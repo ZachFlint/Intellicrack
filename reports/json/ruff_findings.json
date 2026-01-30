@@ -1,9 +1,304 @@
 {
   "tool": "ruff",
-  "generated": "2026-01-18T15:55:45.176916",
-  "total_findings": 6,
-  "total_files": 6,
+  "generated": "2026-01-30T13:59:24.962414",
+  "total_findings": 41,
+  "total_files": 10,
   "files": [
+    {
+      "path": "D:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py",
+      "count": 18,
+      "findings": [
+        {
+          "line": 273,
+          "column": 60,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:273:60: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`"
+        },
+        {
+          "line": 276,
+          "column": 67,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:276:67: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`"
+        },
+        {
+          "line": 285,
+          "column": 62,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:285:62: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`"
+        },
+        {
+          "line": 329,
+          "column": 76,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:329:76: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`"
+        },
+        {
+          "line": 334,
+          "column": 67,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:334:67: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`"
+        },
+        {
+          "line": 455,
+          "column": 52,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:455:52: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`"
+        },
+        {
+          "line": 465,
+          "column": 66,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:465:66: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`"
+        },
+        {
+          "line": 501,
+          "column": 66,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:501:66: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`"
+        },
+        {
+          "line": 503,
+          "column": 72,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:503:72: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`"
+        },
+        {
+          "line": 511,
+          "column": 63,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:511:63: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`"
+        },
+        {
+          "line": 534,
+          "column": 72,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:534:72: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`"
+        },
+        {
+          "line": 536,
+          "column": 78,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:536:78: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`"
+        },
+        {
+          "line": 541,
+          "column": 69,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:541:69: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`"
+        },
+        {
+          "line": 699,
+          "column": 54,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:699:54: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`"
+        },
+        {
+          "line": 805,
+          "column": 20,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:805:20: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`"
+        },
+        {
+          "line": 847,
+          "column": 67,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:847:67: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`"
+        },
+        {
+          "line": 874,
+          "column": 63,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:874:63: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`"
+        },
+        {
+          "line": 878,
+          "column": 62,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:878:62: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\src\\intellicrack\\core\\orchestrator.py",
+      "count": 6,
+      "findings": [
+        {
+          "line": 37,
+          "column": 35,
+          "code": "F401",
+          "message": "`.license_analyzer.LicenseAnalyzer` imported but unused",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\orchestrator.py:37:35: F401 `.license_analyzer.LicenseAnalyzer` imported but unused"
+        },
+        {
+          "line": 893,
+          "column": 15,
+          "code": "PLR6301",
+          "message": "Method `_run_license_analysis` could be a function, class method, or static method",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\orchestrator.py:893:15: PLR6301 Method `_run_license_analysis` could be a function, class method, or static method"
+        },
+        {
+          "line": 903,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\orchestrator.py:903:13: PLC0415 `import` should be at the top-level of a file"
+        },
+        {
+          "line": 909,
+          "column": 13,
+          "code": "TRY300",
+          "message": "Consider moving this statement to an `else` block",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\orchestrator.py:909:13: TRY300 Consider moving this statement to an `else` block"
+        },
+        {
+          "line": 929,
+          "column": 21,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\orchestrator.py:929:21: PLC0415 `import` should be at the top-level of a file"
+        },
+        {
+          "line": 933,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\orchestrator.py:933:13: PLC0415 `import` should be at the top-level of a file"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\src\\intellicrack\\bridges\\process.py",
+      "count": 5,
+      "findings": [
+        {
+          "line": 62,
+          "column": 19,
+          "code": "RUF100",
+          "message": "Unused `noqa` directive (unused: `RUF012`)",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\bridges\\process.py:62:19: RUF100 Unused `noqa` directive (unused: `RUF012`)"
+        },
+        {
+          "line": 79,
+          "column": 19,
+          "code": "RUF100",
+          "message": "Unused `noqa` directive (unused: `RUF012`)",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\bridges\\process.py:79:19: RUF100 Unused `noqa` directive (unused: `RUF012`)"
+        },
+        {
+          "line": 93,
+          "column": 19,
+          "code": "RUF100",
+          "message": "Unused `noqa` directive (unused: `RUF012`)",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\bridges\\process.py:93:19: RUF100 Unused `noqa` directive (unused: `RUF012`)"
+        },
+        {
+          "line": 110,
+          "column": 19,
+          "code": "RUF100",
+          "message": "Unused `noqa` directive (unused: `RUF012`)",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\bridges\\process.py:110:19: RUF100 Unused `noqa` directive (unused: `RUF012`)"
+        },
+        {
+          "line": 450,
+          "column": 44,
+          "code": "RUF100",
+          "message": "Unused `noqa` directive (non-enabled: `PLR6301`)",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\bridges\\process.py:450:44: RUF100 Unused `noqa` directive (non-enabled: `PLR6301`)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\src\\intellicrack\\bridges\\installer.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 287,
+          "column": 50,
+          "code": "RUF100",
+          "message": "Unused `noqa` directive (non-enabled: `PLR6301`)",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\bridges\\installer.py:287:50: RUF100 Unused `noqa` directive (non-enabled: `PLR6301`)"
+        },
+        {
+          "line": 571,
+          "column": 54,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `filename`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\bridges\\installer.py:571:54: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `filename`"
+        },
+        {
+          "line": 587,
+          "column": 55,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `filename`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\bridges\\installer.py:587:55: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `filename`"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tests\\test_providers\\test_local_transformers_provider.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 10,
+          "column": 27,
+          "code": "F401",
+          "message": "`unittest.mock.MagicMock` imported but unused",
+          "raw": "D:\\Intellicrack\\tests\\test_providers\\test_local_transformers_provider.py:10:27: F401 `unittest.mock.MagicMock` imported but unused"
+        },
+        {
+          "line": 10,
+          "column": 38,
+          "code": "F401",
+          "message": "`unittest.mock.patch` imported but unused",
+          "raw": "D:\\Intellicrack\\tests\\test_providers\\test_local_transformers_provider.py:10:38: F401 `unittest.mock.patch` imported but unused"
+        },
+        {
+          "line": 31,
+          "column": 5,
+          "code": "TC005",
+          "message": "Found empty type-checking block",
+          "raw": "D:\\Intellicrack\\tests\\test_providers\\test_local_transformers_provider.py:31:5: TC005 Found empty type-checking block"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\qemu.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 1794,
+          "column": 49,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\qemu.py:1794:49: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`"
+        },
+        {
+          "line": 1855,
+          "column": 49,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\qemu.py:1855:49: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`"
+        }
+      ]
+    },
     {
       "path": "D:\\Intellicrack\\src\\intellicrack\\bridges\\base.py",
       "count": 1,
@@ -18,58 +313,6 @@
       ]
     },
     {
-      "path": "D:\\Intellicrack\\src\\intellicrack\\bridges\\binary.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 350,
-          "column": 44,
-          "code": "RUF100",
-          "message": "Unused `noqa` directive (non-enabled: `PLR6301`)",
-          "raw": "D:\\Intellicrack\\src\\intellicrack\\bridges\\binary.py:350:44: RUF100 Unused `noqa` directive (non-enabled: `PLR6301`)"
-        }
-      ]
-    },
-    {
-      "path": "D:\\Intellicrack\\src\\intellicrack\\bridges\\frida_bridge.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 411,
-          "column": 44,
-          "code": "RUF100",
-          "message": "Unused `noqa` directive (non-enabled: `PLR6301`)",
-          "raw": "D:\\Intellicrack\\src\\intellicrack\\bridges\\frida_bridge.py:411:44: RUF100 Unused `noqa` directive (non-enabled: `PLR6301`)"
-        }
-      ]
-    },
-    {
-      "path": "D:\\Intellicrack\\src\\intellicrack\\bridges\\installer.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 295,
-          "column": 50,
-          "code": "RUF100",
-          "message": "Unused `noqa` directive (non-enabled: `PLR6301`)",
-          "raw": "D:\\Intellicrack\\src\\intellicrack\\bridges\\installer.py:295:50: RUF100 Unused `noqa` directive (non-enabled: `PLR6301`)"
-        }
-      ]
-    },
-    {
-      "path": "D:\\Intellicrack\\src\\intellicrack\\bridges\\process.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 450,
-          "column": 44,
-          "code": "RUF100",
-          "message": "Unused `noqa` directive (non-enabled: `PLR6301`)",
-          "raw": "D:\\Intellicrack\\src\\intellicrack\\bridges\\process.py:450:44: RUF100 Unused `noqa` directive (non-enabled: `PLR6301`)"
-        }
-      ]
-    },
-    {
       "path": "D:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py",
       "count": 1,
       "findings": [
@@ -79,6 +322,32 @@
           "code": "RUF100",
           "message": "Unused `noqa` directive (non-enabled: `PLR6301`)",
           "raw": "D:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:490:44: RUF100 Unused `noqa` directive (non-enabled: `PLR6301`)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\src\\intellicrack\\bridges\\sandbox_bridge.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 678,
+          "column": 53,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\bridges\\sandbox_bridge.py:678:53: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\base.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 420,
+          "column": 55,
+          "code": "G101",
+          "message": "Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\base.py:420:55: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`"
         }
       ]
     }

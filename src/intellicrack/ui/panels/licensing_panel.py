@@ -192,9 +192,7 @@ class ValidationFunctionsTable(QTableWidget):
     def _setup_ui(self) -> None:
         """Set up the table UI."""
         self.setColumnCount(6)
-        self.setHorizontalHeaderLabels([
-            "Address", "Name", "Return", "Complexity", "Crypto", "Strings"
-        ])
+        self.setHorizontalHeaderLabels(["Address", "Name", "Return", "Complexity", "Crypto", "Strings"])
 
         header = self.horizontalHeader()
         if header:
@@ -284,9 +282,7 @@ class CryptoAPITable(QTableWidget):
     def _setup_ui(self) -> None:
         """Set up the table UI."""
         self.setColumnCount(5)
-        self.setHorizontalHeaderLabels([
-            "Address", "API", "DLL", "Caller", "Parameters"
-        ])
+        self.setHorizontalHeaderLabels(["Address", "API", "DLL", "Caller", "Parameters"])
 
         header = self.horizontalHeader()
         if header:
@@ -366,9 +362,7 @@ class ConstantsTable(QTableWidget):
     def _setup_ui(self) -> None:
         """Set up the table UI."""
         self.setColumnCount(4)
-        self.setHorizontalHeaderLabels([
-            "Address", "Value (Hex)", "Value (Dec)", "Context"
-        ])
+        self.setHorizontalHeaderLabels(["Address", "Value (Hex)", "Value (Dec)", "Context"])
 
         header = self.horizontalHeader()
         if header:

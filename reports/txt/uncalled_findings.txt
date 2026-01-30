@@ -1,24 +1,47 @@
-10 findings in src\intellicrack\core\script_gen.py
+12 findings in src\intellicrack\ui\tools.py
 
-src\intellicrack\core\script_gen.py: Unused function add_script
+src\intellicrack\ui\tools.py: Unused function activate_licensing_tab
 
-src\intellicrack\core\script_gen.py: Unused function get_frida_api_reference
+src\intellicrack\ui\tools.py: Unused function activate_scripts_tab
 
-src\intellicrack\core\script_gen.py: Unused function get_ghidra_api_reference
+src\intellicrack\ui\tools.py: Unused function activate_stack_tab
 
-src\intellicrack\core\script_gen.py: Unused function get_radare2_reference
+src\intellicrack\ui\tools.py: Unused function activate_tab
 
-src\intellicrack\core\script_gen.py: Unused function get_script
+src\intellicrack\ui\tools.py: Unused function clear_tab
 
-src\intellicrack\core\script_gen.py: Unused function get_x64dbg_reference
+src\intellicrack\ui\tools.py: Unused function close_embedded_tools
 
-src\intellicrack\core\script_gen.py: Unused function list_scripts
+src\intellicrack\ui\tools.py: Unused function get_embedded_tool
 
-src\intellicrack\core\script_gen.py: Unused function load_script
+src\intellicrack\ui\tools.py: Unused function get_panel
 
-src\intellicrack\core\script_gen.py: Unused function save_script
+src\intellicrack\ui\tools.py: Unused function set_current_address
 
-src\intellicrack\core\script_gen.py: Unused function to_prompt_context
+src\intellicrack\ui\tools.py: Unused function set_tab_content
+
+src\intellicrack\ui\tools.py: Unused function set_tab_info
+
+src\intellicrack\ui\tools.py: Unused function update_licensing_analysis
+
+
+8 findings in src\intellicrack\ui\embedding\win32_helper.py
+
+src\intellicrack\ui\embedding\win32_helper.py: Unused function find_child_window
+
+src\intellicrack\ui\embedding\win32_helper.py: Unused function find_window
+
+src\intellicrack\ui\embedding\win32_helper.py: Unused function get_class_name
+
+src\intellicrack\ui\embedding\win32_helper.py: Unused function get_client_rect
+
+src\intellicrack\ui\embedding\win32_helper.py: Unused function get_process_id
+
+src\intellicrack\ui\embedding\win32_helper.py: Unused function get_window_rect
+
+src\intellicrack\ui\embedding\win32_helper.py: Unused function get_window_text
+
+src\intellicrack\ui\embedding\win32_helper.py: Unused function is_window_visible
 
 
 7 findings in src\intellicrack\core\tools.py
@@ -36,6 +59,23 @@ src\intellicrack\core\tools.py: Unused function get_radare2_bridge
 src\intellicrack\core\tools.py: Unused function get_sandbox_bridge
 
 src\intellicrack\core\tools.py: Unused function get_x64dbg_bridge
+
+
+7 findings in src\intellicrack\ui\embedding\cutter_widget.py
+
+src\intellicrack\ui\embedding\cutter_widget.py: Unused function get_project_path
+
+src\intellicrack\ui\embedding\cutter_widget.py: Unused function get_radare2_bridge
+
+src\intellicrack\ui\embedding\cutter_widget.py: Unused function goto_function
+
+src\intellicrack\ui\embedding\cutter_widget.py: Unused function load_project
+
+src\intellicrack\ui\embedding\cutter_widget.py: Unused function save_project
+
+src\intellicrack\ui\embedding\cutter_widget.py: Unused function set_executable_path
+
+src\intellicrack\ui\embedding\cutter_widget.py: Unused function sync_with_radare2_bridge
 
 
 7 findings in src\intellicrack\ui\resources\font_manager.py
@@ -72,6 +112,36 @@ src\intellicrack\ui\resources\icon_manager.py: Unused function preload_icons
 src\intellicrack\ui\resources\icon_manager.py: Unused function reset_instance
 
 
+6 findings in src\intellicrack\core\logging.py
+
+src\intellicrack\core\logging.py: Unused function log_analysis_operation
+
+src\intellicrack\core\logging.py: Unused function log_binary_operation
+
+src\intellicrack\core\logging.py: Unused function log_exception
+
+src\intellicrack\core\logging.py: Unused function log_sandbox_operation
+
+src\intellicrack\core\logging.py: Unused function log_session_operation
+
+src\intellicrack\core\logging.py: Unused function log_tool_call
+
+
+6 findings in src\intellicrack\core\script_gen.py
+
+src\intellicrack\core\script_gen.py: Unused function get_frida_api_reference
+
+src\intellicrack\core\script_gen.py: Unused function get_ghidra_api_reference
+
+src\intellicrack\core\script_gen.py: Unused function get_radare2_reference
+
+src\intellicrack\core\script_gen.py: Unused function get_x64dbg_reference
+
+src\intellicrack\core\script_gen.py: Unused function save_script
+
+src\intellicrack\core\script_gen.py: Unused function to_prompt_context
+
+
 6 findings in src\intellicrack\credentials\env_loader.py
 
 src\intellicrack\credentials\env_loader.py: Unused function create_env_template
@@ -87,19 +157,19 @@ src\intellicrack\credentials\env_loader.py: Unused function list_missing_provide
 src\intellicrack\credentials\env_loader.py: Unused function reload
 
 
-6 findings in src\intellicrack\providers\registry.py
+6 findings in src\intellicrack\ui\embedding\x64dbg_widget.py
 
-src\intellicrack\providers\registry.py: Unused function active_name
+src\intellicrack\ui\embedding\x64dbg_widget.py: Unused function attach_to_bridge
 
-src\intellicrack\providers\registry.py: Unused function get_active_provider
+src\intellicrack\ui\embedding\x64dbg_widget.py: Unused function attach_to_process
 
-src\intellicrack\providers\registry.py: Unused function has_connected_provider
+src\intellicrack\ui\embedding\x64dbg_widget.py: Unused function get_attached_pid
 
-src\intellicrack\providers\registry.py: Unused function register_provider
+src\intellicrack\ui\embedding\x64dbg_widget.py: Unused function get_bridge
 
-src\intellicrack\providers\registry.py: Unused function set_active
+src\intellicrack\ui\embedding\x64dbg_widget.py: Unused function set_64bit
 
-src\intellicrack\providers\registry.py: Unused function set_credential_loader
+src\intellicrack\ui\embedding\x64dbg_widget.py: Unused function set_install_directory
 
 
 6 findings in src\intellicrack\ui\resources\theme_manager.py
@@ -117,6 +187,19 @@ src\intellicrack\ui\resources\theme_manager.py: Unused function reset_instance
 src\intellicrack\ui\resources\theme_manager.py: Unused function toggle_theme
 
 
+5 findings in src\intellicrack\core\orchestrator.py
+
+src\intellicrack\core\orchestrator.py: Unused function confirm_pending
+
+src\intellicrack\core\orchestrator.py: Unused function current_session
+
+src\intellicrack\core\orchestrator.py: Unused function set_confirmation_callback
+
+src\intellicrack\core\orchestrator.py: Unused function set_licensing_analysis_callback
+
+src\intellicrack\core\orchestrator.py: Unused function stats
+
+
 5 findings in src\intellicrack\core\process_manager.py
 
 src\intellicrack\core\process_manager.py: Unused function clear_shutdown_request
@@ -130,39 +213,48 @@ src\intellicrack\core\process_manager.py: Unused function is_shutdown_requested
 src\intellicrack\core\process_manager.py: Unused function reset_instance
 
 
-5 findings in src\intellicrack\ui\tools.py
+4 findings in src\intellicrack\providers\local_transformers.py
 
-src\intellicrack\ui\tools.py: Unused function activate_tab
+src\intellicrack\providers\local_transformers.py: Unused function clear_cache
 
-src\intellicrack\ui\tools.py: Unused function clear_tab
+src\intellicrack\providers\local_transformers.py: Unused function current_model_id
 
-src\intellicrack\ui\tools.py: Unused function set_current_address
+src\intellicrack\providers\local_transformers.py: Unused function get_device_info
 
-src\intellicrack\ui\tools.py: Unused function set_tab_content
-
-src\intellicrack\ui\tools.py: Unused function set_tab_info
+src\intellicrack\providers\local_transformers.py: Unused function is_b580_detected
 
 
-4 findings in src\intellicrack\core\orchestrator.py
+4 findings in src\intellicrack\providers\registry.py
 
-src\intellicrack\core\orchestrator.py: Unused function confirm_pending
+src\intellicrack\providers\registry.py: Unused function get_active_provider
 
-src\intellicrack\core\orchestrator.py: Unused function current_session
+src\intellicrack\providers\registry.py: Unused function has_connected_provider
 
-src\intellicrack\core\orchestrator.py: Unused function set_confirmation_callback
+src\intellicrack\providers\registry.py: Unused function register_provider
 
-src\intellicrack\core\orchestrator.py: Unused function stats
+src\intellicrack\providers\registry.py: Unused function set_credential_loader
 
 
-4 findings in src\intellicrack\providers\discovery.py
+4 findings in src\intellicrack\ui\embedding\hxd_widget.py
 
-src\intellicrack\providers\discovery.py: Unused function get_by_id
+src\intellicrack\ui\embedding\hxd_widget.py: Unused function get_current_offset
 
-src\intellicrack\providers\discovery.py: Unused function get_discovery_events
+src\intellicrack\ui\embedding\hxd_widget.py: Unused function open_at_offset
 
-src\intellicrack\providers\discovery.py: Unused function get_last_event
+src\intellicrack\ui\embedding\hxd_widget.py: Unused function select_range
 
-src\intellicrack\providers\discovery.py: Unused function get_provider_model_count
+src\intellicrack\ui\embedding\hxd_widget.py: Unused function set_executable_path
+
+
+4 findings in src\intellicrack\ui\panels\stack_viewer.py
+
+src\intellicrack\ui\panels\stack_viewer.py: Unused function add_source
+
+src\intellicrack\ui\panels\stack_viewer.py: Unused function get_source_name
+
+src\intellicrack\ui\panels\stack_viewer.py: Unused function set_frida_bridge
+
+src\intellicrack\ui\panels\stack_viewer.py: Unused function set_x64dbg_bridge
 
 
 3 findings in src\intellicrack\bridges\schemas.py
@@ -183,6 +275,15 @@ src\intellicrack\core\config.py: Unused function is_provider_enabled
 src\intellicrack\core\config.py: Unused function is_tool_enabled
 
 
+3 findings in src\intellicrack\core\session.py
+
+src\intellicrack\core\session.py: Unused function add_patch
+
+src\intellicrack\core\session.py: Unused function get_licensing_analysis
+
+src\intellicrack\core\session.py: Unused function to_metadata
+
+
 3 findings in src\intellicrack\credentials\oauth.py
 
 src\intellicrack\credentials\oauth.py: Unused function do_GET
@@ -190,6 +291,24 @@ src\intellicrack\credentials\oauth.py: Unused function do_GET
 src\intellicrack\credentials\oauth.py: Unused function log_message
 
 src\intellicrack\credentials\oauth.py: Unused function needs_refresh
+
+
+3 findings in src\intellicrack\providers\discovery.py
+
+src\intellicrack\providers\discovery.py: Unused function get_by_id
+
+src\intellicrack\providers\discovery.py: Unused function get_discovery_events
+
+src\intellicrack\providers\discovery.py: Unused function get_last_event
+
+
+3 findings in src\intellicrack\ui\panels\script_manager.py
+
+src\intellicrack\ui\panels\script_manager.py: Unused function get_current_script
+
+src\intellicrack\ui\panels\script_manager.py: Unused function get_selected_id
+
+src\intellicrack\ui\panels\script_manager.py: Unused function set_backend
 
 
 3 findings in src\intellicrack\ui\resources\resource_helper.py
@@ -201,32 +320,11 @@ src\intellicrack\ui\resources\resource_helper.py: Unused function get_style_path
 src\intellicrack\ui\resources\resource_helper.py: Unused function resource_exists
 
 
-2 findings in src\intellicrack\core\logging.py
-
-src\intellicrack\core\logging.py: Unused function log_exception
-
-src\intellicrack\core\logging.py: Unused function log_tool_call
-
-
-2 findings in src\intellicrack\core\session.py
-
-src\intellicrack\core\session.py: Unused function add_patch
-
-src\intellicrack\core\session.py: Unused function to_metadata
-
-
 2 findings in src\intellicrack\providers\ollama.py
 
 src\intellicrack\providers\ollama.py: Unused function cloud_available
 
 src\intellicrack\providers\ollama.py: Unused function local_available
-
-
-2 findings in src\intellicrack\ui\session_manager.py
-
-src\intellicrack\ui\session_manager.py: Unused function get_description
-
-src\intellicrack\ui\session_manager.py: Unused function get_session_name
 
 
 1 findings in src\intellicrack\bridges\frida_bridge.py
@@ -244,9 +342,9 @@ src\intellicrack\bridges\named_pipe_client.py: Unused function set_event_handler
 src\intellicrack\providers\anthropic.py: Unused function get_system_prompt
 
 
-1 findings in src\intellicrack\ui\app.py
+1 findings in src\intellicrack\providers\model_loader.py
 
-src\intellicrack\ui\app.py: Unused function closeEvent
+src\intellicrack\providers\model_loader.py: Unused function get_memory_usage
 
 
 1 findings in src\intellicrack\ui\chat.py
@@ -264,9 +362,19 @@ src\intellicrack\ui\confirmation_dialog.py: Unused function remember_similar
 src\intellicrack\ui\dialogs\splash_screen.py: Unused function show_loading_step
 
 
+1 findings in src\intellicrack\ui\embedding\embedded_widget.py
+
+src\intellicrack\ui\embedding\embedded_widget.py: Unused function get_loaded_file
+
+
 1 findings in src\intellicrack\ui\highlighter.py
 
 src\intellicrack\ui\highlighter.py: Unused function highlightBlock
+
+
+1 findings in src\intellicrack\ui\panels\licensing_panel.py
+
+src\intellicrack\ui\panels\licensing_panel.py: Unused function get_current_analysis
 
 
 1 findings in src\intellicrack\ui\preferences.py
@@ -282,3 +390,8 @@ src\intellicrack\ui\provider_config.py: Unused function get_selected_model
 1 findings in src\intellicrack\ui\sandbox_config.py
 
 src\intellicrack\ui\sandbox_config.py: Unused function is_sandbox_available
+
+
+1 findings in src\intellicrack\ui\session_manager.py
+
+src\intellicrack\ui\session_manager.py: Unused function get_description

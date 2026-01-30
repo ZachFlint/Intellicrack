@@ -1,0 +1,749 @@
+15 findings in D:\Intellicrack\tools\ghidra\support\launch.bat
+
+Line 237: Invalid errorlevel comparison syntax (E016)
+
+Line 1: Unix line endings detected (E018)
+
+Line 243: Missing exit code (W001)
+
+Line 237: Unquoted variable with spaces (W005)
+
+Line 237: IF comparison without quotes (W021)
+
+Line 45: Errorlevel handling difference between .bat/.cmd (W028)
+
+Line 46: FOR /F tokenizing without proper delimiters (W035)
+
+Line 160: Nested FOR loops without call optimization (W039)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 77: Inconsistent indentation (S012)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 26: Magic numbers in code (S019)
+
+Line 138: Command injection via variable substitution (SEC013)
+
+Line 16: Redundant command echoing suppression (P020)
+
+
+14 findings in D:\Intellicrack\tools\ghidra\support\createPdbXmlFiles.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 97: Missing exit code (W001)
+
+Line 44: FOR loop missing /F options for complex parsing (W020)
+
+Line 29: Errorlevel handling difference between .bat/.cmd (W028)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 41: Missing subroutine documentation (S018)
+
+Line 1: Inconsistent variable naming convention (S022)
+
+Line 39: Unsafe SET command usage (SEC002)
+
+Line 75: Command injection via variable substitution (SEC013)
+
+Line 44: Inefficient FOR loop pattern (P009)
+
+Line 25: Redundant command echoing suppression (P020)
+
+Line 26: Redundant SETLOCAL/ENDLOCAL pairs (P024)
+
+
+13 findings in D:\Intellicrack\tools\ghidra\support\gradle\gradlew.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 119: Complex quote escaping error (E028)
+
+Line 123: Missing exit code (W001)
+
+Line 101: Unquoted variable with spaces (W005)
+
+Line 101: IF comparison without quotes (W021)
+
+Line 30: Errorlevel handling difference between .bat/.cmd (W028)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 1: Missing file header documentation (S013)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 5: Magic numbers in code (S019)
+
+Line 46: Command injection via variable substitution (SEC013)
+
+Line 88: Inefficient FOR loop pattern (P009)
+
+
+13 findings in D:\Intellicrack\tools\ghidra\support\buildGhidraJar.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 45: Missing exit code (W001)
+
+Line 23: Errorlevel handling difference between .bat/.cmd (W028)
+
+Line 45: Command execution may be ambiguous (W033)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 16: Trailing whitespace (S004)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 45: Line exceeds maximum length (S011)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 41: Missing subroutine documentation (S018)
+
+Line 45: Long line without continuation (S020)
+
+Line 43: Unsafe SET command usage (SEC002)
+
+Line 18: Redundant command echoing suppression (P020)
+
+
+12 findings in D:\Intellicrack\tools\ghidra\server\ghidraSvr.bat
+
+Line 221: Missing colon in GOTO :EOF statement (E015)
+
+Line 1: Unix line endings detected (E018)
+
+Line 235: Missing exit code (W001)
+
+Line 39: Errorlevel handling difference between .bat/.cmd (W028)
+
+Line 59: FOR /F tokenizing without proper delimiters (W035)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 139: Inconsistent indentation (S012)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 1: Inconsistent variable naming convention (S022)
+
+Line 80: Automatic restart without failure limits (SEC016)
+
+Line 16: Redundant command echoing suppression (P020)
+
+
+12 findings in D:\Intellicrack\tools\ghidra\support\analyzeHeadless.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 70: Missing exit code (W001)
+
+Line 24: Errorlevel handling difference between .bat/.cmd (W028)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 70: Line exceeds maximum length (S011)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 70: Long line without continuation (S020)
+
+Line 1: Inconsistent variable naming convention (S022)
+
+Line 18: Redundant command echoing suppression (P020)
+
+Line 19: Redundant SETLOCAL/ENDLOCAL pairs (P024)
+
+Line 68: Redundant DISABLEDELAYEDEXPANSION (P026)
+
+
+11 findings in D:\Intellicrack\tools\ghidra\support\bsim.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 38: Missing exit code (W001)
+
+Line 26: Errorlevel handling difference between .bat/.cmd (W028)
+
+Line 38: Command execution may be ambiguous (W033)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 21: Trailing whitespace (S004)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 38: Line exceeds maximum length (S011)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 38: Long line without continuation (S020)
+
+Line 18: Redundant command echoing suppression (P020)
+
+
+11 findings in D:\Intellicrack\tools\ghidra\support\dbgengGADPServerRun.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 25: Missing exit code (W001)
+
+Line 25: Command execution may be ambiguous (W033)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 21: Trailing whitespace (S004)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 25: Line exceeds maximum length (S011)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 25: Long line without continuation (S020)
+
+Line 19: Unnecessary SETLOCAL (P003)
+
+Line 18: Redundant command echoing suppression (P020)
+
+
+11 findings in D:\Intellicrack\tools\ghidra\support\dbgmodelGADPServerRun.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 25: Missing exit code (W001)
+
+Line 25: Command execution may be ambiguous (W033)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 21: Trailing whitespace (S004)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 25: Line exceeds maximum length (S011)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 25: Long line without continuation (S020)
+
+Line 19: Unnecessary SETLOCAL (P003)
+
+Line 18: Redundant command echoing suppression (P020)
+
+
+11 findings in D:\Intellicrack\tools\ghidra\support\pyghidraRun.bat
+
+Line 50: Mismatched quotes (E009)
+
+Line 1: Unix line endings detected (E018)
+
+Line 61: Missing exit code (W001)
+
+Line 22: Errorlevel handling difference between .bat/.cmd (W028)
+
+Line 23: FOR /F tokenizing without proper delimiters (W035)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 54: Missing subroutine documentation (S018)
+
+Line 26: Unsafe SET command usage (SEC002)
+
+Line 18: Redundant command echoing suppression (P020)
+
+
+11 findings in D:\Intellicrack\tools\WindowsPatch\WindowsActivator.cmd
+
+Line 14289: Missing quotes in SET /A with special characters (E023)
+
+Line 19845: Missing exit code (W001)
+
+Line 18930: FOR /F missing eol option for comments (W037)
+
+Line 247: FOR /R with explicit filename needs wildcard (W038)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1438: Inconsistent indentation (S012)
+
+Line 1: Missing file header documentation (S013)
+
+Line 1: Inconsistent variable naming convention (S022)
+
+Line 16956: Hardcoded absolute path (SEC006)
+
+Line 5618: Unvalidated path traversal (SEC011)
+
+Line 12: Redundant SETLOCAL/ENDLOCAL pairs (P024)
+
+
+10 findings in D:\Intellicrack\tools\ghidra\server\svrAdmin.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 63: Missing exit code (W001)
+
+Line 42: Errorlevel handling difference between .bat/.cmd (W028)
+
+Line 63: Command execution may be ambiguous (W033)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 59: Missing subroutine documentation (S018)
+
+Line 61: Unsafe SET command usage (SEC002)
+
+Line 16: Redundant command echoing suppression (P020)
+
+
+10 findings in D:\Intellicrack\tools\ghidra\support\convertStorage.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 24: Missing exit code (W001)
+
+Line 22: Errorlevel handling difference between .bat/.cmd (W028)
+
+Line 24: Command execution may be ambiguous (W033)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 24: Line exceeds maximum length (S011)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 24: Long line without continuation (S020)
+
+Line 18: Redundant command echoing suppression (P020)
+
+
+10 findings in D:\Intellicrack\tools\ghidra\support\ghidraDebug.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 33: Missing exit code (W001)
+
+Line 27: Errorlevel handling difference between .bat/.cmd (W028)
+
+Line 33: Command execution may be ambiguous (W033)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 21: Trailing whitespace (S004)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 31: Unsafe SET command usage (SEC002)
+
+Line 18: Redundant command echoing suppression (P020)
+
+
+10 findings in D:\Intellicrack\tools\ghidra\support\jythonRun.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 42: Missing exit code (W001)
+
+Line 30: Errorlevel handling difference between .bat/.cmd (W028)
+
+Line 42: Command execution may be ambiguous (W033)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 42: Line exceeds maximum length (S011)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 42: Long line without continuation (S020)
+
+Line 18: Redundant command echoing suppression (P020)
+
+
+10 findings in D:\Intellicrack\tools\ghidra\support\sleigh.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 24: Missing exit code (W001)
+
+Line 22: Errorlevel handling difference between .bat/.cmd (W028)
+
+Line 24: Command execution may be ambiguous (W033)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 24: Line exceeds maximum length (S011)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 24: Long line without continuation (S020)
+
+Line 18: Redundant command echoing suppression (P020)
+
+
+9 findings in D:\Intellicrack\tools\ghidra\server\svrInstall.bat
+
+Line 19: Missing colon in CALL statement (E014)
+
+Line 1: Unix line endings detected (E018)
+
+Line 21: Missing exit code (W001)
+
+Line 19: Command execution may be ambiguous (W033)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 17: Unnecessary SETLOCAL (P003)
+
+Line 16: Redundant command echoing suppression (P020)
+
+
+9 findings in D:\Intellicrack\tools\ghidra\server\svrUninstall.bat
+
+Line 19: Missing colon in CALL statement (E014)
+
+Line 1: Unix line endings detected (E018)
+
+Line 21: Missing exit code (W001)
+
+Line 19: Command execution may be ambiguous (W033)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 17: Unnecessary SETLOCAL (P003)
+
+Line 16: Redundant command echoing suppression (P020)
+
+
+9 findings in D:\Intellicrack\tools\ghidra\support\ghidraClean.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 24: Missing exit code (W001)
+
+Line 22: Errorlevel handling difference between .bat/.cmd (W028)
+
+Line 24: Command execution may be ambiguous (W033)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 22: Unsafe SET command usage (SEC002)
+
+Line 19: Redundant command echoing suppression (P020)
+
+
+9 findings in D:\Intellicrack\tools\ghidra\support\jshellRun.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 25: Missing exit code (W001)
+
+Line 25: Command execution may be ambiguous (W033)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 21: Trailing whitespace (S004)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 19: Unnecessary SETLOCAL (P003)
+
+Line 18: Redundant command echoing suppression (P020)
+
+
+9 findings in D:\Intellicrack\tools\ghidra\ghidraRun.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 25: Missing exit code (W001)
+
+Line 25: Command execution may be ambiguous (W033)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 21: Trailing whitespace (S004)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 19: Unnecessary SETLOCAL (P003)
+
+Line 18: Redundant command echoing suppression (P020)
+
+
+8 findings in D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-dbgeng\data\debugger-launchers\local-dbgeng-trace.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 36: Potentially undefined variable reference (E006)
+
+Line 36: Missing exit code (W001)
+
+Line 35: Errorlevel handling difference between .bat/.cmd (W028)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 33: Redundant command echoing suppression (P020)
+
+
+8 findings in D:\Intellicrack\tools\ghidra\support\GhidraGo\ghidraGo.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 25: Missing exit code (W001)
+
+Line 23: Errorlevel handling difference between .bat/.cmd (W028)
+
+Line 25: Command execution may be ambiguous (W033)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 18: Redundant command echoing suppression (P020)
+
+
+7 findings in D:\Intellicrack\tools\AdobeInjector\Source\Rebranded\build.bat
+
+Line 67: Missing exit code (W001)
+
+Line 27: Errorlevel handling difference between .bat/.cmd (W028)
+
+Line 42: Inconsistent command capitalization (S003)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 44: Unsafe SET command usage (SEC002)
+
+Line 42: PowerShell execution policy bypass (SEC009)
+
+Line 5: Unnecessary ENABLEDELAYEDEXPANSION (P004)
+
+
+7 findings in D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-dbgeng\data\debugger-launchers\kernel-dbgeng.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 37: Potentially undefined variable reference (E006)
+
+Line 37: Missing exit code (W001)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 35: Redundant command echoing suppression (P020)
+
+
+7 findings in D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-dbgeng\data\debugger-launchers\local-dbgeng-attach.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 35: Potentially undefined variable reference (E006)
+
+Line 35: Missing exit code (W001)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 33: Redundant command echoing suppression (P020)
+
+
+7 findings in D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-dbgeng\data\debugger-launchers\local-dbgeng-ext.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 43: Potentially undefined variable reference (E006)
+
+Line 43: Missing exit code (W001)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 41: Redundant command echoing suppression (P020)
+
+
+7 findings in D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-dbgeng\data\debugger-launchers\local-dbgeng.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 37: Potentially undefined variable reference (E006)
+
+Line 37: Missing exit code (W001)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 35: Redundant command echoing suppression (P020)
+
+
+7 findings in D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-dbgeng\data\debugger-launchers\remote-dbgeng.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 33: Potentially undefined variable reference (E006)
+
+Line 33: Missing exit code (W001)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 31: Redundant command echoing suppression (P020)
+
+
+7 findings in D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-dbgeng\data\debugger-launchers\svrcx-dbgeng.bat
+
+Line 1: Unix line endings detected (E018)
+
+Line 38: Potentially undefined variable reference (E006)
+
+Line 38: Missing exit code (W001)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 1: Potentially unsafe double-colon comment (S016)
+
+Line 36: Redundant command echoing suppression (P020)
+
+
+5 findings in D:\Intellicrack\tools\pmd\bin\pmd.bat
+
+Line 17: FOR loop missing /F options for complex parsing (W020)
+
+Line 4: Errorlevel handling difference between .bat/.cmd (W028)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 1: Inconsistent variable naming convention (S022)
+
+Line 37: Redundant SETLOCAL/ENDLOCAL pairs (P024)
+
+
+5 findings in D:\Intellicrack\tools\pmd-bin-7.8.0\bin\pmd.bat
+
+Line 17: FOR loop missing /F options for complex parsing (W020)
+
+Line 4: Errorlevel handling difference between .bat/.cmd (W028)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 1: Inconsistent variable naming convention (S022)
+
+Line 37: Redundant SETLOCAL/ENDLOCAL pairs (P024)
+
+
+4 findings in D:\Intellicrack\tools\NASM\nasmpath.bat
+
+Line 2: Missing exit code (W001)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 1: Hardcoded absolute path (SEC006)
+
+
+4 findings in D:\Intellicrack\REMOVE_NUL.cmd
+
+Line 1: Unix line endings detected (E018)
+
+Line 25: Missing exit code (W001)
+
+Line 4: Potentially unsafe double-colon comment (S016)
+
+Line 2: Unnecessary SETLOCAL (P003)
+
+
+3 findings in D:\Intellicrack\CLI Coding\UpdateTools.cmd
+
+Line 1: Unix line endings detected (E018)
+
+Line 13: Missing exit code (W001)
+
+Line 3: Windows version compatibility (W009)
+
+
+3 findings in D:\Intellicrack\tools\radare2\bin\r2.bat
+
+Line 1: Missing exit code (W001)
+
+Line 1: Missing @ECHO OFF at file start (S001)
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+
+2 findings in D:\Intellicrack\tools\AdobeInjector\Source\GenP.v3.7.1\v3.7.1-Source\run_build.bat
+
+Line 1: BAT extension used instead of CMD for newer Windows (S007)
+
+Line 12: PowerShell execution policy bypass (SEC009)

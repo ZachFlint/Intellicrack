@@ -395,11 +395,13 @@
 .\.github\workflows\claude-code-review.yml:56:121: [warning] line too long (191 > 120 characters)  (line-length)
 
 
-9 findings in .\.serena\project.yml
+10 findings in .\.serena\project.yml
 
 .\.serena\project.yml:1:73: [error] wrong new line character: expected \n  (new-lines)
 
 .\.serena\project.yml:20:1: [error] wrong indentation: expected 2 but found 0  (indentation)
+
+.\.serena\project.yml:35:1: [error] wrong indentation: expected 2 but found 0  (indentation)
 
 .\.serena\project.yml:54:82: [error] trailing spaces  (trailing-spaces)
 

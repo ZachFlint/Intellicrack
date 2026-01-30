@@ -47,7 +47,7 @@ class ScriptTypeInfo:
             "display": "Frida",
             "extension": ".js",
             "language": "javascript",
-            "template": '''/**
+            "template": """/**
  * Frida script for license validation hook
  * Target: {target}
  */
@@ -66,13 +66,13 @@ Interceptor.attach(ptr("{address}"), {
         // retval.replace(ptr("1"));
     }
 });
-''',
+""",
         },
         "ghidra": {
             "display": "Ghidra",
             "extension": ".java",
             "language": "java",
-            "template": '''/**
+            "template": """/**
  * Ghidra script for license analysis
  * @category Intellicrack
  */
@@ -96,13 +96,13 @@ public class LicenseAnalyzer extends GhidraScript {
         }
     }
 }
-''',
+""",
         },
         "radare2": {
             "display": "radare2",
             "extension": ".r2",
             "language": "r2cmd",
-            "template": '''# radare2 script for license analysis
+            "template": """# radare2 script for license analysis
 # Target: {target}
 
 # Analyze all
@@ -124,13 +124,13 @@ pdf
 
 # Find comparison operations
 /c cmp
-''',
+""",
         },
         "x64dbg": {
             "display": "x64dbg",
             "extension": ".txt",
             "language": "x64dbg",
-            "template": '''// x64dbg script for license bypass
+            "template": """// x64dbg script for license bypass
 // Target: {target}
 
 // Set breakpoint at validation function
@@ -144,7 +144,7 @@ log "License check bypassed at {address}"
 
 // Continue execution
 run
-''',
+""",
         },
         "python": {
             "display": "Python",

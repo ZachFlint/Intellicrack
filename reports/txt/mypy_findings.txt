@@ -1,14 +1,49 @@
-5 findings in tests\test_ui\test_font_manager.py
+14 findings in src\intellicrack\providers\xpu_utils.py
 
-tests\test_ui\test_font_manager.py:108: error: "QFont" has no attribute "styleHint"  [attr-defined]
+src\intellicrack\providers\xpu_utils.py:62: error: Module "torch" is not valid as a type  [valid-type]
 
-tests\test_ui\test_font_manager.py:108: error: "type[QFont]" has no attribute "StyleHint"  [attr-defined]
+src\intellicrack\providers\xpu_utils.py:62: note: Perhaps you meant to use a protocol matching the module structure?
 
-tests\test_ui\test_font_manager.py:113: error: "QFont" has no attribute "fixedPitch"  [attr-defined]
+src\intellicrack\providers\xpu_utils.py:90: error: Statement is unreachable  [unreachable]
 
-tests\test_ui\test_font_manager.py:143: error: "QFont" has no attribute "styleHint"  [attr-defined]
+src\intellicrack\providers\xpu_utils.py:114: error: Statement is unreachable  [unreachable]
 
-tests\test_ui\test_font_manager.py:143: error: "type[QFont]" has no attribute "StyleHint"  [attr-defined]
+src\intellicrack\providers\xpu_utils.py:137: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\providers\xpu_utils.py:218: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\providers\xpu_utils.py:351: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\providers\xpu_utils.py:370: error: Module "torch" is not valid as a type  [valid-type]
+
+src\intellicrack\providers\xpu_utils.py:370: note: Perhaps you meant to use a protocol matching the module structure?
+
+src\intellicrack\providers\xpu_utils.py:381: error: torch_type? has no attribute "zeros"  [attr-defined]
+
+src\intellicrack\providers\xpu_utils.py:384: error: torch_type? has no attribute "xpu"  [attr-defined]
+
+src\intellicrack\providers\xpu_utils.py:402: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\providers\xpu_utils.py:439: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\providers\xpu_utils.py:547: error: Statement is unreachable  [unreachable]
+
+
+7 findings in tests\test_ui\test_app_embedded_tools.py
+
+tests\test_ui\test_app_embedded_tools.py:191: error: Cannot assign to a method  [method-assign]
+
+tests\test_ui\test_app_embedded_tools.py:212: error: Cannot assign to a method  [method-assign]
+
+tests\test_ui\test_app_embedded_tools.py:235: error: Cannot assign to a method  [method-assign]
+
+tests\test_ui\test_app_embedded_tools.py:258: error: Cannot assign to a method  [method-assign]
+
+tests\test_ui\test_app_embedded_tools.py:345: error: Cannot assign to a method  [method-assign]
+
+tests\test_ui\test_app_embedded_tools.py:367: error: Cannot assign to a method  [method-assign]
+
+tests\test_ui\test_app_embedded_tools.py:389: error: Cannot assign to a method  [method-assign]
 
 
 5 findings in tests\test_providers\test_model_discovery.py
@@ -35,11 +70,13 @@ tests\test_core\test_types.py:1359: error: Unexpected keyword argument "process_
 tests\test_core\test_types.py:1366: error: "AttachError" has no attribute "process_name"  [attr-defined]
 
 
-2 findings in tests\test_ui\test_splash_screen.py
+3 findings in tests\test_ui\test_font_manager.py
 
-tests\test_ui\test_splash_screen.py:49: error: "type[Qt]" has no attribute "WindowType"  [attr-defined]
+tests\test_ui\test_font_manager.py:112: error: "QFont" has no attribute "styleHint"  [attr-defined]
 
-tests\test_ui\test_splash_screen.py:50: error: "type[Qt]" has no attribute "WindowType"  [attr-defined]
+tests\test_ui\test_font_manager.py:117: error: "QFont" has no attribute "fixedPitch"  [attr-defined]
+
+tests\test_ui\test_font_manager.py:147: error: "QFont" has no attribute "styleHint"  [attr-defined]
 
 
 2 findings in tests\test_core\test_script_gen_keygen.py
@@ -49,14 +86,21 @@ tests\test_core\test_script_gen_keygen.py:19: error: Module "intellicrack.core.s
 tests\test_core\test_script_gen_keygen.py:19: error: Module "intellicrack.core.script_gen" has no attribute "ScriptGenerator"  [attr-defined]
 
 
-1 findings in src\intellicrack\core\types.py
+2 findings in tests\test_providers\test_local_transformers_provider.py
 
-src\intellicrack\core\types.py:1023: note: "AttachError" defined here
+tests\test_providers\test_local_transformers_provider.py:444: error: Argument 1 to "_format_prompt" of "LocalTransformersProvider" has incompatible type "list[dict[str, str]]"; expected "list[dict[str, object]]"  [arg-type]
+
+tests\test_providers\test_local_transformers_provider.py:456: error: Argument 1 to "_format_prompt" of "LocalTransformersProvider" has incompatible type "list[dict[str, str]]"; expected "list[dict[str, object]]"  [arg-type]
 
 
-1 findings in tests\test_ui\conftest.py
+1 findings in src\intellicrack\bridges\schemas.py
 
-tests\test_ui\conftest.py:31: error: Redundant cast to "QApplication"  [redundant-cast]
+src\intellicrack\bridges\schemas.py:599: error: Argument 1 to "_assert_never" has incompatible type "Literal[ProviderName.LOCAL_TRANSFORMERS]"; expected "Never"  [arg-type]
+
+
+1 findings in src\intellicrack\providers\anthropic.py
+
+src\intellicrack\providers\anthropic.py:395: error: Item "None" of "Task[Any] | None" has no attribute "cancel"  [union-attr]
 
 
 1 findings in tests\test_providers\test_openrouter_provider.py

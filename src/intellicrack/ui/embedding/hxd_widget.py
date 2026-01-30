@@ -193,9 +193,7 @@ class HxDWidget(EmbeddedToolWidget):
         Returns:
             True if navigation was initiated.
         """
-        if not self._embedded_hwnd or not Win32WindowHelper.is_window_valid(
-            self._embedded_hwnd
-        ):
+        if not self._embedded_hwnd or not Win32WindowHelper.is_window_valid(self._embedded_hwnd):
             _logger.warning("hxd_goto_offset_failed", extra={"reason": "not_embedded"})
             return False
 
@@ -221,9 +219,7 @@ class HxDWidget(EmbeddedToolWidget):
         Returns:
             True if selection command was sent.
         """
-        if not self._embedded_hwnd or not Win32WindowHelper.is_window_valid(
-            self._embedded_hwnd
-        ):
+        if not self._embedded_hwnd or not Win32WindowHelper.is_window_valid(self._embedded_hwnd):
             return False
 
         if not self.goto_offset(start):

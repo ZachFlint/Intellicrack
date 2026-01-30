@@ -1,7 +1,60 @@
 {
   "tool": "darglint",
-  "generated": "2026-01-18T15:59:17.274337",
-  "total_findings": 0,
-  "total_files": 0,
-  "files": []
+  "generated": "2026-01-30T14:03:40.199649",
+  "total_findings": 5,
+  "total_files": 2,
+  "files": [
+    {
+      "path": "src\\intellicrack\\providers\\local_transformers.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 156,
+          "column": null,
+          "function": "connect",
+          "code": "DAR402",
+          "message": "[connect] +r ProviderError",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:connect:156: DAR402: +r ProviderError"
+        },
+        {
+          "line": 469,
+          "column": null,
+          "function": "_generate_sync",
+          "code": "DAR401",
+          "message": "[_generate_sync] -r RuntimeError",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:_generate_sync:469: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 516,
+          "column": null,
+          "function": "_stream_generate",
+          "code": "DAR401",
+          "message": "[_stream_generate] -r RuntimeError",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:_stream_generate:516: DAR401: -r RuntimeError"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\model_loader.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 108,
+          "column": null,
+          "function": "max_memory_bytes",
+          "code": "DAR201",
+          "message": "[max_memory_bytes] - return",
+          "raw": "src\\intellicrack\\providers\\model_loader.py:max_memory_bytes:108: DAR201: - return"
+        },
+        {
+          "line": 113,
+          "column": null,
+          "function": "max_memory_bytes",
+          "code": "DAR101",
+          "message": "[max_memory_bytes] - value",
+          "raw": "src\\intellicrack\\providers\\model_loader.py:max_memory_bytes:113: DAR101: - value"
+        }
+      ]
+    }
+  ]
 }

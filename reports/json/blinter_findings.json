@@ -1,0 +1,2790 @@
+{
+  "tool": "blinter",
+  "generated": "2026-01-30T14:45:57.353747",
+  "total_findings": 320,
+  "total_files": 37,
+  "files": [
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\support\\launch.bat",
+      "count": 15,
+      "findings": [
+        {
+          "line": 237,
+          "column": 0,
+          "severity": "error",
+          "code": "E016",
+          "message": "Invalid errorlevel comparison syntax",
+          "raw": "Line 237: Invalid errorlevel comparison syntax (E016)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 243,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 243: Missing exit code (W001)"
+        },
+        {
+          "line": 237,
+          "column": 0,
+          "severity": "warning",
+          "code": "W005",
+          "message": "Unquoted variable with spaces",
+          "raw": "Line 237: Unquoted variable with spaces (W005)"
+        },
+        {
+          "line": 237,
+          "column": 0,
+          "severity": "warning",
+          "code": "W021",
+          "message": "IF comparison without quotes",
+          "raw": "Line 237: IF comparison without quotes (W021)"
+        },
+        {
+          "line": 45,
+          "column": 0,
+          "severity": "warning",
+          "code": "W028",
+          "message": "Errorlevel handling difference between .bat/.cmd",
+          "raw": "Line 45: Errorlevel handling difference between .bat/.cmd (W028)"
+        },
+        {
+          "line": 46,
+          "column": 0,
+          "severity": "warning",
+          "code": "W035",
+          "message": "FOR /F tokenizing without proper delimiters",
+          "raw": "Line 46: FOR /F tokenizing without proper delimiters (W035)"
+        },
+        {
+          "line": 160,
+          "column": 0,
+          "severity": "warning",
+          "code": "W039",
+          "message": "Nested FOR loops without call optimization",
+          "raw": "Line 160: Nested FOR loops without call optimization (W039)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 77,
+          "column": 0,
+          "severity": "style",
+          "code": "S012",
+          "message": "Inconsistent indentation",
+          "raw": "Line 77: Inconsistent indentation (S012)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 26,
+          "column": 0,
+          "severity": "style",
+          "code": "S019",
+          "message": "Magic numbers in code",
+          "raw": "Line 26: Magic numbers in code (S019)"
+        },
+        {
+          "line": 138,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC013",
+          "message": "Command injection via variable substitution",
+          "raw": "Line 138: Command injection via variable substitution (SEC013)"
+        },
+        {
+          "line": 16,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 16: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\support\\createPdbXmlFiles.bat",
+      "count": 14,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 97,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 97: Missing exit code (W001)"
+        },
+        {
+          "line": 44,
+          "column": 0,
+          "severity": "warning",
+          "code": "W020",
+          "message": "FOR loop missing /F options for complex parsing",
+          "raw": "Line 44: FOR loop missing /F options for complex parsing (W020)"
+        },
+        {
+          "line": 29,
+          "column": 0,
+          "severity": "warning",
+          "code": "W028",
+          "message": "Errorlevel handling difference between .bat/.cmd",
+          "raw": "Line 29: Errorlevel handling difference between .bat/.cmd (W028)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 41,
+          "column": 0,
+          "severity": "style",
+          "code": "S018",
+          "message": "Missing subroutine documentation",
+          "raw": "Line 41: Missing subroutine documentation (S018)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S022",
+          "message": "Inconsistent variable naming convention",
+          "raw": "Line 1: Inconsistent variable naming convention (S022)"
+        },
+        {
+          "line": 39,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC002",
+          "message": "Unsafe SET command usage",
+          "raw": "Line 39: Unsafe SET command usage (SEC002)"
+        },
+        {
+          "line": 75,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC013",
+          "message": "Command injection via variable substitution",
+          "raw": "Line 75: Command injection via variable substitution (SEC013)"
+        },
+        {
+          "line": 44,
+          "column": 0,
+          "severity": "performance",
+          "code": "P009",
+          "message": "Inefficient FOR loop pattern",
+          "raw": "Line 44: Inefficient FOR loop pattern (P009)"
+        },
+        {
+          "line": 25,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 25: Redundant command echoing suppression (P020)"
+        },
+        {
+          "line": 26,
+          "column": 0,
+          "severity": "performance",
+          "code": "P024",
+          "message": "Redundant SETLOCAL/ENDLOCAL pairs",
+          "raw": "Line 26: Redundant SETLOCAL/ENDLOCAL pairs (P024)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\support\\gradle\\gradlew.bat",
+      "count": 13,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 119,
+          "column": 0,
+          "severity": "error",
+          "code": "E028",
+          "message": "Complex quote escaping error",
+          "raw": "Line 119: Complex quote escaping error (E028)"
+        },
+        {
+          "line": 123,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 123: Missing exit code (W001)"
+        },
+        {
+          "line": 101,
+          "column": 0,
+          "severity": "warning",
+          "code": "W005",
+          "message": "Unquoted variable with spaces",
+          "raw": "Line 101: Unquoted variable with spaces (W005)"
+        },
+        {
+          "line": 101,
+          "column": 0,
+          "severity": "warning",
+          "code": "W021",
+          "message": "IF comparison without quotes",
+          "raw": "Line 101: IF comparison without quotes (W021)"
+        },
+        {
+          "line": 30,
+          "column": 0,
+          "severity": "warning",
+          "code": "W028",
+          "message": "Errorlevel handling difference between .bat/.cmd",
+          "raw": "Line 30: Errorlevel handling difference between .bat/.cmd (W028)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S013",
+          "message": "Missing file header documentation",
+          "raw": "Line 1: Missing file header documentation (S013)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 5,
+          "column": 0,
+          "severity": "style",
+          "code": "S019",
+          "message": "Magic numbers in code",
+          "raw": "Line 5: Magic numbers in code (S019)"
+        },
+        {
+          "line": 46,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC013",
+          "message": "Command injection via variable substitution",
+          "raw": "Line 46: Command injection via variable substitution (SEC013)"
+        },
+        {
+          "line": 88,
+          "column": 0,
+          "severity": "performance",
+          "code": "P009",
+          "message": "Inefficient FOR loop pattern",
+          "raw": "Line 88: Inefficient FOR loop pattern (P009)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\support\\buildGhidraJar.bat",
+      "count": 13,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 45,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 45: Missing exit code (W001)"
+        },
+        {
+          "line": 23,
+          "column": 0,
+          "severity": "warning",
+          "code": "W028",
+          "message": "Errorlevel handling difference between .bat/.cmd",
+          "raw": "Line 23: Errorlevel handling difference between .bat/.cmd (W028)"
+        },
+        {
+          "line": 45,
+          "column": 0,
+          "severity": "warning",
+          "code": "W033",
+          "message": "Command execution may be ambiguous",
+          "raw": "Line 45: Command execution may be ambiguous (W033)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 16,
+          "column": 0,
+          "severity": "style",
+          "code": "S004",
+          "message": "Trailing whitespace",
+          "raw": "Line 16: Trailing whitespace (S004)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 45,
+          "column": 0,
+          "severity": "style",
+          "code": "S011",
+          "message": "Line exceeds maximum length",
+          "raw": "Line 45: Line exceeds maximum length (S011)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 41,
+          "column": 0,
+          "severity": "style",
+          "code": "S018",
+          "message": "Missing subroutine documentation",
+          "raw": "Line 41: Missing subroutine documentation (S018)"
+        },
+        {
+          "line": 45,
+          "column": 0,
+          "severity": "style",
+          "code": "S020",
+          "message": "Long line without continuation",
+          "raw": "Line 45: Long line without continuation (S020)"
+        },
+        {
+          "line": 43,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC002",
+          "message": "Unsafe SET command usage",
+          "raw": "Line 43: Unsafe SET command usage (SEC002)"
+        },
+        {
+          "line": 18,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 18: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\server\\ghidraSvr.bat",
+      "count": 12,
+      "findings": [
+        {
+          "line": 221,
+          "column": 0,
+          "severity": "error",
+          "code": "E015",
+          "message": "Missing colon in GOTO :EOF statement",
+          "raw": "Line 221: Missing colon in GOTO :EOF statement (E015)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 235,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 235: Missing exit code (W001)"
+        },
+        {
+          "line": 39,
+          "column": 0,
+          "severity": "warning",
+          "code": "W028",
+          "message": "Errorlevel handling difference between .bat/.cmd",
+          "raw": "Line 39: Errorlevel handling difference between .bat/.cmd (W028)"
+        },
+        {
+          "line": 59,
+          "column": 0,
+          "severity": "warning",
+          "code": "W035",
+          "message": "FOR /F tokenizing without proper delimiters",
+          "raw": "Line 59: FOR /F tokenizing without proper delimiters (W035)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 139,
+          "column": 0,
+          "severity": "style",
+          "code": "S012",
+          "message": "Inconsistent indentation",
+          "raw": "Line 139: Inconsistent indentation (S012)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S022",
+          "message": "Inconsistent variable naming convention",
+          "raw": "Line 1: Inconsistent variable naming convention (S022)"
+        },
+        {
+          "line": 80,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC016",
+          "message": "Automatic restart without failure limits",
+          "raw": "Line 80: Automatic restart without failure limits (SEC016)"
+        },
+        {
+          "line": 16,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 16: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\support\\analyzeHeadless.bat",
+      "count": 12,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 70,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 70: Missing exit code (W001)"
+        },
+        {
+          "line": 24,
+          "column": 0,
+          "severity": "warning",
+          "code": "W028",
+          "message": "Errorlevel handling difference between .bat/.cmd",
+          "raw": "Line 24: Errorlevel handling difference between .bat/.cmd (W028)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 70,
+          "column": 0,
+          "severity": "style",
+          "code": "S011",
+          "message": "Line exceeds maximum length",
+          "raw": "Line 70: Line exceeds maximum length (S011)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 70,
+          "column": 0,
+          "severity": "style",
+          "code": "S020",
+          "message": "Long line without continuation",
+          "raw": "Line 70: Long line without continuation (S020)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S022",
+          "message": "Inconsistent variable naming convention",
+          "raw": "Line 1: Inconsistent variable naming convention (S022)"
+        },
+        {
+          "line": 18,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 18: Redundant command echoing suppression (P020)"
+        },
+        {
+          "line": 19,
+          "column": 0,
+          "severity": "performance",
+          "code": "P024",
+          "message": "Redundant SETLOCAL/ENDLOCAL pairs",
+          "raw": "Line 19: Redundant SETLOCAL/ENDLOCAL pairs (P024)"
+        },
+        {
+          "line": 68,
+          "column": 0,
+          "severity": "performance",
+          "code": "P026",
+          "message": "Redundant DISABLEDELAYEDEXPANSION",
+          "raw": "Line 68: Redundant DISABLEDELAYEDEXPANSION (P026)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\support\\bsim.bat",
+      "count": 11,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 38,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 38: Missing exit code (W001)"
+        },
+        {
+          "line": 26,
+          "column": 0,
+          "severity": "warning",
+          "code": "W028",
+          "message": "Errorlevel handling difference between .bat/.cmd",
+          "raw": "Line 26: Errorlevel handling difference between .bat/.cmd (W028)"
+        },
+        {
+          "line": 38,
+          "column": 0,
+          "severity": "warning",
+          "code": "W033",
+          "message": "Command execution may be ambiguous",
+          "raw": "Line 38: Command execution may be ambiguous (W033)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 21,
+          "column": 0,
+          "severity": "style",
+          "code": "S004",
+          "message": "Trailing whitespace",
+          "raw": "Line 21: Trailing whitespace (S004)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 38,
+          "column": 0,
+          "severity": "style",
+          "code": "S011",
+          "message": "Line exceeds maximum length",
+          "raw": "Line 38: Line exceeds maximum length (S011)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 38,
+          "column": 0,
+          "severity": "style",
+          "code": "S020",
+          "message": "Long line without continuation",
+          "raw": "Line 38: Long line without continuation (S020)"
+        },
+        {
+          "line": 18,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 18: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\support\\dbgengGADPServerRun.bat",
+      "count": 11,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 25,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 25: Missing exit code (W001)"
+        },
+        {
+          "line": 25,
+          "column": 0,
+          "severity": "warning",
+          "code": "W033",
+          "message": "Command execution may be ambiguous",
+          "raw": "Line 25: Command execution may be ambiguous (W033)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 21,
+          "column": 0,
+          "severity": "style",
+          "code": "S004",
+          "message": "Trailing whitespace",
+          "raw": "Line 21: Trailing whitespace (S004)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 25,
+          "column": 0,
+          "severity": "style",
+          "code": "S011",
+          "message": "Line exceeds maximum length",
+          "raw": "Line 25: Line exceeds maximum length (S011)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 25,
+          "column": 0,
+          "severity": "style",
+          "code": "S020",
+          "message": "Long line without continuation",
+          "raw": "Line 25: Long line without continuation (S020)"
+        },
+        {
+          "line": 19,
+          "column": 0,
+          "severity": "performance",
+          "code": "P003",
+          "message": "Unnecessary SETLOCAL",
+          "raw": "Line 19: Unnecessary SETLOCAL (P003)"
+        },
+        {
+          "line": 18,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 18: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\support\\dbgmodelGADPServerRun.bat",
+      "count": 11,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 25,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 25: Missing exit code (W001)"
+        },
+        {
+          "line": 25,
+          "column": 0,
+          "severity": "warning",
+          "code": "W033",
+          "message": "Command execution may be ambiguous",
+          "raw": "Line 25: Command execution may be ambiguous (W033)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 21,
+          "column": 0,
+          "severity": "style",
+          "code": "S004",
+          "message": "Trailing whitespace",
+          "raw": "Line 21: Trailing whitespace (S004)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 25,
+          "column": 0,
+          "severity": "style",
+          "code": "S011",
+          "message": "Line exceeds maximum length",
+          "raw": "Line 25: Line exceeds maximum length (S011)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 25,
+          "column": 0,
+          "severity": "style",
+          "code": "S020",
+          "message": "Long line without continuation",
+          "raw": "Line 25: Long line without continuation (S020)"
+        },
+        {
+          "line": 19,
+          "column": 0,
+          "severity": "performance",
+          "code": "P003",
+          "message": "Unnecessary SETLOCAL",
+          "raw": "Line 19: Unnecessary SETLOCAL (P003)"
+        },
+        {
+          "line": 18,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 18: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\support\\pyghidraRun.bat",
+      "count": 11,
+      "findings": [
+        {
+          "line": 50,
+          "column": 0,
+          "severity": "error",
+          "code": "E009",
+          "message": "Mismatched quotes",
+          "raw": "Line 50: Mismatched quotes (E009)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 61,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 61: Missing exit code (W001)"
+        },
+        {
+          "line": 22,
+          "column": 0,
+          "severity": "warning",
+          "code": "W028",
+          "message": "Errorlevel handling difference between .bat/.cmd",
+          "raw": "Line 22: Errorlevel handling difference between .bat/.cmd (W028)"
+        },
+        {
+          "line": 23,
+          "column": 0,
+          "severity": "warning",
+          "code": "W035",
+          "message": "FOR /F tokenizing without proper delimiters",
+          "raw": "Line 23: FOR /F tokenizing without proper delimiters (W035)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 54,
+          "column": 0,
+          "severity": "style",
+          "code": "S018",
+          "message": "Missing subroutine documentation",
+          "raw": "Line 54: Missing subroutine documentation (S018)"
+        },
+        {
+          "line": 26,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC002",
+          "message": "Unsafe SET command usage",
+          "raw": "Line 26: Unsafe SET command usage (SEC002)"
+        },
+        {
+          "line": 18,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 18: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\WindowsPatch\\WindowsActivator.cmd",
+      "count": 11,
+      "findings": [
+        {
+          "line": 14289,
+          "column": 0,
+          "severity": "error",
+          "code": "E023",
+          "message": "Missing quotes in SET /A with special characters",
+          "raw": "Line 14289: Missing quotes in SET /A with special characters (E023)"
+        },
+        {
+          "line": 19845,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 19845: Missing exit code (W001)"
+        },
+        {
+          "line": 18930,
+          "column": 0,
+          "severity": "warning",
+          "code": "W037",
+          "message": "FOR /F missing eol option for comments",
+          "raw": "Line 18930: FOR /F missing eol option for comments (W037)"
+        },
+        {
+          "line": 247,
+          "column": 0,
+          "severity": "warning",
+          "code": "W038",
+          "message": "FOR /R with explicit filename needs wildcard",
+          "raw": "Line 247: FOR /R with explicit filename needs wildcard (W038)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1438,
+          "column": 0,
+          "severity": "style",
+          "code": "S012",
+          "message": "Inconsistent indentation",
+          "raw": "Line 1438: Inconsistent indentation (S012)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S013",
+          "message": "Missing file header documentation",
+          "raw": "Line 1: Missing file header documentation (S013)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S022",
+          "message": "Inconsistent variable naming convention",
+          "raw": "Line 1: Inconsistent variable naming convention (S022)"
+        },
+        {
+          "line": 16956,
+          "column": 0,
+          "severity": "style",
+          "code": "SEC006",
+          "message": "Hardcoded absolute path",
+          "raw": "Line 16956: Hardcoded absolute path (SEC006)"
+        },
+        {
+          "line": 5618,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC011",
+          "message": "Unvalidated path traversal",
+          "raw": "Line 5618: Unvalidated path traversal (SEC011)"
+        },
+        {
+          "line": 12,
+          "column": 0,
+          "severity": "performance",
+          "code": "P024",
+          "message": "Redundant SETLOCAL/ENDLOCAL pairs",
+          "raw": "Line 12: Redundant SETLOCAL/ENDLOCAL pairs (P024)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\server\\svrAdmin.bat",
+      "count": 10,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 63,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 63: Missing exit code (W001)"
+        },
+        {
+          "line": 42,
+          "column": 0,
+          "severity": "warning",
+          "code": "W028",
+          "message": "Errorlevel handling difference between .bat/.cmd",
+          "raw": "Line 42: Errorlevel handling difference between .bat/.cmd (W028)"
+        },
+        {
+          "line": 63,
+          "column": 0,
+          "severity": "warning",
+          "code": "W033",
+          "message": "Command execution may be ambiguous",
+          "raw": "Line 63: Command execution may be ambiguous (W033)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 59,
+          "column": 0,
+          "severity": "style",
+          "code": "S018",
+          "message": "Missing subroutine documentation",
+          "raw": "Line 59: Missing subroutine documentation (S018)"
+        },
+        {
+          "line": 61,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC002",
+          "message": "Unsafe SET command usage",
+          "raw": "Line 61: Unsafe SET command usage (SEC002)"
+        },
+        {
+          "line": 16,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 16: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\support\\convertStorage.bat",
+      "count": 10,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 24,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 24: Missing exit code (W001)"
+        },
+        {
+          "line": 22,
+          "column": 0,
+          "severity": "warning",
+          "code": "W028",
+          "message": "Errorlevel handling difference between .bat/.cmd",
+          "raw": "Line 22: Errorlevel handling difference between .bat/.cmd (W028)"
+        },
+        {
+          "line": 24,
+          "column": 0,
+          "severity": "warning",
+          "code": "W033",
+          "message": "Command execution may be ambiguous",
+          "raw": "Line 24: Command execution may be ambiguous (W033)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 24,
+          "column": 0,
+          "severity": "style",
+          "code": "S011",
+          "message": "Line exceeds maximum length",
+          "raw": "Line 24: Line exceeds maximum length (S011)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 24,
+          "column": 0,
+          "severity": "style",
+          "code": "S020",
+          "message": "Long line without continuation",
+          "raw": "Line 24: Long line without continuation (S020)"
+        },
+        {
+          "line": 18,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 18: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\support\\ghidraDebug.bat",
+      "count": 10,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 33,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 33: Missing exit code (W001)"
+        },
+        {
+          "line": 27,
+          "column": 0,
+          "severity": "warning",
+          "code": "W028",
+          "message": "Errorlevel handling difference between .bat/.cmd",
+          "raw": "Line 27: Errorlevel handling difference between .bat/.cmd (W028)"
+        },
+        {
+          "line": 33,
+          "column": 0,
+          "severity": "warning",
+          "code": "W033",
+          "message": "Command execution may be ambiguous",
+          "raw": "Line 33: Command execution may be ambiguous (W033)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 21,
+          "column": 0,
+          "severity": "style",
+          "code": "S004",
+          "message": "Trailing whitespace",
+          "raw": "Line 21: Trailing whitespace (S004)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 31,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC002",
+          "message": "Unsafe SET command usage",
+          "raw": "Line 31: Unsafe SET command usage (SEC002)"
+        },
+        {
+          "line": 18,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 18: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\support\\jythonRun.bat",
+      "count": 10,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 42,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 42: Missing exit code (W001)"
+        },
+        {
+          "line": 30,
+          "column": 0,
+          "severity": "warning",
+          "code": "W028",
+          "message": "Errorlevel handling difference between .bat/.cmd",
+          "raw": "Line 30: Errorlevel handling difference between .bat/.cmd (W028)"
+        },
+        {
+          "line": 42,
+          "column": 0,
+          "severity": "warning",
+          "code": "W033",
+          "message": "Command execution may be ambiguous",
+          "raw": "Line 42: Command execution may be ambiguous (W033)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 42,
+          "column": 0,
+          "severity": "style",
+          "code": "S011",
+          "message": "Line exceeds maximum length",
+          "raw": "Line 42: Line exceeds maximum length (S011)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 42,
+          "column": 0,
+          "severity": "style",
+          "code": "S020",
+          "message": "Long line without continuation",
+          "raw": "Line 42: Long line without continuation (S020)"
+        },
+        {
+          "line": 18,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 18: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\support\\sleigh.bat",
+      "count": 10,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 24,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 24: Missing exit code (W001)"
+        },
+        {
+          "line": 22,
+          "column": 0,
+          "severity": "warning",
+          "code": "W028",
+          "message": "Errorlevel handling difference between .bat/.cmd",
+          "raw": "Line 22: Errorlevel handling difference between .bat/.cmd (W028)"
+        },
+        {
+          "line": 24,
+          "column": 0,
+          "severity": "warning",
+          "code": "W033",
+          "message": "Command execution may be ambiguous",
+          "raw": "Line 24: Command execution may be ambiguous (W033)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 24,
+          "column": 0,
+          "severity": "style",
+          "code": "S011",
+          "message": "Line exceeds maximum length",
+          "raw": "Line 24: Line exceeds maximum length (S011)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 24,
+          "column": 0,
+          "severity": "style",
+          "code": "S020",
+          "message": "Long line without continuation",
+          "raw": "Line 24: Long line without continuation (S020)"
+        },
+        {
+          "line": 18,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 18: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\server\\svrInstall.bat",
+      "count": 9,
+      "findings": [
+        {
+          "line": 19,
+          "column": 0,
+          "severity": "error",
+          "code": "E014",
+          "message": "Missing colon in CALL statement",
+          "raw": "Line 19: Missing colon in CALL statement (E014)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 21,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 21: Missing exit code (W001)"
+        },
+        {
+          "line": 19,
+          "column": 0,
+          "severity": "warning",
+          "code": "W033",
+          "message": "Command execution may be ambiguous",
+          "raw": "Line 19: Command execution may be ambiguous (W033)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 17,
+          "column": 0,
+          "severity": "performance",
+          "code": "P003",
+          "message": "Unnecessary SETLOCAL",
+          "raw": "Line 17: Unnecessary SETLOCAL (P003)"
+        },
+        {
+          "line": 16,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 16: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\server\\svrUninstall.bat",
+      "count": 9,
+      "findings": [
+        {
+          "line": 19,
+          "column": 0,
+          "severity": "error",
+          "code": "E014",
+          "message": "Missing colon in CALL statement",
+          "raw": "Line 19: Missing colon in CALL statement (E014)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 21,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 21: Missing exit code (W001)"
+        },
+        {
+          "line": 19,
+          "column": 0,
+          "severity": "warning",
+          "code": "W033",
+          "message": "Command execution may be ambiguous",
+          "raw": "Line 19: Command execution may be ambiguous (W033)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 17,
+          "column": 0,
+          "severity": "performance",
+          "code": "P003",
+          "message": "Unnecessary SETLOCAL",
+          "raw": "Line 17: Unnecessary SETLOCAL (P003)"
+        },
+        {
+          "line": 16,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 16: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\support\\ghidraClean.bat",
+      "count": 9,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 24,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 24: Missing exit code (W001)"
+        },
+        {
+          "line": 22,
+          "column": 0,
+          "severity": "warning",
+          "code": "W028",
+          "message": "Errorlevel handling difference between .bat/.cmd",
+          "raw": "Line 22: Errorlevel handling difference between .bat/.cmd (W028)"
+        },
+        {
+          "line": 24,
+          "column": 0,
+          "severity": "warning",
+          "code": "W033",
+          "message": "Command execution may be ambiguous",
+          "raw": "Line 24: Command execution may be ambiguous (W033)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 22,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC002",
+          "message": "Unsafe SET command usage",
+          "raw": "Line 22: Unsafe SET command usage (SEC002)"
+        },
+        {
+          "line": 19,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 19: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\support\\jshellRun.bat",
+      "count": 9,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 25,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 25: Missing exit code (W001)"
+        },
+        {
+          "line": 25,
+          "column": 0,
+          "severity": "warning",
+          "code": "W033",
+          "message": "Command execution may be ambiguous",
+          "raw": "Line 25: Command execution may be ambiguous (W033)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 21,
+          "column": 0,
+          "severity": "style",
+          "code": "S004",
+          "message": "Trailing whitespace",
+          "raw": "Line 21: Trailing whitespace (S004)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 19,
+          "column": 0,
+          "severity": "performance",
+          "code": "P003",
+          "message": "Unnecessary SETLOCAL",
+          "raw": "Line 19: Unnecessary SETLOCAL (P003)"
+        },
+        {
+          "line": 18,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 18: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\ghidraRun.bat",
+      "count": 9,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 25,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 25: Missing exit code (W001)"
+        },
+        {
+          "line": 25,
+          "column": 0,
+          "severity": "warning",
+          "code": "W033",
+          "message": "Command execution may be ambiguous",
+          "raw": "Line 25: Command execution may be ambiguous (W033)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 21,
+          "column": 0,
+          "severity": "style",
+          "code": "S004",
+          "message": "Trailing whitespace",
+          "raw": "Line 21: Trailing whitespace (S004)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 19,
+          "column": 0,
+          "severity": "performance",
+          "code": "P003",
+          "message": "Unnecessary SETLOCAL",
+          "raw": "Line 19: Unnecessary SETLOCAL (P003)"
+        },
+        {
+          "line": 18,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 18: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-agent-dbgeng\\data\\debugger-launchers\\local-dbgeng-trace.bat",
+      "count": 8,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 36,
+          "column": 0,
+          "severity": "warning",
+          "code": "E006",
+          "message": "Potentially undefined variable reference",
+          "raw": "Line 36: Potentially undefined variable reference (E006)"
+        },
+        {
+          "line": 36,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 36: Missing exit code (W001)"
+        },
+        {
+          "line": 35,
+          "column": 0,
+          "severity": "warning",
+          "code": "W028",
+          "message": "Errorlevel handling difference between .bat/.cmd",
+          "raw": "Line 35: Errorlevel handling difference between .bat/.cmd (W028)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 33,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 33: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\support\\GhidraGo\\ghidraGo.bat",
+      "count": 8,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 25,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 25: Missing exit code (W001)"
+        },
+        {
+          "line": 23,
+          "column": 0,
+          "severity": "warning",
+          "code": "W028",
+          "message": "Errorlevel handling difference between .bat/.cmd",
+          "raw": "Line 23: Errorlevel handling difference between .bat/.cmd (W028)"
+        },
+        {
+          "line": 25,
+          "column": 0,
+          "severity": "warning",
+          "code": "W033",
+          "message": "Command execution may be ambiguous",
+          "raw": "Line 25: Command execution may be ambiguous (W033)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 18,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 18: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\AdobeInjector\\Source\\Rebranded\\build.bat",
+      "count": 7,
+      "findings": [
+        {
+          "line": 67,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 67: Missing exit code (W001)"
+        },
+        {
+          "line": 27,
+          "column": 0,
+          "severity": "warning",
+          "code": "W028",
+          "message": "Errorlevel handling difference between .bat/.cmd",
+          "raw": "Line 27: Errorlevel handling difference between .bat/.cmd (W028)"
+        },
+        {
+          "line": 42,
+          "column": 0,
+          "severity": "style",
+          "code": "S003",
+          "message": "Inconsistent command capitalization",
+          "raw": "Line 42: Inconsistent command capitalization (S003)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 44,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC002",
+          "message": "Unsafe SET command usage",
+          "raw": "Line 44: Unsafe SET command usage (SEC002)"
+        },
+        {
+          "line": 42,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC009",
+          "message": "PowerShell execution policy bypass",
+          "raw": "Line 42: PowerShell execution policy bypass (SEC009)"
+        },
+        {
+          "line": 5,
+          "column": 0,
+          "severity": "performance",
+          "code": "P004",
+          "message": "Unnecessary ENABLEDELAYEDEXPANSION",
+          "raw": "Line 5: Unnecessary ENABLEDELAYEDEXPANSION (P004)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-agent-dbgeng\\data\\debugger-launchers\\kernel-dbgeng.bat",
+      "count": 7,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 37,
+          "column": 0,
+          "severity": "warning",
+          "code": "E006",
+          "message": "Potentially undefined variable reference",
+          "raw": "Line 37: Potentially undefined variable reference (E006)"
+        },
+        {
+          "line": 37,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 37: Missing exit code (W001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 35,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 35: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-agent-dbgeng\\data\\debugger-launchers\\local-dbgeng-attach.bat",
+      "count": 7,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 35,
+          "column": 0,
+          "severity": "warning",
+          "code": "E006",
+          "message": "Potentially undefined variable reference",
+          "raw": "Line 35: Potentially undefined variable reference (E006)"
+        },
+        {
+          "line": 35,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 35: Missing exit code (W001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 33,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 33: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-agent-dbgeng\\data\\debugger-launchers\\local-dbgeng-ext.bat",
+      "count": 7,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 43,
+          "column": 0,
+          "severity": "warning",
+          "code": "E006",
+          "message": "Potentially undefined variable reference",
+          "raw": "Line 43: Potentially undefined variable reference (E006)"
+        },
+        {
+          "line": 43,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 43: Missing exit code (W001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 41,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 41: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-agent-dbgeng\\data\\debugger-launchers\\local-dbgeng.bat",
+      "count": 7,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 37,
+          "column": 0,
+          "severity": "warning",
+          "code": "E006",
+          "message": "Potentially undefined variable reference",
+          "raw": "Line 37: Potentially undefined variable reference (E006)"
+        },
+        {
+          "line": 37,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 37: Missing exit code (W001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 35,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 35: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-agent-dbgeng\\data\\debugger-launchers\\remote-dbgeng.bat",
+      "count": 7,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 33,
+          "column": 0,
+          "severity": "warning",
+          "code": "E006",
+          "message": "Potentially undefined variable reference",
+          "raw": "Line 33: Potentially undefined variable reference (E006)"
+        },
+        {
+          "line": 33,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 33: Missing exit code (W001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 31,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 31: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-agent-dbgeng\\data\\debugger-launchers\\svrcx-dbgeng.bat",
+      "count": 7,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 38,
+          "column": 0,
+          "severity": "warning",
+          "code": "E006",
+          "message": "Potentially undefined variable reference",
+          "raw": "Line 38: Potentially undefined variable reference (E006)"
+        },
+        {
+          "line": 38,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 38: Missing exit code (W001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 1: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 36,
+          "column": 0,
+          "severity": "performance",
+          "code": "P020",
+          "message": "Redundant command echoing suppression",
+          "raw": "Line 36: Redundant command echoing suppression (P020)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\pmd\\bin\\pmd.bat",
+      "count": 5,
+      "findings": [
+        {
+          "line": 17,
+          "column": 0,
+          "severity": "warning",
+          "code": "W020",
+          "message": "FOR loop missing /F options for complex parsing",
+          "raw": "Line 17: FOR loop missing /F options for complex parsing (W020)"
+        },
+        {
+          "line": 4,
+          "column": 0,
+          "severity": "warning",
+          "code": "W028",
+          "message": "Errorlevel handling difference between .bat/.cmd",
+          "raw": "Line 4: Errorlevel handling difference between .bat/.cmd (W028)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S022",
+          "message": "Inconsistent variable naming convention",
+          "raw": "Line 1: Inconsistent variable naming convention (S022)"
+        },
+        {
+          "line": 37,
+          "column": 0,
+          "severity": "performance",
+          "code": "P024",
+          "message": "Redundant SETLOCAL/ENDLOCAL pairs",
+          "raw": "Line 37: Redundant SETLOCAL/ENDLOCAL pairs (P024)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\pmd-bin-7.8.0\\bin\\pmd.bat",
+      "count": 5,
+      "findings": [
+        {
+          "line": 17,
+          "column": 0,
+          "severity": "warning",
+          "code": "W020",
+          "message": "FOR loop missing /F options for complex parsing",
+          "raw": "Line 17: FOR loop missing /F options for complex parsing (W020)"
+        },
+        {
+          "line": 4,
+          "column": 0,
+          "severity": "warning",
+          "code": "W028",
+          "message": "Errorlevel handling difference between .bat/.cmd",
+          "raw": "Line 4: Errorlevel handling difference between .bat/.cmd (W028)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S022",
+          "message": "Inconsistent variable naming convention",
+          "raw": "Line 1: Inconsistent variable naming convention (S022)"
+        },
+        {
+          "line": 37,
+          "column": 0,
+          "severity": "performance",
+          "code": "P024",
+          "message": "Redundant SETLOCAL/ENDLOCAL pairs",
+          "raw": "Line 37: Redundant SETLOCAL/ENDLOCAL pairs (P024)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\NASM\\nasmpath.bat",
+      "count": 4,
+      "findings": [
+        {
+          "line": 2,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 2: Missing exit code (W001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "SEC006",
+          "message": "Hardcoded absolute path",
+          "raw": "Line 1: Hardcoded absolute path (SEC006)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\REMOVE_NUL.cmd",
+      "count": 4,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 25,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 25: Missing exit code (W001)"
+        },
+        {
+          "line": 4,
+          "column": 0,
+          "severity": "style",
+          "code": "S016",
+          "message": "Potentially unsafe double-colon comment",
+          "raw": "Line 4: Potentially unsafe double-colon comment (S016)"
+        },
+        {
+          "line": 2,
+          "column": 0,
+          "severity": "performance",
+          "code": "P003",
+          "message": "Unnecessary SETLOCAL",
+          "raw": "Line 2: Unnecessary SETLOCAL (P003)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\CLI Coding\\UpdateTools.cmd",
+      "count": 3,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
+        {
+          "line": 13,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 13: Missing exit code (W001)"
+        },
+        {
+          "line": 3,
+          "column": 0,
+          "severity": "warning",
+          "code": "W009",
+          "message": "Windows version compatibility",
+          "raw": "Line 3: Windows version compatibility (W009)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\radare2\\bin\\r2.bat",
+      "count": 3,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 1: Missing exit code (W001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S001",
+          "message": "Missing @ECHO OFF at file start",
+          "raw": "Line 1: Missing @ECHO OFF at file start (S001)"
+        },
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tools\\AdobeInjector\\Source\\GenP.v3.7.1\\v3.7.1-Source\\run_build.bat",
+      "count": 2,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "style",
+          "code": "S007",
+          "message": "BAT extension used instead of CMD for newer Windows",
+          "raw": "Line 1: BAT extension used instead of CMD for newer Windows (S007)"
+        },
+        {
+          "line": 12,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC009",
+          "message": "PowerShell execution policy bypass",
+          "raw": "Line 12: PowerShell execution policy bypass (SEC009)"
+        }
+      ]
+    }
+  ]
+}

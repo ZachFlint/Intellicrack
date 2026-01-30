@@ -63,9 +63,7 @@ class EmbeddedToolWidget(QWidget):
         self._layout.setContentsMargins(0, 0, 0, 0)
 
         self._status_label = QLabel(f"Loading {self.get_tool_display_name()}...")
-        self._status_label.setStyleSheet(
-            "color: #888; font-size: 14px; padding: 20px;"
-        )
+        self._status_label.setStyleSheet("color: #888; font-size: 14px; padding: 20px;")
         self._layout.addWidget(self._status_label)
 
     def get_executable_path(self) -> Path | None:
@@ -196,9 +194,7 @@ class EmbeddedToolWidget(QWidget):
                 "window_not_found",
                 extra={"tool": self.get_tool_display_name()},
             )
-            self._status_label.setText(
-                f"Waiting for {self.get_tool_display_name()} window..."
-            )
+            self._status_label.setText(f"Waiting for {self.get_tool_display_name()} window...")
             QTimer.singleShot(1000, self._attempt_embedding)
             return
 
@@ -342,9 +338,7 @@ class EmbeddedToolWidget(QWidget):
         Returns:
             True if a window is embedded, False otherwise.
         """
-        return self._embedded_hwnd != 0 and Win32WindowHelper.is_window_valid(
-            self._embedded_hwnd
-        )
+        return self._embedded_hwnd != 0 and Win32WindowHelper.is_window_valid(self._embedded_hwnd)
 
     def get_loaded_file(self) -> Path | None:
         """Get the currently loaded file path.

@@ -1,52 +1,186 @@
 {
   "tool": "mypy",
-  "generated": "2026-01-18T15:59:31.276028",
-  "total_findings": 26,
-  "total_files": 13,
+  "generated": "2026-01-30T14:03:54.877280",
+  "total_findings": 45,
+  "total_files": 15,
   "files": [
     {
-      "path": "tests\\test_ui\\test_font_manager.py",
-      "count": 5,
+      "path": "src\\intellicrack\\providers\\xpu_utils.py",
+      "count": 14,
       "findings": [
         {
-          "line": 108,
+          "line": 62,
           "column": null,
           "severity": "error",
-          "code": "attr-defined",
-          "message": "\"QFont\" has no attribute \"styleHint\"",
-          "raw": "tests\\test_ui\\test_font_manager.py:108: error: \"QFont\" has no attribute \"styleHint\"  [attr-defined]"
+          "code": "valid-type",
+          "message": "Module \"torch\" is not valid as a type",
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:62: error: Module \"torch\" is not valid as a type  [valid-type]"
         },
         {
-          "line": 108,
+          "line": 62,
           "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"type[QFont]\" has no attribute \"StyleHint\"",
-          "raw": "tests\\test_ui\\test_font_manager.py:108: error: \"type[QFont]\" has no attribute \"StyleHint\"  [attr-defined]"
+          "severity": "note",
+          "code": "",
+          "message": "Perhaps you meant to use a protocol matching the module structure?",
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:62: note: Perhaps you meant to use a protocol matching the module structure?"
         },
         {
-          "line": 113,
+          "line": 90,
           "column": null,
           "severity": "error",
-          "code": "attr-defined",
-          "message": "\"QFont\" has no attribute \"fixedPitch\"",
-          "raw": "tests\\test_ui\\test_font_manager.py:113: error: \"QFont\" has no attribute \"fixedPitch\"  [attr-defined]"
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:90: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 143,
+          "line": 114,
           "column": null,
           "severity": "error",
-          "code": "attr-defined",
-          "message": "\"QFont\" has no attribute \"styleHint\"",
-          "raw": "tests\\test_ui\\test_font_manager.py:143: error: \"QFont\" has no attribute \"styleHint\"  [attr-defined]"
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:114: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 143,
+          "line": 137,
+          "column": null,
+          "severity": "error",
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:137: error: Statement is unreachable  [unreachable]"
+        },
+        {
+          "line": 218,
+          "column": null,
+          "severity": "error",
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:218: error: Statement is unreachable  [unreachable]"
+        },
+        {
+          "line": 351,
+          "column": null,
+          "severity": "error",
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:351: error: Statement is unreachable  [unreachable]"
+        },
+        {
+          "line": 370,
+          "column": null,
+          "severity": "error",
+          "code": "valid-type",
+          "message": "Module \"torch\" is not valid as a type",
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:370: error: Module \"torch\" is not valid as a type  [valid-type]"
+        },
+        {
+          "line": 370,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Perhaps you meant to use a protocol matching the module structure?",
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:370: note: Perhaps you meant to use a protocol matching the module structure?"
+        },
+        {
+          "line": 381,
           "column": null,
           "severity": "error",
           "code": "attr-defined",
-          "message": "\"type[QFont]\" has no attribute \"StyleHint\"",
-          "raw": "tests\\test_ui\\test_font_manager.py:143: error: \"type[QFont]\" has no attribute \"StyleHint\"  [attr-defined]"
+          "message": "torch_type? has no attribute \"zeros\"",
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:381: error: torch_type? has no attribute \"zeros\"  [attr-defined]"
+        },
+        {
+          "line": 384,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "torch_type? has no attribute \"xpu\"",
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:384: error: torch_type? has no attribute \"xpu\"  [attr-defined]"
+        },
+        {
+          "line": 402,
+          "column": null,
+          "severity": "error",
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:402: error: Statement is unreachable  [unreachable]"
+        },
+        {
+          "line": 439,
+          "column": null,
+          "severity": "error",
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:439: error: Statement is unreachable  [unreachable]"
+        },
+        {
+          "line": 547,
+          "column": null,
+          "severity": "error",
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:547: error: Statement is unreachable  [unreachable]"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_ui\\test_app_embedded_tools.py",
+      "count": 7,
+      "findings": [
+        {
+          "line": 191,
+          "column": null,
+          "severity": "error",
+          "code": "method-assign",
+          "message": "Cannot assign to a method",
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:191: error: Cannot assign to a method  [method-assign]"
+        },
+        {
+          "line": 212,
+          "column": null,
+          "severity": "error",
+          "code": "method-assign",
+          "message": "Cannot assign to a method",
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:212: error: Cannot assign to a method  [method-assign]"
+        },
+        {
+          "line": 235,
+          "column": null,
+          "severity": "error",
+          "code": "method-assign",
+          "message": "Cannot assign to a method",
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:235: error: Cannot assign to a method  [method-assign]"
+        },
+        {
+          "line": 258,
+          "column": null,
+          "severity": "error",
+          "code": "method-assign",
+          "message": "Cannot assign to a method",
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:258: error: Cannot assign to a method  [method-assign]"
+        },
+        {
+          "line": 345,
+          "column": null,
+          "severity": "error",
+          "code": "method-assign",
+          "message": "Cannot assign to a method",
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:345: error: Cannot assign to a method  [method-assign]"
+        },
+        {
+          "line": 367,
+          "column": null,
+          "severity": "error",
+          "code": "method-assign",
+          "message": "Cannot assign to a method",
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:367: error: Cannot assign to a method  [method-assign]"
+        },
+        {
+          "line": 389,
+          "column": null,
+          "severity": "error",
+          "code": "method-assign",
+          "message": "Cannot assign to a method",
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:389: error: Cannot assign to a method  [method-assign]"
         }
       ]
     },
@@ -135,24 +269,32 @@
       ]
     },
     {
-      "path": "tests\\test_ui\\test_splash_screen.py",
-      "count": 2,
+      "path": "tests\\test_ui\\test_font_manager.py",
+      "count": 3,
       "findings": [
         {
-          "line": 49,
+          "line": 112,
           "column": null,
           "severity": "error",
           "code": "attr-defined",
-          "message": "\"type[Qt]\" has no attribute \"WindowType\"",
-          "raw": "tests\\test_ui\\test_splash_screen.py:49: error: \"type[Qt]\" has no attribute \"WindowType\"  [attr-defined]"
+          "message": "\"QFont\" has no attribute \"styleHint\"",
+          "raw": "tests\\test_ui\\test_font_manager.py:112: error: \"QFont\" has no attribute \"styleHint\"  [attr-defined]"
         },
         {
-          "line": 50,
+          "line": 117,
           "column": null,
           "severity": "error",
           "code": "attr-defined",
-          "message": "\"type[Qt]\" has no attribute \"WindowType\"",
-          "raw": "tests\\test_ui\\test_splash_screen.py:50: error: \"type[Qt]\" has no attribute \"WindowType\"  [attr-defined]"
+          "message": "\"QFont\" has no attribute \"fixedPitch\"",
+          "raw": "tests\\test_ui\\test_font_manager.py:117: error: \"QFont\" has no attribute \"fixedPitch\"  [attr-defined]"
+        },
+        {
+          "line": 147,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"QFont\" has no attribute \"styleHint\"",
+          "raw": "tests\\test_ui\\test_font_manager.py:147: error: \"QFont\" has no attribute \"styleHint\"  [attr-defined]"
         }
       ]
     },
@@ -179,30 +321,52 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\core\\types.py",
-      "count": 1,
+      "path": "tests\\test_providers\\test_local_transformers_provider.py",
+      "count": 2,
       "findings": [
         {
-          "line": 1023,
+          "line": 444,
           "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "\"AttachError\" defined here",
-          "raw": "src\\intellicrack\\core\\types.py:1023: note: \"AttachError\" defined here"
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 1 to \"_format_prompt\" of \"LocalTransformersProvider\" has incompatible type \"list[dict[str, str]]\"; expected \"list[dict[str, object]]\"",
+          "raw": "tests\\test_providers\\test_local_transformers_provider.py:444: error: Argument 1 to \"_format_prompt\" of \"LocalTransformersProvider\" has incompatible type \"list[dict[str, str]]\"; expected \"list[dict[str, object]]\"  [arg-type]"
+        },
+        {
+          "line": 456,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 1 to \"_format_prompt\" of \"LocalTransformersProvider\" has incompatible type \"list[dict[str, str]]\"; expected \"list[dict[str, object]]\"",
+          "raw": "tests\\test_providers\\test_local_transformers_provider.py:456: error: Argument 1 to \"_format_prompt\" of \"LocalTransformersProvider\" has incompatible type \"list[dict[str, str]]\"; expected \"list[dict[str, object]]\"  [arg-type]"
         }
       ]
     },
     {
-      "path": "tests\\test_ui\\conftest.py",
+      "path": "src\\intellicrack\\bridges\\schemas.py",
       "count": 1,
       "findings": [
         {
-          "line": 31,
+          "line": 599,
           "column": null,
           "severity": "error",
-          "code": "redundant-cast",
-          "message": "Redundant cast to \"QApplication\"",
-          "raw": "tests\\test_ui\\conftest.py:31: error: Redundant cast to \"QApplication\"  [redundant-cast]"
+          "code": "arg-type",
+          "message": "Argument 1 to \"_assert_never\" has incompatible type \"Literal[ProviderName.LOCAL_TRANSFORMERS]\"; expected \"Never\"",
+          "raw": "src\\intellicrack\\bridges\\schemas.py:599: error: Argument 1 to \"_assert_never\" has incompatible type \"Literal[ProviderName.LOCAL_TRANSFORMERS]\"; expected \"Never\"  [arg-type]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\anthropic.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 395,
+          "column": null,
+          "severity": "error",
+          "code": "union-attr",
+          "message": "Item \"None\" of \"Task[Any] | None\" has no attribute \"cancel\"",
+          "raw": "src\\intellicrack\\providers\\anthropic.py:395: error: Item \"None\" of \"Task[Any] | None\" has no attribute \"cancel\"  [union-attr]"
         }
       ]
     },

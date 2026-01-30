@@ -413,7 +413,7 @@ docker-compose.override.yml
 
 # Exclude batch files except essential ones
 /*.bat
-!REMOVE_NUL.bat
+!REMOVE_NUL.cmd
 
 # Lock files
 *.lock

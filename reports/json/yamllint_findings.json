@@ -1,7 +1,7 @@
 {
   "tool": "yamllint",
-  "generated": "2026-01-18T15:57:28.049801",
-  "total_findings": 223,
+  "generated": "2026-01-30T14:01:28.890909",
+  "total_findings": 224,
   "total_files": 13,
   "files": [
     {
@@ -1552,7 +1552,7 @@
     },
     {
       "path": ".\\.serena\\project.yml",
-      "count": 9,
+      "count": 10,
       "findings": [
         {
           "line": 1,
@@ -1569,6 +1569,14 @@
           "code": "",
           "message": "wrong indentation: expected 2 but found 0  (indentation)",
           "raw": ".\\.serena\\project.yml:20:1: [error] wrong indentation: expected 2 but found 0  (indentation)"
+        },
+        {
+          "line": 35,
+          "column": 1,
+          "severity": "error",
+          "code": "",
+          "message": "wrong indentation: expected 2 but found 0  (indentation)",
+          "raw": ".\\.serena\\project.yml:35:1: [error] wrong indentation: expected 2 but found 0  (indentation)"
         },
         {
           "line": 54,

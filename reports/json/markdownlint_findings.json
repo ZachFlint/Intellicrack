@@ -1,351 +1,9 @@
 {
   "tool": "markdownlint",
-  "generated": "2026-01-18T15:57:21.188307",
-  "total_findings": 96,
-  "total_files": 6,
+  "generated": "2026-01-30T14:01:21.696351",
+  "total_findings": 63,
+  "total_files": 5,
   "files": [
-    {
-      "path": "IMPLEMENTATION_PLAN.md",
-      "count": 48,
-      "findings": [
-        {
-          "line": 5,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 188]",
-          "raw": "IMPLEMENTATION_PLAN.md:5:81 error MD013/line-length Line length [Expected: 80; Actual: 188]"
-        },
-        {
-          "line": 12,
-          "column": 5,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:12:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 12,
-          "column": 17,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:12:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 12,
-          "column": 24,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:12:24 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 12,
-          "column": 35,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:12:35 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 12,
-          "column": 44,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:12:44 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 12,
-          "column": 1,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:12:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 12,
-          "column": 5,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:12:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 12,
-          "column": 17,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:12:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 12,
-          "column": 24,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:12:24 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 12,
-          "column": 35,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:12:35 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 18,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 85]",
-          "raw": "IMPLEMENTATION_PLAN.md:18:81 error MD013/line-length Line length [Expected: 80; Actual: 85]"
-        },
-        {
-          "line": 31,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 101]",
-          "raw": "IMPLEMENTATION_PLAN.md:31:81 error MD013/line-length Line length [Expected: 80; Actual: 101]"
-        },
-        {
-          "line": 41,
-          "column": null,
-          "code": "error",
-          "message": "MD040/fenced-code-language Fenced code blocks should have a language specified [Context: \"```\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:41 error MD040/fenced-code-language Fenced code blocks should have a language specified [Context: \"```\"]"
-        },
-        {
-          "line": 79,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 164]",
-          "raw": "IMPLEMENTATION_PLAN.md:79:81 error MD013/line-length Line length [Expected: 80; Actual: 164]"
-        },
-        {
-          "line": 90,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 88]",
-          "raw": "IMPLEMENTATION_PLAN.md:90:81 error MD013/line-length Line length [Expected: 80; Actual: 88]"
-        },
-        {
-          "line": 96,
-          "column": null,
-          "code": "error",
-          "message": "MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Problem\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:96 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Problem\"]"
-        },
-        {
-          "line": 122,
-          "column": null,
-          "code": "error",
-          "message": "MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Problem\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:122 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Problem\"]"
-        },
-        {
-          "line": 126,
-          "column": null,
-          "code": "error",
-          "message": "MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Solution\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:126 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Solution\"]"
-        },
-        {
-          "line": 140,
-          "column": null,
-          "code": "error",
-          "message": "MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Problem\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:140 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Problem\"]"
-        },
-        {
-          "line": 144,
-          "column": null,
-          "code": "error",
-          "message": "MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Solution\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:144 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Solution\"]"
-        },
-        {
-          "line": 182,
-          "column": null,
-          "code": "error",
-          "message": "MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Problem\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:182 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Problem\"]"
-        },
-        {
-          "line": 186,
-          "column": null,
-          "code": "error",
-          "message": "MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Solution\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:186 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Solution\"]"
-        },
-        {
-          "line": 203,
-          "column": null,
-          "code": "error",
-          "message": "MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Problem\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:203 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Problem\"]"
-        },
-        {
-          "line": 209,
-          "column": null,
-          "code": "error",
-          "message": "MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Solution\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:209 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Solution\"]"
-        },
-        {
-          "line": 306,
-          "column": null,
-          "code": "error",
-          "message": "MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Problem\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:306 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Problem\"]"
-        },
-        {
-          "line": 311,
-          "column": null,
-          "code": "error",
-          "message": "MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Solution\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:311 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Solution\"]"
-        },
-        {
-          "line": 324,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 88]",
-          "raw": "IMPLEMENTATION_PLAN.md:324:81 error MD013/line-length Line length [Expected: 80; Actual: 88]"
-        },
-        {
-          "line": 343,
-          "column": null,
-          "code": "error",
-          "message": "MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Problem\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:343 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Problem\"]"
-        },
-        {
-          "line": 347,
-          "column": null,
-          "code": "error",
-          "message": "MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Solution\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:347 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Solution\"]"
-        },
-        {
-          "line": 384,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 262]",
-          "raw": "IMPLEMENTATION_PLAN.md:384:81 error MD013/line-length Line length [Expected: 80; Actual: 262]"
-        },
-        {
-          "line": 390,
-          "column": null,
-          "code": "error",
-          "message": "MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Problem\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:390 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Problem\"]"
-        },
-        {
-          "line": 392,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 92]",
-          "raw": "IMPLEMENTATION_PLAN.md:392:81 error MD013/line-length Line length [Expected: 80; Actual: 92]"
-        },
-        {
-          "line": 395,
-          "column": null,
-          "code": "error",
-          "message": "MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Solution\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:395 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Solution\"]"
-        },
-        {
-          "line": 409,
-          "column": null,
-          "code": "error",
-          "message": "MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Problem\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:409 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Problem\"]"
-        },
-        {
-          "line": 413,
-          "column": null,
-          "code": "error",
-          "message": "MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Solution\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:413 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Solution\"]"
-        },
-        {
-          "line": 430,
-          "column": null,
-          "code": "error",
-          "message": "MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Problem\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:430 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Problem\"]"
-        },
-        {
-          "line": 434,
-          "column": null,
-          "code": "error",
-          "message": "MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Solution\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:434 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Solution\"]"
-        },
-        {
-          "line": 452,
-          "column": 8,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:452:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 452,
-          "column": 18,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:452:18 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 452,
-          "column": 1,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:452:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 452,
-          "column": 8,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "IMPLEMENTATION_PLAN.md:452:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 453,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 91]",
-          "raw": "IMPLEMENTATION_PLAN.md:453:81 error MD013/line-length Line length [Expected: 80; Actual: 91]"
-        },
-        {
-          "line": 454,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 91]",
-          "raw": "IMPLEMENTATION_PLAN.md:454:81 error MD013/line-length Line length [Expected: 80; Actual: 91]"
-        },
-        {
-          "line": 455,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 83]",
-          "raw": "IMPLEMENTATION_PLAN.md:455:81 error MD013/line-length Line length [Expected: 80; Actual: 83]"
-        },
-        {
-          "line": 456,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 97]",
-          "raw": "IMPLEMENTATION_PLAN.md:456:81 error MD013/line-length Line length [Expected: 80; Actual: 97]"
-        },
-        {
-          "line": 457,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 91]",
-          "raw": "IMPLEMENTATION_PLAN.md:457:81 error MD013/line-length Line length [Expected: 80; Actual: 91]"
-        },
-        {
-          "line": 503,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 90]",
-          "raw": "IMPLEMENTATION_PLAN.md:503:81 error MD013/line-length Line length [Expected: 80; Actual: 90]"
-        }
-      ]
-    },
     {
       "path": "GEMINI.md",
       "count": 29,
@@ -556,6 +214,117 @@
       ]
     },
     {
+      "path": "README.md",
+      "count": 15,
+      "findings": [
+        {
+          "line": 3,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 179]",
+          "raw": "README.md:3:81 error MD013/line-length Line length [Expected: 80; Actual: 179]"
+        },
+        {
+          "line": 11,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 265]",
+          "raw": "README.md:11:81 error MD013/line-length Line length [Expected: 80; Actual: 265]"
+        },
+        {
+          "line": 15,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 161]",
+          "raw": "README.md:15:81 error MD013/line-length Line length [Expected: 80; Actual: 161]"
+        },
+        {
+          "line": 16,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 128]",
+          "raw": "README.md:16:81 error MD013/line-length Line length [Expected: 80; Actual: 128]"
+        },
+        {
+          "line": 17,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 123]",
+          "raw": "README.md:17:81 error MD013/line-length Line length [Expected: 80; Actual: 123]"
+        },
+        {
+          "line": 18,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 99]",
+          "raw": "README.md:18:81 error MD013/line-length Line length [Expected: 80; Actual: 99]"
+        },
+        {
+          "line": 19,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 107]",
+          "raw": "README.md:19:81 error MD013/line-length Line length [Expected: 80; Actual: 107]"
+        },
+        {
+          "line": 26,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 141]",
+          "raw": "README.md:26:81 error MD013/line-length Line length [Expected: 80; Actual: 141]"
+        },
+        {
+          "line": 27,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 128]",
+          "raw": "README.md:27:81 error MD013/line-length Line length [Expected: 80; Actual: 128]"
+        },
+        {
+          "line": 28,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 151]",
+          "raw": "README.md:28:81 error MD013/line-length Line length [Expected: 80; Actual: 151]"
+        },
+        {
+          "line": 37,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 101]",
+          "raw": "README.md:37:81 error MD013/line-length Line length [Expected: 80; Actual: 101]"
+        },
+        {
+          "line": 38,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 103]",
+          "raw": "README.md:38:81 error MD013/line-length Line length [Expected: 80; Actual: 103]"
+        },
+        {
+          "line": 119,
+          "column": null,
+          "code": "error",
+          "message": "MD040/fenced-code-language Fenced code blocks should have a language specified [Context: \"```\"]",
+          "raw": "README.md:119 error MD040/fenced-code-language Fenced code blocks should have a language specified [Context: \"```\"]"
+        },
+        {
+          "line": 137,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 119]",
+          "raw": "README.md:137:81 error MD013/line-length Line length [Expected: 80; Actual: 119]"
+        },
+        {
+          "line": 150,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 349]",
+          "raw": "README.md:150:81 error MD013/line-length Line length [Expected: 80; Actual: 349]"
+        }
+      ]
+    },
+    {
       "path": "QWEN.md",
       "count": 10,
       "findings": [
@@ -633,7 +402,7 @@
     },
     {
       "path": "AGENTS.md",
-      "count": 7,
+      "count": 8,
       "findings": [
         {
           "line": 5,
@@ -678,11 +447,18 @@
           "raw": "AGENTS.md:13:81 error MD013/line-length Line length [Expected: 80; Actual: 316]"
         },
         {
-          "line": 76,
+          "line": 68,
           "column": null,
           "code": "error",
           "message": "MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Build, Lint, and Test Commands\"]",
-          "raw": "AGENTS.md:76 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Build, Lint, and Test Commands\"]"
+          "raw": "AGENTS.md:68 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Build, Lint, and Test Commands\"]"
+        },
+        {
+          "line": 108,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 118]",
+          "raw": "AGENTS.md:108:81 error MD013/line-length Line length [Expected: 80; Actual: 118]"
         }
       ]
     },
@@ -696,19 +472,6 @@
           "code": "error",
           "message": "MD036/no-emphasis-as-heading Emphasis used instead of a heading [Context: \"TOOLS\"]",
           "raw": "CLAUDE.md:64 error MD036/no-emphasis-as-heading Emphasis used instead of a heading [Context: \"TOOLS\"]"
-        }
-      ]
-    },
-    {
-      "path": "README.md",
-      "count": 1,
-      "findings": [
-        {
-          "line": 213,
-          "column": null,
-          "code": "error",
-          "message": "MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Features\"]",
-          "raw": "README.md:213 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Features\"]"
         }
       ]
     }

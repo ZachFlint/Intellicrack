@@ -1040,9 +1040,7 @@ class ThemeManager:
             True if theme was applied successfully.
         """
         if theme not in {THEME_DARK, THEME_LIGHT}:
-            _logger.warning(
-                "unknown_theme", extra={"theme": theme, "default": DEFAULT_THEME}
-            )
+            _logger.warning("unknown_theme", extra={"theme": theme, "default": DEFAULT_THEME})
             theme = DEFAULT_THEME
 
         stylesheet = self.get_stylesheet(theme)
@@ -1091,9 +1089,7 @@ class ThemeManager:
                     with open(style_path, encoding="utf-8") as f:
                         content = f.read()
                         if content.strip():
-                            _logger.debug(
-                                "stylesheet_loaded", extra={"path": str(style_path)}
-                            )
+                            _logger.debug("stylesheet_loaded", extra={"path": str(style_path)})
                             return content
             except (OSError, PermissionError) as e:
                 _logger.warning(

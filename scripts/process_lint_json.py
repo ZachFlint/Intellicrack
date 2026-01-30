@@ -791,6 +791,49 @@ def process_shellcheck_text(text_output: str) -> tuple[dict[str, list[dict[str, 
     return grouped, cnt
 
 
+def process_blinter_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
+    """Process blinter batch file linter verbose text output."""
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    severity_map: dict[str, str] = {
+        "ERROR LEVEL ISSUES:": "error",
+        "WARNING LEVEL ISSUES:": "warning",
+        "STYLE LEVEL ISSUES:": "style",
+        "SECURITY LEVEL ISSUES:": "security",
+        "PERFORMANCE LEVEL ISSUES:": "performance",
+    }
+    file_pattern = re.compile(r'^\s*Batch Files? Analysis:\s*(.+)$')
+    issue_pattern = re.compile(r'^Line\s+(\d+):\s+(.+)\s+\(([A-Za-z]+\d+)\)$')
+    current_file: str = ""
+    current_severity: str = ""
+    for line in text_output.split('\n'):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        file_match = file_pattern.match(stripped)
+        if file_match:
+            current_file = file_match.group(1).strip()
+            current_severity = ""
+            continue
+        if stripped in severity_map:
+            current_severity = severity_map[stripped]
+            continue
+        issue_match = issue_pattern.match(stripped)
+        if issue_match and current_file:
+            line_num = int(issue_match.group(1))
+            message = issue_match.group(2).strip()
+            code = issue_match.group(3)
+            grouped[current_file].append({
+                "line": line_num,
+                "column": 0,
+                "severity": current_severity or "warning",
+                "code": code,
+                "message": message,
+                "raw": stripped
+            })
+    cnt = sum(len(v) for v in grouped.values())
+    return grouped, cnt
+
+
 def process_jsonlint_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
     """Process JSON validation text output."""
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -1263,6 +1306,7 @@ TEXT_PROCESSORS: dict[str, Callable[[str], tuple[dict[str, list[dict[str, Any]]]
     "cargo-deny": process_cargo_deny_text,
     "cargo_deny": process_cargo_deny_text,
     "shellcheck": process_shellcheck_text,
+    "blinter": process_blinter_text,
     "jsonlint": process_jsonlint_text,
     "psscriptanalyzer": process_psscriptanalyzer_text,
     "biome": process_biome_text,

@@ -1,8 +1,8 @@
 2 findings in src/intellicrack\bridges\base.py
 
-src/intellicrack\bridges\base.py:800: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')
+src/intellicrack\bridges\base.py:804: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')
 
-src/intellicrack\bridges\base.py:862: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')
+src/intellicrack\bridges\base.py:866: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')
 
 
 2 findings in src/intellicrack\bridges\frida_bridge.py
@@ -25,6 +25,11 @@ src/intellicrack\core\script_gen.py:259: D401: in public method `validate_java`:
 1 findings in src/intellicrack\credentials\oauth.py
 
 src/intellicrack\credentials\oauth.py:899: D401: in public function `authorize_google`: - First line should be in imperative mood; try rephrasing (found 'Convenience')
+
+
+1 findings in src/intellicrack\providers\local_transformers.py
+
+src/intellicrack\providers\local_transformers.py:471: D401: in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')
 
 
 1 findings in tests\__init__.py

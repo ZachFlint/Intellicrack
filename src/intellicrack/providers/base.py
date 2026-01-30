@@ -100,9 +100,7 @@ class LLMProviderBase(ABC):
         self._credentials: ProviderCredentials | None = None
         self._connected: bool = False
         self._cancel_requested: bool = False
-        self._logger: logging.Logger = logging.getLogger(
-            f"{__name__}.{self.__class__.__name__}"
-        )
+        self._logger: logging.Logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
     @property
     @abstractmethod

@@ -254,9 +254,7 @@ class StackFrameTable(QTableWidget):
     def _setup_ui(self) -> None:
         """Set up the table UI."""
         self.setColumnCount(5)
-        self.setHorizontalHeaderLabels([
-            "#", "Return Address", "Function", "Module", "Offset"
-        ])
+        self.setHorizontalHeaderLabels(["#", "Return Address", "Function", "Module", "Offset"])
 
         header = self.horizontalHeader()
         if header:

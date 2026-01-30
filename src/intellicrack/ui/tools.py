@@ -638,12 +638,8 @@ class ToolOutputPanel(QFrame):
             from intellicrack.ui.embedding import HxDWidget  # noqa: PLC0415
 
             self._hxd_widget = HxDWidget()
-            self._hxd_widget.tool_started.connect(
-                lambda: self.embedded_tool_started.emit("hxd")
-            )
-            self._hxd_widget.tool_closed.connect(
-                lambda: self.embedded_tool_closed.emit("hxd")
-            )
+            self._hxd_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("hxd"))
+            self._hxd_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("hxd"))
             self._tab_widget.addTab(self._hxd_widget, "HxD")
             self._embedded_tools["hxd"] = self._hxd_widget
             _logger.info("hxd_tab_added")
@@ -669,12 +665,8 @@ class ToolOutputPanel(QFrame):
             from intellicrack.ui.embedding import X64DbgWidget  # noqa: PLC0415
 
             self._x64dbg_widget = X64DbgWidget(use_64bit=is_64bit)
-            self._x64dbg_widget.tool_started.connect(
-                lambda: self.embedded_tool_started.emit("x64dbg")
-            )
-            self._x64dbg_widget.tool_closed.connect(
-                lambda: self.embedded_tool_closed.emit("x64dbg")
-            )
+            self._x64dbg_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("x64dbg"))
+            self._x64dbg_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("x64dbg"))
             tab_name = "x64dbg" if is_64bit else "x32dbg"
             self._tab_widget.addTab(self._x64dbg_widget, tab_name)
             self._embedded_tools["x64dbg"] = self._x64dbg_widget
@@ -698,12 +690,8 @@ class ToolOutputPanel(QFrame):
             from intellicrack.ui.embedding import CutterWidget  # noqa: PLC0415
 
             self._cutter_widget = CutterWidget()
-            self._cutter_widget.tool_started.connect(
-                lambda: self.embedded_tool_started.emit("cutter")
-            )
-            self._cutter_widget.tool_closed.connect(
-                lambda: self.embedded_tool_closed.emit("cutter")
-            )
+            self._cutter_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("cutter"))
+            self._cutter_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("cutter"))
             self._tab_widget.addTab(self._cutter_widget, "Cutter")
             self._embedded_tools["cutter"] = self._cutter_widget
             _logger.info("cutter_tab_added")

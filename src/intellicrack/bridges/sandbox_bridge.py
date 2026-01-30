@@ -472,7 +472,9 @@ class SandboxBridge(ToolBridgeBase):
                 monitor=monitor,
             )
 
-            _logger.info("binary_execution_completed", extra={"instance_id": instance.id, "result": report.result, "exit_code": report.exit_code})
+            _logger.info(
+                "binary_execution_completed", extra={"instance_id": instance.id, "result": report.result, "exit_code": report.exit_code}
+            )
 
             return self._report_to_dict(report, instance.id)
 

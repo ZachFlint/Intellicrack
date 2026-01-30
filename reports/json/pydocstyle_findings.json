@@ -1,28 +1,28 @@
 {
   "tool": "pydocstyle",
-  "generated": "2026-01-18T15:58:20.604787",
-  "total_findings": 10,
-  "total_files": 8,
+  "generated": "2026-01-30T14:02:24.244806",
+  "total_findings": 11,
+  "total_files": 9,
   "files": [
     {
       "path": "src/intellicrack\\bridges\\base.py",
       "count": 2,
       "findings": [
         {
-          "line": 800,
+          "line": 804,
           "column": null,
           "code": "D401",
           "context": "in public method `hook_function`:",
           "message": "in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')",
-          "raw": "src/intellicrack\\bridges\\base.py:800: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
+          "raw": "src/intellicrack\\bridges\\base.py:804: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
         },
         {
-          "line": 862,
+          "line": 866,
           "column": null,
           "code": "D401",
           "context": "in public method `intercept_return`:",
           "message": "in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')",
-          "raw": "src/intellicrack\\bridges\\base.py:862: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
+          "raw": "src/intellicrack\\bridges\\base.py:866: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
         }
       ]
     },
@@ -87,6 +87,20 @@
           "context": "in public function `authorize_google`:",
           "message": "in public function `authorize_google`: - First line should be in imperative mood; try rephrasing (found 'Convenience')",
           "raw": "src/intellicrack\\credentials\\oauth.py:899: D401: in public function `authorize_google`: - First line should be in imperative mood; try rephrasing (found 'Convenience')"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack\\providers\\local_transformers.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 471,
+          "column": null,
+          "code": "D401",
+          "context": "in private method `_generate_sync`:",
+          "message": "in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')",
+          "raw": "src/intellicrack\\providers\\local_transformers.py:471: D401: in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')"
         }
       ]
     },

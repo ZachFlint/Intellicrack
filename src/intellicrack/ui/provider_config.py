@@ -659,9 +659,7 @@ class ProviderConfigDialog(QDialog):
 
         self._active_label = QLabel()
         self._active_label.setWordWrap(True)
-        self._active_label.setStyleSheet(
-            "QLabel { padding: 8px; background-color: #2d2d2d; border-radius: 4px; }"
-        )
+        self._active_label.setStyleSheet("QLabel { padding: 8px; background-color: #2d2d2d; border-radius: 4px; }")
         self._update_active_label()
         left_layout.addWidget(self._active_label)
 
@@ -687,9 +685,7 @@ class ProviderConfigDialog(QDialog):
         main_layout.addWidget(splitter, stretch=1)
 
         button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel
-            | QDialogButtonBox.StandardButton.Apply
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Apply
         )
         button_box.accepted.connect(self._on_accept)
         button_box.rejected.connect(self.reject)
@@ -721,9 +717,7 @@ class ProviderConfigDialog(QDialog):
             is_connected = self._is_provider_connected(provider_id)
             model_count = self._get_model_count(provider_id)
 
-            self._update_provider_item_display(
-                item, display_name, is_active, is_connected, model_count
-            )
+            self._update_provider_item_display(item, display_name, is_active, is_connected, model_count)
 
             self._provider_list.addItem(item)
             self._provider_items[provider_id] = item
@@ -853,9 +847,7 @@ class ProviderConfigDialog(QDialog):
             return
 
         if self._registry is None:
-            QMessageBox.warning(
-                self, "Registry Error", "Provider registry not available."
-            )
+            QMessageBox.warning(self, "Registry Error", "Provider registry not available.")
             return
 
         try:
@@ -871,13 +863,9 @@ class ProviderConfigDialog(QDialog):
                 extra={"provider": self._current_provider},
             )
         except ValueError:
-            QMessageBox.critical(
-                self, "Error", f"Unknown provider: {self._current_provider}"
-            )
+            QMessageBox.critical(self, "Error", f"Unknown provider: {self._current_provider}")
         except Exception as e:
-            QMessageBox.critical(
-                self, "Error", f"Failed to set active provider: {e}"
-            )
+            QMessageBox.critical(self, "Error", f"Failed to set active provider: {e}")
 
     def _refresh_provider_status(self) -> None:
         """Refresh the connection status for all providers."""
@@ -898,9 +886,7 @@ class ProviderConfigDialog(QDialog):
             }
             display_name = display_names.get(provider_id, provider_id.title())
 
-            self._update_provider_item_display(
-                item, display_name, is_active, is_connected, model_count
-            )
+            self._update_provider_item_display(item, display_name, is_active, is_connected, model_count)
 
     def _on_widget_connection_tested(self, success: bool, _message: str) -> None:
         """Handle connection test completion from a widget.
@@ -1023,9 +1009,7 @@ class ProviderSettingsWidget(QFrame):
         credentials_layout.addRow("API Key:", api_key_row)
 
         self._credential_source_label = QLabel()
-        self._credential_source_label.setStyleSheet(
-            "QLabel { padding: 4px 8px; border-radius: 3px; font-size: 11px; }"
-        )
+        self._credential_source_label.setStyleSheet("QLabel { padding: 4px 8px; border-radius: 3px; font-size: 11px; }")
         credentials_layout.addRow("Source:", self._credential_source_label)
 
         self._api_base_input: QLineEdit | None
@@ -1067,9 +1051,7 @@ class ProviderSettingsWidget(QFrame):
 
         self._recommended_label = QLabel()
         self._recommended_label.setWordWrap(True)
-        self._recommended_label.setStyleSheet(
-            "QLabel { color: #6a9fb5; font-style: italic; font-size: 11px; }"
-        )
+        self._recommended_label.setStyleSheet("QLabel { color: #6a9fb5; font-style: italic; font-size: 11px; }")
         model_layout.addRow("", self._recommended_label)
 
         model_group.setLayout(model_layout)

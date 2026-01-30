@@ -927,25 +927,21 @@ class Orchestrator:
             for binary in self._current_session.binaries:
                 if binary.name == binary_name:
                     from pathlib import Path as PathLib
+
                     return await self._run_license_analysis(PathLib(binary.path))
         elif self._current_session.active_binary:
             from pathlib import Path as PathLib
-            analysis = await self._run_license_analysis(
-                PathLib(self._current_session.active_binary.path)
-            )
+
+            analysis = await self._run_license_analysis(PathLib(self._current_session.active_binary.path))
             if analysis:
-                self._current_session.add_licensing_analysis(
-                    self._current_session.active_binary.name, analysis
-                )
+                self._current_session.add_licensing_analysis(self._current_session.active_binary.name, analysis)
                 if self._on_licensing_analysis:
                     self._on_licensing_analysis(analysis)
             return analysis
 
         return None
 
-    def set_licensing_analysis_callback(
-        self, callback: Callable[[LicensingAnalysis], None] | None
-    ) -> None:
+    def set_licensing_analysis_callback(self, callback: Callable[[LicensingAnalysis], None] | None) -> None:
         """Set callback for licensing analysis completion.
 
         Args:

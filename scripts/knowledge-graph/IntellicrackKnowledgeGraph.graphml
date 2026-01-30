@@ -6418,7 +6418,7 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_validate_xpu_device</data>
-      <data key="d4">['torch', 'device']</data>
+      <data key="d4">['torch_mod', 'device']</data>
     </node>
     <node id="src.intellicrack.providers.xpu_utils.get_xpu_memory_info">
       <data key="d0">function</data>
@@ -15077,6 +15077,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.xpu_utils" target="sys">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.providers.xpu_utils" target="types">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.xpu_utils" target="dataclasses">

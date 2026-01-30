@@ -1,39 +1,183 @@
 {
   "tool": "bandit",
-  "generated": "2026-01-18T15:56:35.787910",
-  "total_findings": 15,
-  "total_files": 10,
+  "generated": "2026-01-30T14:00:32.952636",
+  "total_findings": 32,
+  "total_files": 15,
   "files": [
     {
-      "path": "src/intellicrack/ui\\sandbox_config.py",
-      "count": 3,
+      "path": "src/intellicrack/providers\\xpu_utils.py",
+      "count": 7,
       "findings": [
         {
-          "line": 13,
+          "line": 14,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B404:blacklist",
           "message": "Consider possible security implications associated with the subprocess module.",
-          "raw": "src/intellicrack/ui\\sandbox_config.py:13: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
+          "raw": "src/intellicrack/providers\\xpu_utils.py:14: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
         },
         {
-          "line": 110,
+          "line": 161,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B607:start_process_with_partial_path",
           "message": "Starting a process with a partial executable path",
-          "raw": "src/intellicrack/ui\\sandbox_config.py:110: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path"
+          "raw": "src/intellicrack/providers\\xpu_utils.py:161: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path"
         },
         {
-          "line": 110,
+          "line": 161,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B603:subprocess_without_shell_equals_true",
           "message": "subprocess call - check for execution of untrusted input.",
-          "raw": "src/intellicrack/ui\\sandbox_config.py:110: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
+          "raw": "src/intellicrack/providers\\xpu_utils.py:161: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
+        },
+        {
+          "line": 490,
+          "column": null,
+          "severity": "Low",
+          "confidence": "High",
+          "code": "B607:start_process_with_partial_path",
+          "message": "Starting a process with a partial executable path",
+          "raw": "src/intellicrack/providers\\xpu_utils.py:490: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path"
+        },
+        {
+          "line": 490,
+          "column": null,
+          "severity": "Low",
+          "confidence": "High",
+          "code": "B603:subprocess_without_shell_equals_true",
+          "message": "subprocess call - check for execution of untrusted input.",
+          "raw": "src/intellicrack/providers\\xpu_utils.py:490: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
+        },
+        {
+          "line": 515,
+          "column": null,
+          "severity": "Low",
+          "confidence": "High",
+          "code": "B607:start_process_with_partial_path",
+          "message": "Starting a process with a partial executable path",
+          "raw": "src/intellicrack/providers\\xpu_utils.py:515: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path"
+        },
+        {
+          "line": 515,
+          "column": null,
+          "severity": "Low",
+          "confidence": "High",
+          "code": "B603:subprocess_without_shell_equals_true",
+          "message": "subprocess call - check for execution of untrusted input.",
+          "raw": "src/intellicrack/providers\\xpu_utils.py:515: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/providers\\model_loader.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": 438,
+          "column": null,
+          "severity": "Medium",
+          "confidence": "High",
+          "code": "B615:huggingface_unsafe_download",
+          "message": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()",
+          "raw": "src/intellicrack/providers\\model_loader.py:438: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+        },
+        {
+          "line": 457,
+          "column": null,
+          "severity": "Medium",
+          "confidence": "High",
+          "code": "B615:huggingface_unsafe_download",
+          "message": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()",
+          "raw": "src/intellicrack/providers\\model_loader.py:457: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+        },
+        {
+          "line": 545,
+          "column": null,
+          "severity": "Medium",
+          "confidence": "High",
+          "code": "B615:huggingface_unsafe_download",
+          "message": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()",
+          "raw": "src/intellicrack/providers\\model_loader.py:545: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+        },
+        {
+          "line": 564,
+          "column": null,
+          "severity": "Medium",
+          "confidence": "High",
+          "code": "B615:huggingface_unsafe_download",
+          "message": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()",
+          "raw": "src/intellicrack/providers\\model_loader.py:564: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui\\embedding\\embedded_widget.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 10,
+          "column": null,
+          "severity": "Low",
+          "confidence": "High",
+          "code": "B404:blacklist",
+          "message": "Consider possible security implications associated with the subprocess module.",
+          "raw": "src/intellicrack/ui\\embedding\\embedded_widget.py:10: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
+        },
+        {
+          "line": 21,
+          "column": null,
+          "severity": "Low",
+          "confidence": "High",
+          "code": "B404:blacklist",
+          "message": "Consider possible security implications associated with the subprocess module.",
+          "raw": "src/intellicrack/ui\\embedding\\embedded_widget.py:21: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
+        },
+        {
+          "line": 171,
+          "column": null,
+          "severity": "Low",
+          "confidence": "High",
+          "code": "B603:subprocess_without_shell_equals_true",
+          "message": "subprocess call - check for execution of untrusted input.",
+          "raw": "src/intellicrack/ui\\embedding\\embedded_widget.py:171: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui\\sandbox_config.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 14,
+          "column": null,
+          "severity": "Low",
+          "confidence": "High",
+          "code": "B404:blacklist",
+          "message": "Consider possible security implications associated with the subprocess module.",
+          "raw": "src/intellicrack/ui\\sandbox_config.py:14: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
+        },
+        {
+          "line": 113,
+          "column": null,
+          "severity": "Low",
+          "confidence": "High",
+          "code": "B607:start_process_with_partial_path",
+          "message": "Starting a process with a partial executable path",
+          "raw": "src/intellicrack/ui\\sandbox_config.py:113: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path"
+        },
+        {
+          "line": 113,
+          "column": null,
+          "severity": "Low",
+          "confidence": "High",
+          "code": "B603:subprocess_without_shell_equals_true",
+          "message": "subprocess call - check for execution of untrusted input.",
+          "raw": "src/intellicrack/ui\\sandbox_config.py:113: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
         }
       ]
     },
@@ -51,13 +195,13 @@
           "raw": "src/intellicrack/core\\process_manager.py:15: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
         },
         {
-          "line": 670,
+          "line": 667,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B603:subprocess_without_shell_equals_true",
           "message": "subprocess call - check for execution of untrusted input.",
-          "raw": "src/intellicrack/core\\process_manager.py:670: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
+          "raw": "src/intellicrack/core\\process_manager.py:667: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
         }
       ]
     },
@@ -106,6 +250,30 @@
           "code": "B405:blacklist",
           "message": "Using xml.etree.ElementTree to parse untrusted XML data is known to be vulnerable to XML attacks. Replace xml.etree.ElementTree with the equivalent defusedxml package, or make sure defusedxml.defuse_stdlib() is called.",
           "raw": "src/intellicrack/sandbox\\windows.py:14: [Low] B405:blacklist: Using xml.etree.ElementTree to parse untrusted XML data is known to be vulnerable to XML attacks. Replace xml.etree.ElementTree with the equivalent defusedxml package, or make sure defusedxml.defuse_stdlib() is called."
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui\\embedding\\hxd_widget.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 11,
+          "column": null,
+          "severity": "Low",
+          "confidence": "High",
+          "code": "B404:blacklist",
+          "message": "Consider possible security implications associated with the subprocess module.",
+          "raw": "src/intellicrack/ui\\embedding\\hxd_widget.py:11: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
+        },
+        {
+          "line": 292,
+          "column": null,
+          "severity": "Low",
+          "confidence": "High",
+          "code": "B603:subprocess_without_shell_equals_true",
+          "message": "subprocess call - check for execution of untrusted input.",
+          "raw": "src/intellicrack/ui\\embedding\\hxd_widget.py:292: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
         }
       ]
     },
@@ -181,6 +349,21 @@
           "code": "B110:try_except_pass",
           "message": "Try, Except, Pass detected.",
           "raw": "src/intellicrack/credentials\\store.py:412: [Low] B110:try_except_pass: Try, Except, Pass detected."
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui\\resources\\icon_manager.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 99,
+          "column": null,
+          "severity": "Low",
+          "confidence": "Medium",
+          "code": "B105:hardcoded_password_string",
+          "message": "Possible hardcoded password: 'dialog-password.png'",
+          "raw": "src/intellicrack/ui\\resources\\icon_manager.py:99: [Low] B105:hardcoded_password_string: Possible hardcoded password: 'dialog-password.png'"
         }
       ]
     },

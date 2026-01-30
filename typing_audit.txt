@@ -1,0 +1,361 @@
+INTELLICRACK TYPING AUDIT - CHECKLIST
+======================================
+Generated: 2026-01-30
+Scope: src/intellicrack/**/*.py
+Total: 64 findings across 14 files
+
+
+CATEGORY 1: MYPY STRICT ERRORS (actual type system violations)
+--------------------------------------------------------------
+
+[ ] #1  src\intellicrack\providers\xpu_utils.py:62
+       ERROR: Module "torch" used as a type annotation [valid-type]
+       FIX: Replace with a Protocol or types.ModuleType
+
+[ ] #2  src\intellicrack\providers\xpu_utils.py:90
+       ERROR: Statement is unreachable [unreachable]
+
+[ ] #3  src\intellicrack\providers\xpu_utils.py:114
+       ERROR: Statement is unreachable [unreachable]
+
+[ ] #4  src\intellicrack\providers\xpu_utils.py:137
+       ERROR: Statement is unreachable [unreachable]
+
+[ ] #5  src\intellicrack\providers\xpu_utils.py:215
+       ERROR: Statement is unreachable [unreachable]
+
+[ ] #6  src\intellicrack\providers\xpu_utils.py:348
+       ERROR: Statement is unreachable [unreachable]
+
+[ ] #7  src\intellicrack\providers\xpu_utils.py:367
+       ERROR: Module "torch" used as a type annotation [valid-type]
+       FIX: Replace with a Protocol or types.ModuleType
+
+[ ] #8  src\intellicrack\providers\xpu_utils.py:378
+       ERROR: torch_type? has no attribute "zeros" [attr-defined]
+       FIX: Correctly type the variable so attribute access resolves
+
+[ ] #9  src\intellicrack\providers\xpu_utils.py:381
+       ERROR: torch_type? has no attribute "xpu" [attr-defined]
+       FIX: Correctly type the variable so attribute access resolves
+
+[ ] #10 src\intellicrack\providers\xpu_utils.py:399
+       ERROR: Statement is unreachable [unreachable]
+
+[ ] #11 src\intellicrack\providers\xpu_utils.py:436
+       ERROR: Statement is unreachable [unreachable]
+
+[ ] #12 src\intellicrack\providers\xpu_utils.py:544
+       ERROR: Statement is unreachable [unreachable]
+
+[ ] #13 src\intellicrack\bridges\schemas.py:599
+       ERROR: Exhaustiveness check missing case for ProviderName.LOCAL_TRANSFORMERS [arg-type]
+       FIX: Add the missing case branch for LOCAL_TRANSFORMERS before _assert_never
+
+[ ] #14 src\intellicrack\providers\anthropic.py:395
+       ERROR: Item "None" of "Task[Any] | None" has no attribute "cancel" [union-attr]
+       FIX: Add None guard before calling .cancel()
+
+
+CATEGORY 2: cast("Any", ...) - TYPE ERASURE
+--------------------------------------------
+
+[ ] #15 src\intellicrack\providers\anthropic.py:272
+       CODE: messages=cast("Any", anthropic_messages)
+       FIX: Use proper Anthropic SDK message types (e.g. Iterable[MessageParam])
+
+[ ] #16 src\intellicrack\providers\anthropic.py:273
+       CODE: tools=cast("Any", anthropic_tools)
+       FIX: Use proper Anthropic SDK tool types (e.g. Iterable[ToolParam])
+
+[ ] #17 src\intellicrack\providers\anthropic.py:280
+       CODE: messages=cast("Any", anthropic_messages)
+       FIX: Same as #15, alternate code path
+
+[ ] #18 src\intellicrack\providers\anthropic.py:365
+       CODE: messages=cast("Any", anthropic_messages)
+       FIX: Same as #15, streaming path
+
+[ ] #19 src\intellicrack\providers\anthropic.py:366
+       CODE: tools=cast("Any", anthropic_tools)
+       FIX: Same as #16, streaming path
+
+[ ] #20 src\intellicrack\providers\anthropic.py:373
+       CODE: messages=cast("Any", anthropic_messages)
+       FIX: Same as #15, streaming no-tools path
+
+[ ] #21 src\intellicrack\providers\google.py:442
+       CODE: tools=cast("Any", tools_seq)
+       FIX: Use proper Google GenAI SDK tool types
+
+
+CATEGORY 3: LAZY "Any" PARAMETER TYPES
+----------------------------------------
+
+[ ] #22 src\intellicrack\ui\provider_config.py:231
+       CODE: def _test_anthropic(self, timeout: Any)
+       FIX: timeout: int | float | None
+
+[ ] #23 src\intellicrack\ui\provider_config.py:265
+       CODE: def _test_openai(self, timeout: Any)
+       FIX: timeout: int | float | None
+
+[ ] #24 src\intellicrack\ui\provider_config.py:291
+       CODE: def _test_google(self, timeout: Any)
+       FIX: timeout: int | float | None
+
+[ ] #25 src\intellicrack\ui\provider_config.py:315
+       CODE: def _test_ollama(self, timeout: Any)
+       FIX: timeout: int | float | None
+
+[ ] #26 src\intellicrack\ui\provider_config.py:336
+       CODE: def _test_openrouter(self, timeout: Any)
+       FIX: timeout: int | float | None
+
+[ ] #27 src\intellicrack\ui\provider_config.py:464
+       CODE: def _fetch_openai_models(self, timeout: Any)
+       FIX: timeout: int | float | None
+
+[ ] #28 src\intellicrack\ui\provider_config.py:489
+       CODE: def _fetch_google_models(self, timeout: Any)
+       FIX: timeout: int | float | None
+
+[ ] #29 src\intellicrack\ui\provider_config.py:511
+       CODE: def _fetch_ollama_models(self, timeout: Any)
+       FIX: timeout: int | float | None
+
+[ ] #30 src\intellicrack\ui\provider_config.py:532
+       CODE: def _fetch_openrouter_models(self, timeout: Any)
+       FIX: timeout: int | float | None
+
+[ ] #31 src\intellicrack\core\process_manager.py:858
+       CODE: def _terminate_windows_process(self, pid: int, name: str, logger: Any)
+       FIX: logger: logging.Logger | structlog.stdlib.BoundLogger
+
+[ ] #32 src\intellicrack\core\process_manager.py:169
+       CODE: def _get_logger() -> Any
+       FIX: Return type -> logging.Logger | structlog.stdlib.BoundLogger
+
+
+CATEGORY 4: LAZY "Any" VARIABLE/RETURN ANNOTATIONS
+----------------------------------------------------
+
+[ ] #33 src\intellicrack\main.py:59
+       CODE: qt_app: Any = QApplication
+       FIX: qt_app: type[QApplication]
+
+[ ] #34 src\intellicrack\core\types.py:116
+       CODE: result: Any
+       FIX: Determine the actual union of result types used and annotate precisely
+
+[ ] #35 src\intellicrack\core\types.py:741
+       CODE: default: Any = None
+       FIX: Use a TypeVar bound to the field's actual usage, or a concrete union
+
+[ ] #36 src\intellicrack\core\tools.py:394
+       CODE: result: Any = None
+       FIX: Type as the actual tool execution return type (or str | dict[str, object] | None)
+
+[ ] #37 src\intellicrack\providers\openai.py:406
+       CODE: raw_stream: Any = await self._client.chat.completions.create(...)
+       FIX: AsyncStream[ChatCompletionChunk]
+
+[ ] #38 src\intellicrack\providers\openai.py:416
+       CODE: raw_stream_no_tools: Any = await self._client.chat.completions.create(...)
+       FIX: AsyncStream[ChatCompletionChunk]
+
+[ ] #39 src\intellicrack\bridges\binary.py:471
+       CODE: parsed: Any = lief.parse(data)
+       FIX: lief.Binary | None
+
+[ ] #40 src\intellicrack\bridges\binary.py:987
+       CODE: rva_converter: Any = getattr(self._lief_binary, "rva_to_offset", None)
+       FIX: Callable[[int], int] | None
+
+[ ] #41 src\intellicrack\bridges\binary.py:989
+       CODE: lief_result: Any = rva_converter(rva)
+       FIX: int
+
+[ ] #42 src\intellicrack\bridges\binary.py:1013
+       CODE: lief_result: Any = self._lief_binary.offset_to_virtual_address(offset)
+       FIX: int
+
+[ ] #43 src\intellicrack\providers\local_transformers.py:551
+       CODE: _model: Any
+       FIX: PreTrainedModel or a Protocol matching the model interface
+
+[ ] #44 src\intellicrack\providers\local_transformers.py:554
+       CODE: _past_kv: Any
+       FIX: tuple[tuple[Tensor, ...], ...] | None
+
+[ ] #45 src\intellicrack\providers\local_transformers.py:555
+       CODE: ) -> Any:
+       FIX: Determine actual callback return type from usage
+
+[ ] #46 src\intellicrack\providers\local_transformers.py:717
+       CODE: result: Any = tokenizer.apply_chat_template(...)
+       FIX: str | list[int]
+
+
+CATEGORY 5: IMPRECISE LOGGING TYPES
+-------------------------------------
+
+[ ] #47 src\intellicrack\core\logging.py:542
+       CODE: **kwargs: Any
+       FIX: **kwargs: object
+
+[ ] #48 src\intellicrack\core\logging.py:558
+       CODE: **kwargs: Any
+       FIX: **kwargs: object
+
+[ ] #49 src\intellicrack\core\logging.py:574
+       CODE: **kwargs: Any
+       FIX: **kwargs: object
+
+[ ] #50 src\intellicrack\core\logging.py:593
+       CODE: **kwargs: Any
+       FIX: **kwargs: object
+
+[ ] #51 src\intellicrack\core\logging.py:619
+       CODE: **context: Any
+       FIX: **context: object
+
+[ ] #52 src\intellicrack\core\logging.py:648
+       CODE: exc_tb: Any
+       FIX: exc_tb: TracebackType | None
+
+
+CATEGORY 6: UNPARAMETERIZED GENERIC RETURN TYPE
+-------------------------------------------------
+
+[ ] #53 src\intellicrack\ui\panels\script_manager.py:162
+       CODE: def analyze_binary(file_path: str) -> dict:
+       FIX: -> dict[str, object] or a TypedDict with the known return keys
+
+
+CATEGORY 7: UNNECESSARY cast("int", ...) ON PEFILE ATTRIBUTES
+---------------------------------------------------------------
+
+[ ] #54 src\intellicrack\bridges\binary.py:516
+       CODE: entry: int = cast("int", self._pe.OPTIONAL_HEADER.AddressOfEntryPoint)
+       FIX: Remove cast, use int(value) if runtime coercion needed, or create pefile stub
+
+[ ] #55 src\intellicrack\bridges\binary.py:539
+       CODE: virtual_address=cast("int", section.VirtualAddress)
+       FIX: Remove cast or create pefile stub
+
+[ ] #56 src\intellicrack\bridges\binary.py:540
+       CODE: virtual_size=cast("int", section.Misc_VirtualSize)
+       FIX: Remove cast or create pefile stub
+
+[ ] #57 src\intellicrack\bridges\binary.py:541
+       CODE: raw_size=cast("int", section.SizeOfRawData)
+       FIX: Remove cast or create pefile stub
+
+[ ] #58 src\intellicrack\bridges\binary.py:542
+       CODE: characteristics=cast("int", section.Characteristics)
+       FIX: Remove cast or create pefile stub
+
+[ ] #59 src\intellicrack\bridges\binary.py:609
+       CODE: ordinal=cast("int", imp.ordinal)
+       FIX: Remove cast or create pefile stub
+
+[ ] #60 src\intellicrack\bridges\binary.py:610
+       CODE: address=cast("int", imp.address)
+       FIX: Remove cast or create pefile stub
+
+[ ] #61 src\intellicrack\bridges\binary.py:643
+       CODE: ordinal=cast("int", exp.ordinal)
+       FIX: Remove cast or create pefile stub
+
+[ ] #62 src\intellicrack\bridges\binary.py:644
+       CODE: address=cast("int", exp.address)
+       FIX: Remove cast or create pefile stub
+
+[ ] #63 src\intellicrack\bridges\binary.py:983
+       CODE: result: int = cast("int", self._pe.get_offset_from_rva(rva))
+       FIX: Remove cast or create pefile stub
+
+[ ] #64 src\intellicrack\bridges\binary.py:1009
+       CODE: result: int = cast("int", self._pe.get_rva_from_offset(offset))
+       FIX: Remove cast or create pefile stub
+
+
+================================================================================
+SUMMARY
+================================================================================
+
+Total: 64 findings | Completed: 0/64
+
+By file:
+  [ ] providers/xpu_utils.py ........... 12 items (#1-#12)
+  [ ] bridges/binary.py ................ 15 items (#39-#42, #54-#64)
+  [ ] ui/provider_config.py ............  9 items (#22-#30)
+  [ ] providers/anthropic.py ...........  7 items (#14-#20)
+  [ ] core/logging.py ..................  6 items (#47-#52)
+  [ ] providers/local_transformers.py ..  4 items (#43-#46)
+  [ ] providers/openai.py ..............  2 items (#37-#38)
+  [ ] core/process_manager.py ..........  2 items (#31-#32)
+  [ ] core/types.py ....................  2 items (#34-#35)
+  [ ] core/tools.py ....................  1 item  (#36)
+  [ ] main.py ..........................  1 item  (#33)
+  [ ] bridges/schemas.py ...............  1 item  (#13)
+  [ ] providers/google.py ..............  1 item  (#21)
+  [ ] ui/panels/script_manager.py ......  1 item  (#53)
+
+
+================================================================================
+PROMPT FOR FIXING
+================================================================================
+
+Use the following prompt to instruct Claude to fix every item in this list:
+
+---
+
+Fix every typing issue listed in D:\Intellicrack\typing_audit.txt. Work through
+the checklist file by file. For each item:
+
+1. Read the actual code at the listed file and line number to understand the
+   full context - the surrounding function, class, imports, and how the value
+   is actually used downstream.
+
+2. Determine the MOST PRECISE, MOST CORRECT type annotation possible. This
+   means:
+   - Look at what the value actually IS at runtime. Trace it. If a function
+     returns an int, type it as int, not Any. If it returns a stream object,
+     import and use the actual stream type from the SDK.
+   - For SDK/library types (Anthropic, OpenAI, Google, pefile, lief, torch,
+     structlog), import and use the REAL types exported by those libraries.
+     Read the library's .pyi stubs or source to find the exact type. Do not
+     guess or use Any as a shortcut.
+   - For cast("Any", x) calls: remove the cast entirely and fix the
+     underlying type mismatch so the cast is unnecessary, OR replace with a
+     cast to the actual correct type if the library lacks stubs.
+   - For pefile cast("int", ...) calls in bridges/binary.py: create a proper
+     pefile type stub file (py.typed / .pyi) so the casts become unnecessary,
+     then remove every cast.
+   - For unreachable statements in xpu_utils.py: fix the control flow so the
+     code is reachable, or restructure the type narrowing so mypy understands
+     the branch is intentional.
+   - For "Module used as type" errors: use types.ModuleType or define a
+     Protocol that describes the module interface being used.
+
+3. After fixing each item, verify the fix passes mypy --strict for that file.
+
+4. After fixing each file completely, run ruff check and ruff format on it.
+
+5. Mark each item as done by changing [ ] to [x] in typing_audit.txt.
+
+Rules:
+- NEVER use Any as a fix. The entire point is removing Any.
+- NEVER add mypy suppression comments. Fix the actual types.
+- NEVER use object as a lazy substitute where a concrete type exists.
+- If a library lacks type stubs, create a minimal .pyi stub file for the
+  specific symbols used rather than casting to Any.
+- Every annotation must be the narrowest correct type that accurately
+  describes the runtime value.
+- All fixes must pass mypy --strict with zero errors for the modified files.
+- All fixes must pass ruff check with zero findings.
+- Do not break any existing functionality. Run the test suite after each file.
+
+---

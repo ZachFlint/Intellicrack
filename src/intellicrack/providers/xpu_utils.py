@@ -13,12 +13,13 @@ import platform
 import re
 import subprocess
 import sys
+import types
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 
 if TYPE_CHECKING:
-    import torch as torch_type
+    import torch
 
 
 _logger = logging.getLogger(__name__)
@@ -59,7 +60,7 @@ class XPUDeviceInfo:
     supports_int8: bool
 
 
-def _import_torch() -> torch_type | None:
+def _import_torch() -> types.ModuleType | None:
     """Safely import torch with XPU support.
 
     Returns:
@@ -173,11 +174,14 @@ def _get_windows_gpu_info() -> list[dict[str, str]]:
             data = json.loads(result.stdout)
             if isinstance(data, dict):
                 data = [data]
-            gpus.extend({
-                "name": str(gpu.get("Name", "")),
-                "pnp_device_id": str(gpu.get("PNPDeviceID", "")),
-                "driver_version": str(gpu.get("DriverVersion", "")),
-            } for gpu in data)
+            gpus.extend(
+                {
+                    "name": str(gpu.get("Name", "")),
+                    "pnp_device_id": str(gpu.get("PNPDeviceID", "")),
+                    "driver_version": str(gpu.get("DriverVersion", "")),
+                }
+                for gpu in data
+            )
     except Exception as exc:
         _logger.debug("windows_gpu_info_failed", extra={"error": str(exc)})
 
@@ -329,7 +333,7 @@ def is_arc_b580() -> bool:
     return False
 
 
-def initialize_xpu(device_index: int = 0) -> torch_type.device:
+def initialize_xpu(device_index: int = 0) -> torch.device:
     """Initialize and return a torch.device for XPU.
 
     Args:
@@ -364,21 +368,21 @@ def initialize_xpu(device_index: int = 0) -> torch_type.device:
     return device
 
 
-def _validate_xpu_device(torch: torch_type, device: torch_type.device) -> None:
+def _validate_xpu_device(torch_mod: types.ModuleType, device: torch.device) -> None:
     """Validate that XPU device is operational.
 
     Args:
-        torch: The torch module.
+        torch_mod: The torch module.
         device: The device to validate.
 
     Raises:
         RuntimeError: If device validation fails.
     """
     try:
-        test_tensor = torch.zeros(10, device=device)
+        test_tensor = torch_mod.zeros(10, device=device)
         _ = test_tensor + 1
         del test_tensor
-        torch.xpu.synchronize()
+        torch_mod.xpu.synchronize()
     except Exception as exc:
         raise RuntimeError(f"XPU device validation failed: {exc}") from exc
 

@@ -1108,7 +1108,7 @@ class ToolCapabilitiesWidget(QFrame):
         ]
 
         for cap_id, cap_name in capabilities:
-            indicator = QLabel("\u25CB")
+            indicator = QLabel("\u25cb")
             indicator.setStyleSheet("color: #888;")
             self._cap_labels[cap_id] = indicator
             caps_layout.addRow(cap_name, indicator)
@@ -1159,10 +1159,10 @@ class ToolCapabilitiesWidget(QFrame):
             if label:
                 supported = capabilities.get(cap_key, False)
                 if supported:
-                    label.setText("\u25CF")
+                    label.setText("\u25cf")
                     label.setStyleSheet("color: #4ec9b0;")
                 else:
-                    label.setText("\u25CB")
+                    label.setText("\u25cb")
                     label.setStyleSheet("color: #888;")
 
         self._arch_label.setText(", ".join(archs) if archs else "--")

@@ -887,7 +887,9 @@ class ProcessBridge(ToolBridgeBase):
         rev_prot_map = {v: k for k, v in prot_map.items()}
         old_prot_str = rev_prot_map.get(old_prot.value, "unknown")
 
-        _logger.info("memory_protection_changed", extra={"address": hex(address), "old_protection": old_prot_str, "new_protection": protection})
+        _logger.info(
+            "memory_protection_changed", extra={"address": hex(address), "old_protection": old_prot_str, "new_protection": protection}
+        )
         return old_prot_str
 
     async def get_modules(self, pid: int | None = None) -> list[ModuleInfo]:

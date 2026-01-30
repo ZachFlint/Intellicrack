@@ -391,25 +391,12 @@ class Win32WindowHelper:
             hwnd: Window handle to modify.
         """
         style = Win32WindowHelper.get_window_style(hwnd)
-        style &= ~(
-            WS_CAPTION
-            | WS_THICKFRAME
-            | WS_BORDER
-            | WS_SYSMENU
-            | WS_MINIMIZEBOX
-            | WS_MAXIMIZEBOX
-            | WS_POPUP
-        )
+        style &= ~(WS_CAPTION | WS_THICKFRAME | WS_BORDER | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_POPUP)
         style |= WS_CHILD
         Win32WindowHelper.set_window_style(hwnd, style)
 
         ex_style = Win32WindowHelper.get_ex_style(hwnd)
-        ex_style &= ~(
-            WS_EX_APPWINDOW
-            | WS_EX_WINDOWEDGE
-            | WS_EX_CLIENTEDGE
-            | WS_EX_DLGMODALFRAME
-        )
+        ex_style &= ~(WS_EX_APPWINDOW | WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE | WS_EX_DLGMODALFRAME)
         Win32WindowHelper.set_ex_style(hwnd, ex_style)
 
         _user32.SetWindowPos(
@@ -431,14 +418,7 @@ class Win32WindowHelper:
         """
         style = Win32WindowHelper.get_window_style(hwnd)
         style &= ~WS_CHILD
-        style |= (
-            WS_POPUP
-            | WS_CAPTION
-            | WS_THICKFRAME
-            | WS_SYSMENU
-            | WS_MINIMIZEBOX
-            | WS_MAXIMIZEBOX
-        )
+        style |= WS_POPUP | WS_CAPTION | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX
         Win32WindowHelper.set_window_style(hwnd, style)
 
         ex_style = Win32WindowHelper.get_ex_style(hwnd)

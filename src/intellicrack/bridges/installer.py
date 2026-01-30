@@ -399,7 +399,10 @@ class ToolInstaller:
                     min_ver = self._parse_version(tool_info.min_version)
                     if version >= min_ver:
                         return True
-                    _logger.warning("version_below_minimum", extra={"tool": tool_info.display_name, "version": str(version), "min_version": tool_info.min_version})
+                    _logger.warning(
+                        "version_below_minimum",
+                        extra={"tool": tool_info.display_name, "version": str(version), "min_version": tool_info.min_version},
+                    )
                     return False
                 return True
 

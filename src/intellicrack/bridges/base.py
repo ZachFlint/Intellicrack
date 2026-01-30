@@ -142,9 +142,7 @@ class ToolBridgeBase:
         """Initialize the base bridge."""
         self._state: BridgeState = BridgeState()
         self._capabilities: BridgeCapabilities = BridgeCapabilities()
-        self._logger: logging.Logger = logging.getLogger(
-            f"{__name__}.{self.__class__.__name__}"
-        )
+        self._logger: logging.Logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
     @property
     def name(self) -> ToolName:
