@@ -408,7 +408,7 @@ class FridaBridge(InstrumentationBridge):
         await super().shutdown()
         _logger.info("frida_bridge_shutdown")
 
-    async def is_available(self) -> bool:  # noqa: PLR6301
+    async def is_available(self) -> bool:
         """Check if Frida is available.
 
         Returns:
@@ -501,7 +501,7 @@ class FridaBridge(InstrumentationBridge):
             process_attached=True,
             target_pid=self._pid,
         )
-        _logger.info("process_attached_by_name", extra={"name": name, "pid": self._pid})
+        _logger.info("process_attached_by_name", extra={"process_name": name, "pid": self._pid})
 
     async def spawn(
         self,
@@ -535,7 +535,7 @@ class FridaBridge(InstrumentationBridge):
             pid: int = await asyncio.to_thread(
                 device.spawn,
                 str(path),
-                argv=spawn_argv,  # type: ignore[arg-type]
+                argv=spawn_argv,
             )
             self._session = await asyncio.to_thread(
                 device.attach,
@@ -559,7 +559,7 @@ class FridaBridge(InstrumentationBridge):
                 target_path=path,
                 target_pid=pid,
             )
-            _logger.info("process_spawned", extra={"name": path.name, "pid": pid})
+            _logger.info("process_spawned", extra={"process_name": path.name, "pid": pid})
         except Exception as e:
             raise ToolError(_ERR_ATTACH_FAILED) from e
         else:
@@ -956,7 +956,7 @@ class FridaBridge(InstrumentationBridge):
                 msg_typed: dict[str, object] = {str(k): v for k, v in message.items()}
                 self._message_handler(msg_typed)
 
-        script.on("message", on_message)  # type: ignore[call-overload]
+        script.on("message", on_message)
         await asyncio.to_thread(script.load)
 
         await asyncio.sleep(0.1)
@@ -1126,7 +1126,7 @@ class FridaBridge(InstrumentationBridge):
             event.set()
 
         script = await asyncio.to_thread(self._session.create_script, script_code)
-        script.on("message", on_message)  # type: ignore[call-overload]
+        script.on("message", on_message)
         await asyncio.to_thread(script.load)
 
         try:

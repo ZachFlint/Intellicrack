@@ -210,7 +210,7 @@ class SplashScreen(QSplashScreen):
         Args:
             a0: Resize event.
         """
-        super().resizeEvent(a0)  # type: ignore[arg-type]
+        super().resizeEvent(a0)
         if hasattr(self, "_overlay"):
             self._overlay.setGeometry(0, 0, self.width(), self.height())
 

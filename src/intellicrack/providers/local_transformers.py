@@ -12,7 +12,7 @@ import json
 import re
 import time
 from datetime import datetime
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from ..core.logging import get_logger
 from ..core.types import (
@@ -27,6 +27,7 @@ from ..core.types import (
 from .base import LLMProviderBase
 from .model_loader import (
     RECOMMENDED_MODELS_B580,
+    DtypeOption,
     LoadedModel,
     ModelCache,
     ModelConfig,
@@ -210,19 +211,31 @@ class LocalTransformersProvider(LLMProviderBase):
         self._logger.info("local_transformers_disconnected")
 
     async def list_models(self) -> list[ModelInfo]:
-        """List available local models.
+        """List local models that fit on the available hardware.
 
-        Returns a list of recommended models that can fit on the
-        available hardware (B580 12GB VRAM or CPU RAM).
+        When running on XPU the total VRAM is queried once and models
+        whose estimated memory footprint exceeds 90 % of that VRAM are
+        excluded.  On CPU all recommended models are returned because
+        system RAM is assumed to be sufficient (the loader will still
+        fail gracefully if it is not).
 
         Returns:
-            List of available ModelInfo objects.
+            List of ``ModelInfo`` objects for models that can be loaded
+            on the current device.
 
         Raises:
-            ProviderError: If not connected.
+            ProviderError: If the provider is not connected.
         """
         if not self._connected:
             raise ProviderError(_MSG_NOT_CONNECTED)
+
+        vram_utilisation_ceiling: float = 0.9
+
+        total_vram: int = 0
+        if self._device_type == "xpu":
+            _, total_vram = await asyncio.to_thread(get_xpu_memory_info, 0)
+
+        usable_vram: int = int(total_vram * vram_utilisation_ceiling) if total_vram > 0 else 0
 
         models: list[ModelInfo] = []
 
@@ -230,10 +243,18 @@ class LocalTransformersProvider(LLMProviderBase):
             model_id = str(model_data["model_id"])
             recommended_dtype = str(model_data.get("recommended_dtype", "float16"))
 
-            if self._device_type == "xpu":
-                _, total_vram = await asyncio.to_thread(get_xpu_memory_info, 0)
-                estimated = estimate_model_memory(model_id, recommended_dtype)
-                _ = estimated < (total_vram * 0.9) if total_vram > 0 else True
+            if self._device_type == "xpu" and usable_vram > 0:
+                estimated = estimate_model_memory(model_id, cast("DtypeOption", recommended_dtype))
+                if estimated > usable_vram:
+                    self._logger.debug(
+                        "model_excluded_insufficient_vram",
+                        extra={
+                            "model_id": model_id,
+                            "estimated_bytes": estimated,
+                            "available_bytes": usable_vram,
+                        },
+                    )
+                    continue
 
             supports_tools = self._model_supports_tools(model_id)
 
@@ -460,7 +481,7 @@ class LocalTransformersProvider(LLMProviderBase):
         if self._loaded_model is None:
             raise RuntimeError(_MSG_NO_MODEL_LOADED)
 
-        import torch  # noqa: PLC0415
+        import torch
 
         model = self._loaded_model.model
         tokenizer = self._loaded_model.tokenizer
@@ -484,7 +505,7 @@ class LocalTransformersProvider(LLMProviderBase):
             )
 
         generated_ids = outputs[0][input_ids.shape[1] :]
-        response = tokenizer.decode(generated_ids, skip_special_tokens=True)
+        response: str = str(tokenizer.decode(generated_ids, skip_special_tokens=True))
 
         return response.strip()
 
@@ -507,7 +528,7 @@ class LocalTransformersProvider(LLMProviderBase):
         if self._loaded_model is None:
             raise RuntimeError(_MSG_NO_MODEL_LOADED)
 
-        import torch  # noqa: PLC0415
+        import torch
 
         model = self._loaded_model.model
         tokenizer = self._loaded_model.tokenizer
@@ -527,11 +548,11 @@ class LocalTransformersProvider(LLMProviderBase):
                 break
 
             def _forward_pass(
-                _model: object,
+                _model: Any,
                 _gen_ids: torch.Tensor,
                 _attn_mask: torch.Tensor | None,
-                _past_kv: object,
-            ) -> object:
+                _past_kv: Any,
+            ) -> Any:
                 use_ids = _gen_ids[:, -1:] if _past_kv else _gen_ids
                 return _model(
                     input_ids=use_ids,
@@ -669,48 +690,122 @@ class LocalTransformersProvider(LLMProviderBase):
         messages: list[dict[str, object]],
         tools: list[ToolDefinition] | None = None,
     ) -> str:
-        """Format messages into a prompt string.
+        """Format messages into a prompt string using the tokenizer's chat template.
+
+        Uses ``tokenizer.apply_chat_template`` when available so every
+        model family (Phi-3, Llama-3, Mistral, Qwen, TinyLlama/ChatML,
+        etc.) receives correctly formatted special tokens.  Falls back
+        to a generic ChatML-style template when the tokenizer does not
+        ship one.
 
         Args:
-            messages: List of message dictionaries.
-            tools: Optional tools to include in prompt.
+            messages: List of message dictionaries with ``"role"`` and
+                ``"content"`` keys as produced by
+                ``_convert_messages_to_provider_format``.
+            tools: Optional tool definitions to inject into the system
+                prompt so the model is aware of callable functions.
 
         Returns:
-            Formatted prompt string.
+            Fully formatted prompt string ready for tokenization.
         """
-        prompt_parts: list[str] = []
+        chat_messages = self._build_chat_messages(messages, tools)
+
+        if self._loaded_model is not None:
+            tokenizer = self._loaded_model.tokenizer
+            if hasattr(tokenizer, "apply_chat_template") and tokenizer.chat_template is not None:
+                try:
+                    result: Any = tokenizer.apply_chat_template(
+                        chat_messages,
+                        tokenize=False,
+                        add_generation_prompt=True,
+                    )
+                    return str(result)
+                except Exception as exc:
+                    self._logger.debug(
+                        "chat_template_failed_using_fallback",
+                        extra={"error": str(exc)},
+                    )
+
+        return self._format_prompt_chatml_fallback(chat_messages)
+
+    def _build_chat_messages(
+        self,
+        messages: list[dict[str, object]],
+        tools: list[ToolDefinition] | None = None,
+    ) -> list[dict[str, str]]:
+        """Build a normalized message list suitable for chat templates.
+
+        Converts the internal message dictionaries into the
+        ``[{"role": ..., "content": ...}]`` format that HuggingFace
+        ``apply_chat_template`` expects.  Tool schemas are prepended as
+        a system message when tools are provided.
+
+        Args:
+            messages: List of message dictionaries from
+                ``_convert_messages_to_provider_format``.
+            tools: Optional tool definitions to expose to the model.
+
+        Returns:
+            List of ``{"role": str, "content": str}`` dictionaries.
+        """
+        chat_messages: list[dict[str, str]] = []
+
+        if tools:
+            tool_schemas = self._convert_tools_to_provider_format(tools)
+            tools_json = json.dumps(tool_schemas, indent=2)
+            chat_messages.append({
+                "role": "system",
+                "content": (
+                    "You have access to the following tools:\n"
+                    f"{tools_json}\n\n"
+                    "To use a tool, respond with JSON in this format:\n"
+                    '{"tool_call": {"name": "tool_name", "arguments": {...}}}'
+                ),
+            })
 
         for msg in messages:
             role = str(msg.get("role", ""))
             content = str(msg.get("content", ""))
 
-            if role == "system":
-                prompt_parts.append(f"<|system|>\n{content}\n")
-            elif role == "user":
-                prompt_parts.append(f"<|user|>\n{content}\n")
-            elif role == "assistant":
-                prompt_parts.append(f"<|assistant|>\n{content}\n")
-            elif role == "tool":
+            if role == "tool":
                 tool_results = msg.get("tool_results", [])
                 if isinstance(tool_results, list):
-                    for tr in tool_results:
-                        if isinstance(tr, dict):
-                            result = tr.get("result", "")
-                            prompt_parts.append(f"<|tool|>\n{result}\n")
+                    parts: list[str] = [str(tr.get("result", "")) for tr in tool_results if isinstance(tr, dict)]
+                    if parts:
+                        chat_messages.append({
+                            "role": "user",
+                            "content": "[Tool Result]\n" + "\n".join(parts),
+                        })
+            elif role in {"system", "user", "assistant"}:
+                chat_messages.append({"role": role, "content": content})
 
-        if tools:
-            tool_schemas = self._convert_tools_to_provider_format(tools)
-            tools_json = json.dumps(tool_schemas, indent=2)
-            prompt_parts.insert(
-                0,
-                f"<|system|>\nYou have access to the following tools:\n{tools_json}\n\n"
-                "To use a tool, respond with JSON in this format:\n"
-                '{"tool_call": {"name": "tool_name", "arguments": {...}}}\n',
-            )
+        return chat_messages
 
-        prompt_parts.append("<|assistant|>\n")
+    @staticmethod
+    def _format_prompt_chatml_fallback(
+        chat_messages: list[dict[str, str]],
+    ) -> str:
+        """Format messages using the ChatML template as a universal fallback.
 
-        return "".join(prompt_parts)
+        ChatML (``<|im_start|>``/``<|im_end|>``) is the most widely
+        supported fallback template across open-source models and is
+        used when the tokenizer does not ship its own chat template.
+
+        Args:
+            chat_messages: Normalized message list from
+                ``_build_chat_messages``.
+
+        Returns:
+            ChatML-formatted prompt string with a trailing generation
+            prompt.
+        """
+        parts: list[str] = []
+        for msg in chat_messages:
+            role = msg["role"]
+            content = msg["content"]
+            parts.append(f"<|im_start|>{role}\n{content}<|im_end|>\n")
+        parts.append("<|im_start|>assistant\n")
+        return "".join(parts)
 
     def _parse_tool_calls(self, response: str) -> list[ToolCall] | None:
         """Parse tool calls from response.
@@ -734,7 +829,7 @@ class LocalTransformersProvider(LLMProviderBase):
             if escape_next:
                 escape_next = False
                 continue
-            if char == '\\':
+            if char == "\\":
                 escape_next = True
                 continue
             if char == '"' and not escape_next:
@@ -742,9 +837,9 @@ class LocalTransformersProvider(LLMProviderBase):
                 continue
             if in_string:
                 continue
-            if char == '{':
+            if char == "{":
                 brace_count += 1
-            elif char == '}':
+            elif char == "}":
                 brace_count -= 1
                 if brace_count == 0:
                     end_idx = i + 1

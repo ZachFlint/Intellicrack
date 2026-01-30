@@ -11,14 +11,18 @@ import json
 import time
 from collections.abc import AsyncIterator
 from datetime import datetime
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 import openai
 from openai import AsyncStream
 
 
 if TYPE_CHECKING:
-    from openai.types.chat import ChatCompletionChunk
+    from openai.types.chat import (
+        ChatCompletionChunk,
+        ChatCompletionMessageParam,
+        ChatCompletionToolParam,
+    )
 
 from ..core.logging import get_logger, log_provider_request, log_provider_response
 from ..core.types import (
@@ -281,18 +285,20 @@ class OpenAIProvider(LLMProviderBase):
         start_time = time.perf_counter()
 
         try:
+            typed_messages = cast("list[ChatCompletionMessageParam]", openai_messages)
             if openai_tools:
+                typed_tools = cast("list[ChatCompletionToolParam]", openai_tools)
                 response = await self._client.chat.completions.create(
                     model=model,
-                    messages=openai_messages,  # type: ignore[arg-type]
+                    messages=typed_messages,
                     temperature=temperature,
                     max_tokens=max_tokens,
-                    tools=openai_tools,  # type: ignore[arg-type]
+                    tools=typed_tools,
                 )
             else:
                 response = await self._client.chat.completions.create(
                     model=model,
-                    messages=openai_messages,  # type: ignore[arg-type]
+                    messages=typed_messages,
                     temperature=temperature,
                     max_tokens=max_tokens,
                 )
@@ -393,24 +399,28 @@ class OpenAIProvider(LLMProviderBase):
             openai_tools = self._convert_tools_to_provider_format(tools)
 
         try:
+            typed_messages = cast("list[ChatCompletionMessageParam]", openai_messages)
             stream: AsyncStream[ChatCompletionChunk]
             if openai_tools:
-                stream = await self._client.chat.completions.create(  # type: ignore[assignment]
+                typed_tools = cast("list[ChatCompletionToolParam]", openai_tools)
+                raw_stream: Any = await self._client.chat.completions.create(
                     model=model,
-                    messages=openai_messages,  # type: ignore[arg-type]
+                    messages=typed_messages,
                     temperature=temperature,
                     max_tokens=max_tokens,
                     stream=True,
-                    tools=openai_tools,  # type: ignore[arg-type]
+                    tools=typed_tools,
                 )
+                stream = raw_stream
             else:
-                stream = await self._client.chat.completions.create(  # type: ignore[assignment]
+                raw_stream_no_tools: Any = await self._client.chat.completions.create(
                     model=model,
-                    messages=openai_messages,  # type: ignore[arg-type]
+                    messages=typed_messages,
                     temperature=temperature,
                     max_tokens=max_tokens,
                     stream=True,
                 )
+                stream = raw_stream_no_tools
 
             async for chunk in stream:
                 if self._cancel_requested:

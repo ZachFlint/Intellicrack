@@ -1,10 +1,5 @@
 Set-Location "C:\Users\zachf"
 
-$env:PATH = (($env:PATH -split ';') | Where-Object { $_ -notmatch '\.pixi' -and $_ -notmatch 'pixi' }) -join ';'
-Remove-Item Env:CONDA_PREFIX -ErrorAction SilentlyContinue
-Remove-Item Env:VIRTUAL_ENV -ErrorAction SilentlyContinue
-Remove-Item Env:PIXI_* -ErrorAction SilentlyContinue
-
 try {
     Add-Type -TypeDefinition @"
 using System;

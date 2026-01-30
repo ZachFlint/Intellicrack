@@ -5677,6 +5677,18 @@
       <data key="d3">_format_prompt</data>
       <data key="d4">['self', 'messages', 'tools']</data>
     </node>
+    <node id="src.intellicrack.providers.local_transformers._build_chat_messages">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_build_chat_messages</data>
+      <data key="d4">['self', 'messages', 'tools']</data>
+    </node>
+    <node id="src.intellicrack.providers.local_transformers._format_prompt_chatml_fallback">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_format_prompt_chatml_fallback</data>
+      <data key="d4">['chat_messages']</data>
+    </node>
     <node id="src.intellicrack.providers.local_transformers._parse_tool_calls">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -14909,6 +14921,12 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.providers.local_transformers" target="src.intellicrack.providers.local_transformers._format_prompt">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.local_transformers" target="src.intellicrack.providers.local_transformers._build_chat_messages">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.local_transformers" target="src.intellicrack.providers.local_transformers._format_prompt_chatml_fallback">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.providers.local_transformers" target="src.intellicrack.providers.local_transformers._parse_tool_calls">

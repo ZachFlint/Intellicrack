@@ -1772,7 +1772,7 @@ packages:
 - pypi: ./
   name: intellicrack
   version: 1.0.0
-  sha256: a3f00c9a266c40b9a06661aa0316226006cffb162e238b5a85a9ee6f50578d88
+  sha256: d168febca89bf1b7a7ccf29ca3462bbd3f4c8b2ec3ca1fb53d063e81c0575013
   requires_python: '>=3.13'
 - pypi: https://files.pythonhosted.org/packages/0c/4c/b075da0092003d9a55cf2ecc1cae9384a1ca4f650d51b00fc59875fe76f6/ipdb-0.13.13-py3-none-any.whl
   name: ipdb
@@ -4403,6 +4403,7 @@ packages:
 - pypi: https://download.pytorch.org/whl/xpu/torch-2.10.0%2Bxpu-cp313-cp313-win_amd64.whl
   name: torch
   version: 2.10.0+xpu
+  sha256: 2b4b56dd6c792aef82006904fa888692e3782e4ae5da27526801bad4898f05a5
   requires_dist:
   - filelock
   - typing-extensions>=4.10.0

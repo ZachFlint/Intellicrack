@@ -347,7 +347,7 @@ class BinaryBridge(BinaryOperationsBridge):
         await super().shutdown()
         _logger.info("bridge_shutdown")
 
-    async def is_available(self) -> bool:  # noqa: PLR6301
+    async def is_available(self) -> bool:
         """Check if binary operations are available.
 
         Returns:
@@ -468,7 +468,10 @@ class BinaryBridge(BinaryOperationsBridge):
         Returns:
             Parsed lief Binary object or None if parsing fails.
         """
-        result: lief.Binary | None = lief.parse(data)  # type: ignore[assignment]
+        parsed: Any = lief.parse(data)
+        if parsed is None:
+            return None
+        result: lief.Binary = parsed
         return result
 
     def _detect_architecture(self) -> tuple[str, bool]:
@@ -981,9 +984,11 @@ class BinaryBridge(BinaryOperationsBridge):
             return result
 
         if self._lief_binary is not None:
-            lief_result: Any = self._lief_binary.rva_to_offset(rva)  # type: ignore[attr-defined]
-            if isinstance(lief_result, int):
-                return lief_result
+            rva_converter: Any = getattr(self._lief_binary, "rva_to_offset", None)
+            if rva_converter is not None:
+                lief_result: Any = rva_converter(rva)
+                if isinstance(lief_result, int):
+                    return lief_result
             raise ToolError(_ERR_RVA_NOT_AVAIL)
 
         raise ToolError(_ERR_RVA_NOT_AVAIL)

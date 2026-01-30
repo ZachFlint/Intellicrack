@@ -155,30 +155,15 @@ module = [
     "transformers.*",
     "accelerate.*",
     "bitsandbytes.*",
-]
-ignore_missing_imports = true
-ignore_errors = true
-
-[[tool.mypy.overrides]]
-module = [
     "PyQt6.*",
 ]
-ignore_missing_imports = true
-ignore_errors = true
+follow_imports = "skip"
 
 [[tool.mypy.overrides]]
 module = [
     "intellicrack.ui.*",
 ]
 disable_error_code = ["attr-defined", "misc", "no-any-return", "redundant-cast", "unused-ignore"]
-
-[[tool.mypy.overrides]]
-module = [
-    "intellicrack.providers.xpu_utils",
-    "intellicrack.providers.model_loader",
-    "intellicrack.providers.local_transformers",
-]
-disable_error_code = ["valid-type", "unreachable", "no-untyped-call", "arg-type", "operator", "attr-defined"]
 
 [tool.pyright]
 include = ["src/intellicrack", "tests"]
@@ -323,7 +308,7 @@ dummy-variable-rgx = "^(_+|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
     "PLR6301",  # Methods could be static - designed for subclass implementation
 ]
 "src/intellicrack/providers/base.py" = ["TC001"]
-"src/intellicrack/providers/*.py" = ["TC003", "TRY003", "PLR6301", "TRY300", "PLR0914", "S404"]
+"src/intellicrack/providers/*.py" = ["TC003", "TRY003", "PLR6301", "TRY300", "PLR0914", "S404", "PLC0415", "PLW0603", "F401"]
 "tests/**/*.py" = [
     "PLR6301",  # Method could be a function - pytest test methods need self
     "PLR2004",  # Magic value used - test values are intentional

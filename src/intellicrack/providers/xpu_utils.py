@@ -66,7 +66,7 @@ def _import_torch() -> torch_type | None:
         The torch module if available with XPU support, None otherwise.
     """
     try:
-        import torch  # noqa: PLC0415
+        import torch
 
         return torch
     except ImportError:

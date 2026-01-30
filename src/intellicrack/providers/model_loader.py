@@ -246,7 +246,7 @@ def _unload_model(loaded_model: LoadedModel) -> None:
         gc.collect()
 
         try:
-            import torch  # noqa: PLC0415
+            import torch
 
             if hasattr(torch, "xpu") and torch.xpu.is_available():
                 torch.xpu.empty_cache()
@@ -395,12 +395,12 @@ def load_model_for_xpu(
         ImportError: If required packages are not installed.
     """
     try:
-        import torch  # noqa: PLC0415, F401
-        from transformers import AutoModelForCausalLM, AutoTokenizer  # noqa: PLC0415
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
     except ImportError as exc:
         raise ImportError("transformers and torch are required for model loading") from exc
 
-    from .xpu_utils import clear_xpu_cache, get_xpu_memory_info, initialize_xpu, is_xpu_available  # noqa: PLC0415
+    from .xpu_utils import clear_xpu_cache, get_xpu_memory_info, initialize_xpu, is_xpu_available
 
     if not is_xpu_available():
         raise RuntimeError("XPU is not available. Use load_model_for_cpu instead.")
@@ -513,8 +513,8 @@ def load_model_for_cpu(
         ImportError: If required packages are not installed.
     """
     try:
-        import torch  # noqa: PLC0415
-        from transformers import AutoModelForCausalLM, AutoTokenizer  # noqa: PLC0415
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
     except ImportError as exc:
         raise ImportError("transformers and torch are required for model loading") from exc
 
@@ -607,7 +607,7 @@ def _get_torch_dtype(dtype_str: str) -> torch.dtype:
     Returns:
         Corresponding torch.dtype.
     """
-    import torch  # noqa: PLC0415
+    import torch
 
     dtype_map: dict[str, torch.dtype] = {
         "float32": torch.float32,
@@ -618,26 +618,52 @@ def _get_torch_dtype(dtype_str: str) -> torch.dtype:
     return dtype_map.get(dtype_str, torch.float32)
 
 
-def _get_quantization_config(dtype_str: str) -> dict[str, object]:
-    """Get quantization configuration for BitsAndBytes.
+def _get_quantization_config(dtype_str: str) -> object:
+    """Get a BitsAndBytesConfig for quantized model loading.
+
+    Creates a properly typed ``BitsAndBytesConfig`` object that the
+    ``transformers.AutoModelForCausalLM.from_pretrained`` method expects
+    for its ``quantization_config`` parameter.  Falls back to a plain
+    dictionary when the ``bitsandbytes`` / ``transformers`` packages are
+    too old to expose the config class.
 
     Args:
-        dtype_str: "int8" or "int4".
+        dtype_str: Quantization precision, either ``"int8"`` or ``"int4"``.
 
     Returns:
-        Configuration dictionary for transformers.
+        A ``BitsAndBytesConfig`` instance (preferred) or a plain
+        ``dict`` when the config class is unavailable.
     """
+    try:
+        from transformers import BitsAndBytesConfig
+    except ImportError:
+        _logger.warning(
+            "bitsandbytes_config_unavailable",
+            extra={"dtype": dtype_str},
+        )
+        if dtype_str == "int8":
+            return {"load_in_8bit": True}
+        if dtype_str == "int4":
+            return {
+                "load_in_4bit": True,
+                "bnb_4bit_compute_dtype": "float16",
+                "bnb_4bit_use_double_quant": True,
+            }
+        return {}
+
     if dtype_str == "int8":
-        return {
-            "load_in_8bit": True,
-        }
+        return BitsAndBytesConfig(load_in_8bit=True)
+
     if dtype_str == "int4":
-        return {
-            "load_in_4bit": True,
-            "bnb_4bit_compute_dtype": "float16",
-            "bnb_4bit_use_double_quant": True,
-        }
-    return {}
+        import torch
+
+        return BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch.float16,
+            bnb_4bit_use_double_quant=True,
+        )
+
+    return BitsAndBytesConfig()
 
 
 _global_cache: ModelCache | None = None
@@ -650,7 +676,7 @@ def get_global_model_cache() -> ModelCache:
     Returns:
         The global ModelCache instance.
     """
-    global _global_cache  # noqa: PLW0603
+    global _global_cache
     with _cache_lock:
         if _global_cache is None:
             _global_cache = ModelCache()

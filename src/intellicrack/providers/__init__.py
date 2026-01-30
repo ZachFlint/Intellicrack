@@ -30,6 +30,7 @@ from .grok import GrokProvider
 from .huggingface import HuggingFaceProvider
 from .local_transformers import LocalTransformersProvider
 from .model_loader import (
+    DtypeOption,
     LoadedModel,
     ModelCache,
     ModelConfig,
@@ -66,6 +67,7 @@ __all__: list[str] = [
     "DiscoveryCache",
     "DiscoveryEvent",
     "DiscoveryFilter",
+    "DtypeOption",
     "GoogleFunctionDeclaration",
     "GoogleProvider",
     "GrokProvider",

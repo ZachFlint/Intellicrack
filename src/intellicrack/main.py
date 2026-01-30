@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
@@ -56,8 +56,9 @@ def main() -> int:  # noqa: PLR0914
         return 1
 
     app = QApplication(sys.argv)
-    app.setApplicationName("Intellicrack")  # type: ignore[attr-defined]
-    app.setApplicationVersion("2.0.0")  # type: ignore[attr-defined]
+    qt_app: Any = QApplication
+    qt_app.setApplicationName("Intellicrack")
+    qt_app.setApplicationVersion("2.0.0")
     app.setStyle("Fusion")
 
     from intellicrack.ui.dialogs import SplashScreen  # noqa: PLC0415
@@ -67,7 +68,7 @@ def main() -> int:  # noqa: PLR0914
     theme_manager.apply_theme("dark")
 
     icon_manager = IconManager.get_instance()
-    app.setWindowIcon(icon_manager.get_app_icon())  # type: ignore[attr-defined]
+    qt_app.setWindowIcon(icon_manager.get_app_icon())
 
     splash = SplashScreen()
     splash.show()
