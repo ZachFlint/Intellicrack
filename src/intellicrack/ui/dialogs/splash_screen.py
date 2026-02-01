@@ -10,7 +10,7 @@ import logging
 from typing import Final
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QPainter, QPixmap
+from PyQt6.QtGui import QColor, QFont, QPainter, QPixmap, QResizeEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QLabel,
@@ -204,7 +204,7 @@ class SplashScreen(QSplashScreen):
         """
         self.set_progress(progress, step)
 
-    def resizeEvent(self, a0: object) -> None:  # noqa: N802
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:  # noqa: N802
         """Handle resize events to adjust overlay.
 
         Args:

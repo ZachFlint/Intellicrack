@@ -257,7 +257,7 @@ class X64DbgWidget(EmbeddedToolWidget):
         """
         if self._bridge:
             try:
-                self._bridge.debug_file(str(binary_path))
+                self._run_bridge_async(self._bridge.load(binary_path))
                 self._loaded_file = binary_path
             except Exception:
                 _logger.exception("bridge_debug_command_failed")
@@ -279,7 +279,7 @@ class X64DbgWidget(EmbeddedToolWidget):
         """
         if self._bridge:
             try:
-                self._bridge.attach_process(pid)
+                self._run_bridge_async(self._bridge.attach(pid))
                 self._attached_pid = pid
             except Exception:
                 _logger.exception("bridge_attach_failed")
@@ -409,7 +409,7 @@ class X64DbgWidget(EmbeddedToolWidget):
         """
         if self._bridge:
             try:
-                self._run_bridge_async(self._bridge.goto_address(address))
+                self._run_bridge_async(self._bridge.run_command(f"goto {hex(address)}"))
             except Exception:
                 _logger.exception("goto_address_failed")
                 return False

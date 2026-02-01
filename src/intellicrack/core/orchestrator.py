@@ -11,8 +11,10 @@ import asyncio
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
+from .license_analyzer import LicenseAnalyzer
 from .logging import get_logger
 from .types import (
     BinaryInfo,
@@ -30,11 +32,9 @@ from .types import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from pathlib import Path
 
     from ..providers.base import LLMProvider
     from ..providers.registry import ProviderRegistry
-    from .license_analyzer import LicenseAnalyzer
     from .session import Session, SessionManager
     from .tools import ToolRegistry
 
@@ -109,6 +109,21 @@ class OrchestratorStats:
         """
         self._response_times.append(time_ms)
         self.average_response_time_ms = sum(self._response_times) / len(self._response_times)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert statistics to dictionary for reporting.
+
+        Returns:
+            Dictionary containing all statistics.
+        """
+        return {
+            "total_requests": self.total_requests,
+            "total_tool_calls": self.total_tool_calls,
+            "successful_tool_calls": self.successful_tool_calls,
+            "failed_tool_calls": self.failed_tool_calls,
+            "total_tokens_used": self.total_tokens_used,
+            "average_response_time_ms": self.average_response_time_ms,
+        }
 
 
 class Orchestrator:
@@ -333,8 +348,7 @@ class Orchestrator:
             if self._state != "cancelled":
                 self._state = "idle"
 
-            if self._current_session is not None:
-                await self._sessions.update(self._current_session)
+            await self._sessions.update(self._current_session)
 
     async def _run_agent_loop(self) -> None:
         """Run the main agent loop until completion or cancellation.
@@ -526,6 +540,18 @@ class Orchestrator:
 
         return "\n".join(prompt_parts)
 
+    @staticmethod
+    def _estimate_tokens(text: str) -> int:
+        """Estimate token count for text.
+
+        Args:
+            text: Text to estimate tokens for.
+
+        Returns:
+            Estimated token count.
+        """
+        return len(text) // 4
+
     async def _call_llm(
         self,
         provider: LLMProvider,
@@ -551,22 +577,31 @@ class Orchestrator:
             error_message = "No active session"
             raise RuntimeError(error_message)
 
+        # Estimate input tokens
+        input_tokens = sum(self._estimate_tokens(m.content) for m in messages)
+        self._stats.total_tokens_used += input_tokens
+
         tools_available = bool(tools)
         if self._should_use_streaming(
             tools_available=tools_available,
             is_final_response=is_final_response,
         ):
-            return await self._stream_response(
+            result = await self._stream_response(
+                provider=provider,
+                messages=messages,
+                tools=tools,
+            )
+        else:
+            result = await self._non_stream_response(
                 provider=provider,
                 messages=messages,
                 tools=tools,
             )
 
-        return await self._non_stream_response(
-            provider=provider,
-            messages=messages,
-            tools=tools,
-        )
+        response, _ = result
+        self._stats.total_tokens_used += self._estimate_tokens(response.content)
+
+        return result
 
     def _should_use_streaming(
         self,
@@ -890,7 +925,8 @@ class Orchestrator:
         await self._sessions.update(self._current_session)
         return binary_info
 
-    async def _run_license_analysis(self, path: Path) -> LicensingAnalysis | None:
+    @staticmethod
+    async def _run_license_analysis(path: Path) -> LicensingAnalysis | None:
         """Run licensing analysis on a binary.
 
         Args:
@@ -900,16 +936,15 @@ class Orchestrator:
             LicensingAnalysis results or None on failure.
         """
         try:
-            from .license_analyzer import LicenseAnalyzer
-
             analyzer = LicenseAnalyzer()
             loop = asyncio.get_running_loop()
             analysis = await loop.run_in_executor(None, analyzer.analyze, path)
-            _logger.info("licensing_analysis_completed", extra={"binary": path.name})
-            return analysis
         except Exception as e:
             _logger.warning("licensing_analysis_failed", extra={"binary": path.name, "error": str(e)})
             return None
+        else:
+            _logger.info("licensing_analysis_completed", extra={"binary": path.name})
+            return analysis
 
     async def reanalyze_licensing(self, binary_name: str | None = None) -> LicensingAnalysis | None:
         """Re-run licensing analysis on the active or specified binary.
@@ -926,13 +961,9 @@ class Orchestrator:
         if binary_name:
             for binary in self._current_session.binaries:
                 if binary.name == binary_name:
-                    from pathlib import Path as PathLib
-
-                    return await self._run_license_analysis(PathLib(binary.path))
+                    return await self._run_license_analysis(Path(binary.path))
         elif self._current_session.active_binary:
-            from pathlib import Path as PathLib
-
-            analysis = await self._run_license_analysis(PathLib(self._current_session.active_binary.path))
+            analysis = await self._run_license_analysis(Path(self._current_session.active_binary.path))
             if analysis:
                 self._current_session.add_licensing_analysis(self._current_session.active_binary.name, analysis)
                 if self._on_licensing_analysis:
@@ -1072,6 +1103,108 @@ class Orchestrator:
             tool_name = ToolName(tool_name.lower())
 
         return await self._tools.initialize_tool(tool_name)
+
+    async def save_session(self) -> None:
+        """Save the current session.
+
+        Delegates to the session manager to persist the current session state.
+        """
+        await self._sessions.save()
+
+    def set_confirmation_level(self, level: ConfirmationLevel) -> None:
+        """Set the confirmation level for tool calls.
+
+        Args:
+            level: The desired confirmation level.
+        """
+        self._config.confirmation_level = level
+
+    async def get_system_status(self) -> dict[str, Any]:
+        """Get comprehensive system status report.
+
+        Returns:
+            Dictionary containing session, metrics, and tool status.
+        """
+        return {
+            "state": self.state,
+            "session_id": self.current_session.id if self.current_session else None,
+            "metrics": self.stats.to_dict(),
+            "tools": await self.get_tool_status(),
+        }
+
+    def configure_hooks(
+        self,
+        on_licensing: Callable[[LicensingAnalysis], None] | None = None,
+        on_confirmation: Callable[[ToolCall], bool] | None = None,
+    ) -> None:
+        """Configure event hooks.
+
+        Args:
+            on_licensing: Callback for licensing analysis.
+            on_confirmation: Callback for confirmation requests.
+        """
+        if on_licensing:
+            self.set_licensing_analysis_callback(on_licensing)
+        if on_confirmation:
+            self.set_confirmation_callback(on_confirmation)
+
+    async def refresh_session_state(self) -> None:
+        """Refresh the session state including licensing analysis."""
+        await self.reanalyze_licensing()
+
+    async def register_manual_patch(
+        self,
+        address: int,
+        original_bytes: bytes,
+        new_bytes: bytes,
+        description: str,
+    ) -> None:
+        """Register a manually applied patch.
+
+        Args:
+            address: Patch address.
+            original_bytes: Original bytes.
+            new_bytes: New bytes.
+            description: Description.
+        """
+        patch = PatchInfo(
+            address=address,
+            original_bytes=original_bytes,
+            new_bytes=new_bytes,
+            description=description,
+            applied=True,
+        )
+        await self.add_patch(patch)
+
+    def resolve_confirmation(self, approved: bool) -> None:
+        """Resolve any pending confirmation request.
+
+        Args:
+            approved: Whether to approve the request.
+        """
+        self.confirm_pending(approved)
+
+    async def activate_binary_by_name(self, name: str) -> None:
+        """Activate a binary by name.
+
+        Args:
+            name: Name of binary to activate.
+
+        Raises:
+            ValueError: If binary not found.
+            RuntimeError: If no active session.
+        """
+        if self._current_session is None:
+            error_message = "No active session"
+            raise RuntimeError(error_message)
+
+        for i, binary in enumerate(self._current_session.binaries):
+            if binary.name == name:
+                await self.set_active_binary(i)
+                return
+
+        error_message = f"Binary not found: {name}"
+        raise ValueError(error_message)
 
     async def shutdown(self) -> None:
         """Shutdown the orchestrator and cleanup resources."""

@@ -1,25 +1,50 @@
+11 findings in src/intellicrack\ui\tools.py
+
+src/intellicrack\ui\tools.py:42: D102: in public method `tool_started`: - Missing docstring in public method
+
+src/intellicrack\ui\tools.py:44: D102: in public method `tool_closed`: - Missing docstring in public method
+
+src/intellicrack\ui\tools.py:46: D102: in public method `start_tool`: - Missing docstring in public method
+
+src/intellicrack\ui\tools.py:47: D102: in public method `stop_tool`: - Missing docstring in public method
+
+src/intellicrack\ui\tools.py:51: D101: in public class `HxDWidgetProtocol`: - Missing docstring in public class
+
+src/intellicrack\ui\tools.py:52: D102: in public method `load_file`: - Missing docstring in public method
+
+src/intellicrack\ui\tools.py:56: D101: in public class `X64DbgWidgetProtocol`: - Missing docstring in public class
+
+src/intellicrack\ui\tools.py:57: D102: in public method `debug_file`: - Missing docstring in public method
+
+src/intellicrack\ui\tools.py:61: D101: in public class `CutterWidgetProtocol`: - Missing docstring in public class
+
+src/intellicrack\ui\tools.py:62: D102: in public method `analyze_binary`: - Missing docstring in public method
+
+src/intellicrack\ui\tools.py:69: D102: in public method `set_analysis`: - Missing docstring in public method
+
+
 2 findings in src/intellicrack\bridges\base.py
 
-src/intellicrack\bridges\base.py:804: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')
+src/intellicrack\bridges\base.py:776: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')
 
-src/intellicrack\bridges\base.py:866: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')
+src/intellicrack\bridges\base.py:827: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')
 
 
 2 findings in src/intellicrack\bridges\frida_bridge.py
 
-src/intellicrack\bridges\frida_bridge.py:906: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')
+src/intellicrack\bridges\frida_bridge.py:925: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')
 
-src/intellicrack\bridges\frida_bridge.py:1037: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')
+src/intellicrack\bridges\frida_bridge.py:1058: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')
 
 
 1 findings in src/intellicrack\core\process_manager.py
 
-src/intellicrack\core\process_manager.py:257: D401: in private method `_sync_cleanup`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')
+src/intellicrack\core\process_manager.py:258: D401: in private method `_sync_cleanup`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')
 
 
 1 findings in src/intellicrack\core\script_gen.py
 
-src/intellicrack\core\script_gen.py:259: D401: in public method `validate_java`: - First line should be in imperative mood; try rephrasing (found 'Basic')
+src/intellicrack\core\script_gen.py:350: D401: in public method `validate_java`: - First line should be in imperative mood; try rephrasing (found 'Basic')
 
 
 1 findings in src/intellicrack\credentials\oauth.py
@@ -29,7 +54,7 @@ src/intellicrack\credentials\oauth.py:899: D401: in public function `authorize_g
 
 1 findings in src/intellicrack\providers\local_transformers.py
 
-src/intellicrack\providers\local_transformers.py:471: D401: in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')
+src/intellicrack\providers\local_transformers.py:475: D401: in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')
 
 
 1 findings in tests\__init__.py

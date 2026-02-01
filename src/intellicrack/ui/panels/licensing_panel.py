@@ -457,7 +457,7 @@ class NotesPanel(QTextEdit):
             self.setPlainText("No analysis notes available.")
             return
 
-        formatted = []
+        formatted: list[str] = []
         for i, note in enumerate(notes, 1):
             formatted.append(f"{i}. {note}")
 

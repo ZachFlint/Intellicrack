@@ -44,7 +44,7 @@ GEMINI.md:43:81 error MD013/line-length Line length [Expected: 80; Actual: 191]
 
 GEMINI.md:45:81 error MD013/line-length Line length [Expected: 80; Actual: 164]
 
-GEMINI.md:48:81 error MD013/line-length Line length [Expected: 80; Actual: 316]
+GEMINI.md:48:81 error MD013/line-length Line length [Expected: 80; Actual: 722]
 
 GEMINI.md:92:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
 
@@ -110,7 +110,7 @@ QWEN.md:12:81 error MD013/line-length Line length [Expected: 80; Actual: 191]
 
 QWEN.md:14:81 error MD013/line-length Line length [Expected: 80; Actual: 164]
 
-QWEN.md:17:81 error MD013/line-length Line length [Expected: 80; Actual: 316]
+QWEN.md:17:81 error MD013/line-length Line length [Expected: 80; Actual: 722]
 
 QWEN.md:40:81 error MD013/line-length Line length [Expected: 80; Actual: 91]
 
@@ -127,13 +127,17 @@ AGENTS.md:8:81 error MD013/line-length Line length [Expected: 80; Actual: 191]
 
 AGENTS.md:10:81 error MD013/line-length Line length [Expected: 80; Actual: 164]
 
-AGENTS.md:13:81 error MD013/line-length Line length [Expected: 80; Actual: 316]
+AGENTS.md:13:81 error MD013/line-length Line length [Expected: 80; Actual: 722]
 
 AGENTS.md:68 error MD024/no-duplicate-heading Multiple headings with the same content [Context: "Build, Lint, and Test Commands"]
 
 AGENTS.md:108:81 error MD013/line-length Line length [Expected: 80; Actual: 118]
 
 
-1 findings in CLAUDE.md
+3 findings in Claude.md
 
-CLAUDE.md:64 error MD036/no-emphasis-as-heading Emphasis used instead of a heading [Context: "TOOLS"]
+Claude.md:64 error MD036/no-emphasis-as-heading Emphasis used instead of a heading [Context: "TOOLS"]
+
+Claude.md:74:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
+
+Claude.md:107:81 error MD013/line-length Line length [Expected: 80; Actual: 86]

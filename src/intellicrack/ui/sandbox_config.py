@@ -15,7 +15,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -60,8 +60,8 @@ class SandboxTestWorker(QThread):
         output: Signal emitted with sandbox output messages.
     """
 
-    finished: pyqtSignal = pyqtSignal(bool, str)
-    output: pyqtSignal = pyqtSignal(str)
+    finished: ClassVar[pyqtSignal] = pyqtSignal(bool, str)
+    output: ClassVar[pyqtSignal] = pyqtSignal(str)
 
     def __init__(
         self,
@@ -117,14 +117,13 @@ class SandboxTestWorker(QThread):
                 creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0,
             )
 
-            if self._process.pid is not None:
-                process_manager = ProcessManager.get_instance()
-                process_manager.register(
-                    self._process,
-                    name="sandbox-test",
-                    process_type=ProcessType.SANDBOX,
-                    metadata={"wsb_config": str(self._wsb_file)},
-                )
+            process_manager = ProcessManager.get_instance()
+            process_manager.register(
+                self._process,
+                name="sandbox-test",
+                process_type=ProcessType.SANDBOX,
+                metadata={"wsb_config": str(self._wsb_file)},
+            )
 
             self.output.emit("Windows Sandbox launched successfully")
             self.output.emit("Waiting for sandbox to initialize (10 seconds)...")
@@ -198,8 +197,7 @@ class SandboxTestWorker(QThread):
         """Stop the sandbox test and terminate the process."""
         if self._process:
             process_manager = ProcessManager.get_instance()
-            if self._process.pid is not None:
-                process_manager.unregister(self._process.pid)
+            process_manager.unregister(self._process.pid)
 
             try:
                 self._process.terminate()
@@ -219,7 +217,7 @@ class SandboxConfigDialog(QDialog):
         settings_updated: Signal emitted when settings change.
     """
 
-    settings_updated: pyqtSignal = pyqtSignal()
+    settings_updated: ClassVar[pyqtSignal] = pyqtSignal()
 
     CONFIG_DIR = Path.home() / ".intellicrack"
     CONFIG_FILE = CONFIG_DIR / "sandbox.json"
@@ -676,7 +674,7 @@ class SandboxMonitorWidget(QFrame):
         sandbox_stopped: Signal emitted when sandbox is stopped.
     """
 
-    sandbox_stopped: pyqtSignal = pyqtSignal()
+    sandbox_stopped: ClassVar[pyqtSignal] = pyqtSignal()
 
     def __init__(
         self,

@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Fri, Jan 30, 2026 02:46:34 PM
+Generated: Sat, Jan 31, 2026 07:15:00 PM
 Directory: D:\Intellicrack\src
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -159,6 +159,8 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   ├── schemas.py
 │   │   └── x64dbg.py
 │   ├── core/
+│   │   ├── __pycache__/
+│   │   │   └── types.cpython-313.pyc
 │   │   ├── __init__.py
 │   │   ├── config.py
 │   │   ├── license_analyzer.py
@@ -251,5 +253,6 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
     ├── dependency_links.txt
     ├── entry_points.txt
     ├── PKG-INFO
+    ├── requires.txt
     ├── SOURCES.txt
     └── top_level.txt

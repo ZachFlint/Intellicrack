@@ -4,47 +4,83 @@ This module defines the abstract interface that all tool bridge implementations
 must follow, enabling consistent interaction across Ghidra, x64dbg, Frida,
 radare2, and other reverse engineering tools.
 """
-# ruff: noqa: PLR6301
 
+from __future__ import annotations
+
+import abc
 import logging
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Literal, TypedDict
+from typing import TYPE_CHECKING, Literal
 
-from ..core.types import (
-    BinaryInfo,
-    BreakpointInfo,
-    CrossReference,
-    ExportInfo,
-    FunctionInfo,
-    HookInfo,
-    ImportInfo,
-    MemoryRegion,
-    ModuleInfo,
-    PatchInfo,
-    RegisterState,
-    StringInfo,
-    ToolDefinition,
-    ToolError,
-    ToolName,
-)
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from pathlib import Path
+
+    from ..core.types import (
+        BinaryInfo,
+        BreakpointInfo,
+        CrossReference,
+        ExportInfo,
+        FunctionInfo,
+        HookInfo,
+        ImportInfo,
+        MemoryRegion,
+        ModuleInfo,
+        PatchInfo,
+        RegisterState,
+        StringInfo,
+        ToolDefinition,
+        ToolName,
+    )
+
+__all__ = [
+    "BinaryOperationsBridge",
+    "BridgeCapabilities",
+    "BridgeState",
+    "DebuggerBridge",
+    "DisassemblyLine",
+    "DynamicAnalysisBridge",
+    "InstrumentationBridge",
+    "MemorySearchResult",
+    "StackFrame",
+    "StaticAnalysisBridge",
+    "ToolBridgeBase",
+    "WatchpointInfo",
+]
 
 _ERR_MUST_OVERRIDE = "must override method"
 
 
-class DisassemblyLine(TypedDict):
-    """Single line of disassembly output."""
+@dataclass
+class DisassemblyLine:
+    """Single line of disassembly output.
+
+    Attributes:
+        address: Virtual address of the instruction.
+        bytes_str: Hex representation of instruction bytes.
+        mnemonic: Instruction mnemonic (e.g., 'mov', 'jmp').
+        operands: Instruction operands (e.g., 'rax, rbx').
+        comment: Optional comment at this line.
+    """
 
     address: int
-    bytes: str
+    bytes_str: str
     mnemonic: str
     operands: str
-    comment: str | None
+    comment: str | None = None
 
 
-class MemorySearchResult(TypedDict):
-    """Result from a memory pattern search."""
+@dataclass
+class MemorySearchResult:
+    """Result from a memory pattern search.
+
+    Attributes:
+        address: Virtual address of the match.
+        matched_bytes: The actual bytes that matched (hex string).
+        context_before: Bytes preceding the match (hex string).
+        context_after: Bytes following the match (hex string).
+    """
 
     address: int
     matched_bytes: str
@@ -52,8 +88,19 @@ class MemorySearchResult(TypedDict):
     context_after: str
 
 
-class StackFrame(TypedDict):
-    """Single stack frame in a call stack."""
+@dataclass
+class StackFrame:
+    """Single stack frame in a call stack.
+
+    Attributes:
+        index: Frame index (0 = top/current).
+        address: Instruction pointer in this frame.
+        return_address: Return address for this frame.
+        frame_pointer: Base/Frame pointer (RBP/EBP).
+        stack_pointer: Stack pointer (RSP/ESP).
+        function_name: Name of the function if known.
+        module_name: Name of the module if known.
+    """
 
     index: int
     address: int
@@ -64,8 +111,18 @@ class StackFrame(TypedDict):
     module_name: str | None
 
 
-class WatchpointInfo(TypedDict):
-    """Memory watchpoint information."""
+@dataclass
+class WatchpointInfo:
+    """Memory watchpoint information.
+
+    Attributes:
+        id: Watchpoint identifier.
+        address: Memory address being watched.
+        size: Size of the watched region.
+        watch_type: Type of access to watch (read/write/exec).
+        enabled: Whether the watchpoint is active.
+        hit_count: Number of times hit.
+    """
 
     id: int
     address: int
@@ -98,8 +155,20 @@ class BridgeCapabilities:
     supports_patching: bool = False
     supports_scripting: bool = False
     supports_memory_access: bool = False
-    supported_architectures: list[str] = field(default_factory=list)
-    supported_formats: list[str] = field(default_factory=list)
+    supported_architectures: list[str] = field(default_factory=list[str])
+    supported_formats: list[str] = field(default_factory=list[str])
+
+    def has_capability(self, capability: str) -> bool:
+        """Check if a specific capability is supported."""
+        return getattr(self, f"supports_{capability}", False)
+
+    def supports_arch(self, arch: str) -> bool:
+        """Check if an architecture is supported."""
+        return arch in self.supported_architectures
+
+    def supports_format(self, fmt: str) -> bool:
+        """Check if a binary format is supported."""
+        return fmt in self.supported_formats
 
 
 @dataclass
@@ -124,8 +193,16 @@ class BridgeState:
     target_pid: int | None = None
     last_error: str | None = None
 
+    def is_ready(self) -> bool:
+        """Check if bridge is connected and tool is running."""
+        return self.connected and self.tool_running
 
-class ToolBridgeBase:
+    def clear_error(self) -> None:
+        """Clear the last error."""
+        self.last_error = None
+
+
+class ToolBridgeBase(abc.ABC):
     """Base class for tool bridges.
 
     All bridge implementations must inherit from this class and override
@@ -145,16 +222,14 @@ class ToolBridgeBase:
         self._logger: logging.Logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
     @property
+    @abc.abstractmethod
     def name(self) -> ToolName:
         """Get the tool's name.
 
         Note:
             Subclasses must override to return the ToolName enum value.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
     @property
     def state(self) -> BridgeState:
@@ -175,46 +250,39 @@ class ToolBridgeBase:
         return self._capabilities
 
     @property
+    @abc.abstractmethod
     def tool_definition(self) -> ToolDefinition:
         """Get tool definition for LLM function calling.
 
         Note:
             Subclasses must override to return a ToolDefinition
             with all available functions for this bridge.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def initialize(self, tool_path: Path | None = None) -> None:
         """Initialize the tool bridge.
 
         Args:
             tool_path: Optional path to tool installation.
                       If None, will auto-detect or download.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del tool_path
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
     async def shutdown(self) -> None:
         """Shutdown the tool and cleanup resources."""
         self._logger.info("bridge_shutdown", extra={"bridge_class": self.__class__.__name__})
         self._state = BridgeState()
 
+    @abc.abstractmethod
     async def is_available(self) -> bool:
         """Check if the tool is installed and available.
 
         Note:
             Subclasses must override to return True if tool is ready.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
 
 class StaticAnalysisBridge(ToolBridgeBase):
@@ -234,6 +302,7 @@ class StaticAnalysisBridge(ToolBridgeBase):
             supported_formats=["pe", "elf", "macho"],
         )
 
+    @abc.abstractmethod
     async def load_binary(self, path: Path) -> BinaryInfo:
         """Load a binary for analysis.
 
@@ -242,21 +311,19 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
         Note:
             Subclasses must override to return BinaryInfo with file details.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del path
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def analyze(self) -> None:
         """Run full analysis on loaded binary.
 
         Raises:
             ToolError: If analysis fails.
         """
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def get_functions(
         self,
         filter_pattern: str | None = None,
@@ -268,13 +335,10 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
         Note:
             Subclasses must override to return list of function information.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del filter_pattern
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def get_function(self, address: int) -> FunctionInfo | None:
         """Get function at specific address.
 
@@ -283,13 +347,10 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
         Note:
             Subclasses must override to return function info or None.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del address
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def decompile(self, address: int) -> str:
         """Decompile function at address.
 
@@ -298,13 +359,10 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
         Note:
             Subclasses must override to return decompiled C pseudocode.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del address
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def disassemble(
         self,
         address: int,
@@ -318,13 +376,10 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
         Note:
             Subclasses must override to return list of disassembly lines.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del address, count
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def get_xrefs_to(self, address: int) -> list[CrossReference]:
         """Get cross-references to an address.
 
@@ -333,13 +388,10 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
         Note:
             Subclasses must override to return list of cross-references.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del address
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def get_xrefs_from(self, address: int) -> list[CrossReference]:
         """Get cross-references from an address.
 
@@ -348,13 +400,10 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
         Note:
             Subclasses must override to return list of cross-references.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del address
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def search_strings(self, pattern: str) -> list[StringInfo]:
         """Search for strings matching pattern.
 
@@ -363,13 +412,10 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
         Note:
             Subclasses must override to return matching strings.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del pattern
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def search_bytes(self, pattern: bytes) -> list[int]:
         """Search for byte pattern.
 
@@ -378,35 +424,28 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
         Note:
             Subclasses must override to return list of match addresses.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del pattern
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def get_imports(self) -> list[ImportInfo]:
         """Get all imported functions.
 
         Note:
             Subclasses must override to return list of import information.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def get_exports(self) -> list[ExportInfo]:
         """Get all exported functions.
 
         Note:
             Subclasses must override to return list of export information.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def rename_function(self, address: int, new_name: str) -> bool:
         """Rename a function.
 
@@ -416,13 +455,10 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
         Note:
             Subclasses must override to return True if rename succeeded.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del address, new_name
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def add_comment(
         self,
         address: int,
@@ -438,12 +474,8 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
         Note:
             Subclasses must override to return True if comment was added.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del address, comment, comment_type
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
 
 class DynamicAnalysisBridge(ToolBridgeBase):
@@ -464,22 +496,20 @@ class DynamicAnalysisBridge(ToolBridgeBase):
             supported_formats=["pe"],
         )
 
+    @abc.abstractmethod
     async def attach(self, pid: int) -> None:
         """Attach to a running process.
 
         Args:
             pid: Process ID to attach to.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del pid
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def spawn(
         self,
         path: Path,
-        args: list[str] | None = None,
+        args: Sequence[str] | None = None,
     ) -> int:
         """Spawn a new process.
 
@@ -489,21 +519,15 @@ class DynamicAnalysisBridge(ToolBridgeBase):
 
         Note:
             Subclasses must override to return PID of spawned process.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del path, args
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def detach(self) -> None:
-        """Detach from current process.
+        """Detach from current process."""
+        ...
 
-        Raises:
-            ToolError: Must be overridden by subclass.
-        """
-        raise ToolError(_ERR_MUST_OVERRIDE)
-
+    @abc.abstractmethod
     async def read_memory(self, address: int, size: int) -> bytes:
         """Read process memory.
 
@@ -513,13 +537,10 @@ class DynamicAnalysisBridge(ToolBridgeBase):
 
         Note:
             Subclasses must override to return memory contents.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del address, size
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def write_memory(self, address: int, data: bytes) -> int:
         """Write to process memory.
 
@@ -529,24 +550,19 @@ class DynamicAnalysisBridge(ToolBridgeBase):
 
         Note:
             Subclasses must override to return the number of bytes written.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del address, data
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def get_memory_regions(self) -> list[MemoryRegion]:
         """Get process memory map.
 
         Note:
             Subclasses must override to return list of memory regions.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def scan_memory(self, pattern: bytes) -> list[MemorySearchResult]:
         """Scan process memory for a pattern.
 
@@ -555,12 +571,8 @@ class DynamicAnalysisBridge(ToolBridgeBase):
 
         Note:
             Subclasses must override to return list of matches with context.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del pattern
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
 
 class DebuggerBridge(DynamicAnalysisBridge):
@@ -575,63 +587,49 @@ class DebuggerBridge(DynamicAnalysisBridge):
         super().__init__()
         self._capabilities.supports_debugging = True
 
+    @abc.abstractmethod
     async def run(self) -> None:
-        """Continue execution.
+        """Continue execution."""
+        ...
 
-        Raises:
-            ToolError: Must be overridden by subclass.
-        """
-        raise ToolError(_ERR_MUST_OVERRIDE)
-
+    @abc.abstractmethod
     async def pause(self) -> None:
-        """Pause execution.
+        """Pause execution."""
+        ...
 
-        Raises:
-            ToolError: Must be overridden by subclass.
-        """
-        raise ToolError(_ERR_MUST_OVERRIDE)
-
+    @abc.abstractmethod
     async def stop(self) -> None:
-        """Stop debugging (terminate process).
+        """Stop debugging (terminate process)."""
+        ...
 
-        Raises:
-            ToolError: Must be overridden by subclass.
-        """
-        raise ToolError(_ERR_MUST_OVERRIDE)
-
+    @abc.abstractmethod
     async def step_into(self) -> int:
         """Single step into.
 
         Note:
             Subclasses must override to return new instruction pointer.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def step_over(self) -> int:
         """Single step over.
 
         Note:
             Subclasses must override to return new instruction pointer.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def step_out(self) -> int:
         """Step out of current function.
 
         Note:
             Subclasses must override to return new instruction pointer.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def set_breakpoint(
         self,
         address: int,
@@ -647,13 +645,10 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
         Note:
             Subclasses must override to return the breakpoint ID.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del address, bp_type, condition
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def remove_breakpoint(self, address: int) -> bool:
         """Remove a breakpoint.
 
@@ -662,35 +657,28 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
         Note:
             Subclasses must override to return True if removed successfully.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del address
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def get_breakpoints(self) -> list[BreakpointInfo]:
         """Get all breakpoints.
 
         Note:
             Subclasses must override to return list of breakpoint information.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def get_registers(self) -> RegisterState:
         """Get all register values.
 
         Note:
             Subclasses must override to return RegisterState with all registers.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def set_register(self, register: str, value: int) -> bool:
         """Set a register value.
 
@@ -700,24 +688,19 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
         Note:
             Subclasses must override to return True if set successfully.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del register, value
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def get_stack_trace(self) -> list[StackFrame]:
         """Get current stack trace.
 
         Note:
             Subclasses must override to return list of stack frames.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def disassemble_at(
         self,
         address: int,
@@ -731,13 +714,10 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
         Note:
             Subclasses must override to return list of disassembly lines.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del address, count
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def assemble_at(self, address: int, instruction: str) -> bytes:
         """Assemble instruction at address.
 
@@ -747,12 +727,8 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
         Note:
             Subclasses must override to return assembled bytes.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del address, instruction
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
 
 class InstrumentationBridge(DynamicAnalysisBridge):
@@ -767,18 +743,17 @@ class InstrumentationBridge(DynamicAnalysisBridge):
         super().__init__()
         self._capabilities.supports_scripting = True
 
+    @abc.abstractmethod
     async def enumerate_modules(self) -> list[ModuleInfo]:
         """List all loaded modules in the process.
 
         Note:
             Subclasses must override to return list of ModuleInfo for each
             loaded module in the attached process.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def enumerate_exports(self, module_name: str) -> list[ExportInfo]:
         """List exports of a module.
 
@@ -788,13 +763,10 @@ class InstrumentationBridge(DynamicAnalysisBridge):
         Note:
             Subclasses must override to return list of ExportInfo for all
             exported symbols from the specified module.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del module_name
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def hook_function(
         self,
         target: str,
@@ -811,13 +783,10 @@ class InstrumentationBridge(DynamicAnalysisBridge):
         Note:
             Subclasses must override to return HookInfo describing the
             installed hook on the target function.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del target, on_enter, on_leave
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def remove_hook(self, hook_id: str) -> bool:
         """Remove a previously installed hook.
 
@@ -827,25 +796,20 @@ class InstrumentationBridge(DynamicAnalysisBridge):
         Note:
             Subclasses must override to return True if hook was removed
             successfully, False otherwise.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del hook_id
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def get_hooks(self) -> list[HookInfo]:
         """Get all active hooks.
 
         Note:
             Subclasses must override to return list of HookInfo for all
             currently installed hooks in the process.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def execute_script(self, script: str) -> str:
         """Execute custom script code.
 
@@ -855,13 +819,10 @@ class InstrumentationBridge(DynamicAnalysisBridge):
         Note:
             Subclasses must override to return the script execution result
             as a string.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del script
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def intercept_return(self, target: str, return_value: int) -> HookInfo:
         """Hook a function and modify its return value.
 
@@ -872,17 +833,14 @@ class InstrumentationBridge(DynamicAnalysisBridge):
         Note:
             Subclasses must override to return HookInfo describing the
             installed return value interception hook.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del target, return_value
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def call_function(
         self,
         address: int,
-        args: list[int] | None = None,
+        args: Sequence[int] | None = None,
     ) -> int:
         """Call a function in the target process.
 
@@ -893,12 +851,8 @@ class InstrumentationBridge(DynamicAnalysisBridge):
         Note:
             Subclasses must override to return the integer return value
             from calling the function at the specified address.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del address, args
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
 
 class BinaryOperationsBridge(ToolBridgeBase):
@@ -918,6 +872,7 @@ class BinaryOperationsBridge(ToolBridgeBase):
             supported_formats=["pe", "elf", "macho", "raw"],
         )
 
+    @abc.abstractmethod
     async def load_file(self, path: Path) -> BinaryInfo:
         """Load a binary file.
 
@@ -927,13 +882,10 @@ class BinaryOperationsBridge(ToolBridgeBase):
         Note:
             Subclasses must override to return BinaryInfo with file details
             including format, architecture, sections, and entry point.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del path
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def read_bytes(self, offset: int, size: int) -> bytes:
         """Read bytes from file.
 
@@ -944,26 +896,20 @@ class BinaryOperationsBridge(ToolBridgeBase):
         Note:
             Subclasses must override to return bytes read from the file
             at the specified offset.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del offset, size
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def write_bytes(self, offset: int, data: bytes) -> None:
         """Write bytes to file.
 
         Args:
             offset: File offset.
             data: Bytes to write.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del offset, data
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def apply_patch(self, patch: PatchInfo) -> bool:
         """Apply a patch to the binary.
 
@@ -973,13 +919,10 @@ class BinaryOperationsBridge(ToolBridgeBase):
         Note:
             Subclasses must override to return True if the patch was
             applied successfully, False otherwise.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del patch
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def revert_patch(self, patch: PatchInfo) -> bool:
         """Revert a previously applied patch.
 
@@ -989,13 +932,10 @@ class BinaryOperationsBridge(ToolBridgeBase):
         Note:
             Subclasses must override to return True if the patch was
             reverted successfully, False otherwise.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del patch
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def save(self, path: Path | None = None) -> Path:
         """Save the binary to file.
 
@@ -1005,13 +945,10 @@ class BinaryOperationsBridge(ToolBridgeBase):
         Note:
             Subclasses must override to return the Path where the file
             was saved.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del path
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def search_pattern(
         self,
         pattern: bytes,
@@ -1028,13 +965,10 @@ class BinaryOperationsBridge(ToolBridgeBase):
         Note:
             Subclasses must override to return list of file offsets where
             the byte pattern was found.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del pattern, start_offset, max_results
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...
 
+    @abc.abstractmethod
     async def calculate_checksum(
         self,
         algorithm: str = "sha256",
@@ -1047,9 +981,5 @@ class BinaryOperationsBridge(ToolBridgeBase):
         Note:
             Subclasses must override to return the hex digest of the
             file hash using the specified algorithm.
-
-        Raises:
-            ToolError: Must be overridden by subclass.
         """
-        del algorithm
-        raise ToolError(_ERR_MUST_OVERRIDE)
+        ...

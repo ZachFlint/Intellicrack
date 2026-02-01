@@ -1,7 +1,7 @@
 {
   "tool": "markdownlint",
-  "generated": "2026-01-30T14:01:21.696351",
-  "total_findings": 63,
+  "generated": "2026-01-30T22:11:47.800932",
+  "total_findings": 65,
   "total_files": 5,
   "files": [
     {
@@ -166,8 +166,8 @@
           "line": 48,
           "column": 81,
           "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 316]",
-          "raw": "GEMINI.md:48:81 error MD013/line-length Line length [Expected: 80; Actual: 316]"
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 722]",
+          "raw": "GEMINI.md:48:81 error MD013/line-length Line length [Expected: 80; Actual: 722]"
         },
         {
           "line": 92,
@@ -388,8 +388,8 @@
           "line": 17,
           "column": 81,
           "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 316]",
-          "raw": "QWEN.md:17:81 error MD013/line-length Line length [Expected: 80; Actual: 316]"
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 722]",
+          "raw": "QWEN.md:17:81 error MD013/line-length Line length [Expected: 80; Actual: 722]"
         },
         {
           "line": 40,
@@ -443,8 +443,8 @@
           "line": 13,
           "column": 81,
           "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 316]",
-          "raw": "AGENTS.md:13:81 error MD013/line-length Line length [Expected: 80; Actual: 316]"
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 722]",
+          "raw": "AGENTS.md:13:81 error MD013/line-length Line length [Expected: 80; Actual: 722]"
         },
         {
           "line": 68,
@@ -463,15 +463,29 @@
       ]
     },
     {
-      "path": "CLAUDE.md",
-      "count": 1,
+      "path": "Claude.md",
+      "count": 3,
       "findings": [
         {
           "line": 64,
           "column": null,
           "code": "error",
           "message": "MD036/no-emphasis-as-heading Emphasis used instead of a heading [Context: \"TOOLS\"]",
-          "raw": "CLAUDE.md:64 error MD036/no-emphasis-as-heading Emphasis used instead of a heading [Context: \"TOOLS\"]"
+          "raw": "Claude.md:64 error MD036/no-emphasis-as-heading Emphasis used instead of a heading [Context: \"TOOLS\"]"
+        },
+        {
+          "line": 74,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 101]",
+          "raw": "Claude.md:74:81 error MD013/line-length Line length [Expected: 80; Actual: 101]"
+        },
+        {
+          "line": 107,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 86]",
+          "raw": "Claude.md:107:81 error MD013/line-length Line length [Expected: 80; Actual: 86]"
         }
       ]
     }

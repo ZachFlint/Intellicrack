@@ -8,7 +8,7 @@ import json
 import time
 from collections.abc import AsyncIterator
 from datetime import datetime
-from typing import cast
+from typing import Any, cast
 
 import httpx
 
@@ -306,16 +306,17 @@ class OpenRouterProvider(LLMProviderBase):
                     func_data = tc.get("function", {})
                     func_name = func_data.get("name", "")
                     args_str = func_data.get("arguments", "{}")
+                    parsed_args: dict[str, Any]
                     try:
-                        args = json.loads(args_str)
+                        parsed_args = json.loads(str(args_str))
                     except json.JSONDecodeError:
-                        args = {}
+                        parsed_args = {}
 
                     tool_call = ToolCall(
                         id=tc.get("id", f"call_{len(tool_calls)}"),
                         tool_name=func_name.split(".")[0] if "." in func_name else func_name,
                         function_name=func_name,
-                        arguments=args,
+                        arguments=parsed_args,
                     )
                     tool_calls.append(tool_call)
 

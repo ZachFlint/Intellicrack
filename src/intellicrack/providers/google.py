@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections.abc import Iterable
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, ClassVar, cast, override
 
@@ -280,12 +281,17 @@ class GoogleProvider(LLMProviderBase):
         try:
             config = self._create_config(temperature, max_tokens, gemini_tools)
 
-            response: GenerateContentResponse = await asyncio.to_thread(
-                self._client.models.generate_content,
-                model=model,
-                contents=gemini_contents,
-                config=config,
-            )
+            client = self._client
+            typed_contents = cast("types.ContentListUnionDict", gemini_contents)
+
+            def _generate() -> GenerateContentResponse:
+                return client.models.generate_content(
+                    model=model,
+                    contents=typed_contents,
+                    config=config,
+                )
+
+            response = await asyncio.to_thread(_generate)
 
             duration_ms = (time.perf_counter() - start_time) * 1000
             content, tool_calls = self._parse_response(response)
@@ -372,12 +378,17 @@ class GoogleProvider(LLMProviderBase):
         try:
             config = self._create_config(temperature, max_tokens, gemini_tools)
 
-            response_stream = await asyncio.to_thread(
-                self._client.models.generate_content_stream,
-                model=model,
-                contents=gemini_contents,
-                config=config,
-            )
+            client = self._client
+            typed_contents = cast("types.ContentListUnionDict", gemini_contents)
+
+            def _start_stream() -> Iterable[GenerateContentResponse]:
+                return client.models.generate_content_stream(
+                    model=model,
+                    contents=typed_contents,
+                    config=config,
+                )
+
+            response_stream = await asyncio.to_thread(_start_stream)
 
             for chunk in response_stream:
                 if self._cancel_requested:
@@ -439,7 +450,7 @@ class GoogleProvider(LLMProviderBase):
             return types.GenerateContentConfig(
                 temperature=temperature,
                 max_output_tokens=max_tokens,
-                tools=cast("Any", tools_seq),
+                tools=list(tools_seq),
             )
         return types.GenerateContentConfig(
             temperature=temperature,

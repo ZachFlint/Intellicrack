@@ -203,7 +203,7 @@ def build_schema_property(
     if param.enum is not None and len(param.enum) > 0:
         prop["enum"] = param.enum
 
-    if param.default is not None and isinstance(param.default, (str, int, float, bool)):
+    if param.default is not None:
         prop["default"] = param.default
 
     return prop
@@ -260,7 +260,7 @@ def _build_google_schema_parameters(
         }
         if param.enum is not None and len(param.enum) > 0:
             prop["enum"] = param.enum
-        if param.default is not None and isinstance(param.default, (str, int, float, bool)):
+        if param.default is not None:
             prop["default"] = param.default
 
         properties[param.name] = prop
@@ -595,6 +595,8 @@ def get_schema_for_provider(
     if provider == ProviderName.HUGGINGFACE:
         return [dict(s) for s in to_openai_schema(tool)]
     if provider == ProviderName.GROK:
+        return [dict(s) for s in to_openai_schema(tool)]
+    if provider == ProviderName.LOCAL_TRANSFORMERS:
         return [dict(s) for s in to_openai_schema(tool)]
     _assert_never(provider)
 

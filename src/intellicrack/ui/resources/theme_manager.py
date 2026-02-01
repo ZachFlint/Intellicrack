@@ -7,7 +7,7 @@ dark and light themes.
 from __future__ import annotations
 
 import logging
-from typing import ClassVar, Final, cast
+from typing import ClassVar, Final
 
 from PyQt6.QtWidgets import QApplication
 
@@ -1047,8 +1047,7 @@ class ThemeManager:
         app_instance = QApplication.instance()
 
         if app_instance is not None:
-            app = cast("QApplication", app_instance)
-            app.setStyleSheet(stylesheet)
+            app_instance.setStyleSheet(stylesheet)
             self._current_theme = theme
             _logger.info("theme_applied", extra={"theme": theme})
             return True

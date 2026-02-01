@@ -15,6 +15,9 @@ from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 import openai
 from openai import AsyncStream
+from openai.types.chat.chat_completion_message_function_tool_call import (
+    ChatCompletionMessageFunctionToolCall,
+)
 
 
 if TYPE_CHECKING:
@@ -313,8 +316,9 @@ class OpenAIProvider(LLMProviderBase):
 
             if response_message.tool_calls:
                 for tc in response_message.tool_calls:
-                    if not hasattr(tc, "function"):
+                    if not isinstance(tc, ChatCompletionMessageFunctionToolCall):
                         continue
+                    arguments: dict[str, Any]
                     try:
                         arguments = json.loads(tc.function.arguments)
                     except json.JSONDecodeError:
@@ -403,7 +407,7 @@ class OpenAIProvider(LLMProviderBase):
             stream: AsyncStream[ChatCompletionChunk]
             if openai_tools:
                 typed_tools = cast("list[ChatCompletionToolParam]", openai_tools)
-                raw_stream: Any = await self._client.chat.completions.create(
+                stream = await self._client.chat.completions.create(
                     model=model,
                     messages=typed_messages,
                     temperature=temperature,
@@ -411,16 +415,14 @@ class OpenAIProvider(LLMProviderBase):
                     stream=True,
                     tools=typed_tools,
                 )
-                stream = raw_stream
             else:
-                raw_stream_no_tools: Any = await self._client.chat.completions.create(
+                stream = await self._client.chat.completions.create(
                     model=model,
                     messages=typed_messages,
                     temperature=temperature,
                     max_tokens=max_tokens,
                     stream=True,
                 )
-                stream = raw_stream_no_tools
 
             async for chunk in stream:
                 if self._cancel_requested:

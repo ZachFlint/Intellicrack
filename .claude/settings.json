@@ -1,0 +1,5 @@
+{
+  "enabledPlugins": {
+    "basedpyright@claude-code-lsps": true
+  }
+}

@@ -7,6 +7,7 @@ for development. Includes automatic cleanup of old log files on startup.
 
 from __future__ import annotations
 
+import inspect
 import logging
 import sys
 import time
@@ -19,11 +20,9 @@ import structlog
 
 
 if TYPE_CHECKING:
-    from types import FrameType
+    from types import FrameType, TracebackType
 
     from structlog.types import EventDict, Processor, WrappedLogger
-
-    from .config import LogConfig
 
 
 _ERR_INVALID_CONFIG = "expected LogConfig"
@@ -144,7 +143,7 @@ def _add_call_info(
     Returns:
         Updated event dictionary with call info.
     """
-    frame: FrameType | None = sys._getframe()
+    frame: FrameType | None = inspect.currentframe()
     target_depth = 0
 
     while frame is not None:
@@ -339,7 +338,7 @@ class IntellicrackLogger:
 _app_logger: IntellicrackLogger | None = None
 
 
-def setup_logging(config: LogConfig) -> IntellicrackLogger:
+def setup_logging(config: object) -> IntellicrackLogger:
     """Set up application logging from configuration.
 
     Args:
@@ -472,10 +471,24 @@ def _sanitize_arguments(arguments: dict[str, object]) -> dict[str, str]:
     for key, value in arguments.items():
         if isinstance(value, bytes):
             sanitized[key] = f"<bytes len={len(value)}>"
-        elif isinstance(value, (list, tuple)) and len(value) > _COLLECTION_TRUNCATE_SIZE:
-            sanitized[key] = f"<{type(value).__name__} len={len(value)}>"
-        elif isinstance(value, dict) and len(value) > _COLLECTION_TRUNCATE_SIZE:
-            sanitized[key] = f"<dict len={len(value)}>"
+        elif isinstance(value, list):
+            obj_list = cast("list[object]", value)
+            if len(obj_list) > _COLLECTION_TRUNCATE_SIZE:
+                sanitized[key] = f"<list len={len(obj_list)}>"
+            else:
+                sanitized[key] = repr(obj_list)
+        elif isinstance(value, tuple):
+            obj_tuple = cast("tuple[object, ...]", value)
+            if len(obj_tuple) > _COLLECTION_TRUNCATE_SIZE:
+                sanitized[key] = f"<tuple len={len(obj_tuple)}>"
+            else:
+                sanitized[key] = repr(obj_tuple)
+        elif isinstance(value, dict):
+            obj_dict = cast("dict[object, object]", value)
+            if len(obj_dict) > _COLLECTION_TRUNCATE_SIZE:
+                sanitized[key] = f"<dict len={len(obj_dict)}>"
+            else:
+                sanitized[key] = repr(obj_dict)
         elif isinstance(value, str) and len(value) > _STRING_TRUNCATE_SIZE:
             sanitized[key] = f"{value[:100]}...({len(value)} chars)"
         else:
@@ -539,7 +552,7 @@ def log_provider_response(
 def log_binary_operation(
     operation: str,
     path: str | Path,
-    **kwargs: Any,
+    **kwargs: object,
 ) -> None:
     """Log a binary analysis operation.
 
@@ -555,7 +568,7 @@ def log_binary_operation(
 def log_sandbox_operation(
     operation: str,
     sandbox_type: str,
-    **kwargs: Any,
+    **kwargs: object,
 ) -> None:
     """Log a sandbox operation.
 
@@ -571,7 +584,7 @@ def log_sandbox_operation(
 def log_session_operation(
     operation: str,
     session_id: str | None = None,
-    **kwargs: Any,
+    **kwargs: object,
 ) -> None:
     """Log a session operation.
 
@@ -581,7 +594,7 @@ def log_session_operation(
         **kwargs: Additional operation-specific context.
     """
     slog = get_structlog_logger("session")
-    log_data: dict[str, Any] = dict(kwargs)
+    log_data: dict[str, object] = dict(kwargs)
     if session_id:
         log_data["session_id"] = session_id
     slog.info(f"session_{operation}", **log_data)
@@ -590,7 +603,7 @@ def log_session_operation(
 def log_analysis_operation(
     operation: str,
     target: str,
-    **kwargs: Any,
+    **kwargs: object,
 ) -> None:
     """Log a license analysis operation.
 
@@ -616,7 +629,7 @@ class OperationTimer:
         self,
         operation: str,
         logger_name: str = "operations",
-        **context: Any,
+        **context: object,
     ) -> None:
         """Initialize the operation timer.
 
@@ -645,7 +658,7 @@ class OperationTimer:
         self,
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
-        exc_tb: Any,
+        exc_tb: TracebackType | None,
     ) -> None:
         """Stop the timer and log operation completion.
 

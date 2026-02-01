@@ -7,23 +7,29 @@ Cutter, and HxD embedded tool integration.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from PyQt6.QtWidgets import QApplication, QMessageBox
+from PyQt6.QtWidgets import QApplication, QMessageBox, QPushButton
 
 
 if TYPE_CHECKING:
     from collections.abc import Generator
 
+    from intellicrack.core.config import Config
+    from intellicrack.core.orchestrator import Orchestrator
+    from intellicrack.ui.app import MainWindow
+
 
 @pytest.fixture(scope="module")
 def qapp() -> Generator[QApplication]:
     """Provide QApplication for tests."""
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication([])
+    existing = QApplication.instance()
+    if existing is not None and isinstance(existing, QApplication):
+        yield existing
+        return
+    app = QApplication([])
     yield app
 
 
@@ -49,6 +55,27 @@ def mock_config() -> MagicMock:
     return config
 
 
+def _create_window(
+    mock_config: MagicMock,
+    mock_orchestrator: MagicMock,
+) -> MainWindow:
+    """Create a MainWindow instance with mock dependencies.
+
+    Args:
+        mock_config: Mock configuration object.
+        mock_orchestrator: Mock orchestrator object.
+
+    Returns:
+        A new MainWindow instance.
+    """
+    from intellicrack.ui.app import MainWindow as _MainWindow
+
+    return _MainWindow(
+        cast("Config", mock_config),
+        cast("Orchestrator", mock_orchestrator),
+    )
+
+
 class TestEmbeddedToolsMenuIntegration:
     """Tests for embedded tools menu items in MainWindow."""
 
@@ -59,12 +86,13 @@ class TestEmbeddedToolsMenuIntegration:
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify Embedded Tools submenu is created in Tools menu."""
+        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
-            from intellicrack.ui.app import MainWindow
-
-            window = MainWindow(mock_config, mock_orchestrator)
+            window = _create_window(mock_config, mock_orchestrator)
             try:
                 menubar = window.menuBar()
+                assert menubar is not None, "Menu bar not found"
+
                 tools_menu = None
                 for action in menubar.actions():
                     if action.text() == "&Tools":
@@ -90,12 +118,13 @@ class TestEmbeddedToolsMenuIntegration:
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify all 6 menu actions exist in Embedded Tools submenu."""
+        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
-            from intellicrack.ui.app import MainWindow
-
-            window = MainWindow(mock_config, mock_orchestrator)
+            window = _create_window(mock_config, mock_orchestrator)
             try:
                 menubar = window.menuBar()
+                assert menubar is not None
+
                 tools_menu = None
                 for action in menubar.actions():
                     if action.text() == "&Tools":
@@ -103,7 +132,7 @@ class TestEmbeddedToolsMenuIntegration:
                         break
 
                 embedded_menu = None
-                if tools_menu:
+                if tools_menu is not None:
                     for action in tools_menu.actions():
                         if action.text() == "&Embedded Tools":
                             embedded_menu = action.menu()
@@ -137,18 +166,25 @@ class TestToolbarButtonsIntegration:
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify x64dbg, Cutter, and HxD buttons exist in toolbar."""
+        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
-            from intellicrack.ui.app import MainWindow
-
-            window = MainWindow(mock_config, mock_orchestrator)
+            window = _create_window(mock_config, mock_orchestrator)
             try:
                 assert hasattr(window, "_x64dbg_btn"), "x64dbg button not found"
                 assert hasattr(window, "_cutter_btn"), "Cutter button not found"
                 assert hasattr(window, "_hxd_btn"), "HxD button not found"
 
-                assert window._x64dbg_btn.text() == "x64dbg"
-                assert window._cutter_btn.text() == "Cutter"
-                assert window._hxd_btn.text() == "HxD"
+                x64dbg_btn: object = getattr(window, "_x64dbg_btn")
+                cutter_btn: object = getattr(window, "_cutter_btn")
+                hxd_btn: object = getattr(window, "_hxd_btn")
+
+                assert isinstance(x64dbg_btn, QPushButton)
+                assert isinstance(cutter_btn, QPushButton)
+                assert isinstance(hxd_btn, QPushButton)
+
+                assert x64dbg_btn.text() == "x64dbg"
+                assert cutter_btn.text() == "Cutter"
+                assert hxd_btn.text() == "HxD"
             finally:
                 window.close()
 
@@ -159,14 +195,21 @@ class TestToolbarButtonsIntegration:
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify toolbar buttons have correct tooltips."""
+        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
-            from intellicrack.ui.app import MainWindow
-
-            window = MainWindow(mock_config, mock_orchestrator)
+            window = _create_window(mock_config, mock_orchestrator)
             try:
-                assert "x64dbg" in window._x64dbg_btn.toolTip()
-                assert "Cutter" in window._cutter_btn.toolTip()
-                assert "HxD" in window._hxd_btn.toolTip()
+                x64dbg_btn: object = getattr(window, "_x64dbg_btn")
+                cutter_btn: object = getattr(window, "_cutter_btn")
+                hxd_btn: object = getattr(window, "_hxd_btn")
+
+                assert isinstance(x64dbg_btn, QPushButton)
+                assert isinstance(cutter_btn, QPushButton)
+                assert isinstance(hxd_btn, QPushButton)
+
+                assert "x64dbg" in x64dbg_btn.toolTip()
+                assert "Cutter" in cutter_btn.toolTip()
+                assert "HxD" in hxd_btn.toolTip()
             finally:
                 window.close()
 
@@ -181,18 +224,21 @@ class TestEmbeddedToolHandlers:
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify _on_open_x64dbg calls add_x64dbg_tab."""
+        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
-            from intellicrack.ui.app import MainWindow
-
-            window = MainWindow(mock_config, mock_orchestrator)
+            window = _create_window(mock_config, mock_orchestrator)
             try:
                 mock_widget = MagicMock()
                 mock_widget.start_tool.return_value = True
-                window._tool_panel.add_x64dbg_tab = MagicMock(return_value=mock_widget)
+                tool_panel: object = getattr(window, "_tool_panel")
+                mock_add_tab = MagicMock(return_value=mock_widget)
+                setattr(tool_panel, "add_x64dbg_tab", mock_add_tab)
 
-                window._on_open_x64dbg()
+                open_x64dbg: object = getattr(window, "_on_open_x64dbg")
+                assert callable(open_x64dbg)
+                open_x64dbg()
 
-                window._tool_panel.add_x64dbg_tab.assert_called_once_with(is_64bit=True)
+                mock_add_tab.assert_called_once_with(is_64bit=True)
                 mock_widget.start_tool.assert_called_once()
             finally:
                 window.close()
@@ -204,17 +250,21 @@ class TestEmbeddedToolHandlers:
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify _on_open_x64dbg shows error when widget creation fails."""
+        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
-            from intellicrack.ui.app import MainWindow
-
-            window = MainWindow(mock_config, mock_orchestrator)
+            window = _create_window(mock_config, mock_orchestrator)
             try:
-                window._tool_panel.add_x64dbg_tab = MagicMock(return_value=None)
+                tool_panel: object = getattr(window, "_tool_panel")
+                setattr(tool_panel, "add_x64dbg_tab", MagicMock(return_value=None))
 
                 with patch.object(window, "_show_tool_error") as mock_error:
-                    window._on_open_x64dbg()
+                    open_x64dbg: object = getattr(window, "_on_open_x64dbg")
+                    assert callable(open_x64dbg)
+                    open_x64dbg()
                     mock_error.assert_called_once()
-                    assert "x64dbg" in mock_error.call_args[0][0]
+                    call_args = mock_error.call_args
+                    assert call_args is not None
+                    assert "x64dbg" in str(call_args[0][0])
             finally:
                 window.close()
 
@@ -225,18 +275,21 @@ class TestEmbeddedToolHandlers:
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify _on_open_cutter calls add_cutter_tab."""
+        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
-            from intellicrack.ui.app import MainWindow
-
-            window = MainWindow(mock_config, mock_orchestrator)
+            window = _create_window(mock_config, mock_orchestrator)
             try:
                 mock_widget = MagicMock()
                 mock_widget.start_tool.return_value = True
-                window._tool_panel.add_cutter_tab = MagicMock(return_value=mock_widget)
+                tool_panel: object = getattr(window, "_tool_panel")
+                mock_add_tab = MagicMock(return_value=mock_widget)
+                setattr(tool_panel, "add_cutter_tab", mock_add_tab)
 
-                window._on_open_cutter()
+                open_cutter: object = getattr(window, "_on_open_cutter")
+                assert callable(open_cutter)
+                open_cutter()
 
-                window._tool_panel.add_cutter_tab.assert_called_once()
+                mock_add_tab.assert_called_once()
                 mock_widget.start_tool.assert_called_once()
             finally:
                 window.close()
@@ -248,18 +301,21 @@ class TestEmbeddedToolHandlers:
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify _on_open_hxd calls add_hxd_tab."""
+        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
-            from intellicrack.ui.app import MainWindow
-
-            window = MainWindow(mock_config, mock_orchestrator)
+            window = _create_window(mock_config, mock_orchestrator)
             try:
                 mock_widget = MagicMock()
                 mock_widget.start_tool.return_value = True
-                window._tool_panel.add_hxd_tab = MagicMock(return_value=mock_widget)
+                tool_panel: object = getattr(window, "_tool_panel")
+                mock_add_tab = MagicMock(return_value=mock_widget)
+                setattr(tool_panel, "add_hxd_tab", mock_add_tab)
 
-                window._on_open_hxd()
+                open_hxd: object = getattr(window, "_on_open_hxd")
+                assert callable(open_hxd)
+                open_hxd()
 
-                window._tool_panel.add_hxd_tab.assert_called_once()
+                mock_add_tab.assert_called_once()
                 mock_widget.start_tool.assert_called_once()
             finally:
                 window.close()
@@ -275,15 +331,16 @@ class TestCurrentBinaryHandlers:
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify warning shown when no binary is loaded for debug."""
+        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
-            from intellicrack.ui.app import MainWindow
-
-            window = MainWindow(mock_config, mock_orchestrator)
+            window = _create_window(mock_config, mock_orchestrator)
             try:
-                window._current_binary = None
+                setattr(window, "_current_binary", None)
 
                 with patch.object(window, "_show_no_binary_warning") as mock_warn:
-                    window._on_debug_current_binary()
+                    on_debug: object = getattr(window, "_on_debug_current_binary")
+                    assert callable(on_debug)
+                    on_debug()
                     mock_warn.assert_called_once_with("debug")
             finally:
                 window.close()
@@ -295,15 +352,16 @@ class TestCurrentBinaryHandlers:
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify warning shown when no binary is loaded for analysis."""
+        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
-            from intellicrack.ui.app import MainWindow
-
-            window = MainWindow(mock_config, mock_orchestrator)
+            window = _create_window(mock_config, mock_orchestrator)
             try:
-                window._current_binary = None
+                setattr(window, "_current_binary", None)
 
                 with patch.object(window, "_show_no_binary_warning") as mock_warn:
-                    window._on_analyze_current_binary()
+                    on_analyze: object = getattr(window, "_on_analyze_current_binary")
+                    assert callable(on_analyze)
+                    on_analyze()
                     mock_warn.assert_called_once_with("analyze")
             finally:
                 window.close()
@@ -315,15 +373,16 @@ class TestCurrentBinaryHandlers:
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify warning shown when no binary is loaded for hex edit."""
+        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
-            from intellicrack.ui.app import MainWindow
-
-            window = MainWindow(mock_config, mock_orchestrator)
+            window = _create_window(mock_config, mock_orchestrator)
             try:
-                window._current_binary = None
+                setattr(window, "_current_binary", None)
 
                 with patch.object(window, "_show_no_binary_warning") as mock_warn:
-                    window._on_hex_edit_current_binary()
+                    on_hex_edit: object = getattr(window, "_on_hex_edit_current_binary")
+                    assert callable(on_hex_edit)
+                    on_hex_edit()
                     mock_warn.assert_called_once_with("hex edit")
             finally:
                 window.close()
@@ -335,18 +394,21 @@ class TestCurrentBinaryHandlers:
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify binary is passed to x64dbg when loaded."""
+        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
-            from intellicrack.ui.app import MainWindow
-
-            window = MainWindow(mock_config, mock_orchestrator)
+            window = _create_window(mock_config, mock_orchestrator)
             try:
                 test_path = Path("/test/binary.exe")
-                window._current_binary = test_path
-                window._tool_panel.open_in_x64dbg = MagicMock(return_value=True)
+                setattr(window, "_current_binary", test_path)
+                tool_panel: object = getattr(window, "_tool_panel")
+                mock_open = MagicMock(return_value=True)
+                setattr(tool_panel, "open_in_x64dbg", mock_open)
 
-                window._on_debug_current_binary()
+                on_debug: object = getattr(window, "_on_debug_current_binary")
+                assert callable(on_debug)
+                on_debug()
 
-                window._tool_panel.open_in_x64dbg.assert_called_once_with(test_path)
+                mock_open.assert_called_once_with(test_path)
             finally:
                 window.close()
 
@@ -357,18 +419,21 @@ class TestCurrentBinaryHandlers:
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify binary is passed to Cutter when loaded."""
+        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
-            from intellicrack.ui.app import MainWindow
-
-            window = MainWindow(mock_config, mock_orchestrator)
+            window = _create_window(mock_config, mock_orchestrator)
             try:
                 test_path = Path("/test/binary.exe")
-                window._current_binary = test_path
-                window._tool_panel.open_in_cutter = MagicMock(return_value=True)
+                setattr(window, "_current_binary", test_path)
+                tool_panel: object = getattr(window, "_tool_panel")
+                mock_open = MagicMock(return_value=True)
+                setattr(tool_panel, "open_in_cutter", mock_open)
 
-                window._on_analyze_current_binary()
+                on_analyze: object = getattr(window, "_on_analyze_current_binary")
+                assert callable(on_analyze)
+                on_analyze()
 
-                window._tool_panel.open_in_cutter.assert_called_once_with(test_path)
+                mock_open.assert_called_once_with(test_path)
             finally:
                 window.close()
 
@@ -379,18 +444,21 @@ class TestCurrentBinaryHandlers:
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify binary is passed to HxD when loaded."""
+        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
-            from intellicrack.ui.app import MainWindow
-
-            window = MainWindow(mock_config, mock_orchestrator)
+            window = _create_window(mock_config, mock_orchestrator)
             try:
                 test_path = Path("/test/binary.exe")
-                window._current_binary = test_path
-                window._tool_panel.open_in_hxd = MagicMock(return_value=True)
+                setattr(window, "_current_binary", test_path)
+                tool_panel: object = getattr(window, "_tool_panel")
+                mock_open = MagicMock(return_value=True)
+                setattr(tool_panel, "open_in_hxd", mock_open)
 
-                window._on_hex_edit_current_binary()
+                on_hex_edit: object = getattr(window, "_on_hex_edit_current_binary")
+                assert callable(on_hex_edit)
+                on_hex_edit()
 
-                window._tool_panel.open_in_hxd.assert_called_once_with(test_path)
+                mock_open.assert_called_once_with(test_path)
             finally:
                 window.close()
 
@@ -405,12 +473,12 @@ class TestCurrentBinaryTracking:
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify _current_binary starts as None."""
+        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
-            from intellicrack.ui.app import MainWindow
-
-            window = MainWindow(mock_config, mock_orchestrator)
+            window = _create_window(mock_config, mock_orchestrator)
             try:
-                assert window._current_binary is None
+                current_binary: object = getattr(window, "_current_binary")
+                assert current_binary is None
             finally:
                 window.close()
 
@@ -421,17 +489,19 @@ class TestCurrentBinaryTracking:
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify _load_binary updates _current_binary."""
+        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
-            from intellicrack.ui.app import MainWindow
-
-            window = MainWindow(mock_config, mock_orchestrator)
+            window = _create_window(mock_config, mock_orchestrator)
             try:
                 test_path = Path("/test/sample.exe")
 
                 with patch.object(window, "_run_async"):
-                    window._load_binary(test_path)
+                    load_binary: object = getattr(window, "_load_binary")
+                    assert callable(load_binary)
+                    load_binary(test_path)
 
-                assert window._current_binary == test_path
+                current_binary: object = getattr(window, "_current_binary")
+                assert current_binary == test_path
             finally:
                 window.close()
 
@@ -446,18 +516,20 @@ class TestErrorDialogs:
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify _show_tool_error displays QMessageBox warning."""
+        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
-            from intellicrack.ui.app import MainWindow
-
-            window = MainWindow(mock_config, mock_orchestrator)
+            window = _create_window(mock_config, mock_orchestrator)
             try:
                 with patch.object(QMessageBox, "warning") as mock_warning:
-                    window._show_tool_error("TestTool", "Test error message")
+                    show_error: object = getattr(window, "_show_tool_error")
+                    assert callable(show_error)
+                    show_error("TestTool", "Test error message")
 
                     mock_warning.assert_called_once()
                     call_args = mock_warning.call_args
-                    assert "TestTool" in call_args[0][1]
-                    assert "Test error message" in call_args[0][2]
+                    assert call_args is not None
+                    assert "TestTool" in str(call_args[0][1])
+                    assert "Test error message" in str(call_args[0][2])
             finally:
                 window.close()
 
@@ -468,16 +540,18 @@ class TestErrorDialogs:
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify _show_no_binary_warning displays QMessageBox information."""
+        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
-            from intellicrack.ui.app import MainWindow
-
-            window = MainWindow(mock_config, mock_orchestrator)
+            window = _create_window(mock_config, mock_orchestrator)
             try:
                 with patch.object(QMessageBox, "information") as mock_info:
-                    window._show_no_binary_warning("test action")
+                    show_warning: object = getattr(window, "_show_no_binary_warning")
+                    assert callable(show_warning)
+                    show_warning("test action")
 
                     mock_info.assert_called_once()
                     call_args = mock_info.call_args
-                    assert "test action" in call_args[0][2]
+                    assert call_args is not None
+                    assert "test action" in str(call_args[0][2])
             finally:
                 window.close()

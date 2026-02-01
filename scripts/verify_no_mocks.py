@@ -78,19 +78,17 @@ def find_mock_usage(file_path: Path) -> list[tuple[int, str, str]]:
 
         # Check if this is a validation script that legitimately checks for patterns
         is_validation_script = any(
-            "validation" in str(file_path).lower() or
-            "check" in str(file_path).lower() or
-            "verify" in str(file_path).lower()
+            "validation" in str(file_path).lower() or "check" in str(file_path).lower() or "verify" in str(file_path).lower()
             for _ in [None]
         )
 
         for line_num, line in enumerate(lines, 1):
             # Skip comments that are just listing patterns to avoid
-            if line.strip().startswith('#') and any(x in line.lower() for x in ['pattern', 'avoid', 'check', 'detect']):
+            if line.strip().startswith("#") and any(x in line.lower() for x in ["pattern", "avoid", "check", "detect"]):
                 continue
 
             # Skip lines that are checking for these patterns (validation scripts)
-            if is_validation_script and any(x in line for x in ['in line', 'not in', 'check', 'detect', 'validate']):
+            if is_validation_script and any(x in line for x in ["in line", "not in", "check", "detect", "validate"]):
                 continue
 
             for pattern in MOCK_PATTERNS:
@@ -131,21 +129,10 @@ def scan_test_directory(test_dir: Path) -> dict:
 def classify_severity(pattern: str, line: str, file_path: str) -> str:
     """Classify violation severity."""
     # Critical violations - actual mock framework usage
-    critical_patterns = [
-        "from unittest.mock import",
-        "from mock import",
-        "import unittest.mock",
-        "import mock"
-    ]
+    critical_patterns = ["from unittest.mock import", "from mock import", "import unittest.mock", "import mock"]
 
     # High violations - mock objects and assertions
-    high_patterns = [
-        "Mock(",
-        "MagicMock(",
-        "patch(",
-        "@patch",
-        ".assert_called"
-    ]
+    high_patterns = ["Mock(", "MagicMock(", "patch(", "@patch", ".assert_called"]
 
     if any(p in line for p in critical_patterns):
         return "CRITICAL"
@@ -195,8 +182,9 @@ def print_report(violations: dict, summary_only: bool = False) -> int:
         for file_path in critical_files[:10]:  # Show first 10
             file_violations = violations[file_path]
             print(f"\n📄 {file_path}")
-            critical_lines = [(num, line, pat) for num, line, pat in file_violations
-                             if classify_severity(pat, line, file_path) == "CRITICAL"]
+            critical_lines = [
+                (num, line, pat) for num, line, pat in file_violations if classify_severity(pat, line, file_path) == "CRITICAL"
+            ]
             for line_num, line, _pattern in critical_lines[:3]:
                 print(f"   Line {line_num}: {line}")
 
@@ -217,24 +205,10 @@ def print_report(violations: dict, summary_only: bool = False) -> int:
 
 def main():
     """Main entry point."""
-    parser = argparse.ArgumentParser(
-        description="Verify that tests use real data instead of mocks"
-    )
-    parser.add_argument(
-        "--summary", "-s",
-        action="store_true",
-        help="Show only summary, not detailed violations"
-    )
-    parser.add_argument(
-        "--ci",
-        action="store_true",
-        help="CI mode: exit with code 2 for critical, 1 for high violations"
-    )
-    parser.add_argument(
-        "--test-dir",
-        type=Path,
-        help="Override test directory path (default: auto-detect)"
-    )
+    parser = argparse.ArgumentParser(description="Verify that tests use real data instead of mocks")
+    parser.add_argument("--summary", "-s", action="store_true", help="Show only summary, not detailed violations")
+    parser.add_argument("--ci", action="store_true", help="CI mode: exit with code 2 for critical, 1 for high violations")
+    parser.add_argument("--test-dir", type=Path, help="Override test directory path (default: auto-detect)")
 
     args = parser.parse_args()
 

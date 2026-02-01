@@ -296,7 +296,7 @@ class IconManager:
             color = QColor("#d4d4d4")
 
         pixmap = QPixmap(size, size)
-        pixmap.fill(Qt.GlobalColor.transparent)
+        pixmap.fill(QColor(0, 0, 0, 0))
 
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)

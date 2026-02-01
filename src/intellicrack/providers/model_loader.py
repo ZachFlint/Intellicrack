@@ -395,7 +395,7 @@ def load_model_for_xpu(
         ImportError: If required packages are not installed.
     """
     try:
-        import torch
+        __import__("torch")
         from transformers import AutoModelForCausalLM, AutoTokenizer
     except ImportError as exc:
         raise ImportError("transformers and torch are required for model loading") from exc

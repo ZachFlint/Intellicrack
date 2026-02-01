@@ -173,10 +173,10 @@ class ConnectionTestWorker(QThread):
     Runs connection tests in a separate thread to avoid blocking the UI.
 
     Attributes:
-        finished: Signal emitted when test completes with (success, message).
+        test_finished: Signal emitted when test completes with (success, message).
     """
 
-    finished: pyqtSignal = pyqtSignal(bool, str)
+    test_finished: ClassVar[pyqtSignal] = pyqtSignal(bool, str)
 
     def __init__(
         self,
@@ -202,9 +202,9 @@ class ConnectionTestWorker(QThread):
         """Run the connection test in a separate thread."""
         try:
             success, message = self._test_provider_connection()
-            self.finished.emit(success, message)
+            self.test_finished.emit(success, message)
         except Exception as e:
-            self.finished.emit(False, f"Connection error: {e}")
+            self.test_finished.emit(False, f"Connection error: {e}")
 
     def _test_provider_connection(self) -> tuple[bool, str]:
         """Test the connection to the provider.
@@ -228,7 +228,7 @@ class ConnectionTestWorker(QThread):
             return self._test_huggingface(timeout)
         return False, f"Unknown provider: {self._provider_id}"
 
-    def _test_anthropic(self, timeout: Any) -> tuple[bool, str]:
+    def _test_anthropic(self, timeout: httpx.Timeout) -> tuple[bool, str]:
         """Test Anthropic API connection.
 
         Args:
@@ -262,7 +262,7 @@ class ConnectionTestWorker(QThread):
         except Exception as e:
             return False, str(e)
 
-    def _test_openai(self, timeout: Any) -> tuple[bool, str]:
+    def _test_openai(self, timeout: httpx.Timeout) -> tuple[bool, str]:
         """Test OpenAI API connection.
 
         Args:
@@ -288,7 +288,7 @@ class ConnectionTestWorker(QThread):
         except Exception as e:
             return False, str(e)
 
-    def _test_google(self, timeout: Any) -> tuple[bool, str]:
+    def _test_google(self, timeout: httpx.Timeout) -> tuple[bool, str]:
         """Test Google Gemini API connection.
 
         Args:
@@ -312,7 +312,7 @@ class ConnectionTestWorker(QThread):
         except Exception as e:
             return False, str(e)
 
-    def _test_ollama(self, timeout: Any) -> tuple[bool, str]:
+    def _test_ollama(self, timeout: httpx.Timeout) -> tuple[bool, str]:
         """Test Ollama connection.
 
         Args:
@@ -333,7 +333,7 @@ class ConnectionTestWorker(QThread):
         except Exception as e:
             return False, str(e)
 
-    def _test_openrouter(self, timeout: Any) -> tuple[bool, str]:
+    def _test_openrouter(self, timeout: httpx.Timeout) -> tuple[bool, str]:
         """Test OpenRouter API connection.
 
         Args:
@@ -390,10 +390,10 @@ class ModelRefreshWorker(QThread):
     """Worker thread for refreshing model lists from provider APIs.
 
     Attributes:
-        finished: Signal emitted when refresh completes with (success, models, message).
+        refresh_finished: Signal emitted when refresh completes with (success, models, message).
     """
 
-    finished: pyqtSignal = pyqtSignal(bool, list, str)
+    refresh_finished: ClassVar[pyqtSignal] = pyqtSignal(bool, list, str)
 
     def __init__(
         self,
@@ -419,9 +419,9 @@ class ModelRefreshWorker(QThread):
         """Run the model refresh in a separate thread."""
         try:
             success, models, message = self._fetch_models()
-            self.finished.emit(success, models, message)
+            self.refresh_finished.emit(success, models, message)
         except Exception as e:
-            self.finished.emit(False, [], f"Error fetching models: {e}")
+            self.refresh_finished.emit(False, [], f"Error fetching models: {e}")
 
     def _fetch_models(self) -> tuple[bool, list[str], str]:
         """Fetch available models from the provider API.
@@ -461,7 +461,7 @@ class ModelRefreshWorker(QThread):
         ]
         return True, models, "Anthropic models loaded"
 
-    def _fetch_openai_models(self, timeout: Any) -> tuple[bool, list[str], str]:
+    def _fetch_openai_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
         """Fetch OpenAI models from API.
 
         Args:
@@ -486,7 +486,7 @@ class ModelRefreshWorker(QThread):
         except Exception as e:
             return False, [], str(e)
 
-    def _fetch_google_models(self, timeout: Any) -> tuple[bool, list[str], str]:
+    def _fetch_google_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
         """Fetch Google Gemini models from API.
 
         Args:
@@ -508,7 +508,7 @@ class ModelRefreshWorker(QThread):
         except Exception as e:
             return False, [], str(e)
 
-    def _fetch_ollama_models(self, timeout: Any) -> tuple[bool, list[str], str]:
+    def _fetch_ollama_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
         """Fetch installed Ollama models.
 
         Args:
@@ -529,7 +529,7 @@ class ModelRefreshWorker(QThread):
         except Exception as e:
             return False, [], str(e)
 
-    def _fetch_openrouter_models(self, timeout: Any) -> tuple[bool, list[str], str]:
+    def _fetch_openrouter_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
         """Fetch OpenRouter models from API.
 
         Args:
@@ -607,8 +607,8 @@ class ProviderConfigDialog(QDialog):
         active_provider_changed: Signal emitted when active provider changes.
     """
 
-    provider_updated: pyqtSignal = pyqtSignal(str)
-    active_provider_changed: pyqtSignal = pyqtSignal(str)
+    provider_updated: ClassVar[pyqtSignal] = pyqtSignal(str)
+    active_provider_changed: ClassVar[pyqtSignal] = pyqtSignal(str)
 
     def __init__(
         self,
@@ -948,7 +948,7 @@ class ProviderSettingsWidget(QFrame):
         connection_tested: Signal emitted after connection test.
     """
 
-    connection_tested: pyqtSignal = pyqtSignal(bool, str)
+    connection_tested: ClassVar[pyqtSignal] = pyqtSignal(bool, str)
 
     def __init__(
         self,
@@ -1159,9 +1159,21 @@ class ProviderSettingsWidget(QFrame):
             return
 
         try:
-            recommended = self._discovery.get_recommended_model(self._provider_id)
+            import asyncio  # noqa: PLC0415
+
+            loop: asyncio.AbstractEventLoop | None = None
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                pass
+
+            if loop is not None and loop.is_running():
+                self._recommended_label.setText("")
+                return
+
+            recommended = asyncio.run(self._discovery.get_recommended_model(self._provider_id))
             if recommended:
-                self._recommended_label.setText(f"Recommended: {recommended}")
+                self._recommended_label.setText(f"Recommended: {recommended.name}")
             else:
                 self._recommended_label.setText("")
         except Exception:
@@ -1301,7 +1313,7 @@ class ProviderSettingsWidget(QFrame):
             return
 
         self._refresh_worker = ModelRefreshWorker(self._provider_id, api_key, api_base, self)
-        self._refresh_worker.finished.connect(self._on_models_refreshed)
+        self._refresh_worker.refresh_finished.connect(self._on_models_refreshed)
         self._refresh_worker.start()
 
     def _on_models_refreshed(self, success: bool, models: list[str], message: str) -> None:
@@ -1362,7 +1374,7 @@ class ProviderSettingsWidget(QFrame):
             return
 
         self._test_worker = ConnectionTestWorker(self._provider_id, api_key, api_base, self)
-        self._test_worker.finished.connect(self._on_connection_tested)
+        self._test_worker.test_finished.connect(self._on_connection_tested)
         self._test_worker.start()
 
     def _on_connection_tested(self, success: bool, message: str) -> None:
@@ -1499,7 +1511,7 @@ class ModelSelectionDialog(QDialog):
         model_selected: Signal emitted when a model is selected.
     """
 
-    model_selected: pyqtSignal = pyqtSignal(str)
+    model_selected: ClassVar[pyqtSignal] = pyqtSignal(str)
 
     def __init__(
         self,

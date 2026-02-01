@@ -10,9 +10,9 @@ import asyncio
 import json
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QAction, QCloseEvent
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -20,6 +20,8 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QMenu,
+    QMenuBar,
     QMessageBox,
     QPushButton,
     QSizePolicy,
@@ -65,7 +67,7 @@ class AsyncWorker(QThread):
 
     def __init__(
         self,
-        coro: Coroutine[Any, Any, Any],
+        coro: Coroutine[object, object, object],
         parent: QWidget | None = None,
     ) -> None:
         """Initialize the async worker.
@@ -75,7 +77,7 @@ class AsyncWorker(QThread):
             parent: Parent widget.
         """
         super().__init__(parent)
-        self._coro: Coroutine[Any, Any, Any] = coro
+        self._coro: Coroutine[object, object, object] = coro
 
     def run(self) -> None:
         """Run the coroutine in a new event loop."""
@@ -202,9 +204,11 @@ class MainWindow(QMainWindow):
 
     def _setup_menus(self) -> None:  # noqa: PLR0914
         """Set up the menu bar."""
-        menubar = self.menuBar()
+        menubar: QMenuBar | None = self.menuBar()
+        assert menubar is not None
 
-        file_menu = menubar.addMenu("&File")
+        file_menu: QMenu | None = menubar.addMenu("&File")
+        assert file_menu is not None
 
         load_action = QAction("Load Binary...", self)
         load_action.setShortcut("Ctrl+O")
@@ -240,7 +244,8 @@ class MainWindow(QMainWindow):
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
 
-        tools_menu = menubar.addMenu("&Tools")
+        tools_menu: QMenu | None = menubar.addMenu("&Tools")
+        assert tools_menu is not None
 
         tool_status_action = QAction("Tool Status...", self)
         tool_status_action.triggered.connect(self._on_tool_status)
@@ -252,7 +257,8 @@ class MainWindow(QMainWindow):
 
         tools_menu.addSeparator()
 
-        embedded_menu = tools_menu.addMenu("&Embedded Tools")
+        embedded_menu: QMenu | None = tools_menu.addMenu("&Embedded Tools")
+        assert embedded_menu is not None
 
         open_x64dbg_action = QAction("Open x64dbg Debugger", self)
         open_x64dbg_action.triggered.connect(self._on_open_x64dbg)
@@ -280,7 +286,8 @@ class MainWindow(QMainWindow):
         hex_edit_binary_action.triggered.connect(self._on_hex_edit_current_binary)
         embedded_menu.addAction(hex_edit_binary_action)
 
-        providers_menu = menubar.addMenu("&Providers")
+        providers_menu: QMenu | None = menubar.addMenu("&Providers")
+        assert providers_menu is not None
 
         configure_providers_action = QAction("Configure Providers...", self)
         configure_providers_action.triggered.connect(self._on_configure_providers)
@@ -290,7 +297,8 @@ class MainWindow(QMainWindow):
         refresh_models_action.triggered.connect(self._on_refresh_models)
         providers_menu.addAction(refresh_models_action)
 
-        sandbox_menu = menubar.addMenu("&Sandbox")
+        sandbox_menu: QMenu | None = menubar.addMenu("&Sandbox")
+        assert sandbox_menu is not None
 
         configure_sandbox_action = QAction("Configure Sandbox...", self)
         configure_sandbox_action.triggered.connect(self._on_configure_sandbox)
@@ -300,13 +308,15 @@ class MainWindow(QMainWindow):
         open_sandbox_action.triggered.connect(self._on_open_sandbox)
         sandbox_menu.addAction(open_sandbox_action)
 
-        settings_menu = menubar.addMenu("&Settings")
+        settings_menu: QMenu | None = menubar.addMenu("&Settings")
+        assert settings_menu is not None
 
         preferences_action = QAction("Preferences...", self)
         preferences_action.triggered.connect(self._on_preferences)
         settings_menu.addAction(preferences_action)
 
-        help_menu = menubar.addMenu("&Help")
+        help_menu: QMenu | None = menubar.addMenu("&Help")
+        assert help_menu is not None
 
         about_action = QAction("About", self)
         about_action.triggered.connect(self._on_about)
@@ -414,6 +424,7 @@ class MainWindow(QMainWindow):
         self.tool_result_received.connect(self._on_tool_result)
         self.stream_chunk_received.connect(self._on_stream_chunk)
         self.status_update.connect(self._update_status)
+        self._tool_panel.address_clicked.connect(self._on_address_clicked)
 
     def _configure_orchestrator(self) -> None:
         """Configure orchestrator callbacks."""
@@ -444,16 +455,7 @@ class MainWindow(QMainWindow):
             except asyncio.InvalidStateError:
                 pass
 
-        from PyQt6.QtCore import (  # noqa: PLC0415
-            QMetaObject,
-            Qt as QtCore_Qt,
-        )
-
-        QMetaObject.invokeMethod(
-            self,
-            show_dialog,
-            QtCore_Qt.ConnectionType.QueuedConnection,
-        )
+        QTimer.singleShot(0, show_dialog)
 
         return future
 
@@ -508,7 +510,7 @@ class MainWindow(QMainWindow):
         if result.error:
             self._tool_panel.log(f"Error: {result.error}")
 
-    def _run_async(self, coro: Coroutine[Any, Any, Any]) -> None:
+    def _run_async(self, coro: Coroutine[object, object, object]) -> None:
         """Run an async operation in a worker thread.
 
         Args:
@@ -548,6 +550,15 @@ class MainWindow(QMainWindow):
         """
         self._status_label.setText(status)
 
+    def _on_address_clicked(self, address: int) -> None:
+        """Handle address click in the tool panel.
+
+        Args:
+            address: The clicked memory address.
+        """
+        self._tool_panel.set_current_address(address)
+        self.status_update.emit(f"Navigated to 0x{address:08X}")
+
     def _on_load_binary(self) -> None:
         """Handle load binary action."""
         path, _ = QFileDialog.getOpenFileName(
@@ -575,12 +586,14 @@ class MainWindow(QMainWindow):
 
     def _on_new_session(self) -> None:
         """Handle new session action."""
-        provider = self._provider_combo.currentData()
+        provider_data: object = self._provider_combo.currentData()
         model = self._model_combo.currentText()
 
         if not model:
             QMessageBox.warning(self, "Warning", "Please select a model first.")
             return
+
+        provider: str | ProviderName = provider_data if isinstance(provider_data, ProviderName) else str(provider_data)
 
         async def create_session() -> None:
             await self._orchestrator.start_session(provider, model)
@@ -647,10 +660,10 @@ class MainWindow(QMainWindow):
             parent=self,
         )
         if dialog.exec():
-            settings = dialog.get_settings()
+            settings: dict[str, dict[str, object]] = dialog.get_settings()
             self._apply_tool_settings(settings)
 
-    def _apply_tool_settings(self, settings: dict[str, dict[str, Any]]) -> None:
+    def _apply_tool_settings(self, settings: dict[str, dict[str, object]]) -> None:
         """Apply tool configuration settings.
 
         The ToolConfigDialog handles persistence via its own JSON config file.
@@ -667,10 +680,10 @@ class MainWindow(QMainWindow):
         """Handle configure providers action."""
         dialog = ProviderConfigDialog(parent=self)
         if dialog.exec():
-            settings = dialog.get_settings()
+            settings: dict[str, dict[str, object]] = dialog.get_settings()
             self._apply_provider_settings(settings)
 
-    def _apply_provider_settings(self, settings: dict[str, dict[str, Any]]) -> None:
+    def _apply_provider_settings(self, settings: dict[str, dict[str, object]]) -> None:
         """Apply provider configuration settings.
 
         The ProviderConfigDialog handles persistence via its own JSON config file.
@@ -685,12 +698,12 @@ class MainWindow(QMainWindow):
 
     def _on_refresh_models(self) -> None:
         """Handle refresh models action."""
-        provider = self._provider_combo.currentData()
-        if not provider:
+        provider_data: object = self._provider_combo.currentData()
+        if not provider_data:
             QMessageBox.warning(self, "Warning", "Please select a provider first.")
             return
 
-        provider_id = provider.value if hasattr(provider, "value") else str(provider)
+        provider_id: str = provider_data.value if isinstance(provider_data, ProviderName) else str(provider_data)
 
         env_vars: dict[str, str] = {
             "anthropic": "ANTHROPIC_API_KEY",
@@ -706,12 +719,11 @@ class MainWindow(QMainWindow):
         if config_path.exists():
             try:
                 with open(config_path, encoding="utf-8") as f:
-                    provider_settings: dict[str, Any] = json.load(f)
-                    provider_data: dict[str, Any] = provider_settings.get(provider_id, {})
-                    if isinstance(provider_data, dict):
-                        config_key: str = str(provider_data.get("api_key", ""))
-                        if config_key:
-                            api_key = config_key
+                    loaded_json: dict[str, dict[str, str]] = json.load(f)
+                    provider_section = loaded_json.get(provider_id, {})
+                    config_key = provider_section.get("api_key", "")
+                    if config_key:
+                        api_key = config_key
             except (json.JSONDecodeError, OSError):
                 pass
 
@@ -720,7 +732,7 @@ class MainWindow(QMainWindow):
         self._model_combo.setEnabled(False)
 
         self._model_refresh_worker = ModelRefreshWorker(provider_id, api_key, None, self)
-        self._model_refresh_worker.finished.connect(self._on_models_refresh_finished)
+        self._model_refresh_worker.refresh_finished.connect(self._on_models_refresh_finished)
         self._model_refresh_worker.start()
 
     def _on_models_refresh_finished(self, success: bool, models: list[str], message: str) -> None:
@@ -747,10 +759,10 @@ class MainWindow(QMainWindow):
             parent=self,
         )
         if dialog.exec():
-            settings = dialog.get_settings()
+            settings: dict[str, object] = dialog.get_settings()
             self._apply_sandbox_settings(settings)
 
-    def _apply_sandbox_settings(self, settings: dict[str, Any]) -> None:
+    def _apply_sandbox_settings(self, settings: dict[str, object]) -> None:
         """Apply sandbox configuration settings.
 
         The SandboxConfigDialog handles persistence via its own JSON config file.
@@ -791,10 +803,13 @@ class MainWindow(QMainWindow):
                 self._sandbox_btn.setChecked(True)
                 self.status_update.emit("Sandbox opened")
 
+        def on_sandbox_error(e: Exception) -> None:
+            QMessageBox.critical(self, "Error", str(e))
+
         self.status_update.emit("Opening sandbox...")
         worker = AsyncWorker(open_sandbox(), self)
         worker.finished.connect(on_sandbox_opened)
-        worker.error.connect(lambda e: QMessageBox.critical(self, "Error", str(e)))
+        worker.error.connect(on_sandbox_error)
         worker.start()
         self._current_worker = worker
 
@@ -909,8 +924,11 @@ class MainWindow(QMainWindow):
             index: New selection index.
         """
         del index
-        provider = self._provider_combo.currentData()
-        _logger.info("provider_changed", extra={"provider": provider.value if provider else None})
+        provider: object = self._provider_combo.currentData()
+        provider_value: str | None = None
+        if isinstance(provider, ProviderName):
+            provider_value = provider.value
+        _logger.info("provider_changed", extra={"provider": provider_value})
 
     def _on_sandbox_toggled(self, checked: bool) -> None:
         """Handle sandbox toggle.
@@ -931,10 +949,10 @@ class MainWindow(QMainWindow):
         self._auto_approve_btn.setText(f"Auto-approve: {'ON' if checked else 'OFF'}")
 
         if checked:
-            self._orchestrator._config.confirmation_level = ConfirmationLevel.NONE
+            self._orchestrator.set_confirmation_level(ConfirmationLevel.NONE)
             self.status_update.emit("Auto-approve enabled - all tool calls will be approved automatically")
         else:
-            self._orchestrator._config.confirmation_level = ConfirmationLevel.DESTRUCTIVE
+            self._orchestrator.set_confirmation_level(ConfirmationLevel.DESTRUCTIVE)
             self.status_update.emit("Auto-approve disabled - destructive operations require confirmation")
 
     def _on_cancel(self) -> None:
@@ -946,12 +964,13 @@ class MainWindow(QMainWindow):
         self._run_async(cancel())
         self.status_update.emit("Cancelling...")
 
-    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
+    def closeEvent(self, a0: QCloseEvent | None) -> None:  # noqa: N802
         """Handle window close event.
 
         Args:
-            event: Close event.
+            a0: Close event.
         """
+        self._tool_panel.close_embedded_tools()
 
         async def shutdown() -> None:
             await self._orchestrator.shutdown()
@@ -964,4 +983,5 @@ class MainWindow(QMainWindow):
         loop.run_until_complete(shutdown())
         loop.close()
 
-        event.accept()
+        if a0 is not None:
+            a0.accept()

@@ -70,7 +70,7 @@ git diff
 - Select workflow
 - Click "Run workflow"
 - Set max errors (start with 10-20 for first run)
-- Choose type checker (mypy recommended)
+- Choose type checker (basedpyright required)
 - Click "Run workflow"
 
 **Check results:**

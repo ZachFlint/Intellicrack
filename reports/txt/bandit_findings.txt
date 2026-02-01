@@ -2,17 +2,17 @@
 
 src/intellicrack/providers\xpu_utils.py:14: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
 
-src/intellicrack/providers\xpu_utils.py:161: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path
+src/intellicrack/providers\xpu_utils.py:160: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path
 
-src/intellicrack/providers\xpu_utils.py:161: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input.
+src/intellicrack/providers\xpu_utils.py:160: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input.
 
-src/intellicrack/providers\xpu_utils.py:490: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path
+src/intellicrack/providers\xpu_utils.py:489: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path
 
-src/intellicrack/providers\xpu_utils.py:490: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input.
+src/intellicrack/providers\xpu_utils.py:489: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input.
 
-src/intellicrack/providers\xpu_utils.py:515: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path
+src/intellicrack/providers\xpu_utils.py:514: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path
 
-src/intellicrack/providers\xpu_utils.py:515: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input.
+src/intellicrack/providers\xpu_utils.py:514: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input.
 
 
 4 findings in src/intellicrack/providers\model_loader.py
@@ -48,7 +48,7 @@ src/intellicrack/ui\sandbox_config.py:113: [Low] B603:subprocess_without_shell_e
 
 src/intellicrack/core\process_manager.py:15: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
 
-src/intellicrack/core\process_manager.py:667: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input.
+src/intellicrack/core\process_manager.py:668: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input.
 
 
 2 findings in src/intellicrack/credentials\oauth.py

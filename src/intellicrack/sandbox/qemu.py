@@ -191,8 +191,6 @@ class QMPClient:
                 timeout=timeout,
             )
 
-            if self._reader is None:
-                return False
             greeting = await asyncio.wait_for(
                 self._reader.readline(),
                 timeout=_QMP_READ_TIMEOUT,
@@ -374,6 +372,11 @@ class GuestAgentClient:
         self._lock = asyncio.Lock()
         self._message_queue: asyncio.Queue[GuestAgentMessage] = asyncio.Queue()
         self._reader_task: asyncio.Task[None] | None = None
+
+    @property
+    def is_connected(self) -> bool:
+        """Whether the client is currently connected."""
+        return self._connected
 
     async def connect(self, timeout: float = 60.0, retry_interval: float = 2.0) -> bool:
         """Connect to guest agent with retry.
@@ -1436,7 +1439,7 @@ python3 /mnt/shared/monitor/agent.py &
 
         effective_timeout = timeout or self._config.timeout_seconds
 
-        if self._agent is not None and self._agent._connected:
+        if self._agent is not None and self._agent.is_connected:
             if working_directory:
                 command = f"cd {working_directory} && {command}"
             return await self._agent.send_command(command, timeout=effective_timeout)

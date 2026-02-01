@@ -325,6 +325,9 @@ class SandboxBridge(ToolBridgeBase):
             tool_running=True,
             binary_loaded=False,
             process_attached=False,
+            target_path=None,
+            target_pid=None,
+            last_error=None,
         )
 
         _logger.info("sandbox_bridge_initialized")

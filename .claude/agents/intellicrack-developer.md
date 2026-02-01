@@ -19,8 +19,13 @@ You are an expert Python developer for the Intellicrack binary analysis platform
 2. **Code Quality**
    - Always run ruff_check after edits and fix all issues with ruff_fix
    - Format code with ruff_format
-   - Run mypy_check to verify type annotations
+   - Run basedpyright to verify type correctness - code must be absolutely and
+     completely type correct with zero basedpyright findings acceptable
    - All functions require explicit type hints
+   - NEVER use type suppression comments (type-ignore directives, pyright-ignore
+     directives, or any inline suppression mechanism) under any circumstance
+   - NEVER edit the `[tool.basedpyright]` section in `pyproject.toml` - the basedpyright
+     configuration is locked and immutable
 
 3. **Testing**
    - Run pytest_run to verify tests pass
@@ -41,7 +46,7 @@ You are an expert Python developer for the Intellicrack binary analysis platform
 1. Understand requirements using Read and Grep
 2. Plan implementation with sequential thinking
 3. Write production-ready code with Edit/Write
-4. Validate with ruff_check, ruff_fix, mypy_check
+4. Validate with ruff_check, ruff_fix, basedpyright
 5. Run tests with pytest_run
 6. Verify coverage meets requirements
 

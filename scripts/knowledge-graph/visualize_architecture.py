@@ -33,7 +33,7 @@ except ImportError as e:
     sys.exit(1)
 
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -50,11 +50,11 @@ class ClusterManager:
     def build_clusters(self, depth: int = 2) -> None:
         """Group nodes by their parent module at specified depth."""
         for node_id in self.graph.nodes:
-            parts = node_id.replace('::', '.').split('.')
+            parts = node_id.replace("::", ".").split(".")
             if len(parts) >= depth:
-                cluster_id = '.'.join(parts[:depth])
+                cluster_id = ".".join(parts[:depth])
             else:
-                cluster_id = parts[0] if parts else 'root'
+                cluster_id = parts[0] if parts else "root"
 
             self.clusters[cluster_id].add(node_id)
             self.node_to_cluster[node_id] = cluster_id
@@ -63,16 +63,16 @@ class ClusterManager:
             types_count: dict[str, int] = defaultdict(int)
             for node_id in members:
                 if node_id in self.graph.nodes:
-                    node_type = self.graph.nodes[node_id].get('type', 'unknown')
+                    node_type = self.graph.nodes[node_id].get("type", "unknown")
                     types_count[node_type] += 1
 
             self.cluster_meta[cluster_id] = {
-                'size': len(members),
-                'modules': types_count.get('module', 0),
-                'classes': types_count.get('class', 0),
-                'functions': types_count.get('function', 0),
-                'structs': types_count.get('struct', 0),
-                'children': sorted(members),
+                "size": len(members),
+                "modules": types_count.get("module", 0),
+                "classes": types_count.get("class", 0),
+                "functions": types_count.get("function", 0),
+                "structs": types_count.get("struct", 0),
+                "children": sorted(members),
             }
 
 
@@ -85,28 +85,26 @@ class EdgeBundler:
         """Initialize the edge bundler with node positions."""
         self.positions = positions
 
-    def bundle_edges(
-        self, edges: list[dict[str, Any]], angle_buckets: int = 24, region_size: float = 300.0
-    ) -> list[dict[str, Any]]:
+    def bundle_edges(self, edges: list[dict[str, Any]], angle_buckets: int = 24, region_size: float = 300.0) -> list[dict[str, Any]]:
         """Apply edge bundling based on direction and spatial proximity."""
         edge_groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
         for edge in edges:
-            from_pos = self.positions.get(edge['from'], {'x': 0, 'y': 0})
-            to_pos = self.positions.get(edge['to'], {'x': 0, 'y': 0})
+            from_pos = self.positions.get(edge["from"], {"x": 0, "y": 0})
+            to_pos = self.positions.get(edge["to"], {"x": 0, "y": 0})
 
-            dx = to_pos['x'] - from_pos['x']
-            dy = to_pos['y'] - from_pos['y']
+            dx = to_pos["x"] - from_pos["x"]
+            dy = to_pos["y"] - from_pos["y"]
 
             if dx == 0 and dy == 0:
-                edge_groups['zero'].append(edge)
+                edge_groups["zero"].append(edge)
                 continue
 
             angle = math.atan2(dy, dx)
             angle_bucket = int((angle + math.pi) / (2 * math.pi) * angle_buckets)
 
-            mid_x = int((from_pos['x'] + to_pos['x']) / 2 / region_size)
-            mid_y = int((from_pos['y'] + to_pos['y']) / 2 / region_size)
+            mid_x = int((from_pos["x"] + to_pos["x"]) / 2 / region_size)
+            mid_y = int((from_pos["y"] + to_pos["y"]) / 2 / region_size)
 
             key = f"{angle_bucket}_{mid_x}_{mid_y}"
             edge_groups[key].append(edge)
@@ -123,10 +121,10 @@ class EdgeBundler:
                 roundness = 0.15 + abs(offset_factor) * 0.2
 
                 edge_copy = edge.copy()
-                edge_copy['smooth'] = {
-                    'enabled': True,
-                    'type': 'curvedCW' if i % 2 == 0 else 'curvedCCW',
-                    'roundness': roundness,
+                edge_copy["smooth"] = {
+                    "enabled": True,
+                    "type": "curvedCW" if i % 2 == 0 else "curvedCCW",
+                    "roundness": roundness,
                 }
                 bundled_edges.append(edge_copy)
 
@@ -139,20 +137,20 @@ class KnowledgeGraphGenerator:
     MAX_LABEL_LENGTH = 30
 
     TYPE_COLORS: ClassVar[dict[str, str]] = {
-        'module': '#4A90D9',
-        'class': '#F5A623',
-        'function': '#D0021B',
-        'variable': '#BD10E0',
-        'external': '#9B9B9B',
-        'cluster': '#50E3C2',
-        'entry': '#FF4444',
+        "module": "#4A90D9",
+        "class": "#F5A623",
+        "function": "#D0021B",
+        "variable": "#BD10E0",
+        "external": "#9B9B9B",
+        "cluster": "#50E3C2",
+        "entry": "#FF4444",
     }
 
     def __init__(self, root_dir: Path) -> None:
         """Initialize the knowledge graph generator."""
         self.root_dir = root_dir.resolve()
-        if self.root_dir.name != 'src':
-            possible_sub = self.root_dir / 'src'
+        if self.root_dir.name != "src":
+            possible_sub = self.root_dir / "src"
             if possible_sub.exists():
                 self.root_dir = possible_sub
 
@@ -185,14 +183,12 @@ class KnowledgeGraphGenerator:
                 for file in files:
                     if file.endswith(".py"):
                         path = Path(root) / file
-                        if 'tests' in path.parts or '__pycache__' in path.parts:
+                        if "tests" in path.parts or "__pycache__" in path.parts:
                             continue
 
                         module_name = self._get_module_name(path)
                         self.module_map[path] = module_name
-                        self.graph.add_node(
-                            module_name, type='module', lang='python', path=str(path), label=module_name
-                        )
+                        self.graph.add_node(module_name, type="module", lang="python", path=str(path), label=module_name)
                         self._parse_python_file(path, module_name)
         except (PermissionError, OSError):
             logger.exception("Error identifying files in directory %s", self.root_dir)
@@ -213,47 +209,45 @@ class KnowledgeGraphGenerator:
                 for alias in node.names:
                     target = alias.name
                     imports_map[alias.asname or alias.name] = target
-                    self.graph.add_edge(module_name, target, type='imports')
+                    self.graph.add_edge(module_name, target, type="imports")
             elif isinstance(node, ast.ImportFrom):
                 if node.module:
                     module_base = node.module
                     if node.level > 0:
                         module_base = self._resolve_relative_import(module_name, node.module, node.level)
-                    self.graph.add_edge(module_name, module_base, type='imports')
+                    self.graph.add_edge(module_name, module_base, type="imports")
                     for alias in node.names:
                         full_target = f"{module_base}.{alias.name}"
                         imports_map[alias.asname or alias.name] = full_target
 
             elif isinstance(node, ast.ClassDef):
                 class_id = f"{module_name}.{node.name}"
-                self.graph.add_node(class_id, type='class', lang='python', label=node.name)
-                self.graph.add_edge(module_name, class_id, type='defines')
+                self.graph.add_node(class_id, type="class", lang="python", label=node.name)
+                self.graph.add_edge(module_name, class_id, type="defines")
                 for base in node.bases:
                     if isinstance(base, ast.Name):
                         base_name = imports_map.get(base.id, base.id)
-                        self.graph.add_edge(class_id, base_name, type='inherits')
+                        self.graph.add_edge(class_id, base_name, type="inherits")
 
             elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 func_id = f"{module_name}.{node.name}"
                 args = [a.arg for a in node.args.args]
-                self.graph.add_node(func_id, type='function', lang='python', label=node.name, args=str(args))
-                self.graph.add_edge(module_name, func_id, type='defines')
+                self.graph.add_node(func_id, type="function", lang="python", label=node.name, args=str(args))
+                self.graph.add_edge(module_name, func_id, type="defines")
 
-                if node.name == 'main' and (
-                    module_name.endswith('__main__') or 'intellicrack.main' in module_name
-                ):
+                if node.name == "main" and (module_name.endswith("__main__") or "intellicrack.main" in module_name):
                     self.python_entry_points.add(func_id)
 
     def _get_module_name(self, path: Path) -> str:
         try:
             rel_path = path.relative_to(self.repo_root)
-            return str(rel_path.with_suffix('')).replace(os.sep, '.')
+            return str(rel_path.with_suffix("")).replace(os.sep, ".")
         except ValueError:
             return path.stem
 
     @staticmethod
     def _resolve_relative_import(current_module: str, partial_module: str | None, level: int) -> str:
-        parts = current_module.split('.')
+        parts = current_module.split(".")
         if level >= len(parts):
             return partial_module if partial_module else ""
         base = ".".join(parts[:-level])
@@ -269,19 +263,17 @@ class KnowledgeGraphGenerator:
         except Exception:
             logger.exception("Failed to save GraphML file:")
 
-    def _calculate_hierarchical_layout(
-        self, filtered_graph: nx.DiGraph
-    ) -> dict[str, dict[str, float]]:
+    def _calculate_hierarchical_layout(self, filtered_graph: nx.DiGraph) -> dict[str, dict[str, float]]:
         """Calculate hierarchical layout based on module depth with grid wrapping."""
         logger.info("Calculating hierarchical layout...")
         layout_map: dict[str, dict[str, float]] = {}
 
         levels: dict[int, list[str]] = defaultdict(list)
-        type_offset = {'module': 0, 'class': 1, 'function': 2, 'struct': 1, 'external': 3}
+        type_offset = {"module": 0, "class": 1, "function": 2, "struct": 1, "external": 3}
 
         for node_id in filtered_graph.nodes:
-            depth = node_id.count('.') + node_id.count('::')
-            node_type = filtered_graph.nodes[node_id].get('type', 'unknown')
+            depth = node_id.count(".") + node_id.count("::")
+            node_type = filtered_graph.nodes[node_id].get("type", "unknown")
             level = depth * 3 + type_offset.get(node_type, 0)
             levels[level].append(node_id)
 
@@ -302,10 +294,7 @@ class KnowledgeGraphGenerator:
             for i, node_id in enumerate(sorted_nodes):
                 row = i // cols
                 col = i % cols
-                layout_map[node_id] = {
-                    'x': start_x + (col * x_spacing),
-                    'y': current_y + (row * y_spacing)
-                }
+                layout_map[node_id] = {"x": start_x + (col * x_spacing), "y": current_y + (row * y_spacing)}
 
             current_y += rows * y_spacing + level_gap
 
@@ -319,7 +308,7 @@ class KnowledgeGraphGenerator:
 
         center_node = None
         for node_id in filtered_graph.nodes:
-            if 'intellicrack.main' in node_id and filtered_graph.nodes[node_id].get('type') == 'module':
+            if "intellicrack.main" in node_id and filtered_graph.nodes[node_id].get("type") == "module":
                 center_node = node_id
                 break
 
@@ -329,7 +318,7 @@ class KnowledgeGraphGenerator:
         if not center_node:
             return layout_map
 
-        layout_map[center_node] = {'x': 0, 'y': 0}
+        layout_map[center_node] = {"x": 0, "y": 0}
 
         try:
             lengths = nx.single_source_shortest_path_length(filtered_graph.to_undirected(), center_node)
@@ -353,7 +342,7 @@ class KnowledgeGraphGenerator:
 
             for i, node_id in enumerate(sorted_nodes):
                 angle = i * angle_step
-                layout_map[node_id] = {'x': radius * math.cos(angle), 'y': radius * math.sin(angle)}
+                layout_map[node_id] = {"x": radius * math.cos(angle), "y": radius * math.sin(angle)}
 
         logger.info("Radial layout calculated for %d nodes.", len(layout_map))
         return layout_map
@@ -365,21 +354,21 @@ class KnowledgeGraphGenerator:
 
         try:
             json_output = subprocess.check_output(
-                ['sfdp', '-K', 'sfdp', '-Goverlap=prism', '-Gmaxiter=500', '-Tjson', str(dot_file)],
+                ["sfdp", "-K", "sfdp", "-Goverlap=prism", "-Gmaxiter=500", "-Tjson", str(dot_file)],
                 text=True,
                 stderr=subprocess.PIPE,
             )
 
             data = json.loads(json_output)
 
-            if 'objects' in data:
-                for node in data['objects']:
-                    name = node.get('name')
-                    pos = node.get('pos')
+            if "objects" in data:
+                for node in data["objects"]:
+                    name = node.get("name")
+                    pos = node.get("pos")
                     if name and pos:
                         try:
-                            x, y = map(float, pos.split(','))
-                            layout_map[name] = {'x': x * 5, 'y': y * -5}
+                            x, y = map(float, pos.split(","))
+                            layout_map[name] = {"x": x * 5, "y": y * -5}
                         except ValueError:
                             pass
 
@@ -400,7 +389,7 @@ class KnowledgeGraphGenerator:
             try:
                 nx.drawing.nx_pydot.write_dot(filtered_graph, str(dot_path))
             except (ImportError, AttributeError):
-                with open(dot_path, 'w', encoding='utf-8') as f:
+                with open(dot_path, "w", encoding="utf-8") as f:
                     f.write('digraph "Intellicrack" {\n')
                     for n in filtered_graph.nodes:
                         safe_n = n.replace('"', '\\"')
@@ -409,7 +398,7 @@ class KnowledgeGraphGenerator:
                         safe_u = u.replace('"', '\\"')
                         safe_v = v.replace('"', '\\"')
                         f.write(f'  "{safe_u}" -> "{safe_v}";\n')
-                    f.write('}\n')
+                    f.write("}\n")
             return True
         except Exception:
             logger.exception("Failed to generate DOT file.")
@@ -418,7 +407,7 @@ class KnowledgeGraphGenerator:
     def generate_interactive_html(  # noqa: PLR0914
         self,
         output_path: Path,
-        layout_method: str = 'sfdp',
+        layout_method: str = "sfdp",
         *,
         enable_clustering: bool = True,
         dot_output_dir: Path | None = None,
@@ -426,7 +415,7 @@ class KnowledgeGraphGenerator:
         """Generates a standalone HTML file with all optimizations."""
         logger.info("Filtering graph for visualization...")
 
-        internal_nodes = {n for n in self.graph.nodes if n.startswith('intellicrack.')}
+        internal_nodes = {n for n in self.graph.nodes if n.startswith("intellicrack.")}
 
         boundary_nodes: set[str] = set()
         for u in internal_nodes:
@@ -435,26 +424,24 @@ class KnowledgeGraphGenerator:
                     boundary_nodes.add(v)
 
         candidates = internal_nodes.union(boundary_nodes)
-        nodes_to_keep = {n for n in candidates if self.graph.nodes[n].get('type') != 'variable'}
+        nodes_to_keep = {n for n in candidates if self.graph.nodes[n].get("type") != "variable"}
 
         filtered_graph = self.graph.subgraph(nodes_to_keep).copy()
 
-        logger.info(
-            "Visualization graph: %d nodes (Original: %d)", len(filtered_graph), self.graph.number_of_nodes()
-        )
+        logger.info("Visualization graph: %d nodes (Original: %d)", len(filtered_graph), self.graph.number_of_nodes())
 
         if dot_output_dir is not None:
-            dot_path = dot_output_dir / (output_path.stem + '.dot')
+            dot_path = dot_output_dir / (output_path.stem + ".dot")
         else:
-            dot_path = output_path.with_suffix('.dot')
+            dot_path = output_path.with_suffix(".dot")
         positions: dict[str, dict[str, float]] = {}
 
         self._generate_dot_file(filtered_graph, dot_path)
         logger.info("DOT file saved to: %s", dot_path)
 
-        if layout_method == 'hierarchical':
+        if layout_method == "hierarchical":
             positions = self._calculate_hierarchical_layout(filtered_graph)
-        elif layout_method == 'radial':
+        elif layout_method == "radial":
             positions = self._calculate_radial_layout(filtered_graph)
         else:
             if dot_path.exists():
@@ -469,84 +456,86 @@ class KnowledgeGraphGenerator:
         clusters_data: dict[str, dict[str, Any]] = {}
 
         if positions:
-            xs = [p['x'] for p in positions.values()]
-            ys = [p['y'] for p in positions.values()]
+            xs = [p["x"] for p in positions.values()]
+            ys = [p["y"] for p in positions.values()]
             min_x, max_x = min(xs), max(xs)
             min_y, max_y = min(ys), max(ys)
             width = max_x - min_x if max_x != min_x else 1
             height = max_y - min_y if max_y != min_y else 1
             scale = 800 / max(width, height)
             for node_id in positions:
-                positions[node_id]['x'] = (positions[node_id]['x'] - min_x) * scale
-                positions[node_id]['y'] = (positions[node_id]['y'] - min_y) * scale
+                positions[node_id]["x"] = (positions[node_id]["x"] - min_x) * scale
+                positions[node_id]["y"] = (positions[node_id]["y"] - min_y) * scale
 
         if enable_clustering and self.cluster_manager:
             for cluster_id, meta in self.cluster_manager.cluster_meta.items():
-                if any(child.startswith('intellicrack.') for child in meta['children']):
+                if any(child.startswith("intellicrack.") for child in meta["children"]):
                     clusters_data[cluster_id] = {
-                        'id': cluster_id,
-                        'label': cluster_id.split('.')[-1],
-                        'size': meta['size'],
-                        'children': meta['children'],
-                        'modules': meta['modules'],
-                        'classes': meta['classes'],
-                        'functions': meta['functions'],
+                        "id": cluster_id,
+                        "label": cluster_id.split(".")[-1],
+                        "size": meta["size"],
+                        "children": meta["children"],
+                        "modules": meta["modules"],
+                        "classes": meta["classes"],
+                        "functions": meta["functions"],
                     }
 
         entry_point_id: str | None = None
 
         for node_id, attrs in filtered_graph.nodes(data=True):
-            node_type = attrs.get('type', 'unknown')
+            node_type = attrs.get("type", "unknown")
 
             if node_id in boundary_nodes:
-                node_type = 'external'
+                node_type = "external"
 
-            label = attrs.get('label', node_id.split('.')[-1].split('::')[-1])
+            label = attrs.get("label", node_id.split(".")[-1].split("::")[-1])
             if len(label) > self.MAX_LABEL_LENGTH:
                 label = label[: self.MAX_LABEL_LENGTH - 3] + "..."
 
-            color = self.TYPE_COLORS.get(node_type, '#D2E5FF')
+            color = self.TYPE_COLORS.get(node_type, "#D2E5FF")
 
-            size_map = {'module': 8, 'class': 6, 'struct': 6, 'function': 4, 'external': 4}
+            size_map = {"module": 8, "class": 6, "struct": 6, "function": 4, "external": 4}
             size = size_map.get(node_type, 3)
 
             if not entry_point_id:
-                if 'intellicrack.main' in node_id and node_type == 'module':
+                if "intellicrack.main" in node_id and node_type == "module":
                     entry_point_id = node_id
 
             if node_id == entry_point_id:
-                color = '#FF4444'
+                color = "#FF4444"
                 size = 12
 
-            cluster_id = self.cluster_manager.node_to_cluster.get(node_id, '') if self.cluster_manager else ''
+            cluster_id = self.cluster_manager.node_to_cluster.get(node_id, "") if self.cluster_manager else ""
 
             node_data: dict[str, Any] = {
-                'id': node_id,
-                'label': label,
-                'color': color,
-                'type': node_type,
-                'size': size,
-                'cluster': cluster_id,
+                "id": node_id,
+                "label": label,
+                "color": color,
+                "type": node_type,
+                "size": size,
+                "cluster": cluster_id,
             }
 
             if node_id in positions:
-                node_data['x'] = positions[node_id]['x']
-                node_data['y'] = positions[node_id]['y']
+                node_data["x"] = positions[node_id]["x"]
+                node_data["y"] = positions[node_id]["y"]
 
             nodes_data.append(node_data)
 
         for u, v, _attrs in filtered_graph.edges(data=True):
             edge_data: dict[str, Any] = {
-                'source': u,
-                'target': v,
+                "source": u,
+                "target": v,
             }
             edges_data.append(edge_data)
 
         if positions:
             bundler = EdgeBundler(positions)
-            vis_edges = [{'from': e['source'], 'to': e['target']} for e in edges_data]
+            vis_edges = [{"from": e["source"], "to": e["target"]} for e in edges_data]
             bundled = bundler.bundle_edges(vis_edges)
-            edges_data = [{'source': e['from'], 'target': e['to'], **{k: v for k, v in e.items() if k not in {'from', 'to'}}} for e in bundled]
+            edges_data = [
+                {"source": e["from"], "target": e["to"], **{k: v for k, v in e.items() if k not in {"from", "to"}}} for e in bundled
+            ]
 
         json_nodes = json.dumps(nodes_data)
         json_edges = json.dumps(edges_data)
@@ -557,7 +546,7 @@ class KnowledgeGraphGenerator:
         html_content = self._generate_html_template(json_nodes, json_edges, json_clusters, json_entry, json_colors)
 
         try:
-            with open(output_path, 'w', encoding='utf-8') as f:
+            with open(output_path, "w", encoding="utf-8") as f:
                 f.write(html_content)
             logger.info("Interactive HTML saved to: %s", output_path)
         except Exception:
@@ -572,7 +561,7 @@ class KnowledgeGraphGenerator:
         json_colors: str,
     ) -> str:
         """Generate the complete HTML template with all JavaScript features."""
-        return f'''<!DOCTYPE html>
+        return f"""<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
@@ -1360,7 +1349,7 @@ document.addEventListener('keydown',function(e){{
 init();
   </script>
 </body>
-</html>'''
+</html>"""
 
 
 def main() -> None:
@@ -1370,8 +1359,8 @@ def main() -> None:
     parser.add_argument(
         "--layout",
         "-l",
-        choices=['sfdp', 'hierarchical', 'radial'],
-        default='sfdp',
+        choices=["sfdp", "hierarchical", "radial"],
+        default="sfdp",
         help="Layout algorithm (default: sfdp)",
     )
     parser.add_argument(

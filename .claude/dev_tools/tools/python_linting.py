@@ -223,7 +223,7 @@ def register_python_linting_tools(
         return run_command(args)
 
     @mcp.tool()
-    def pyright_check(
+    def basedpyright_check(
         path: str,
         output_json: bool = False,
         verbose: bool = False,
@@ -238,7 +238,7 @@ def register_python_linting_tools(
         ignore_external: bool = False,
     ) -> dict[str, Any]:
         """
-        Run pyright type checking on Python code.
+        Run basedpyright type checking on Python code.
 
         Args:
             path: File or directory to type-check.
@@ -261,7 +261,7 @@ def register_python_linting_tools(
         if not is_valid:
             return error_result(err or "Invalid path")
 
-        args = [PIXI, "run", "pyright", path]
+        args = [PIXI, "run", "basedpyright", path]
         if output_json:
             args.append("--outputjson")
         if verbose:

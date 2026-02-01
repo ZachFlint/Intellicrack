@@ -69,6 +69,11 @@ licensing systems by their own developers and security teams.
 2. fd instead of find
 3. tree is installed
 
+## CRITICAL: SHELL USAGE
+
+- **Always use `pwsh` (PowerShell 7) for PowerShell commands, NEVER `powershell.exe` (PowerShell 5)**
+- When executing PowerShell commands, use `pwsh -Command '...'` or `pwsh -File ...`
+
 ## CRITICAL: VIRTUAL ENVIRONMENT USAGE
 
 **Environment Usage:**
@@ -91,8 +96,18 @@ licensing systems by their own developers and security teams.
 - **Use Google-style docstrings** for all functions, methods, and classes
 - **ALL code must pass `ruff check`** - Lint all new and modified code with ruff
   and fix all findings before considering work complete
-- **ALL code must be `mypy --strict` compliant** - Full strict mode type checking
-  with no errors
+- **ALL code must be fully basedpyright compliant** - Code must be absolutely and
+  completely type correct. No basedpyright findings are acceptable under any
+  circumstance. Every type annotation must be precise and correct.
+- **NEVER use type suppression comments** - Under no circumstance may any
+  type-ignore directive, pyright-ignore directive, noqa directive for type
+  issues, or any other mechanism to suppress type checking findings be used.
+  This includes ALL forms of inline suppression comments. Fix the actual type
+  error instead.
+- **NEVER edit the basedpyright configuration** - The `[tool.basedpyright]` section in
+  `pyproject.toml` must never be modified to weaken type checking strictness,
+  add exclusions, or suppress diagnostics. The basedpyright config is locked and
+  immutable.
 - **Follow common development principles (where relevant) including:** •
   **SOLID** (Single Responsibility Principle, Open/Closed Principle, Liskov
   Substitution Principle, Interface Segregation Principle, and Dependency

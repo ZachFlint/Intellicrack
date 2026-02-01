@@ -11,7 +11,7 @@ import uuid
 from collections.abc import Callable
 from ctypes import wintypes
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from ..core.types import ToolError
 
@@ -198,7 +198,7 @@ class NamedPipeClient:
 
         data = await self._read_exact(length)
         try:
-            payload = json.loads(data.decode("utf-8"))
+            payload: object = json.loads(data.decode("utf-8"))
         except json.JSONDecodeError as exc:
             error_message = f"Invalid JSON payload: {exc}"
             raise ToolError(error_message) from exc
@@ -206,7 +206,7 @@ class NamedPipeClient:
         if not isinstance(payload, dict):
             error_message = "Unexpected message payload type"
             raise ToolError(error_message)
-        return payload
+        return cast("dict[str, Any]", payload)
 
     async def _read_exact(self, size: int) -> bytes:
         """Read an exact number of bytes from the pipe.

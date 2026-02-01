@@ -10,17 +10,21 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal, Protocol, cast, runtime_checkable
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont, QTextCursor
+from PyQt6.QtGui import QFont, QSyntaxHighlighter, QTextCursor
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QListWidget,
+    QListWidgetItem,
     QPlainTextEdit,
     QSplitter,
     QTabWidget,
+    QTreeWidget,
+    QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -30,19 +34,60 @@ from .highlighter import (
 )
 
 
+@runtime_checkable
+class ToolWidget(Protocol):
+    """Protocol for embedded tool widgets."""
+
+    @property
+    def tool_started(self) -> Any: ...
+    @property
+    def tool_closed(self) -> Any: ...
+
+    def start_tool(self) -> bool: ...
+    def stop_tool(self) -> bool: ...
+
+
+@runtime_checkable
+class HxDWidgetProtocol(ToolWidget, Protocol):
+    def load_file(self, file_path: Path) -> bool: ...
+
+
+@runtime_checkable
+class X64DbgWidgetProtocol(ToolWidget, Protocol):
+    def debug_file(self, file_path: Path) -> bool: ...
+
+
+@runtime_checkable
+class CutterWidgetProtocol(ToolWidget, Protocol):
+    def analyze_binary(self, file_path: Path) -> bool: ...
+
+
+@runtime_checkable
+class AnalysisPanel(Protocol):
+    """Protocol for analysis panels."""
+
+    def set_analysis(self, analysis: "LicensingAnalysis") -> None: ...
+
+
 if TYPE_CHECKING:
-    from intellicrack.core.license_analyzer import LicensingAnalysis
-    from intellicrack.ui.embedding import CutterWidget, HxDWidget, X64DbgWidget
-    from intellicrack.ui.panels import (
-        LicensingAnalysisPanel,
-        ScriptManagerPanel,
-        StackViewerPanel,
-    )
+    from ..core.types import LicensingAnalysis
+    from .panels.licensing_panel import LicensingAnalysisPanel
 
 _logger = logging.getLogger(__name__)
 
 
-OutputType = Literal["decompiled", "disassembly", "strings", "xrefs", "log"]
+OutputType = Literal[
+    "ghidra",
+    "frida",
+    "radare2",
+    "x64dbg",
+    "log",
+    "licensing",
+    "scripts",
+    "stack",
+    "hxd",
+    "cutter",
+]
 
 
 class CodeDisplay(QPlainTextEdit):
@@ -63,10 +108,10 @@ class CodeDisplay(QPlainTextEdit):
             language: Programming language for highlighting.
             parent: Parent widget.
         """
-        super().__init__(parent)
+        super().__init__(parent=parent)
         self._language = language
-        self._highlighter = get_highlighter_for_language(language, self.document())
         self._setup_ui()
+        self.set_language(language)
 
     def _setup_ui(self) -> None:
         """Set up the code display UI."""
@@ -83,6 +128,17 @@ class CodeDisplay(QPlainTextEdit):
         """
         self._language = language
         self._highlighter = get_highlighter_for_language(language, self.document())
+        # Ensure highlighter is attached to the document
+        if self._highlighter:
+            self._highlighter.setDocument(self.document())
+
+    def get_highlighter(self) -> QSyntaxHighlighter | None:
+        """Get the current syntax highlighter.
+
+        Returns:
+            The syntax highlighter or None.
+        """
+        return self._highlighter
 
     def set_content(self, content: str) -> None:
         """Set the displayed content.
@@ -141,6 +197,7 @@ class ToolTab(QFrame):
 
     def _setup_ui(self) -> None:
         """Set up the tool tab UI."""
+        self.setObjectName(f"tool_tab_{self._name.lower()}")
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -261,13 +318,27 @@ class FunctionListPanel(QFrame):
 
         layout.addWidget(header)
 
-        self._list_widget = QPlainTextEdit()
-        self._list_widget.setReadOnly(True)
+        self._list_widget = QListWidget()
         self._list_widget.setFont(QFont("JetBrains Mono", 9))
         self._list_widget.setObjectName("function_list")
+        self._list_widget.itemDoubleClicked.connect(self._on_item_double_clicked)
         layout.addWidget(self._list_widget)
 
         self.setObjectName("function_list_panel")
+
+    def _on_item_double_clicked(self, item: QListWidgetItem) -> None:
+        """Handle double click on a function.
+
+        Args:
+            item: The clicked list item.
+        """
+        address_str = item.text().split("  ")[0]
+        try:
+            address = int(address_str, 16)
+            name = item.text().split("  ")[1]
+            self.function_selected.emit(name, address)
+        except (ValueError, IndexError):
+            _logger.exception("failed_to_parse_function_item", extra={"text": item.text()})
 
     def set_functions(self, functions: list[tuple[str, int]]) -> None:
         """Set the function list.
@@ -278,11 +349,17 @@ class FunctionListPanel(QFrame):
         self._functions = functions
         self._count_label.setText(f"({len(functions)})")
 
-        lines = []
+        self._list_widget.clear()
         for name, address in functions:
-            lines.append(f"0x{address:08X}  {name}")
+            self._list_widget.addItem(f"0x{address:08X}  {name}")
 
-        self._list_widget.setPlainText("\n".join(lines))
+    def get_functions(self) -> list[tuple[str, int]]:
+        """Get the current list of functions.
+
+        Returns:
+            List of (name, address) tuples.
+        """
+        return self._functions
 
 
 class XRefPanel(QFrame):
@@ -322,13 +399,30 @@ class XRefPanel(QFrame):
 
         layout.addWidget(header)
 
-        self._xref_display = QPlainTextEdit()
-        self._xref_display.setReadOnly(True)
+        self._xref_display = QTreeWidget()
+        self._xref_display.setHeaderHidden(True)
         self._xref_display.setFont(QFont("JetBrains Mono", 9))
         self._xref_display.setObjectName("xref_display")
+        self._xref_display.itemClicked.connect(self._on_item_clicked)
         layout.addWidget(self._xref_display)
 
         self.setObjectName("xref_panel")
+
+    def _on_item_clicked(self, item: QTreeWidgetItem, column: int) -> None:
+        """Handle click on an xref.
+
+        Args:
+            item: The clicked tree item.
+            column: The clicked column index.
+        """
+        del column
+        address_str = item.text(0).strip().split("  ")[0]
+        if address_str.startswith("0x"):
+            try:
+                address = int(address_str, 16)
+                self.xref_selected.emit(address)
+            except ValueError:
+                pass
 
     def set_xrefs(
         self,
@@ -341,20 +435,19 @@ class XRefPanel(QFrame):
             incoming: List of (address, description) for refs to this location.
             outgoing: List of (address, description) for refs from this location.
         """
-        lines = []
+        self._xref_display.clear()
 
         if incoming:
-            lines.append("=== References TO ===")
+            incoming_root = QTreeWidgetItem(self._xref_display, ["=== References TO ==="])
+            incoming_root.setExpanded(True)
             for addr, desc in incoming:
-                lines.append(f"  0x{addr:08X}  {desc}")
-            lines.append("")
+                QTreeWidgetItem(incoming_root, [f"0x{addr:08X}  {desc}"])
 
         if outgoing:
-            lines.append("=== References FROM ===")
+            outgoing_root = QTreeWidgetItem(self._xref_display, ["=== References FROM ==="])
+            outgoing_root.setExpanded(True)
             for addr, desc in outgoing:
-                lines.append(f"  0x{addr:08X}  {desc}")
-
-        self._xref_display.setPlainText("\n".join(lines))
+                QTreeWidgetItem(outgoing_root, [f"0x{addr:08X}  {desc}"])
 
 
 class ToolOutputPanel(QFrame):
@@ -452,9 +545,11 @@ class ToolOutputPanel(QFrame):
         right_layout.setSpacing(0)
 
         self._func_list = FunctionListPanel()
+        self._func_list.function_selected.connect(self._on_function_selected)
         right_layout.addWidget(self._func_list)
 
         self._xref_panel = XRefPanel()
+        self._xref_panel.xref_selected.connect(self._on_xref_selected)
         right_layout.addWidget(self._xref_panel)
 
         self._main_splitter.addWidget(right_panel)
@@ -464,18 +559,36 @@ class ToolOutputPanel(QFrame):
 
         self.setObjectName("analysis_panel")
 
-    def set_tab_content(self, tab_name: str, content: str) -> None:
+    def _on_function_selected(self, name: str, address: int) -> None:
+        """Handle function selection in the list.
+
+        Args:
+            name: Function name.
+            address: Function address.
+        """
+        del name
+        self.address_clicked.emit(address)
+
+    def _on_xref_selected(self, address: int) -> None:
+        """Handle xref selection.
+
+        Args:
+            address: Target address.
+        """
+        self.address_clicked.emit(address)
+
+    def set_tab_content(self, tab_name: OutputType, content: str) -> None:
         """Set content for a specific tab.
 
         Args:
-            tab_name: Name of the tab (ghidra, frida, radare2, x64dbg, log).
+            tab_name: Name of the tab.
             content: Text content to display.
         """
         tab = self._tabs.get(tab_name.lower())
         if tab:
             tab.set_content(content)
 
-    def set_tab_info(self, tab_name: str, header: str, content: str) -> None:
+    def set_tab_info(self, tab_name: OutputType, header: str, content: str) -> None:
         """Set info panel content for a specific tab.
 
         Args:
@@ -487,7 +600,7 @@ class ToolOutputPanel(QFrame):
         if tab:
             tab.set_info(header, content)
 
-    def append_tab_content(self, tab_name: str, content: str) -> None:
+    def append_tab_content(self, tab_name: OutputType, content: str) -> None:
         """Append content to a specific tab.
 
         Args:
@@ -527,7 +640,7 @@ class ToolOutputPanel(QFrame):
         """
         self._xref_panel.set_xrefs(incoming, outgoing)
 
-    def activate_tab(self, tab_name: str) -> None:
+    def activate_tab(self, tab_name: OutputType) -> None:
         """Activate a specific tab.
 
         Args:
@@ -538,6 +651,11 @@ class ToolOutputPanel(QFrame):
             index = self._tab_widget.indexOf(tab)
             if index >= 0:
                 self._tab_widget.setCurrentIndex(index)
+        else:
+            # Check panels and embedded tools
+            widget = self._panels.get(tab_name.lower()) or self._embedded_tools.get(tab_name.lower())
+            if widget:
+                self._activate_tab_by_widget(widget)
 
     def log(self, message: str) -> None:
         """Append a message to the log tab.
@@ -547,7 +665,7 @@ class ToolOutputPanel(QFrame):
         """
         self.append_tab_content("log", message)
 
-    def clear_tab(self, tab_name: str) -> None:
+    def clear_tab(self, tab_name: OutputType) -> None:
         """Clear content of a specific tab.
 
         Args:
@@ -568,11 +686,11 @@ class ToolOutputPanel(QFrame):
     def _setup_embedded_tabs(self) -> None:
         """Set up tabs for embedded tools and analysis panels."""
         self._licensing_panel: LicensingAnalysisPanel | None = None
-        self._script_panel: ScriptManagerPanel | None = None
-        self._stack_panel: StackViewerPanel | None = None
-        self._hxd_widget: HxDWidget | None = None
-        self._x64dbg_widget: X64DbgWidget | None = None
-        self._cutter_widget: CutterWidget | None = None
+        self._script_panel: QWidget | None = None
+        self._stack_panel: QWidget | None = None
+        self._hxd_widget: HxDWidgetProtocol | None = None
+        self._x64dbg_widget: X64DbgWidgetProtocol | None = None
+        self._cutter_widget: CutterWidgetProtocol | None = None
 
     def add_licensing_panel(self) -> LicensingAnalysisPanel:
         """Add the licensing analysis panel as a tab.
@@ -583,7 +701,7 @@ class ToolOutputPanel(QFrame):
         if self._licensing_panel is not None:
             return self._licensing_panel
 
-        from intellicrack.ui.panels import LicensingAnalysisPanel  # noqa: PLC0415
+        from .panels.licensing_panel import LicensingAnalysisPanel  # noqa: PLC0415
 
         self._licensing_panel = LicensingAnalysisPanel()
         self._tab_widget.addTab(self._licensing_panel, "Licensing")
@@ -591,7 +709,7 @@ class ToolOutputPanel(QFrame):
         _logger.info("licensing_panel_added")
         return self._licensing_panel
 
-    def add_script_panel(self) -> ScriptManagerPanel:
+    def add_script_panel(self) -> QWidget:
         """Add the script manager panel as a tab.
 
         Returns:
@@ -600,7 +718,7 @@ class ToolOutputPanel(QFrame):
         if self._script_panel is not None:
             return self._script_panel
 
-        from intellicrack.ui.panels import ScriptManagerPanel  # noqa: PLC0415
+        from .panels.script_manager import ScriptManagerPanel  # noqa: PLC0415
 
         self._script_panel = ScriptManagerPanel()
         self._tab_widget.addTab(self._script_panel, "Scripts")
@@ -608,7 +726,7 @@ class ToolOutputPanel(QFrame):
         _logger.info("script_panel_added")
         return self._script_panel
 
-    def add_stack_panel(self) -> StackViewerPanel:
+    def add_stack_panel(self) -> QWidget:
         """Add the stack viewer panel as a tab.
 
         Returns:
@@ -617,7 +735,7 @@ class ToolOutputPanel(QFrame):
         if self._stack_panel is not None:
             return self._stack_panel
 
-        from intellicrack.ui.panels import StackViewerPanel  # noqa: PLC0415
+        from .panels.stack_viewer import StackViewerPanel  # noqa: PLC0415
 
         self._stack_panel = StackViewerPanel()
         self._tab_widget.addTab(self._stack_panel, "Stack")
@@ -625,7 +743,7 @@ class ToolOutputPanel(QFrame):
         _logger.info("stack_panel_added")
         return self._stack_panel
 
-    def add_hxd_tab(self) -> HxDWidget | None:
+    def add_hxd_tab(self) -> HxDWidgetProtocol | None:
         """Add the HxD hex editor as an embedded tab.
 
         Returns:
@@ -635,13 +753,13 @@ class ToolOutputPanel(QFrame):
             return self._hxd_widget
 
         try:
-            from intellicrack.ui.embedding import HxDWidget  # noqa: PLC0415
+            from .embedding.hxd_widget import HxDWidget  # noqa: PLC0415
 
-            self._hxd_widget = HxDWidget()
+            self._hxd_widget = cast(HxDWidgetProtocol, HxDWidget())
             self._hxd_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("hxd"))
             self._hxd_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("hxd"))
-            self._tab_widget.addTab(self._hxd_widget, "HxD")
-            self._embedded_tools["hxd"] = self._hxd_widget
+            self._tab_widget.addTab(cast(QWidget, self._hxd_widget), "HxD")
+            self._embedded_tools["hxd"] = cast(QWidget, self._hxd_widget)
             _logger.info("hxd_tab_added")
         except Exception as e:
             _logger.warning("hxd_tab_add_failed", extra={"error": str(e)})
@@ -649,7 +767,7 @@ class ToolOutputPanel(QFrame):
         else:
             return self._hxd_widget
 
-    def add_x64dbg_tab(self, is_64bit: bool = True) -> X64DbgWidget | None:
+    def add_x64dbg_tab(self, is_64bit: bool = True) -> X64DbgWidgetProtocol | None:
         """Add the x64dbg/x32dbg debugger as an embedded tab.
 
         Args:
@@ -662,14 +780,14 @@ class ToolOutputPanel(QFrame):
             return self._x64dbg_widget
 
         try:
-            from intellicrack.ui.embedding import X64DbgWidget  # noqa: PLC0415
+            from .embedding.x64dbg_widget import X64DbgWidget  # noqa: PLC0415
 
-            self._x64dbg_widget = X64DbgWidget(use_64bit=is_64bit)
+            self._x64dbg_widget = cast(X64DbgWidgetProtocol, X64DbgWidget(use_64bit=is_64bit))
             self._x64dbg_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("x64dbg"))
             self._x64dbg_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("x64dbg"))
             tab_name = "x64dbg" if is_64bit else "x32dbg"
-            self._tab_widget.addTab(self._x64dbg_widget, tab_name)
-            self._embedded_tools["x64dbg"] = self._x64dbg_widget
+            self._tab_widget.addTab(cast(QWidget, self._x64dbg_widget), tab_name)
+            self._embedded_tools["x64dbg"] = cast(QWidget, self._x64dbg_widget)
             _logger.info("x64dbg_tab_added", extra={"is_64bit": is_64bit})
         except Exception as e:
             _logger.warning("x64dbg_tab_add_failed", extra={"error": str(e)})
@@ -677,7 +795,7 @@ class ToolOutputPanel(QFrame):
         else:
             return self._x64dbg_widget
 
-    def add_cutter_tab(self) -> CutterWidget | None:
+    def add_cutter_tab(self) -> CutterWidgetProtocol | None:
         """Add the Cutter reverse engineering tool as an embedded tab.
 
         Returns:
@@ -687,13 +805,13 @@ class ToolOutputPanel(QFrame):
             return self._cutter_widget
 
         try:
-            from intellicrack.ui.embedding import CutterWidget  # noqa: PLC0415
+            from .embedding.cutter_widget import CutterWidget  # noqa: PLC0415
 
-            self._cutter_widget = CutterWidget()
+            self._cutter_widget = cast(CutterWidgetProtocol, CutterWidget())
             self._cutter_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("cutter"))
             self._cutter_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("cutter"))
-            self._tab_widget.addTab(self._cutter_widget, "Cutter")
-            self._embedded_tools["cutter"] = self._cutter_widget
+            self._tab_widget.addTab(cast(QWidget, self._cutter_widget), "Cutter")
+            self._embedded_tools["cutter"] = cast(QWidget, self._cutter_widget)
             _logger.info("cutter_tab_added")
         except Exception as e:
             _logger.warning("cutter_tab_add_failed", extra={"error": str(e)})
@@ -721,7 +839,7 @@ class ToolOutputPanel(QFrame):
         path = Path(file_path) if isinstance(file_path, str) else file_path
         success = self._hxd_widget.load_file(path)
         if success:
-            self._activate_tab_by_widget(self._hxd_widget)
+            self._activate_tab_by_widget(cast(QWidget, self._hxd_widget))
         return success
 
     def open_in_x64dbg(
@@ -749,7 +867,7 @@ class ToolOutputPanel(QFrame):
         path = Path(file_path) if isinstance(file_path, str) else file_path
         success = self._x64dbg_widget.debug_file(path)
         if success:
-            self._activate_tab_by_widget(self._x64dbg_widget)
+            self._activate_tab_by_widget(cast(QWidget, self._x64dbg_widget))
         return success
 
     def open_in_cutter(self, file_path: Path | str) -> bool:
@@ -772,7 +890,7 @@ class ToolOutputPanel(QFrame):
         path = Path(file_path) if isinstance(file_path, str) else file_path
         success = self._cutter_widget.analyze_binary(path)
         if success:
-            self._activate_tab_by_widget(self._cutter_widget)
+            self._activate_tab_by_widget(cast(QWidget, self._cutter_widget))
         return success
 
     def _activate_tab_by_widget(self, widget: QWidget) -> None:
@@ -785,22 +903,22 @@ class ToolOutputPanel(QFrame):
         if index >= 0:
             self._tab_widget.setCurrentIndex(index)
 
-    def get_embedded_tool(self, tool_id: str) -> QWidget | None:
+    def get_embedded_tool(self, tool_id: OutputType) -> QWidget | None:
         """Get an embedded tool widget by ID.
 
         Args:
-            tool_id: The tool identifier (hxd, x64dbg, cutter).
+            tool_id: The tool identifier.
 
         Returns:
             The embedded tool widget or None if not available.
         """
         return self._embedded_tools.get(tool_id.lower())
 
-    def get_panel(self, panel_id: str) -> QWidget | None:
+    def get_panel(self, panel_id: OutputType) -> QWidget | None:
         """Get a panel widget by ID.
 
         Args:
-            panel_id: The panel identifier (licensing, scripts, stack).
+            panel_id: The panel identifier.
 
         Returns:
             The panel widget or None if not available.

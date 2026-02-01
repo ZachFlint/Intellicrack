@@ -14,7 +14,7 @@ on:
         type: choice
         options:
           - mypy
-          - pyright
+          - basedpyright
       create_pr:
         description: 'Create PR instead of direct commit'
         required: false
@@ -89,7 +89,7 @@ jobs:
           if [ "${{ github.event.inputs.checker || 'mypy' }}" = "mypy" ]; then
             pixi run python -m mypy intellicrack/ --show-column-numbers --show-error-codes --no-error-summary 2>&1 | tee type_errors.txt || true
           else
-            pixi run pyright intellicrack/ --outputjson 2>&1 | tee type_errors.txt || true
+            pixi run basedpyright intellicrack/ --outputjson 2>&1 | tee type_errors.txt || true
           fi
 
           ERROR_COUNT=$(grep -c "error:" type_errors.txt || echo "0")
@@ -198,7 +198,7 @@ CRITICAL RULES - FOLLOW STRICTLY:
 - Add proper type hints using typing module or modern syntax (list[str], dict[str, int])
 - Fix actual type mismatches with correct types
 - NEVER use # type: ignore, # noqa, # pragma, or any disable comments
-- FORBIDDEN: Any form of error suppression (type: ignore, mypy: ignore, pyright: ignore)
+- FORBIDDEN: Any form of error suppression (type: ignore, mypy: ignore, pyright: ignore, basedpyright: ignore)
 - REQUIRED: Add actual type hints - function signatures, variable annotations, return types
 - Use TYPE_CHECKING for imports only needed for type checking
 - Maintain existing functionality - DO NOT change logic
@@ -242,7 +242,7 @@ You can provide multiple edits for the same file. Make sure OLD code matches EXA
 ABSOLUTE PROHIBITIONS:
 - NEVER use # type: ignore comments
 - NEVER use # mypy: ignore comments
-- NEVER use # pyright: ignore comments
+- NEVER use # pyright: ignore or # basedpyright: ignore comments
 - NEVER use # noqa comments for type errors
 - NEVER suppress errors - FIX them with proper type hints
 
@@ -376,7 +376,7 @@ Output edits in the exact format requested.""",
           if [ "${{ github.event.inputs.checker || 'mypy' }}" = "mypy" ]; then
             pixi run python -m mypy intellicrack/ --no-error-summary 2>&1 | tee verification_results.txt || true
           else
-            pixi run pyright intellicrack/ 2>&1 | tee verification_results.txt || true
+            pixi run basedpyright intellicrack/ 2>&1 | tee verification_results.txt || true
           fi
 
           NEW_ERROR_COUNT=$(grep -c "error:" verification_results.txt || echo "0")

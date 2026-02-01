@@ -8,6 +8,7 @@ for LLM function calling.
 from __future__ import annotations
 
 import asyncio
+import inspect
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -391,9 +392,9 @@ class ToolRegistry:
         if not callable(method):
             raise ToolError(_ERR_NOT_CALLABLE)
 
-        result: Any = None
+        result: object = None
         try:
-            if asyncio.iscoroutinefunction(method):
+            if inspect.iscoroutinefunction(method):
                 result = await method(**arguments)
             else:
                 result = await asyncio.to_thread(method, **arguments)

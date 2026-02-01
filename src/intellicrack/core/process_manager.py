@@ -26,6 +26,7 @@ from .logging import get_logger
 
 
 if TYPE_CHECKING:
+    import logging
     from collections.abc import Coroutine
 
 _module_logger = get_logger("process_manager")
@@ -137,12 +138,12 @@ class ProcessManager:
         if self._initialized:
             return
 
-        self._processes: dict[int, TrackedProcess] = {}
-        self._external_pids: dict[int, dict[str, Any]] = {}
+        self._processes = {}
+        self._external_pids = {}
         self._process_lock = threading.Lock()
         self._cleanup_in_progress = False
-        self._original_sigint_handler: ProcessManager._SignalHandler = None
-        self._original_sigterm_handler: ProcessManager._SignalHandler = None
+        self._original_sigint_handler = None
+        self._original_sigterm_handler = None
         self._atexit_registered = False
         self._shutdown_event = threading.Event()
         self._initialized = True
@@ -166,7 +167,7 @@ class ProcessManager:
             cls._instance = None
 
     @staticmethod
-    def _get_logger() -> Any:
+    def _get_logger() -> logging.Logger:
         """Get the module logger.
 
         Returns:
@@ -683,15 +684,17 @@ class ProcessManager:
         try:
             stdout_data, stderr_data = process.communicate(timeout=timeout)
 
-            if text and stdout_data is not None:
-                stdout_result: str | bytes = stdout_data.decode("utf-8", errors="replace")
+            stdout_result: str | bytes
+            if text:
+                stdout_result = stdout_data.decode("utf-8", errors="replace")
             else:
-                stdout_result = stdout_data if stdout_data is not None else b""
+                stdout_result = stdout_data
 
-            if text and stderr_data is not None:
-                stderr_result: str | bytes = stderr_data.decode("utf-8", errors="replace")
+            stderr_result: str | bytes
+            if text:
+                stderr_result = stderr_data.decode("utf-8", errors="replace")
             else:
-                stderr_result = stderr_data if stderr_data is not None else b""
+                stderr_result = stderr_data
 
             returncode = process.returncode
 
@@ -855,7 +858,7 @@ class ProcessManager:
 
         return success
 
-    def _terminate_windows_process(self, pid: int, name: str, logger: Any) -> bool:
+    def _terminate_windows_process(self, pid: int, name: str, logger: logging.Logger) -> bool:
         """Terminate a process using Windows API.
 
         Args:

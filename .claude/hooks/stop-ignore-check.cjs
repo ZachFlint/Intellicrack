@@ -41,6 +41,8 @@ function checkFileStillHasViolations(filePath, violations) {
             /#\s*mypy:\s*ignore/i,
             /#\s*mypy:\s*disable-error-code/i,
             /#\s*pyright:\s*ignore/i,
+            /#\s*pyright:\s*reportGeneralTypeIssues/i,
+            /#\s*pyright:\s*basic/i,
             /#\s*pylint:\s*disable/i,
             /#\s*pylint:\s*disable-next/i,
             /#\s*pylint:\s*disable-all/i,

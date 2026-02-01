@@ -15,7 +15,7 @@ import subprocess
 import sys
 import types
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 
 if TYPE_CHECKING:
@@ -115,8 +115,7 @@ def get_xpu_device_count() -> int:
     try:
         if not hasattr(torch, "xpu") or not torch.xpu.is_available():
             return 0
-        count: int = torch.xpu.device_count()
-        return count
+        return torch.xpu.device_count()
     except Exception as exc:
         _logger.debug("xpu_device_count_failed", extra={"error": str(exc)})
         return 0
@@ -137,8 +136,7 @@ def _get_device_name_from_sycl(device_index: int) -> str:
 
     try:
         if hasattr(torch.xpu, "get_device_name"):
-            name: str = torch.xpu.get_device_name(device_index)
-            return name
+            return torch.xpu.get_device_name(device_index)
         if hasattr(torch.xpu, "get_device_properties"):
             props = torch.xpu.get_device_properties(device_index)
             if hasattr(props, "name"):
@@ -171,16 +169,22 @@ def _get_windows_gpu_info() -> list[dict[str, str]]:
             check=False,
         )
         if result.returncode == 0 and result.stdout.strip():
-            data = json.loads(result.stdout)
-            if isinstance(data, dict):
-                data = [data]
+            raw: object = json.loads(result.stdout)
+            gpu_entries: list[dict[str, str]]
+            if isinstance(raw, dict):
+                gpu_entries = [cast("dict[str, str]", raw)]
+            elif isinstance(raw, list):
+                raw_list: list[object] = cast("list[object]", raw)
+                gpu_entries = [cast("dict[str, str]", item) for item in raw_list if isinstance(item, dict)]
+            else:
+                gpu_entries = []
             gpus.extend(
                 {
                     "name": str(gpu.get("Name", "")),
                     "pnp_device_id": str(gpu.get("PNPDeviceID", "")),
                     "driver_version": str(gpu.get("DriverVersion", "")),
                 }
-                for gpu in data
+                for gpu in gpu_entries
             )
     except Exception as exc:
         _logger.debug("windows_gpu_info_failed", extra={"error": str(exc)})

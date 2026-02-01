@@ -11,10 +11,15 @@ import hashlib
 import math
 import re
 from collections import Counter
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 
 import capstone
 import lief
+import lief.COFF
+import lief.ELF
+import lief.MachO
+import lief.OAT
+import lief.PE
 import pefile
 
 from ..core.logging import get_logger
@@ -35,6 +40,16 @@ from .base import BinaryOperationsBridge, BridgeCapabilities, BridgeState
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    _LiefParsedType = lief.PE.Binary | lief.OAT.Binary | lief.ELF.Binary | lief.MachO.Binary | lief.COFF.Binary | None
+
+    def _lief_parse_raw(data: bytes) -> _LiefParsedType:
+        """Typed wrapper for lief.parse (type-checking only)."""
+        _ = data
+        return None
+
+else:
+    _lief_parse_raw = lief.parse
 
 _logger = get_logger("bridges.binary")
 
@@ -333,7 +348,15 @@ class BinaryBridge(BinaryOperationsBridge):
             tool_path: Not used for this bridge.
         """
         del tool_path
-        self._state = BridgeState(connected=True, tool_running=True)
+        self._state = BridgeState(
+            connected=True,
+            tool_running=True,
+            binary_loaded=False,
+            process_attached=False,
+            target_path=None,
+            target_pid=None,
+            last_error=None,
+        )
         _logger.info("bridge_initialized")
 
     async def shutdown(self) -> None:
@@ -405,12 +428,10 @@ class BinaryBridge(BinaryOperationsBridge):
             imports = await self._get_imports_internal()
             exports = await self._get_exports_internal()
 
-            self._state = BridgeState(
-                connected=True,
-                tool_running=True,
-                binary_loaded=True,
-                target_path=self._binary_path,
-            )
+            self._state.connected = True
+            self._state.tool_running = True
+            self._state.binary_loaded = True
+            self._state.target_path = self._binary_path
 
             _logger.info("binary_loaded", extra={"path": str(path.name), "file_type": file_type, "arch": arch})
 
@@ -442,13 +463,16 @@ class BinaryBridge(BinaryOperationsBridge):
         if self._data is None or len(self._data) < _MIN_HEADER_LEN:
             return "raw"
 
-        if self._data[:2] == b"MZ":
+        header_2 = bytes(self._data[:2])
+        header_4 = bytes(self._data[:4])
+
+        if header_2 == b"MZ":
             return "pe"
 
-        if self._data[:4] == b"\x7fELF":
+        if header_4 == b"\x7fELF":
             return "elf"
 
-        if self._data[:4] in {
+        if header_4 in {
             b"\xfe\xed\xfa\xce",
             b"\xce\xfa\xed\xfe",
             b"\xfe\xed\xfa\xcf",
@@ -468,11 +492,12 @@ class BinaryBridge(BinaryOperationsBridge):
         Returns:
             Parsed lief Binary object or None if parsing fails.
         """
-        parsed: Any = lief.parse(data)
+        parsed: _LiefParsedType = _lief_parse_raw(data)
         if parsed is None:
             return None
-        result: lief.Binary = parsed
-        return result
+        if isinstance(parsed, lief.COFF.Binary):
+            return None
+        return parsed
 
     def _detect_architecture(self) -> tuple[str, bool]:
         """Detect the CPU architecture.
@@ -481,7 +506,7 @@ class BinaryBridge(BinaryOperationsBridge):
             Tuple of (architecture name, is_64bit).
         """
         if self._pe is not None:
-            machine = self._pe.FILE_HEADER.Machine
+            machine: int = self._pe.FILE_HEADER.Machine
             if machine == _MACHINE_AMD64:
                 return "x86_64", True
             if machine == _MACHINE_I386:
@@ -491,18 +516,17 @@ class BinaryBridge(BinaryOperationsBridge):
             if machine == _MACHINE_ARM:
                 return "arm", False
 
-        if self._lief_binary is not None and hasattr(self._lief_binary, "header"):
-            header = self._lief_binary.header
-            if hasattr(header, "machine_type"):
-                mt = str(header.machine_type)
-                if "X86_64" in mt or "AMD64" in mt:
-                    return "x86_64", True
-                if "I386" in mt or "X86" in mt:
-                    return "x86", False
-                if "AARCH64" in mt:
-                    return "arm64", True
-                if "ARM" in mt:
-                    return "arm", False
+        if self._lief_binary is not None:
+            lief_header: lief.Header = self._lief_binary.header
+            arch_val: lief.Header.ARCHITECTURES = lief_header.architecture
+            if arch_val == lief.Header.ARCHITECTURES.X86_64:
+                return "x86_64", True
+            if arch_val == lief.Header.ARCHITECTURES.X86:
+                return "x86", False
+            if arch_val == lief.Header.ARCHITECTURES.ARM64:
+                return "arm64", True
+            if arch_val == lief.Header.ARCHITECTURES.ARM:
+                return "arm", False
 
         return "unknown", False
 
@@ -513,8 +537,7 @@ class BinaryBridge(BinaryOperationsBridge):
             Entry point address or 0 if not found.
         """
         if self._pe is not None:
-            entry: int = cast("int", self._pe.OPTIONAL_HEADER.AddressOfEntryPoint)
-            return entry
+            return int(self._pe.OPTIONAL_HEADER.AddressOfEntryPoint)
 
         if self._lief_binary is not None:
             return self._lief_binary.entrypoint
@@ -536,18 +559,19 @@ class BinaryBridge(BinaryOperationsBridge):
                 sections.append(
                     SectionInfo(
                         name=name,
-                        virtual_address=cast("int", section.VirtualAddress),
-                        virtual_size=cast("int", section.Misc_VirtualSize),
-                        raw_size=cast("int", section.SizeOfRawData),
-                        characteristics=cast("int", section.Characteristics),
+                        virtual_address=int(section.VirtualAddress),
+                        virtual_size=int(section.Misc_VirtualSize),
+                        raw_size=int(section.SizeOfRawData),
+                        characteristics=int(section.Characteristics),
                         entropy=entropy,
                     )
                 )
 
         elif self._lief_binary is not None:
             for section in self._lief_binary.sections:
-                data = bytes(section.content) if section.content else b""
-                entropy = self._calculate_entropy(data)
+                content_view: memoryview = section.content
+                section_data: bytes = bytes(content_view) if len(content_view) > 0 else b""
+                entropy = self._calculate_entropy(section_data)
                 section_name_raw: str | bytes = section.name
                 section_name: str = (
                     section_name_raw.decode("utf-8", errors="replace") if isinstance(section_name_raw, bytes) else section_name_raw
@@ -557,7 +581,7 @@ class BinaryBridge(BinaryOperationsBridge):
                         name=section_name,
                         virtual_address=section.virtual_address,
                         virtual_size=section.size,
-                        raw_size=len(data),
+                        raw_size=len(section_data),
                         characteristics=0,
                         entropy=entropy,
                     )
@@ -606,8 +630,8 @@ class BinaryBridge(BinaryOperationsBridge):
                         ImportInfo(
                             dll=dll_name,
                             function=name,
-                            ordinal=cast("int", imp.ordinal) if not imp.name else None,
-                            address=cast("int", imp.address),
+                            ordinal=int(imp.ordinal) if not imp.name else None,
+                            address=int(imp.address),
                         )
                     )
 
@@ -640,8 +664,8 @@ class BinaryBridge(BinaryOperationsBridge):
                 exports.append(
                     ExportInfo(
                         name=name,
-                        ordinal=cast("int", exp.ordinal),
-                        address=cast("int", exp.address),
+                        ordinal=int(exp.ordinal),
+                        address=int(exp.address),
                     )
                 )
 
@@ -980,15 +1004,11 @@ class BinaryBridge(BinaryOperationsBridge):
             ToolError: If conversion fails.
         """
         if self._pe is not None:
-            result: int = cast("int", self._pe.get_offset_from_rva(rva))
-            return result
+            return int(self._pe.get_offset_from_rva(rva))
 
         if self._lief_binary is not None:
-            rva_converter: Any = getattr(self._lief_binary, "rva_to_offset", None)
-            if rva_converter is not None:
-                lief_result: Any = rva_converter(rva)
-                if isinstance(lief_result, int):
-                    return lief_result
+            if isinstance(self._lief_binary, lief.PE.Binary):
+                return self._lief_binary.rva_to_offset(rva)
             raise ToolError(_ERR_RVA_NOT_AVAIL)
 
         raise ToolError(_ERR_RVA_NOT_AVAIL)
@@ -1006,13 +1026,12 @@ class BinaryBridge(BinaryOperationsBridge):
             ToolError: If conversion fails.
         """
         if self._pe is not None:
-            result: int = cast("int", self._pe.get_rva_from_offset(offset))
-            return result
+            return int(self._pe.get_rva_from_offset(offset))
 
         if self._lief_binary is not None:
-            lief_result: Any = self._lief_binary.offset_to_virtual_address(offset)
-            if isinstance(lief_result, int):
-                return lief_result
+            lief_ova_result: int | lief.lief_errors = self._lief_binary.offset_to_virtual_address(offset)
+            if isinstance(lief_ova_result, int):
+                return lief_ova_result
             raise ToolError(_ERR_OFFSET_NOT_AVAIL)
 
         raise ToolError(_ERR_OFFSET_NOT_AVAIL)

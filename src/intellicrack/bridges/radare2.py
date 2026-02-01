@@ -42,6 +42,8 @@ from .base import (
 if TYPE_CHECKING:
     from pathlib import Path
 
+__all__ = ["Radare2Bridge"]
+
 XRefType = Literal["call", "jump", "data", "read", "write"]
 StringEncoding = Literal["ascii", "utf-8", "utf-16le", "utf-16be"]
 
@@ -50,6 +52,7 @@ _logger = get_logger("bridges.radare2")
 _ERR_FILE_NOT_FOUND = "file not found"
 _ERR_LOAD_FAILED = "failed to load binary"
 _ERR_NO_BINARY = "no binary loaded"
+_ERR_NOT_ANALYZED = "binary not analyzed"
 _ERR_CMD_FAILED = "command execution failed"
 _ERR_TOOL_NOT_AVAILABLE = "radare2 not available"
 _ERR_DECOMPILE_NA = "decompilation not available"
@@ -168,7 +171,7 @@ def _get_list(data: dict[str, Any], key: str) -> list[Any]:
     """
     val = data.get(key)
     if isinstance(val, list):
-        return val
+        return cast("list[Any]", val)
     return []
 
 
@@ -187,7 +190,7 @@ class Radare2Bridge(StaticAnalysisBridge):
     def __init__(self) -> None:
         """Initialize the radare2 bridge."""
         super().__init__()
-        self._r2: r2pipe.open_sync | None = None
+        self._r2: r2pipe.open | None = None
         self._binary_path: Path | None = None
         self._analyzed: bool = False
         self._r2_pid: int | None = None
@@ -201,6 +204,25 @@ class Radare2Bridge(StaticAnalysisBridge):
             supported_architectures=["x86", "x86_64", "arm", "arm64", "mips", "ppc"],
             supported_formats=["pe", "elf", "macho", "raw"],
         )
+
+    async def _r2_cmd(self, command: str) -> str:
+        """Execute an r2 command and return a guaranteed string result.
+
+        Args:
+            command: The r2 command to execute.
+
+        Returns:
+            Command output as string, empty string if None.
+
+        Raises:
+            ToolError: If r2 is not connected.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+        result = await asyncio.to_thread(self._r2.cmd, command)
+        if result is None:
+            return ""
+        return result
 
     @property
     def name(self) -> ToolName:
@@ -465,7 +487,15 @@ class Radare2Bridge(StaticAnalysisBridge):
             tool_path: Optional path to radare2 installation.
         """
         del tool_path
-        self._state = BridgeState(connected=True, tool_running=True)
+        self._state = BridgeState(
+            connected=True,
+            tool_running=True,
+            binary_loaded=False,
+            process_attached=False,
+            target_path=None,
+            target_pid=None,
+            last_error=None,
+        )
         _logger.info("radare2_bridge_initialized")
 
     async def shutdown(self) -> None:
@@ -487,15 +517,15 @@ class Radare2Bridge(StaticAnalysisBridge):
         await super().shutdown()
         _logger.info("radare2_bridge_shutdown")
 
-    async def is_available(self) -> bool:  # noqa: PLR6301
+    async def is_available(self) -> bool:
         """Check if radare2 is available.
 
         Returns:
             True if radare2 can be used.
         """
         try:
-            r2 = await asyncio.to_thread(r2pipe.open, "-")
-            version = await asyncio.to_thread(r2.cmd, "?V")
+            r2: r2pipe.open = await asyncio.to_thread(r2pipe.open, "-")
+            version: str | None = await asyncio.to_thread(r2.cmd, "?V")
             await asyncio.to_thread(r2.quit)
         except Exception:
             return False
@@ -529,18 +559,20 @@ class Radare2Bridge(StaticAnalysisBridge):
             self._binary_path = path.resolve()
             self._analyzed = False
 
-            if self._r2 is not None and hasattr(self._r2, "_child"):
-                child = getattr(self._r2, "_child", None)
+            if hasattr(self._r2, "_child"):
+                child: object = getattr(self._r2, "_child", None)
                 if child is not None and hasattr(child, "pid"):
-                    self._r2_pid = child.pid
-                    process_manager = ProcessManager.get_instance()
-                    process_manager.register_external_pid(
-                        self._r2_pid,
-                        name=f"radare2-{path.name}",
-                        process_type=ProcessType.EXTERNAL_TOOL,
-                        metadata={"binary": str(path)},
-                    )
-                    _logger.debug("radare2_process_registered", extra={"pid": self._r2_pid})
+                    pid_val: object = getattr(child, "pid", None)
+                    if isinstance(pid_val, int):
+                        self._r2_pid = pid_val
+                        process_manager = ProcessManager.get_instance()
+                        process_manager.register_external_pid(
+                            self._r2_pid,
+                            name=f"radare2-{path.name}",
+                            process_type=ProcessType.EXTERNAL_TOOL,
+                            metadata={"binary": str(path)},
+                        )
+                        _logger.debug("radare2_process_registered", extra={"pid": self._r2_pid})
 
             info_list = await self._cmd_json("ij")
             info = info_list[0] if info_list else {}
@@ -553,7 +585,7 @@ class Radare2Bridge(StaticAnalysisBridge):
             entry_offset = _get_int(bin_info, "entry", 0)
             entry = baddr + entry_offset
 
-            await asyncio.to_thread(self._r2.cmd, "e io.cache=true")
+            await self._r2_cmd("e io.cache=true")
 
             hashes = await self._cmd_json("itj")
             md5 = ""
@@ -569,17 +601,17 @@ class Radare2Bridge(StaticAnalysisBridge):
             imports = await self._get_imports_internal()
             exports = await self._get_exports_internal()
 
-            self._state = BridgeState(
-                connected=True,
-                tool_running=True,
-                binary_loaded=True,
-                target_path=self._binary_path,
-            )
+            self._state.connected = True
+            self._state.tool_running = True
+            self._state.binary_loaded = True
+            self._state.target_path = self._binary_path
 
             _logger.info("binary_loaded", extra={"path": path.name, "file_type": file_type, "arch": arch, "bits": bits})
 
+            binary_path = self._binary_path
+
             return BinaryInfo(
-                path=self._binary_path,
+                path=binary_path,
                 name=path.name,
                 size=path.stat().st_size,
                 md5=md5,
@@ -617,7 +649,7 @@ class Radare2Bridge(StaticAnalysisBridge):
         cmd = cmd_map.get(level, "aaa")
 
         _logger.info("analysis_starting", extra={"level": level})
-        await asyncio.to_thread(self._r2.cmd, cmd)
+        await self._r2_cmd(cmd)
         self._analyzed = True
         _logger.info("analysis_complete")
 
@@ -638,6 +670,8 @@ class Radare2Bridge(StaticAnalysisBridge):
         """
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
+        if not self._analyzed:
+            raise ToolError(_ERR_NOT_ANALYZED)
 
         funcs = await self._cmd_json("aflj")
 
@@ -679,8 +713,10 @@ class Radare2Bridge(StaticAnalysisBridge):
         """
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
+        if not self._analyzed:
+            raise ToolError(_ERR_NOT_ANALYZED)
 
-        await asyncio.to_thread(self._r2.cmd, f"s {address}")
+        await self._r2_cmd(f"s {address}")
         func_info = await self._cmd_json("afij")
 
         if not func_info:
@@ -749,12 +785,14 @@ class Radare2Bridge(StaticAnalysisBridge):
         """
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
+        if not self._analyzed:
+            raise ToolError(_ERR_NOT_ANALYZED)
 
-        await asyncio.to_thread(self._r2.cmd, f"s {address}")
-        result = await asyncio.to_thread(self._r2.cmd, "pdc")
+        await self._r2_cmd(f"s {address}")
+        result = await self._r2_cmd("pdc")
 
         if not result or "Cannot" in result:
-            result = await asyncio.to_thread(self._r2.cmd, "pdg")
+            result = await self._r2_cmd("pdg")
 
         if not result or "Cannot" in result:
             raise ToolError(_ERR_DECOMPILE_NA)
@@ -780,8 +818,10 @@ class Radare2Bridge(StaticAnalysisBridge):
         """
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
+        if not self._analyzed:
+            raise ToolError(_ERR_NOT_ANALYZED)
 
-        await asyncio.to_thread(self._r2.cmd, f"s {address}")
+        await self._r2_cmd(f"s {address}")
         insns = await self._cmd_json(f"pdj {count}")
 
         result: list[DisassemblyLine] = []
@@ -794,7 +834,7 @@ class Radare2Bridge(StaticAnalysisBridge):
             result.append(
                 DisassemblyLine(
                     address=_get_int(insn, "offset"),
-                    bytes=hex_bytes,
+                    bytes_str=hex_bytes,
                     mnemonic=mnemonic,
                     operands=operands,
                     comment=_get_optional_str(insn, "comment"),
@@ -817,6 +857,8 @@ class Radare2Bridge(StaticAnalysisBridge):
         """
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
+        if not self._analyzed:
+            raise ToolError(_ERR_NOT_ANALYZED)
 
         xrefs = await self._cmd_json(f"axtj @ {address}")
 
@@ -857,6 +899,8 @@ class Radare2Bridge(StaticAnalysisBridge):
         """
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
+        if not self._analyzed:
+            raise ToolError(_ERR_NOT_ANALYZED)
 
         xrefs = await self._cmd_json(f"axfj @ {address}")
 
@@ -897,6 +941,8 @@ class Radare2Bridge(StaticAnalysisBridge):
         """
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
+        if not self._analyzed:
+            raise ToolError(_ERR_NOT_ANALYZED)
 
         strings = await self._cmd_json("izj")
 
@@ -944,6 +990,8 @@ class Radare2Bridge(StaticAnalysisBridge):
         """
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
+        if not self._analyzed:
+            raise ToolError(_ERR_NOT_ANALYZED)
 
         hex_pattern = pattern.hex()
         results = await self._cmd_json(f"/xj {hex_pattern}")
@@ -964,6 +1012,8 @@ class Radare2Bridge(StaticAnalysisBridge):
         """
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
+        if not self._analyzed:
+            raise ToolError(_ERR_NOT_ANALYZED)
 
         clean_pattern = hex_pattern.replace(" ", "").replace("??", "..")
         results = await self._cmd_json(f"/xj {clean_pattern}")
@@ -1046,6 +1096,8 @@ class Radare2Bridge(StaticAnalysisBridge):
         Returns:
             List of import information.
         """
+        if not self._analyzed:
+            return []
         return await self._get_imports_internal()
 
     async def get_exports(self) -> list[ExportInfo]:
@@ -1054,6 +1106,8 @@ class Radare2Bridge(StaticAnalysisBridge):
         Returns:
             List of export information.
         """
+        if not self._analyzed:
+            return []
         return await self._get_exports_internal()
 
     async def rename_function(self, address: int, new_name: str) -> bool:
@@ -1071,8 +1125,10 @@ class Radare2Bridge(StaticAnalysisBridge):
         """
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
+        if not self._analyzed:
+            raise ToolError(_ERR_NOT_ANALYZED)
 
-        await asyncio.to_thread(self._r2.cmd, f"afn {new_name} @ {address}")
+        await self._r2_cmd(f"afn {new_name} @ {address}")
         _logger.info("function_renamed", extra={"address": hex(address), "new_name": new_name})
         return True
 
@@ -1098,9 +1154,11 @@ class Radare2Bridge(StaticAnalysisBridge):
         del comment_type
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
+        if not self._analyzed:
+            raise ToolError(_ERR_NOT_ANALYZED)
 
         escaped = comment.replace('"', '\\"')
-        await asyncio.to_thread(self._r2.cmd, f'CC "{escaped}" @ {address}')
+        await self._r2_cmd(f'CC "{escaped}" @ {address}')
         _logger.info("comment_added", extra={"address": hex(address)})
         return True
 
@@ -1118,7 +1176,7 @@ class Radare2Bridge(StaticAnalysisBridge):
             raise ToolError(_ERR_NO_BINARY)
 
         hex_data = data.hex()
-        await asyncio.to_thread(self._r2.cmd, f"wx {hex_data} @ {address}")
+        await self._r2_cmd(f"wx {hex_data} @ {address}")
         _logger.debug("bytes_written", extra={"length": len(data), "address": hex(address)})
 
     async def assemble_at(self, address: int, instruction: str) -> bytes:
@@ -1137,9 +1195,10 @@ class Radare2Bridge(StaticAnalysisBridge):
         del address
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
+        if not self._analyzed:
+            raise ToolError(_ERR_NOT_ANALYZED)
 
-        result = await asyncio.to_thread(
-            self._r2.cmd,
+        result = await self._r2_cmd(
             f'rasm2 -a x86 -b 64 "{instruction}"',
         )
 
@@ -1160,10 +1219,7 @@ class Radare2Bridge(StaticAnalysisBridge):
         Raises:
             ToolError: If execution fails.
         """
-        if self._r2 is None:
-            raise ToolError(_ERR_NO_BINARY)
-
-        return await asyncio.to_thread(self._r2.cmd, command)
+        return await self._r2_cmd(command)
 
     async def _cmd_json(self, command: str) -> list[dict[str, Any]]:
         """Execute command and parse JSON output.
@@ -1178,7 +1234,7 @@ class Radare2Bridge(StaticAnalysisBridge):
             _logger.warning("radare2_unavailable", extra={"operation": "_cmd_json"})
             return []
 
-        result = await asyncio.to_thread(self._r2.cmd, command)
+        result = await self._r2_cmd(command)
 
         if not result or not result.strip():
             return []
@@ -1194,3 +1250,61 @@ class Radare2Bridge(StaticAnalysisBridge):
             if isinstance(parsed, dict):
                 return [cast("dict[str, Any]", parsed)]
             return []
+
+    async def seek(self, address: int) -> str:
+        """Seek to a specific address.
+
+        Args:
+            address: Target address.
+
+        Returns:
+            Output of seek command.
+        """
+        return await self.execute_command(f"s {address}")
+
+    async def get_function_address(self, name: str) -> int | None:
+        """Get address of a function by name.
+
+        Args:
+            name: Function name.
+
+        Returns:
+            Address of function or None if not found.
+        """
+        funcs = await self.get_functions(filter_pattern=name)
+        for f in funcs:
+            if f.name == name:
+                return f.address
+        return None
+
+    async def list_functions(self) -> list[tuple[str, int]]:
+        """List functions for compatibility with CutterWidget.
+
+        Returns:
+            List of (name, address) tuples.
+        """
+        return [(f.name, f.address) for f in await self.get_functions()]
+
+    async def list_strings(self) -> list[tuple[int, str]]:
+        """List strings for compatibility with CutterWidget.
+
+        Returns:
+            List of (address, value) tuples.
+        """
+        return [(s.address, s.value) for s in await self.search_strings("")]
+
+    async def list_imports(self) -> list[tuple[str, str, int]]:
+        """List imports for compatibility with CutterWidget.
+
+        Returns:
+            List of (dll, function, address) tuples.
+        """
+        return [(i.dll, i.function, i.address) for i in await self.get_imports()]
+
+    async def list_exports(self) -> list[tuple[str, int]]:
+        """List exports for compatibility with CutterWidget.
+
+        Returns:
+            List of (name, address) tuples.
+        """
+        return [(e.name, e.address) for e in await self.get_exports()]

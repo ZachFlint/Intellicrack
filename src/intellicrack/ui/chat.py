@@ -468,13 +468,15 @@ class ChatPanel(QFrame):
         )
 
         content_label: QLabel | None = None
-        for i in range(bubble.layout().count()):
-            item = bubble.layout().itemAt(i)
-            if item and item.widget():
-                widget = item.widget()
-                if isinstance(widget, QLabel) and not widget.text().startswith(("You", "Intellicrack", "System", "Tool")):
-                    content_label = widget
-                    break
+        bubble_layout = bubble.layout()
+        if bubble_layout is not None:
+            for i in range(bubble_layout.count()):
+                item = bubble_layout.itemAt(i)
+                if item is not None:
+                    widget = item.widget()
+                    if isinstance(widget, QLabel) and not widget.text().startswith(("You", "Intellicrack", "System", "Tool")):
+                        content_label = widget
+                        break
 
         def append_chunk(chunk: str) -> None:
             nonlocal content_label
@@ -493,8 +495,10 @@ class ChatPanel(QFrame):
 
         while self._messages_layout.count() > 1:
             item = self._messages_layout.takeAt(0)
-            if item and item.widget():
-                item.widget().deleteLater()
+            if item is not None:
+                widget = item.widget()
+                if widget is not None:
+                    widget.deleteLater()
 
     def set_input_enabled(self, enabled: bool) -> None:
         """Enable or disable the input widget.

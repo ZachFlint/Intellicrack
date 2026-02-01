@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, cast
+from typing import TYPE_CHECKING, ClassVar, cast, override
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QFont
@@ -159,7 +159,7 @@ import struct
 from pathlib import Path
 
 
-def analyze_binary(file_path: str) -> dict:
+def analyze_binary(file_path: str) -> dict[str, list[str]]:
     """Analyze binary for license protection patterns.
 
     Args:
@@ -271,6 +271,7 @@ class ScriptListWidget(QListWidget):
 
     script_selected = pyqtSignal(str)
 
+    @override
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the script list widget.
 
@@ -374,13 +375,14 @@ class ScriptEditor(QPlainTextEdit):
 
     content_changed = pyqtSignal()
 
+    @override
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the script editor.
 
         Args:
             parent: Parent widget.
         """
-        super().__init__(parent)
+        super().__init__(parent=parent)
         self._current_language = "text"
         self._setup_ui()
 
@@ -434,6 +436,7 @@ class ScriptManagerPanel(QWidget):
 
     script_execute = pyqtSignal(str, str, str)
 
+    @override
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the script manager panel.
 

@@ -29,8 +29,10 @@ from .process_manager import (
 )
 from .script_gen import (
     BypassStrategy,
+    GeneratedScript,
     Script,
     ScriptContext,
+    ScriptGenerator,
     ScriptLanguage,
     ScriptManager,
     ScriptValidator,
@@ -97,8 +99,10 @@ __all__: list[str] = [  # noqa: RUF022
     "PendingConfirmation",
     # Script Infrastructure
     "BypassStrategy",
+    "GeneratedScript",
     "Script",
     "ScriptContext",
+    "ScriptGenerator",
     "ScriptLanguage",
     "ScriptManager",
     "ScriptValidator",

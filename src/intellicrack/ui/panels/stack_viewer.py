@@ -9,7 +9,7 @@ from __future__ import annotations
 import datetime
 import logging
 from dataclasses import dataclass
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol, cast, runtime_checkable
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QFont
@@ -115,7 +115,8 @@ class X64DbgStackSource:
             return []
 
         try:
-            raw_frames: list[dict[str, Any]] = getattr(self._bridge, "get_stack_trace", lambda: [])()
+            _empty_trace: list[dict[str, Any]] = []
+            raw_frames: list[dict[str, Any]] = getattr(self._bridge, "get_stack_trace", lambda: _empty_trace)()
             frames: list[StackFrame] = []
             for i, raw in enumerate(raw_frames):
                 frame = StackFrame(
@@ -187,16 +188,18 @@ class FridaStackSource:
             return self._cached_frames
 
         try:
-            raw_frames: list[Any] = getattr(self._bridge, "get_backtrace", lambda: [])()
+            _empty_bt: list[Any] = []
+            raw_frames: list[Any] = getattr(self._bridge, "get_backtrace", lambda: _empty_bt)()
             frames: list[StackFrame] = []
             for i, raw in enumerate(raw_frames):
                 if isinstance(raw, dict):
+                    raw_dict: dict[str, Any] = cast("dict[str, Any]", raw)
                     frame = StackFrame(
                         index=i,
-                        return_address=raw.get("address", 0),
-                        function_name=raw.get("name", "unknown"),
-                        module_name=raw.get("moduleName", "unknown"),
-                        offset=raw.get("offset", 0),
+                        return_address=raw_dict.get("address", 0),
+                        function_name=raw_dict.get("name", "unknown"),
+                        module_name=raw_dict.get("moduleName", "unknown"),
+                        offset=raw_dict.get("offset", 0),
                     )
                 else:
                     frame = StackFrame(

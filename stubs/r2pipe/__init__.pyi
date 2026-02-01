@@ -2,7 +2,6 @@
 
 from typing import Any
 
-
 class open_sync:
     """Synchronous r2pipe connection."""
 
@@ -20,7 +19,6 @@ class open_sync:
         """Close the r2pipe connection."""
         ...
 
-
 class open_async:
     """Asynchronous r2pipe connection."""
 
@@ -37,7 +35,6 @@ class open_async:
     async def quit(self) -> None:
         """Close the r2pipe connection."""
         ...
-
 
 def open(path: str, flags: list[str] | None = None) -> open_sync:
     """Open a new r2pipe connection.

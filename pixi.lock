@@ -84,6 +84,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/b7/b8/3fe70c75fe32afc4bb507f75563d39bc5642255d1d94f1f23604725780bf/babel-2.17.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/eb/95/7118e935b0b0bd3f94dfec2d852fd4e4f4f9757bdb49850519acd245cd3a/backrefs-6.1-py313-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/e0/0b/8bdc52111c83e2dc2f97403dc87c0830b8989d9ae45732b34b686326fb2c/bandit-1.9.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/4e/e7/04fd5706f8b49e335765e9e3dd8dcfc4cdd6e15121213641665b433f885e/basedpyright-1.37.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ba/53/7cfbe3a93354764be85c2dfcbfc5b6536413e598155aa7ef7e85d74c9e49/bitsandbytes-0.49.1-py3-none-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/a6/a3/e8d1526bea0446e040193185353920a9506eab60a7d8beb062029129c7d2/black-26.1.0-cp313-cp313-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/c5/24/313772c00cefce3a0983bf215ac5a47de4b77ce5cd380953ade312e3b414/blinter-1.0.112-py3-none-any.whl
@@ -205,6 +206,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/64/9a/1a1c154f10a575d20dd634e5697805e589bbdb7673a0ad00e8da90044ba7/nh3-0.3.2-cp38-abi3-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/60/90/81ac364ef94209c100e12579629dc92bf7a709a84af32f8c551b02c07e94/nltk-3.9.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/88/b2/d0896bdcdc8d28a7fc5717c305f1a861c26e18c05047949fb371034d98bd/nodeenv-1.10.0-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/4e/c3/0e13a3da78f08cb58650971a6957ac7bfef84164b405176e53ab1e3584e2/nodejs_wheel_binaries-24.13.0-py2.py3-none-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/b9/34/434c594e0125a16b05a7bedaea33e63c90abbfbe47e5729a735a8a8a90ea/nox-2025.11.12-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/da/a6/cf32198b0b6e18d4fbfa9a21a992a7fca535b9bb2b0cdd217d4a3445b5ca/numpy-2.4.1-cp313-cp313-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/fd/72/fb2af0d259a651affdce65fd6a495f0e07a685a0136baf585c5065204ee7/nvidia_ml_py-13.590.48-py3-none-any.whl
@@ -261,7 +263,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/75/34/be7a55529607b21db00a49ca53cb07c3092d2a5a95ea19bb95cfa0346904/pyqt6-6.10.2-cp39-abi3-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/53/5c/648c515d57bc82909d0597befb03bbc2f7a570f323dba3ad38629669efcb/pyqt6_qt6-6.10.1-py3-none-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/40/d3/447b30d1f00cc50ad9e5c53b2e920068606b16857da83f8036b390c79fad/pyqt6_sip-13.11.0-cp313-cp313-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/0c/82/a2c93e32800940d9573fb28c346772a14778b84ba7524e691b324620ab89/pyright-1.1.408-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/86/cd/300d42aa7675d2ce66fea380177c19ad9f8ffad01295160a06e257360d73/pyroma-5.0.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/e5/35/f8b19922b6a25bc0880171a2f1a003eaeb93657475193ab516fd87cac9da/pytest_asyncio-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/33/29/e756e715a48959f1c0045342088d7ca9762a2f509b945f362a316e9412b7/pytest_benchmark-5.2.3-py3-none-any.whl
@@ -641,6 +642,13 @@ packages:
   - beautifulsoup4>=4.8.0 ; extra == 'test'
   - pylint==1.9.4 ; extra == 'test'
   requires_python: '>=3.10'
+- pypi: https://files.pythonhosted.org/packages/4e/e7/04fd5706f8b49e335765e9e3dd8dcfc4cdd6e15121213641665b433f885e/basedpyright-1.37.2-py3-none-any.whl
+  name: basedpyright
+  version: 1.37.2
+  sha256: 8e9cc5c6e6c7a00340ee48051a4d8c072ee91693d2a83b97d6c0f43bf56faf33
+  requires_dist:
+  - nodejs-wheel-binaries>=20.13.1
+  requires_python: '>=3.8'
 - pypi: https://files.pythonhosted.org/packages/ba/53/7cfbe3a93354764be85c2dfcbfc5b6536413e598155aa7ef7e85d74c9e49/bitsandbytes-0.49.1-py3-none-win_amd64.whl
   name: bitsandbytes
   version: 0.49.1
@@ -1796,7 +1804,126 @@ packages:
 - pypi: ./
   name: intellicrack
   version: 1.0.0
-  sha256: d168febca89bf1b7a7ccf29ca3462bbd3f4c8b2ec3ca1fb53d063e81c0575013
+  sha256: 7380f15056709544157c98ad3ecf2383eed19393394dc8462f735307dacd88ff
+  requires_dist:
+  - networkx>=3.6.1,<4
+  - markdown-it-py>=3.0,<4
+  - anthropic
+  - openai
+  - google-genai
+  - ollama
+  - httpx
+  - pyqt6
+  - qdarkstyle
+  - pygments
+  - pefile
+  - lief
+  - capstone
+  - keystone-engine
+  - frida
+  - frida-tools
+  - r2pipe
+  - ghidra-bridge
+  - python-dotenv
+  - tomli
+  - tomli-w
+  - aiofiles
+  - aiosqlite
+  - pydantic
+  - mcp>=1.2.0
+  - pyannotate>=1.2.0,<2
+  - structlog>=24.1.0
+  - transformers>=4.40.0
+  - accelerate>=0.30.0
+  - bitsandbytes>=0.43.0
+  - sentencepiece
+  - safetensors
+  - build ; extra == 'dev'
+  - pyclean ; extra == 'dev'
+  - black ; extra == 'dev'
+  - pylint ; extra == 'dev'
+  - autopep8 ; extra == 'dev'
+  - flake8 ; extra == 'dev'
+  - ruff ; extra == 'dev'
+  - isort ; extra == 'dev'
+  - pycodestyle ; extra == 'dev'
+  - bandit ; extra == 'dev'
+  - blinter ; extra == 'dev'
+  - vulture ; extra == 'dev'
+  - pyupgrade ; extra == 'dev'
+  - pydocstyle ; extra == 'dev'
+  - sourcery ; extra == 'dev'
+  - wemake-python-styleguide ; extra == 'dev'
+  - darglint ; extra == 'dev'
+  - pyroma ; extra == 'dev'
+  - mypy-extensions ; extra == 'dev'
+  - dead ; extra == 'dev'
+  - uncalled ; extra == 'dev'
+  - deadcode ; extra == 'dev'
+  - pygount ; extra == 'dev'
+  - pytest-deadfixtures ; extra == 'dev'
+  - basedpyright ; extra == 'dev'
+  - monkeytype ; extra == 'dev'
+  - ty ; extra == 'dev'
+  - mccabe ; extra == 'dev'
+  - xenon ; extra == 'dev'
+  - safety ; extra == 'dev'
+  - yamllint ; extra == 'dev'
+  - jsonlint ; extra == 'dev'
+  - pytest ; extra == 'dev'
+  - pytest-cov ; extra == 'dev'
+  - pytest-mock ; extra == 'dev'
+  - pytest-asyncio ; extra == 'dev'
+  - pytest-xdist ; extra == 'dev'
+  - pytest-timeout ; extra == 'dev'
+  - pytest-qt ; extra == 'dev'
+  - pytest-benchmark ; extra == 'dev'
+  - pytest-html ; extra == 'dev'
+  - pytest-randomly ; extra == 'dev'
+  - pytest-sugar ; extra == 'dev'
+  - pytest-env ; extra == 'dev'
+  - pytest-instafail ; extra == 'dev'
+  - hypothesis ; extra == 'dev'
+  - tox ; extra == 'dev'
+  - nox ; extra == 'dev'
+  - coverage ; extra == 'dev'
+  - freezegun ; extra == 'dev'
+  - responses ; extra == 'dev'
+  - faker ; extra == 'dev'
+  - radon ; extra == 'dev'
+  - sphinx ; extra == 'dev'
+  - sphinx-rtd-theme ; extra == 'dev'
+  - sphinx-autodoc-typehints ; extra == 'dev'
+  - sphinx-copybutton ; extra == 'dev'
+  - sphinx-tabs ; extra == 'dev'
+  - sphinxcontrib-mermaid ; extra == 'dev'
+  - sphinx-autobuild ; extra == 'dev'
+  - pdoc3 ; extra == 'dev'
+  - mkdocs-material ; extra == 'dev'
+  - pymdown-extensions ; extra == 'dev'
+  - myst-parser ; extra == 'dev'
+  - ipdb ; extra == 'dev'
+  - line-profiler ; extra == 'dev'
+  - memory-profiler ; extra == 'dev'
+  - py-spy ; extra == 'dev'
+  - snakeviz ; extra == 'dev'
+  - pyinstrument ; extra == 'dev'
+  - scalene ; extra == 'dev'
+  - pre-commit ; extra == 'dev'
+  - commitizen ; extra == 'dev'
+  - bumpversion ; extra == 'dev'
+  - pipdeptree ; extra == 'dev'
+  - rope ; extra == 'dev'
+  - astor ; extra == 'dev'
+  - yapf ; extra == 'dev'
+  - pip-audit ; extra == 'dev'
+  - nodeenv ; extra == 'dev'
+  - twine ; extra == 'dev'
+  - setuptools-scm ; extra == 'dev'
+  - poetry ; extra == 'dev'
+  - pycallgraph2 ; extra == 'dev'
+  - pre-commit-hooks ; extra == 'dev'
+  - detect-secrets ; extra == 'dev'
   requires_python: '>=3.13'
 - pypi: https://files.pythonhosted.org/packages/0c/4c/b075da0092003d9a55cf2ecc1cae9384a1ca4f650d51b00fc59875fe76f6/ipdb-0.13.13-py3-none-any.whl
   name: ipdb
@@ -2709,6 +2836,13 @@ packages:
   purls: []
   size: 30226500
   timestamp: 1765888126555
+- pypi: https://files.pythonhosted.org/packages/4e/c3/0e13a3da78f08cb58650971a6957ac7bfef84164b405176e53ab1e3584e2/nodejs_wheel_binaries-24.13.0-py2.py3-none-win_amd64.whl
+  name: nodejs-wheel-binaries
+  version: 24.13.0
+  sha256: 605be4763e3ef427a3385a55da5a1bcf0a659aa2716eebbf23f332926d7e5f23
+  requires_dist:
+  - typing-extensions ; python_full_version < '3.8'
+  requires_python: '>=3.7'
 - pypi: https://files.pythonhosted.org/packages/b9/34/434c594e0125a16b05a7bedaea33e63c90abbfbe47e5729a735a8a8a90ea/nox-2025.11.12-py3-none-any.whl
   name: nox
   version: 2025.11.12
@@ -3355,18 +3489,6 @@ packages:
   version: 13.11.0
   sha256: 8d49b5bf3d8d36cd7db93ddc54cd09dbba96a3fd926e445ef75499b41e47b5a3
   requires_python: '>=3.10'
-- pypi: https://files.pythonhosted.org/packages/0c/82/a2c93e32800940d9573fb28c346772a14778b84ba7524e691b324620ab89/pyright-1.1.408-py3-none-any.whl
-  name: pyright
-  version: 1.1.408
-  sha256: 090b32865f4fdb1e0e6cd82bf5618480d48eecd2eb2e70f960982a3d9a4c17c1
-  requires_dist:
-  - nodeenv>=1.6.0
-  - typing-extensions>=4.1
-  - twine>=3.4.1 ; extra == 'dev'
-  - nodejs-wheel-binaries ; extra == 'nodejs'
-  - twine>=3.4.1 ; extra == 'all'
-  - nodejs-wheel-binaries ; extra == 'all'
-  requires_python: '>=3.7'
 - pypi: https://files.pythonhosted.org/packages/86/cd/300d42aa7675d2ce66fea380177c19ad9f8ffad01295160a06e257360d73/pyroma-5.0.1-py3-none-any.whl
   name: pyroma
   version: 5.0.1

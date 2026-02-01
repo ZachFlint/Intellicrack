@@ -335,35 +335,48 @@ class GhidraBridge(StaticAnalysisBridge):
             tool_path: Path to Ghidra installation.
         """
         self._ghidra_path = tool_path
+        self._state = BridgeState(
+            connected=False,
+            tool_running=False,
+            binary_loaded=False,
+            process_attached=False,
+            target_path=None,
+            target_pid=None,
+            last_error=None,
+        )
 
         try:
-            ghidra_bridge = importlib.import_module("ghidra_bridge")
+            ghidra_bridge_mod = importlib.import_module("ghidra_bridge")
+            bridge_cls = cast("Callable[..., object]", getattr(ghidra_bridge_mod, "GhidraBridge"))
 
             self._bridge = await asyncio.to_thread(
-                ghidra_bridge.GhidraBridge,
+                bridge_cls,
                 namespace=None,
                 connect_to_host="127.0.0.1",
                 connect_to_port=self._port,
             )
-            self._state = BridgeState(connected=True, tool_running=True)
+            self._state.connected = True
+            self._state.tool_running = True
             _logger.info("ghidra_bridge_connected", extra={"port": self._port})
 
         except ImportError:
             _logger.warning("ghidra_bridge_not_installed")
             self._bridge = None
-            self._state = BridgeState(connected=False, tool_running=False)
+            self._state.connected = False
+            self._state.tool_running = False
 
         except Exception as e:
             _logger.warning("ghidra_connect_failed", extra={"error": str(e)})
             self._bridge = None
-            self._state = BridgeState(connected=True, tool_running=False)
+            self._state.connected = False
+            self._state.tool_running = False
+            self._state.last_error = str(e)
 
     async def shutdown(self) -> None:
         """Shutdown Ghidra and cleanup resources."""
         if self._process is not None:
             process_manager = ProcessManager.get_instance()
-            if self._process.pid is not None:
-                process_manager.unregister(self._process.pid)
+            process_manager.unregister(self._process.pid)
 
             self._process.terminate()
             try:
@@ -433,38 +446,42 @@ class GhidraBridge(StaticAnalysisBridge):
 
         _logger.info("ghidra_headless_starting", extra={"command": " ".join(cmd)})
 
-        self._process = await asyncio.to_thread(
-            subprocess.Popen,
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-
-        if self._process.pid is not None:
-            process_manager = ProcessManager.get_instance()
-            process_manager.register(
-                self._process,
-                name="ghidra-headless",
-                process_type=ProcessType.EXTERNAL_TOOL,
-                metadata={"project": project_name, "project_dir": str(project_dir)},
-                cleanup_callback=self.shutdown,
+        def _start_process() -> subprocess.Popen[bytes]:
+            return subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
             )
+
+        self._process = await asyncio.to_thread(_start_process)
+
+        process_manager = ProcessManager.get_instance()
+        process_manager.register(
+            self._process,
+            name="ghidra-headless",
+            process_type=ProcessType.EXTERNAL_TOOL,
+            metadata={"project": project_name, "project_dir": str(project_dir)},
+            cleanup_callback=self.shutdown,
+        )
 
         await asyncio.sleep(10)
 
         try:
-            ghidra_bridge = importlib.import_module("ghidra_bridge")
+            ghidra_bridge_mod = importlib.import_module("ghidra_bridge")
+            bridge_cls = cast("Callable[..., object]", getattr(ghidra_bridge_mod, "GhidraBridge"))
 
             self._bridge = await asyncio.to_thread(
-                ghidra_bridge.GhidraBridge,
+                bridge_cls,
                 namespace=None,
                 connect_to_host="127.0.0.1",
                 connect_to_port=self._port,
             )
-            self._state = BridgeState(connected=True, tool_running=True)
+            self._state.connected = True
+            self._state.tool_running = True
             _logger.info("ghidra_headless_connected")
         except Exception as e:
             error_message = f"Failed to connect to Ghidra: {e}"
+            self._state.last_error = error_message
             raise ToolError(error_message) from e
 
     def _create_bridge_script(self) -> Path:
@@ -522,12 +539,10 @@ ghidra_bridge_server.GhidraBridgeServer(
         file_type = self._detect_format(data)
         arch, is_64 = self._detect_architecture(data)
 
-        self._state = BridgeState(
-            connected=True,
-            tool_running=True,
-            binary_loaded=True,
-            target_path=self._binary_path,
-        )
+        self._state.connected = True
+        self._state.tool_running = True
+        self._state.binary_loaded = True
+        self._state.target_path = self._binary_path
 
         _logger.info("binary_loaded", extra={"path": path.name})
 
@@ -1001,7 +1016,7 @@ metadata
             return [
                 DisassemblyLine(
                     address=int(i.get("address", 0)),
-                    bytes=str(i.get("bytes", "")),
+                    bytes_str=str(i.get("bytes", "")),
                     mnemonic=str(i.get("mnemonic", "")),
                     operands=str(i.get("operands", "")),
                     comment=None,
@@ -1180,7 +1195,7 @@ metadata
             """)
 
             if isinstance(result, list):
-                return [int(addr) for addr in result]
+                return [int(addr) for addr in cast("list[int | float | str]", result)]
         except Exception as e:
             _logger.warning("byte_search_failed", extra={"error": str(e)})
         return []

@@ -71,6 +71,12 @@ features.)_**
 - [ ] **Linting and Static Analysis:** Has the code been checked with the
       project's linter (`ruff check .`)? Confirm there are no new warnings or
       errors.
+- [ ] **Type Checking:** Has the code been verified with basedpyright? Code must be
+      absolutely and completely type correct with zero basedpyright findings
+      acceptable. Confirm no type suppression comments (type-ignore directives,
+      pyright-ignore directives, or any inline suppression mechanism) are
+      present. Confirm the `[tool.basedpyright]` section in `pyproject.toml` has
+      not been modified.
 
 **Final Assessment:** Provide a concise summary of your verification.
 

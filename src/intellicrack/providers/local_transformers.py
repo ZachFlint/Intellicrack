@@ -50,6 +50,10 @@ from .xpu_utils import (
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    import torch
+    from transformers import PreTrainedModel
+    from transformers.modeling_outputs import CausalLMOutputWithPast
+
 
 _logger = get_logger("providers.local_transformers")
 
@@ -548,11 +552,11 @@ class LocalTransformersProvider(LLMProviderBase):
                 break
 
             def _forward_pass(
-                _model: Any,
+                _model: PreTrainedModel,
                 _gen_ids: torch.Tensor,
                 _attn_mask: torch.Tensor | None,
-                _past_kv: Any,
-            ) -> Any:
+                _past_kv: tuple[tuple[torch.Tensor, ...], ...] | None,
+            ) -> CausalLMOutputWithPast:
                 use_ids = _gen_ids[:, -1:] if _past_kv else _gen_ids
                 return _model(
                     input_ids=use_ids,
@@ -714,7 +718,7 @@ class LocalTransformersProvider(LLMProviderBase):
             tokenizer = self._loaded_model.tokenizer
             if hasattr(tokenizer, "apply_chat_template") and tokenizer.chat_template is not None:
                 try:
-                    result: Any = tokenizer.apply_chat_template(
+                    result: str | list[int] = tokenizer.apply_chat_template(
                         chat_messages,
                         tokenize=False,
                         add_generation_prompt=True,
@@ -768,9 +772,10 @@ class LocalTransformersProvider(LLMProviderBase):
             content = str(msg.get("content", ""))
 
             if role == "tool":
-                tool_results = msg.get("tool_results", [])
-                if isinstance(tool_results, list):
-                    parts: list[str] = [str(tr.get("result", "")) for tr in tool_results if isinstance(tr, dict)]
+                tool_results_raw = msg.get("tool_results")
+                if isinstance(tool_results_raw, list):
+                    tool_results_typed = cast("list[dict[str, object]]", tool_results_raw)
+                    parts: list[str] = [str(tr_dict.get("result", "")) for tr_dict in tool_results_typed]
                     if parts:
                         chat_messages.append({
                             "role": "user",
@@ -851,10 +856,11 @@ class LocalTransformersProvider(LLMProviderBase):
         json_str = response[start_idx:end_idx]
 
         try:
-            data = json.loads(json_str)
-            tool_call_data = data.get("tool_call", {})
-            name = tool_call_data.get("name", "")
-            arguments = tool_call_data.get("arguments", {})
+            data: dict[str, Any] = json.loads(json_str)
+            tool_call_data: dict[str, Any] = data.get("tool_call", {})
+            name: str = str(tool_call_data.get("name", ""))
+            raw_arguments: object = tool_call_data.get("arguments", {})
+            parsed_arguments: dict[str, Any] = cast("dict[str, Any]", raw_arguments) if isinstance(raw_arguments, dict) else {}
 
             if name:
                 return [
@@ -862,7 +868,7 @@ class LocalTransformersProvider(LLMProviderBase):
                         id=f"call_{int(time.time() * 1000)}",
                         tool_name=name.split(".")[0] if "." in name else name,
                         function_name=name,
-                        arguments=arguments if isinstance(arguments, dict) else {},
+                        arguments=parsed_arguments,
                     )
                 ]
         except json.JSONDecodeError:

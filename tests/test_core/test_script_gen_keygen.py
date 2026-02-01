@@ -57,7 +57,7 @@ def create_test_analysis(
     Returns:
         Configured LicensingAnalysis instance.
     """
-    constants = []
+    constants: list[MagicConstant] = []
     if magic_constants:
         for i, val in enumerate(magic_constants):
             constants.append(

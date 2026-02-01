@@ -10,7 +10,7 @@
  • SOLID(Single Responsibility Principle, Open/Closed Principle, Liskov Substitution Principle, Interface Segregation Principle, and Dependency Inversion Principle)
  • DRY (Don't Repeat Yourself)
  • KISS (Keep It Simple, Stupid)
-[5] ALL code requires explicit type hints/annotations compliant with mypy strict mode. Windows compatibility PRIORITY with proper platform checks. NEVER delete method bindings - create FUNCTIONAL missing functions instead. NO comments/emojis/TODO markers unless requested. MAINTAIN functionality over "cleaner" code.
+[5] ALL code requires explicit type hints/annotations that are fully basedpyright compliant. Code must be absolutely and completely type correct with zero basedpyright findings acceptable. NEVER use type suppression comments (type-ignore directives, pyright-ignore directives, or any inline suppression mechanism) under any circumstance - fix the actual type error instead. NEVER edit the [tool.basedpyright] section in pyproject.toml - the basedpyright configuration is locked and immutable. Windows compatibility PRIORITY with proper platform checks. NEVER delete method bindings - create FUNCTIONAL missing functions instead. NO comments/emojis/TODO markers unless requested. MAINTAIN functionality over "cleaner" code.
 </system-reminder>
 
 ## Build, Lint, and Test Commands

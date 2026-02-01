@@ -1,68 +1,210 @@
+41 findings in D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:177:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:178:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:179:35: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:202:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:203:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:204:35: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:233:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:235:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:237:39: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:257:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:258:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:261:43: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:284:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:286:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:288:39: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:310:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:312:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:314:36: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:338:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:341:40: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:359:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:362:42: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:380:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:383:43: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:402:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:403:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:405:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:407:36: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:427:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:428:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:430:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:432:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:452:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:453:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:455:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:457:39: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:480:42: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:499:43: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:503:42: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:524:42: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:548:44: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+
+
+24 findings in D:\Intellicrack\src\intellicrack\ui\tools.py
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:42:9: D102 Missing docstring in public method
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:44:9: D102 Missing docstring in public method
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:46:9: D102 Missing docstring in public method
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:47:9: D102 Missing docstring in public method
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:51:7: D101 Missing docstring in public class
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:52:9: D102 Missing docstring in public method
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:56:7: D101 Missing docstring in public class
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:57:9: D102 Missing docstring in public method
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:61:7: D101 Missing docstring in public class
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:62:9: D102 Missing docstring in public method
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:69:9: D102 Missing docstring in public method
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:69:38: UP037 Remove quotes from type annotation
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:758:37: TC006 Add quotes to type expression in `typing.cast()`
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:761:42: TC006 Add quotes to type expression in `typing.cast()`
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:762:48: TC006 Add quotes to type expression in `typing.cast()`
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:785:40: TC006 Add quotes to type expression in `typing.cast()`
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:789:42: TC006 Add quotes to type expression in `typing.cast()`
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:790:51: TC006 Add quotes to type expression in `typing.cast()`
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:810:40: TC006 Add quotes to type expression in `typing.cast()`
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:813:42: TC006 Add quotes to type expression in `typing.cast()`
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:814:51: TC006 Add quotes to type expression in `typing.cast()`
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:842:47: TC006 Add quotes to type expression in `typing.cast()`
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:870:47: TC006 Add quotes to type expression in `typing.cast()`
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:893:47: TC006 Add quotes to type expression in `typing.cast()`
+
+
 18 findings in D:\Intellicrack\src\intellicrack\core\process_manager.py
 
-D:\Intellicrack\src\intellicrack\core\process_manager.py:273:60: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
+D:\Intellicrack\src\intellicrack\core\process_manager.py:274:60: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
 
-D:\Intellicrack\src\intellicrack\core\process_manager.py:276:67: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
+D:\Intellicrack\src\intellicrack\core\process_manager.py:277:67: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
 
-D:\Intellicrack\src\intellicrack\core\process_manager.py:285:62: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
+D:\Intellicrack\src\intellicrack\core\process_manager.py:286:62: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
 
-D:\Intellicrack\src\intellicrack\core\process_manager.py:329:76: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
+D:\Intellicrack\src\intellicrack\core\process_manager.py:330:76: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
 
-D:\Intellicrack\src\intellicrack\core\process_manager.py:334:67: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
+D:\Intellicrack\src\intellicrack\core\process_manager.py:335:67: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
 
-D:\Intellicrack\src\intellicrack\core\process_manager.py:455:52: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
+D:\Intellicrack\src\intellicrack\core\process_manager.py:456:52: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
 
-D:\Intellicrack\src\intellicrack\core\process_manager.py:465:66: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
+D:\Intellicrack\src\intellicrack\core\process_manager.py:466:66: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
 
-D:\Intellicrack\src\intellicrack\core\process_manager.py:501:66: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
+D:\Intellicrack\src\intellicrack\core\process_manager.py:502:66: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
 
-D:\Intellicrack\src\intellicrack\core\process_manager.py:503:72: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
+D:\Intellicrack\src\intellicrack\core\process_manager.py:504:72: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
 
-D:\Intellicrack\src\intellicrack\core\process_manager.py:511:63: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
+D:\Intellicrack\src\intellicrack\core\process_manager.py:512:63: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
 
-D:\Intellicrack\src\intellicrack\core\process_manager.py:534:72: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
+D:\Intellicrack\src\intellicrack\core\process_manager.py:535:72: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
 
-D:\Intellicrack\src\intellicrack\core\process_manager.py:536:78: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
+D:\Intellicrack\src\intellicrack\core\process_manager.py:537:78: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
 
-D:\Intellicrack\src\intellicrack\core\process_manager.py:541:69: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
+D:\Intellicrack\src\intellicrack\core\process_manager.py:542:69: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
 
-D:\Intellicrack\src\intellicrack\core\process_manager.py:699:54: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
+D:\Intellicrack\src\intellicrack\core\process_manager.py:700:54: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
 
-D:\Intellicrack\src\intellicrack\core\process_manager.py:805:20: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
+D:\Intellicrack\src\intellicrack\core\process_manager.py:806:20: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
 
-D:\Intellicrack\src\intellicrack\core\process_manager.py:847:67: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
+D:\Intellicrack\src\intellicrack\core\process_manager.py:848:67: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
 
-D:\Intellicrack\src\intellicrack\core\process_manager.py:874:63: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
+D:\Intellicrack\src\intellicrack\core\process_manager.py:875:63: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
 
-D:\Intellicrack\src\intellicrack\core\process_manager.py:878:62: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-
-6 findings in D:\Intellicrack\src\intellicrack\core\orchestrator.py
-
-D:\Intellicrack\src\intellicrack\core\orchestrator.py:37:35: F401 `.license_analyzer.LicenseAnalyzer` imported but unused
-
-D:\Intellicrack\src\intellicrack\core\orchestrator.py:893:15: PLR6301 Method `_run_license_analysis` could be a function, class method, or static method
-
-D:\Intellicrack\src\intellicrack\core\orchestrator.py:903:13: PLC0415 `import` should be at the top-level of a file
-
-D:\Intellicrack\src\intellicrack\core\orchestrator.py:909:13: TRY300 Consider moving this statement to an `else` block
-
-D:\Intellicrack\src\intellicrack\core\orchestrator.py:929:21: PLC0415 `import` should be at the top-level of a file
-
-D:\Intellicrack\src\intellicrack\core\orchestrator.py:933:13: PLC0415 `import` should be at the top-level of a file
+D:\Intellicrack\src\intellicrack\core\process_manager.py:879:62: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
 
 
-5 findings in D:\Intellicrack\src\intellicrack\bridges\process.py
+10 findings in D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py
 
-D:\Intellicrack\src\intellicrack\bridges\process.py:62:19: RUF100 Unused `noqa` directive (unused: `RUF012`)
+D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py:15:24: TC002 Move third-party import `frida.core.ScriptMessage` into a type-checking block
 
-D:\Intellicrack\src\intellicrack\bridges\process.py:79:19: RUF100 Unused `noqa` directive (unused: `RUF012`)
+D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py:664:31: TC006 Add quotes to type expression in `typing.cast()`
 
-D:\Intellicrack\src\intellicrack\bridges\process.py:93:19: RUF100 Unused `noqa` directive (unused: `RUF012`)
+D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py:735:26: TC006 Add quotes to type expression in `typing.cast()`
 
-D:\Intellicrack\src\intellicrack\bridges\process.py:110:19: RUF100 Unused `noqa` directive (unused: `RUF012`)
+D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py:799:26: TC006 Add quotes to type expression in `typing.cast()`
 
-D:\Intellicrack\src\intellicrack\bridges\process.py:450:44: RUF100 Unused `noqa` directive (non-enabled: `PLR6301`)
+D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py:849:26: TC006 Add quotes to type expression in `typing.cast()`
+
+D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py:905:26: TC006 Add quotes to type expression in `typing.cast()`
+
+D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py:975:52: TC006 Add quotes to type expression in `typing.cast()`
+
+D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py:988:41: TC006 Add quotes to type expression in `typing.cast()`
+
+D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py:1141:46: TC006 Add quotes to type expression in `typing.cast()`
+
+D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py:1142:25: PERF403 Use `dict.update` instead of a for-loop
+
+
+4 findings in D:\Intellicrack\tests\test_bridges\test_x64dbg_api_coverage.py
+
+D:\Intellicrack\tests\test_bridges\test_x64dbg_api_coverage.py:8:1: I001 Import block is un-sorted or un-formatted
+
+D:\Intellicrack\tests\test_bridges\test_x64dbg_api_coverage.py:10:8: F401 `asyncio` imported but unused
+
+D:\Intellicrack\tests\test_bridges\test_x64dbg_api_coverage.py:13:27: F401 `unittest.mock.MagicMock` imported but unused
+
+D:\Intellicrack\tests\test_bridges\test_x64dbg_api_coverage.py:13:38: F401 `unittest.mock.patch` imported but unused
 
 
 3 findings in D:\Intellicrack\src\intellicrack\bridges\installer.py
@@ -83,6 +225,13 @@ D:\Intellicrack\tests\test_providers\test_local_transformers_provider.py:10:38: 
 D:\Intellicrack\tests\test_providers\test_local_transformers_provider.py:31:5: TC005 Found empty type-checking block
 
 
+2 findings in D:\Intellicrack\src\intellicrack\bridges\x64dbg.py
+
+D:\Intellicrack\src\intellicrack\bridges\x64dbg.py:293:1: PLR0904 Too many public methods (45 > 40)
+
+D:\Intellicrack\src\intellicrack\bridges\x64dbg.py:859:16: UP041 Replace aliased errors with `TimeoutError`
+
+
 2 findings in D:\Intellicrack\src\intellicrack\sandbox\qemu.py
 
 D:\Intellicrack\src\intellicrack\sandbox\qemu.py:1794:49: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
@@ -90,21 +239,26 @@ D:\Intellicrack\src\intellicrack\sandbox\qemu.py:1794:49: G101 Logging statement
 D:\Intellicrack\src\intellicrack\sandbox\qemu.py:1855:49: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
 
 
-1 findings in D:\Intellicrack\src\intellicrack\bridges\base.py
-
-D:\Intellicrack\src\intellicrack\bridges\base.py:7:1: RUF100 Unused `noqa` directive (non-enabled: `PLR6301`)
-
-
-1 findings in D:\Intellicrack\src\intellicrack\bridges\radare2.py
-
-D:\Intellicrack\src\intellicrack\bridges\radare2.py:490:44: RUF100 Unused `noqa` directive (non-enabled: `PLR6301`)
-
-
 1 findings in D:\Intellicrack\src\intellicrack\bridges\sandbox_bridge.py
 
-D:\Intellicrack\src\intellicrack\bridges\sandbox_bridge.py:678:53: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
+D:\Intellicrack\src\intellicrack\bridges\sandbox_bridge.py:681:53: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\providers\local_transformers.py
+
+D:\Intellicrack\src\intellicrack\providers\local_transformers.py:869:35: PLC0207 Replace with `split(..., maxsplit=1)`.
 
 
 1 findings in D:\Intellicrack\src\intellicrack\sandbox\base.py
 
 D:\Intellicrack\src\intellicrack\sandbox\base.py:420:55: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\ui\provider_config.py
+
+D:\Intellicrack\src\intellicrack\ui\provider_config.py:1165:13: SIM105 Use `contextlib.suppress(RuntimeError)` instead of `try`-`except`-`pass`
+
+
+1 findings in D:\Intellicrack\tests\test_ui\test_tools_logic.py
+
+D:\Intellicrack\tests\test_ui\test_tools_logic.py:12:26: F401 `PyQt6.QtCore.Qt` imported but unused

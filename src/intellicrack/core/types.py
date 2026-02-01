@@ -16,6 +16,58 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+__all__ = [
+    "AlgorithmType",
+    "AttachError",
+    "AuthenticationError",
+    "BinaryInfo",
+    "BreakpointInfo",
+    "ConfigurationError",
+    "ConfirmationLevel",
+    "CrossReference",
+    "CryptoAPICall",
+    "DataTypeInfo",
+    "ExportInfo",
+    "FunctionInfo",
+    "HookInfo",
+    "ImportInfo",
+    "InitializationError",
+    "IntellicrackError",
+    "KeyFormat",
+    "LicensingAnalysis",
+    "MagicConstant",
+    "MemoryRegion",
+    "Message",
+    "ModelInfo",
+    "ModelNotFoundError",
+    "ModuleInfo",
+    "ParameterInfo",
+    "PatchInfo",
+    "ProcessInfo",
+    "ProviderCredentials",
+    "ProviderError",
+    "ProviderName",
+    "RateLimitError",
+    "RegisterState",
+    "SandboxError",
+    "SectionInfo",
+    "Session",
+    "StringInfo",
+    "ThreadInfo",
+    "ToolCall",
+    "ToolDefinition",
+    "ToolError",
+    "ToolFunction",
+    "ToolName",
+    "ToolNotFoundError",
+    "ToolParameter",
+    "ToolResult",
+    "ToolState",
+    "ValidationFunctionInfo",
+    "VariableInfo",
+]
+
+
 class ToolName(enum.Enum):
     """Enumeration of all supported reverse engineering tools."""
 
@@ -67,6 +119,18 @@ class AlgorithmType(enum.Enum):
     TIME_BASED = "time_based"
     FEATURE_FLAG = "feature_flag"
 
+    @property
+    def is_hash(self) -> bool:
+        """Check if the algorithm is a hashing algorithm."""
+        return self in {
+            AlgorithmType.MD5,
+            AlgorithmType.SHA1,
+            AlgorithmType.SHA256,
+            AlgorithmType.CRC32,
+            AlgorithmType.CUSTOM_HASH,
+            AlgorithmType.CHECKSUM,
+        }
+
 
 class KeyFormat(enum.Enum):
     """Common license key format classifications."""
@@ -80,6 +144,22 @@ class KeyFormat(enum.Enum):
     BASE64 = "base64"
     NAME_SERIAL_PAIR = "name_serial_pair"
     HARDWARE_LOCKED = "hardware_locked"
+
+    @property
+    def requires_hardware_id(self) -> bool:
+        """Check if the key format requires a hardware ID."""
+        return self in {KeyFormat.HARDWARE_LOCKED, KeyFormat.NAME_SERIAL_PAIR}
+
+    @property
+    def is_text_based(self) -> bool:
+        """Check if the key format is text-based."""
+        return self in {
+            KeyFormat.SERIAL_PLAIN,
+            KeyFormat.SERIAL_DASHED,
+            KeyFormat.ALPHANUMERIC,
+            KeyFormat.HEX_STRING,
+            KeyFormat.BASE64,
+        }
 
 
 @dataclass
@@ -113,7 +193,7 @@ class ToolResult:
 
     call_id: str
     success: bool
-    result: Any
+    result: object
     error: str | None
     duration_ms: float
 
@@ -156,6 +236,21 @@ class SectionInfo:
     raw_size: int
     characteristics: int
     entropy: float
+
+    @property
+    def is_executable(self) -> bool:
+        """Check if section is executable."""
+        return bool(self.characteristics & 0x20000000)
+
+    @property
+    def is_readable(self) -> bool:
+        """Check if section is readable."""
+        return bool(self.characteristics & 0x40000000)
+
+    @property
+    def is_writable(self) -> bool:
+        """Check if section is writable."""
+        return bool(self.characteristics & 0x80000000)
 
 
 @dataclass
@@ -281,6 +376,15 @@ class DataTypeInfo:
     array_length: int | None
     base_type: str | None
 
+    @property
+    def display_type(self) -> str:
+        """Get the display string for the data type."""
+        if self.is_pointer and self.base_type:
+            return f"{self.base_type} *"
+        if self.is_array and self.base_type and self.array_length is not None:
+            return f"{self.base_type}[{self.array_length}]"
+        return self.name
+
 
 @dataclass
 class FunctionInfo:
@@ -307,6 +411,17 @@ class FunctionInfo:
     local_variables: list[VariableInfo]
     decompiled_code: str | None = None
     disassembly: str | None = None
+
+    @property
+    def has_code(self) -> bool:
+        """Check if code is available."""
+        return bool(self.decompiled_code or self.disassembly)
+
+    @property
+    def summary(self) -> str:
+        """Get function summary."""
+        vars_count = len(self.local_variables)
+        return f"{self.name}@{hex(self.address)} ({self.calling_convention}, {vars_count} vars)"
 
 
 @dataclass
@@ -352,6 +467,11 @@ class ValidationFunctionInfo:
     complexity_score: int
     arithmetic_operations: int = 0
 
+    @property
+    def summary(self) -> str:
+        """Get validation function summary."""
+        return f"Validation @ {hex(self.address)}: {len(self.comparison_addresses)} cmps, {self.arithmetic_operations} ops"
+
 
 @dataclass
 class MagicConstant:
@@ -387,6 +507,12 @@ class CrossReference:
     ref_type: Literal["call", "jump", "data", "read", "write"]
     from_function: str | None
     to_function: str | None
+
+    def __str__(self) -> str:
+        """Get string representation of the cross reference."""
+        src = self.from_function or hex(self.from_address)
+        dst = self.to_function or hex(self.to_address)
+        return f"[{self.ref_type}] {src} -> {dst}"
 
 
 @dataclass
@@ -473,6 +599,11 @@ class BreakpointInfo:
     hit_count: int
     condition: str | None = None
 
+    def __str__(self) -> str:
+        """Get string representation of the breakpoint."""
+        status = "enabled" if self.enabled else "disabled"
+        return f"BP#{self.id} @ {hex(self.address)} ({self.bp_type}): {status}, hit {self.hit_count} times"
+
 
 @dataclass
 class RegisterState:
@@ -508,6 +639,64 @@ class RegisterState:
     fs: int
     gs: int
     ss: int
+
+    def __getitem__(self, key: str) -> int:
+        """Access register by name.
+
+        Args:
+            key: Register name.
+
+        Returns:
+            Register value.
+
+        Raises:
+            KeyError: If register name is invalid.
+        """
+        if hasattr(self, key):
+            val = getattr(self, key)
+            if isinstance(val, int):
+                return val
+        raise KeyError(key)
+
+    def get_gpr_dict(self) -> dict[str, int]:
+        """Get general purpose registers.
+
+        Returns:
+            Dictionary of GPR names and values.
+        """
+        return {
+            "rax": self.rax,
+            "rbx": self.rbx,
+            "rcx": self.rcx,
+            "rdx": self.rdx,
+            "rsi": self.rsi,
+            "rdi": self.rdi,
+            "rbp": self.rbp,
+            "rsp": self.rsp,
+            "r8": self.r8,
+            "r9": self.r9,
+            "r10": self.r10,
+            "r11": self.r11,
+            "r12": self.r12,
+            "r13": self.r13,
+            "r14": self.r14,
+            "r15": self.r15,
+        }
+
+    def get_segment_registers(self) -> dict[str, int]:
+        """Get segment registers.
+
+        Returns:
+            Dictionary of segment register names and values.
+        """
+        return {
+            "cs": self.cs,
+            "ds": self.ds,
+            "es": self.es,
+            "fs": self.fs,
+            "gs": self.gs,
+            "ss": self.ss,
+        }
 
 
 @dataclass
@@ -546,6 +735,10 @@ class ThreadInfo:
     start_address: int
     state: str
     priority: int
+
+    def __str__(self) -> str:
+        """Get string representation of the thread."""
+        return f"Thread {self.tid} ({self.state}, prio={self.priority}) @ {hex(self.start_address)}"
 
 
 @dataclass
@@ -738,7 +931,7 @@ class ToolParameter:
     description: str
     required: bool = True
     enum: list[str] | None = None
-    default: Any = None
+    default: str | int | float | bool | None = None
 
 
 @dataclass
@@ -756,6 +949,12 @@ class ToolFunction:
     description: str
     parameters: list[ToolParameter]
     returns: str
+
+    @property
+    def signature(self) -> str:
+        """Get function signature string."""
+        params = ", ".join(f"{p.name}: {p.type}" for p in self.parameters)
+        return f"{self.name}({params}) -> {self.returns}"
 
 
 @dataclass
@@ -1018,6 +1217,7 @@ class AttachError(ToolError):
 
     Attributes:
         pid: Process ID that could not be attached.
+        process_name: Name of the process that could not be attached.
         reason: Specific reason for attachment failure.
     """
 
@@ -1026,6 +1226,7 @@ class AttachError(ToolError):
         message: str,
         tool_name: str | None = None,
         pid: int | None = None,
+        process_name: str | None = None,
         reason: str | None = None,
         exit_code: int | None = None,
         stderr: str | None = None,
@@ -1038,6 +1239,7 @@ class AttachError(ToolError):
             message: Human-readable error description.
             tool_name: Name of the tool.
             pid: Process ID that could not be attached.
+            process_name: Name of the process that could not be attached.
             reason: Specific reason for attachment failure.
             exit_code: Process exit code if applicable.
             stderr: Standard error output for debugging.
@@ -1046,6 +1248,7 @@ class AttachError(ToolError):
         """
         super().__init__(message, tool_name, exit_code, stderr, error_code, details)
         self.pid = pid
+        self.process_name = process_name
         self.reason = reason
 
 

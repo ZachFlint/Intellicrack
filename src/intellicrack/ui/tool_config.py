@@ -78,11 +78,11 @@ class ToolInstallWorker(QThread):
 
     Attributes:
         progress: Signal emitted with progress percentage (0-100).
-        finished: Signal emitted when installation completes with (success, message).
+        install_finished: Signal emitted when installation completes with (success, message).
     """
 
     progress: pyqtSignal = pyqtSignal(int)
-    finished: pyqtSignal = pyqtSignal(bool, str)
+    install_finished: pyqtSignal = pyqtSignal(bool, str)
 
     DOWNLOAD_URLS: ClassVar[dict[str, dict[str, str]]] = {
         "ghidra": {
@@ -121,12 +121,12 @@ class ToolInstallWorker(QThread):
         try:
             self._install_tool()
         except Exception as e:
-            self.finished.emit(False, f"Installation failed: {e}")
+            self.install_finished.emit(False, f"Installation failed: {e}")
 
     def _install_tool(self) -> None:
         """Download and install the tool."""
         if self._tool_id not in self.DOWNLOAD_URLS:
-            self.finished.emit(False, f"No download URL for {self._tool_id}")
+            self.install_finished.emit(False, f"No download URL for {self._tool_id}")
             return
 
         tool_info = self.DOWNLOAD_URLS[self._tool_id]
@@ -149,7 +149,7 @@ class ToolInstallWorker(QThread):
                     client.stream("GET", url, follow_redirects=True) as response,
                 ):
                     if response.status_code != HTTP_OK:
-                        self.finished.emit(
+                        self.install_finished.emit(
                             False,
                             f"Download failed: HTTP {response.status_code}",
                         )
@@ -167,10 +167,10 @@ class ToolInstallWorker(QThread):
                                 self.progress.emit(pct)
 
             except httpx.TimeoutException:
-                self.finished.emit(False, "Download timed out")
+                self.install_finished.emit(False, "Download timed out")
                 return
             except httpx.ConnectError:
-                self.finished.emit(False, "Could not connect to download server")
+                self.install_finished.emit(False, "Could not connect to download server")
                 return
 
             self.progress.emit(85)
@@ -179,7 +179,7 @@ class ToolInstallWorker(QThread):
                 with zipfile.ZipFile(zip_path, "r") as zf:
                     zf.extractall(self._install_path)
             except zipfile.BadZipFile:
-                self.finished.emit(False, "Downloaded file is not a valid ZIP archive")
+                self.install_finished.emit(False, "Downloaded file is not a valid ZIP archive")
                 return
 
             self.progress.emit(95)
@@ -190,7 +190,7 @@ class ToolInstallWorker(QThread):
                 self._post_install_radare2()
 
             self.progress.emit(100)
-            self.finished.emit(True, f"{name} installed successfully")
+            self.install_finished.emit(True, f"{name} installed successfully")
 
     def _post_install_ghidra(self) -> None:
         """Post-installation setup for Ghidra.
@@ -445,10 +445,10 @@ class ToolStatusCheckWorker(QThread):
     """Worker thread for checking tool status.
 
     Attributes:
-        finished: Signal emitted when check completes with (tool_id, is_available, message).
+        status_checked: Signal emitted when check completes with (tool_id, is_available, message).
     """
 
-    finished: pyqtSignal = pyqtSignal(str, bool, str)
+    status_checked: pyqtSignal = pyqtSignal(str, bool, str)
 
     def __init__(
         self,
@@ -471,9 +471,9 @@ class ToolStatusCheckWorker(QThread):
         """Run the status check in a separate thread."""
         try:
             is_available, message = self._check_tool()
-            self.finished.emit(self._tool_id, is_available, message)
+            self.status_checked.emit(self._tool_id, is_available, message)
         except Exception as e:
-            self.finished.emit(self._tool_id, False, f"Check failed: {e}")
+            self.status_checked.emit(self._tool_id, False, f"Check failed: {e}")
 
     def _check_tool(self) -> tuple[bool, str]:
         """Check if the tool is available and working.
@@ -953,7 +953,7 @@ class ToolSettingsWidget(QFrame):
             self._path_input.text().strip(),
             self,
         )
-        self._status_worker.finished.connect(self._on_status_checked)
+        self._status_worker.status_checked.connect(self._on_status_checked)
         self._status_worker.start()
 
     def _on_status_checked(self, tool_id: str, is_available: bool, message: str) -> None:
@@ -1013,7 +1013,7 @@ class ToolSettingsWidget(QFrame):
 
             self._install_worker = ToolInstallWorker(self._tool_id, install_path, self)
             self._install_worker.progress.connect(self._install_progress.setValue)
-            self._install_worker.finished.connect(self._on_install_finished)
+            self._install_worker.install_finished.connect(self._on_install_finished)
             self._install_worker.start()
 
     def _on_install_finished(self, success: bool, message: str) -> None:
@@ -1384,7 +1384,7 @@ class ToolStatusDialog(QDialog):
             tool_path = tool_settings.get("path", "")
 
             worker = ToolStatusCheckWorker(tool_id, tool_path, self)
-            worker.finished.connect(self._on_tool_status_received)
+            worker.status_checked.connect(self._on_tool_status_received)
             self._status_workers.append(worker)
             worker.start()
 

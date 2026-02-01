@@ -21,19 +21,46 @@ from __future__ import annotations
 import ast
 import subprocess  # noqa: S404
 import tempfile
+import textwrap
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, override
 
 from .logging import get_logger
 from .process_manager import ProcessManager
+from .types import AlgorithmType
+
+
+if TYPE_CHECKING:
+    from .types import LicensingAnalysis
 
 
 _logger = get_logger("core.script_gen")
 
 ScriptType = Literal["frida", "ghidra", "radare2", "python", "x64dbg"]
+
+
+def _empty_str_list() -> list[str]:
+    """Typed factory for empty string lists (dataclass default)."""
+    return []
+
+
+def _empty_int_list() -> list[int]:
+    """Typed factory for empty int lists (dataclass default)."""
+    return []
+
+
+def _empty_dict_list() -> list[dict[str, Any]]:
+    """Typed factory for empty dict lists (dataclass default)."""
+    return []
+
+
+def _empty_str_any_dict() -> dict[str, Any]:
+    """Typed factory for empty string-Any dicts (dataclass default)."""
+    return {}
 
 
 class ScriptLanguage(Enum):
@@ -64,6 +91,24 @@ class BypassStrategy(Enum):
     INLINE_PATCH = "inline_patch"
     VIRTUALIZATION_DEFEAT = "virtualization_defeat"
 
+    @property
+    def description(self) -> str:
+        """Get human-readable description of the strategy."""
+        descriptions = {
+            BypassStrategy.RETURN_TRUE: "Force function to return true (1)",
+            BypassStrategy.RETURN_FALSE: "Force function to return false (0)",
+            BypassStrategy.RETURN_ZERO: "Force function to return 0",
+            BypassStrategy.RETURN_ONE: "Force function to return 1",
+            BypassStrategy.NOP_FUNCTION: "Replace function body with NOPs",
+            BypassStrategy.SKIP_CHECK: "Skip validation check",
+            BypassStrategy.PATCH_JUMP: "Patch conditional jump",
+            BypassStrategy.HOOK_REPLACE: "Hook and replace function",
+            BypassStrategy.MEMORY_PATCH: "Patch memory directly",
+            BypassStrategy.INLINE_PATCH: "Inline assembly patch",
+            BypassStrategy.VIRTUALIZATION_DEFEAT: "Defeat virtualization/obfuscation",
+        }
+        return descriptions.get(self, "Unknown strategy")
+
 
 @dataclass
 class ScriptContext:
@@ -90,15 +135,18 @@ class ScriptContext:
     architecture: str = "x64"
     platform: str = "windows"
     module_base: int | None = None
-    target_functions: list[dict[str, Any]] = field(default_factory=list)
-    identified_protections: list[str] = field(default_factory=list)
-    crypto_apis: list[str] = field(default_factory=list)
-    string_references: list[str] = field(default_factory=list)
-    magic_constants: list[int] = field(default_factory=list)
-    additional_context: dict[str, Any] = field(default_factory=dict)
+    target_functions: list[dict[str, Any]] = field(default_factory=_empty_dict_list)
+    identified_protections: list[str] = field(default_factory=_empty_str_list)
+    crypto_apis: list[str] = field(default_factory=_empty_str_list)
+    string_references: list[str] = field(default_factory=_empty_str_list)
+    magic_constants: list[int] = field(default_factory=_empty_int_list)
+    additional_context: dict[str, Any] = field(default_factory=_empty_str_any_dict)
 
-    def to_prompt_context(self) -> str:
+    def to_prompt_context(self, language: ScriptLanguage | None = None) -> str:
         """Convert context to a string suitable for AI prompts.
+
+        Args:
+            language: Target script language (optional) to include API reference.
 
         Returns:
             Formatted context string.
@@ -120,8 +168,20 @@ class ScriptContext:
             for func in self.target_functions:
                 name = func.get("name", "unknown")
                 addr = func.get("address", 0)
-                strategy = func.get("strategy", "unknown")
-                lines.append(f"  - {name} @ 0x{addr:X} (strategy: {strategy})")
+                strategy_raw = func.get("strategy", "unknown")
+
+                strategy_desc = str(strategy_raw)
+                # Try to map string to Enum if possible
+                try:
+                    if isinstance(strategy_raw, str):
+                        strategy_enum = BypassStrategy(strategy_raw)
+                        strategy_desc = f"{strategy_enum.value} ({strategy_enum.description})"
+                    elif isinstance(strategy_raw, BypassStrategy):
+                        strategy_desc = f"{strategy_raw.value} ({strategy_raw.description})"
+                except ValueError:
+                    pass
+
+                lines.append(f"  - {name} @ 0x{addr:X} (strategy: {strategy_desc})")
 
         if self.identified_protections:
             lines.append(f"\nProtections: {', '.join(self.identified_protections)}")
@@ -136,6 +196,27 @@ class ScriptContext:
         if self.magic_constants:
             lines.append("\nMagic Constants:")
             lines.extend(f"  - 0x{c:X} ({c})" for c in self.magic_constants)
+
+        if self.additional_context:
+            lines.append("\nAdditional Analysis Context:")
+            for k, v in self.additional_context.items():
+                lines.append(f"  - {k}: {v!r}")
+
+        if language:
+            api_ref = {}
+            if language == ScriptLanguage.JAVASCRIPT:
+                api_ref = get_frida_api_reference()
+            elif language == ScriptLanguage.JAVA:
+                api_ref = get_ghidra_api_reference()
+            elif language == ScriptLanguage.R2_COMMANDS:
+                api_ref = get_radare2_reference()
+            elif language == ScriptLanguage.X64DBG_SCRIPT:
+                api_ref = get_x64dbg_reference()
+
+            if api_ref:
+                lines.append(f"\n{language.value.upper()} API Reference:")
+                for category, usage in api_ref.items():
+                    lines.append(f"  {category}: {usage}")
 
         return "\n".join(lines)
 
@@ -164,9 +245,19 @@ class Script:
     description: str
     created_at: datetime = field(default_factory=datetime.now)
     context: ScriptContext | None = None
-    target_functions: list[str] = field(default_factory=list)
+    target_functions: list[str] = field(default_factory=_empty_str_list)
     verified: bool = False
-    execution_results: dict[str, Any] = field(default_factory=dict)
+    execution_results: dict[str, Any] = field(default_factory=_empty_str_any_dict)
+
+    def add_execution_result(self, tool_name: str, result: Any) -> None:
+        """Add or update an execution result record.
+
+        Args:
+            tool_name: Name of the tool that executed the script.
+            result: The result object or data.
+        """
+        self.execution_results[tool_name] = result
+        self.execution_results["last_run"] = datetime.now().isoformat()
 
     def save(self, path: Path) -> None:
         """Save script to file.
@@ -349,6 +440,21 @@ class ScriptManager:
         """
         return self.scripts.get(name)
 
+    def delete_script(self, name: str) -> bool:
+        """Delete a script by name.
+
+        Args:
+            name: Script name to delete.
+
+        Returns:
+            True if script was deleted, False if not found.
+        """
+        if name not in self.scripts:
+            return False
+        del self.scripts[name]
+        _logger.info("script_deleted", extra={"script_name": name})
+        return True
+
     def list_scripts(self, script_type: ScriptType | None = None) -> list[str]:
         """List available scripts.
 
@@ -433,6 +539,48 @@ class ScriptManager:
         self.scripts[script.name] = script
         return script
 
+    def ensure_script_saved(self, name: str) -> bool:
+        """Ensure a script is saved to disk.
+
+        Args:
+            name: Script name.
+
+        Returns:
+            True if saved successfully.
+        """
+        if name not in self.scripts:
+            return False
+        return self.save_script(name) is not None
+
+    def reload_script(self, name: str) -> bool:
+        """Reload a script from disk (if it exists).
+
+        Args:
+            name: Script name.
+
+        Returns:
+            True if reloaded successfully.
+        """
+        # First try to find where it might be saved
+        # This is a bit tricky since save_script logic handles paths
+        # We assume standard location in scripts_dir
+        script = self.scripts.get(name)
+        if not script:
+            return False
+
+        ext = script.get_extension()
+        filename = f"{name}{ext}"
+        path = self.scripts_dir / filename
+
+        if not path.exists():
+            return False
+
+        reloaded = self.load_script(path)
+        if reloaded:
+            self.scripts[name] = reloaded
+            return True
+        return False
+
 
 def get_frida_api_reference() -> dict[str, str]:
     """Get Frida API reference for AI context.
@@ -499,3 +647,547 @@ def get_x64dbg_reference() -> dict[str, str]:
         "patching": 'assemble addr, "instruction" (assemble), patch addr, bytes (patch)',
         "scripting": 'scriptload path, scriptcmd "command"',
     }
+
+
+@dataclass
+class GeneratedScript:
+    """A script generated by the ScriptGenerator.
+
+    Attributes:
+        name: Script name.
+        description: Description of what the script does.
+        content: Full script source code.
+    """
+
+    name: str
+    description: str
+    content: str
+
+
+class ScriptGenerator:
+    """Generates scripts and prompts for Intellicrack.
+
+    Handles both deterministic keygen generation and AI prompt preparation
+    for dynamic script generation.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the script generator."""
+
+    @staticmethod
+    def prepare_ai_prompt(context: ScriptContext, language: ScriptLanguage) -> str:
+        """Prepare a detailed prompt for AI script generation.
+
+        Args:
+            context: Analysis context.
+            language: Target script language.
+
+        Returns:
+            Full prompt string including context and API references.
+        """
+        # Get the context string with API refs
+        context_str = context.to_prompt_context(language)
+
+        prompt = f"""
+You are an expert reverse engineering script generator.
+Target: {context.binary_name} ({context.architecture}/{context.platform})
+Language: {language.value}
+
+ANALYSIS CONTEXT:
+{context_str}
+
+TASK:
+Write a standalone, error-free {language.value} script to bypass the protections described above.
+The script must be production-ready and handle errors gracefully.
+Do not include placeholders. Implement full logic based on the provided addresses and strategies.
+"""
+        return prompt.strip()
+
+    @staticmethod
+    def generate_keygen_from_analysis(analysis: LicensingAnalysis) -> GeneratedScript:
+        """Generate a keygen script from licensing analysis results.
+
+        Routes to the appropriate algorithm-specific generator based on the
+        detected algorithm type in the analysis.
+
+        Args:
+            analysis: Licensing analysis results.
+
+        Returns:
+            Generated keygen script.
+        """
+        generators: dict[AlgorithmType, _KeygenBuilder] = {
+            AlgorithmType.MD5: _MD5KeygenBuilder(),
+            AlgorithmType.SHA1: _SHA1KeygenBuilder(),
+            AlgorithmType.CRC32: _CRC32KeygenBuilder(),
+            AlgorithmType.XOR: _XORKeygenBuilder(),
+            AlgorithmType.RSA: _RSAKeygenBuilder(),
+            AlgorithmType.HWID_BASED: _HWIDKeygenBuilder(),
+            AlgorithmType.TIME_BASED: _TimeBasedKeygenBuilder(),
+            AlgorithmType.FEATURE_FLAG: _FeatureFlagKeygenBuilder(),
+            AlgorithmType.CUSTOM_HASH: _CustomHashKeygenBuilder(),
+        }
+
+        builder = generators.get(analysis.algorithm_type, _FallbackKeygenBuilder())
+        return builder.build(analysis)
+
+
+class _KeygenBuilder(ABC):
+    """Base class for algorithm-specific keygen builders."""
+
+    @abstractmethod
+    def _algorithm_label(self) -> str:
+        return "GENERIC"
+
+    @abstractmethod
+    def _generate_imports(self) -> str:
+        return ""
+
+    def _generate_constants(self, analysis: LicensingAnalysis) -> str:
+        lines: list[str] = [f"ALGORITHM = '{self._algorithm_label()}'"]
+        lines.append(f"KEY_FORMAT = '{analysis.key_format.value}'")
+        lines.append(f"KEY_LENGTH = {analysis.key_length}")
+        if analysis.group_size is not None:
+            lines.append(f"GROUP_SIZE = {analysis.group_size}")
+        else:
+            lines.append("GROUP_SIZE = 4")
+        sep = analysis.group_separator if analysis.group_separator else "-"
+        lines.append(f"GROUP_SEPARATOR = '{sep}'")
+        if analysis.checksum_algorithm:
+            lines.append(f"CHECKSUM_ALGORITHM = '{analysis.checksum_algorithm}'")
+        if analysis.checksum_position:
+            lines.append(f"CHECKSUM_POSITION = '{analysis.checksum_position}'")
+        magic_vals: list[int] = [
+            mc.value for mc in analysis.magic_constants if mc.usage_context not in {"rsa_modulus", "rsa_public_exponent"}
+        ]
+        if magic_vals:
+            lines.append(f"MAGIC_CONSTANTS = {magic_vals!r}")
+        if analysis.feature_flags:
+            lines.append(f"FEATURE_FLAGS = {analysis.feature_flags!r}")
+        return "\n".join(lines)
+
+    @abstractmethod
+    def _generate_keygen_body(self, analysis: LicensingAnalysis) -> str:
+        fmt_call = _fmt_call_str(analysis)
+        checksum_call = _checksum_call_str(analysis)
+        return textwrap.dedent(f"""\
+def generate(self, username: str) -> str:
+    raw = (username * ((KEY_LENGTH // max(len(username), 1)) + 1))[:KEY_LENGTH].upper()
+    key = {fmt_call}
+    {checksum_call}
+    return key
+
+def validate(self, username: str, key: str) -> bool:
+    expected = self.generate(username)
+    return key.upper() == expected.upper()
+""")
+
+    @staticmethod
+    def _generate_format_helpers(analysis: LicensingAnalysis) -> str:
+        parts: list[str] = []
+        parts.append(
+            textwrap.dedent("""\
+            def _format_key(self, raw: str) -> str:
+                if KEY_FORMAT == 'serial_dashed':
+                    groups = [raw[i:i+GROUP_SIZE] for i in range(0, len(raw), GROUP_SIZE)]
+                    return GROUP_SEPARATOR.join(groups)
+                return raw
+        """)
+        )
+        if analysis.checksum_algorithm:
+            parts.append(
+                textwrap.dedent("""\
+            def _append_checksum(self, key_body: str) -> str:
+                import zlib
+                if CHECKSUM_ALGORITHM == 'crc32':
+                    cksum = format(zlib.crc32(key_body.encode()) & 0xFFFFFFFF, '08X')
+                else:
+                    cksum = format(zlib.adler32(key_body.encode()) & 0xFFFFFFFF, '08X')
+                if CHECKSUM_POSITION == 'prefix':
+                    return cksum + key_body
+                return key_body + cksum
+            """)
+            )
+        return "\n".join(parts)
+
+    def build(self, analysis: LicensingAnalysis) -> GeneratedScript:
+        label = self._algorithm_label()
+        header = "#!/usr/bin/env python3\nfrom __future__ import annotations\n"
+        imports = self._generate_imports()
+        constants = self._generate_constants(analysis)
+        body = self._generate_keygen_body(analysis)
+        format_helpers = self._generate_format_helpers(analysis)
+
+        content_parts: list[str] = [header]
+        if imports:
+            content_parts.append(imports)
+        content_parts.append("")
+        content_parts.append(constants)
+        content_parts.append("")
+        content_parts.append("class Keygen:")
+        content_parts.append(textwrap.indent(body, "    "))
+        content_parts.append("")
+        content_parts.append(textwrap.indent(format_helpers, "    "))
+
+        content = "\n".join(content_parts)
+        return GeneratedScript(
+            name=f"{analysis.binary_name}_{label.lower()}_keygen",
+            description=f"{label} keygen for {analysis.binary_name}",
+            content=content,
+        )
+
+
+def _checksum_call_str(analysis: LicensingAnalysis) -> str:
+    if analysis.checksum_algorithm is not None:
+        return "key = self._append_checksum(key)"
+    return ""
+
+
+def _fmt_call_str(analysis: LicensingAnalysis) -> str:
+    if analysis.key_format.value == "serial_dashed":
+        return "self._format_key(raw)"
+    return "raw"
+
+
+class _MD5KeygenBuilder(_KeygenBuilder):
+    @override
+    def _algorithm_label(self) -> str:
+        return "MD5"
+
+    @override
+    def _generate_imports(self) -> str:
+        return "import hashlib"
+
+    @override
+    def _generate_keygen_body(self, analysis: LicensingAnalysis) -> str:
+        fmt_call = _fmt_call_str(analysis)
+        checksum_call = _checksum_call_str(analysis)
+        return textwrap.dedent(f"""\
+def generate(self, username: str) -> str:
+    digest = hashlib.md5(username.encode()).hexdigest().upper()
+    raw = digest[:KEY_LENGTH]
+    key = {fmt_call}
+    {checksum_call}
+    return key
+
+def validate(self, username: str, key: str) -> bool:
+    expected = self.generate(username)
+    return key.upper() == expected.upper()
+""")
+
+
+class _SHA1KeygenBuilder(_KeygenBuilder):
+    @override
+    def _algorithm_label(self) -> str:
+        return "SHA1"
+
+    @override
+    def _generate_imports(self) -> str:
+        return "import hashlib"
+
+    @override
+    def _generate_keygen_body(self, analysis: LicensingAnalysis) -> str:
+        fmt_call = _fmt_call_str(analysis)
+        checksum_call = _checksum_call_str(analysis)
+        return textwrap.dedent(f"""\
+def generate(self, username: str) -> str:
+    digest = hashlib.sha1(username.encode()).hexdigest().upper()
+    raw = digest[:KEY_LENGTH]
+    key = {fmt_call}
+    {checksum_call}
+    return key
+
+def validate(self, username: str, key: str) -> bool:
+    expected = self.generate(username)
+    return key.upper() == expected.upper()
+""")
+
+
+class _CRC32KeygenBuilder(_KeygenBuilder):
+    @override
+    def _algorithm_label(self) -> str:
+        return "CRC32"
+
+    @override
+    def _generate_imports(self) -> str:
+        return "import zlib"
+
+    @override
+    def _generate_keygen_body(self, analysis: LicensingAnalysis) -> str:
+        fmt_call = _fmt_call_str(analysis)
+        checksum_call = _checksum_call_str(analysis)
+        return textwrap.dedent(f"""\
+def generate(self, username: str) -> str:
+    crc = zlib.crc32(username.encode()) & 0xFFFFFFFF
+    raw = format(crc, '08X')
+    raw = (raw * ((KEY_LENGTH // len(raw)) + 1))[:KEY_LENGTH]
+    key = {fmt_call}
+    {checksum_call}
+    return key
+
+def validate(self, username: str, key: str) -> bool:
+    expected = self.generate(username)
+    return key.upper() == expected.upper()
+""")
+
+
+class _XORKeygenBuilder(_KeygenBuilder):
+    @override
+    def _algorithm_label(self) -> str:
+        return "XOR"
+
+    @override
+    def _generate_imports(self) -> str:
+        return ""
+
+    @override
+    def _generate_keygen_body(self, analysis: LicensingAnalysis) -> str:
+        fmt_call = _fmt_call_str(analysis)
+        checksum_call = _checksum_call_str(analysis)
+        return textwrap.dedent(f"""\
+def generate(self, username: str) -> str:
+    xor_key = 0x5A
+    result_bytes = []
+    for i, ch in enumerate(username.encode()):
+        result_bytes.append(ch ^ xor_key ^ (i & 0xFF))
+    raw = ''.join(format(b, '02X') for b in result_bytes)
+    raw = (raw * ((KEY_LENGTH // max(len(raw), 1)) + 1))[:KEY_LENGTH]
+    key = {fmt_call}
+    {checksum_call}
+    return key
+
+def validate(self, username: str, key: str) -> bool:
+    expected = self.generate(username)
+    return key.upper() == expected.upper()
+""")
+
+
+class _RSAKeygenBuilder(_KeygenBuilder):
+    @override
+    def _algorithm_label(self) -> str:
+        return "RSA"
+
+    @override
+    def _generate_imports(self) -> str:
+        return "import hashlib\nimport math"
+
+    @override
+    def _generate_constants(self, analysis: LicensingAnalysis) -> str:
+        base = super()._generate_constants(analysis)
+        rsa_n = 0
+        rsa_e = 65537
+        for mc in analysis.magic_constants:
+            if mc.usage_context == "rsa_modulus":
+                rsa_n = mc.value
+            elif mc.usage_context == "rsa_public_exponent":
+                rsa_e = mc.value
+        return base + f"\nRSA_MODULUS = {rsa_n}\nRSA_PUBLIC_EXPONENT = {rsa_e}"
+
+    @override
+    def _generate_keygen_body(self, analysis: LicensingAnalysis) -> str:
+        fmt_call = _fmt_call_str(analysis)
+        checksum_call = _checksum_call_str(analysis)
+        return textwrap.dedent(f"""\
+@staticmethod
+def _modinv(a: int, m: int) -> int:
+    g, x, _ = Keygen._extended_gcd(a, m)
+    if g != 1:
+        raise ValueError('Modular inverse does not exist')
+    return x % m
+
+@staticmethod
+def _extended_gcd(a: int, b: int) -> tuple[int, int, int]:
+    if a == 0:
+        return b, 0, 1
+    g, x1, y1 = Keygen._extended_gcd(b % a, a)
+    return g, y1 - (b // a) * x1, x1
+
+@staticmethod
+def _pkcs1_v1_5_encode(message: bytes, target_len: int) -> bytes:
+    digest = hashlib.sha1(message).digest()
+    padding_len = max(target_len - len(digest) - 3, 8)
+    return b'\\x00\\x01' + b'\\xff' * padding_len + b'\\x00' + digest
+
+@staticmethod
+def _rsa_sign(message: bytes, d: int, n: int) -> int:
+    encoded = Keygen._pkcs1_v1_5_encode(message, (n.bit_length() + 7) // 8)
+    m_int = int.from_bytes(encoded, 'big')
+    return pow(m_int, d, n)
+
+@staticmethod
+def _rsa_verify(message: bytes, signature: int, e: int, n: int) -> bool:
+    encoded = Keygen._pkcs1_v1_5_encode(message, (n.bit_length() + 7) // 8)
+    m_int = int.from_bytes(encoded, 'big')
+    return pow(signature, e, n) == m_int
+
+def generate(self, username: str) -> str:
+    n = RSA_MODULUS
+    e = RSA_PUBLIC_EXPONENT
+    phi = n - 1
+    try:
+        d = Keygen._modinv(e, phi)
+    except ValueError:
+        d = 3
+    sig = Keygen._rsa_sign(username.encode(), d, n)
+    raw = format(sig, 'X').upper()
+    raw = (raw * ((KEY_LENGTH // max(len(raw), 1)) + 1))[:KEY_LENGTH]
+    key = {fmt_call}
+    {checksum_call}
+    return key
+
+def validate(self, username: str, key: str) -> bool:
+    expected = self.generate(username)
+    return key.upper() == expected.upper()
+""")
+
+
+class _HWIDKeygenBuilder(_KeygenBuilder):
+    @override
+    def _algorithm_label(self) -> str:
+        return "HWID"
+
+    @override
+    def _generate_imports(self) -> str:
+        return "import hashlib\nimport platform"
+
+    @override
+    def _generate_keygen_body(self, analysis: LicensingAnalysis) -> str:
+        fmt_call = _fmt_call_str(analysis)
+        checksum_call = _checksum_call_str(analysis)
+        return textwrap.dedent(f"""\
+@staticmethod
+def _get_hardware_id() -> str:
+    node = platform.node()
+    machine = platform.machine()
+    return hashlib.md5((node + machine).encode()).hexdigest().upper()
+
+def generate(self, username: str) -> str:
+    hwid = self._get_hardware_id()
+    combined = hashlib.md5((username + hwid).encode()).hexdigest().upper()
+    raw = combined[:KEY_LENGTH]
+    key = {fmt_call}
+    {checksum_call}
+    return key
+
+def validate(self, username: str, key: str) -> bool:
+    expected = self.generate(username)
+    return key.upper() == expected.upper()
+""")
+
+
+class _TimeBasedKeygenBuilder(_KeygenBuilder):
+    @override
+    def _algorithm_label(self) -> str:
+        return "TIME_BASED"
+
+    @override
+    def _generate_imports(self) -> str:
+        return "import hashlib\nimport time"
+
+    @override
+    def _generate_keygen_body(self, analysis: LicensingAnalysis) -> str:
+        fmt_call = _fmt_call_str(analysis)
+        checksum_call = _checksum_call_str(analysis)
+        return textwrap.dedent(f"""\
+def generate(self, username: str, expiry_days: int = 365) -> str:
+    now = int(time.time())
+    expiry = now + expiry_days * 86400
+    payload = f'{{username}}:{{expiry}}'
+    digest = hashlib.md5(payload.encode()).hexdigest().upper()
+    raw = digest[:KEY_LENGTH]
+    key = {fmt_call}
+    {checksum_call}
+    return key
+
+def validate(self, username: str, key: str) -> bool:
+    return isinstance(key, str) and len(key) > 0
+""")
+
+
+class _FeatureFlagKeygenBuilder(_KeygenBuilder):
+    @override
+    def _algorithm_label(self) -> str:
+        return "FEATURE_FLAG"
+
+    @override
+    def _generate_imports(self) -> str:
+        return "import hashlib"
+
+    @override
+    def _generate_keygen_body(self, analysis: LicensingAnalysis) -> str:
+        fmt_call = _fmt_call_str(analysis)
+        checksum_call = _checksum_call_str(analysis)
+        return textwrap.dedent(f"""\
+def generate(self, username: str, feature_mask: int = 0xFFFF) -> str:
+    payload = f'{{username}}:{{feature_mask}}'
+    digest = hashlib.md5(payload.encode()).hexdigest().upper()
+    mask_hex = format(feature_mask & 0xFFFF, '04X')
+    raw = (mask_hex + digest)[:KEY_LENGTH]
+    key = {fmt_call}
+    {checksum_call}
+    return key
+
+def validate(self, username: str, key: str) -> bool:
+    return isinstance(key, str) and len(key) > 0
+""")
+
+
+class _CustomHashKeygenBuilder(_KeygenBuilder):
+    @override
+    def _algorithm_label(self) -> str:
+        return "CUSTOM_HASH"
+
+    @override
+    def _generate_imports(self) -> str:
+        return ""
+
+    @override
+    def _generate_keygen_body(self, analysis: LicensingAnalysis) -> str:
+        fmt_call = _fmt_call_str(analysis)
+        checksum_call = _checksum_call_str(analysis)
+        magic_vals: list[int] = [
+            mc.value for mc in analysis.magic_constants if mc.usage_context not in {"rsa_modulus", "rsa_public_exponent"}
+        ]
+        seed = magic_vals[0] if magic_vals else 0x12345678
+        return textwrap.dedent(f"""\
+def generate(self, username: str) -> str:
+    h = {seed}
+    for ch in username.encode():
+        h = ((h * 31) + ch) & 0xFFFFFFFF
+    raw = format(h, '08X')
+    raw = (raw * ((KEY_LENGTH // max(len(raw), 1)) + 1))[:KEY_LENGTH]
+    key = {fmt_call}
+    {checksum_call}
+    return key
+
+def validate(self, username: str, key: str) -> bool:
+    expected = self.generate(username)
+    return key.upper() == expected.upper()
+""")
+
+
+class _FallbackKeygenBuilder(_KeygenBuilder):
+    @override
+    def _algorithm_label(self) -> str:
+        return "GENERIC"
+
+    @override
+    def _generate_imports(self) -> str:
+        return "import hashlib"
+
+    @override
+    def _generate_keygen_body(self, analysis: LicensingAnalysis) -> str:
+        fmt_call = _fmt_call_str(analysis)
+        checksum_call = _checksum_call_str(analysis)
+        return textwrap.dedent(f"""\
+def generate(self, username: str) -> str:
+    digest = hashlib.sha256(username.encode()).hexdigest().upper()
+    raw = digest[:KEY_LENGTH]
+    key = {fmt_call}
+    {checksum_call}
+    return key
+
+def validate(self, username: str, key: str) -> bool:
+    expected = self.generate(username)
+    return key.upper() == expected.upper()
+""")

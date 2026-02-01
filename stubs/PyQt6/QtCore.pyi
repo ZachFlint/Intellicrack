@@ -2,7 +2,6 @@
 
 from typing import Any, Callable
 
-
 class QObject:
     """Base Qt object class with proper typing."""
 
@@ -19,7 +18,6 @@ class QObject:
     def signalsBlocked(self) -> bool: ...
     def property(self, name: str) -> Any: ...
     def setProperty(self, name: str, value: Any) -> bool: ...
-
 
 class QThread(QObject):
     """Thread class with proper typing."""
@@ -46,7 +44,6 @@ class QThread(QObject):
     @staticmethod
     def usleep(usecs: int) -> None: ...
 
-
 class QTimer(QObject):
     """Timer class with proper typing."""
 
@@ -64,7 +61,6 @@ class QTimer(QObject):
     @staticmethod
     def singleShot(msec: int, receiver: Callable[[], None]) -> None: ...
 
-
 class pyqtSignal:
     """Signal class with proper typing."""
 
@@ -73,13 +69,11 @@ class pyqtSignal:
     def connect(self, slot: Callable[..., Any]) -> None: ...
     def disconnect(self, slot: Callable[..., Any] | None = None) -> None: ...
 
-
 class pyqtSlot:
     """Slot decorator with proper typing."""
 
     def __init__(self, *types: type, result: type | None = None) -> None: ...
     def __call__(self, func: Callable[..., Any]) -> Callable[..., Any]: ...
-
 
 class Qt:
     """Qt namespace with constants."""
@@ -260,7 +254,6 @@ class Qt:
     WindowModal: int
     ApplicationModal: int
 
-
 class QSize:
     """Size class with proper typing."""
 
@@ -279,7 +272,6 @@ class QSize:
     def transpose(self) -> None: ...
     def transposed(self) -> QSize: ...
 
-
 class QPoint:
     """Point class with proper typing."""
 
@@ -290,7 +282,6 @@ class QPoint:
     def setY(self, y: int) -> None: ...
     def isNull(self) -> bool: ...
     def manhattanLength(self) -> int: ...
-
 
 class QRect:
     """Rectangle class with proper typing."""
@@ -320,7 +311,6 @@ class QRect:
     def contains(self, *args: Any) -> bool: ...
     def intersects(self, rect: QRect) -> bool: ...
 
-
 class QMargins:
     """Margins class with proper typing."""
 
@@ -334,7 +324,6 @@ class QMargins:
     def setRight(self, right: int) -> None: ...
     def setBottom(self, bottom: int) -> None: ...
     def isNull(self) -> bool: ...
-
 
 class QRegularExpression:
     """Regular expression class with proper typing."""
@@ -366,7 +355,6 @@ class QRegularExpression:
     def match(self, subject: str, offset: int = 0) -> Any: ...
     def globalMatch(self, subject: str, offset: int = 0) -> Any: ...
 
-
 class QMutex:
     """Mutex class with proper typing."""
 
@@ -375,14 +363,12 @@ class QMutex:
     def unlock(self) -> None: ...
     def tryLock(self, timeout: int = 0) -> bool: ...
 
-
 class QMutexLocker:
     """Mutex locker class with proper typing."""
 
     def __init__(self, mutex: QMutex) -> None: ...
     def unlock(self) -> None: ...
     def relock(self) -> None: ...
-
 
 class QModelIndex:
     """Model index class with proper typing."""
@@ -397,7 +383,6 @@ class QModelIndex:
     def model(self) -> Any: ...
     def isValid(self) -> bool: ...
     def internalPointer(self) -> Any: ...
-
 
 class QUrl:
     """URL class with proper typing."""
@@ -422,7 +407,6 @@ class QUrl:
     @staticmethod
     def fromLocalFile(localFile: str) -> QUrl: ...
 
-
 class QDateTime:
     """DateTime class with proper typing."""
 
@@ -439,7 +423,6 @@ class QDateTime:
     @staticmethod
     def fromMSecsSinceEpoch(msecs: int) -> QDateTime: ...
 
-
 class QDate:
     """Date class with proper typing."""
 
@@ -452,7 +435,6 @@ class QDate:
     def isNull(self) -> bool: ...
     @staticmethod
     def currentDate() -> QDate: ...
-
 
 class QTime:
     """Time class with proper typing."""
@@ -467,7 +449,6 @@ class QTime:
     def isNull(self) -> bool: ...
     @staticmethod
     def currentTime() -> QTime: ...
-
 
 class QSettings:
     """Settings class with proper typing."""
@@ -485,7 +466,6 @@ class QSettings:
     def beginGroup(self, prefix: str) -> None: ...
     def endGroup(self) -> None: ...
     def group(self) -> str: ...
-
 
 class QByteArray:
     """Byte array class with proper typing."""

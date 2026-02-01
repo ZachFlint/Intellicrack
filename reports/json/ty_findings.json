@@ -1,263 +1,12 @@
 {
   "tool": "ty",
-  "generated": "2026-01-30T14:00:24.672616",
-  "total_findings": 154,
-  "total_files": 30,
+  "generated": "2026-01-30T22:10:45.477682",
+  "total_findings": 91,
+  "total_files": 23,
   "files": [
     {
-      "path": "src\\intellicrack\\ui\\app.py",
-      "count": 35,
-      "findings": [
-        {
-          "line": 207,
-          "column": 21,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addMenu` may be missing on object of type `QMenuBar | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:207:21: warning[possibly-missing-attribute] Attribute `addMenu` may be missing on object of type `QMenuBar | None`"
-        },
-        {
-          "line": 212,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:212:9: warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 214,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addSeparator` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:214:9: warning[possibly-missing-attribute] Attribute `addSeparator` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 219,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:219:9: warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 223,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:223:9: warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 228,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:228:9: warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 230,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addSeparator` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:230:9: warning[possibly-missing-attribute] Attribute `addSeparator` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 234,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:234:9: warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 236,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addSeparator` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:236:9: warning[possibly-missing-attribute] Attribute `addSeparator` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 241,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:241:9: warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 243,
-          "column": 22,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addMenu` may be missing on object of type `QMenuBar | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:243:22: warning[possibly-missing-attribute] Attribute `addMenu` may be missing on object of type `QMenuBar | None`"
-        },
-        {
-          "line": 247,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:247:9: warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 251,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:251:9: warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 253,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addSeparator` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:253:9: warning[possibly-missing-attribute] Attribute `addSeparator` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 255,
-          "column": 25,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addMenu` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:255:25: warning[possibly-missing-attribute] Attribute `addMenu` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 259,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:259:9: warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 263,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:263:9: warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 267,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:267:9: warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 269,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addSeparator` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:269:9: warning[possibly-missing-attribute] Attribute `addSeparator` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 273,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:273:9: warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 277,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:277:9: warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 281,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:281:9: warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 283,
-          "column": 26,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addMenu` may be missing on object of type `QMenuBar | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:283:26: warning[possibly-missing-attribute] Attribute `addMenu` may be missing on object of type `QMenuBar | None`"
-        },
-        {
-          "line": 287,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:287:9: warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 291,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:291:9: warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 293,
-          "column": 24,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addMenu` may be missing on object of type `QMenuBar | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:293:24: warning[possibly-missing-attribute] Attribute `addMenu` may be missing on object of type `QMenuBar | None`"
-        },
-        {
-          "line": 297,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:297:9: warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 301,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:301:9: warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 303,
-          "column": 25,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addMenu` may be missing on object of type `QMenuBar | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:303:25: warning[possibly-missing-attribute] Attribute `addMenu` may be missing on object of type `QMenuBar | None`"
-        },
-        {
-          "line": 307,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:307:9: warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 309,
-          "column": 21,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addMenu` may be missing on object of type `QMenuBar | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:309:21: warning[possibly-missing-attribute] Attribute `addMenu` may be missing on object of type `QMenuBar | None`"
-        },
-        {
-          "line": 313,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`",
-          "raw": "src\\intellicrack\\ui\\app.py:313:9: warning[possibly-missing-attribute] Attribute `addAction` may be missing on object of type `QMenu | None`"
-        },
-        {
-          "line": 452,
-          "column": 9,
-          "code": "no-matching-overload",
-          "message": "No overload of function `invokeMethod` matches arguments",
-          "raw": "src\\intellicrack\\ui\\app.py:452:9: error[no-matching-overload] No overload of function `invokeMethod` matches arguments"
-        },
-        {
-          "line": 612,
-          "column": 19,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `save_session` may be missing on object of type `Unknown | Orchestrator`",
-          "raw": "src\\intellicrack\\ui\\app.py:612:19: warning[possibly-missing-attribute] Attribute `save_session` may be missing on object of type `Unknown | Orchestrator`"
-        },
-        {
-          "line": 949,
-          "column": 9,
-          "code": "invalid-method-override",
-          "message": "Invalid override of method `closeEvent`: Definition is incompatible with `QWidget.closeEvent`",
-          "raw": "src\\intellicrack\\ui\\app.py:949:9: error[invalid-method-override] Invalid override of method `closeEvent`: Definition is incompatible with `QWidget.closeEvent`"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\session_manager.py",
-      "count": 17,
+      "count": 11,
       "findings": [
         {
           "line": 124,
@@ -309,254 +58,101 @@
           "raw": "src\\intellicrack\\ui\\session_manager.py:358:25: warning[possibly-missing-attribute] Attribute `selectedRows` may be missing on object of type `Unknown | QItemSelectionModel | None`"
         },
         {
-          "line": 362,
-          "column": 26,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `data` may be missing on object of type `Unknown | QTableWidgetItem | None`",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:362:26: warning[possibly-missing-attribute] Attribute `data` may be missing on object of type `Unknown | QTableWidgetItem | None`"
-        },
-        {
-          "line": 452,
+          "line": 455,
           "column": 25,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `selectedRows` may be missing on object of type `Unknown | QItemSelectionModel | None`",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:452:25: warning[possibly-missing-attribute] Attribute `selectedRows` may be missing on object of type `Unknown | QItemSelectionModel | None`"
-        },
-        {
-          "line": 457,
-          "column": 22,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `data` may be missing on object of type `Unknown | QTableWidgetItem | None`",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:457:22: warning[possibly-missing-attribute] Attribute `data` may be missing on object of type `Unknown | QTableWidgetItem | None`"
-        },
-        {
-          "line": 480,
-          "column": 25,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `selectedRows` may be missing on object of type `Unknown | QItemSelectionModel | None`",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:480:25: warning[possibly-missing-attribute] Attribute `selectedRows` may be missing on object of type `Unknown | QItemSelectionModel | None`"
-        },
-        {
-          "line": 485,
-          "column": 22,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `data` may be missing on object of type `Unknown | QTableWidgetItem | None`",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:485:22: warning[possibly-missing-attribute] Attribute `data` may be missing on object of type `Unknown | QTableWidgetItem | None`"
+          "raw": "src\\intellicrack\\ui\\session_manager.py:455:25: warning[possibly-missing-attribute] Attribute `selectedRows` may be missing on object of type `Unknown | QItemSelectionModel | None`"
         },
         {
           "line": 486,
-          "column": 24,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `text` may be missing on object of type `Unknown | QTableWidgetItem | None`",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:486:24: warning[possibly-missing-attribute] Attribute `text` may be missing on object of type `Unknown | QTableWidgetItem | None`"
-        },
-        {
-          "line": 537,
           "column": 25,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `selectedRows` may be missing on object of type `Unknown | QItemSelectionModel | None`",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:537:25: warning[possibly-missing-attribute] Attribute `selectedRows` may be missing on object of type `Unknown | QItemSelectionModel | None`"
+          "raw": "src\\intellicrack\\ui\\session_manager.py:486:25: warning[possibly-missing-attribute] Attribute `selectedRows` may be missing on object of type `Unknown | QItemSelectionModel | None`"
         },
         {
-          "line": 547,
-          "column": 22,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `data` may be missing on object of type `Unknown | QTableWidgetItem | None`",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:547:22: warning[possibly-missing-attribute] Attribute `data` may be missing on object of type `Unknown | QTableWidgetItem | None`"
-        },
-        {
-          "line": 548,
-          "column": 24,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `text` may be missing on object of type `Unknown | QTableWidgetItem | None`",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:548:24: warning[possibly-missing-attribute] Attribute `text` may be missing on object of type `Unknown | QTableWidgetItem | None`"
-        },
-        {
-          "line": 725,
+          "line": 546,
           "column": 25,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `selectedRows` may be missing on object of type `Unknown | QItemSelectionModel | None`",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:725:25: warning[possibly-missing-attribute] Attribute `selectedRows` may be missing on object of type `Unknown | QItemSelectionModel | None`"
+          "raw": "src\\intellicrack\\ui\\session_manager.py:546:25: warning[possibly-missing-attribute] Attribute `selectedRows` may be missing on object of type `Unknown | QItemSelectionModel | None`"
+        },
+        {
+          "line": 737,
+          "column": 25,
+          "code": "",
+          "message": "warning[possibly-missing-attribute] Attribute `selectedRows` may be missing on object of type `Unknown | QItemSelectionModel | None`",
+          "raw": "src\\intellicrack\\ui\\session_manager.py:737:25: warning[possibly-missing-attribute] Attribute `selectedRows` may be missing on object of type `Unknown | QItemSelectionModel | None`"
         }
       ]
     },
     {
-      "path": "src\\intellicrack\\bridges\\frida_bridge.py",
-      "count": 15,
-      "findings": [
-        {
-          "line": 537,
-          "column": 17,
-          "code": "invalid-argument-type",
-          "message": "Argument to function `to_thread` is incorrect: Expected `None | list[str | bytes] | tuple[str | bytes]`, found `list[str]`",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:537:17: error[invalid-argument-type] Argument to function `to_thread` is incorrect: Expected `None | list[str | bytes] | tuple[str | bytes]`, found `list[str]`"
-        },
-        {
-          "line": 649,
-          "column": 26,
-          "code": "invalid-argument-type",
-          "message": "Argument to function `__new__` is incorrect: Expected `Iterable[SupportsIndex] | SupportsIndex | SupportsBytes | Buffer`, found `Top[list[Unknown]] | bytes | bytearray`",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:649:26: error[invalid-argument-type] Argument to function `__new__` is incorrect: Expected `Iterable[SupportsIndex] | SupportsIndex | SupportsBytes | Buffer`, found `Top[list[Unknown]] | bytes | bytearray`"
-        },
-        {
-          "line": 720,
-          "column": 32,
-          "code": "no-matching-overload",
-          "message": "No overload of bound method `get` matches arguments",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:720:32: error[no-matching-overload] No overload of bound method `get` matches arguments"
-        },
-        {
-          "line": 722,
-          "column": 28,
-          "code": "no-matching-overload",
-          "message": "No overload of bound method `get` matches arguments",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:722:28: error[no-matching-overload] No overload of bound method `get` matches arguments"
-        },
-        {
-          "line": 723,
-          "column": 34,
-          "code": "no-matching-overload",
-          "message": "No overload of bound method `get` matches arguments",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:723:34: error[no-matching-overload] No overload of bound method `get` matches arguments"
-        },
-        {
-          "line": 724,
-          "column": 34,
-          "code": "invalid-argument-type",
-          "message": "Argument to bound method `get` is incorrect: Expected `Never`, found `Literal[\"file\"]`",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:724:34: error[invalid-argument-type] Argument to bound method `get` is incorrect: Expected `Never`, found `Literal[\"file\"]`"
-        },
-        {
-          "line": 783,
-          "column": 32,
-          "code": "no-matching-overload",
-          "message": "No overload of bound method `get` matches arguments",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:783:32: error[no-matching-overload] No overload of bound method `get` matches arguments"
-        },
-        {
-          "line": 832,
-          "column": 32,
-          "code": "no-matching-overload",
-          "message": "No overload of bound method `get` matches arguments",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:832:32: error[no-matching-overload] No overload of bound method `get` matches arguments"
-        },
-        {
-          "line": 834,
-          "column": 28,
-          "code": "no-matching-overload",
-          "message": "No overload of bound method `get` matches arguments",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:834:28: error[no-matching-overload] No overload of bound method `get` matches arguments"
-        },
-        {
-          "line": 835,
-          "column": 28,
-          "code": "no-matching-overload",
-          "message": "No overload of bound method `get` matches arguments",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:835:28: error[no-matching-overload] No overload of bound method `get` matches arguments"
-        },
-        {
-          "line": 836,
-          "column": 28,
-          "code": "no-matching-overload",
-          "message": "No overload of bound method `get` matches arguments",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:836:28: error[no-matching-overload] No overload of bound method `get` matches arguments"
-        },
-        {
-          "line": 887,
-          "column": 32,
-          "code": "no-matching-overload",
-          "message": "No overload of bound method `get` matches arguments",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:887:32: error[no-matching-overload] No overload of bound method `get` matches arguments"
-        },
-        {
-          "line": 889,
-          "column": 28,
-          "code": "no-matching-overload",
-          "message": "No overload of bound method `get` matches arguments",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:889:28: error[no-matching-overload] No overload of bound method `get` matches arguments"
-        },
-        {
-          "line": 959,
-          "column": 9,
-          "code": "no-matching-overload",
-          "message": "No overload of bound method `on` matches arguments",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:959:9: error[no-matching-overload] No overload of bound method `on` matches arguments"
-        },
-        {
-          "line": 1129,
-          "column": 9,
-          "code": "no-matching-overload",
-          "message": "No overload of bound method `on` matches arguments",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:1129:9: error[no-matching-overload] No overload of bound method `on` matches arguments"
-        }
-      ]
-    },
-    {
-      "path": "tests\\test_ui\\test_app_embedded_tools.py",
+      "path": "src\\intellicrack\\ui\\panels\\script_manager.py",
       "count": 9,
       "findings": [
         {
-          "line": 69,
-          "column": 31,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `actions` may be missing on object of type `QMenuBar | None`",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:69:31: warning[possibly-missing-attribute] Attribute `actions` may be missing on object of type `QMenuBar | None`"
+          "line": 565,
+          "column": 38,
+          "code": "invalid-argument-type",
+          "message": "Argument to bound method `set_filter` is incorrect: Expected `str | None`, found `object`",
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:565:38: error[invalid-argument-type] Argument to bound method `set_filter` is incorrect: Expected `str | None`, found `object`"
         },
         {
-          "line": 100,
-          "column": 31,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `actions` may be missing on object of type `QMenuBar | None`",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:100:31: warning[possibly-missing-attribute] Attribute `actions` may be missing on object of type `QMenuBar | None`"
+          "line": 575,
+          "column": 52,
+          "code": "invalid-argument-type",
+          "message": "Argument to bound method `get_language` is incorrect: Expected `str`, found `~AlwaysFalsy`",
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:575:52: error[invalid-argument-type] Argument to bound method `get_language` is incorrect: Expected `str`, found `~AlwaysFalsy`"
         },
         {
-          "line": 191,
+          "line": 674,
+          "column": 48,
+          "code": "invalid-argument-type",
+          "message": "Argument to bound method `get_template` is incorrect: Expected `str`, found `~AlwaysFalsy`",
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:674:48: error[invalid-argument-type] Argument to bound method `get_template` is incorrect: Expected `str`, found `~AlwaysFalsy`"
+        },
+        {
+          "line": 690,
+          "column": 47,
+          "code": "invalid-argument-type",
+          "message": "Argument to bound method `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`",
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:690:47: error[invalid-argument-type] Argument to bound method `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`"
+        },
+        {
+          "line": 695,
+          "column": 62,
+          "code": "invalid-argument-type",
+          "message": "Argument to bound method `add_script` is incorrect: Expected `str`, found `~AlwaysFalsy`",
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:695:62: error[invalid-argument-type] Argument to bound method `add_script` is incorrect: Expected `str`, found `~AlwaysFalsy`"
+        },
+        {
+          "line": 717,
           "column": 17,
-          "code": "invalid-assignment",
-          "message": "Object of type `MagicMock` is not assignable to attribute `add_x64dbg_tab` on type `Unknown | ToolOutputPanel`",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:191:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `add_x64dbg_tab` on type `Unknown | ToolOutputPanel`"
+          "code": "unresolved-attribute",
+          "message": "Object of type `ScriptManager & ~AlwaysFalsy` has no attribute `delete_script`",
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:717:17: error[unresolved-attribute] Object of type `ScriptManager & ~AlwaysFalsy` has no attribute `delete_script`"
         },
         {
-          "line": 212,
-          "column": 17,
-          "code": "invalid-assignment",
-          "message": "Object of type `MagicMock` is not assignable to attribute `add_x64dbg_tab` on type `Unknown | ToolOutputPanel`",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:212:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `add_x64dbg_tab` on type `Unknown | ToolOutputPanel`"
+          "line": 729,
+          "column": 50,
+          "code": "invalid-argument-type",
+          "message": "Argument to bound method `get_extension` is incorrect: Expected `str`, found `~AlwaysFalsy`",
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:729:50: error[invalid-argument-type] Argument to bound method `get_extension` is incorrect: Expected `str`, found `~AlwaysFalsy`"
         },
         {
-          "line": 235,
-          "column": 17,
-          "code": "invalid-assignment",
-          "message": "Object of type `MagicMock` is not assignable to attribute `add_cutter_tab` on type `Unknown | ToolOutputPanel`",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:235:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `add_cutter_tab` on type `Unknown | ToolOutputPanel`"
+          "line": 761,
+          "column": 43,
+          "code": "invalid-argument-type",
+          "message": "Argument to bound method `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`",
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:761:43: error[invalid-argument-type] Argument to bound method `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`"
         },
         {
-          "line": 258,
-          "column": 17,
-          "code": "invalid-assignment",
-          "message": "Object of type `MagicMock` is not assignable to attribute `add_hxd_tab` on type `Unknown | ToolOutputPanel`",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:258:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `add_hxd_tab` on type `Unknown | ToolOutputPanel`"
-        },
-        {
-          "line": 345,
-          "column": 17,
-          "code": "invalid-assignment",
-          "message": "Object of type `MagicMock` is not assignable to attribute `open_in_x64dbg` on type `Unknown | ToolOutputPanel`",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:345:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `open_in_x64dbg` on type `Unknown | ToolOutputPanel`"
-        },
-        {
-          "line": 367,
-          "column": 17,
-          "code": "invalid-assignment",
-          "message": "Object of type `MagicMock` is not assignable to attribute `open_in_cutter` on type `Unknown | ToolOutputPanel`",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:367:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `open_in_cutter` on type `Unknown | ToolOutputPanel`"
-        },
-        {
-          "line": 389,
-          "column": 17,
-          "code": "invalid-assignment",
-          "message": "Object of type `MagicMock` is not assignable to attribute `open_in_hxd` on type `Unknown | ToolOutputPanel`",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:389:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `open_in_hxd` on type `Unknown | ToolOutputPanel`"
+          "line": 826,
+          "column": 16,
+          "code": "invalid-return-type",
+          "message": "Return type does not match returned value: expected `tuple[str, str, str] | None`, found `tuple[(Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy), ~AlwaysFalsy, (Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy)]`",
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:826:16: error[invalid-return-type] Return type does not match returned value: expected `tuple[str, str, str] | None`, found `tuple[(Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy), ~AlwaysFalsy, (Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy)]`"
         }
       ]
     },
@@ -614,11 +210,11 @@
           "raw": "src\\intellicrack\\bridges\\schemas.py:598:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments"
         },
         {
-          "line": 599,
-          "column": 19,
-          "code": "invalid-argument-type",
-          "message": "Argument to function `_assert_never` is incorrect: Expected `Never`, found `Literal[ProviderName.LOCAL_TRANSFORMERS]`",
-          "raw": "src\\intellicrack\\bridges\\schemas.py:599:19: error[invalid-argument-type] Argument to function `_assert_never` is incorrect: Expected `Never`, found `Literal[ProviderName.LOCAL_TRANSFORMERS]`"
+          "line": 600,
+          "column": 17,
+          "code": "no-matching-overload",
+          "message": "No overload of bound method `__init__` matches arguments",
+          "raw": "src\\intellicrack\\bridges\\schemas.py:600:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments"
         }
       ]
     },
@@ -685,132 +281,98 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\embedding\\cutter_widget.py",
+      "path": "src\\intellicrack\\bridges\\ghidra.py",
       "count": 6,
       "findings": [
         {
-          "line": 207,
-          "column": 17,
-          "code": "unresolved-attribute",
-          "message": "Object of type `Radare2Bridge & ~AlwaysFalsy` has no attribute `seek`",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:207:17: error[unresolved-attribute] Object of type `Radare2Bridge & ~AlwaysFalsy` has no attribute `seek`"
-        },
-        {
-          "line": 228,
-          "column": 24,
-          "code": "unresolved-attribute",
-          "message": "Object of type `Radare2Bridge & ~AlwaysFalsy` has no attribute `get_function_address`",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:228:24: error[unresolved-attribute] Object of type `Radare2Bridge & ~AlwaysFalsy` has no attribute `get_function_address`"
-        },
-        {
-          "line": 248,
-          "column": 26,
-          "code": "unresolved-attribute",
-          "message": "Object of type `Radare2Bridge & ~AlwaysFalsy` has no attribute `list_functions`",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:248:26: error[unresolved-attribute] Object of type `Radare2Bridge & ~AlwaysFalsy` has no attribute `list_functions`"
-        },
-        {
-          "line": 266,
-          "column": 26,
-          "code": "unresolved-attribute",
-          "message": "Object of type `Radare2Bridge & ~AlwaysFalsy` has no attribute `list_strings`",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:266:26: error[unresolved-attribute] Object of type `Radare2Bridge & ~AlwaysFalsy` has no attribute `list_strings`"
-        },
-        {
-          "line": 284,
-          "column": 26,
-          "code": "unresolved-attribute",
-          "message": "Object of type `Radare2Bridge & ~AlwaysFalsy` has no attribute `list_imports`",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:284:26: error[unresolved-attribute] Object of type `Radare2Bridge & ~AlwaysFalsy` has no attribute `list_imports`"
-        },
-        {
-          "line": 302,
-          "column": 26,
-          "code": "unresolved-attribute",
-          "message": "Object of type `Radare2Bridge & ~AlwaysFalsy` has no attribute `list_exports`",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:302:26: error[unresolved-attribute] Object of type `Radare2Bridge & ~AlwaysFalsy` has no attribute `list_exports`"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\bridges\\binary.py",
-      "count": 5,
-      "findings": [
-        {
-          "line": 474,
-          "column": 31,
+          "line": 449,
+          "column": 9,
           "code": "invalid-assignment",
-          "message": "Object of type `lief.PE.Binary | lief.ELF.Binary | lief.MachO.Binary | lief.COFF.Binary` is not assignable to `lief.Binary`",
-          "raw": "src\\intellicrack\\bridges\\binary.py:474:31: error[invalid-assignment] Object of type `lief.PE.Binary | lief.ELF.Binary | lief.MachO.Binary | lief.COFF.Binary` is not assignable to `lief.Binary`"
+          "message": "Object of type `Popen[str] | Popen[bytes] | Popen[Any]` is not assignable to attribute `_process` of type `Popen[bytes] | None`",
+          "raw": "src\\intellicrack\\bridges\\ghidra.py:449:9: error[invalid-assignment] Object of type `Popen[str] | Popen[bytes] | Popen[Any]` is not assignable to attribute `_process` of type `Popen[bytes] | None`"
         },
         {
-          "line": 601,
-          "column": 26,
-          "code": "not-iterable",
-          "message": "Object of type `object` is not iterable",
-          "raw": "src\\intellicrack\\bridges\\binary.py:601:26: error[not-iterable] Object of type `object` is not iterable"
+          "line": 456,
+          "column": 12,
+          "code": "",
+          "message": "warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`",
+          "raw": "src\\intellicrack\\bridges\\ghidra.py:456:12: warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`"
         },
         {
-          "line": 638,
-          "column": 24,
-          "code": "unresolved-attribute",
-          "message": "Object of type `object` has no attribute `symbols`",
-          "raw": "src\\intellicrack\\bridges\\binary.py:638:24: error[unresolved-attribute] Object of type `object` has no attribute `symbols`"
-        },
-        {
-          "line": 939,
-          "column": 50,
-          "code": "missing-argument",
-          "message": "No argument provided for required parameter `offset` of function `disasm`",
-          "raw": "src\\intellicrack\\bridges\\binary.py:939:50: error[missing-argument] No argument provided for required parameter `offset` of function `disasm`"
-        },
-        {
-          "line": 939,
-          "column": 60,
+          "line": 459,
+          "column": 17,
           "code": "invalid-argument-type",
-          "message": "Argument to function `disasm` is incorrect: Expected `Cs`, found `bytes`",
-          "raw": "src\\intellicrack\\bridges\\binary.py:939:60: error[invalid-argument-type] Argument to function `disasm` is incorrect: Expected `Cs`, found `bytes`"
+          "message": "Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`",
+          "raw": "src\\intellicrack\\bridges\\ghidra.py:459:17: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`"
+        },
+        {
+          "line": 1015,
+          "column": 17,
+          "code": "missing-argument",
+          "message": "No argument provided for required parameter `bytes_str`",
+          "raw": "src\\intellicrack\\bridges\\ghidra.py:1015:17: error[missing-argument] No argument provided for required parameter `bytes_str`"
+        },
+        {
+          "line": 1017,
+          "column": 21,
+          "code": "unknown-argument",
+          "message": "Argument `bytes` does not match any known parameter",
+          "raw": "src\\intellicrack\\bridges\\ghidra.py:1017:21: error[unknown-argument] Argument `bytes` does not match any known parameter"
+        },
+        {
+          "line": 1196,
+          "column": 29,
+          "code": "invalid-argument-type",
+          "message": "Argument to function `__new__` is incorrect: Expected `str | Buffer | SupportsInt | SupportsIndex | SupportsTrunc`, found `object`",
+          "raw": "src\\intellicrack\\bridges\\ghidra.py:1196:29: error[invalid-argument-type] Argument to function `__new__` is incorrect: Expected `str | Buffer | SupportsInt | SupportsIndex | SupportsTrunc`, found `object`"
         }
       ]
     },
     {
       "path": "src\\intellicrack\\bridges\\x64dbg.py",
-      "count": 5,
+      "count": 6,
       "findings": [
         {
-          "line": 675,
+          "line": 764,
           "column": 9,
           "code": "invalid-assignment",
           "message": "Object of type `Popen[str] | Popen[bytes] | Popen[Any]` is not assignable to attribute `_process` of type `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:675:9: error[invalid-assignment] Object of type `Popen[str] | Popen[bytes] | Popen[Any]` is not assignable to attribute `_process` of type `Popen[bytes] | None`"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:764:9: error[invalid-assignment] Object of type `Popen[str] | Popen[bytes] | Popen[Any]` is not assignable to attribute `_process` of type `Popen[bytes] | None`"
         },
         {
-          "line": 683,
+          "line": 772,
           "column": 12,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:683:12: warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:772:12: warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`"
         },
         {
-          "line": 686,
+          "line": 775,
           "column": 17,
           "code": "invalid-argument-type",
           "message": "Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:686:17: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:775:17: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`"
         },
         {
-          "line": 791,
+          "line": 889,
           "column": 33,
           "code": "invalid-argument-type",
           "message": "Argument to bound method `get` is incorrect: Expected `Never`, found `Literal[\"output\"]`",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:791:33: error[invalid-argument-type] Argument to bound method `get` is incorrect: Expected `Never`, found `Literal[\"output\"]`"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:889:33: error[invalid-argument-type] Argument to bound method `get` is incorrect: Expected `Never`, found `Literal[\"output\"]`"
         },
         {
-          "line": 1113,
+          "line": 1209,
           "column": 34,
           "code": "invalid-argument-type",
           "message": "Method `__getitem__` of type `bound method Top[dict[Unknown, Unknown]].__getitem__(key: Never, /) -> object` cannot be called with key of type `str` on object of type `Top[dict[Unknown, Unknown]]`",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1113:34: error[invalid-argument-type] Method `__getitem__` of type `bound method Top[dict[Unknown, Unknown]].__getitem__(key: Never, /) -> object` cannot be called with key of type `str` on object of type `Top[dict[Unknown, Unknown]]`"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1209:34: error[invalid-argument-type] Method `__getitem__` of type `bound method Top[dict[Unknown, Unknown]].__getitem__(key: Never, /) -> object` cannot be called with key of type `str` on object of type `Top[dict[Unknown, Unknown]]`"
+        },
+        {
+          "line": 1765,
+          "column": 15,
+          "code": "invalid-method-override",
+          "message": "Invalid override of method `spawn`: Definition is incompatible with `DynamicAnalysisBridge.spawn`",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1765:15: error[invalid-method-override] Invalid override of method `spawn`: Definition is incompatible with `DynamicAnalysisBridge.spawn`"
         }
       ]
     },
@@ -856,36 +418,77 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\bridges\\ghidra.py",
+      "path": "src\\intellicrack\\ui\\embedding\\cutter_widget.py",
+      "count": 5,
+      "findings": [
+        {
+          "line": 233,
+          "column": 46,
+          "code": "invalid-argument-type",
+          "message": "Argument to bound method `goto_address` is incorrect: Expected `int`, found `CoroutineType[Any, Any, int | None]`",
+          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:233:46: error[invalid-argument-type] Argument to bound method `goto_address` is incorrect: Expected `int`, found `CoroutineType[Any, Any, int | None]`"
+        },
+        {
+          "line": 252,
+          "column": 24,
+          "code": "invalid-return-type",
+          "message": "Return type does not match returned value: expected `list[tuple[str, int]]`, found `CoroutineType[Any, Any, list[tuple[str, int]]]`",
+          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:252:24: error[invalid-return-type] Return type does not match returned value: expected `list[tuple[str, int]]`, found `CoroutineType[Any, Any, list[tuple[str, int]]]`"
+        },
+        {
+          "line": 270,
+          "column": 24,
+          "code": "invalid-return-type",
+          "message": "Return type does not match returned value: expected `list[tuple[int, str]]`, found `CoroutineType[Any, Any, list[tuple[int, str]]]`",
+          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:270:24: error[invalid-return-type] Return type does not match returned value: expected `list[tuple[int, str]]`, found `CoroutineType[Any, Any, list[tuple[int, str]]]`"
+        },
+        {
+          "line": 288,
+          "column": 24,
+          "code": "invalid-return-type",
+          "message": "Return type does not match returned value: expected `list[tuple[str, str, int]]`, found `CoroutineType[Any, Any, list[tuple[str, str, int]]]`",
+          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:288:24: error[invalid-return-type] Return type does not match returned value: expected `list[tuple[str, str, int]]`, found `CoroutineType[Any, Any, list[tuple[str, str, int]]]`"
+        },
+        {
+          "line": 306,
+          "column": 24,
+          "code": "invalid-return-type",
+          "message": "Return type does not match returned value: expected `list[tuple[str, int]]`, found `CoroutineType[Any, Any, list[tuple[str, int]]]`",
+          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:306:24: error[invalid-return-type] Return type does not match returned value: expected `list[tuple[str, int]]`, found `CoroutineType[Any, Any, list[tuple[str, int]]]`"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\bridges\\binary.py",
       "count": 4,
       "findings": [
         {
-          "line": 436,
-          "column": 9,
-          "code": "invalid-assignment",
-          "message": "Object of type `Popen[str] | Popen[bytes] | Popen[Any]` is not assignable to attribute `_process` of type `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\bridges\\ghidra.py:436:9: error[invalid-assignment] Object of type `Popen[str] | Popen[bytes] | Popen[Any]` is not assignable to attribute `_process` of type `Popen[bytes] | None`"
+          "line": 625,
+          "column": 26,
+          "code": "not-iterable",
+          "message": "Object of type `object` is not iterable",
+          "raw": "src\\intellicrack\\bridges\\binary.py:625:26: error[not-iterable] Object of type `object` is not iterable"
         },
         {
-          "line": 443,
-          "column": 12,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\bridges\\ghidra.py:443:12: warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`"
+          "line": 662,
+          "column": 24,
+          "code": "unresolved-attribute",
+          "message": "Object of type `object` has no attribute `symbols`",
+          "raw": "src\\intellicrack\\bridges\\binary.py:662:24: error[unresolved-attribute] Object of type `object` has no attribute `symbols`"
         },
         {
-          "line": 446,
-          "column": 17,
+          "line": 963,
+          "column": 50,
+          "code": "missing-argument",
+          "message": "No argument provided for required parameter `offset` of function `disasm`",
+          "raw": "src\\intellicrack\\bridges\\binary.py:963:50: error[missing-argument] No argument provided for required parameter `offset` of function `disasm`"
+        },
+        {
+          "line": 963,
+          "column": 60,
           "code": "invalid-argument-type",
-          "message": "Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\bridges\\ghidra.py:446:17: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`"
-        },
-        {
-          "line": 1183,
-          "column": 29,
-          "code": "invalid-argument-type",
-          "message": "Argument to function `__new__` is incorrect: Expected `str | Buffer | SupportsInt | SupportsIndex | SupportsTrunc`, found `object`",
-          "raw": "src\\intellicrack\\bridges\\ghidra.py:1183:29: error[invalid-argument-type] Argument to function `__new__` is incorrect: Expected `str | Buffer | SupportsInt | SupportsIndex | SupportsTrunc`, found `object`"
+          "message": "Argument to function `disasm` is incorrect: Expected `Cs`, found `bytes`",
+          "raw": "src\\intellicrack\\bridges\\binary.py:963:60: error[invalid-argument-type] Argument to function `disasm` is incorrect: Expected `Cs`, found `bytes`"
         }
       ]
     },
@@ -924,36 +527,29 @@
       ]
     },
     {
-      "path": "tests\\test_core\\test_types.py",
-      "count": 4,
+      "path": "src\\intellicrack\\providers\\local_transformers.py",
+      "count": 3,
       "findings": [
         {
-          "line": 1353,
-          "column": 46,
-          "code": "unknown-argument",
-          "message": "Argument `process_name` does not match any known parameter of bound method `__init__`",
-          "raw": "tests\\test_core\\test_types.py:1353:46: error[unknown-argument] Argument `process_name` does not match any known parameter of bound method `__init__`"
+          "line": 501,
+          "column": 23,
+          "code": "call-non-callable",
+          "message": "Object of type `Tensor` is not callable",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:501:23: error[call-non-callable] Object of type `Tensor` is not callable"
         },
         {
-          "line": 1354,
-          "column": 12,
-          "code": "unresolved-attribute",
-          "message": "Object of type `AttachError` has no attribute `process_name`",
-          "raw": "tests\\test_core\\test_types.py:1354:12: error[unresolved-attribute] Object of type `AttachError` has no attribute `process_name`"
+          "line": 577,
+          "column": 22,
+          "code": "not-subscriptable",
+          "message": "Cannot subscript object of type `None` with no `__getitem__` method",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:577:22: error[not-subscriptable] Cannot subscript object of type `None` with no `__getitem__` method"
         },
         {
-          "line": 1362,
-          "column": 9,
-          "code": "unknown-argument",
-          "message": "Argument `process_name` does not match any known parameter of bound method `__init__`",
-          "raw": "tests\\test_core\\test_types.py:1362:9: error[unknown-argument] Argument `process_name` does not match any known parameter of bound method `__init__`"
-        },
-        {
-          "line": 1366,
-          "column": 12,
-          "code": "unresolved-attribute",
-          "message": "Object of type `AttachError` has no attribute `process_name`",
-          "raw": "tests\\test_core\\test_types.py:1366:12: error[unresolved-attribute] Object of type `AttachError` has no attribute `process_name`"
+          "line": 721,
+          "column": 47,
+          "code": "invalid-assignment",
+          "message": "Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:721:47: error[invalid-assignment] Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`"
         }
       ]
     },
@@ -1043,18 +639,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 439,
+          "line": 442,
           "column": 15,
           "code": "invalid-type-form",
           "message": "Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in type expression",
-          "raw": "src\\intellicrack\\bridges\\sandbox_bridge.py:439:15: error[invalid-type-form] Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in type expression"
+          "raw": "src\\intellicrack\\bridges\\sandbox_bridge.py:442:15: error[invalid-type-form] Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in type expression"
         },
         {
-          "line": 629,
+          "line": 632,
           "column": 29,
           "code": "invalid-type-form",
           "message": "Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in type expression",
-          "raw": "src\\intellicrack\\bridges\\sandbox_bridge.py:629:29: error[invalid-type-form] Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in type expression"
+          "raw": "src\\intellicrack\\bridges\\sandbox_bridge.py:632:29: error[invalid-type-form] Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in type expression"
         }
       ]
     },
@@ -1063,58 +659,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 133,
+          "line": 134,
           "column": 16,
           "code": "invalid-return-type",
           "message": "Return type does not match returned value: expected `ProcessManager`, found `ProcessManager | None | Unknown`",
-          "raw": "src\\intellicrack\\core\\process_manager.py:133:16: error[invalid-return-type] Return type does not match returned value: expected `ProcessManager`, found `ProcessManager | None | Unknown`"
+          "raw": "src\\intellicrack\\core\\process_manager.py:134:16: error[invalid-return-type] Return type does not match returned value: expected `ProcessManager`, found `ProcessManager | None | Unknown`"
         },
         {
-          "line": 470,
+          "line": 471,
           "column": 56,
           "code": "invalid-argument-type",
           "message": "Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`",
-          "raw": "src\\intellicrack\\core\\process_manager.py:470:56: error[invalid-argument-type] Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\local_transformers.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 497,
-          "column": 23,
-          "code": "call-non-callable",
-          "message": "Object of type `Tensor` is not callable",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:497:23: error[call-non-callable] Object of type `Tensor` is not callable"
-        },
-        {
-          "line": 773,
-          "column": 45,
-          "code": "no-matching-overload",
-          "message": "No overload of bound method `get` matches arguments",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:773:45: error[no-matching-overload] No overload of bound method `get` matches arguments"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\xpu_utils.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 62,
-          "column": 24,
-          "code": "invalid-type-form",
-          "message": "Module `torch` is not valid in a type expression",
-          "raw": "src\\intellicrack\\providers\\xpu_utils.py:62:24: error[invalid-type-form] Module `torch` is not valid in a type expression"
-        },
-        {
-          "line": 370,
-          "column": 33,
-          "code": "invalid-type-form",
-          "message": "Module `torch` is not valid in a type expression",
-          "raw": "src\\intellicrack\\providers\\xpu_utils.py:370:33: error[invalid-type-form] Module `torch` is not valid in a type expression"
+          "raw": "src\\intellicrack\\core\\process_manager.py:471:56: error[invalid-argument-type] Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`"
         }
       ]
     },
@@ -1139,48 +695,22 @@
       ]
     },
     {
-      "path": "tests\\test_core\\test_script_gen_keygen.py",
+      "path": "tests\\test_bridges\\test_x64dbg.py",
       "count": 2,
       "findings": [
         {
-          "line": 19,
-          "column": 42,
-          "code": "unresolved-import",
-          "message": "Module `intellicrack.core.script_gen` has no member `GeneratedScript`",
-          "raw": "tests\\test_core\\test_script_gen_keygen.py:19:42: error[unresolved-import] Module `intellicrack.core.script_gen` has no member `GeneratedScript`"
+          "line": 165,
+          "column": 26,
+          "code": "invalid-assignment",
+          "message": "Object of type `dict[Unknown | str, Unknown | int | str]` is not assignable to `WatchpointInfo`",
+          "raw": "tests\\test_bridges\\test_x64dbg.py:165:26: error[invalid-assignment] Object of type `dict[Unknown | str, Unknown | int | str]` is not assignable to `WatchpointInfo`"
         },
         {
-          "line": 19,
-          "column": 59,
-          "code": "unresolved-import",
-          "message": "Module `intellicrack.core.script_gen` has no member `ScriptGenerator`",
-          "raw": "tests\\test_core\\test_script_gen_keygen.py:19:59: error[unresolved-import] Module `intellicrack.core.script_gen` has no member `ScriptGenerator`"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\bridges\\radare2.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 190,
-          "column": 19,
-          "code": "invalid-type-form",
-          "message": "Module `r2pipe.open_sync` is not valid in a type expression",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:190:19: error[invalid-type-form] Module `r2pipe.open_sync` is not valid in a type expression"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\anthropic.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 395,
-          "column": 13,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `cancel` may be missing on object of type `Task[Any] | None`",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:395:13: warning[possibly-missing-attribute] Attribute `cancel` may be missing on object of type `Task[Any] | None`"
+          "line": 175,
+          "column": 12,
+          "code": "not-subscriptable",
+          "message": "Cannot subscript object of type `WatchpointInfo` with no `__getitem__` method",
+          "raw": "tests\\test_bridges\\test_x64dbg.py:175:12: error[not-subscriptable] Cannot subscript object of type `WatchpointInfo` with no `__getitem__` method"
         }
       ]
     },
@@ -1194,32 +724,6 @@
           "code": "invalid-argument-type",
           "message": "Argument to bound method `__call__` is incorrect: Expected `PreTrainedModel`, found `device`",
           "raw": "src\\intellicrack\\providers\\model_loader.py:460:30: error[invalid-argument-type] Argument to bound method `__call__` is incorrect: Expected `PreTrainedModel`, found `device`"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 213,
-          "column": 29,
-          "code": "invalid-argument-type",
-          "message": "Argument to bound method `resizeEvent` is incorrect: Expected `QResizeEvent | None`, found `object`",
-          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:213:29: error[invalid-argument-type] Argument to bound method `resizeEvent` is incorrect: Expected `QResizeEvent | None`, found `object`"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\script_manager.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 717,
-          "column": 17,
-          "code": "unresolved-attribute",
-          "message": "Object of type `ScriptManager & ~AlwaysFalsy` has no attribute `delete_script`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:717:17: error[unresolved-attribute] Object of type `ScriptManager & ~AlwaysFalsy` has no attribute `delete_script`"
         }
       ]
     },
@@ -1254,11 +758,24 @@
       "count": 1,
       "findings": [
         {
-          "line": 110,
+          "line": 166,
           "column": 17,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `findBlockByLineNumber` may be missing on object of type `QTextDocument | None`",
-          "raw": "src\\intellicrack\\ui\\tools.py:110:17: warning[possibly-missing-attribute] Attribute `findBlockByLineNumber` may be missing on object of type `QTextDocument | None`"
+          "raw": "src\\intellicrack\\ui\\tools.py:166:17: warning[possibly-missing-attribute] Attribute `findBlockByLineNumber` may be missing on object of type `QTextDocument | None`"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_ui\\test_tools_logic.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 24,
+          "column": 12,
+          "code": "invalid-return-type",
+          "message": "Return type does not match returned value: expected `QApplication`, found `QCoreApplication`",
+          "raw": "tests\\test_ui\\test_tools_logic.py:24:12: error[invalid-return-type] Return type does not match returned value: expected `QApplication`, found `QCoreApplication`"
         }
       ]
     }

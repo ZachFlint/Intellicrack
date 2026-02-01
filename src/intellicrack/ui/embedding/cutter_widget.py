@@ -6,11 +6,13 @@ within Intellicrack's interface.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import winreg
+from collections.abc import Coroutine
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
 from intellicrack.ui.embedding.embedded_widget import EmbeddedToolWidget
 from intellicrack.ui.embedding.win32_helper import Win32WindowHelper
@@ -22,6 +24,8 @@ if TYPE_CHECKING:
     from intellicrack.bridges.radare2 import Radare2Bridge
 
 _logger = logging.getLogger(__name__)
+
+_T = TypeVar("_T")
 
 
 class CutterWidget(EmbeddedToolWidget):
@@ -171,6 +175,24 @@ class CutterWidget(EmbeddedToolWidget):
         """
         return self._r2_bridge
 
+    def _run_bridge_coroutine(self, coro: Coroutine[Any, Any, _T]) -> _T | None:
+        """Run an async bridge coroutine synchronously.
+
+        Args:
+            coro: Coroutine to execute.
+
+        Returns:
+            Coroutine result, or None if scheduling asynchronously.
+        """
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                asyncio.ensure_future(coro)
+                return None
+            return loop.run_until_complete(coro)
+        except RuntimeError:
+            return asyncio.run(coro)
+
     def analyze_binary(self, binary_path: Path) -> bool:
         """Open a binary for analysis in Cutter.
 
@@ -204,7 +226,7 @@ class CutterWidget(EmbeddedToolWidget):
         """
         if self._r2_bridge:
             try:
-                self._r2_bridge.seek(address)
+                self._run_bridge_coroutine(self._r2_bridge.seek(address))
             except Exception:
                 _logger.exception("seek_via_bridge_failed", extra={"address": hex(address)})
             else:
@@ -225,11 +247,11 @@ class CutterWidget(EmbeddedToolWidget):
         """
         if self._r2_bridge:
             try:
-                addr = self._r2_bridge.get_function_address(function_name)
+                addr = self._run_bridge_coroutine(self._r2_bridge.get_function_address(function_name))
             except Exception:
                 _logger.exception("find_function_failed", extra={"function": function_name})
             else:
-                if addr:
+                if addr is not None:
                     return self.goto_address(addr)
 
         _logger.info("function_navigation_requested", extra={"function": function_name})
@@ -245,11 +267,12 @@ class CutterWidget(EmbeddedToolWidget):
         """
         if self._r2_bridge:
             try:
-                result = self._r2_bridge.list_functions()
+                result = self._run_bridge_coroutine(self._r2_bridge.list_functions())
             except Exception:
                 _logger.exception("get_functions_failed")
             else:
-                return result
+                if result is not None:
+                    return result
 
         return []
 
@@ -263,11 +286,12 @@ class CutterWidget(EmbeddedToolWidget):
         """
         if self._r2_bridge:
             try:
-                result = self._r2_bridge.list_strings()
+                result = self._run_bridge_coroutine(self._r2_bridge.list_strings())
             except Exception:
                 _logger.exception("get_strings_failed")
             else:
-                return result
+                if result is not None:
+                    return result
 
         return []
 
@@ -281,11 +305,12 @@ class CutterWidget(EmbeddedToolWidget):
         """
         if self._r2_bridge:
             try:
-                result = self._r2_bridge.list_imports()
+                result = self._run_bridge_coroutine(self._r2_bridge.list_imports())
             except Exception:
                 _logger.exception("get_imports_failed")
             else:
-                return result
+                if result is not None:
+                    return result
 
         return []
 
@@ -299,11 +324,12 @@ class CutterWidget(EmbeddedToolWidget):
         """
         if self._r2_bridge:
             try:
-                result = self._r2_bridge.list_exports()
+                result = self._run_bridge_coroutine(self._r2_bridge.list_exports())
             except Exception:
                 _logger.exception("get_exports_failed")
             else:
-                return result
+                if result is not None:
+                    return result
 
         return []
 

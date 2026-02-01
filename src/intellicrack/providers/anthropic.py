@@ -15,7 +15,9 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast, override
 import anthropic
 from anthropic.types import (
     Message as AnthropicMessage,
+    MessageParam,
     TextBlock,
+    ToolParam,
     ToolUseBlock,
 )
 
@@ -269,15 +271,15 @@ class AnthropicProvider(LLMProviderBase):
                     model=model,
                     max_tokens=max_tokens,
                     temperature=temperature,
-                    messages=cast("Any", anthropic_messages),
-                    tools=cast("Any", anthropic_tools),
+                    messages=cast("list[MessageParam]", anthropic_messages),
+                    tools=cast("list[ToolParam]", anthropic_tools),
                 )
             else:
                 response = await self._client.messages.create(
                     model=model,
                     max_tokens=max_tokens,
                     temperature=temperature,
-                    messages=cast("Any", anthropic_messages),
+                    messages=cast("list[MessageParam]", anthropic_messages),
                 )
 
             duration_ms = (time.perf_counter() - start_time) * 1000
@@ -290,7 +292,7 @@ class AnthropicProvider(LLMProviderBase):
                     content += block.text
                 elif isinstance(block, ToolUseBlock):
                     block_input = block.input
-                    arguments: dict[str, Any] = dict(block_input) if isinstance(block_input, dict) else {}
+                    arguments: dict[str, Any] = dict(block_input)
                     tool_call = ToolCall(
                         id=block.id,
                         tool_name=block.name.split(".")[0] if "." in block.name else block.name,
@@ -362,15 +364,15 @@ class AnthropicProvider(LLMProviderBase):
                     model=model,
                     max_tokens=max_tokens,
                     temperature=temperature,
-                    messages=cast("Any", anthropic_messages),
-                    tools=cast("Any", anthropic_tools),
+                    messages=cast("list[MessageParam]", anthropic_messages),
+                    tools=cast("list[ToolParam]", anthropic_tools),
                 )
             else:
                 stream_context = self._client.messages.stream(
                     model=model,
                     max_tokens=max_tokens,
                     temperature=temperature,
-                    messages=cast("Any", anthropic_messages),
+                    messages=cast("list[MessageParam]", anthropic_messages),
                 )
 
             async with stream_context as stream:
@@ -390,9 +392,10 @@ class AnthropicProvider(LLMProviderBase):
     async def cancel_request(self) -> None:
         """Cancel any in-flight request."""
         self._cancel_requested = True
-        had_task = self._current_task is not None and not self._current_task.done()
-        if had_task:
+        had_task = False
+        if self._current_task is not None and not self._current_task.done():
             self._current_task.cancel()
+            had_task = True
         self._logger.info("anthropic_request_cancelled", extra={"had_active_task": had_task})
 
     @override

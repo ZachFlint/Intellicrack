@@ -194,15 +194,14 @@ class WindowsSandbox(SandboxBase):
                 creationflags=subprocess.CREATE_NEW_CONSOLE,
             )
 
-            if self._process.pid is not None:
-                process_manager = ProcessManager.get_instance()
-                process_manager.register(
-                    self._process,
-                    name="windows-sandbox",
-                    process_type=ProcessType.SANDBOX,
-                    metadata={"wsb_config": str(self._wsb_path)},
-                    cleanup_callback=self.stop,
-                )
+            process_manager = ProcessManager.get_instance()
+            process_manager.register(
+                self._process,
+                name="windows-sandbox",
+                process_type=ProcessType.SANDBOX,
+                metadata={"wsb_config": str(self._wsb_path)},
+                cleanup_callback=self.stop,
+            )
 
             await asyncio.sleep(_STARTUP_WAIT_SECONDS)
 
@@ -238,8 +237,7 @@ class WindowsSandbox(SandboxBase):
         try:
             if self._process is not None:
                 process_manager = ProcessManager.get_instance()
-                if self._process.pid is not None:
-                    process_manager.unregister(self._process.pid)
+                process_manager.unregister(self._process.pid)
 
                 await process_manager.run_tracked_async(
                     ["taskkill", "/F", "/IM", "WindowsSandbox.exe"],

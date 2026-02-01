@@ -59,7 +59,7 @@ ProcessAccessRights = Literal[
 class PROCESSENTRY32(ctypes.Structure):
     """Windows PROCESSENTRY32 structure."""
 
-    _fields_ = [  # noqa: RUF012
+    _fields_ = [
         ("dwSize", wintypes.DWORD),
         ("cntUsage", wintypes.DWORD),
         ("th32ProcessID", wintypes.DWORD),
@@ -76,7 +76,7 @@ class PROCESSENTRY32(ctypes.Structure):
 class THREADENTRY32(ctypes.Structure):
     """Windows THREADENTRY32 structure."""
 
-    _fields_ = [  # noqa: RUF012
+    _fields_ = [
         ("dwSize", wintypes.DWORD),
         ("cntUsage", wintypes.DWORD),
         ("th32ThreadID", wintypes.DWORD),
@@ -90,7 +90,7 @@ class THREADENTRY32(ctypes.Structure):
 class MODULEENTRY32(ctypes.Structure):
     """Windows MODULEENTRY32 structure."""
 
-    _fields_ = [  # noqa: RUF012
+    _fields_ = [
         ("dwSize", wintypes.DWORD),
         ("th32ModuleID", wintypes.DWORD),
         ("th32ProcessID", wintypes.DWORD),
@@ -107,7 +107,7 @@ class MODULEENTRY32(ctypes.Structure):
 class MEMORY_BASIC_INFORMATION(ctypes.Structure):  # noqa: N801
     """Windows MEMORY_BASIC_INFORMATION structure."""
 
-    _fields_ = [  # noqa: RUF012
+    _fields_ = [
         ("BaseAddress", ctypes.c_void_p),
         ("AllocationBase", ctypes.c_void_p),
         ("AllocationProtect", wintypes.DWORD),
@@ -433,11 +433,27 @@ class ProcessBridge(ToolBridgeBase):
         try:
             self._kernel32 = ctypes.windll.kernel32
             self._psapi = ctypes.windll.psapi
-            self._state = BridgeState(connected=True, tool_running=True)
+            self._state = BridgeState(
+                connected=True,
+                tool_running=True,
+                binary_loaded=False,
+                process_attached=False,
+                target_path=None,
+                target_pid=None,
+                last_error=None,
+            )
             _logger.info("process_bridge_initialized")
-        except Exception:
+        except Exception as e:
             _logger.exception("process_bridge_init_failed")
-            self._state = BridgeState(connected=False, tool_running=False)
+            self._state = BridgeState(
+                connected=False,
+                tool_running=False,
+                binary_loaded=False,
+                process_attached=False,
+                target_path=None,
+                target_pid=None,
+                last_error=str(e),
+            )
 
     async def shutdown(self) -> None:
         """Shutdown and cleanup resources."""
@@ -447,7 +463,7 @@ class ProcessBridge(ToolBridgeBase):
         await super().shutdown()
         _logger.info("process_bridge_shutdown")
 
-    async def is_available(self) -> bool:  # noqa: PLR6301
+    async def is_available(self) -> bool:
         """Check if process bridge is available.
 
         Returns:
@@ -557,11 +573,10 @@ class ProcessBridge(ToolBridgeBase):
         self._attached_pid = pid
         self._process_handle = handle
 
-        self._state = BridgeState(
-            connected=True,
-            tool_running=True,
-            process_attached=True,
-        )
+        self._state.connected = True
+        self._state.tool_running = True
+        self._state.process_attached = True
+        self._state.target_pid = pid
 
         _logger.info("process_opened", extra={"pid": pid, "access": access})
         return True
@@ -578,11 +593,10 @@ class ProcessBridge(ToolBridgeBase):
             self._attached_pid = None
             _logger.info("process_handle_closed")
 
-        self._state = BridgeState(
-            connected=True,
-            tool_running=True,
-            process_attached=False,
-        )
+        self._state.connected = True
+        self._state.tool_running = True
+        self._state.process_attached = False
+        self._state.target_pid = None
 
         return True
 

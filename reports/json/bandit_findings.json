@@ -1,6 +1,6 @@
 {
   "tool": "bandit",
-  "generated": "2026-01-30T14:00:32.952636",
+  "generated": "2026-01-30T22:10:53.916832",
   "total_findings": 32,
   "total_files": 15,
   "files": [
@@ -18,58 +18,58 @@
           "raw": "src/intellicrack/providers\\xpu_utils.py:14: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
         },
         {
-          "line": 161,
+          "line": 160,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B607:start_process_with_partial_path",
           "message": "Starting a process with a partial executable path",
-          "raw": "src/intellicrack/providers\\xpu_utils.py:161: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path"
+          "raw": "src/intellicrack/providers\\xpu_utils.py:160: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path"
         },
         {
-          "line": 161,
+          "line": 160,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B603:subprocess_without_shell_equals_true",
           "message": "subprocess call - check for execution of untrusted input.",
-          "raw": "src/intellicrack/providers\\xpu_utils.py:161: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
+          "raw": "src/intellicrack/providers\\xpu_utils.py:160: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
         },
         {
-          "line": 490,
+          "line": 489,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B607:start_process_with_partial_path",
           "message": "Starting a process with a partial executable path",
-          "raw": "src/intellicrack/providers\\xpu_utils.py:490: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path"
+          "raw": "src/intellicrack/providers\\xpu_utils.py:489: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path"
         },
         {
-          "line": 490,
+          "line": 489,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B603:subprocess_without_shell_equals_true",
           "message": "subprocess call - check for execution of untrusted input.",
-          "raw": "src/intellicrack/providers\\xpu_utils.py:490: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
+          "raw": "src/intellicrack/providers\\xpu_utils.py:489: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
         },
         {
-          "line": 515,
+          "line": 514,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B607:start_process_with_partial_path",
           "message": "Starting a process with a partial executable path",
-          "raw": "src/intellicrack/providers\\xpu_utils.py:515: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path"
+          "raw": "src/intellicrack/providers\\xpu_utils.py:514: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path"
         },
         {
-          "line": 515,
+          "line": 514,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B603:subprocess_without_shell_equals_true",
           "message": "subprocess call - check for execution of untrusted input.",
-          "raw": "src/intellicrack/providers\\xpu_utils.py:515: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
+          "raw": "src/intellicrack/providers\\xpu_utils.py:514: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
         }
       ]
     },
@@ -195,13 +195,13 @@
           "raw": "src/intellicrack/core\\process_manager.py:15: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
         },
         {
-          "line": 667,
+          "line": 668,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B603:subprocess_without_shell_equals_true",
           "message": "subprocess call - check for execution of untrusted input.",
-          "raw": "src/intellicrack/core\\process_manager.py:667: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
+          "raw": "src/intellicrack/core\\process_manager.py:668: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
         }
       ]
     },

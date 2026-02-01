@@ -10,7 +10,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -58,8 +58,8 @@ class SessionManagerDialog(QDialog):
         session_deleted: Signal emitted when a session is deleted.
     """
 
-    session_loaded: pyqtSignal = pyqtSignal(str)
-    session_deleted: pyqtSignal = pyqtSignal(str)
+    session_loaded: ClassVar[pyqtSignal] = pyqtSignal(str)
+    session_deleted: ClassVar[pyqtSignal] = pyqtSignal(str)
 
     SESSIONS_DIR = Path.home() / ".intellicrack" / "sessions"
 
@@ -359,7 +359,10 @@ class SessionManagerDialog(QDialog):
 
         if selected_rows:
             row = selected_rows[0].row()
-            session_id = self._session_table.item(row, 0).data(Qt.ItemDataRole.UserRole)
+            name_item = self._session_table.item(row, 0)
+            if name_item is None:
+                return
+            session_id = name_item.data(Qt.ItemDataRole.UserRole)
 
             session = None
             for s in self._sessions:
@@ -454,7 +457,10 @@ class SessionManagerDialog(QDialog):
             return
 
         row = selected_rows[0].row()
-        session_id = self._session_table.item(row, 0).data(Qt.ItemDataRole.UserRole)
+        name_item = self._session_table.item(row, 0)
+        if name_item is None:
+            return
+        session_id: str = name_item.data(Qt.ItemDataRole.UserRole)
 
         if session_id == self._current_session_id:
             QMessageBox.information(
@@ -482,8 +488,11 @@ class SessionManagerDialog(QDialog):
             return
 
         row = selected_rows[0].row()
-        session_id = self._session_table.item(row, 0).data(Qt.ItemDataRole.UserRole)
-        session_name = self._session_table.item(row, 0).text()
+        name_item = self._session_table.item(row, 0)
+        if name_item is None:
+            return
+        session_id: str = name_item.data(Qt.ItemDataRole.UserRole)
+        session_name: str = name_item.text()
 
         if session_id == self._current_session_id:
             QMessageBox.warning(
@@ -544,8 +553,11 @@ class SessionManagerDialog(QDialog):
             return
 
         row = selected_rows[0].row()
-        session_id = self._session_table.item(row, 0).data(Qt.ItemDataRole.UserRole)
-        session_name = self._session_table.item(row, 0).text()
+        name_item = self._session_table.item(row, 0)
+        if name_item is None:
+            return
+        session_id: str = name_item.data(Qt.ItemDataRole.UserRole)
+        session_name: str = name_item.text()
 
         session_data = None
         for s in self._sessions:
@@ -622,10 +634,10 @@ class SessionManagerDialog(QDialog):
             export_data["updated_at"] = str(updated_at)
 
         if "messages" in session_data:
-            messages = []
+            messages: list[dict[str, Any]] = []
             for msg in session_data["messages"]:
                 if isinstance(msg, dict):
-                    messages.append(msg)
+                    messages.append(cast("dict[str, Any]", msg))
                 elif hasattr(msg, "__dict__"):
                     messages.append(msg.__dict__)
             export_data["messages"] = messages
@@ -652,15 +664,17 @@ class SessionManagerDialog(QDialog):
 
         try:
             with open(path, encoding="utf-8") as f:
-                import_data = json.load(f)
+                raw_data: object = json.load(f)
 
-            if not isinstance(import_data, dict):
+            if not isinstance(raw_data, dict):
                 QMessageBox.warning(
                     self,
                     "Import Failed",
                     "Invalid session file format.",
                 )
                 return
+
+            import_data = cast("dict[str, Any]", raw_data)
 
             required_fields = {"id", "name"}
             if not required_fields.issubset(import_data.keys()):

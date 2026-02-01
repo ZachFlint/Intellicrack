@@ -34,7 +34,130 @@ classifiers = [
     "Environment :: Console",
     "Environment :: X11 Applications :: Qt",
 ]
-dependencies = []
+dependencies = [
+    "networkx>=3.6.1,<4",
+    "markdown-it-py>=3.0,<4",
+    "anthropic",
+    "openai",
+    "google-genai",
+    "ollama",
+    "httpx",
+    "PyQt6",
+    "qdarkstyle",
+    "pygments",
+    "pefile",
+    "lief",
+    "capstone",
+    "keystone-engine",
+    "frida",
+    "frida-tools",
+    "r2pipe",
+    "ghidra-bridge",
+    "python-dotenv",
+    "tomli",
+    "tomli-w",
+    "aiofiles",
+    "aiosqlite",
+    "pydantic",
+    "mcp>=1.2.0",
+    "pyannotate>=1.2.0,<2",
+    "structlog>=24.1.0",
+    "transformers>=4.40.0",
+    "accelerate>=0.30.0",
+    "bitsandbytes>=0.43.0",
+    "sentencepiece",
+    "safetensors",
+]
+
+[project.optional-dependencies]
+dev = [
+    "build",
+    "pyclean",
+    "black",
+    "pylint",
+    "autopep8",
+    "flake8",
+    "ruff",
+    "isort",
+    "pycodestyle",
+    "bandit",
+    "blinter",
+    "vulture",
+    "pyupgrade",
+    "pydocstyle",
+    "sourcery",
+    "wemake-python-styleguide",
+    "darglint",
+    "pyroma",
+    "mypy-extensions",
+    "dead",
+    "uncalled",
+    "deadcode",
+    "pygount",
+    "pytest-deadfixtures",
+    "basedpyright",
+    "monkeytype",
+    "ty",
+    "mccabe",
+    "xenon",
+    "safety",
+    "yamllint",
+    "jsonlint",
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+    "pytest-asyncio",
+    "pytest-xdist",
+    "pytest-timeout",
+    "pytest-qt",
+    "pytest-benchmark",
+    "pytest-html",
+    "pytest-randomly",
+    "pytest-sugar",
+    "pytest-env",
+    "pytest-instafail",
+    "hypothesis",
+    "tox",
+    "nox",
+    "coverage",
+    "freezegun",
+    "responses",
+    "faker",
+    "radon",
+    "sphinx",
+    "sphinx-rtd-theme",
+    "sphinx-autodoc-typehints",
+    "sphinx-copybutton",
+    "sphinx-tabs",
+    "sphinxcontrib-mermaid",
+    "sphinx-autobuild",
+    "pdoc3",
+    "mkdocs-material",
+    "pymdown-extensions",
+    "myst-parser",
+    "ipdb",
+    "line-profiler",
+    "memory-profiler",
+    "py-spy",
+    "snakeviz",
+    "pyinstrument",
+    "scalene",
+    "pre-commit",
+    "commitizen",
+    "bumpversion",
+    "pipdeptree",
+    "rope",
+    "astor",
+    "yapf",
+    "pip-audit",
+    "nodeenv",
+    "twine",
+    "setuptools-scm",
+    "poetry",
+    "pycallgraph2",
+    "pre-commit-hooks",
+    "detect-secrets",
+]
 
 [project.urls]
 Homepage = "https://github.com/zacharyflint/intellicrack"
@@ -47,6 +170,167 @@ intellicrack = "intellicrack.main:main"
 
 [project.gui-scripts]
 intellicrack-gui = "intellicrack.main:main"
+
+[tool.pixi.workspace]
+name = "Intellicrack"
+version = "1.0.0"
+description = "Intellicrack: AI-powered reverse engineering orchestration platform"
+authors = ["Zachary Flint <zach.flint2@gmail.com>"]
+channels = ["conda-forge"]
+platforms = ["win-64"]
+preview = ["pixi-build"]
+
+[tool.pixi.dependencies]
+python = "3.13.*"
+git = "*"
+pip = "*"
+wheel = "*"
+setuptools = "*"
+just = "*"
+networkx = ">=3.6.1,<4"
+shellcheck = "*"
+nodejs = "*"
+yarn = "*"
+markdownlint-cli = "*"
+pixi-pycharm = "*"
+anyio = "*"
+types-requests = "*"
+types-pyyaml = "*"
+pytest = "*"
+rich = "*"
+mypy = "*"
+markdown-it-py = ">=3.0,<4"
+
+[tool.pixi.pypi-dependencies]
+intellicrack = { path = ".", editable = true }
+anthropic = "*"
+openai = "*"
+google-genai = "*"
+ollama = "*"
+httpx = "*"
+PyQt6 = "*"
+qdarkstyle = "*"
+pygments = "*"
+pefile = "*"
+lief = "*"
+capstone = "*"
+keystone-engine = "*"
+frida = "*"
+frida-tools = "*"
+r2pipe = "*"
+ghidra-bridge = "*"
+python-dotenv = "*"
+tomli = "*"
+tomli-w = "*"
+aiofiles = "*"
+aiosqlite = "*"
+pydantic = "*"
+build = "*"
+pyclean = "*"
+black = "*"
+pylint = "*"
+autopep8 = "*"
+flake8 = "*"
+ruff = "*"
+isort = "*"
+pycodestyle = "*"
+bandit = "*"
+blinter = "*"
+vulture = "*"
+pyupgrade = "*"
+pydocstyle = "*"
+sourcery = "*"
+wemake-python-styleguide = "*"
+darglint = "*"
+pyroma = "*"
+mypy-extensions = "*"
+dead = "*"
+uncalled = "*"
+deadcode = "*"
+pygount = "*"
+pytest-deadfixtures = "*"
+basedpyright = "*"
+monkeytype = "*"
+ty = "*"
+mccabe = "*"
+xenon = "*"
+safety = "*"
+yamllint = "*"
+jsonlint = "*"
+pytest-cov = "*"
+pytest-mock = "*"
+pytest-asyncio = "*"
+pytest-xdist = "*"
+pytest-timeout = "*"
+pytest-qt = "*"
+pytest-benchmark = "*"
+pytest-html = "*"
+pytest-randomly = "*"
+pytest-sugar = "*"
+pytest-env = "*"
+pytest-instafail = "*"
+hypothesis = "*"
+tox = "*"
+nox = "*"
+coverage = "*"
+freezegun = "*"
+responses = "*"
+faker = "*"
+radon = "*"
+sphinx = "*"
+sphinx-rtd-theme = "*"
+sphinx-autodoc-typehints = "*"
+sphinx-copybutton = "*"
+sphinx-tabs = "*"
+sphinxcontrib-mermaid = "*"
+sphinx-autobuild = "*"
+pdoc3 = "*"
+mkdocs-material = "*"
+pymdown-extensions = "*"
+myst-parser = "*"
+ipdb = "*"
+line-profiler = "*"
+memory-profiler = "*"
+py-spy = "*"
+snakeviz = "*"
+pyinstrument = "*"
+scalene = "*"
+pre-commit = "*"
+commitizen = "*"
+bumpversion = "*"
+pipdeptree = "*"
+rope = "*"
+astor = "*"
+yapf = "*"
+pip-audit = "*"
+nodeenv = "*"
+twine = "*"
+setuptools-scm = "*"
+poetry = "*"
+pycallgraph2 = "*"
+pre-commit-hooks = "*"
+detect-secrets = "*"
+mcp = ">=1.2.0"
+pyannotate = ">=1.2.0,<2"
+structlog = ">=24.1.0"
+transformers = ">=4.40.0"
+accelerate = ">=0.30.0"
+bitsandbytes = ">=0.43.0"
+sentencepiece = "*"
+safetensors = "*"
+
+[tool.pixi.pypi-options]
+extra-index-urls = ["https://download.pytorch.org/whl/xpu"]
+index-strategy = "unsafe-best-match"
+
+[tool.pixi.tasks]
+dev = "python -m intellicrack"
+gui = "python -m intellicrack.ui.app"
+test = "just test"
+lint = "just lint"
+format = "just ruff-fmt"
+typecheck = "just basedpyright"
+pyright = "basedpyright"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -141,7 +425,7 @@ exclude = [
     "^\\.idea/",
     "^\\.vscode/",
     "^node_modules/",
-    "^CLI\\ Coding/",
+    "^CLI Coding/",
     "^Screenshots/",
 ]
 
@@ -165,8 +449,8 @@ module = [
 ]
 disable_error_code = ["attr-defined", "misc", "no-any-return", "redundant-cast", "unused-ignore"]
 
-[tool.pyright]
-include = ["src/intellicrack", "tests"]
+[tool.basedpyright]
+include = ["src/intellicrack"]
 exclude = [
     "**/__pycache__",
     "**/node_modules",
@@ -202,12 +486,7 @@ reportMissingTypeStubs = false
 reportMissingModuleSource = "warning"
 reportUndefinedVariable = "error"
 reportGeneralTypeIssues = "error"
-
-[[tool.pyright.executionEnvironments]]
-root = "."
-pythonVersion = "3.13"
-pythonPlatform = "Windows"
-extraPaths = ["."]
+extraPaths = ["d:/intellicrack/src"]
 
 [tool.ruff]
 line-length = 140

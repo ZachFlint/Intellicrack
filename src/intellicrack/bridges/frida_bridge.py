@@ -9,9 +9,10 @@ from __future__ import annotations
 import asyncio
 import uuid
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import frida
+from frida.core import ScriptMessage
 
 from ..core.logging import get_logger
 from ..core.process_manager import ProcessManager, ProcessType
@@ -35,7 +36,7 @@ from .base import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
 
 _logger = get_logger("bridges.frida")
 
@@ -371,9 +372,20 @@ class FridaBridge(InstrumentationBridge):
         del tool_path
         try:
             self._device = await asyncio.to_thread(frida.get_local_device)
-            self._state = BridgeState(connected=True, tool_running=True)
+            self._state = BridgeState(
+                connected=True,
+                tool_running=True,
+                binary_loaded=False,
+                process_attached=False,
+                target_path=None,
+                target_pid=None,
+                last_error=None,
+            )
             _logger.info("frida_bridge_initialized")
         except Exception as e:
+            self._state.connected = False
+            self._state.tool_running = False
+            self._state.last_error = str(e)
             raise ToolError(_ERR_INIT_FAILED) from e
 
     async def shutdown(self) -> None:
@@ -443,12 +455,11 @@ class FridaBridge(InstrumentationBridge):
                 pid,
             )
             self._pid = pid
-            self._state = BridgeState(
-                connected=True,
-                tool_running=True,
-                process_attached=True,
-                target_pid=pid,
-            )
+            self._state.connected = True
+            self._state.tool_running = True
+            self._state.process_attached = True
+            self._state.target_pid = pid
+
             _logger.info("process_attached", extra={"pid": pid})
         except frida.ProcessNotFoundError as e:
             raise ToolError(_ERR_PROCESS_NOT_FOUND) from e
@@ -495,18 +506,17 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_ATTACH_FAILED) from e
 
         self._pid = target_pid
-        self._state = BridgeState(
-            connected=True,
-            tool_running=True,
-            process_attached=True,
-            target_pid=self._pid,
-        )
+        self._state.connected = True
+        self._state.tool_running = True
+        self._state.process_attached = True
+        self._state.target_pid = self._pid
+
         _logger.info("process_attached_by_name", extra={"process_name": name, "pid": self._pid})
 
     async def spawn(
         self,
         path: Path,
-        args: list[str] | None = None,
+        args: Sequence[str] | None = None,
     ) -> int:
         """Spawn a new process with Frida instrumentation.
 
@@ -528,7 +538,7 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_DEVICE_FAILED)
 
         try:
-            spawn_argv: list[str] = [str(path)]
+            spawn_argv: list[str | bytes] = [str(path)]
             if args:
                 spawn_argv.extend(args)
 
@@ -552,13 +562,12 @@ class FridaBridge(InstrumentationBridge):
                 metadata={"path": str(path), "args": args or []},
             )
 
-            self._state = BridgeState(
-                connected=True,
-                tool_running=True,
-                process_attached=True,
-                target_path=path,
-                target_pid=pid,
-            )
+            self._state.connected = True
+            self._state.tool_running = True
+            self._state.process_attached = True
+            self._state.target_path = path
+            self._state.target_pid = pid
+
             _logger.info("process_spawned", extra={"process_name": path.name, "pid": pid})
         except Exception as e:
             raise ToolError(_ERR_ATTACH_FAILED) from e
@@ -613,7 +622,11 @@ class FridaBridge(InstrumentationBridge):
 
             self._pid = None
             self._hooks = {}
-            self._state = BridgeState(connected=True, tool_running=True)
+            self._state.connected = True
+            self._state.tool_running = True
+            self._state.process_attached = False
+            self._state.target_pid = None
+
             _logger.info("process_detached")
         except Exception as e:
             raise ToolError(_ERR_NOT_ATTACHED) from e
@@ -644,9 +657,11 @@ class FridaBridge(InstrumentationBridge):
         if "error" in result:
             raise ToolError(_ERR_READ_FAILED)
 
-        data = result.get("data")
-        if isinstance(data, (list, bytes, bytearray)):
-            return bytes(data)
+        read_data = result.get("data")
+        if isinstance(read_data, (bytes, bytearray)):
+            return bytes(read_data)
+        if isinstance(read_data, list):
+            return bytes(cast(list[int], read_data))
 
         raise ToolError(_ERR_READ_FAILED)
 
@@ -712,11 +727,12 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_READ_FAILED)
 
         regions: list[MemoryRegion] = []
-        data_list = result.get("data", [])
-        if isinstance(data_list, list):
-            for r in data_list:
-                if not isinstance(r, dict):
+        range_data = result.get("data", [])
+        if isinstance(range_data, list):
+            for raw_item in cast("list[object]", range_data):
+                if not isinstance(raw_item, dict):
                     continue
+                r = cast(dict[str, object], raw_item)
                 base_str = str(r.get("base", "0"))
                 base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
                 size_val = r.get("size", 0)
@@ -725,7 +741,7 @@ class FridaBridge(InstrumentationBridge):
                 regions.append(
                     MemoryRegion(
                         base_address=base,
-                        size=int(size_val) if size_val is not None else 0,
+                        size=int(size_val) if isinstance(size_val, (int, float)) else 0,
                         protection=str(protection_val) if protection_val else "",
                         state="MEM_COMMIT",
                         type="MEM_PRIVATE",
@@ -775,11 +791,12 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_READ_FAILED)
 
         matches: list[MemorySearchResult] = []
-        data_list = result.get("data", [])
-        if isinstance(data_list, list):
-            for m in data_list:
-                if not isinstance(m, dict):
+        scan_data = result.get("data", [])
+        if isinstance(scan_data, list):
+            for raw_match in cast("list[object]", scan_data):
+                if not isinstance(raw_match, dict):
                     continue
+                m = cast(dict[str, object], raw_match)
                 addr_str = str(m.get("address", "0"))
                 addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
                 matches.append(
@@ -824,11 +841,12 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_MODULE_NOT_FOUND)
 
         modules: list[ModuleInfo] = []
-        data_list = result.get("data", [])
-        if isinstance(data_list, list):
-            for m in data_list:
-                if not isinstance(m, dict):
+        mod_data = result.get("data", [])
+        if isinstance(mod_data, list):
+            for raw_mod in cast("list[object]", mod_data):
+                if not isinstance(raw_mod, dict):
                     continue
+                m = cast(dict[str, object], raw_mod)
                 base_str = str(m.get("base", "0"))
                 base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
                 name_val = m.get("name", "")
@@ -839,7 +857,7 @@ class FridaBridge(InstrumentationBridge):
                         name=str(name_val) if name_val else "",
                         path=Path(str(path_val) if path_val else ""),
                         base_address=base,
-                        size=int(size_val) if size_val is not None else 0,
+                        size=int(size_val) if isinstance(size_val, (int, float)) else 0,
                         entry_point=0,
                     )
                 )
@@ -879,11 +897,12 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_EXPORT_NOT_FOUND)
 
         exports: list[ExportInfo] = []
-        data_list = result.get("data", [])
-        if isinstance(data_list, list):
-            for idx, e in enumerate(data_list):
-                if not isinstance(e, dict):
+        export_data = result.get("data", [])
+        if isinstance(export_data, list):
+            for idx, raw_export in enumerate(cast("list[object]", export_data)):
+                if not isinstance(raw_export, dict):
                     continue
+                e = cast(dict[str, object], raw_export)
                 addr_str = str(e.get("address", "0"))
                 addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
                 name_val = e.get("name", "")
@@ -947,14 +966,14 @@ class FridaBridge(InstrumentationBridge):
 
         script = await asyncio.to_thread(self._session.create_script, script_code)
 
-        messages: list[dict[str, Any]] = []
+        messages: list[ScriptMessage] = []
 
-        def on_message(message: dict[str, Any], data: bytes | None) -> None:
+        def on_message(message: ScriptMessage, data: bytes | None) -> None:
             del data
             messages.append(message)
             if self._message_handler:
-                msg_typed: dict[str, object] = {str(k): v for k, v in message.items()}
-                self._message_handler(msg_typed)
+                raw: dict[str, object] = dict(cast(dict[str, object], message))
+                self._message_handler(raw)
 
         script.on("message", on_message)
         await asyncio.to_thread(script.load)
@@ -963,12 +982,14 @@ class FridaBridge(InstrumentationBridge):
 
         address: int | None = None
         for msg in messages:
-            if msg.get("type") == "send":
+            if msg["type"] == "send":
                 payload = msg.get("payload", {})
-                if isinstance(payload, dict) and payload.get("type") == "hooked":
-                    addr_str = payload.get("address", "0")
-                    if isinstance(addr_str, str):
-                        address = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+                if isinstance(payload, dict):
+                    payload_dict = cast(dict[str, object], payload)
+                    if payload_dict.get("type") == "hooked":
+                        addr_val = payload_dict.get("address", "0")
+                        if isinstance(addr_val, str):
+                            address = int(addr_val, 16) if addr_val.startswith("0x") else int(addr_val)
 
         self._scripts[hook_id] = script
 
@@ -1052,7 +1073,7 @@ class FridaBridge(InstrumentationBridge):
     async def call_function(
         self,
         address: int,
-        args: list[int] | None = None,
+        args: Sequence[int] | None = None,
     ) -> int:
         """Call a function in the target process.
 
@@ -1094,7 +1115,7 @@ class FridaBridge(InstrumentationBridge):
         self,
         script_code: str,
         timeout: float = 5.0,
-    ) -> dict[str, object]:
+    ) -> dict[str, Any]:
         """Execute a script and wait for result.
 
         Args:
@@ -1110,19 +1131,19 @@ class FridaBridge(InstrumentationBridge):
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
-        result: dict[str, object] = {}
+        result: dict[str, Any] = {}
         event = asyncio.Event()
 
-        def on_message(message: dict[str, Any], data: bytes | None) -> None:
-            if message.get("type") == "send":
+        def on_message(message: ScriptMessage, data: bytes | None) -> None:
+            if message["type"] == "send":
                 payload = message.get("payload", {})
                 if isinstance(payload, dict):
-                    for k, v in payload.items():
-                        result[str(k)] = v
+                    for k_str, v_any in cast(dict[str, object], payload).items():
+                        result[k_str] = v_any
                     if data:
                         result["data"] = list(data)
-            elif message.get("type") == "error":
-                result["error"] = message.get("description", "Unknown error")
+            elif message["type"] == "error":
+                result["error"] = message["description"]
             event.set()
 
         script = await asyncio.to_thread(self._session.create_script, script_code)

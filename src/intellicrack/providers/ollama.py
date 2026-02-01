@@ -10,7 +10,7 @@ import json
 import time
 from datetime import datetime
 from http import HTTPStatus
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import httpx
 
@@ -436,18 +436,23 @@ class OllamaProvider(LLMProviderBase):
                 for idx, tc in enumerate(data["message"]["tool_calls"]):
                     func_data = tc.get("function", {})
                     func_name = func_data.get("name", "")
-                    args = func_data.get("arguments", {})
-                    if isinstance(args, str):
+                    raw_args = func_data.get("arguments", {})
+                    parsed_args: dict[str, Any]
+                    if isinstance(raw_args, str):
                         try:
-                            args = json.loads(args)
+                            parsed_args = json.loads(raw_args)
                         except json.JSONDecodeError:
-                            args = {}
+                            parsed_args = {}
+                    elif isinstance(raw_args, dict):
+                        parsed_args = cast("dict[str, Any]", raw_args)
+                    else:
+                        parsed_args = {}
 
                     tool_call = ToolCall(
                         id=f"call_{idx}",
                         tool_name=(func_name.split(".")[0] if "." in func_name else func_name),
                         function_name=func_name,
-                        arguments=args,
+                        arguments=parsed_args,
                     )
                     tool_calls.append(tool_call)
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 
 if TYPE_CHECKING:
@@ -56,7 +56,7 @@ def main() -> int:  # noqa: PLR0914
         return 1
 
     app = QApplication(sys.argv)
-    qt_app: Any = QApplication
+    qt_app: type[QApplication] = QApplication
     qt_app.setApplicationName("Intellicrack")
     qt_app.setApplicationVersion("2.0.0")
     app.setStyle("Fusion")

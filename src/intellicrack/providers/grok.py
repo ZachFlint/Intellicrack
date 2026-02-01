@@ -11,7 +11,7 @@ import asyncio
 import json
 import time
 from datetime import datetime
-from typing import TYPE_CHECKING, TypedDict, cast
+from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 import openai
 
@@ -293,9 +293,9 @@ class GrokProvider(LLMProviderBase):
                     if tc_function is None:
                         continue
                     try:
-                        arguments = json.loads(tc_function.arguments)
+                        parsed_args: dict[str, Any] = json.loads(tc_function.arguments)
                     except json.JSONDecodeError:
-                        arguments = {}
+                        parsed_args = {}
 
                     func_name = tc_function.name
                     tool_name = func_name.split(".")[0] if "." in func_name else func_name
@@ -303,7 +303,7 @@ class GrokProvider(LLMProviderBase):
                         id=tc.id,
                         tool_name=tool_name,
                         function_name=func_name,
-                        arguments=arguments,
+                        arguments=parsed_args,
                     )
                     tool_calls.append(tool_call)
 
