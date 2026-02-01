@@ -39,34 +39,194 @@ class ToolWidget(Protocol):
     """Protocol for embedded tool widgets."""
 
     @property
-    def tool_started(self) -> Any: ...
-    @property
-    def tool_closed(self) -> Any: ...
+    def tool_started(self) -> Any:
+        """Get the signal emitted when the tool process starts."""
+        return None
 
-    def start_tool(self) -> bool: ...
-    def stop_tool(self) -> bool: ...
+    @property
+    def tool_closed(self) -> Any:
+        """Get the signal emitted when the tool process closes."""
+        return None
+
+    def start_tool(self) -> bool:
+        """Launch the external tool process.
+
+        Returns:
+            True if the tool was started successfully.
+        """
+        _ = self
+        return False
+
+    def stop_tool(self) -> bool:
+        """Terminate the external tool process.
+
+        Returns:
+            True if the tool was stopped successfully.
+        """
+        _ = self
+        return False
 
 
 @runtime_checkable
 class HxDWidgetProtocol(ToolWidget, Protocol):
-    def load_file(self, file_path: Path) -> bool: ...
+    """Protocol for HxD hex editor widget integration."""
+
+    def load_file(self, file_path: Path) -> bool:
+        """Load a file into the hex editor.
+
+        Args:
+            file_path: Path to the file to open.
+
+        Returns:
+            True if the file was loaded successfully.
+        """
+        _ = (self, file_path)
+        return False
 
 
 @runtime_checkable
 class X64DbgWidgetProtocol(ToolWidget, Protocol):
-    def debug_file(self, file_path: Path) -> bool: ...
+    """Protocol for x64dbg debugger widget integration."""
+
+    def debug_file(self, file_path: Path) -> bool:
+        """Launch a file in the debugger.
+
+        Args:
+            file_path: Path to the executable to debug.
+
+        Returns:
+            True if debugging was started successfully.
+        """
+        _ = (self, file_path)
+        return False
 
 
 @runtime_checkable
 class CutterWidgetProtocol(ToolWidget, Protocol):
-    def analyze_binary(self, file_path: Path) -> bool: ...
+    """Protocol for Cutter reverse engineering widget integration."""
+
+    def analyze_binary(self, file_path: Path) -> bool:
+        """Open a binary for analysis in Cutter.
+
+        Args:
+            file_path: Path to the binary to analyze.
+
+        Returns:
+            True if analysis was started successfully.
+        """
+        _ = (self, file_path)
+        return False
+
+
+@runtime_checkable
+class GhidraWidgetProtocol(ToolWidget, Protocol):
+    """Protocol for Ghidra reverse engineering widget integration."""
+
+    def load_binary(self, binary_path: Path) -> bool:
+        """Load a binary into Ghidra for analysis.
+
+        Args:
+            binary_path: Path to the binary to analyze.
+
+        Returns:
+            True if the binary was loaded successfully.
+        """
+        _ = (self, binary_path)
+        return False
+
+
+@runtime_checkable
+class Radare2WidgetProtocol(ToolWidget, Protocol):
+    """Protocol for radare2/iaito GUI widget integration."""
+
+    def analyze_binary(self, binary_path: Path) -> bool:
+        """Load and analyze a binary in the radare2 GUI.
+
+        Args:
+            binary_path: Path to the binary to analyze.
+
+        Returns:
+            True if analysis was started successfully.
+        """
+        _ = (self, binary_path)
+        return False
+
+
+@runtime_checkable
+class FridaPanelProtocol(ToolWidget, Protocol):
+    """Protocol for Frida instrumentation panel."""
+
+    def set_bridge(self, bridge: Any) -> None:
+        """Set the FridaBridge instance.
+
+        Args:
+            bridge: FridaBridge instance for instrumentation.
+        """
+        _ = (self, bridge)
+
+    def log_message(self, message: str) -> None:
+        """Append a message to the console output.
+
+        Args:
+            message: Text to display.
+        """
+        _ = (self, message)
+
+
+@runtime_checkable
+class ProcessPanelProtocol(ToolWidget, Protocol):
+    """Protocol for process management panel."""
+
+    def get_selected_pid(self) -> int | None:
+        """Get the currently selected process ID.
+
+        Returns:
+            The selected PID or None.
+        """
+        _ = self
+        return None
+
+
+@runtime_checkable
+class BinaryPanelProtocol(ToolWidget, Protocol):
+    """Protocol for binary hex viewer and patching panel."""
+
+    def load_file(self, file_path: Path | str) -> bool:
+        """Load a binary file for viewing and patching.
+
+        Args:
+            file_path: Path to the binary file.
+
+        Returns:
+            True if the file was loaded successfully.
+        """
+        _ = (self, file_path)
+        return False
+
+
+@runtime_checkable
+class SandboxPanelProtocol(ToolWidget, Protocol):
+    """Protocol for sandbox management panel."""
+
+    def set_sandbox(self, sandbox: Any) -> None:
+        """Set the sandbox backend instance.
+
+        Args:
+            sandbox: SandboxBase implementation.
+        """
+        _ = (self, sandbox)
 
 
 @runtime_checkable
 class AnalysisPanel(Protocol):
     """Protocol for analysis panels."""
 
-    def set_analysis(self, analysis: "LicensingAnalysis") -> None: ...
+    def set_analysis(self, analysis: LicensingAnalysis) -> None:
+        """Update the panel with new licensing analysis data.
+
+        Args:
+            analysis: The licensing analysis results to display.
+        """
 
 
 if TYPE_CHECKING:
@@ -87,6 +247,9 @@ OutputType = Literal[
     "stack",
     "hxd",
     "cutter",
+    "process",
+    "binary",
+    "sandbox",
 ]
 
 
@@ -691,6 +854,12 @@ class ToolOutputPanel(QFrame):
         self._hxd_widget: HxDWidgetProtocol | None = None
         self._x64dbg_widget: X64DbgWidgetProtocol | None = None
         self._cutter_widget: CutterWidgetProtocol | None = None
+        self._ghidra_widget: GhidraWidgetProtocol | None = None
+        self._radare2_widget: Radare2WidgetProtocol | None = None
+        self._frida_panel: FridaPanelProtocol | None = None
+        self._process_panel: ProcessPanelProtocol | None = None
+        self._binary_panel: BinaryPanelProtocol | None = None
+        self._sandbox_panel: SandboxPanelProtocol | None = None
 
     def add_licensing_panel(self) -> LicensingAnalysisPanel:
         """Add the licensing analysis panel as a tab.
@@ -755,11 +924,11 @@ class ToolOutputPanel(QFrame):
         try:
             from .embedding.hxd_widget import HxDWidget  # noqa: PLC0415
 
-            self._hxd_widget = cast(HxDWidgetProtocol, HxDWidget())
+            self._hxd_widget = cast("HxDWidgetProtocol", HxDWidget())
             self._hxd_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("hxd"))
             self._hxd_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("hxd"))
-            self._tab_widget.addTab(cast(QWidget, self._hxd_widget), "HxD")
-            self._embedded_tools["hxd"] = cast(QWidget, self._hxd_widget)
+            self._tab_widget.addTab(cast("QWidget", self._hxd_widget), "HxD")
+            self._embedded_tools["hxd"] = cast("QWidget", self._hxd_widget)
             _logger.info("hxd_tab_added")
         except Exception as e:
             _logger.warning("hxd_tab_add_failed", extra={"error": str(e)})
@@ -782,12 +951,12 @@ class ToolOutputPanel(QFrame):
         try:
             from .embedding.x64dbg_widget import X64DbgWidget  # noqa: PLC0415
 
-            self._x64dbg_widget = cast(X64DbgWidgetProtocol, X64DbgWidget(use_64bit=is_64bit))
+            self._x64dbg_widget = cast("X64DbgWidgetProtocol", X64DbgWidget(use_64bit=is_64bit))
             self._x64dbg_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("x64dbg"))
             self._x64dbg_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("x64dbg"))
             tab_name = "x64dbg" if is_64bit else "x32dbg"
-            self._tab_widget.addTab(cast(QWidget, self._x64dbg_widget), tab_name)
-            self._embedded_tools["x64dbg"] = cast(QWidget, self._x64dbg_widget)
+            self._tab_widget.addTab(cast("QWidget", self._x64dbg_widget), tab_name)
+            self._embedded_tools["x64dbg"] = cast("QWidget", self._x64dbg_widget)
             _logger.info("x64dbg_tab_added", extra={"is_64bit": is_64bit})
         except Exception as e:
             _logger.warning("x64dbg_tab_add_failed", extra={"error": str(e)})
@@ -807,17 +976,229 @@ class ToolOutputPanel(QFrame):
         try:
             from .embedding.cutter_widget import CutterWidget  # noqa: PLC0415
 
-            self._cutter_widget = cast(CutterWidgetProtocol, CutterWidget())
+            self._cutter_widget = cast("CutterWidgetProtocol", CutterWidget())
             self._cutter_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("cutter"))
             self._cutter_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("cutter"))
-            self._tab_widget.addTab(cast(QWidget, self._cutter_widget), "Cutter")
-            self._embedded_tools["cutter"] = cast(QWidget, self._cutter_widget)
+            self._tab_widget.addTab(cast("QWidget", self._cutter_widget), "Cutter")
+            self._embedded_tools["cutter"] = cast("QWidget", self._cutter_widget)
             _logger.info("cutter_tab_added")
         except Exception as e:
             _logger.warning("cutter_tab_add_failed", extra={"error": str(e)})
             return None
         else:
             return self._cutter_widget
+
+    def add_ghidra_tab(self) -> GhidraWidgetProtocol | None:
+        """Add the Ghidra reverse engineering tool as an embedded tab.
+
+        Returns:
+            The created GhidraWidget or None if creation failed.
+        """
+        if self._ghidra_widget is not None:
+            return self._ghidra_widget
+
+        try:
+            from .embedding.ghidra_widget import GhidraWidget  # noqa: PLC0415
+
+            self._ghidra_widget = cast("GhidraWidgetProtocol", GhidraWidget())
+            self._ghidra_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("ghidra"))
+            self._ghidra_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("ghidra"))
+            self._tab_widget.addTab(cast("QWidget", self._ghidra_widget), "Ghidra (Embed)")
+            self._embedded_tools["ghidra"] = cast("QWidget", self._ghidra_widget)
+            _logger.info("ghidra_tab_added")
+        except Exception as e:
+            _logger.warning("ghidra_tab_add_failed", extra={"error": str(e)})
+            return None
+        else:
+            return self._ghidra_widget
+
+    def add_radare2_tab(self) -> Radare2WidgetProtocol | None:
+        """Add the radare2/iaito GUI as an embedded tab.
+
+        Returns:
+            The created Radare2Widget or None if creation failed.
+        """
+        if self._radare2_widget is not None:
+            return self._radare2_widget
+
+        try:
+            from .embedding.radare2_widget import Radare2Widget  # noqa: PLC0415
+
+            self._radare2_widget = cast("Radare2WidgetProtocol", Radare2Widget())
+            self._radare2_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("radare2"))
+            self._radare2_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("radare2"))
+            self._tab_widget.addTab(cast("QWidget", self._radare2_widget), "radare2")
+            self._embedded_tools["radare2_gui"] = cast("QWidget", self._radare2_widget)
+            _logger.info("radare2_tab_added")
+        except Exception as e:
+            _logger.warning("radare2_tab_add_failed", extra={"error": str(e)})
+            return None
+        else:
+            return self._radare2_widget
+
+    def add_frida_tab(self) -> FridaPanelProtocol | None:
+        """Add the Frida instrumentation panel as a tab.
+
+        Returns:
+            The created FridaPanel or None if creation failed.
+        """
+        if self._frida_panel is not None:
+            return self._frida_panel
+
+        try:
+            from .panels.frida_panel import FridaPanel  # noqa: PLC0415
+
+            self._frida_panel = cast("FridaPanelProtocol", FridaPanel())
+            self._frida_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("frida"))
+            self._frida_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("frida"))
+            self._tab_widget.addTab(cast("QWidget", self._frida_panel), "Frida")
+            self._panels["frida"] = cast("QWidget", self._frida_panel)
+            _logger.info("frida_tab_added")
+        except Exception as e:
+            _logger.warning("frida_tab_add_failed", extra={"error": str(e)})
+            return None
+        else:
+            return self._frida_panel
+
+    def add_process_tab(self) -> ProcessPanelProtocol | None:
+        """Add the process management panel as a tab.
+
+        Returns:
+            The created ProcessPanel or None if creation failed.
+        """
+        if self._process_panel is not None:
+            return self._process_panel
+
+        try:
+            from .panels.process_panel import ProcessPanel  # noqa: PLC0415
+
+            self._process_panel = cast("ProcessPanelProtocol", ProcessPanel())
+            self._process_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("process"))
+            self._process_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("process"))
+            self._tab_widget.addTab(cast("QWidget", self._process_panel), "Process")
+            self._panels["process"] = cast("QWidget", self._process_panel)
+            _logger.info("process_tab_added")
+        except Exception as e:
+            _logger.warning("process_tab_add_failed", extra={"error": str(e)})
+            return None
+        else:
+            return self._process_panel
+
+    def add_binary_tab(self) -> BinaryPanelProtocol | None:
+        """Add the binary hex viewer and patching panel as a tab.
+
+        Returns:
+            The created BinaryPanel or None if creation failed.
+        """
+        if self._binary_panel is not None:
+            return self._binary_panel
+
+        try:
+            from .panels.binary_panel import BinaryPanel  # noqa: PLC0415
+
+            self._binary_panel = cast("BinaryPanelProtocol", BinaryPanel())
+            self._binary_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("binary"))
+            self._binary_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("binary"))
+            self._tab_widget.addTab(cast("QWidget", self._binary_panel), "Binary")
+            self._panels["binary"] = cast("QWidget", self._binary_panel)
+            _logger.info("binary_tab_added")
+        except Exception as e:
+            _logger.warning("binary_tab_add_failed", extra={"error": str(e)})
+            return None
+        else:
+            return self._binary_panel
+
+    def add_sandbox_tab(self) -> SandboxPanelProtocol | None:
+        """Add the sandbox management panel as a tab.
+
+        Returns:
+            The created SandboxPanel or None if creation failed.
+        """
+        if self._sandbox_panel is not None:
+            return self._sandbox_panel
+
+        try:
+            from .panels.sandbox_panel import SandboxPanel  # noqa: PLC0415
+
+            self._sandbox_panel = cast("SandboxPanelProtocol", SandboxPanel())
+            self._sandbox_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("sandbox"))
+            self._sandbox_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("sandbox"))
+            self._tab_widget.addTab(cast("QWidget", self._sandbox_panel), "Sandbox")
+            self._panels["sandbox"] = cast("QWidget", self._sandbox_panel)
+            _logger.info("sandbox_tab_added")
+        except Exception as e:
+            _logger.warning("sandbox_tab_add_failed", extra={"error": str(e)})
+            return None
+        else:
+            return self._sandbox_panel
+
+    def open_in_ghidra(self, file_path: Path | str) -> bool:
+        """Open a file in the embedded Ghidra tool.
+
+        Args:
+            file_path: Path to the binary to analyze.
+
+        Returns:
+            True if the file was opened successfully.
+        """
+        if self._ghidra_widget is None:
+            widget = self.add_ghidra_tab()
+            if widget is None:
+                return False
+
+        if self._ghidra_widget is None:
+            return False
+
+        path = Path(file_path) if isinstance(file_path, str) else file_path
+        success = self._ghidra_widget.load_binary(path)
+        if success:
+            self._activate_tab_by_widget(cast("QWidget", self._ghidra_widget))
+        return success
+
+    def open_in_radare2(self, file_path: Path | str) -> bool:
+        """Open a file in the embedded radare2/iaito tool.
+
+        Args:
+            file_path: Path to the binary to analyze.
+
+        Returns:
+            True if the file was opened successfully.
+        """
+        if self._radare2_widget is None:
+            widget = self.add_radare2_tab()
+            if widget is None:
+                return False
+
+        if self._radare2_widget is None:
+            return False
+
+        path = Path(file_path) if isinstance(file_path, str) else file_path
+        success = self._radare2_widget.analyze_binary(path)
+        if success:
+            self._activate_tab_by_widget(cast("QWidget", self._radare2_widget))
+        return success
+
+    def open_in_binary(self, file_path: Path | str) -> bool:
+        """Open a file in the binary hex viewer panel.
+
+        Args:
+            file_path: Path to the binary file.
+
+        Returns:
+            True if the file was opened successfully.
+        """
+        if self._binary_panel is None:
+            widget = self.add_binary_tab()
+            if widget is None:
+                return False
+
+        if self._binary_panel is None:
+            return False
+
+        success = self._binary_panel.load_file(file_path)
+        if success:
+            self._activate_tab_by_widget(cast("QWidget", self._binary_panel))
+        return success
 
     def open_in_hxd(self, file_path: Path | str) -> bool:
         """Open a file in the embedded HxD hex editor.
@@ -839,7 +1220,7 @@ class ToolOutputPanel(QFrame):
         path = Path(file_path) if isinstance(file_path, str) else file_path
         success = self._hxd_widget.load_file(path)
         if success:
-            self._activate_tab_by_widget(cast(QWidget, self._hxd_widget))
+            self._activate_tab_by_widget(cast("QWidget", self._hxd_widget))
         return success
 
     def open_in_x64dbg(
@@ -867,7 +1248,7 @@ class ToolOutputPanel(QFrame):
         path = Path(file_path) if isinstance(file_path, str) else file_path
         success = self._x64dbg_widget.debug_file(path)
         if success:
-            self._activate_tab_by_widget(cast(QWidget, self._x64dbg_widget))
+            self._activate_tab_by_widget(cast("QWidget", self._x64dbg_widget))
         return success
 
     def open_in_cutter(self, file_path: Path | str) -> bool:
@@ -890,7 +1271,7 @@ class ToolOutputPanel(QFrame):
         path = Path(file_path) if isinstance(file_path, str) else file_path
         success = self._cutter_widget.analyze_binary(path)
         if success:
-            self._activate_tab_by_widget(cast(QWidget, self._cutter_widget))
+            self._activate_tab_by_widget(cast("QWidget", self._cutter_widget))
         return success
 
     def _activate_tab_by_widget(self, widget: QWidget) -> None:
@@ -969,5 +1350,23 @@ class ToolOutputPanel(QFrame):
 
         if self._cutter_widget is not None:
             self._cutter_widget.stop_tool()
+
+        if self._ghidra_widget is not None:
+            self._ghidra_widget.stop_tool()
+
+        if self._radare2_widget is not None:
+            self._radare2_widget.stop_tool()
+
+        if self._frida_panel is not None:
+            self._frida_panel.stop_tool()
+
+        if self._process_panel is not None:
+            self._process_panel.stop_tool()
+
+        if self._binary_panel is not None:
+            self._binary_panel.stop_tool()
+
+        if self._sandbox_panel is not None:
+            self._sandbox_panel.stop_tool()
 
         _logger.info("embedded_tools_closed")

@@ -13,8 +13,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
-from PyQt6.QtGui import QAction, QCloseEvent
+from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
+    QApplication,
     QComboBox,
     QFileDialog,
     QHBoxLayout,
@@ -45,6 +46,8 @@ from .tools import ToolOutputPanel
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
+
+    from PyQt6.QtGui import QCloseEvent
 
     from ..core.config import Config
     from ..core.orchestrator import Orchestrator
@@ -145,7 +148,44 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("Intellicrack")
         self.setWindowIcon(self._icon_manager.get_app_icon())
-        self.resize(1400, 900)
+
+        self._apply_smart_window_size()
+
+    def _apply_smart_window_size(self) -> None:
+        """Size and center the window based on available screen geometry.
+
+        Detects the primary monitor's usable area (excluding taskbar) and
+        sizes the window slightly smaller with a small margin. Caps at
+        1400x900 on large screens and floors at 800x600 minimum. Falls
+        back to 1400x900 if screen detection fails.
+        """
+        max_w, max_h = 1400, 900
+        min_w, min_h = 800, 600
+        margin_w, margin_h = 6, 8
+
+        try:
+            app = QApplication.instance()
+            if app is None:
+                self.resize(max_w, max_h)
+                return
+
+            screen = app.primaryScreen()
+            if screen is None:
+                self.resize(max_w, max_h)
+                return
+
+            available = screen.availableGeometry()
+            target_w = max(min_w, min(max_w, available.width() - margin_w))
+            target_h = max(min_h, min(max_h, available.height() - margin_h))
+
+            self.resize(target_w, target_h)
+
+            center_x = available.x() + (available.width() - target_w) // 2
+            center_y = available.y() + (available.height() - target_h) // 2
+            self.move(center_x, center_y)
+        except Exception:
+            _logger.debug("screen_detection_failed_using_default_size")
+            self.resize(max_w, max_h)
 
     def _setup_ui(self) -> None:
         """Set up the main UI layout."""
@@ -380,6 +420,42 @@ class MainWindow(QMainWindow):
         self._hxd_btn.setToolTip("Open HxD Hex Editor")
         self._hxd_btn.clicked.connect(self._on_open_hxd)
         toolbar.addWidget(self._hxd_btn)
+
+        self._ghidra_btn = QPushButton("Ghidra")
+        self._ghidra_btn.setObjectName("tool_button")
+        self._ghidra_btn.setToolTip("Open Ghidra Reverse Engineering")
+        self._ghidra_btn.clicked.connect(self._on_open_ghidra)
+        toolbar.addWidget(self._ghidra_btn)
+
+        self._radare2_btn = QPushButton("radare2")
+        self._radare2_btn.setObjectName("tool_button")
+        self._radare2_btn.setToolTip("Open radare2/iaito GUI")
+        self._radare2_btn.clicked.connect(self._on_open_radare2)
+        toolbar.addWidget(self._radare2_btn)
+
+        self._frida_btn = QPushButton("Frida")
+        self._frida_btn.setObjectName("tool_button")
+        self._frida_btn.setToolTip("Open Frida Instrumentation Panel")
+        self._frida_btn.clicked.connect(self._on_open_frida)
+        toolbar.addWidget(self._frida_btn)
+
+        self._process_btn = QPushButton("Process")
+        self._process_btn.setObjectName("tool_button")
+        self._process_btn.setToolTip("Open Process Manager")
+        self._process_btn.clicked.connect(self._on_open_process)
+        toolbar.addWidget(self._process_btn)
+
+        self._binary_btn = QPushButton("Binary")
+        self._binary_btn.setObjectName("tool_button")
+        self._binary_btn.setToolTip("Open Binary Hex Viewer")
+        self._binary_btn.clicked.connect(self._on_open_binary)
+        toolbar.addWidget(self._binary_btn)
+
+        self._sandbox_tool_btn = QPushButton("Sandbox")
+        self._sandbox_tool_btn.setObjectName("tool_button")
+        self._sandbox_tool_btn.setToolTip("Open Sandbox Manager")
+        self._sandbox_tool_btn.clicked.connect(self._on_open_sandbox_panel)
+        toolbar.addWidget(self._sandbox_tool_btn)
 
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
@@ -678,7 +754,15 @@ class MainWindow(QMainWindow):
 
     def _on_configure_providers(self) -> None:
         """Handle configure providers action."""
-        dialog = ProviderConfigDialog(parent=self)
+        from ..providers.discovery import ModelDiscovery  # noqa: PLC0415
+
+        registry = self._orchestrator.provider_registry
+        discovery = ModelDiscovery(registry)
+        dialog = ProviderConfigDialog(
+            provider_registry=registry,
+            model_discovery=discovery,
+            parent=self,
+        )
         if dialog.exec():
             settings: dict[str, dict[str, object]] = dialog.get_settings()
             self._apply_provider_settings(settings)
@@ -731,7 +815,7 @@ class MainWindow(QMainWindow):
         self._model_combo.clear()
         self._model_combo.setEnabled(False)
 
-        self._model_refresh_worker = ModelRefreshWorker(provider_id, api_key, None, self)
+        self._model_refresh_worker = ModelRefreshWorker(provider_id, api_key, parent=self)
         self._model_refresh_worker.refresh_finished.connect(self._on_models_refresh_finished)
         self._model_refresh_worker.start()
 
@@ -865,6 +949,64 @@ class MainWindow(QMainWindow):
                 "HxD",
                 "HxD executable not found. Check tools/hxd/ directory.",
             )
+
+    def _on_open_ghidra(self) -> None:
+        """Open Ghidra in embedded tab."""
+        widget = self._tool_panel.add_ghidra_tab()
+        if widget is None:
+            self._show_tool_error("Ghidra", "Failed to initialize Ghidra widget")
+            return
+        if not widget.start_tool():
+            self._show_tool_error(
+                "Ghidra",
+                "Ghidra executable not found. Set GHIDRA_HOME or check tools/ghidra/ directory.",
+            )
+
+    def _on_open_radare2(self) -> None:
+        """Open radare2/iaito GUI in embedded tab."""
+        widget = self._tool_panel.add_radare2_tab()
+        if widget is None:
+            self._show_tool_error("radare2", "Failed to initialize radare2 widget")
+            return
+        if not widget.start_tool():
+            self._show_tool_error(
+                "radare2",
+                "iaito/Cutter executable not found. Check tools/iaito/ or tools/cutter/ directory.",
+            )
+
+    def _on_open_frida(self) -> None:
+        """Open Frida instrumentation panel."""
+        panel = self._tool_panel.add_frida_tab()
+        if panel is None:
+            self._show_tool_error("Frida", "Failed to initialize Frida panel")
+            return
+        panel.start_tool()
+
+    def _on_open_process(self) -> None:
+        """Open process manager panel."""
+        panel = self._tool_panel.add_process_tab()
+        if panel is None:
+            self._show_tool_error("Process", "Failed to initialize Process panel")
+            return
+        panel.start_tool()
+
+    def _on_open_binary(self) -> None:
+        """Open binary hex viewer panel."""
+        panel = self._tool_panel.add_binary_tab()
+        if panel is None:
+            self._show_tool_error("Binary", "Failed to initialize Binary panel")
+            return
+        panel.start_tool()
+        if self._current_binary is not None:
+            self._tool_panel.open_in_binary(self._current_binary)
+
+    def _on_open_sandbox_panel(self) -> None:
+        """Open sandbox manager panel."""
+        panel = self._tool_panel.add_sandbox_tab()
+        if panel is None:
+            self._show_tool_error("Sandbox", "Failed to initialize Sandbox panel")
+            return
+        panel.start_tool()
 
     def _on_debug_current_binary(self) -> None:
         """Debug the currently loaded binary with x64dbg."""

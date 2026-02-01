@@ -115,8 +115,8 @@ class X64DbgStackSource:
             return []
 
         try:
-            _empty_trace: list[dict[str, Any]] = []
-            raw_frames: list[dict[str, Any]] = getattr(self._bridge, "get_stack_trace", lambda: _empty_trace)()
+            empty_trace: list[dict[str, Any]] = []
+            raw_frames: list[dict[str, Any]] = getattr(self._bridge, "get_stack_trace", lambda: empty_trace)()
             frames: list[StackFrame] = []
             for i, raw in enumerate(raw_frames):
                 frame = StackFrame(
@@ -188,8 +188,8 @@ class FridaStackSource:
             return self._cached_frames
 
         try:
-            _empty_bt: list[Any] = []
-            raw_frames: list[Any] = getattr(self._bridge, "get_backtrace", lambda: _empty_bt)()
+            empty_bt: list[Any] = []
+            raw_frames: list[Any] = getattr(self._bridge, "get_backtrace", lambda: empty_bt)()
             frames: list[StackFrame] = []
             for i, raw in enumerate(raw_frames):
                 if isinstance(raw, dict):

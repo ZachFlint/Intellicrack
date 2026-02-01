@@ -131,7 +131,7 @@ async def test_process_info_real(bridge: X64DbgBridge) -> None:
 
     bridge.binary_path = Path(sys.executable)
 
-    info = await bridge.get_process_info()
+    info = await bridge._get_process_info()
     assert info is not None
     assert info.pid == os.getpid()
     assert len(info.threads) > 0
@@ -139,9 +139,9 @@ async def test_process_info_real(bridge: X64DbgBridge) -> None:
     # command line might be None depending on permissions/implementation, but method should run
 
     # Check threads
-    threads = await bridge.get_threads()
+    threads = await bridge._get_threads()
     assert len(threads) > 0
 
     # Check modules
-    modules = await bridge.get_modules()
+    modules = await bridge._get_modules()
     assert len(modules) > 0

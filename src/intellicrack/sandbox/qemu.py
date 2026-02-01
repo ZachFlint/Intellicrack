@@ -1794,7 +1794,7 @@ echo $? > "/mnt/shared/output/{result_name}"
             _logger.error("snapshot_create_failed", extra={"error": result.error})
             raise SandboxError(_ERR_SNAPSHOT_CREATE)
 
-        _logger.info("snapshot_created", extra={"name": name})
+        _logger.info("snapshot_created", extra={"snapshot_name": name})
         return name
 
     async def restore_snapshot(self, snapshot_id: str) -> None:
@@ -1855,4 +1855,4 @@ echo $? > "/mnt/shared/output/{result_name}"
             _logger.error("snapshot_delete_failed", extra={"error": result.error})
             raise SandboxError(_ERR_SNAPSHOT_DELETE)
 
-        _logger.info("snapshot_deleted", extra={"name": name})
+        _logger.info("snapshot_deleted", extra={"snapshot_name": name})

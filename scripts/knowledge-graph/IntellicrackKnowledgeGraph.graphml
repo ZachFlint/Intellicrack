@@ -14,10 +14,29 @@
       <data key="d3">src.intellicrack.main</data>
     </node>
     <node id="__future__" />
+    <node id="argparse" />
     <node id="asyncio" />
     <node id="sys" />
+    <node id="dataclasses" />
     <node id="pathlib" />
     <node id="typing" />
+    <node id="src.intellicrack.main._CLIOptions">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">_CLIOptions</data>
+    </node>
+    <node id="src.intellicrack.main._parse_args">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_parse_args</data>
+      <data key="d4">[]</data>
+    </node>
+    <node id="src.intellicrack.main._apply_cli_overrides">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_apply_cli_overrides</data>
+      <data key="d4">['config', 'cli']</data>
+    </node>
     <node id="src.intellicrack.main.main">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -84,7 +103,6 @@
       <data key="d3">src.intellicrack.bridges.base</data>
     </node>
     <node id="abc" />
-    <node id="dataclasses" />
     <node id="src.intellicrack.bridges.base.DisassemblyLine">
       <data key="d0">class</data>
       <data key="d1">python</data>
@@ -743,7 +761,6 @@
     </node>
     <node id="uuid" />
     <node id="frida" />
-    <node id="frida.core" />
     <node id="src.intellicrack.core.process_manager">
       <data key="d0">module</data>
       <data key="d1">python</data>
@@ -755,6 +772,7 @@
       <data key="d1">python</data>
       <data key="d3">FridaBridge</data>
     </node>
+    <node id="frida.core" />
     <node id="src.intellicrack.bridges.frida_bridge.__init__">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -2141,19 +2159,19 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">attached_pid</data>
-      <data key="d4">['self', 'value']</data>
+      <data key="d4">['self']</data>
     </node>
     <node id="src.intellicrack.bridges.x64dbg.binary_path">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">binary_path</data>
-      <data key="d4">['self', 'value']</data>
+      <data key="d4">['self']</data>
     </node>
     <node id="src.intellicrack.bridges.x64dbg.is_64bit">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">is_64bit</data>
-      <data key="d4">['self', 'value']</data>
+      <data key="d4">['self']</data>
     </node>
     <node id="src.intellicrack.bridges.x64dbg.breakpoints">
       <data key="d0">function</data>
@@ -2167,23 +2185,11 @@
       <data key="d3">watchpoints</data>
       <data key="d4">['self']</data>
     </node>
-    <node id="src.intellicrack.bridges.x64dbg.next_bp_id">
-      <data key="d0">function</data>
-      <data key="d1">python</data>
-      <data key="d3">next_bp_id</data>
-      <data key="d4">['self', 'value']</data>
-    </node>
-    <node id="src.intellicrack.bridges.x64dbg.next_wp_id">
-      <data key="d0">function</data>
-      <data key="d1">python</data>
-      <data key="d3">next_wp_id</data>
-      <data key="d4">['self', 'value']</data>
-    </node>
     <node id="src.intellicrack.bridges.x64dbg.x64dbg_path">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">x64dbg_path</data>
-      <data key="d4">['self', 'value']</data>
+      <data key="d4">['self']</data>
     </node>
     <node id="src.intellicrack.bridges.x64dbg.name">
       <data key="d0">function</data>
@@ -2431,22 +2437,22 @@
       <data key="d3">spawn</data>
       <data key="d4">['self', 'path', 'args']</data>
     </node>
-    <node id="src.intellicrack.bridges.x64dbg.get_threads">
+    <node id="src.intellicrack.bridges.x64dbg._get_threads">
       <data key="d0">function</data>
       <data key="d1">python</data>
-      <data key="d3">get_threads</data>
+      <data key="d3">_get_threads</data>
       <data key="d4">['self']</data>
     </node>
-    <node id="src.intellicrack.bridges.x64dbg.get_modules">
+    <node id="src.intellicrack.bridges.x64dbg._get_modules">
       <data key="d0">function</data>
       <data key="d1">python</data>
-      <data key="d3">get_modules</data>
+      <data key="d3">_get_modules</data>
       <data key="d4">['self']</data>
     </node>
-    <node id="src.intellicrack.bridges.x64dbg.get_process_info">
+    <node id="src.intellicrack.bridges.x64dbg._get_process_info">
       <data key="d0">function</data>
       <data key="d1">python</data>
-      <data key="d3">get_process_info</data>
+      <data key="d3">_get_process_info</data>
       <data key="d4">['self']</data>
     </node>
     <node id="src.intellicrack.bridges.x64dbg._get_parent_pid">
@@ -3234,6 +3240,12 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">stats</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.core.orchestrator.provider_registry">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">provider_registry</data>
       <data key="d4">['self']</data>
     </node>
     <node id="src.intellicrack.core.orchestrator.start_session">
@@ -7663,6 +7675,12 @@
       <data key="d3">run</data>
       <data key="d4">['self']</data>
     </node>
+    <node id="src.intellicrack.ui.app._apply_smart_window_size">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_apply_smart_window_size</data>
+      <data key="d4">['self']</data>
+    </node>
     <node id="src.intellicrack.ui.app._setup_ui">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -7883,6 +7901,42 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_on_open_hxd</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.app._on_open_ghidra">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_open_ghidra</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.app._on_open_radare2">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_open_radare2</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.app._on_open_frida">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_open_frida</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.app._on_open_process">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_open_process</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.app._on_open_binary">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_open_binary</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.app._on_open_sandbox_panel">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_open_sandbox_panel</data>
       <data key="d4">['self']</data>
     </node>
     <node id="src.intellicrack.ui.app._on_debug_current_binary">
@@ -8420,6 +8474,7 @@
       <data key="d1">python</data>
       <data key="d3">ModelSelectionDialog</data>
     </node>
+    <node id="intellicrack.providers.base" />
     <node id="intellicrack.providers.discovery" />
     <node id="src.intellicrack.ui.provider_config.__init__">
       <data key="d0">function</data>
@@ -8503,7 +8558,7 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_fetch_anthropic_models</data>
-      <data key="d4">[]</data>
+      <data key="d4">['self', 'timeout']</data>
     </node>
     <node id="src.intellicrack.ui.provider_config._fetch_openai_models">
       <data key="d0">function</data>
@@ -8677,6 +8732,12 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_refresh_models</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.provider_config._auto_refresh_models">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_auto_refresh_models</data>
       <data key="d4">['self']</data>
     </node>
     <node id="src.intellicrack.ui.provider_config._on_models_refreshed">
@@ -9087,6 +9148,36 @@
       <data key="d1">python</data>
       <data key="d3">CutterWidgetProtocol</data>
     </node>
+    <node id="src.intellicrack.ui.tools.GhidraWidgetProtocol">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">GhidraWidgetProtocol</data>
+    </node>
+    <node id="src.intellicrack.ui.tools.Radare2WidgetProtocol">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">Radare2WidgetProtocol</data>
+    </node>
+    <node id="src.intellicrack.ui.tools.FridaPanelProtocol">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">FridaPanelProtocol</data>
+    </node>
+    <node id="src.intellicrack.ui.tools.ProcessPanelProtocol">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">ProcessPanelProtocol</data>
+    </node>
+    <node id="src.intellicrack.ui.tools.BinaryPanelProtocol">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">BinaryPanelProtocol</data>
+    </node>
+    <node id="src.intellicrack.ui.tools.SandboxPanelProtocol">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">SandboxPanelProtocol</data>
+    </node>
     <node id="src.intellicrack.ui.tools.AnalysisPanel">
       <data key="d0">class</data>
       <data key="d1">python</data>
@@ -9158,7 +9249,37 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">analyze_binary</data>
-      <data key="d4">['self', 'file_path']</data>
+      <data key="d4">['self', 'binary_path']</data>
+    </node>
+    <node id="src.intellicrack.ui.tools.load_binary">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">load_binary</data>
+      <data key="d4">['self', 'binary_path']</data>
+    </node>
+    <node id="src.intellicrack.ui.tools.set_bridge">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_bridge</data>
+      <data key="d4">['self', 'bridge']</data>
+    </node>
+    <node id="src.intellicrack.ui.tools.log_message">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">log_message</data>
+      <data key="d4">['self', 'message']</data>
+    </node>
+    <node id="src.intellicrack.ui.tools.get_selected_pid">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_selected_pid</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.tools.set_sandbox">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_sandbox</data>
+      <data key="d4">['self', 'sandbox']</data>
     </node>
     <node id="src.intellicrack.ui.tools.set_analysis">
       <data key="d0">function</data>
@@ -9352,6 +9473,60 @@
       <data key="d3">add_cutter_tab</data>
       <data key="d4">['self']</data>
     </node>
+    <node id="src.intellicrack.ui.tools.add_ghidra_tab">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">add_ghidra_tab</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.tools.add_radare2_tab">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">add_radare2_tab</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.tools.add_frida_tab">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">add_frida_tab</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.tools.add_process_tab">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">add_process_tab</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.tools.add_binary_tab">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">add_binary_tab</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.tools.add_sandbox_tab">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">add_sandbox_tab</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.tools.open_in_ghidra">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">open_in_ghidra</data>
+      <data key="d4">['self', 'file_path']</data>
+    </node>
+    <node id="src.intellicrack.ui.tools.open_in_radare2">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">open_in_radare2</data>
+      <data key="d4">['self', 'file_path']</data>
+    </node>
+    <node id="src.intellicrack.ui.tools.open_in_binary">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">open_in_binary</data>
+      <data key="d4">['self', 'file_path']</data>
+    </node>
     <node id="src.intellicrack.ui.tools.open_in_hxd">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -9447,6 +9622,42 @@
       <data key="d1">python</data>
       <data key="d2">D:\Intellicrack\src\intellicrack\ui\embedding\cutter_widget.py</data>
       <data key="d3">src.intellicrack.ui.embedding.cutter_widget</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.ghidra_widget">
+      <data key="d0">module</data>
+      <data key="d1">python</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack\ui\embedding\ghidra_widget.py</data>
+      <data key="d3">src.intellicrack.ui.embedding.ghidra_widget</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.radare2_widget">
+      <data key="d0">module</data>
+      <data key="d1">python</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack\ui\embedding\radare2_widget.py</data>
+      <data key="d3">src.intellicrack.ui.embedding.radare2_widget</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.frida_panel">
+      <data key="d0">module</data>
+      <data key="d1">python</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py</data>
+      <data key="d3">src.intellicrack.ui.panels.frida_panel</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel">
+      <data key="d0">module</data>
+      <data key="d1">python</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\process_panel.py</data>
+      <data key="d3">src.intellicrack.ui.panels.process_panel</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.binary_panel">
+      <data key="d0">module</data>
+      <data key="d1">python</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\binary_panel.py</data>
+      <data key="d3">src.intellicrack.ui.panels.binary_panel</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.sandbox_panel">
+      <data key="d0">module</data>
+      <data key="d1">python</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py</data>
+      <data key="d3">src.intellicrack.ui.panels.sandbox_panel</data>
     </node>
     <node id="src.intellicrack.ui.tool_config.ToolInstallWorker">
       <data key="d0">class</data>
@@ -10028,6 +10239,78 @@
       <data key="d3">closeEvent</data>
       <data key="d4">['self', 'event']</data>
     </node>
+    <node id="src.intellicrack.ui.embedding.ghidra_widget.GhidraWidget">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">GhidraWidget</data>
+    </node>
+    <node id="intellicrack.bridges.ghidra" />
+    <node id="src.intellicrack.ui.embedding.ghidra_widget.__init__">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">__init__</data>
+      <data key="d4">['self', 'parent']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.ghidra_widget.get_tool_display_name">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_tool_display_name</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.ghidra_widget.get_executable_path">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_executable_path</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.ghidra_widget.get_window_search_params">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_window_search_params</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.ghidra_widget.prepare_launch_args">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">prepare_launch_args</data>
+      <data key="d4">['self', 'binary_path']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.ghidra_widget.start_tool">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">start_tool</data>
+      <data key="d4">['self', 'binary_path']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.ghidra_widget._run_bridge_coroutine">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_run_bridge_coroutine</data>
+      <data key="d4">['self', 'coro']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.ghidra_widget.attach_to_bridge">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">attach_to_bridge</data>
+      <data key="d4">['self', 'bridge']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.ghidra_widget.get_bridge">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_bridge</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.ghidra_widget.load_binary">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">load_binary</data>
+      <data key="d4">['self', 'binary_path']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.ghidra_widget.set_executable_path">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_executable_path</data>
+      <data key="d4">['self', 'path']</data>
+    </node>
     <node id="src.intellicrack.ui.embedding.hxd_widget.HxDWidget">
       <data key="d0">class</data>
       <data key="d1">python</data>
@@ -10121,6 +10404,77 @@
       <data key="d1">python</data>
       <data key="d3">open_at_offset</data>
       <data key="d4">['self', 'file_path', 'offset']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.radare2_widget.Radare2Widget">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">Radare2Widget</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.radare2_widget.__init__">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">__init__</data>
+      <data key="d4">['self', 'parent']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.radare2_widget.get_tool_display_name">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_tool_display_name</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.radare2_widget.get_executable_path">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_executable_path</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.radare2_widget.get_window_search_params">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_window_search_params</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.radare2_widget.prepare_launch_args">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">prepare_launch_args</data>
+      <data key="d4">['self', 'binary_path']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.radare2_widget._run_bridge_coroutine">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_run_bridge_coroutine</data>
+      <data key="d4">['self', 'coro']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.radare2_widget.sync_with_bridge">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">sync_with_bridge</data>
+      <data key="d4">['self', 'bridge']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.radare2_widget.get_bridge">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_bridge</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.radare2_widget.analyze_binary">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">analyze_binary</data>
+      <data key="d4">['self', 'binary_path']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.radare2_widget.goto_address">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">goto_address</data>
+      <data key="d4">['self', 'address']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.radare2_widget.set_executable_path">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_executable_path</data>
+      <data key="d4">['self', 'path']</data>
     </node>
     <node id="src.intellicrack.ui.embedding.win32_helper">
       <data key="d0">module</data>
@@ -10440,8 +10794,249 @@
       <data key="d3">src.intellicrack.ui.embedding.__init__</data>
     </node>
     <node id="intellicrack.ui.embedding.cutter_widget" />
+    <node id="intellicrack.ui.embedding.ghidra_widget" />
     <node id="intellicrack.ui.embedding.hxd_widget" />
+    <node id="intellicrack.ui.embedding.radare2_widget" />
     <node id="intellicrack.ui.embedding.x64dbg_widget" />
+    <node id="src.intellicrack.ui.panels.binary_panel.BinaryPanel">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">BinaryPanel</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.binary_panel.__init__">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">__init__</data>
+      <data key="d4">['self', 'parent']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.binary_panel._setup_ui">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_setup_ui</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.binary_panel.load_file">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">load_file</data>
+      <data key="d4">['self', 'file_path']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.binary_panel._populate_hex_view">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_populate_hex_view</data>
+      <data key="d4">['self', 'start_offset']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.binary_panel._parse_sections">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_parse_sections</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.binary_panel._extract_strings">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_extract_strings</data>
+      <data key="d4">['self', 'min_length']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.binary_panel._on_open_file">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_open_file</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.binary_panel._on_goto_offset">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_goto_offset</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.binary_panel._on_search">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_search</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.binary_panel._on_apply_patch">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_apply_patch</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.binary_panel._on_revert_patch">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_revert_patch</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.binary_panel._on_save">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_save</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.binary_panel._on_section_double_clicked">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_section_double_clicked</data>
+      <data key="d4">['self', 'item', '_column']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.binary_panel._on_string_double_clicked">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_string_double_clicked</data>
+      <data key="d4">['self', 'row', '_column']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.binary_panel._update_patches_table">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_update_patches_table</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.binary_panel.get_file_data">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_file_data</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.binary_panel.get_patches">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_patches</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.binary_panel.start_tool">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">start_tool</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.binary_panel.stop_tool">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">stop_tool</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.frida_panel.FridaPanel">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">FridaPanel</data>
+    </node>
+    <node id="intellicrack.bridges.frida_bridge" />
+    <node id="src.intellicrack.ui.panels.frida_panel.__init__">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">__init__</data>
+      <data key="d4">['self', 'parent']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.frida_panel._setup_ui">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_setup_ui</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.frida_panel._create_toolbar">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_create_toolbar</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.frida_panel._create_editor_section">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_create_editor_section</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.frida_panel._create_hooks_section">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_create_hooks_section</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.frida_panel.set_bridge">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_bridge</data>
+      <data key="d4">['self', 'bridge']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.frida_panel.get_bridge">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_bridge</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.frida_panel.log_message">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">log_message</data>
+      <data key="d4">['self', 'message']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.frida_panel._on_frida_message">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_frida_message</data>
+      <data key="d4">['self', 'message', '_data']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.frida_panel._on_attach">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_attach</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.frida_panel._on_detach">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_detach</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.frida_panel._on_run_script">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_run_script</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.frida_panel._on_stop_script">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_stop_script</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.frida_panel._on_clear_console">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_clear_console</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.frida_panel._on_add_hook">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_add_hook</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.frida_panel._on_remove_hook">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_remove_hook</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.frida_panel.add_hook_entry">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">add_hook_entry</data>
+      <data key="d4">['self', 'address', 'module', 'function', 'status', 'hook_id']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.frida_panel.start_tool">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">start_tool</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.frida_panel.stop_tool">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">stop_tool</data>
+      <data key="d4">['self']</data>
+    </node>
     <node id="src.intellicrack.ui.panels.licensing_panel.SummaryCard">
       <data key="d0">class</data>
       <data key="d1">python</data>
@@ -10556,6 +11151,248 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">clear</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="ctypes.wintypes" />
+    <node id="src.intellicrack.ui.panels.process_panel._PROCESSENTRY32">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">_PROCESSENTRY32</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel._MODULEENTRY32">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">_MODULEENTRY32</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel._THREADENTRY32">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">_THREADENTRY32</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel._ProcessMemoryCounters">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">_ProcessMemoryCounters</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel._enumerate_processes">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_enumerate_processes</data>
+      <data key="d4">[]</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel._get_process_memory_mb">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_get_process_memory_mb</data>
+      <data key="d4">['pid']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel._detect_process_architecture">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_detect_process_architecture</data>
+      <data key="d4">['pid']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel._enumerate_modules">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_enumerate_modules</data>
+      <data key="d4">['pid']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel._enumerate_threads">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_enumerate_threads</data>
+      <data key="d4">['pid']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel.ProcessPanel">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">ProcessPanel</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel.__init__">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">__init__</data>
+      <data key="d4">['self', 'parent']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel._setup_ui">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_setup_ui</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel.set_process_manager">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_process_manager</data>
+      <data key="d4">['self', 'mgr']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel._on_refresh">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_refresh</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel._on_filter_changed">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_filter_changed</data>
+      <data key="d4">['self', '_text']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel._on_auto_refresh_toggled">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_auto_refresh_toggled</data>
+      <data key="d4">['self', 'checked']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel._on_process_selection_changed">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_process_selection_changed</data>
+      <data key="d4">['self', 'row', '_col', '_prev_row', '_prev_col']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel._load_process_details">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_load_process_details</data>
+      <data key="d4">['self', 'pid']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel._on_attach">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_attach</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel._on_terminate">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_terminate</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel.get_selected_pid">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_selected_pid</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel.start_tool">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">start_tool</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel.stop_tool">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">stop_tool</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.sandbox_panel.SandboxPanel">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">SandboxPanel</data>
+    </node>
+    <node id="intellicrack.sandbox.base" />
+    <node id="src.intellicrack.ui.panels.sandbox_panel.__init__">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">__init__</data>
+      <data key="d4">['self', 'parent']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.sandbox_panel._setup_ui">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_setup_ui</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.sandbox_panel.set_sandbox">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_sandbox</data>
+      <data key="d4">['self', 'sandbox']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.sandbox_panel.get_sandbox">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_sandbox</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.sandbox_panel._log">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_log</data>
+      <data key="d4">['self', 'message']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.sandbox_panel._on_create">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_create</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.sandbox_panel._on_destroy">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_destroy</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.sandbox_panel._on_restart">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_restart</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.sandbox_panel._on_browse_binary">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_browse_binary</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.sandbox_panel._on_run_binary">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_run_binary</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.sandbox_panel._on_take_snapshot">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_take_snapshot</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.sandbox_panel._on_restore_snapshot">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_restore_snapshot</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.sandbox_panel._poll_status">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_poll_status</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.sandbox_panel._clear_report_tabs">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_clear_report_tabs</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.sandbox_panel.load_execution_report">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">load_execution_report</data>
+      <data key="d4">['self', 'report']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.sandbox_panel.start_tool">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">start_tool</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.sandbox_panel.stop_tool">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">stop_tool</data>
       <data key="d4">['self']</data>
     </node>
     <node id="src.intellicrack.ui.panels.script_manager.ScriptTypeInfo">
@@ -10915,7 +11752,11 @@
       <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\__init__.py</data>
       <data key="d3">src.intellicrack.ui.panels.__init__</data>
     </node>
+    <node id="intellicrack.ui.panels.binary_panel" />
+    <node id="intellicrack.ui.panels.frida_panel" />
     <node id="intellicrack.ui.panels.licensing_panel" />
+    <node id="intellicrack.ui.panels.process_panel" />
+    <node id="intellicrack.ui.panels.sandbox_panel" />
     <node id="intellicrack.ui.panels.script_manager" />
     <node id="intellicrack.ui.panels.stack_viewer" />
     <node id="src.intellicrack.ui.resources.font_manager">
@@ -11290,10 +12131,16 @@
     <edge source="src.intellicrack.main" target="__future__">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.main" target="argparse">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.main" target="asyncio">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.main" target="sys">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.main" target="dataclasses">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.main" target="pathlib">
@@ -11301,6 +12148,15 @@
     </edge>
     <edge source="src.intellicrack.main" target="typing">
       <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.main" target="src.intellicrack.main._CLIOptions">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.main" target="src.intellicrack.main._parse_args">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.main" target="src.intellicrack.main._apply_cli_overrides">
+      <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.main" target="src.intellicrack.main.main">
       <data key="d5">defines</data>
@@ -12157,9 +13013,6 @@
     <edge source="src.intellicrack.bridges.frida_bridge" target="frida">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.bridges.frida_bridge" target="frida.core">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.bridges.frida_bridge" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
@@ -12176,6 +13029,9 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.bridges.frida_bridge" target="collections.abc">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.frida_bridge" target="frida.core">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.bridges.frida_bridge" target="src.intellicrack.bridges.frida_bridge.__init__">
@@ -13246,9 +14102,6 @@
     <edge source="src.intellicrack.bridges.x64dbg" target="sys">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.bridges.x64dbg" target="collections.abc">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.bridges.x64dbg" target="pathlib">
       <data key="d5">imports</data>
     </edge>
@@ -13297,6 +14150,9 @@
     <edge source="src.intellicrack.bridges.x64dbg" target="ctypes">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.bridges.x64dbg" target="collections.abc">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.bridges.x64dbg" target="types">
       <data key="d5">imports</data>
     </edge>
@@ -13325,12 +14181,6 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.x64dbg.watchpoints">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.x64dbg.next_bp_id">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.x64dbg.next_wp_id">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.x64dbg.x64dbg_path">
@@ -13459,13 +14309,13 @@
     <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.x64dbg.spawn">
       <data key="d5">defines</data>
     </edge>
-    <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.x64dbg.get_threads">
+    <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.x64dbg._get_threads">
       <data key="d5">defines</data>
     </edge>
-    <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.x64dbg.get_modules">
+    <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.x64dbg._get_modules">
       <data key="d5">defines</data>
     </edge>
-    <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.x64dbg.get_process_info">
+    <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.x64dbg._get_process_info">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.x64dbg._get_parent_pid">
@@ -13922,6 +14772,9 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.core.orchestrator" target="src.intellicrack.core.orchestrator.stats">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.orchestrator" target="src.intellicrack.core.orchestrator.provider_registry">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.core.orchestrator" target="src.intellicrack.core.orchestrator.start_session">
@@ -16978,6 +17831,9 @@
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app.run">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._apply_smart_window_size">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._setup_ui">
       <data key="d5">defines</data>
     </edge>
@@ -17089,6 +17945,24 @@
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._on_open_hxd">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._on_open_ghidra">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._on_open_radare2">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._on_open_frida">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._on_open_process">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._on_open_binary">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._on_open_sandbox_panel">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._on_debug_current_binary">
       <data key="d5">defines</data>
     </edge>
@@ -17136,6 +18010,9 @@
     </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app.save_session">
       <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.providers.discovery">
+      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app.open_sandbox">
       <data key="d5">defines</data>
@@ -17260,6 +18137,9 @@
     <edge source="src.intellicrack.ui.provider_config" target="__future__">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="contextlib">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.provider_config" target="json">
       <data key="d5">imports</data>
     </edge>
@@ -17312,6 +18192,9 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.provider_config" target="intellicrack.core.types">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="intellicrack.providers.base">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.provider_config" target="intellicrack.providers.discovery">
@@ -17447,6 +18330,9 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._refresh_models">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._auto_refresh_models">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._on_models_refreshed">
@@ -17941,6 +18827,24 @@
     <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.CutterWidgetProtocol">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.GhidraWidgetProtocol">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.Radare2WidgetProtocol">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.FridaPanelProtocol">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.ProcessPanelProtocol">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.BinaryPanelProtocol">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.SandboxPanelProtocol">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.AnalysisPanel">
       <data key="d5">defines</data>
     </edge>
@@ -17978,6 +18882,21 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.analyze_binary">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.load_binary">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.set_bridge">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.log_message">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.get_selected_pid">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.set_sandbox">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.set_analysis">
@@ -18079,6 +18998,33 @@
     <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.add_cutter_tab">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.add_ghidra_tab">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.add_radare2_tab">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.add_frida_tab">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.add_process_tab">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.add_binary_tab">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.add_sandbox_tab">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.open_in_ghidra">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.open_in_radare2">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.open_in_binary">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.open_in_hxd">
       <data key="d5">defines</data>
     </edge>
@@ -18125,6 +19071,24 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.embedding.cutter_widget">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.embedding.ghidra_widget">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.embedding.radare2_widget">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.panels.frida_panel">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.panels.process_panel">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.panels.binary_panel">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.panels.sandbox_panel">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.app.AsyncWorker" target="PyQt6.QtCore.QThread">
@@ -18392,6 +19356,42 @@
       <data key="d5">inherits</data>
     </edge>
     <edge source="src.intellicrack.ui.tools.CutterWidgetProtocol" target="typing.Protocol">
+      <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools.GhidraWidgetProtocol" target="ToolWidget">
+      <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools.GhidraWidgetProtocol" target="typing.Protocol">
+      <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools.Radare2WidgetProtocol" target="ToolWidget">
+      <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools.Radare2WidgetProtocol" target="typing.Protocol">
+      <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools.FridaPanelProtocol" target="ToolWidget">
+      <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools.FridaPanelProtocol" target="typing.Protocol">
+      <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools.ProcessPanelProtocol" target="ToolWidget">
+      <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools.ProcessPanelProtocol" target="typing.Protocol">
+      <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools.BinaryPanelProtocol" target="ToolWidget">
+      <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools.BinaryPanelProtocol" target="typing.Protocol">
+      <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools.SandboxPanelProtocol" target="ToolWidget">
+      <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools.SandboxPanelProtocol" target="typing.Protocol">
       <data key="d5">inherits</data>
     </edge>
     <edge source="src.intellicrack.ui.tools.AnalysisPanel" target="typing.Protocol">
@@ -19000,6 +20000,492 @@
     <edge source="src.intellicrack.ui.embedding.cutter_widget" target="src.intellicrack.ui.embedding.cutter_widget.get_project_path">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="__future__">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="asyncio">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="logging">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="os">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="winreg">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="collections.abc">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="pathlib">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="intellicrack.ui.embedding.embedded_widget">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="intellicrack.ui.embedding.win32_helper">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="src.intellicrack.ui.embedding.ghidra_widget.GhidraWidget">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="intellicrack.bridges.ghidra">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="src.intellicrack.ui.embedding.ghidra_widget.__init__">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="src.intellicrack.ui.embedding.ghidra_widget.get_tool_display_name">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="src.intellicrack.ui.embedding.ghidra_widget.get_executable_path">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="src.intellicrack.ui.embedding.ghidra_widget.get_window_search_params">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="src.intellicrack.ui.embedding.ghidra_widget.prepare_launch_args">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="src.intellicrack.ui.embedding.ghidra_widget.start_tool">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="src.intellicrack.ui.embedding.ghidra_widget._run_bridge_coroutine">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="src.intellicrack.ui.embedding.ghidra_widget.attach_to_bridge">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="src.intellicrack.ui.embedding.ghidra_widget.get_bridge">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="src.intellicrack.ui.embedding.ghidra_widget.load_binary">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="src.intellicrack.ui.embedding.ghidra_widget.set_executable_path">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="__future__">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="asyncio">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="logging">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="os">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="collections.abc">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="pathlib">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="intellicrack.ui.embedding.embedded_widget">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="intellicrack.ui.embedding.win32_helper">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="src.intellicrack.ui.embedding.radare2_widget.Radare2Widget">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="intellicrack.bridges.radare2">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="src.intellicrack.ui.embedding.radare2_widget.__init__">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="src.intellicrack.ui.embedding.radare2_widget.get_tool_display_name">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="src.intellicrack.ui.embedding.radare2_widget.get_executable_path">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="src.intellicrack.ui.embedding.radare2_widget.get_window_search_params">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="src.intellicrack.ui.embedding.radare2_widget.prepare_launch_args">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="src.intellicrack.ui.embedding.radare2_widget._run_bridge_coroutine">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="src.intellicrack.ui.embedding.radare2_widget.sync_with_bridge">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="src.intellicrack.ui.embedding.radare2_widget.get_bridge">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="src.intellicrack.ui.embedding.radare2_widget.analyze_binary">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="src.intellicrack.ui.embedding.radare2_widget.goto_address">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="src.intellicrack.ui.embedding.radare2_widget.set_executable_path">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="__future__">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="contextlib">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="logging">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="PyQt6.QtCore">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="PyQt6.QtGui">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="src.intellicrack.ui.panels.frida_panel.FridaPanel">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="intellicrack.bridges.frida_bridge">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="src.intellicrack.ui.panels.frida_panel.__init__">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="src.intellicrack.ui.panels.frida_panel._setup_ui">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="src.intellicrack.ui.panels.frida_panel._create_toolbar">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="src.intellicrack.ui.panels.frida_panel._create_editor_section">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="src.intellicrack.ui.panels.frida_panel._create_hooks_section">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="src.intellicrack.ui.panels.frida_panel.set_bridge">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="src.intellicrack.ui.panels.frida_panel.get_bridge">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="src.intellicrack.ui.panels.frida_panel.log_message">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="src.intellicrack.ui.panels.frida_panel._on_frida_message">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="src.intellicrack.ui.panels.frida_panel._on_attach">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="src.intellicrack.ui.panels.frida_panel._on_detach">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="src.intellicrack.ui.panels.frida_panel._on_run_script">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="src.intellicrack.ui.panels.frida_panel._on_stop_script">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="src.intellicrack.ui.panels.frida_panel._on_clear_console">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="src.intellicrack.ui.panels.frida_panel._on_add_hook">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="src.intellicrack.ui.panels.frida_panel._on_remove_hook">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="src.intellicrack.ui.panels.frida_panel.add_hook_entry">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="src.intellicrack.ui.panels.frida_panel.start_tool">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="src.intellicrack.ui.panels.frida_panel.stop_tool">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="__future__">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="ctypes">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="ctypes.wintypes">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="logging">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="struct">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="PyQt6.QtCore">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="PyQt6.QtGui">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._PROCESSENTRY32">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._MODULEENTRY32">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._THREADENTRY32">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._ProcessMemoryCounters">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._enumerate_processes">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._get_process_memory_mb">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._detect_process_architecture">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._enumerate_modules">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._enumerate_threads">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel.ProcessPanel">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="intellicrack.core.process_manager">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel.__init__">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._setup_ui">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel.set_process_manager">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._on_refresh">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._on_filter_changed">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._on_auto_refresh_toggled">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._on_process_selection_changed">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._load_process_details">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._on_attach">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._on_terminate">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel.get_selected_pid">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel.start_tool">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel.stop_tool">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="__future__">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="logging">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="struct">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="pathlib">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="PyQt6.QtCore">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="PyQt6.QtGui">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="src.intellicrack.ui.panels.binary_panel.BinaryPanel">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="src.intellicrack.ui.panels.binary_panel.__init__">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="src.intellicrack.ui.panels.binary_panel._setup_ui">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="src.intellicrack.ui.panels.binary_panel.load_file">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="src.intellicrack.ui.panels.binary_panel._populate_hex_view">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="src.intellicrack.ui.panels.binary_panel._parse_sections">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="src.intellicrack.ui.panels.binary_panel._extract_strings">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="src.intellicrack.ui.panels.binary_panel._on_open_file">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="src.intellicrack.ui.panels.binary_panel._on_goto_offset">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="src.intellicrack.ui.panels.binary_panel._on_search">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="src.intellicrack.ui.panels.binary_panel._on_apply_patch">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="src.intellicrack.ui.panels.binary_panel._on_revert_patch">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="src.intellicrack.ui.panels.binary_panel._on_save">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="src.intellicrack.ui.panels.binary_panel._on_section_double_clicked">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="src.intellicrack.ui.panels.binary_panel._on_string_double_clicked">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="src.intellicrack.ui.panels.binary_panel._update_patches_table">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="src.intellicrack.ui.panels.binary_panel.get_file_data">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="src.intellicrack.ui.panels.binary_panel.get_patches">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="src.intellicrack.ui.panels.binary_panel.start_tool">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="src.intellicrack.ui.panels.binary_panel.stop_tool">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="__future__">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="contextlib">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="logging">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="pathlib">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="PyQt6.QtCore">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="PyQt6.QtGui">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel.SandboxPanel">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="intellicrack.sandbox.base">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel.__init__">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel._setup_ui">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel.set_sandbox">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel.get_sandbox">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel._log">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel._on_create">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel._on_destroy">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel._on_restart">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel._on_browse_binary">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel._on_run_binary">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel._on_take_snapshot">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel._on_restore_snapshot">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel._poll_status">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel._clear_report_tabs">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel.load_execution_report">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel.start_tool">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel.stop_tool">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.tool_config.ToolInstallWorker" target="PyQt6.QtCore.QThread">
       <data key="d5">inherits</data>
     </edge>
@@ -19216,7 +20702,13 @@
     <edge source="src.intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget" target="PyQt6.QtWidgets.QWidget">
       <data key="d5">inherits</data>
     </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget.GhidraWidget" target="intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget">
+      <data key="d5">inherits</data>
+    </edge>
     <edge source="src.intellicrack.ui.embedding.hxd_widget.HxDWidget" target="intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget">
+      <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget.Radare2Widget" target="intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget">
       <data key="d5">inherits</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.win32_helper" target="__future__">
@@ -19342,7 +20834,13 @@
     <edge source="src.intellicrack.ui.embedding.__init__" target="intellicrack.ui.embedding.embedded_widget">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.ui.embedding.__init__" target="intellicrack.ui.embedding.ghidra_widget">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.embedding.__init__" target="intellicrack.ui.embedding.hxd_widget">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.__init__" target="intellicrack.ui.embedding.radare2_widget">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.__init__" target="intellicrack.ui.embedding.win32_helper">
@@ -19350,6 +20848,12 @@
     </edge>
     <edge source="src.intellicrack.ui.embedding.__init__" target="intellicrack.ui.embedding.x64dbg_widget">
       <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel.BinaryPanel" target="PyQt6.QtWidgets.QWidget">
+      <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel.FridaPanel" target="PyQt6.QtWidgets.QWidget">
+      <data key="d5">inherits</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.licensing_panel.SummaryCard" target="PyQt6.QtWidgets.QFrame">
       <data key="d5">inherits</data>
@@ -19370,6 +20874,12 @@
       <data key="d5">inherits</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.licensing_panel.LicensingAnalysisPanel" target="PyQt6.QtWidgets.QWidget">
+      <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel.ProcessPanel" target="PyQt6.QtWidgets.QWidget">
+      <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel.SandboxPanel" target="PyQt6.QtWidgets.QWidget">
       <data key="d5">inherits</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.script_manager.ScriptListWidget" target="PyQt6.QtWidgets.QListWidget">
@@ -19393,7 +20903,19 @@
     <edge source="src.intellicrack.ui.panels.__init__" target="__future__">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.ui.panels.__init__" target="intellicrack.ui.panels.binary_panel">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.__init__" target="intellicrack.ui.panels.frida_panel">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.panels.__init__" target="intellicrack.ui.panels.licensing_panel">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.__init__" target="intellicrack.ui.panels.process_panel">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.__init__" target="intellicrack.ui.panels.sandbox_panel">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.__init__" target="intellicrack.ui.panels.script_manager">

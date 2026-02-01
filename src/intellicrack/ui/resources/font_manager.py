@@ -120,7 +120,7 @@ class FontManager:
             config_path = get_assets_path() / "fonts" / "font_config.json"
             if config_path.exists():
                 with open(config_path, encoding="utf-8") as f:
-                    self._font_config = cast(dict[str, object], json.load(f))
+                    self._font_config = cast("dict[str, object]", json.load(f))
                     _logger.debug("font_config_loaded", extra={"config": self._font_config})
         except (json.JSONDecodeError, OSError) as e:
             _logger.debug("font_config_load_failed", extra={"error": str(e)})

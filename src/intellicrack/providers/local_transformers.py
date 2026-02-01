@@ -866,7 +866,7 @@ class LocalTransformersProvider(LLMProviderBase):
                 return [
                     ToolCall(
                         id=f"call_{int(time.time() * 1000)}",
-                        tool_name=name.split(".")[0] if "." in name else name,
+                        tool_name=name.split(".", maxsplit=1)[0] if "." in name else name,
                         function_name=name,
                         arguments=parsed_arguments,
                     )

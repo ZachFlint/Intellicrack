@@ -57,6 +57,7 @@ class CutterWidget(EmbeddedToolWidget):
         self._exe_path: Path | None = None
         self._r2_bridge: Radare2Bridge | None = None
         self._project_path: Path | None = None
+        self._background_tasks: set[asyncio.Task[object]] = set()
         super().__init__(parent)
 
     def get_tool_display_name(self) -> str:
@@ -187,7 +188,9 @@ class CutterWidget(EmbeddedToolWidget):
         try:
             loop = asyncio.get_event_loop()
             if loop.is_running():
-                asyncio.ensure_future(coro)
+                task = asyncio.ensure_future(coro)
+                self._background_tasks.add(task)
+                task.add_done_callback(self._background_tasks.discard)
                 return None
             return loop.run_until_complete(coro)
         except RuntimeError:

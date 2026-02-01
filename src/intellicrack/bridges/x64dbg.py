@@ -9,7 +9,6 @@ from __future__ import annotations
 import asyncio
 import subprocess
 import sys
-from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -45,6 +44,7 @@ if sys.platform == "win32":
     from ctypes import wintypes
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from types import ModuleType
 
 # Optional disassembler/assembler imports
@@ -336,30 +336,15 @@ class X64DbgBridge(DebuggerBridge):
         """Get the currently attached process ID."""
         return self._attached_pid
 
-    @attached_pid.setter
-    def attached_pid(self, value: int | None) -> None:
-        """Set the attached process ID."""
-        self._attached_pid = value
-
     @property
     def binary_path(self) -> Path | None:
         """Get the path to the loaded binary."""
         return self._binary_path
 
-    @binary_path.setter
-    def binary_path(self, value: Path | None) -> None:
-        """Set the binary path."""
-        self._binary_path = value
-
     @property
     def is_64bit(self) -> bool:
         """Get whether the bridge is in 64-bit mode."""
         return self._is_64bit
-
-    @is_64bit.setter
-    def is_64bit(self, value: bool) -> None:
-        """Set the architecture mode."""
-        self._is_64bit = value
 
     @property
     def breakpoints(self) -> dict[int, BreakpointInfo]:
@@ -372,34 +357,9 @@ class X64DbgBridge(DebuggerBridge):
         return self._watchpoints
 
     @property
-    def next_bp_id(self) -> int:
-        """Get the next breakpoint ID."""
-        return self._next_bp_id
-
-    @next_bp_id.setter
-    def next_bp_id(self, value: int) -> None:
-        """Set the next breakpoint ID."""
-        self._next_bp_id = value
-
-    @property
-    def next_wp_id(self) -> int:
-        """Get the next watchpoint ID."""
-        return self._next_wp_id
-
-    @next_wp_id.setter
-    def next_wp_id(self, value: int) -> None:
-        """Set the next watchpoint ID."""
-        self._next_wp_id = value
-
-    @property
     def x64dbg_path(self) -> Path | None:
         """Get the path to the x64dbg installation."""
         return self._x64dbg_path
-
-    @x64dbg_path.setter
-    def x64dbg_path(self, value: Path | None) -> None:
-        """Set the x64dbg installation path."""
-        self._x64dbg_path = value
 
     @property
     def name(self) -> ToolName:
@@ -856,7 +816,7 @@ class X64DbgBridge(DebuggerBridge):
                 self._pipe_client.send_command(command, params),
                 timeout=self.COMMAND_TIMEOUT,
             )
-        except asyncio.TimeoutError as e:
+        except TimeoutError as e:
             msg = f"Command {command} timed out"
             raise ToolError(msg) from e
 
@@ -1776,7 +1736,7 @@ class X64DbgBridge(DebuggerBridge):
         await self.load(path, args_str)
         return self._attached_pid or 0
 
-    async def get_threads(self) -> list[ThreadInfo]:
+    async def _get_threads(self) -> list[ThreadInfo]:
         """Get thread information for the attached process.
 
         Uses Windows Toolhelp API (CreateToolhelp32Snapshot with TH32CS_SNAPTHREAD)
@@ -1848,7 +1808,7 @@ class X64DbgBridge(DebuggerBridge):
             _logger.debug("threads_found", extra={"count": len(threads), "pid": self._attached_pid})
             return threads
 
-    async def get_modules(self) -> list[ModuleInfo]:
+    async def _get_modules(self) -> list[ModuleInfo]:
         """Get loaded modules for the attached process.
 
         Uses Windows Toolhelp API (CreateToolhelp32Snapshot with TH32CS_SNAPMODULE)
@@ -1927,7 +1887,7 @@ class X64DbgBridge(DebuggerBridge):
             _logger.debug("modules_found", extra={"count": len(modules), "pid": self._attached_pid})
             return modules
 
-    async def get_process_info(self) -> ProcessInfo | None:
+    async def _get_process_info(self) -> ProcessInfo | None:
         """Get complete process information including threads and modules.
 
         Aggregates thread and module information along with process details
@@ -1939,8 +1899,8 @@ class X64DbgBridge(DebuggerBridge):
         if self._attached_pid is None:
             return None
 
-        threads = await self.get_threads()
-        modules = await self.get_modules()
+        threads = await self._get_threads()
+        modules = await self._get_modules()
 
         command_line = self._get_command_line(self._attached_pid)
         parent_pid = self._get_parent_pid(self._attached_pid)

@@ -6,8 +6,10 @@ logging, providers, tool bridges, and the GUI.
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -17,6 +19,112 @@ if TYPE_CHECKING:
 
     from intellicrack.credentials.env_loader import CredentialLoader
     from intellicrack.providers.registry import ProviderRegistry
+
+_APP_VERSION = "2.0.0"
+_VALID_LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+
+
+@dataclass(frozen=True)
+class _CLIOptions:
+    """Parsed CLI options that override configuration values."""
+
+    log_level: str | None = None
+    disable_console_log: bool = False
+    disable_file_log: bool = False
+
+
+def _parse_args() -> tuple[_CLIOptions, list[str]]:
+    """Parse CLI arguments into typed options.
+
+    Returns:
+        Tuple of parsed CLI options and remaining arguments
+        (passed through to QApplication).
+    """
+    parser = argparse.ArgumentParser(
+        prog="intellicrack",
+        description="Intellicrack - Advanced Binary Analysis Platform",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"Intellicrack {_APP_VERSION}",
+    )
+
+    verbosity_group = parser.add_mutually_exclusive_group()
+    verbosity_group.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        default=False,
+        help="Enable DEBUG level logging (maximum verbosity)",
+    )
+    verbosity_group.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        default=False,
+        help="Enable WARNING level logging (reduced output)",
+    )
+    verbosity_group.add_argument(
+        "--log-level",
+        choices=list(_VALID_LOG_LEVELS),
+        default=None,
+        metavar="LEVEL",
+        help="Set explicit log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
+    )
+
+    parser.add_argument(
+        "--no-console-log",
+        action="store_true",
+        default=False,
+        help="Disable console log output",
+    )
+    parser.add_argument(
+        "--no-file-log",
+        action="store_true",
+        default=False,
+        help="Disable file log output",
+    )
+
+    namespace, remaining = parser.parse_known_args()
+    ns_dict: dict[str, object] = vars(namespace)
+
+    resolved_level: str | None = None
+    if ns_dict.get("verbose"):
+        resolved_level = "DEBUG"
+    elif ns_dict.get("quiet"):
+        resolved_level = "WARNING"
+    elif ns_dict.get("log_level") is not None:
+        resolved_level = str(ns_dict["log_level"])
+
+    return (
+        _CLIOptions(
+            log_level=resolved_level,
+            disable_console_log=bool(ns_dict.get("no_console_log")),
+            disable_file_log=bool(ns_dict.get("no_file_log")),
+        ),
+        remaining,
+    )
+
+
+def _apply_cli_overrides(config: object, cli: _CLIOptions) -> None:
+    """Apply CLI flag overrides to the loaded config in-place.
+
+    Args:
+        config: Config instance whose log sub-config will be mutated.
+        cli: Parsed CLI options with any overrides.
+    """
+    from intellicrack.core.config import Config  # noqa: PLC0415
+
+    if not isinstance(config, Config):
+        return
+
+    if cli.log_level is not None:
+        config.log.level = cli.log_level
+    if cli.disable_console_log:
+        config.log.console_enabled = False
+    if cli.disable_file_log:
+        config.log.file_enabled = False
 
 
 def main() -> int:  # noqa: PLR0914
@@ -29,12 +137,20 @@ def main() -> int:  # noqa: PLR0914
     from intellicrack.core.logging import get_logger, setup_logging  # noqa: PLC0415
     from intellicrack.core.process_manager import ProcessManager  # noqa: PLC0415
 
+    cli_options, remaining_args = _parse_args()
+    sys.argv = [sys.argv[0], *remaining_args]
+
     config_path = Path("config.toml")
     config = Config.load(config_path) if config_path.exists() else Config.default()
 
+    _apply_cli_overrides(config, cli_options)
+
     setup_logging(config.log)
     logger = get_logger("main")
-    logger.info("app_starting", extra={"version": "2.0.0"})
+    logger.info(
+        "app_starting",
+        extra={"version": _APP_VERSION, "log_level": config.log.level},
+    )
 
     process_manager = ProcessManager.get_instance()
     process_manager.install_handlers()
@@ -58,7 +174,7 @@ def main() -> int:  # noqa: PLR0914
     app = QApplication(sys.argv)
     qt_app: type[QApplication] = QApplication
     qt_app.setApplicationName("Intellicrack")
-    qt_app.setApplicationVersion("2.0.0")
+    qt_app.setApplicationVersion(_APP_VERSION)
     app.setStyle("Fusion")
 
     from intellicrack.ui.dialogs import SplashScreen  # noqa: PLC0415

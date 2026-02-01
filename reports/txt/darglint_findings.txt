@@ -1,38 +1,3 @@
-16 findings in src\intellicrack\bridges\x64dbg.py
-
-src\intellicrack\bridges\x64dbg.py:get_capstone:68: DAR201: - return
-
-src\intellicrack\bridges\x64dbg.py:get_keystone:73: DAR201: - return
-
-src\intellicrack\bridges\x64dbg.py:attached_pid:334: DAR201: - return
-
-src\intellicrack\bridges\x64dbg.py:attached_pid:339: DAR101: - value
-
-src\intellicrack\bridges\x64dbg.py:binary_path:344: DAR201: - return
-
-src\intellicrack\bridges\x64dbg.py:binary_path:349: DAR101: - value
-
-src\intellicrack\bridges\x64dbg.py:is_64bit:354: DAR201: - return
-
-src\intellicrack\bridges\x64dbg.py:is_64bit:359: DAR101: - value
-
-src\intellicrack\bridges\x64dbg.py:breakpoints:364: DAR201: - return
-
-src\intellicrack\bridges\x64dbg.py:watchpoints:369: DAR201: - return
-
-src\intellicrack\bridges\x64dbg.py:next_bp_id:374: DAR201: - return
-
-src\intellicrack\bridges\x64dbg.py:next_bp_id:379: DAR101: - value
-
-src\intellicrack\bridges\x64dbg.py:next_wp_id:384: DAR201: - return
-
-src\intellicrack\bridges\x64dbg.py:next_wp_id:389: DAR101: - value
-
-src\intellicrack\bridges\x64dbg.py:x64dbg_path:394: DAR201: - return
-
-src\intellicrack\bridges\x64dbg.py:x64dbg_path:399: DAR101: - value
-
-
 14 findings in src\intellicrack\core\types.py
 
 src\intellicrack\core\types.py:is_hash:124: DAR201: - return
@@ -83,6 +48,25 @@ src\intellicrack\bridges\base.py:is_ready:196: DAR201: - return
 src\intellicrack\bridges\base.py:analyze:323: DAR402: +r ToolError
 
 
+8 findings in src\intellicrack\bridges\x64dbg.py
+
+src\intellicrack\bridges\x64dbg.py:get_capstone:69: DAR201: - return
+
+src\intellicrack\bridges\x64dbg.py:get_keystone:74: DAR201: - return
+
+src\intellicrack\bridges\x64dbg.py:attached_pid:336: DAR201: - return
+
+src\intellicrack\bridges\x64dbg.py:binary_path:341: DAR201: - return
+
+src\intellicrack\bridges\x64dbg.py:is_64bit:346: DAR201: - return
+
+src\intellicrack\bridges\x64dbg.py:breakpoints:351: DAR201: - return
+
+src\intellicrack\bridges\x64dbg.py:watchpoints:356: DAR201: - return
+
+src\intellicrack\bridges\x64dbg.py:x64dbg_path:361: DAR201: - return
+
+
 5 findings in src\intellicrack\core\script_gen.py
 
 src\intellicrack\core\script_gen.py:_empty_str_list:46: DAR201: - return
@@ -119,6 +103,18 @@ src\intellicrack\providers\model_loader.py:max_memory_bytes:108: DAR201: - retur
 src\intellicrack\providers\model_loader.py:max_memory_bytes:113: DAR101: - value
 
 
+2 findings in src\intellicrack\ui\tools.py
+
+src\intellicrack\ui\tools.py:tool_started:43: DAR201: - return
+
+src\intellicrack\ui\tools.py:tool_closed:48: DAR201: - return
+
+
 1 findings in src\intellicrack\bridges\radare2.py
 
 src\intellicrack\bridges\radare2.py:execute_command:1220: DAR402: +r ToolError
+
+
+1 findings in src\intellicrack\sandbox\qemu.py
+
+src\intellicrack\sandbox\qemu.py:is_connected:378: DAR201: - return

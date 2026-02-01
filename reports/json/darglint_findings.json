@@ -1,143 +1,9 @@
 {
   "tool": "darglint",
-  "generated": "2026-01-30T22:14:11.258545",
-  "total_findings": 51,
-  "total_files": 8,
+  "generated": "2026-01-31T20:48:12.867659",
+  "total_findings": 46,
+  "total_files": 10,
   "files": [
-    {
-      "path": "src\\intellicrack\\bridges\\x64dbg.py",
-      "count": 16,
-      "findings": [
-        {
-          "line": 68,
-          "column": null,
-          "function": "get_capstone",
-          "code": "DAR201",
-          "message": "[get_capstone] - return",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:get_capstone:68: DAR201: - return"
-        },
-        {
-          "line": 73,
-          "column": null,
-          "function": "get_keystone",
-          "code": "DAR201",
-          "message": "[get_keystone] - return",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:get_keystone:73: DAR201: - return"
-        },
-        {
-          "line": 334,
-          "column": null,
-          "function": "attached_pid",
-          "code": "DAR201",
-          "message": "[attached_pid] - return",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:attached_pid:334: DAR201: - return"
-        },
-        {
-          "line": 339,
-          "column": null,
-          "function": "attached_pid",
-          "code": "DAR101",
-          "message": "[attached_pid] - value",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:attached_pid:339: DAR101: - value"
-        },
-        {
-          "line": 344,
-          "column": null,
-          "function": "binary_path",
-          "code": "DAR201",
-          "message": "[binary_path] - return",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:binary_path:344: DAR201: - return"
-        },
-        {
-          "line": 349,
-          "column": null,
-          "function": "binary_path",
-          "code": "DAR101",
-          "message": "[binary_path] - value",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:binary_path:349: DAR101: - value"
-        },
-        {
-          "line": 354,
-          "column": null,
-          "function": "is_64bit",
-          "code": "DAR201",
-          "message": "[is_64bit] - return",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:is_64bit:354: DAR201: - return"
-        },
-        {
-          "line": 359,
-          "column": null,
-          "function": "is_64bit",
-          "code": "DAR101",
-          "message": "[is_64bit] - value",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:is_64bit:359: DAR101: - value"
-        },
-        {
-          "line": 364,
-          "column": null,
-          "function": "breakpoints",
-          "code": "DAR201",
-          "message": "[breakpoints] - return",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:breakpoints:364: DAR201: - return"
-        },
-        {
-          "line": 369,
-          "column": null,
-          "function": "watchpoints",
-          "code": "DAR201",
-          "message": "[watchpoints] - return",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:watchpoints:369: DAR201: - return"
-        },
-        {
-          "line": 374,
-          "column": null,
-          "function": "next_bp_id",
-          "code": "DAR201",
-          "message": "[next_bp_id] - return",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:next_bp_id:374: DAR201: - return"
-        },
-        {
-          "line": 379,
-          "column": null,
-          "function": "next_bp_id",
-          "code": "DAR101",
-          "message": "[next_bp_id] - value",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:next_bp_id:379: DAR101: - value"
-        },
-        {
-          "line": 384,
-          "column": null,
-          "function": "next_wp_id",
-          "code": "DAR201",
-          "message": "[next_wp_id] - return",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:next_wp_id:384: DAR201: - return"
-        },
-        {
-          "line": 389,
-          "column": null,
-          "function": "next_wp_id",
-          "code": "DAR101",
-          "message": "[next_wp_id] - value",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:next_wp_id:389: DAR101: - value"
-        },
-        {
-          "line": 394,
-          "column": null,
-          "function": "x64dbg_path",
-          "code": "DAR201",
-          "message": "[x64dbg_path] - return",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:x64dbg_path:394: DAR201: - return"
-        },
-        {
-          "line": 399,
-          "column": null,
-          "function": "x64dbg_path",
-          "code": "DAR101",
-          "message": "[x64dbg_path] - value",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:x64dbg_path:399: DAR101: - value"
-        }
-      ]
-    },
     {
       "path": "src\\intellicrack\\core\\types.py",
       "count": 14,
@@ -327,6 +193,76 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\bridges\\x64dbg.py",
+      "count": 8,
+      "findings": [
+        {
+          "line": 69,
+          "column": null,
+          "function": "get_capstone",
+          "code": "DAR201",
+          "message": "[get_capstone] - return",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:get_capstone:69: DAR201: - return"
+        },
+        {
+          "line": 74,
+          "column": null,
+          "function": "get_keystone",
+          "code": "DAR201",
+          "message": "[get_keystone] - return",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:get_keystone:74: DAR201: - return"
+        },
+        {
+          "line": 336,
+          "column": null,
+          "function": "attached_pid",
+          "code": "DAR201",
+          "message": "[attached_pid] - return",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:attached_pid:336: DAR201: - return"
+        },
+        {
+          "line": 341,
+          "column": null,
+          "function": "binary_path",
+          "code": "DAR201",
+          "message": "[binary_path] - return",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:binary_path:341: DAR201: - return"
+        },
+        {
+          "line": 346,
+          "column": null,
+          "function": "is_64bit",
+          "code": "DAR201",
+          "message": "[is_64bit] - return",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:is_64bit:346: DAR201: - return"
+        },
+        {
+          "line": 351,
+          "column": null,
+          "function": "breakpoints",
+          "code": "DAR201",
+          "message": "[breakpoints] - return",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:breakpoints:351: DAR201: - return"
+        },
+        {
+          "line": 356,
+          "column": null,
+          "function": "watchpoints",
+          "code": "DAR201",
+          "message": "[watchpoints] - return",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:watchpoints:356: DAR201: - return"
+        },
+        {
+          "line": 361,
+          "column": null,
+          "function": "x64dbg_path",
+          "code": "DAR201",
+          "message": "[x64dbg_path] - return",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:x64dbg_path:361: DAR201: - return"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\core\\script_gen.py",
       "count": 5,
       "findings": [
@@ -447,6 +383,28 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\tools.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 43,
+          "column": null,
+          "function": "tool_started",
+          "code": "DAR201",
+          "message": "[tool_started] - return",
+          "raw": "src\\intellicrack\\ui\\tools.py:tool_started:43: DAR201: - return"
+        },
+        {
+          "line": 48,
+          "column": null,
+          "function": "tool_closed",
+          "code": "DAR201",
+          "message": "[tool_closed] - return",
+          "raw": "src\\intellicrack\\ui\\tools.py:tool_closed:48: DAR201: - return"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\bridges\\radare2.py",
       "count": 1,
       "findings": [
@@ -457,6 +415,20 @@
           "code": "DAR402",
           "message": "[execute_command] +r ToolError",
           "raw": "src\\intellicrack\\bridges\\radare2.py:execute_command:1220: DAR402: +r ToolError"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\sandbox\\qemu.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 378,
+          "column": null,
+          "function": "is_connected",
+          "code": "DAR201",
+          "message": "[is_connected] - return",
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:is_connected:378: DAR201: - return"
         }
       ]
     }

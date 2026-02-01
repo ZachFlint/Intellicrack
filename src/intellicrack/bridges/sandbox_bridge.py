@@ -678,7 +678,7 @@ class SandboxBridge(ToolBridgeBase):
         try:
             snapshot_id = await instance.sandbox.take_snapshot(name)
             instance.touch()
-            _logger.info("snapshot_created", extra={"name": name, "instance_id": instance_id, "snapshot_id": snapshot_id})
+            _logger.info("snapshot_created", extra={"snapshot_name": name, "instance_id": instance_id, "snapshot_id": snapshot_id})
 
             return {
                 "snapshot_id": snapshot_id,

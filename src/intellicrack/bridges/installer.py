@@ -284,7 +284,7 @@ class ToolInstaller:
         _logger.debug("tool_not_found", extra={"tool": tool_info.display_name})
         return None
 
-    async def _find_frida(self) -> Path | None:  # noqa: PLR6301
+    async def _find_frida(self) -> Path | None:
         """Check if Frida Python package is installed.
 
         Returns:
@@ -568,7 +568,7 @@ class ToolInstaller:
             filename = url.rsplit("/", maxsplit=1)[-1]
             temp_path = Path(tempfile.gettempdir()) / filename
 
-            _logger.info("download_starting", extra={"filename": filename})
+            _logger.info("download_starting", extra={"file_name": filename})
 
             async with client.stream("GET", url) as response:
                 response.raise_for_status()
@@ -584,7 +584,7 @@ class ToolInstaller:
                             if downloaded % _ONE_MB < _PROGRESS_CHUNK:
                                 _logger.debug("download_progress", extra={"percent": round(percent, 1)})
 
-            _logger.info("download_completed", extra={"filename": filename, "bytes": downloaded})
+            _logger.info("download_completed", extra={"file_name": filename, "bytes": downloaded})
 
         except Exception:
             _logger.exception("download_failed")

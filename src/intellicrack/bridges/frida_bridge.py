@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 import frida
-from frida.core import ScriptMessage
 
 from ..core.logging import get_logger
 from ..core.process_manager import ProcessManager, ProcessType
@@ -37,6 +36,8 @@ from .base import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
+
+    from frida.core import ScriptMessage
 
 _logger = get_logger("bridges.frida")
 
@@ -661,7 +662,7 @@ class FridaBridge(InstrumentationBridge):
         if isinstance(read_data, (bytes, bytearray)):
             return bytes(read_data)
         if isinstance(read_data, list):
-            return bytes(cast(list[int], read_data))
+            return bytes(cast("list[int]", read_data))
 
         raise ToolError(_ERR_READ_FAILED)
 
@@ -732,7 +733,7 @@ class FridaBridge(InstrumentationBridge):
             for raw_item in cast("list[object]", range_data):
                 if not isinstance(raw_item, dict):
                     continue
-                r = cast(dict[str, object], raw_item)
+                r = cast("dict[str, object]", raw_item)
                 base_str = str(r.get("base", "0"))
                 base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
                 size_val = r.get("size", 0)
@@ -796,7 +797,7 @@ class FridaBridge(InstrumentationBridge):
             for raw_match in cast("list[object]", scan_data):
                 if not isinstance(raw_match, dict):
                     continue
-                m = cast(dict[str, object], raw_match)
+                m = cast("dict[str, object]", raw_match)
                 addr_str = str(m.get("address", "0"))
                 addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
                 matches.append(
@@ -846,7 +847,7 @@ class FridaBridge(InstrumentationBridge):
             for raw_mod in cast("list[object]", mod_data):
                 if not isinstance(raw_mod, dict):
                     continue
-                m = cast(dict[str, object], raw_mod)
+                m = cast("dict[str, object]", raw_mod)
                 base_str = str(m.get("base", "0"))
                 base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
                 name_val = m.get("name", "")
@@ -902,7 +903,7 @@ class FridaBridge(InstrumentationBridge):
             for idx, raw_export in enumerate(cast("list[object]", export_data)):
                 if not isinstance(raw_export, dict):
                     continue
-                e = cast(dict[str, object], raw_export)
+                e = cast("dict[str, object]", raw_export)
                 addr_str = str(e.get("address", "0"))
                 addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
                 name_val = e.get("name", "")
@@ -972,7 +973,7 @@ class FridaBridge(InstrumentationBridge):
             del data
             messages.append(message)
             if self._message_handler:
-                raw: dict[str, object] = dict(cast(dict[str, object], message))
+                raw: dict[str, object] = dict(cast("dict[str, object]", message))
                 self._message_handler(raw)
 
         script.on("message", on_message)
@@ -985,7 +986,7 @@ class FridaBridge(InstrumentationBridge):
             if msg["type"] == "send":
                 payload = msg.get("payload", {})
                 if isinstance(payload, dict):
-                    payload_dict = cast(dict[str, object], payload)
+                    payload_dict = cast("dict[str, object]", payload)
                     if payload_dict.get("type") == "hooked":
                         addr_val = payload_dict.get("address", "0")
                         if isinstance(addr_val, str):
@@ -1138,8 +1139,7 @@ class FridaBridge(InstrumentationBridge):
             if message["type"] == "send":
                 payload = message.get("payload", {})
                 if isinstance(payload, dict):
-                    for k_str, v_any in cast(dict[str, object], payload).items():
-                        result[k_str] = v_any
+                    result.update(dict(cast("dict[str, object]", payload).items()))
                     if data:
                         result["data"] = list(data)
             elif message["type"] == "error":

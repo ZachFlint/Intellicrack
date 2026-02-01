@@ -12,19 +12,15 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Literal
 
 from .license_analyzer import LicenseAnalyzer
 from .logging import get_logger
 from .types import (
-    BinaryInfo,
     ConfirmationLevel,
-    LicensingAnalysis,
     Message,
     PatchInfo,
     ProviderName,
-    ToolCall,
-    ToolDefinition,
     ToolName,
     ToolResult,
 )
@@ -32,11 +28,13 @@ from .types import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from typing import Any
 
     from ..providers.base import LLMProvider
     from ..providers.registry import ProviderRegistry
     from .session import Session, SessionManager
     from .tools import ToolRegistry
+    from .types import BinaryInfo, LicensingAnalysis, ToolCall, ToolDefinition
 
 
 _logger = get_logger("core.orchestrator")
@@ -217,6 +215,15 @@ class Orchestrator:
             Statistics instance.
         """
         return self._stats
+
+    @property
+    def provider_registry(self) -> ProviderRegistry:
+        """Get the provider registry.
+
+        Returns:
+            The provider registry instance.
+        """
+        return self._providers
 
     async def start_session(
         self,

@@ -347,7 +347,7 @@ class GhidraBridge(StaticAnalysisBridge):
 
         try:
             ghidra_bridge_mod = importlib.import_module("ghidra_bridge")
-            bridge_cls = cast("Callable[..., object]", getattr(ghidra_bridge_mod, "GhidraBridge"))
+            bridge_cls = cast("Callable[..., object]", ghidra_bridge_mod.GhidraBridge)
 
             self._bridge = await asyncio.to_thread(
                 bridge_cls,
@@ -468,7 +468,7 @@ class GhidraBridge(StaticAnalysisBridge):
 
         try:
             ghidra_bridge_mod = importlib.import_module("ghidra_bridge")
-            bridge_cls = cast("Callable[..., object]", getattr(ghidra_bridge_mod, "GhidraBridge"))
+            bridge_cls = cast("Callable[..., object]", ghidra_bridge_mod.GhidraBridge)
 
             self._bridge = await asyncio.to_thread(
                 bridge_cls,

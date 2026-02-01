@@ -6,6 +6,7 @@ API key management, model selection, and connection settings.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import os
@@ -44,6 +45,7 @@ _logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from intellicrack.core.types import ModelInfo
+    from intellicrack.providers.base import LLMProviderBase
     from intellicrack.providers.discovery import ModelDiscovery
     from intellicrack.providers.registry import ProviderRegistry
 
@@ -400,6 +402,7 @@ class ModelRefreshWorker(QThread):
         provider_id: str,
         api_key: str,
         api_base: str | None = None,
+        provider: LLMProviderBase | None = None,
         parent: QWidget | None = None,
     ) -> None:
         """Initialize the model refresh worker.
@@ -408,12 +411,14 @@ class ModelRefreshWorker(QThread):
             provider_id: The provider identifier.
             api_key: The API key for authentication.
             api_base: Optional API base URL.
+            provider: Optional connected provider instance for direct model listing.
             parent: Parent widget.
         """
         super().__init__(parent)
         self._provider_id = provider_id
         self._api_key = api_key
         self._api_base = api_base
+        self._provider = provider
 
     def run(self) -> None:
         """Run the model refresh in a separate thread."""
@@ -429,10 +434,24 @@ class ModelRefreshWorker(QThread):
         Returns:
             Tuple of (success, model_list, message).
         """
+        import asyncio as _asyncio  # noqa: PLC0415
+
+        if self._provider is not None and self._provider.is_connected:
+            try:
+                model_infos = _asyncio.run(self._provider.list_models())
+                model_ids = sorted(m.id for m in model_infos)
+                if model_ids:
+                    return True, model_ids, f"Found {len(model_ids)} models"
+            except Exception as exc:
+                _logger.warning(
+                    "provider_list_models_fallback",
+                    extra={"provider": self._provider_id, "error": str(exc)},
+                )
+
         timeout = httpx.Timeout(15.0)
 
         if self._provider_id == "anthropic":
-            return self._fetch_anthropic_models()
+            return self._fetch_anthropic_models(timeout)
         if self._provider_id == "openai":
             return self._fetch_openai_models(timeout)
         if self._provider_id == "google":
@@ -445,21 +464,73 @@ class ModelRefreshWorker(QThread):
             return self._fetch_huggingface_models(timeout)
         return False, [], f"Unknown provider: {self._provider_id}"
 
-    @staticmethod
-    def _fetch_anthropic_models() -> tuple[bool, list[str], str]:
-        """Fetch Anthropic models (returns known models as API doesn't list them).
+    def _fetch_anthropic_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
+        """Fetch Anthropic models from the /v1/models API with pagination.
+
+        Args:
+            timeout: HTTP request timeout configuration.
 
         Returns:
             Tuple of (success, model_list, message).
         """
-        models = [
+        fallback_models = [
+            "claude-opus-4-20250514",
             "claude-sonnet-4-20250514",
+            "claude-3-7-sonnet-20250219",
             "claude-3-5-sonnet-20241022",
             "claude-3-5-haiku-20241022",
             "claude-3-opus-20240229",
             "claude-3-haiku-20240307",
         ]
-        return True, models, "Anthropic models loaded"
+
+        if not self._api_key:
+            return True, fallback_models, "Anthropic models loaded (defaults)"
+
+        headers = {
+            "x-api-key": self._api_key,
+            "anthropic-version": "2023-06-01",
+        }
+        base_url = (self._api_base or "https://api.anthropic.com").rstrip("/")
+        all_models: list[str] = []
+        after_id: str | None = None
+
+        try:
+            with httpx.Client(timeout=timeout) as client:
+                for _ in range(10):
+                    params: dict[str, str | int] = {"limit": 100}
+                    if after_id is not None:
+                        params["after_id"] = after_id
+
+                    resp = client.get(
+                        f"{base_url}/v1/models",
+                        headers=headers,
+                        params=params,
+                    )
+                    if resp.status_code == HTTP_UNAUTHORIZED:
+                        return True, fallback_models, "Invalid API key, showing defaults"
+                    if resp.status_code >= HTTP_BAD_REQUEST:
+                        return True, fallback_models, f"API error {resp.status_code}, showing defaults"
+
+                    data = resp.json()
+                    for model_entry in data.get("data", []):
+                        model_id = model_entry.get("id", "")
+                        if model_id:
+                            all_models.append(model_id)
+
+                    if not data.get("has_more", False):
+                        break
+                    last_id = data.get("last_id")
+                    if not last_id:
+                        break
+                    after_id = last_id
+
+        except Exception:
+            return True, fallback_models, "API unavailable, showing defaults"
+        else:
+            if all_models:
+                all_models.sort()
+                return True, all_models, f"Found {len(all_models)} Anthropic models"
+            return True, fallback_models, "No models returned, showing defaults"
 
     def _fetch_openai_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
         """Fetch OpenAI models from API.
@@ -800,7 +871,7 @@ class ProviderConfigDialog(QDialog):
             provider_name = ProviderName(provider_id.upper())
             provider = self._registry.get(provider_name)
             return provider is not None and getattr(provider, "is_connected", False)
-        except (ValueError, Exception):
+        except Exception:
             return False
 
     def _get_model_count(self, provider_id: str) -> int:
@@ -820,7 +891,7 @@ class ProviderConfigDialog(QDialog):
             provider_name = ProviderName(provider_id.upper())
             counts = self._discovery.get_provider_model_count()
             return counts.get(provider_name, 0)
-        except (ValueError, Exception):
+        except Exception:
             return 0
 
     def _update_active_label(self) -> None:
@@ -1162,10 +1233,8 @@ class ProviderSettingsWidget(QFrame):
             import asyncio  # noqa: PLC0415
 
             loop: asyncio.AbstractEventLoop | None = None
-            try:
+            with contextlib.suppress(RuntimeError):
                 loop = asyncio.get_running_loop()
-            except RuntimeError:
-                pass
 
             if loop is not None and loop.is_running():
                 self._recommended_label.setText("")
@@ -1228,6 +1297,10 @@ class ProviderSettingsWidget(QFrame):
 
         self._update_credential_source_display(api_key)
         self._update_recommended_model()
+
+        has_key = bool(self._api_key_input.text().strip())
+        if has_key or self._provider_id == "ollama":
+            QTimer.singleShot(200, self._auto_refresh_models)
 
     def _load_from_config(self) -> dict[str, Any]:
         """Load settings from the config file.
@@ -1298,6 +1371,8 @@ class ProviderSettingsWidget(QFrame):
 
     def _refresh_models(self) -> None:
         """Refresh the model list from the provider API."""
+        from intellicrack.core.types import ProviderName  # noqa: PLC0415
+
         icon_manager = IconManager.get_instance()
         self._status_icon.setPixmap(icon_manager.get_pixmap("status_loading", 16))
         self._status_label.setText("Refreshing models...")
@@ -1312,9 +1387,27 @@ class ProviderSettingsWidget(QFrame):
             self._refresh_models_btn.setEnabled(True)
             return
 
-        self._refresh_worker = ModelRefreshWorker(self._provider_id, api_key, api_base, self)
+        provider = None
+        if self._registry is not None:
+            with contextlib.suppress(ValueError):
+                provider_name = ProviderName(self._provider_id)
+                provider = self._registry.get(provider_name)
+
+        self._refresh_worker = ModelRefreshWorker(
+            self._provider_id,
+            api_key,
+            api_base,
+            provider=provider,
+            parent=self,
+        )
         self._refresh_worker.refresh_finished.connect(self._on_models_refreshed)
         self._refresh_worker.start()
+
+    def _auto_refresh_models(self) -> None:
+        """Auto-refresh models if no refresh is already running."""
+        if self._refresh_worker is not None and self._refresh_worker.isRunning():
+            return
+        self._refresh_models()
 
     def _on_models_refreshed(self, success: bool, models: list[str], message: str) -> None:
         """Handle model refresh completion.
@@ -1394,6 +1487,7 @@ class ProviderSettingsWidget(QFrame):
             )
             self._status_icon.setPixmap(icon_manager.get_pixmap("status_success", 16))
             self._status_label.setText(message)
+            QTimer.singleShot(500, self._auto_refresh_models)
         else:
             _logger.warning(
                 "provider_connection_test_failed",

@@ -417,7 +417,7 @@ class SandboxBase:
         """
         _logger.debug(
             "base_sandbox_take_snapshot_called",
-            extra={"class_name": type(self).__name__, "name": name},
+            extra={"class_name": type(self).__name__, "snapshot_name": name},
         )
         raise SandboxError(_ERR_SNAPSHOTS_NOT_SUPPORTED)
 
