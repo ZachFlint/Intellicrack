@@ -375,7 +375,11 @@ class GuestAgentClient:
 
     @property
     def is_connected(self) -> bool:
-        """Whether the client is currently connected."""
+        """Whether the client is currently connected.
+
+        Returns:
+            True if the guest agent connection is active.
+        """
         return self._connected
 
     async def connect(self, timeout: float = 60.0, retry_interval: float = 2.0) -> bool:

@@ -118,3 +118,13 @@ src\intellicrack\bridges\radare2.py:execute_command:1220: DAR402: +r ToolError
 1 findings in src\intellicrack\sandbox\qemu.py
 
 src\intellicrack\sandbox\qemu.py:is_connected:378: DAR201: - return
+
+
+1 findings in src\intellicrack\ui\panels\frida_panel.py
+
+src\intellicrack\ui\panels\frida_panel.py:_on_frida_message:273: DAR102: + data
+
+
+1 findings in src\intellicrack\ui\panels\process_panel.py
+
+src\intellicrack\ui\panels\process_panel.py:_detect_process_architecture:181: DAR203:  ~Return: expected str but was Architecture string

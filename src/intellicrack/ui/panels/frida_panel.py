@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import contextlib
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QFontMetrics
 from PyQt6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
@@ -27,6 +27,9 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from intellicrack.ui.panels._async_bridge import run_bridge_coroutine
+from intellicrack.ui.panels._qt_compat import edit_table_item, set_max_block_count
 
 
 if TYPE_CHECKING:
@@ -105,7 +108,7 @@ class FridaPanel(QWidget):
         self._console = QPlainTextEdit()
         self._console.setFont(QFont("JetBrains Mono", 9))
         self._console.setReadOnly(True)
-        self._console.setMaximumBlockCount(10000)
+        set_max_block_count(self._console, 10000)
         console_layout.addWidget(self._console)
         main_splitter.addWidget(console_container)
 
@@ -195,7 +198,7 @@ class FridaPanel(QWidget):
         self._script_editor.setFont(QFont("JetBrains Mono", 10))
         self._script_editor.setPlainText(_DEFAULT_FRIDA_SCRIPT)
         self._script_editor.setTabStopDistance(
-            self._script_editor.fontMetrics().horizontalAdvance(" ") * 4
+            QFontMetrics(self._script_editor.font()).horizontalAdvance(" ") * 4
         )
         editor_layout.addWidget(self._script_editor)
         return editor_container
@@ -233,9 +236,7 @@ class FridaPanel(QWidget):
         self._hooks_table.setHorizontalHeaderLabels(_HOOK_COLUMNS)
         self._hooks_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._hooks_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        header = self._hooks_table.horizontalHeader()
-        if header is not None:
-            header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self._hooks_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         hooks_layout.addWidget(self._hooks_table)
         return hooks_container
 
@@ -265,14 +266,13 @@ class FridaPanel(QWidget):
         """
         self._console.appendPlainText(message)
 
-    def _on_frida_message(self, message: dict[str, Any], _data: bytes | None) -> None:
+    def _on_frida_message(self, message: dict[str, object]) -> None:
         """Handle messages from Frida scripts.
 
         Args:
             message: Frida message dictionary.
-            data: Optional binary data payload.
         """
-        msg_type = message.get("type", "")
+        msg_type = str(message.get("type", ""))
         if msg_type == "send":
             payload = message.get("payload", "")
             self._console.appendPlainText(f"[send] {payload}")
@@ -295,11 +295,11 @@ class FridaPanel(QWidget):
 
         try:
             pid = int(target)
-            self._bridge.attach(pid)
+            run_bridge_coroutine(self._bridge.attach(pid))
             self._attached_pid = pid
             self._console.appendPlainText(f"[+] Attached to PID {pid}")
         except ValueError:
-            self._bridge.attach_by_name(target)
+            run_bridge_coroutine(self._bridge.attach_by_name(target))
             self._console.appendPlainText(f"[+] Attached to '{target}'")
         except Exception as e:
             self._console.appendPlainText(f"[-] Attach failed: {e}")
@@ -316,7 +316,7 @@ class FridaPanel(QWidget):
             return
 
         try:
-            self._bridge.detach()
+            run_bridge_coroutine(self._bridge.detach())
             self._console.appendPlainText("[+] Detached")
         except Exception as e:
             self._console.appendPlainText(f"[-] Detach failed: {e}")
@@ -339,7 +339,7 @@ class FridaPanel(QWidget):
             return
 
         try:
-            self._bridge.execute_script(source)
+            run_bridge_coroutine(self._bridge.execute_script(source))
             self._console.appendPlainText("[+] Script executed")
             self._run_btn.setEnabled(False)
             self._stop_btn.setEnabled(True)
@@ -369,7 +369,7 @@ class FridaPanel(QWidget):
         self._hooks_table.setItem(row, _HOOK_COL_MODULE, QTableWidgetItem(""))
         self._hooks_table.setItem(row, _HOOK_COL_FUNCTION, QTableWidgetItem(""))
         self._hooks_table.setItem(row, _HOOK_COL_STATUS, QTableWidgetItem("Pending"))
-        self._hooks_table.editItem(self._hooks_table.item(row, _HOOK_COL_ADDRESS))
+        edit_table_item(self._hooks_table, self._hooks_table.item(row, _HOOK_COL_ADDRESS))
 
     def _on_remove_hook(self) -> None:
         """Remove the selected hook."""
@@ -380,7 +380,7 @@ class FridaPanel(QWidget):
         if selected < len(self._hook_ids) and self._bridge is not None:
             hook_id = self._hook_ids[selected]
             try:
-                self._bridge.remove_hook(hook_id)
+                run_bridge_coroutine(self._bridge.remove_hook(hook_id))
                 self._console.appendPlainText(f"[+] Removed hook {hook_id}")
             except Exception as e:
                 self._console.appendPlainText(f"[-] Failed to remove hook: {e}")
@@ -431,7 +431,7 @@ class FridaPanel(QWidget):
         """
         if self._bridge is not None:
             with contextlib.suppress(Exception):
-                self._bridge.detach()
+                run_bridge_coroutine(self._bridge.detach())
         self._attached_pid = None
         self.tool_closed.emit()
         return True

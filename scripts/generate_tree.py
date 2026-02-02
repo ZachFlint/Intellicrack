@@ -195,7 +195,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
         if os.name == "nt":
             tree_output = generate_fallback_tree(root_path)
         else:
-            result = subprocess.run(["tree", "-F"], capture_output=True, text=True, shell=False, cwd=root_path)
+            result = subprocess.run(["tree", "-F"], capture_output=True, text=True, shell=False, cwd=root_path, check=False)
             tree_output = result.stdout if result.returncode == 0 else ""
 
             if not tree_output:
@@ -213,13 +213,13 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
     print(f"TXT tree generated: {output_file} ({line_count} lines)")
 
 
-def generate_fallback_tree(root_path: str, prefix: str = "", is_last: bool = True) -> str:
+def generate_fallback_tree(root_path: str, prefix: str = "", _is_last: bool = True) -> str:
     """Generate tree structure as fallback if tree command fails.
 
     Args:
         root_path: Root directory path to generate tree from.
         prefix: Prefix string for tree indentation (used in recursion).
-        is_last: Whether this is the last item in the current directory.
+        _is_last: Whether this is the last item in the current directory.
 
     Returns:
         String representation of the directory tree structure.

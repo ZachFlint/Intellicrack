@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Verify that no test files use mocks or fake data.
+
 This script enforces the REAL DATA ONLY testing principle.
 """
 
@@ -8,6 +9,7 @@ import os
 import re
 import sys
 from pathlib import Path
+
 
 # Patterns that indicate mock usage
 MOCK_PATTERNS = [
@@ -53,8 +55,8 @@ MOCK_PATTERNS = [
 EXCLUDE_FILES = [
     "conftest.py",
     "__init__.py",
-    "base_test.py",  # Base test class is allowed to mention mocks in validation
-    "verify_no_mocks.py",  # This script contains patterns for detection
+    "base_test.py",
+    "verify_no_mocks.py",
 ]
 
 # Directories to exclude
@@ -70,24 +72,21 @@ def find_mock_usage(file_path: Path) -> list[tuple[int, str, str]]:
 
     Returns list of (line_number, line_content, pattern_matched)
     """
-    violations = []
+    violations: list[tuple[int, str, str]] = []
 
     try:
         with open(file_path, encoding="utf-8") as f:
             lines = f.readlines()
 
-        # Check if this is a validation script that legitimately checks for patterns
         is_validation_script = any(
             "validation" in str(file_path).lower() or "check" in str(file_path).lower() or "verify" in str(file_path).lower()
             for _ in [None]
         )
 
         for line_num, line in enumerate(lines, 1):
-            # Skip comments that are just listing patterns to avoid
             if line.strip().startswith("#") and any(x in line.lower() for x in ["pattern", "avoid", "check", "detect"]):
                 continue
 
-            # Skip lines that are checking for these patterns (validation scripts)
             if is_validation_script and any(x in line for x in ["in line", "not in", "check", "detect", "validate"]):
                 continue
 
@@ -101,15 +100,14 @@ def find_mock_usage(file_path: Path) -> list[tuple[int, str, str]]:
     return violations
 
 
-def scan_test_directory(test_dir: Path) -> dict:
+def scan_test_directory(test_dir: Path) -> dict[str, list[tuple[int, str, str]]]:
     """Scan entire test directory for mock usage.
 
     Returns dict of {file_path: [(line_num, line, pattern), ...]}
     """
-    all_violations = {}
+    all_violations: dict[str, list[tuple[int, str, str]]] = {}
 
     for root, dirs, files in os.walk(test_dir):
-        # Skip excluded directories
         dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS]
 
         for file in files:
@@ -126,34 +124,47 @@ def scan_test_directory(test_dir: Path) -> dict:
     return all_violations
 
 
-def classify_severity(pattern: str, line: str, file_path: str) -> str:
-    """Classify violation severity."""
-    # Critical violations - actual mock framework usage
+def classify_severity(_pattern: str, line: str, _file_path: str) -> str:
+    """Classify violation severity.
+
+    Args:
+        _pattern: The regex pattern that matched (reserved for future severity weighting).
+        line: The source line containing the violation.
+        _file_path: Path to the file containing the violation (reserved for future per-file rules).
+
+    Returns:
+        Severity level string: CRITICAL, HIGH, MEDIUM, or LOW.
+    """
     critical_patterns = ["from unittest.mock import", "from mock import", "import unittest.mock", "import mock"]
 
-    # High violations - mock objects and assertions
     high_patterns = ["Mock(", "MagicMock(", "patch(", "@patch", ".assert_called"]
 
     if any(p in line for p in critical_patterns):
         return "CRITICAL"
-    elif any(p in line for p in high_patterns):
+    if any(p in line for p in high_patterns):
         return "HIGH"
-    elif "test123" in line or "placeholder" in line:
+    if "test123" in line or "placeholder" in line:
         return "MEDIUM"
-    else:
-        return "LOW"
+    return "LOW"
 
 
-def print_report(violations: dict, summary_only: bool = False) -> int:
-    """Print violation report and return exit code."""
+def print_report(violations: dict[str, list[tuple[int, str, str]]], summary_only: bool = False) -> int:
+    """Print violation report and return exit code.
+
+    Args:
+        violations: Mapping of file paths to lists of (line_num, line_content, pattern) tuples.
+        summary_only: If True, only print summary without detailed violations.
+
+    Returns:
+        Exit code: 0 for clean/low, 1 for high, 2 for critical violations.
+    """
     if not violations:
         print("OK SUCCESS: No mock usage found in tests!")
         print("All tests appear to use REAL data as required.")
         return 0
 
-    # Classify violations by severity
     severity_counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
-    critical_files = []
+    critical_files: list[str] = []
 
     for file_path, file_violations in violations.items():
         has_critical = False
@@ -166,22 +177,20 @@ def print_report(violations: dict, summary_only: bool = False) -> int:
         if has_critical:
             critical_files.append(file_path)
 
-    # Print summary
     print("FAIL MOCK USAGE VIOLATIONS DETECTED")
     print("=" * 80)
-    print(f"🔴 CRITICAL: {severity_counts['CRITICAL']} (Mock framework imports)")
-    print(f"🟡 HIGH:     {severity_counts['HIGH']} (Mock objects/assertions)")
-    print(f"🟠 MEDIUM:   {severity_counts['MEDIUM']} (Test data violations)")
-    print(f"🔵 LOW:      {severity_counts['LOW']} (Other patterns)")
+    print(f"CRITICAL: {severity_counts['CRITICAL']} (Mock framework imports)")
+    print(f"HIGH:     {severity_counts['HIGH']} (Mock objects/assertions)")
+    print(f"MEDIUM:   {severity_counts['MEDIUM']} (Test data violations)")
+    print(f"LOW:      {severity_counts['LOW']} (Other patterns)")
     print(f"\nTotal files affected: {len(violations)}")
     print("=" * 80)
 
-    # Show critical violations first
     if critical_files and not summary_only:
-        print("\n🚨 CRITICAL VIOLATIONS (Mock framework usage):")
-        for file_path in critical_files[:10]:  # Show first 10
+        print("\nCRITICAL VIOLATIONS (Mock framework usage):")
+        for file_path in critical_files[:10]:
             file_violations = violations[file_path]
-            print(f"\n📄 {file_path}")
+            print(f"\n  {file_path}")
             critical_lines = [
                 (num, line, pat) for num, line, pat in file_violations if classify_severity(pat, line, file_path) == "CRITICAL"
             ]
@@ -194,17 +203,19 @@ def print_report(violations: dict, summary_only: bool = False) -> int:
     print("3. Implement real API responses for network tests")
     print("4. Use actual binary samples for exploitation tests")
 
-    # Return appropriate exit code based on severity
     if severity_counts["CRITICAL"] > 0:
-        return 2  # Critical violations
-    elif severity_counts["HIGH"] > 0:
-        return 1  # High violations
-    else:
-        return 0  # Only medium/low violations - warning only
+        return 2
+    if severity_counts["HIGH"] > 0:
+        return 1
+    return 0
 
 
-def main():
-    """Main entry point."""
+def main() -> int:
+    """Main entry point.
+
+    Returns:
+        Exit code indicating scan results.
+    """
     parser = argparse.ArgumentParser(description="Verify that tests use real data instead of mocks")
     parser.add_argument("--summary", "-s", action="store_true", help="Show only summary, not detailed violations")
     parser.add_argument("--ci", action="store_true", help="CI mode: exit with code 2 for critical, 1 for high violations")
@@ -212,12 +223,11 @@ def main():
 
     args = parser.parse_args()
 
-    # Find test directory
     if args.test_dir:
         test_dir = args.test_dir
     else:
         script_dir = Path(__file__).parent
-        test_dir = script_dir.parent  # tests/utils -> tests
+        test_dir = script_dir.parent
 
     if not test_dir.exists():
         print(f"Error: Test directory not found at {test_dir}")
@@ -230,10 +240,8 @@ def main():
     violations = scan_test_directory(test_dir)
 
     if args.ci:
-        # In CI mode, return appropriate exit code
         return print_report(violations, summary_only=True)
-    else:
-        return print_report(violations, summary_only=args.summary)
+    return print_report(violations, summary_only=args.summary)
 
 
 if __name__ == "__main__":

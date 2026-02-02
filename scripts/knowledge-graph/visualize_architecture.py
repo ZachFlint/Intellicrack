@@ -51,10 +51,7 @@ class ClusterManager:
         """Group nodes by their parent module at specified depth."""
         for node_id in self.graph.nodes:
             parts = node_id.replace("::", ".").split(".")
-            if len(parts) >= depth:
-                cluster_id = ".".join(parts[:depth])
-            else:
-                cluster_id = parts[0] if parts else "root"
+            cluster_id = ".".join(parts[:depth]) if len(parts) >= depth else parts[0] if parts else "root"
 
             self.clusters[cluster_id].add(node_id)
             self.node_to_cluster[node_id] = cluster_id
@@ -263,7 +260,8 @@ class KnowledgeGraphGenerator:
         except Exception:
             logger.exception("Failed to save GraphML file:")
 
-    def _calculate_hierarchical_layout(self, filtered_graph: nx.DiGraph) -> dict[str, dict[str, float]]:
+    @staticmethod
+    def _calculate_hierarchical_layout(filtered_graph: nx.DiGraph) -> dict[str, dict[str, float]]:
         """Calculate hierarchical layout based on module depth with grid wrapping."""
         logger.info("Calculating hierarchical layout...")
         layout_map: dict[str, dict[str, float]] = {}
@@ -282,26 +280,26 @@ class KnowledgeGraphGenerator:
         max_cols = 150
         level_gap = 80
 
-        current_y = 0
-        for level, node_ids in sorted(levels.items()):
+        current_y = 0.0
+        for _level, node_ids in sorted(levels.items()):
             sorted_nodes = sorted(node_ids)
-            n_nodes = len(sorted_nodes)
-            cols = min(n_nodes, max_cols)
-            rows = (n_nodes + cols - 1) // cols
-            total_width = cols * x_spacing
-            start_x = -total_width / 2
+            cols = min(len(sorted_nodes), max_cols)
+            start_x = -(cols * x_spacing) / 2
 
             for i, node_id in enumerate(sorted_nodes):
-                row = i // cols
-                col = i % cols
-                layout_map[node_id] = {"x": start_x + (col * x_spacing), "y": current_y + (row * y_spacing)}
+                layout_map[node_id] = {
+                    "x": start_x + ((i % cols) * x_spacing),
+                    "y": current_y + ((i // cols) * y_spacing),
+                }
 
+            rows = (len(sorted_nodes) + cols - 1) // cols
             current_y += rows * y_spacing + level_gap
 
         logger.info("Hierarchical layout calculated for %d nodes.", len(layout_map))
         return layout_map
 
-    def _calculate_radial_layout(self, filtered_graph: nx.DiGraph) -> dict[str, dict[str, float]]:
+    @staticmethod
+    def _calculate_radial_layout(filtered_graph: nx.DiGraph) -> dict[str, dict[str, float]]:
         """Calculate radial layout with entry point at center."""
         logger.info("Calculating radial layout...")
         layout_map: dict[str, dict[str, float]] = {}
@@ -347,7 +345,8 @@ class KnowledgeGraphGenerator:
         logger.info("Radial layout calculated for %d nodes.", len(layout_map))
         return layout_map
 
-    def _calculate_sfdp_layout(self, dot_file: Path) -> dict[str, dict[str, float]]:
+    @staticmethod
+    def _calculate_sfdp_layout(dot_file: Path) -> dict[str, dict[str, float]]:
         """Calculates layout using sfdp and returns node positions."""
         logger.info("Calculating pre-loaded layout using sfdp (this may take a while)...")
         layout_map: dict[str, dict[str, float]] = {}
@@ -383,7 +382,8 @@ class KnowledgeGraphGenerator:
 
         return layout_map
 
-    def _generate_dot_file(self, filtered_graph: nx.DiGraph, dot_path: Path) -> bool:
+    @staticmethod
+    def _generate_dot_file(filtered_graph: nx.DiGraph, dot_path: Path) -> bool:
         """Generate DOT file for external layout tools."""
         try:
             try:
@@ -399,12 +399,100 @@ class KnowledgeGraphGenerator:
                         safe_v = v.replace('"', '\\"')
                         f.write(f'  "{safe_u}" -> "{safe_v}";\n')
                     f.write("}\n")
-            return True
         except Exception:
             logger.exception("Failed to generate DOT file.")
             return False
+        else:
+            return True
 
-    def generate_interactive_html(  # noqa: PLR0914
+    @staticmethod
+    def _normalize_positions(positions: dict[str, dict[str, float]]) -> None:
+        """Normalize node positions to fit within an 800-unit coordinate space."""
+        if not positions:
+            return
+        xs = [p["x"] for p in positions.values()]
+        ys = [p["y"] for p in positions.values()]
+        min_x, max_x = min(xs), max(xs)
+        min_y, max_y = min(ys), max(ys)
+        width = max_x - min_x if max_x != min_x else 1
+        height = max_y - min_y if max_y != min_y else 1
+        scale = 800 / max(width, height)
+        for coords in positions.values():
+            coords["x"] = (coords["x"] - min_x) * scale
+            coords["y"] = (coords["y"] - min_y) * scale
+
+    def _build_node_data(
+        self,
+        filtered_graph: nx.DiGraph,
+        boundary_nodes: set[str],
+        positions: dict[str, dict[str, float]],
+    ) -> tuple[list[dict[str, Any]], str | None]:
+        """Build node data list and identify the entry point node."""
+        nodes_data: list[dict[str, Any]] = []
+        entry_point_id: str | None = None
+        size_map = {"module": 8, "class": 6, "struct": 6, "function": 4, "external": 4}
+
+        for node_id, attrs in filtered_graph.nodes(data=True):
+            node_type = attrs.get("type", "unknown")
+
+            if node_id in boundary_nodes:
+                node_type = "external"
+
+            label = attrs.get("label", node_id.split(".")[-1].split("::")[-1])
+            if len(label) > self.MAX_LABEL_LENGTH:
+                label = label[: self.MAX_LABEL_LENGTH - 3] + "..."
+
+            color = self.TYPE_COLORS.get(node_type, "#D2E5FF")
+            size = size_map.get(node_type, 3)
+
+            if not entry_point_id and "intellicrack.main" in node_id and node_type == "module":
+                entry_point_id = node_id
+
+            if node_id == entry_point_id:
+                color = "#FF4444"
+                size = 12
+
+            cluster_id = self.cluster_manager.node_to_cluster.get(node_id, "") if self.cluster_manager else ""
+
+            node_data: dict[str, Any] = {
+                "id": node_id,
+                "label": label,
+                "color": color,
+                "type": node_type,
+                "size": size,
+                "cluster": cluster_id,
+            }
+
+            if node_id in positions:
+                node_data["x"] = positions[node_id]["x"]
+                node_data["y"] = positions[node_id]["y"]
+
+            nodes_data.append(node_data)
+
+        return nodes_data, entry_point_id
+
+    @staticmethod
+    def _build_edge_data(
+        filtered_graph: nx.DiGraph,
+        positions: dict[str, dict[str, float]],
+    ) -> list[dict[str, Any]]:
+        """Build edge data list with optional edge bundling."""
+        edges_data: list[dict[str, Any]] = [
+            {"source": u, "target": v} for u, v, _attrs in filtered_graph.edges(data=True)
+        ]
+
+        if positions:
+            bundler = EdgeBundler(positions)
+            vis_edges = [{"from": e["source"], "to": e["target"]} for e in edges_data]
+            bundled = bundler.bundle_edges(vis_edges)
+            edges_data = [
+                {"source": e["from"], "target": e["to"], **{k: v for k, v in e.items() if k not in {"from", "to"}}}
+                for e in bundled
+            ]
+
+        return edges_data
+
+    def generate_interactive_html(
         self,
         output_path: Path,
         layout_method: str = "sfdp",
@@ -430,42 +518,57 @@ class KnowledgeGraphGenerator:
 
         logger.info("Visualization graph: %d nodes (Original: %d)", len(filtered_graph), self.graph.number_of_nodes())
 
-        if dot_output_dir is not None:
-            dot_path = dot_output_dir / (output_path.stem + ".dot")
-        else:
-            dot_path = output_path.with_suffix(".dot")
-        positions: dict[str, dict[str, float]] = {}
+        dot_path = dot_output_dir / (output_path.stem + ".dot") if dot_output_dir is not None else output_path.with_suffix(".dot")
+        positions = self._compute_positions(filtered_graph, dot_path, layout_method)
+        self._normalize_positions(positions)
 
+        clusters_data = self._build_cluster_data(enable_clustering)
+        nodes_data, entry_point_id = self._build_node_data(filtered_graph, boundary_nodes, positions)
+        edges_data = self._build_edge_data(filtered_graph, positions)
+
+        html_content = self._generate_html_template(
+            json.dumps(nodes_data),
+            json.dumps(edges_data),
+            json.dumps(clusters_data),
+            json.dumps(entry_point_id) if entry_point_id else "null",
+            json.dumps(self.TYPE_COLORS),
+        )
+
+        try:
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(html_content)
+            logger.info("Interactive HTML saved to: %s", output_path)
+        except Exception:
+            logger.exception("Failed to save HTML file:")
+
+    def _compute_positions(
+        self,
+        filtered_graph: nx.DiGraph,
+        dot_path: Path,
+        layout_method: str,
+    ) -> dict[str, dict[str, float]]:
+        """Compute node positions using the specified layout method."""
         self._generate_dot_file(filtered_graph, dot_path)
         logger.info("DOT file saved to: %s", dot_path)
 
         if layout_method == "hierarchical":
+            return self._calculate_hierarchical_layout(filtered_graph)
+        if layout_method == "radial":
+            return self._calculate_radial_layout(filtered_graph)
+
+        positions: dict[str, dict[str, float]] = {}
+        if dot_path.exists():
+            positions = self._calculate_sfdp_layout(dot_path)
+
+        if not positions:
+            logger.info("Falling back to hierarchical layout...")
             positions = self._calculate_hierarchical_layout(filtered_graph)
-        elif layout_method == "radial":
-            positions = self._calculate_radial_layout(filtered_graph)
-        else:
-            if dot_path.exists():
-                positions = self._calculate_sfdp_layout(dot_path)
 
-            if not positions:
-                logger.info("Falling back to hierarchical layout...")
-                positions = self._calculate_hierarchical_layout(filtered_graph)
+        return positions
 
-        nodes_data: list[dict[str, Any]] = []
-        edges_data: list[dict[str, Any]] = []
+    def _build_cluster_data(self, enable_clustering: bool) -> dict[str, dict[str, Any]]:
+        """Build cluster metadata for the visualization."""
         clusters_data: dict[str, dict[str, Any]] = {}
-
-        if positions:
-            xs = [p["x"] for p in positions.values()]
-            ys = [p["y"] for p in positions.values()]
-            min_x, max_x = min(xs), max(xs)
-            min_y, max_y = min(ys), max(ys)
-            width = max_x - min_x if max_x != min_x else 1
-            height = max_y - min_y if max_y != min_y else 1
-            scale = 800 / max(width, height)
-            for node_id in positions:
-                positions[node_id]["x"] = (positions[node_id]["x"] - min_x) * scale
-                positions[node_id]["y"] = (positions[node_id]["y"] - min_y) * scale
 
         if enable_clustering and self.cluster_manager:
             for cluster_id, meta in self.cluster_manager.cluster_meta.items():
@@ -480,80 +583,10 @@ class KnowledgeGraphGenerator:
                         "functions": meta["functions"],
                     }
 
-        entry_point_id: str | None = None
+        return clusters_data
 
-        for node_id, attrs in filtered_graph.nodes(data=True):
-            node_type = attrs.get("type", "unknown")
-
-            if node_id in boundary_nodes:
-                node_type = "external"
-
-            label = attrs.get("label", node_id.split(".")[-1].split("::")[-1])
-            if len(label) > self.MAX_LABEL_LENGTH:
-                label = label[: self.MAX_LABEL_LENGTH - 3] + "..."
-
-            color = self.TYPE_COLORS.get(node_type, "#D2E5FF")
-
-            size_map = {"module": 8, "class": 6, "struct": 6, "function": 4, "external": 4}
-            size = size_map.get(node_type, 3)
-
-            if not entry_point_id:
-                if "intellicrack.main" in node_id and node_type == "module":
-                    entry_point_id = node_id
-
-            if node_id == entry_point_id:
-                color = "#FF4444"
-                size = 12
-
-            cluster_id = self.cluster_manager.node_to_cluster.get(node_id, "") if self.cluster_manager else ""
-
-            node_data: dict[str, Any] = {
-                "id": node_id,
-                "label": label,
-                "color": color,
-                "type": node_type,
-                "size": size,
-                "cluster": cluster_id,
-            }
-
-            if node_id in positions:
-                node_data["x"] = positions[node_id]["x"]
-                node_data["y"] = positions[node_id]["y"]
-
-            nodes_data.append(node_data)
-
-        for u, v, _attrs in filtered_graph.edges(data=True):
-            edge_data: dict[str, Any] = {
-                "source": u,
-                "target": v,
-            }
-            edges_data.append(edge_data)
-
-        if positions:
-            bundler = EdgeBundler(positions)
-            vis_edges = [{"from": e["source"], "to": e["target"]} for e in edges_data]
-            bundled = bundler.bundle_edges(vis_edges)
-            edges_data = [
-                {"source": e["from"], "target": e["to"], **{k: v for k, v in e.items() if k not in {"from", "to"}}} for e in bundled
-            ]
-
-        json_nodes = json.dumps(nodes_data)
-        json_edges = json.dumps(edges_data)
-        json_clusters = json.dumps(clusters_data)
-        json_entry = json.dumps(entry_point_id) if entry_point_id else "null"
-        json_colors = json.dumps(self.TYPE_COLORS)
-
-        html_content = self._generate_html_template(json_nodes, json_edges, json_clusters, json_entry, json_colors)
-
-        try:
-            with open(output_path, "w", encoding="utf-8") as f:
-                f.write(html_content)
-            logger.info("Interactive HTML saved to: %s", output_path)
-        except Exception:
-            logger.exception("Failed to save HTML file:")
-
+    @staticmethod
     def _generate_html_template(
-        self,
         json_nodes: str,
         json_edges: str,
         json_clusters: str,

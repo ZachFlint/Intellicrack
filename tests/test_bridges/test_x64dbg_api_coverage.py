@@ -7,15 +7,14 @@ code coverage and usage analysis requirements.
 
 from __future__ import annotations
 
-import asyncio
 import os
 import sys
-from unittest.mock import MagicMock, patch
 
 import pytest
 
 from intellicrack.bridges.x64dbg import X64DbgBridge
-from intellicrack.core.types import ToolError, BreakpointInfo
+from intellicrack.core.types import BreakpointInfo, ToolError
+
 
 # Mark all tests as requiring Windows if they use ctypes features
 pytestmark = pytest.mark.asyncio

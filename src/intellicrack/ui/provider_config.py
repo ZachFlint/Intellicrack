@@ -6,6 +6,7 @@ API key management, model selection, and connection settings.
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import json
 import logging
@@ -37,6 +38,8 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from intellicrack.core.types import ProviderName
 
 from .resources import IconManager
 
@@ -434,11 +437,9 @@ class ModelRefreshWorker(QThread):
         Returns:
             Tuple of (success, model_list, message).
         """
-        import asyncio as _asyncio  # noqa: PLC0415
-
         if self._provider is not None and self._provider.is_connected:
             try:
-                model_infos = _asyncio.run(self._provider.list_models())
+                model_infos = asyncio.run(self._provider.list_models())
                 model_ids = sorted(m.id for m in model_infos)
                 if model_ids:
                     return True, model_ids, f"Found {len(model_ids)} models"
@@ -866,8 +867,6 @@ class ProviderConfigDialog(QDialog):
         if self._registry is None:
             return False
         try:
-            from intellicrack.core.types import ProviderName  # noqa: PLC0415
-
             provider_name = ProviderName(provider_id.upper())
             provider = self._registry.get(provider_name)
             return provider is not None and getattr(provider, "is_connected", False)
@@ -886,8 +885,6 @@ class ProviderConfigDialog(QDialog):
         if self._discovery is None:
             return 0
         try:
-            from intellicrack.core.types import ProviderName  # noqa: PLC0415
-
             provider_name = ProviderName(provider_id.upper())
             counts = self._discovery.get_provider_model_count()
             return counts.get(provider_name, 0)
@@ -922,8 +919,6 @@ class ProviderConfigDialog(QDialog):
             return
 
         try:
-            from intellicrack.core.types import ProviderName  # noqa: PLC0415
-
             provider_name = ProviderName(self._current_provider.upper())
             self._registry.set_active(provider_name)
             self._update_active_label()
@@ -1230,8 +1225,6 @@ class ProviderSettingsWidget(QFrame):
             return
 
         try:
-            import asyncio  # noqa: PLC0415
-
             loop: asyncio.AbstractEventLoop | None = None
             with contextlib.suppress(RuntimeError):
                 loop = asyncio.get_running_loop()
@@ -1371,8 +1364,6 @@ class ProviderSettingsWidget(QFrame):
 
     def _refresh_models(self) -> None:
         """Refresh the model list from the provider API."""
-        from intellicrack.core.types import ProviderName  # noqa: PLC0415
-
         icon_manager = IconManager.get_instance()
         self._status_icon.setPixmap(icon_manager.get_pixmap("status_loading", 16))
         self._status_label.setText("Refreshing models...")

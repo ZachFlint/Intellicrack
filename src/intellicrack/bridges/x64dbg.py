@@ -67,12 +67,20 @@ except ImportError:
 
 
 def get_capstone() -> ModuleType | None:
-    """Get the capstone module if available."""
+    """Get the capstone module if available.
+
+    Returns:
+        The capstone module, or None if not installed.
+    """
     return _capstone
 
 
 def get_keystone() -> ModuleType | None:
-    """Get the keystone module if available."""
+    """Get the keystone module if available.
+
+    Returns:
+        The keystone module, or None if not installed.
+    """
     return _keystone
 
 
@@ -333,32 +341,56 @@ class X64DbgBridge(DebuggerBridge):
 
     @property
     def attached_pid(self) -> int | None:
-        """Get the currently attached process ID."""
+        """Get the currently attached process ID.
+
+        Returns:
+            The PID of the attached process, or None if not attached.
+        """
         return self._attached_pid
 
     @property
     def binary_path(self) -> Path | None:
-        """Get the path to the loaded binary."""
+        """Get the path to the loaded binary.
+
+        Returns:
+            The binary file path, or None if no binary is loaded.
+        """
         return self._binary_path
 
     @property
     def is_64bit(self) -> bool:
-        """Get whether the bridge is in 64-bit mode."""
+        """Get whether the bridge is in 64-bit mode.
+
+        Returns:
+            True if operating in 64-bit mode.
+        """
         return self._is_64bit
 
     @property
     def breakpoints(self) -> dict[int, BreakpointInfo]:
-        """Get the breakpoints dictionary."""
+        """Get the breakpoints dictionary.
+
+        Returns:
+            Mapping of breakpoint IDs to their info.
+        """
         return self._breakpoints
 
     @property
     def watchpoints(self) -> dict[int, WatchpointInfo]:
-        """Get the watchpoints dictionary."""
+        """Get the watchpoints dictionary.
+
+        Returns:
+            Mapping of watchpoint IDs to their info.
+        """
         return self._watchpoints
 
     @property
     def x64dbg_path(self) -> Path | None:
-        """Get the path to the x64dbg installation."""
+        """Get the path to the x64dbg installation.
+
+        Returns:
+            The x64dbg installation path, or None if not found.
+        """
         return self._x64dbg_path
 
     @property

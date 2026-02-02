@@ -9,7 +9,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 
 from intellicrack.ui.tools import FunctionListPanel, ToolOutputPanel, XRefPanel

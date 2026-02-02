@@ -44,22 +44,38 @@ ScriptType = Literal["frida", "ghidra", "radare2", "python", "x64dbg"]
 
 
 def _empty_str_list() -> list[str]:
-    """Typed factory for empty string lists (dataclass default)."""
+    """Typed factory for empty string lists (dataclass default).
+
+    Returns:
+        An empty string list.
+    """
     return []
 
 
 def _empty_int_list() -> list[int]:
-    """Typed factory for empty int lists (dataclass default)."""
+    """Typed factory for empty int lists (dataclass default).
+
+    Returns:
+        An empty integer list.
+    """
     return []
 
 
 def _empty_dict_list() -> list[dict[str, Any]]:
-    """Typed factory for empty dict lists (dataclass default)."""
+    """Typed factory for empty dict lists (dataclass default).
+
+    Returns:
+        An empty list of string-Any dictionaries.
+    """
     return []
 
 
 def _empty_str_any_dict() -> dict[str, Any]:
-    """Typed factory for empty string-Any dicts (dataclass default)."""
+    """Typed factory for empty string-Any dicts (dataclass default).
+
+    Returns:
+        An empty string-keyed dictionary.
+    """
     return {}
 
 
@@ -93,7 +109,11 @@ class BypassStrategy(Enum):
 
     @property
     def description(self) -> str:
-        """Get human-readable description of the strategy."""
+        """Get human-readable description of the strategy.
+
+        Returns:
+            Description text for this bypass strategy.
+        """
         descriptions = {
             BypassStrategy.RETURN_TRUE: "Force function to return true (1)",
             BypassStrategy.RETURN_FALSE: "Force function to return false (0)",
@@ -699,7 +719,7 @@ ANALYSIS CONTEXT:
 TASK:
 Write a standalone, error-free {language.value} script to bypass the protections described above.
 The script must be production-ready and handle errors gracefully.
-Do not include placeholders. Implement full logic based on the provided addresses and strategies.
+Implement full logic based on the provided addresses and strategies.
 """
         return prompt.strip()
 

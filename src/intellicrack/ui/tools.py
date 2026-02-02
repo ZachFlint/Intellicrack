@@ -40,12 +40,20 @@ class ToolWidget(Protocol):
 
     @property
     def tool_started(self) -> Any:
-        """Get the signal emitted when the tool process starts."""
+        """Get the signal emitted when the tool process starts.
+
+        Returns:
+            Any: The tool-started signal, or None if not implemented.
+        """
         return None
 
     @property
     def tool_closed(self) -> Any:
-        """Get the signal emitted when the tool process closes."""
+        """Get the signal emitted when the tool process closes.
+
+        Returns:
+            Any: The tool-closed signal, or None if not implemented.
+        """
         return None
 
     def start_tool(self) -> bool:

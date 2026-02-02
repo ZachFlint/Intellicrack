@@ -6,9 +6,6 @@ including XPU detection, model loading, inference, and fallback mechanisms.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, patch
-
 import pytest
 
 from intellicrack.core.types import Message, ProviderName
@@ -25,10 +22,6 @@ from intellicrack.providers.xpu_utils import (
     is_arc_b580,
     is_xpu_available,
 )
-
-
-if TYPE_CHECKING:
-    pass
 
 
 class TestXPUDetection:

@@ -30,6 +30,12 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.ui.panels._qt_compat import (
+    set_header_labels,
+    tree_item_data,
+    tree_item_set_data,
+)
+
 
 _logger = logging.getLogger(__name__)
 
@@ -154,14 +160,11 @@ class BinaryPanel(QWidget):
         self._hex_table.setHorizontalHeaderLabels(["Offset", "Hex", "ASCII"])
         self._hex_table.setFont(QFont("JetBrains Mono", 9))
         self._hex_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        v_header = self._hex_table.verticalHeader()
-        if v_header is not None:
-            v_header.setVisible(False)
+        self._hex_table.verticalHeader().setVisible(False)
         hex_header = self._hex_table.horizontalHeader()
-        if hex_header is not None:
-            hex_header.setSectionResizeMode(_HEX_COL_OFFSET, QHeaderView.ResizeMode.ResizeToContents)
-            hex_header.setSectionResizeMode(_HEX_COL_HEX, QHeaderView.ResizeMode.Stretch)
-            hex_header.setSectionResizeMode(_HEX_COL_ASCII, QHeaderView.ResizeMode.ResizeToContents)
+        hex_header.setSectionResizeMode(_HEX_COL_OFFSET, QHeaderView.ResizeMode.ResizeToContents)
+        hex_header.setSectionResizeMode(_HEX_COL_HEX, QHeaderView.ResizeMode.Stretch)
+        hex_header.setSectionResizeMode(_HEX_COL_ASCII, QHeaderView.ResizeMode.ResizeToContents)
         hex_layout.addWidget(self._hex_table)
         main_splitter.addWidget(hex_container)
 
@@ -172,33 +175,29 @@ class BinaryPanel(QWidget):
         self._side_tabs = QTabWidget()
 
         self._sections_tree = QTreeWidget()
-        self._sections_tree.setHeaderLabels(["Name", "VAddr", "Size", "Flags"])
+        set_header_labels(self._sections_tree, ["Name", "VAddr", "Size", "Flags"])
         self._sections_tree.itemDoubleClicked.connect(self._on_section_double_clicked)
         self._side_tabs.addTab(self._sections_tree, "Sections")
 
         self._imports_tree = QTreeWidget()
-        self._imports_tree.setHeaderLabels(["Library", "Function", "Address"])
+        set_header_labels(self._imports_tree, ["Library", "Function", "Address"])
         self._side_tabs.addTab(self._imports_tree, "Imports")
 
         self._exports_tree = QTreeWidget()
-        self._exports_tree.setHeaderLabels(["Name", "Address", "Ordinal"])
+        set_header_labels(self._exports_tree, ["Name", "Address", "Ordinal"])
         self._side_tabs.addTab(self._exports_tree, "Exports")
 
         self._strings_table = QTableWidget(0, 3)
         self._strings_table.setHorizontalHeaderLabels(["Offset", "Length", "String"])
         self._strings_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        str_header = self._strings_table.horizontalHeader()
-        if str_header is not None:
-            str_header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        self._strings_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         self._strings_table.cellDoubleClicked.connect(self._on_string_double_clicked)
         self._side_tabs.addTab(self._strings_table, "Strings")
 
         self._patches_table = QTableWidget(0, 3)
         self._patches_table.setHorizontalHeaderLabels(["Offset", "Original", "Patched"])
         self._patches_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        patch_header = self._patches_table.horizontalHeader()
-        if patch_header is not None:
-            patch_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self._patches_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self._side_tabs.addTab(self._patches_table, "Patches")
 
         side_layout.addWidget(self._side_tabs)
@@ -290,7 +289,7 @@ class BinaryPanel(QWidget):
         if len(self._file_data) < _MIN_PE_HEADER_SIZE:
             return
 
-        if self._file_data[:2] != b"MZ":
+        if bytes(self._file_data[:2]) != b"MZ":
             return
 
         try:
@@ -298,7 +297,7 @@ class BinaryPanel(QWidget):
             if pe_offset + 24 > len(self._file_data):
                 return
 
-            if self._file_data[pe_offset : pe_offset + 4] != b"PE\x00\x00":
+            if bytes(self._file_data[pe_offset : pe_offset + 4]) != b"PE\x00\x00":
                 return
 
             num_sections = struct.unpack_from("<H", self._file_data, pe_offset + 6)[0]
@@ -332,7 +331,7 @@ class BinaryPanel(QWidget):
                     f"{raw_size:,} / {vsize:,}",
                     flags_str,
                 ])
-                item.setData(0, Qt.ItemDataRole.UserRole, vaddr)
+                tree_item_set_data(item, 0, Qt.ItemDataRole.UserRole, vaddr)
                 self._sections_tree.addTopLevelItem(item)
 
         except (struct.error, IndexError) as e:
@@ -504,10 +503,10 @@ class BinaryPanel(QWidget):
             item: The double-clicked tree item.
             _column: Column index (unused).
         """
-        vaddr = item.data(0, Qt.ItemDataRole.UserRole)
-        if vaddr is not None:
-            self._populate_hex_view(int(vaddr))
-            self._offset_input.setText(f"0x{int(vaddr):08X}")
+        vaddr: object = tree_item_data(item, 0, Qt.ItemDataRole.UserRole)
+        if isinstance(vaddr, int):
+            self._populate_hex_view(vaddr)
+            self._offset_input.setText(f"0x{vaddr:08X}")
 
     def _on_string_double_clicked(self, row: int, _column: int) -> None:
         """Navigate to a string's offset in the hex view.

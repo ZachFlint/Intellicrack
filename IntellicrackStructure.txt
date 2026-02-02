@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Sat, Jan 31, 2026 11:15:15 PM
+Generated: Sun, Feb 01, 2026 05:39:45 PM
 Directory: D:\Intellicrack\src
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -226,6 +226,10 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   │   └── x64dbg_widget.py
 │   │   ├── panels/
 │   │   │   ├── __init__.py
+│   │   │   ├── _async_bridge.py
+│   │   │   ├── _async_bridge.pyi
+│   │   │   ├── _qt_compat.py
+│   │   │   ├── _qt_compat.pyi
 │   │   │   ├── binary_panel.py
 │   │   │   ├── frida_panel.py
 │   │   │   ├── licensing_panel.py
@@ -242,6 +246,8 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   │   ├── resource_helper.py
 │   │   │   └── theme_manager.py
 │   │   ├── __init__.py
+│   │   ├── _screen_compat.py
+│   │   ├── _screen_compat.pyi
 │   │   ├── app.py
 │   │   ├── chat.py
 │   │   ├── confirmation_dialog.py

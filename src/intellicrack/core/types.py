@@ -121,7 +121,11 @@ class AlgorithmType(enum.Enum):
 
     @property
     def is_hash(self) -> bool:
-        """Check if the algorithm is a hashing algorithm."""
+        """Check if the algorithm is a hashing algorithm.
+
+        Returns:
+            True if this algorithm type is a hashing algorithm.
+        """
         return self in {
             AlgorithmType.MD5,
             AlgorithmType.SHA1,
@@ -147,12 +151,20 @@ class KeyFormat(enum.Enum):
 
     @property
     def requires_hardware_id(self) -> bool:
-        """Check if the key format requires a hardware ID."""
+        """Check if the key format requires a hardware ID.
+
+        Returns:
+            True if the format requires hardware identification.
+        """
         return self in {KeyFormat.HARDWARE_LOCKED, KeyFormat.NAME_SERIAL_PAIR}
 
     @property
     def is_text_based(self) -> bool:
-        """Check if the key format is text-based."""
+        """Check if the key format is text-based.
+
+        Returns:
+            True if the format uses text-based key representation.
+        """
         return self in {
             KeyFormat.SERIAL_PLAIN,
             KeyFormat.SERIAL_DASHED,
@@ -239,17 +251,29 @@ class SectionInfo:
 
     @property
     def is_executable(self) -> bool:
-        """Check if section is executable."""
+        """Check if section is executable.
+
+        Returns:
+            True if the section has the executable characteristic flag set.
+        """
         return bool(self.characteristics & 0x20000000)
 
     @property
     def is_readable(self) -> bool:
-        """Check if section is readable."""
+        """Check if section is readable.
+
+        Returns:
+            True if the section has the readable characteristic flag set.
+        """
         return bool(self.characteristics & 0x40000000)
 
     @property
     def is_writable(self) -> bool:
-        """Check if section is writable."""
+        """Check if section is writable.
+
+        Returns:
+            True if the section has the writable characteristic flag set.
+        """
         return bool(self.characteristics & 0x80000000)
 
 
@@ -378,7 +402,11 @@ class DataTypeInfo:
 
     @property
     def display_type(self) -> str:
-        """Get the display string for the data type."""
+        """Get the display string for the data type.
+
+        Returns:
+            Formatted type string including pointer or array notation.
+        """
         if self.is_pointer and self.base_type:
             return f"{self.base_type} *"
         if self.is_array and self.base_type and self.array_length is not None:
@@ -414,12 +442,20 @@ class FunctionInfo:
 
     @property
     def has_code(self) -> bool:
-        """Check if code is available."""
+        """Check if code is available.
+
+        Returns:
+            True if decompiled code or disassembly is present.
+        """
         return bool(self.decompiled_code or self.disassembly)
 
     @property
     def summary(self) -> str:
-        """Get function summary."""
+        """Get function summary.
+
+        Returns:
+            Summary string with name, address, convention, and variable count.
+        """
         vars_count = len(self.local_variables)
         return f"{self.name}@{hex(self.address)} ({self.calling_convention}, {vars_count} vars)"
 
@@ -469,7 +505,11 @@ class ValidationFunctionInfo:
 
     @property
     def summary(self) -> str:
-        """Get validation function summary."""
+        """Get validation function summary.
+
+        Returns:
+            Summary with address, comparison count, and arithmetic operations.
+        """
         return f"Validation @ {hex(self.address)}: {len(self.comparison_addresses)} cmps, {self.arithmetic_operations} ops"
 
 
@@ -509,7 +549,11 @@ class CrossReference:
     to_function: str | None
 
     def __str__(self) -> str:
-        """Get string representation of the cross reference."""
+        """Get string representation of the cross reference.
+
+        Returns:
+            Formatted cross-reference showing type, source, and destination.
+        """
         src = self.from_function or hex(self.from_address)
         dst = self.to_function or hex(self.to_address)
         return f"[{self.ref_type}] {src} -> {dst}"
@@ -600,7 +644,11 @@ class BreakpointInfo:
     condition: str | None = None
 
     def __str__(self) -> str:
-        """Get string representation of the breakpoint."""
+        """Get string representation of the breakpoint.
+
+        Returns:
+            Formatted breakpoint info with ID, address, type, and hit count.
+        """
         status = "enabled" if self.enabled else "disabled"
         return f"BP#{self.id} @ {hex(self.address)} ({self.bp_type}): {status}, hit {self.hit_count} times"
 
@@ -737,7 +785,11 @@ class ThreadInfo:
     priority: int
 
     def __str__(self) -> str:
-        """Get string representation of the thread."""
+        """Get string representation of the thread.
+
+        Returns:
+            Formatted thread info with TID, state, priority, and address.
+        """
         return f"Thread {self.tid} ({self.state}, prio={self.priority}) @ {hex(self.start_address)}"
 
 
@@ -952,7 +1004,11 @@ class ToolFunction:
 
     @property
     def signature(self) -> str:
-        """Get function signature string."""
+        """Get function signature string.
+
+        Returns:
+            Formatted signature with name, parameters, and return type.
+        """
         params = ", ".join(f"{p.name}: {p.type}" for p in self.parameters)
         return f"{self.name}({params}) -> {self.returns}"
 

@@ -155,9 +155,6 @@ class LocalTransformersProvider(LLMProviderBase):
 
         Args:
             credentials: Optional credentials (not used for local inference).
-
-        Raises:
-            ProviderError: If initialization fails.
         """
         self._credentials = credentials
 
@@ -481,6 +478,9 @@ class LocalTransformersProvider(LLMProviderBase):
 
         Returns:
             Generated text.
+
+        Raises:
+            RuntimeError: If no model is currently loaded.
         """
         if self._loaded_model is None:
             raise RuntimeError(_MSG_NO_MODEL_LOADED)
@@ -528,6 +528,9 @@ class LocalTransformersProvider(LLMProviderBase):
 
         Yields:
             Text chunks.
+
+        Raises:
+            RuntimeError: If no model is currently loaded.
         """
         if self._loaded_model is None:
             raise RuntimeError(_MSG_NO_MODEL_LOADED)

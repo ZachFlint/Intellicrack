@@ -1215,9 +1215,6 @@ class Radare2Bridge(StaticAnalysisBridge):
 
         Returns:
             Command output.
-
-        Raises:
-            ToolError: If execution fails.
         """
         return await self._r2_cmd(command)
 

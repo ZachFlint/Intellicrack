@@ -12,7 +12,7 @@ import logging
 import struct
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QModelIndex, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QHeaderView,
@@ -29,6 +29,8 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from intellicrack.ui.panels._qt_compat import set_header_labels, set_sorting_enabled
 
 
 if TYPE_CHECKING:
@@ -179,7 +181,7 @@ def _detect_process_architecture(pid: int) -> str:
         pid: Process ID.
 
     Returns:
-        Architecture string: 'x64', 'x86', or 'Unknown'.
+        One of 'x64', 'x86', or 'Unknown'.
     """
     handle = _kernel32.OpenProcess(_PROCESS_QUERY_INFORMATION, False, pid)
     if not handle:
@@ -350,11 +352,15 @@ class ProcessPanel(QWidget):
         self._process_table.setHorizontalHeaderLabels(_PROC_COLUMNS)
         self._process_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._process_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self._process_table.setSortingEnabled(True)
-        self._process_table.currentCellChanged.connect(self._on_process_selection_changed)
-        header = self._process_table.horizontalHeader()
-        if header is not None:
-            header.setSectionResizeMode(_PROC_COL_NAME, QHeaderView.ResizeMode.Stretch)
+        set_sorting_enabled(self._process_table, enable=True)
+        selection_model = self._process_table.selectionModel()
+        if selection_model is not None:
+            selection_model.currentChanged.connect(self._on_process_selection_changed)
+        else:
+            _logger.warning("process_table_selection_model_unavailable")
+        self._process_table.horizontalHeader().setSectionResizeMode(
+            _PROC_COL_NAME, QHeaderView.ResizeMode.Stretch
+        )
         main_splitter.addWidget(self._process_table)
 
         details_panel = QWidget()
@@ -364,15 +370,13 @@ class ProcessPanel(QWidget):
         self._details_tabs = QTabWidget()
 
         self._modules_tree = QTreeWidget()
-        self._modules_tree.setHeaderLabels(["Module", "Base Address", "Size", "Path"])
+        set_header_labels(self._modules_tree, ["Module", "Base Address", "Size", "Path"])
         self._details_tabs.addTab(self._modules_tree, "Modules")
 
         self._threads_table = QTableWidget(0, 2)
         self._threads_table.setHorizontalHeaderLabels(["Thread ID", "Priority"])
         self._threads_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        th_header = self._threads_table.horizontalHeader()
-        if th_header is not None:
-            th_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self._threads_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self._details_tabs.addTab(self._threads_table, "Threads")
 
         self._info_label = QLabel("Select a process to view details")
@@ -402,7 +406,7 @@ class ProcessPanel(QWidget):
         current_filter = self._search_input.text().strip().lower()
         processes = _enumerate_processes()
 
-        self._process_table.setSortingEnabled(False)
+        set_sorting_enabled(self._process_table, enable=False)
         self._process_table.setRowCount(0)
 
         visible_count = 0
@@ -437,7 +441,7 @@ class ProcessPanel(QWidget):
 
             visible_count += 1
 
-        self._process_table.setSortingEnabled(True)
+        set_sorting_enabled(self._process_table, enable=True)
         self._proc_count_label.setText(f"{visible_count} processes")
 
     def _on_filter_changed(self, _text: str) -> None:
@@ -461,15 +465,14 @@ class ProcessPanel(QWidget):
             self._auto_refresh_btn.setText("Auto-Refresh: OFF")
             self._auto_refresh_timer.stop()
 
-    def _on_process_selection_changed(self, row: int, _col: int, _prev_row: int, _prev_col: int) -> None:
+    def _on_process_selection_changed(self, current: QModelIndex, _previous: QModelIndex) -> None:
         """Handle process table selection change.
 
         Args:
-            row: Selected row index.
-            _col: Selected column (unused).
-            _prev_row: Previous row (unused).
-            _prev_col: Previous column (unused).
+            current: Currently selected model index.
+            _previous: Previously selected model index.
         """
+        row = current.row()
         if row < 0:
             return
 

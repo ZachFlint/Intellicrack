@@ -30,6 +30,13 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.ui.panels._async_bridge import run_bridge_coroutine
+from intellicrack.ui.panels._qt_compat import (
+    get_current_tree_item,
+    set_header_labels,
+    set_max_block_count,
+)
+
 
 if TYPE_CHECKING:
     from intellicrack.sandbox.base import ExecutionReport, SandboxBase
@@ -173,23 +180,23 @@ class SandboxPanel(QWidget):
         self._console_output = QPlainTextEdit()
         self._console_output.setFont(QFont("JetBrains Mono", 9))
         self._console_output.setReadOnly(True)
-        self._console_output.setMaximumBlockCount(10000)
+        set_max_block_count(self._console_output, 10000)
         output_tabs.addTab(self._console_output, "Console")
 
         self._file_changes_tree = QTreeWidget()
-        self._file_changes_tree.setHeaderLabels(["Operation", "Path", "Details"])
+        set_header_labels(self._file_changes_tree, ["Operation", "Path", "Details"])
         output_tabs.addTab(self._file_changes_tree, "File Changes")
 
         self._registry_changes_tree = QTreeWidget()
-        self._registry_changes_tree.setHeaderLabels(["Operation", "Key", "Value"])
+        set_header_labels(self._registry_changes_tree, ["Operation", "Key", "Value"])
         output_tabs.addTab(self._registry_changes_tree, "Registry Changes")
 
         self._network_tree = QTreeWidget()
-        self._network_tree.setHeaderLabels(["Protocol", "Destination", "Port", "Data Size"])
+        set_header_labels(self._network_tree, ["Protocol", "Destination", "Port", "Data Size"])
         output_tabs.addTab(self._network_tree, "Network Activity")
 
         self._snapshots_tree = QTreeWidget()
-        self._snapshots_tree.setHeaderLabels(["ID", "Name", "Created"])
+        set_header_labels(self._snapshots_tree, ["ID", "Name", "Created"])
         output_tabs.addTab(self._snapshots_tree, "Snapshots")
 
         main_splitter.addWidget(output_tabs)
@@ -229,7 +236,7 @@ class SandboxPanel(QWidget):
             return
 
         try:
-            self._sandbox.start()
+            run_bridge_coroutine(self._sandbox.start())
             self._sandbox_id = "active"
             self._log("[+] Sandbox created")
             self._status_indicator.setText("Active")
@@ -251,7 +258,7 @@ class SandboxPanel(QWidget):
             return
 
         try:
-            self._sandbox.stop()
+            run_bridge_coroutine(self._sandbox.stop())
             self._log("[+] Sandbox destroyed")
         except Exception as e:
             self._log(f"[-] Failed to destroy sandbox: {e}")
@@ -273,7 +280,7 @@ class SandboxPanel(QWidget):
             return
 
         try:
-            self._sandbox.restart()
+            run_bridge_coroutine(self._sandbox.restart())
             self._log("[+] Sandbox restarted")
             self._clear_report_tabs()
         except Exception as e:
@@ -314,9 +321,9 @@ class SandboxPanel(QWidget):
 
         try:
             sandbox_dest = f"C:\\Sandbox\\{binary.name}"
-            self._sandbox.copy_to_sandbox(binary, sandbox_dest)
+            run_bridge_coroutine(self._sandbox.copy_to_sandbox(binary, sandbox_dest))
             sandbox_binary = Path(sandbox_dest)
-            self._sandbox.run_binary(sandbox_binary, args_list)
+            run_bridge_coroutine(self._sandbox.run_binary(sandbox_binary, args_list))
             self._log("[+] Execution started")
             self.execution_completed.emit(binary.name)
         except Exception as e:
@@ -328,7 +335,8 @@ class SandboxPanel(QWidget):
             return
 
         try:
-            snapshot_id = self._sandbox.take_snapshot("manual_snapshot")
+            snapshot_result = run_bridge_coroutine(self._sandbox.take_snapshot("manual_snapshot"))
+            snapshot_id = str(snapshot_result) if snapshot_result is not None else "unknown"
             self._log(f"[+] Snapshot taken: {snapshot_id}")
             item = QTreeWidgetItem([str(snapshot_id), "manual_snapshot", "now"])
             self._snapshots_tree.addTopLevelItem(item)
@@ -340,14 +348,14 @@ class SandboxPanel(QWidget):
         if self._sandbox is None:
             return
 
-        selected = self._snapshots_tree.currentItem()
+        selected = get_current_tree_item(self._snapshots_tree)
         if selected is None:
             self._log("[!] No snapshot selected")
             return
 
         snapshot_id = selected.text(0)
         try:
-            self._sandbox.restore_snapshot(snapshot_id)
+            run_bridge_coroutine(self._sandbox.restore_snapshot(snapshot_id))
             self._log(f"[+] Restored snapshot: {snapshot_id}")
             self._clear_report_tabs()
         except Exception as e:
@@ -426,6 +434,6 @@ class SandboxPanel(QWidget):
         self._status_poll_timer.stop()
         if self._sandbox is not None and self._sandbox_id is not None:
             with contextlib.suppress(Exception):
-                self._sandbox.stop()
+                run_bridge_coroutine(self._sandbox.stop())
         self.tool_closed.emit()
         return True

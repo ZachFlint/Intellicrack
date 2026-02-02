@@ -7614,6 +7614,12 @@
     </node>
     <node id="PyQt6.QtCore" />
     <node id="PyQt6.QtGui" />
+    <node id="src.intellicrack.ui._screen_compat">
+      <data key="d0">module</data>
+      <data key="d1">python</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack\ui\_screen_compat.py</data>
+      <data key="d3">src.intellicrack.ui._screen_compat</data>
+    </node>
     <node id="src.intellicrack.ui.chat">
       <data key="d0">module</data>
       <data key="d1">python</data>
@@ -9888,6 +9894,24 @@
       <data key="d3">_on_tool_status_received</data>
       <data key="d4">['self', 'tool_id', 'is_available', 'message']</data>
     </node>
+    <node id="src.intellicrack.ui._screen_compat._resolve">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_resolve</data>
+      <data key="d4">['obj', 'method_name']</data>
+    </node>
+    <node id="src.intellicrack.ui._screen_compat.get_screen_geometry">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_screen_geometry</data>
+      <data key="d4">['app']</data>
+    </node>
+    <node id="src.intellicrack.ui._screen_compat.move_widget">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">move_widget</data>
+      <data key="d4">['widget', 'x', 'y']</data>
+    </node>
     <node id="src.intellicrack.ui.__init__">
       <data key="d0">module</data>
       <data key="d1">python</data>
@@ -10798,6 +10822,7 @@
     <node id="intellicrack.ui.embedding.hxd_widget" />
     <node id="intellicrack.ui.embedding.radare2_widget" />
     <node id="intellicrack.ui.embedding.x64dbg_widget" />
+    <node id="intellicrack.ui.panels._qt_compat" />
     <node id="src.intellicrack.ui.panels.binary_panel.BinaryPanel">
       <data key="d0">class</data>
       <data key="d1">python</data>
@@ -10917,6 +10942,7 @@
       <data key="d3">stop_tool</data>
       <data key="d4">['self']</data>
     </node>
+    <node id="intellicrack.ui.panels._async_bridge" />
     <node id="src.intellicrack.ui.panels.frida_panel.FridaPanel">
       <data key="d0">class</data>
       <data key="d1">python</data>
@@ -10975,7 +11001,7 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_on_frida_message</data>
-      <data key="d4">['self', 'message', '_data']</data>
+      <data key="d4">['self', 'message']</data>
     </node>
     <node id="src.intellicrack.ui.panels.frida_panel._on_attach">
       <data key="d0">function</data>
@@ -11249,7 +11275,7 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_on_process_selection_changed</data>
-      <data key="d4">['self', 'row', '_col', '_prev_row', '_prev_col']</data>
+      <data key="d4">['self', 'current', '_previous']</data>
     </node>
     <node id="src.intellicrack.ui.panels.process_panel._load_process_details">
       <data key="d0">function</data>
@@ -11745,6 +11771,78 @@
       <data key="d1">python</data>
       <data key="d3">clear</data>
       <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels._async_bridge">
+      <data key="d0">module</data>
+      <data key="d1">python</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\_async_bridge.py</data>
+      <data key="d3">src.intellicrack.ui.panels._async_bridge</data>
+    </node>
+    <node id="src.intellicrack.ui.panels._async_bridge.run_bridge_coroutine">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">run_bridge_coroutine</data>
+      <data key="d4">['coro']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels._async_bridge._log_task_exception">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_log_task_exception</data>
+      <data key="d4">['task']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels._qt_compat">
+      <data key="d0">module</data>
+      <data key="d1">python</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\_qt_compat.py</data>
+      <data key="d3">src.intellicrack.ui.panels._qt_compat</data>
+    </node>
+    <node id="src.intellicrack.ui.panels._qt_compat._resolve">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_resolve</data>
+      <data key="d4">['obj', 'method_name']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels._qt_compat.set_sorting_enabled">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_sorting_enabled</data>
+      <data key="d4">['table', 'enable']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels._qt_compat.set_header_labels">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_header_labels</data>
+      <data key="d4">['tree', 'labels']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels._qt_compat.set_max_block_count">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_max_block_count</data>
+      <data key="d4">['editor', 'maximum']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels._qt_compat.edit_table_item">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">edit_table_item</data>
+      <data key="d4">['table', 'item']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels._qt_compat.get_current_tree_item">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_current_tree_item</data>
+      <data key="d4">['tree']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels._qt_compat.tree_item_set_data">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">tree_item_set_data</data>
+      <data key="d4">['item', 'column', 'role', 'value']</data>
+    </node>
+    <node id="src.intellicrack.ui.panels._qt_compat.tree_item_data">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">tree_item_data</data>
+      <data key="d4">['item', 'column', 'role']</data>
     </node>
     <node id="src.intellicrack.ui.panels.__init__">
       <data key="d0">module</data>
@@ -17786,7 +17884,13 @@
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.core.types">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.providers.discovery">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.sandbox">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui._screen_compat">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.chat">
@@ -18011,9 +18115,6 @@
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app.save_session">
       <data key="d5">defines</data>
     </edge>
-    <edge source="src.intellicrack.ui.app" target="src.intellicrack.providers.discovery">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app.open_sandbox">
       <data key="d5">defines</data>
     </edge>
@@ -18034,6 +18135,27 @@
     </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app.load_session">
       <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui._screen_compat" target="__future__">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui._screen_compat" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui._screen_compat" target="src.intellicrack.ui._screen_compat._resolve">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui._screen_compat" target="src.intellicrack.ui._screen_compat.get_screen_geometry">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui._screen_compat" target="src.intellicrack.ui._screen_compat.move_widget">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui._screen_compat" target="collections.abc">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui._screen_compat" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.chat" target="__future__">
       <data key="d5">imports</data>
@@ -18137,6 +18259,9 @@
     <edge source="src.intellicrack.ui.provider_config" target="__future__">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="asyncio">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.provider_config" target="contextlib">
       <data key="d5">imports</data>
     </edge>
@@ -18167,6 +18292,9 @@
     <edge source="src.intellicrack.ui.provider_config" target="PyQt6.QtWidgets">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="intellicrack.core.types">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.resources">
       <data key="d5">imports</data>
     </edge>
@@ -18190,9 +18318,6 @@
     </edge>
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config.ModelSelectionDialog">
       <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.provider_config" target="intellicrack.core.types">
-      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.provider_config" target="intellicrack.providers.base">
       <data key="d5">imports</data>
@@ -18361,9 +18486,6 @@
     </edge>
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config.get_selected_model">
       <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.provider_config" target="asyncio">
-      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.provider_config" target="intellicrack.credentials.env_loader">
       <data key="d5">imports</data>
@@ -20162,6 +20284,12 @@
     <edge source="src.intellicrack.ui.panels.frida_panel" target="PyQt6.QtWidgets">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="intellicrack.ui.panels._async_bridge">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="intellicrack.ui.panels._qt_compat">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.panels.frida_panel" target="src.intellicrack.ui.panels.frida_panel.FridaPanel">
       <data key="d5">defines</data>
     </edge>
@@ -20250,6 +20378,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.process_panel" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="intellicrack.ui.panels._qt_compat">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._PROCESSENTRY32">
@@ -20345,6 +20476,9 @@
     <edge source="src.intellicrack.ui.panels.binary_panel" target="PyQt6.QtWidgets">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="intellicrack.ui.panels._qt_compat">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.panels.binary_panel" target="src.intellicrack.ui.panels.binary_panel.BinaryPanel">
       <data key="d5">defines</data>
     </edge>
@@ -20427,6 +20561,12 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.sandbox_panel" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="intellicrack.ui.panels._async_bridge">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="intellicrack.ui.panels._qt_compat">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel.SandboxPanel">
@@ -20899,6 +21039,69 @@
     </edge>
     <edge source="src.intellicrack.ui.panels.stack_viewer.StackViewerPanel" target="PyQt6.QtWidgets.QWidget">
       <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels._async_bridge" target="__future__">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels._async_bridge" target="asyncio">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels._async_bridge" target="logging">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels._async_bridge" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels._async_bridge" target="src.intellicrack.ui.panels._async_bridge.run_bridge_coroutine">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels._async_bridge" target="src.intellicrack.ui.panels._async_bridge._log_task_exception">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels._async_bridge" target="collections.abc">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels._qt_compat" target="__future__">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels._qt_compat" target="logging">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels._qt_compat" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels._qt_compat" target="src.intellicrack.ui.panels._qt_compat._resolve">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels._qt_compat" target="src.intellicrack.ui.panels._qt_compat.set_sorting_enabled">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels._qt_compat" target="src.intellicrack.ui.panels._qt_compat.set_header_labels">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels._qt_compat" target="src.intellicrack.ui.panels._qt_compat.set_max_block_count">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels._qt_compat" target="src.intellicrack.ui.panels._qt_compat.edit_table_item">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels._qt_compat" target="src.intellicrack.ui.panels._qt_compat.get_current_tree_item">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels._qt_compat" target="src.intellicrack.ui.panels._qt_compat.tree_item_set_data">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels._qt_compat" target="src.intellicrack.ui.panels._qt_compat.tree_item_data">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels._qt_compat" target="collections.abc">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels._qt_compat" target="PyQt6.QtCore">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels._qt_compat" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.__init__" target="__future__">
       <data key="d5">imports</data>

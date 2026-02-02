@@ -44,7 +44,14 @@ if TYPE_CHECKING:
     _LiefParsedType = lief.PE.Binary | lief.OAT.Binary | lief.ELF.Binary | lief.MachO.Binary | lief.COFF.Binary | None
 
     def _lief_parse_raw(data: bytes) -> _LiefParsedType:
-        """Typed wrapper for lief.parse (type-checking only)."""
+        """Typed wrapper for lief.parse (type-checking only).
+
+        Args:
+            data: Raw binary data to parse.
+
+        Returns:
+            Parsed binary object, or None on failure.
+        """
         _ = data
         return None
 
@@ -458,7 +465,7 @@ class BinaryBridge(BinaryOperationsBridge):
         """Detect the binary format.
 
         Returns:
-            str: The binary format ('pe', 'elf', 'macho', or 'raw').
+            The binary format ('pe', 'elf', 'macho', or 'raw').
         """
         if self._data is None or len(self._data) < _MIN_HEADER_LEN:
             return "raw"

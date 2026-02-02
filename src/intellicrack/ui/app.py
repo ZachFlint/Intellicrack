@@ -34,7 +34,9 @@ from PyQt6.QtWidgets import (
 
 from ..core.logging import get_logger
 from ..core.types import Message, ProviderName, ToolCall, ToolResult
+from ..providers.discovery import ModelDiscovery
 from ..sandbox import SandboxManager
+from ._screen_compat import get_screen_geometry, move_widget
 from .chat import ChatPanel
 from .provider_config import ModelRefreshWorker, ProviderConfigDialog
 from .resources import FontManager, IconManager, ThemeManager
@@ -165,24 +167,25 @@ class MainWindow(QMainWindow):
 
         try:
             app = QApplication.instance()
-            if app is None:
+            if not isinstance(app, QApplication):
                 self.resize(max_w, max_h)
                 return
 
-            screen = app.primaryScreen()
-            if screen is None:
+            geometry = get_screen_geometry(app)
+            if geometry is None:
                 self.resize(max_w, max_h)
                 return
 
-            available = screen.availableGeometry()
-            target_w = max(min_w, min(max_w, available.width() - margin_w))
-            target_h = max(min_h, min(max_h, available.height() - margin_h))
+            avail_x, avail_y, avail_w, avail_h = geometry
+            target_w = max(min_w, min(max_w, avail_w - margin_w))
+            target_h = max(min_h, min(max_h, avail_h - margin_h))
 
             self.resize(target_w, target_h)
-
-            center_x = available.x() + (available.width() - target_w) // 2
-            center_y = available.y() + (available.height() - target_h) // 2
-            self.move(center_x, center_y)
+            move_widget(
+                self,
+                avail_x + (avail_w - target_w) // 2,
+                avail_y + (avail_h - target_h) // 2,
+            )
         except Exception:
             _logger.debug("screen_detection_failed_using_default_size")
             self.resize(max_w, max_h)
@@ -754,8 +757,6 @@ class MainWindow(QMainWindow):
 
     def _on_configure_providers(self) -> None:
         """Handle configure providers action."""
-        from ..providers.discovery import ModelDiscovery  # noqa: PLC0415
-
         registry = self._orchestrator.provider_registry
         discovery = ModelDiscovery(registry)
         dialog = ProviderConfigDialog(

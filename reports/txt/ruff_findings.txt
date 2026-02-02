@@ -83,119 +83,6 @@ D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:524:42: B009 Do not cal
 D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:548:44: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
 
 
-24 findings in D:\Intellicrack\src\intellicrack\ui\tools.py
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:42:9: D102 Missing docstring in public method
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:44:9: D102 Missing docstring in public method
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:46:9: D102 Missing docstring in public method
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:47:9: D102 Missing docstring in public method
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:51:7: D101 Missing docstring in public class
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:52:9: D102 Missing docstring in public method
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:56:7: D101 Missing docstring in public class
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:57:9: D102 Missing docstring in public method
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:61:7: D101 Missing docstring in public class
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:62:9: D102 Missing docstring in public method
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:69:9: D102 Missing docstring in public method
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:69:38: UP037 Remove quotes from type annotation
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:758:37: TC006 Add quotes to type expression in `typing.cast()`
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:761:42: TC006 Add quotes to type expression in `typing.cast()`
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:762:48: TC006 Add quotes to type expression in `typing.cast()`
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:785:40: TC006 Add quotes to type expression in `typing.cast()`
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:789:42: TC006 Add quotes to type expression in `typing.cast()`
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:790:51: TC006 Add quotes to type expression in `typing.cast()`
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:810:40: TC006 Add quotes to type expression in `typing.cast()`
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:813:42: TC006 Add quotes to type expression in `typing.cast()`
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:814:51: TC006 Add quotes to type expression in `typing.cast()`
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:842:47: TC006 Add quotes to type expression in `typing.cast()`
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:870:47: TC006 Add quotes to type expression in `typing.cast()`
-
-D:\Intellicrack\src\intellicrack\ui\tools.py:893:47: TC006 Add quotes to type expression in `typing.cast()`
-
-
-18 findings in D:\Intellicrack\src\intellicrack\core\process_manager.py
-
-D:\Intellicrack\src\intellicrack\core\process_manager.py:274:60: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-D:\Intellicrack\src\intellicrack\core\process_manager.py:277:67: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-D:\Intellicrack\src\intellicrack\core\process_manager.py:286:62: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-D:\Intellicrack\src\intellicrack\core\process_manager.py:330:76: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-D:\Intellicrack\src\intellicrack\core\process_manager.py:335:67: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-D:\Intellicrack\src\intellicrack\core\process_manager.py:456:52: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-D:\Intellicrack\src\intellicrack\core\process_manager.py:466:66: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-D:\Intellicrack\src\intellicrack\core\process_manager.py:502:66: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-D:\Intellicrack\src\intellicrack\core\process_manager.py:504:72: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-D:\Intellicrack\src\intellicrack\core\process_manager.py:512:63: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-D:\Intellicrack\src\intellicrack\core\process_manager.py:535:72: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-D:\Intellicrack\src\intellicrack\core\process_manager.py:537:78: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-D:\Intellicrack\src\intellicrack\core\process_manager.py:542:69: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-D:\Intellicrack\src\intellicrack\core\process_manager.py:700:54: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-D:\Intellicrack\src\intellicrack\core\process_manager.py:806:20: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-D:\Intellicrack\src\intellicrack\core\process_manager.py:848:67: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-D:\Intellicrack\src\intellicrack\core\process_manager.py:875:63: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-D:\Intellicrack\src\intellicrack\core\process_manager.py:879:62: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-
-10 findings in D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py
-
-D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py:15:24: TC002 Move third-party import `frida.core.ScriptMessage` into a type-checking block
-
-D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py:664:31: TC006 Add quotes to type expression in `typing.cast()`
-
-D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py:735:26: TC006 Add quotes to type expression in `typing.cast()`
-
-D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py:799:26: TC006 Add quotes to type expression in `typing.cast()`
-
-D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py:849:26: TC006 Add quotes to type expression in `typing.cast()`
-
-D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py:905:26: TC006 Add quotes to type expression in `typing.cast()`
-
-D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py:975:52: TC006 Add quotes to type expression in `typing.cast()`
-
-D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py:988:41: TC006 Add quotes to type expression in `typing.cast()`
-
-D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py:1141:46: TC006 Add quotes to type expression in `typing.cast()`
-
-D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py:1142:25: PERF403 Use `dict.update` instead of a for-loop
-
-
 4 findings in D:\Intellicrack\tests\test_bridges\test_x64dbg_api_coverage.py
 
 D:\Intellicrack\tests\test_bridges\test_x64dbg_api_coverage.py:8:1: I001 Import block is un-sorted or un-formatted
@@ -207,15 +94,6 @@ D:\Intellicrack\tests\test_bridges\test_x64dbg_api_coverage.py:13:27: F401 `unit
 D:\Intellicrack\tests\test_bridges\test_x64dbg_api_coverage.py:13:38: F401 `unittest.mock.patch` imported but unused
 
 
-3 findings in D:\Intellicrack\src\intellicrack\bridges\installer.py
-
-D:\Intellicrack\src\intellicrack\bridges\installer.py:287:50: RUF100 Unused `noqa` directive (non-enabled: `PLR6301`)
-
-D:\Intellicrack\src\intellicrack\bridges\installer.py:571:54: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `filename`
-
-D:\Intellicrack\src\intellicrack\bridges\installer.py:587:55: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `filename`
-
-
 3 findings in D:\Intellicrack\tests\test_providers\test_local_transformers_provider.py
 
 D:\Intellicrack\tests\test_providers\test_local_transformers_provider.py:10:27: F401 `unittest.mock.MagicMock` imported but unused
@@ -223,40 +101,6 @@ D:\Intellicrack\tests\test_providers\test_local_transformers_provider.py:10:27: 
 D:\Intellicrack\tests\test_providers\test_local_transformers_provider.py:10:38: F401 `unittest.mock.patch` imported but unused
 
 D:\Intellicrack\tests\test_providers\test_local_transformers_provider.py:31:5: TC005 Found empty type-checking block
-
-
-2 findings in D:\Intellicrack\src\intellicrack\bridges\x64dbg.py
-
-D:\Intellicrack\src\intellicrack\bridges\x64dbg.py:293:1: PLR0904 Too many public methods (45 > 40)
-
-D:\Intellicrack\src\intellicrack\bridges\x64dbg.py:859:16: UP041 Replace aliased errors with `TimeoutError`
-
-
-2 findings in D:\Intellicrack\src\intellicrack\sandbox\qemu.py
-
-D:\Intellicrack\src\intellicrack\sandbox\qemu.py:1794:49: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-D:\Intellicrack\src\intellicrack\sandbox\qemu.py:1855:49: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-
-1 findings in D:\Intellicrack\src\intellicrack\bridges\sandbox_bridge.py
-
-D:\Intellicrack\src\intellicrack\bridges\sandbox_bridge.py:681:53: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-
-1 findings in D:\Intellicrack\src\intellicrack\providers\local_transformers.py
-
-D:\Intellicrack\src\intellicrack\providers\local_transformers.py:869:35: PLC0207 Replace with `split(..., maxsplit=1)`.
-
-
-1 findings in D:\Intellicrack\src\intellicrack\sandbox\base.py
-
-D:\Intellicrack\src\intellicrack\sandbox\base.py:420:55: G101 Logging statement uses an `extra` field that clashes with a `LogRecord` field: `name`
-
-
-1 findings in D:\Intellicrack\src\intellicrack\ui\provider_config.py
-
-D:\Intellicrack\src\intellicrack\ui\provider_config.py:1165:13: SIM105 Use `contextlib.suppress(RuntimeError)` instead of `try`-`except`-`pass`
 
 
 1 findings in D:\Intellicrack\tests\test_ui\test_tools_logic.py

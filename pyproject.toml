@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=75.8.2", "wheel"]
+requires = ["setuptools>=80.10.2", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -59,10 +59,10 @@ dependencies = [
     "aiofiles",
     "aiosqlite",
     "pydantic",
-    "mcp>=1.2.0",
+    "mcp>=1.26.0",
     "pyannotate>=1.2.0,<2",
     "structlog>=24.1.0",
-    "transformers>=4.40.0",
+    "transformers>=5.0.0",
     "accelerate>=0.30.0",
     "bitsandbytes>=0.43.0",
     "sentencepiece",
@@ -310,10 +310,10 @@ poetry = "*"
 pycallgraph2 = "*"
 pre-commit-hooks = "*"
 detect-secrets = "*"
-mcp = ">=1.2.0"
+mcp = ">=1.26.0"
 pyannotate = ">=1.2.0,<2"
 structlog = ">=24.1.0"
-transformers = ">=4.40.0"
+transformers = ">=5.0.0"
 accelerate = ">=0.30.0"
 bitsandbytes = ">=0.43.0"
 sentencepiece = "*"
@@ -515,6 +515,8 @@ exclude = [
     "node_modules/",
     "CLI Coding/",
     "Screenshots/",
+    "typings/",
+    "stubs/",
 ]
 
 [tool.ruff.lint]
@@ -575,6 +577,7 @@ dummy-variable-rgx = "^(_+|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 "src/intellicrack/sandbox/*.py" = ["S404"]
 "src/intellicrack/ui/tool_config.py" = ["S404"]
 "src/intellicrack/ui/sandbox_config.py" = ["S404"]
+"scripts/generate_tree.py" = ["S404"]
 "src/intellicrack/ui/app.py" = ["SIM105"]
 "src/intellicrack/core/process_manager.py" = ["S404"]
 "src/intellicrack/ui/embedding/*.py" = [

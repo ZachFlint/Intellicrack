@@ -1,8 +1,8 @@
 {
   "tool": "darglint",
-  "generated": "2026-01-31T20:48:12.867659",
-  "total_findings": 46,
-  "total_files": 10,
+  "generated": "2026-01-31T23:26:35.811426",
+  "total_findings": 48,
+  "total_files": 12,
   "files": [
     {
       "path": "src\\intellicrack\\core\\types.py",
@@ -429,6 +429,34 @@
           "code": "DAR201",
           "message": "[is_connected] - return",
           "raw": "src\\intellicrack\\sandbox\\qemu.py:is_connected:378: DAR201: - return"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\frida_panel.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 273,
+          "column": null,
+          "function": "_on_frida_message",
+          "code": "DAR102",
+          "message": "[_on_frida_message] + data",
+          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:_on_frida_message:273: DAR102: + data"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\process_panel.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 181,
+          "column": null,
+          "function": "_detect_process_architecture",
+          "code": "DAR203",
+          "message": "[_detect_process_architecture] ~Return: expected str but was Architecture string",
+          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:_detect_process_architecture:181: DAR203:  ~Return: expected str but was Architecture string"
         }
       ]
     }

@@ -161,7 +161,7 @@ class GhidraWidget(EmbeddedToolWidget):
             "title_contains": self._GHIDRA_TITLE_PATTERN,
         }
 
-    def prepare_launch_args(self, binary_path: Path | None = None) -> list[str]:  # noqa: ARG002
+    def prepare_launch_args(self, binary_path: Path | None = None) -> list[str]:
         """Prepare Ghidra launch arguments.
 
         Args:
@@ -170,6 +170,7 @@ class GhidraWidget(EmbeddedToolWidget):
         Returns:
             Command-line arguments list.
         """
+        del binary_path
         exe_path = self.get_executable_path()
         if not exe_path:
             return []

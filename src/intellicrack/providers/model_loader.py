@@ -105,12 +105,20 @@ class ModelCache:
 
     @property
     def max_memory_bytes(self) -> int:
-        """Get the maximum memory limit."""
+        """Get the maximum memory limit.
+
+        Returns:
+            Maximum memory in bytes allowed for cached models.
+        """
         return self._max_memory_bytes
 
     @max_memory_bytes.setter
     def max_memory_bytes(self, value: int) -> None:
-        """Set the maximum memory limit and evict if needed."""
+        """Set the maximum memory limit and evict if needed.
+
+        Args:
+            value: New maximum memory limit in bytes.
+        """
         with self._lock:
             self._max_memory_bytes = value
             self._evict_to_fit(0)

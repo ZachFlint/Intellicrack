@@ -174,9 +174,9 @@ class TestToolbarButtonsIntegration:
                 assert hasattr(window, "_cutter_btn"), "Cutter button not found"
                 assert hasattr(window, "_hxd_btn"), "HxD button not found"
 
-                x64dbg_btn: object = getattr(window, "_x64dbg_btn")
-                cutter_btn: object = getattr(window, "_cutter_btn")
-                hxd_btn: object = getattr(window, "_hxd_btn")
+                x64dbg_btn: object = window._x64dbg_btn
+                cutter_btn: object = window._cutter_btn
+                hxd_btn: object = window._hxd_btn
 
                 assert isinstance(x64dbg_btn, QPushButton)
                 assert isinstance(cutter_btn, QPushButton)
@@ -199,9 +199,9 @@ class TestToolbarButtonsIntegration:
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
-                x64dbg_btn: object = getattr(window, "_x64dbg_btn")
-                cutter_btn: object = getattr(window, "_cutter_btn")
-                hxd_btn: object = getattr(window, "_hxd_btn")
+                x64dbg_btn: object = window._x64dbg_btn
+                cutter_btn: object = window._cutter_btn
+                hxd_btn: object = window._hxd_btn
 
                 assert isinstance(x64dbg_btn, QPushButton)
                 assert isinstance(cutter_btn, QPushButton)
@@ -230,11 +230,11 @@ class TestEmbeddedToolHandlers:
             try:
                 mock_widget = MagicMock()
                 mock_widget.start_tool.return_value = True
-                tool_panel: object = getattr(window, "_tool_panel")
+                tool_panel: object = window._tool_panel
                 mock_add_tab = MagicMock(return_value=mock_widget)
-                setattr(tool_panel, "add_x64dbg_tab", mock_add_tab)
+                tool_panel.add_x64dbg_tab = mock_add_tab
 
-                open_x64dbg: object = getattr(window, "_on_open_x64dbg")
+                open_x64dbg: object = window._on_open_x64dbg
                 assert callable(open_x64dbg)
                 open_x64dbg()
 
@@ -254,11 +254,11 @@ class TestEmbeddedToolHandlers:
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
-                tool_panel: object = getattr(window, "_tool_panel")
-                setattr(tool_panel, "add_x64dbg_tab", MagicMock(return_value=None))
+                tool_panel: object = window._tool_panel
+                tool_panel.add_x64dbg_tab = MagicMock(return_value=None)
 
                 with patch.object(window, "_show_tool_error") as mock_error:
-                    open_x64dbg: object = getattr(window, "_on_open_x64dbg")
+                    open_x64dbg: object = window._on_open_x64dbg
                     assert callable(open_x64dbg)
                     open_x64dbg()
                     mock_error.assert_called_once()
@@ -281,11 +281,11 @@ class TestEmbeddedToolHandlers:
             try:
                 mock_widget = MagicMock()
                 mock_widget.start_tool.return_value = True
-                tool_panel: object = getattr(window, "_tool_panel")
+                tool_panel: object = window._tool_panel
                 mock_add_tab = MagicMock(return_value=mock_widget)
-                setattr(tool_panel, "add_cutter_tab", mock_add_tab)
+                tool_panel.add_cutter_tab = mock_add_tab
 
-                open_cutter: object = getattr(window, "_on_open_cutter")
+                open_cutter: object = window._on_open_cutter
                 assert callable(open_cutter)
                 open_cutter()
 
@@ -307,11 +307,11 @@ class TestEmbeddedToolHandlers:
             try:
                 mock_widget = MagicMock()
                 mock_widget.start_tool.return_value = True
-                tool_panel: object = getattr(window, "_tool_panel")
+                tool_panel: object = window._tool_panel
                 mock_add_tab = MagicMock(return_value=mock_widget)
-                setattr(tool_panel, "add_hxd_tab", mock_add_tab)
+                tool_panel.add_hxd_tab = mock_add_tab
 
-                open_hxd: object = getattr(window, "_on_open_hxd")
+                open_hxd: object = window._on_open_hxd
                 assert callable(open_hxd)
                 open_hxd()
 
@@ -335,10 +335,10 @@ class TestCurrentBinaryHandlers:
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
-                setattr(window, "_current_binary", None)
+                window._current_binary = None
 
                 with patch.object(window, "_show_no_binary_warning") as mock_warn:
-                    on_debug: object = getattr(window, "_on_debug_current_binary")
+                    on_debug: object = window._on_debug_current_binary
                     assert callable(on_debug)
                     on_debug()
                     mock_warn.assert_called_once_with("debug")
@@ -356,10 +356,10 @@ class TestCurrentBinaryHandlers:
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
-                setattr(window, "_current_binary", None)
+                window._current_binary = None
 
                 with patch.object(window, "_show_no_binary_warning") as mock_warn:
-                    on_analyze: object = getattr(window, "_on_analyze_current_binary")
+                    on_analyze: object = window._on_analyze_current_binary
                     assert callable(on_analyze)
                     on_analyze()
                     mock_warn.assert_called_once_with("analyze")
@@ -377,10 +377,10 @@ class TestCurrentBinaryHandlers:
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
-                setattr(window, "_current_binary", None)
+                window._current_binary = None
 
                 with patch.object(window, "_show_no_binary_warning") as mock_warn:
-                    on_hex_edit: object = getattr(window, "_on_hex_edit_current_binary")
+                    on_hex_edit: object = window._on_hex_edit_current_binary
                     assert callable(on_hex_edit)
                     on_hex_edit()
                     mock_warn.assert_called_once_with("hex edit")
@@ -399,12 +399,12 @@ class TestCurrentBinaryHandlers:
             window = _create_window(mock_config, mock_orchestrator)
             try:
                 test_path = Path("/test/binary.exe")
-                setattr(window, "_current_binary", test_path)
-                tool_panel: object = getattr(window, "_tool_panel")
+                window._current_binary = test_path
+                tool_panel: object = window._tool_panel
                 mock_open = MagicMock(return_value=True)
-                setattr(tool_panel, "open_in_x64dbg", mock_open)
+                tool_panel.open_in_x64dbg = mock_open
 
-                on_debug: object = getattr(window, "_on_debug_current_binary")
+                on_debug: object = window._on_debug_current_binary
                 assert callable(on_debug)
                 on_debug()
 
@@ -424,12 +424,12 @@ class TestCurrentBinaryHandlers:
             window = _create_window(mock_config, mock_orchestrator)
             try:
                 test_path = Path("/test/binary.exe")
-                setattr(window, "_current_binary", test_path)
-                tool_panel: object = getattr(window, "_tool_panel")
+                window._current_binary = test_path
+                tool_panel: object = window._tool_panel
                 mock_open = MagicMock(return_value=True)
-                setattr(tool_panel, "open_in_cutter", mock_open)
+                tool_panel.open_in_cutter = mock_open
 
-                on_analyze: object = getattr(window, "_on_analyze_current_binary")
+                on_analyze: object = window._on_analyze_current_binary
                 assert callable(on_analyze)
                 on_analyze()
 
@@ -449,12 +449,12 @@ class TestCurrentBinaryHandlers:
             window = _create_window(mock_config, mock_orchestrator)
             try:
                 test_path = Path("/test/binary.exe")
-                setattr(window, "_current_binary", test_path)
-                tool_panel: object = getattr(window, "_tool_panel")
+                window._current_binary = test_path
+                tool_panel: object = window._tool_panel
                 mock_open = MagicMock(return_value=True)
-                setattr(tool_panel, "open_in_hxd", mock_open)
+                tool_panel.open_in_hxd = mock_open
 
-                on_hex_edit: object = getattr(window, "_on_hex_edit_current_binary")
+                on_hex_edit: object = window._on_hex_edit_current_binary
                 assert callable(on_hex_edit)
                 on_hex_edit()
 
@@ -477,7 +477,7 @@ class TestCurrentBinaryTracking:
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
-                current_binary: object = getattr(window, "_current_binary")
+                current_binary: object = window._current_binary
                 assert current_binary is None
             finally:
                 window.close()
@@ -496,11 +496,11 @@ class TestCurrentBinaryTracking:
                 test_path = Path("/test/sample.exe")
 
                 with patch.object(window, "_run_async"):
-                    load_binary: object = getattr(window, "_load_binary")
+                    load_binary: object = window._load_binary
                     assert callable(load_binary)
                     load_binary(test_path)
 
-                current_binary: object = getattr(window, "_current_binary")
+                current_binary: object = window._current_binary
                 assert current_binary == test_path
             finally:
                 window.close()
@@ -521,7 +521,7 @@ class TestErrorDialogs:
             window = _create_window(mock_config, mock_orchestrator)
             try:
                 with patch.object(QMessageBox, "warning") as mock_warning:
-                    show_error: object = getattr(window, "_show_tool_error")
+                    show_error: object = window._show_tool_error
                     assert callable(show_error)
                     show_error("TestTool", "Test error message")
 
@@ -545,7 +545,7 @@ class TestErrorDialogs:
             window = _create_window(mock_config, mock_orchestrator)
             try:
                 with patch.object(QMessageBox, "information") as mock_info:
-                    show_warning: object = getattr(window, "_show_no_binary_warning")
+                    show_warning: object = window._show_no_binary_warning
                     assert callable(show_warning)
                     show_warning("test action")
 
