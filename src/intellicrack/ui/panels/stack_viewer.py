@@ -7,7 +7,6 @@ X64DbgBridge and FridaBridge for synchronized debugging views.
 from __future__ import annotations
 
 import datetime
-import logging
 from dataclasses import dataclass
 from typing import Any, Protocol, cast, runtime_checkable
 
@@ -26,8 +25,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.core.logging import get_logger
 
-_logger = logging.getLogger(__name__)
+
+_logger = get_logger("ui.panels.stack_viewer")
 
 
 @dataclass
@@ -259,8 +260,7 @@ class StackFrameTable(QTableWidget):
         self.setColumnCount(5)
         self.setHorizontalHeaderLabels(["#", "Return Address", "Function", "Module", "Offset"])
 
-        header = self.horizontalHeader()
-        if header:
+        if header := self.horizontalHeader():
             header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
             header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
             header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
@@ -283,8 +283,7 @@ class StackFrameTable(QTableWidget):
             row: Row index.
             _column: Column index (unused).
         """
-        addr_item = self.item(row, 1)
-        if addr_item:
+        if addr_item := self.item(row, 1):
             try:
                 address = int(addr_item.text(), 16)
                 self.frame_clicked.emit(address)
@@ -298,8 +297,7 @@ class StackFrameTable(QTableWidget):
             row: Row index.
             _column: Column index (unused).
         """
-        addr_item = self.item(row, 1)
-        if addr_item:
+        if addr_item := self.item(row, 1):
             try:
                 address = int(addr_item.text(), 16)
                 self.frame_double_clicked.emit(address)
@@ -442,6 +440,7 @@ class StackViewerPanel(QWidget):
         Args:
             source_name: Name of the selected source.
         """
+        _logger.debug("stack_source_changed", extra={"source": source_name})
         self._active_source = source_name
         self._update_status()
         self.refresh()
@@ -504,6 +503,7 @@ class StackViewerPanel(QWidget):
 
         frames = source.get_stack_frames()
         self._frame_table.set_frames(frames)
+        _logger.debug("stack_frames_refreshed", extra={"source": self._active_source, "frame_count": len(frames)})
 
         self._frame_count_label.setText(f"{len(frames)} frames")
 

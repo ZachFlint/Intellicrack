@@ -8,7 +8,6 @@ Qt container widgets.
 from __future__ import annotations
 
 import ctypes
-import logging
 import shutil
 import time
 import winreg
@@ -16,11 +15,13 @@ from ctypes import wintypes
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from intellicrack.core.logging import get_logger
+
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("ui.embedding.win32")
 
 _user32 = ctypes.windll.user32
 _kernel32 = ctypes.windll.kernel32
@@ -201,7 +202,12 @@ class Win32WindowHelper:
             Window handle (HWND) if found, 0 otherwise.
         """
         hwnd = _user32.FindWindowW(class_name, window_title)
-        return int(hwnd) if hwnd else 0
+        result = int(hwnd) if hwnd else 0
+        _logger.debug(
+            "find_window",
+            extra={"class_name": class_name, "title": window_title, "hwnd": hex(result)},
+        )
+        return result
 
     @staticmethod
     def find_window_by_pid(
@@ -255,13 +261,19 @@ class Win32WindowHelper:
         callback = _ENUM_CALLBACK_TYPE(enum_callback)
         deadline = time.monotonic() + timeout
 
+        _logger.debug(
+            "find_window_by_pid_started",
+            extra={"pid": pid, "timeout": timeout, "class_name": class_name, "title_contains": title_contains},
+        )
         while time.monotonic() < deadline:
             found_hwnd.clear()
             _user32.EnumWindows(callback, 0)
             if found_hwnd:
+                _logger.debug("find_window_by_pid_found", extra={"pid": pid, "hwnd": hex(found_hwnd[0])})
                 return found_hwnd[0]
             time.sleep(0.1)
 
+        _logger.debug("find_window_by_pid_timeout", extra={"pid": pid})
         return 0
 
     @staticmethod
@@ -391,6 +403,7 @@ class Win32WindowHelper:
             hwnd: Window handle to modify.
         """
         style = Win32WindowHelper.get_window_style(hwnd)
+        _logger.debug("removing_window_borders", extra={"hwnd": hex(hwnd), "original_style": hex(style)})
         style &= ~(WS_CAPTION | WS_THICKFRAME | WS_BORDER | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_POPUP)
         style |= WS_CHILD
         Win32WindowHelper.set_window_style(hwnd, style)
@@ -416,6 +429,7 @@ class Win32WindowHelper:
         Args:
             hwnd: Window handle to modify.
         """
+        _logger.debug("restoring_window_borders", extra={"hwnd": hex(hwnd)})
         style = Win32WindowHelper.get_window_style(hwnd)
         style &= ~WS_CHILD
         style |= WS_POPUP | WS_CAPTION | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX
@@ -643,8 +657,7 @@ class Win32WindowHelper:
         Returns:
             Path to executable if found, None otherwise.
         """
-        path = shutil.which(executable_name)
-        if path:
+        if path := shutil.which(executable_name):
             return Path(path)
 
         common_paths = [
@@ -670,7 +683,8 @@ class Win32WindowHelper:
                     value, _ = winreg.QueryValueEx(key, "")
                     if value:
                         return Path(value)
-            except (FileNotFoundError, OSError):
+            except OSError:
+                _logger.debug("registry_app_path_not_found", extra={"executable": executable_name})
                 continue
 
         return None

@@ -29,8 +29,7 @@ def qapp() -> Generator[QApplication]:
     if existing is not None and isinstance(existing, QApplication):
         yield existing
         return
-    app = QApplication([])
-    yield app
+    yield QApplication([])
 
 
 @pytest.fixture
@@ -93,20 +92,24 @@ class TestEmbeddedToolsMenuIntegration:
                 menubar = window.menuBar()
                 assert menubar is not None, "Menu bar not found"
 
-                tools_menu = None
-                for action in menubar.actions():
-                    if action.text() == "&Tools":
-                        tools_menu = action.menu()
-                        break
-
+                tools_menu = next(
+                    (
+                        action.menu()
+                        for action in menubar.actions()
+                        if action.text() == "&Tools"
+                    ),
+                    None,
+                )
                 assert tools_menu is not None, "Tools menu not found"
 
-                embedded_menu = None
-                for action in tools_menu.actions():
-                    if action.text() == "&Embedded Tools":
-                        embedded_menu = action.menu()
-                        break
-
+                embedded_menu = next(
+                    (
+                        action.menu()
+                        for action in tools_menu.actions()
+                        if action.text() == "&Embedded Tools"
+                    ),
+                    None,
+                )
                 assert embedded_menu is not None, "Embedded Tools submenu not found"
             finally:
                 window.close()
@@ -125,12 +128,14 @@ class TestEmbeddedToolsMenuIntegration:
                 menubar = window.menuBar()
                 assert menubar is not None
 
-                tools_menu = None
-                for action in menubar.actions():
-                    if action.text() == "&Tools":
-                        tools_menu = action.menu()
-                        break
-
+                tools_menu = next(
+                    (
+                        action.menu()
+                        for action in menubar.actions()
+                        if action.text() == "&Tools"
+                    ),
+                    None,
+                )
                 embedded_menu = None
                 if tools_menu is not None:
                     for action in tools_menu.actions():

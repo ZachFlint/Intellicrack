@@ -7,11 +7,11 @@ Ollama, and OpenRouter.
 
 from __future__ import annotations
 
-import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, TypedDict
 
+from ..core.logging import get_logger
 from ..core.types import (
     Message,
     ModelInfo,
@@ -22,9 +22,13 @@ from ..core.types import (
 
 
 if TYPE_CHECKING:
+    import logging
     from collections.abc import AsyncIterator
 
     from ..core.types import ProviderName
+
+
+_logger = get_logger("providers.base")
 
 
 class JSONSchemaProperty(TypedDict, total=False):
@@ -100,7 +104,7 @@ class LLMProviderBase(ABC):
         self._credentials: ProviderCredentials | None = None
         self._connected: bool = False
         self._cancel_requested: bool = False
-        self._logger: logging.Logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+        self._logger: logging.Logger = get_logger("providers.base")
 
     @property
     @abstractmethod
@@ -345,6 +349,7 @@ def _build_schema_property(
     Returns:
         JSONSchemaProperty with the specified values.
     """
+    _logger.debug("build_schema_property", extra={"param_type": param_type, "has_enum": enum_values is not None})
     prop: JSONSchemaProperty = {
         "type": param_type,
         "description": description,
@@ -367,6 +372,7 @@ def create_anthropic_tool_schema(
     Returns:
         List of tools in Anthropic's format.
     """
+    _logger.debug("create_anthropic_tool_schema", extra={"function_count": len(tool.functions)})
     tools: list[AnthropicToolSchema] = []
 
     for func in tool.functions:
@@ -394,6 +400,7 @@ def create_anthropic_tool_schema(
         }
         tools.append(tool_schema)
 
+    _logger.debug("create_anthropic_tool_schema_complete", extra={"tools_created": len(tools)})
     return tools
 
 
@@ -408,6 +415,7 @@ def create_openai_tool_schema(
     Returns:
         List of tools in OpenAI's format.
     """
+    _logger.debug("create_openai_tool_schema", extra={"function_count": len(tool.functions)})
     tools: list[OpenAIToolSchema] = []
 
     for func in tool.functions:
@@ -438,6 +446,7 @@ def create_openai_tool_schema(
         }
         tools.append(tool_schema)
 
+    _logger.debug("create_openai_tool_schema_complete", extra={"tools_created": len(tools)})
     return tools
 
 
@@ -452,6 +461,7 @@ def create_google_tool_schema(
     Returns:
         List of function declarations in Google's format.
     """
+    _logger.debug("create_google_tool_schema", extra={"function_count": len(tool.functions)})
     function_declarations: list[GoogleFunctionDeclaration] = []
 
     for func in tool.functions:
@@ -479,6 +489,7 @@ def create_google_tool_schema(
         }
         function_declarations.append(func_decl)
 
+    _logger.debug("create_google_tool_schema_complete", extra={"declarations_created": len(function_declarations)})
     return function_declarations
 
 

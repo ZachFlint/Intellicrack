@@ -7,7 +7,6 @@ snapshot management, and execution report viewing.
 from __future__ import annotations
 
 import contextlib
-import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -30,6 +29,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels._async_bridge import run_bridge_coroutine
 from intellicrack.ui.panels._qt_compat import (
     get_current_tree_item,
@@ -41,7 +41,7 @@ from intellicrack.ui.panels._qt_compat import (
 if TYPE_CHECKING:
     from intellicrack.sandbox.base import ExecutionReport, SandboxBase
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("ui.panels.sandbox")
 
 
 class SandboxPanel(QWidget):
@@ -233,8 +233,10 @@ class SandboxPanel(QWidget):
         """Create a new sandbox environment."""
         if self._sandbox is None:
             self._log("[!] No sandbox backend configured")
+            _logger.warning("sandbox_create_failed_no_backend")
             return
 
+        _logger.debug("sandbox_create_started")
         try:
             run_bridge_coroutine(self._sandbox.start())
             self._sandbox_id = "active"
@@ -249,19 +251,24 @@ class SandboxPanel(QWidget):
             self._status_poll_timer.start(5000)
             self.sandbox_created.emit(self._sandbox_id)
             self.tool_started.emit()
+            _logger.info("sandbox_created", extra={"sandbox_id": self._sandbox_id})
         except Exception as e:
             self._log(f"[-] Failed to create sandbox: {e}")
+            _logger.exception("sandbox_create_failed", extra={"error": str(e)})
 
     def _on_destroy(self) -> None:
         """Destroy the current sandbox environment."""
         if self._sandbox is None:
             return
 
+        _logger.debug("sandbox_destroy_started")
         try:
             run_bridge_coroutine(self._sandbox.stop())
             self._log("[+] Sandbox destroyed")
+            _logger.info("sandbox_destroyed")
         except Exception as e:
             self._log(f"[-] Failed to destroy sandbox: {e}")
+            _logger.exception("sandbox_destroy_failed", extra={"error": str(e)})
 
         self._sandbox_id = None
         self._status_indicator.setText("Inactive")
@@ -279,12 +286,15 @@ class SandboxPanel(QWidget):
         if self._sandbox is None:
             return
 
+        _logger.debug("sandbox_restart_started")
         try:
             run_bridge_coroutine(self._sandbox.restart())
             self._log("[+] Sandbox restarted")
             self._clear_report_tabs()
+            _logger.info("sandbox_restarted")
         except Exception as e:
             self._log(f"[-] Failed to restart sandbox: {e}")
+            _logger.exception("sandbox_restart_failed", extra={"error": str(e)})
 
     def _on_browse_binary(self) -> None:
         """Browse for a binary to execute in the sandbox."""
@@ -318,6 +328,7 @@ class SandboxPanel(QWidget):
 
         self._log(f"[*] Executing: {binary.name} {args}")
         self._clear_report_tabs()
+        _logger.debug("sandbox_binary_execution_started", extra={"binary": binary.name, "exec_args": args})
 
         try:
             sandbox_dest = f"C:\\Sandbox\\{binary.name}"
@@ -326,8 +337,10 @@ class SandboxPanel(QWidget):
             run_bridge_coroutine(self._sandbox.run_binary(sandbox_binary, args_list))
             self._log("[+] Execution started")
             self.execution_completed.emit(binary.name)
+            _logger.info("sandbox_binary_executed", extra={"binary": binary.name})
         except Exception as e:
             self._log(f"[-] Execution failed: {e}")
+            _logger.exception("sandbox_binary_execution_failed", extra={"binary": binary.name, "error": str(e)})
 
     def _on_take_snapshot(self) -> None:
         """Take a snapshot of the current sandbox state."""
@@ -338,10 +351,12 @@ class SandboxPanel(QWidget):
             snapshot_result = run_bridge_coroutine(self._sandbox.take_snapshot("manual_snapshot"))
             snapshot_id = str(snapshot_result) if snapshot_result is not None else "unknown"
             self._log(f"[+] Snapshot taken: {snapshot_id}")
-            item = QTreeWidgetItem([str(snapshot_id), "manual_snapshot", "now"])
+            item = QTreeWidgetItem([snapshot_id, "manual_snapshot", "now"])
             self._snapshots_tree.addTopLevelItem(item)
+            _logger.info("sandbox_snapshot_taken", extra={"snapshot_id": snapshot_id})
         except Exception as e:
             self._log(f"[-] Snapshot failed: {e}")
+            _logger.exception("sandbox_snapshot_failed", extra={"error": str(e)})
 
     def _on_restore_snapshot(self) -> None:
         """Restore the selected snapshot."""
@@ -358,8 +373,10 @@ class SandboxPanel(QWidget):
             run_bridge_coroutine(self._sandbox.restore_snapshot(snapshot_id))
             self._log(f"[+] Restored snapshot: {snapshot_id}")
             self._clear_report_tabs()
+            _logger.info("sandbox_snapshot_restored", extra={"snapshot_id": snapshot_id})
         except Exception as e:
             self._log(f"[-] Restore failed: {e}")
+            _logger.exception("sandbox_snapshot_restore_failed", extra={"snapshot_id": snapshot_id, "error": str(e)})
 
     def _poll_status(self) -> None:
         """Poll the sandbox status periodically."""
@@ -385,6 +402,7 @@ class SandboxPanel(QWidget):
         Args:
             report: The execution report to display.
         """
+        _logger.debug("execution_report_loading")
         self._clear_report_tabs()
 
         if hasattr(report, "file_changes"):
@@ -415,6 +433,11 @@ class SandboxPanel(QWidget):
         self._log(f"[+] Execution report loaded: {len(report.file_changes)} file changes, "
                   f"{len(report.registry_changes)} registry changes, "
                   f"{len(report.network_activity)} network events")
+        _logger.info("execution_report_loaded", extra={
+            "file_changes": len(report.file_changes),
+            "registry_changes": len(report.registry_changes),
+            "network_events": len(report.network_activity),
+        })
 
     def start_tool(self) -> bool:
         """Start the sandbox panel.

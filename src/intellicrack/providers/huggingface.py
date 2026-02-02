@@ -291,12 +291,7 @@ class HuggingFaceProvider(LLMProviderBase):
             return 131072
         if "deepseek" in model_lower:
             return 131072
-        if "mistral" in model_lower or "mixtral" in model_lower:
-            return 32768
-        if "phi-3" in model_lower or "phi3" in model_lower:
-            return 4096
-
-        return 4096
+        return 32768 if "mistral" in model_lower or "mixtral" in model_lower else 4096
 
     def _estimate_tool_support(self, model_id: str) -> bool:
         """Estimate if model supports tool/function calling.
@@ -438,11 +433,18 @@ class HuggingFaceProvider(LLMProviderBase):
                         arguments=args,
                     )
                     tool_calls.append(tool_call)
+                    self._logger.debug(
+                        "tool_call_parsed",
+                        extra={
+                            "tool_name": tool_call.tool_name,
+                            "arguments_count": len(tool_call.arguments),
+                        },
+                    )
 
             message = Message(
                 role="assistant",
                 content=content,
-                tool_calls=tool_calls if tool_calls else None,
+                tool_calls=tool_calls or None,
                 timestamp=datetime.now(),
             )
 
@@ -464,7 +466,7 @@ class HuggingFaceProvider(LLMProviderBase):
                 },
             )
 
-            return message, tool_calls if tool_calls else None
+            return message, tool_calls or None
 
         except RateLimitError:
             self._logger.warning(
@@ -540,10 +542,10 @@ class HuggingFaceProvider(LLMProviderBase):
                 request_body["tools"] = self._convert_tools_to_provider_format(tools)
 
             async with self._client.stream(
-                "POST",
-                f"{self._base_url}/models/{model}/v1/chat/completions",
-                json=request_body,
-            ) as response:
+                        "POST",
+                        f"{self._base_url}/models/{model}/v1/chat/completions",
+                        json=request_body,
+                    ) as response:
                 if response.status_code == HTTP_SERVICE_UNAVAILABLE:
                     raise ProviderError(  # noqa: TRY301
                         "Model is loading. Please wait and try again."
@@ -563,14 +565,13 @@ class HuggingFaceProvider(LLMProviderBase):
                             break
                         try:
                             data = json.loads(data_str)
-                            choices = data.get("choices", [])
-                            if choices:
+                            if choices := data.get("choices", []):
                                 delta = choices[0].get("delta", {})
-                                content = delta.get("content", "")
-                                if content:
+                                if content := delta.get("content", ""):
                                     chunk_count += 1
                                     yield content
-                        except json.JSONDecodeError:
+                        except json.JSONDecodeError as exc:
+                            self._logger.debug("stream_json_parse_skipped", extra={"error": str(exc)})
                             continue
 
             self._logger.info(

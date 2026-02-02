@@ -53,10 +53,7 @@ def _combo_find_data(combo: QComboBox, data: object) -> int:
     if find_data is not None:
         result = find_data(data)
         return int(result) if isinstance(result, int) else -1
-    for i in range(combo.count()):
-        if combo.itemData(i) == data:
-            return i
-    return -1
+    return next((i for i in range(combo.count()) if combo.itemData(i) == data), -1)
 
 
 def _combo_current_data(combo: QComboBox) -> object:
@@ -72,9 +69,7 @@ def _combo_current_data(combo: QComboBox) -> object:
     if current_data is not None:
         return current_data()
     idx = combo.currentIndex()
-    if idx >= 0:
-        return combo.itemData(idx)
-    return None
+    return combo.itemData(idx) if idx >= 0 else None
 
 
 def _item_set_font(item: QListWidgetItem, font: QFont) -> None:
@@ -155,14 +150,16 @@ class GeneralSettingsWidget(QWidget):
 
     def _browse_tools(self) -> None:
         """Browse for tools directory."""
-        path = QFileDialog.getExistingDirectory(self, "Select Tools Directory", self._tools_path.text())
-        if path:
+        if path := QFileDialog.getExistingDirectory(
+            self, "Select Tools Directory", self._tools_path.text()
+        ):
             self._tools_path.setText(path)
 
     def _browse_logs(self) -> None:
         """Browse for logs directory."""
-        path = QFileDialog.getExistingDirectory(self, "Select Logs Directory", self._logs_path.text())
-        if path:
+        if path := QFileDialog.getExistingDirectory(
+            self, "Select Logs Directory", self._logs_path.text()
+        ):
             self._logs_path.setText(path)
 
     def _load_settings(self) -> None:
@@ -619,8 +616,9 @@ class PreferencesDialog(QDialog):
         )
         button_box.accepted.connect(self._on_accept)
         button_box.rejected.connect(self.reject)
-        apply_button = button_box.button(QDialogButtonBox.StandardButton.Apply)
-        if apply_button:
+        if apply_button := button_box.button(
+            QDialogButtonBox.StandardButton.Apply
+        ):
             apply_button.clicked.connect(self._on_apply)
 
         button_layout.addStretch()
@@ -668,7 +666,7 @@ class PreferencesDialog(QDialog):
         """
         all_settings: dict[str, Any] = {}
         for widget in self._settings_widgets:
-            all_settings.update(widget.get_settings())
+            all_settings |= widget.get_settings()
 
         return replace(
             self._config,

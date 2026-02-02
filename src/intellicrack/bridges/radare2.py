@@ -72,9 +72,7 @@ def _get_str(data: dict[str, Any], key: str, default: str = "") -> str:
         String value or default.
     """
     val = data.get(key, default)
-    if isinstance(val, str):
-        return val
-    return default
+    return val if isinstance(val, str) else default
 
 
 def _get_int(data: dict[str, Any], key: str, default: int = 0) -> int:
@@ -89,9 +87,7 @@ def _get_int(data: dict[str, Any], key: str, default: int = 0) -> int:
         Integer value or default.
     """
     val = data.get(key, default)
-    if isinstance(val, int):
-        return val
-    return default
+    return val if isinstance(val, int) else default
 
 
 def _get_float(data: dict[str, Any], key: str, default: float = 0.0) -> float:
@@ -106,9 +102,7 @@ def _get_float(data: dict[str, Any], key: str, default: float = 0.0) -> float:
         Float value or default.
     """
     val = data.get(key, default)
-    if isinstance(val, (int, float)):
-        return float(val)
-    return default
+    return float(val) if isinstance(val, (int, float)) else default
 
 
 def _get_dict(data: dict[str, Any], key: str) -> dict[str, Any]:
@@ -122,9 +116,7 @@ def _get_dict(data: dict[str, Any], key: str) -> dict[str, Any]:
         Dictionary value or empty dict.
     """
     val = data.get(key)
-    if isinstance(val, dict):
-        return cast("dict[str, Any]", val)
-    return {}
+    return cast("dict[str, Any]", val) if isinstance(val, dict) else {}
 
 
 def _get_optional_str(data: dict[str, Any], key: str) -> str | None:
@@ -138,9 +130,7 @@ def _get_optional_str(data: dict[str, Any], key: str) -> str | None:
         String value or None.
     """
     val = data.get(key)
-    if isinstance(val, str):
-        return val
-    return None
+    return val if isinstance(val, str) else None
 
 
 def _get_optional_int(data: dict[str, Any], key: str) -> int | None:
@@ -154,9 +144,7 @@ def _get_optional_int(data: dict[str, Any], key: str) -> int | None:
         Integer value or None.
     """
     val = data.get(key)
-    if isinstance(val, int):
-        return val
-    return None
+    return val if isinstance(val, int) else None
 
 
 def _get_list(data: dict[str, Any], key: str) -> list[Any]:
@@ -170,9 +158,7 @@ def _get_list(data: dict[str, Any], key: str) -> list[Any]:
         List value or empty list.
     """
     val = data.get(key)
-    if isinstance(val, list):
-        return cast("list[Any]", val)
-    return []
+    return cast("list[Any]", val) if isinstance(val, list) else []
 
 
 class Radare2Bridge(StaticAnalysisBridge):
@@ -220,9 +206,7 @@ class Radare2Bridge(StaticAnalysisBridge):
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
         result = await asyncio.to_thread(self._r2.cmd, command)
-        if result is None:
-            return ""
-        return result
+        return "" if result is None else result
 
     @property
     def name(self) -> ToolName:
@@ -954,13 +938,11 @@ class Radare2Bridge(StaticAnalysisBridge):
             if regex.search(string_val):
                 raw_encoding = _get_str(s, "type", "ascii")
                 encoding: StringEncoding
-                if raw_encoding == "wide":
-                    encoding = "utf-16le"
+                if raw_encoding == "utf-16be":
+                    encoding = "utf-16be"
                 elif raw_encoding == "utf-8":
                     encoding = "utf-8"
-                elif raw_encoding == "utf-16be":
-                    encoding = "utf-16be"
-                elif raw_encoding == "utf-16le":
+                elif raw_encoding in ["wide", "utf-16le"]:
                     encoding = "utf-16le"
                 else:
                     encoding = "ascii"
@@ -1078,16 +1060,14 @@ class Radare2Bridge(StaticAnalysisBridge):
 
         exports = await self._cmd_json("iEj")
 
-        result: list[ExportInfo] = []
-        for idx, e in enumerate(exports):
-            result.append(
-                ExportInfo(
-                    name=_get_str(e, "name"),
-                    ordinal=idx,
-                    address=_get_int(e, "vaddr"),
-                )
+        result: list[ExportInfo] = [
+            ExportInfo(
+                name=_get_str(e, "name"),
+                ordinal=idx,
+                address=_get_int(e, "vaddr"),
             )
-
+            for idx, e in enumerate(exports)
+        ]
         return result
 
     async def get_imports(self) -> list[ImportInfo]:
@@ -1096,9 +1076,7 @@ class Radare2Bridge(StaticAnalysisBridge):
         Returns:
             List of import information.
         """
-        if not self._analyzed:
-            return []
-        return await self._get_imports_internal()
+        return await self._get_imports_internal() if self._analyzed else []
 
     async def get_exports(self) -> list[ExportInfo]:
         """Get exported functions.
@@ -1106,9 +1084,7 @@ class Radare2Bridge(StaticAnalysisBridge):
         Returns:
             List of export information.
         """
-        if not self._analyzed:
-            return []
-        return await self._get_exports_internal()
+        return await self._get_exports_internal() if self._analyzed else []
 
     async def rename_function(self, address: int, new_name: str) -> bool:
         """Rename a function.
@@ -1244,9 +1220,7 @@ class Radare2Bridge(StaticAnalysisBridge):
         else:
             if isinstance(parsed, list):
                 return cast("list[dict[str, Any]]", parsed)
-            if isinstance(parsed, dict):
-                return [cast("dict[str, Any]", parsed)]
-            return []
+            return [cast("dict[str, Any]", parsed)] if isinstance(parsed, dict) else []
 
     async def seek(self, address: int) -> str:
         """Seek to a specific address.
@@ -1269,10 +1243,7 @@ class Radare2Bridge(StaticAnalysisBridge):
             Address of function or None if not found.
         """
         funcs = await self.get_functions(filter_pattern=name)
-        for f in funcs:
-            if f.name == name:
-                return f.address
-        return None
+        return next((f.address for f in funcs if f.name == name), None)
 
     async def list_functions(self) -> list[tuple[str, int]]:
         """List functions for compatibility with CutterWidget.

@@ -10,7 +10,11 @@ Example:
 
 from __future__ import annotations
 
+import logging
 import sys
+
+
+_logger = logging.getLogger("intellicrack.__main__")
 
 
 def run() -> None:
@@ -23,8 +27,8 @@ def run() -> None:
     try:
         from intellicrack.main import main  # noqa: PLC0415
     except ImportError as e:
-        print(f"Failed to import Intellicrack: {e}", file=sys.stderr)
-        print("Ensure all dependencies are installed.", file=sys.stderr)
+        _logger.exception("import_failed", extra={"error": str(e)})
+        _logger.warning("dependency_check_hint")
         sys.exit(1)
 
     sys.exit(main())

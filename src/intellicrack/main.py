@@ -167,8 +167,8 @@ def main() -> int:  # noqa: PLR0914
         from intellicrack.ui.app import MainWindow  # noqa: PLC0415
 
     except ImportError as e:
-        print(f"Required dependencies not available: {e}")
-        print("Install required packages with: pixi install")
+        logger.exception("dependency_import_failed", extra={"error": str(e)})
+        logger.warning("install_hint", extra={"command": "pixi install"})
         return 1
 
     app = QApplication(sys.argv)
@@ -189,6 +189,7 @@ def main() -> int:  # noqa: PLR0914
     splash = SplashScreen()
     splash.show()
     app.processEvents()
+    logger.info("splash_screen_shown")
 
     splash.set_progress(5, "Loading configuration...")
     app.processEvents()
@@ -207,6 +208,7 @@ def main() -> int:  # noqa: PLR0914
         app.processEvents()
 
         provider_registry = ProviderRegistry()
+        logger.info("provider_initialization_started")
         loop.run_until_complete(
             _initialize_providers(
                 provider_registry,
@@ -214,6 +216,7 @@ def main() -> int:  # noqa: PLR0914
                 logger,
             )
         )
+        logger.info("provider_initialization_complete")
 
         splash.set_progress(50, "Initializing tools...")
         app.processEvents()
@@ -251,9 +254,15 @@ def main() -> int:  # noqa: PLR0914
         exit_code = app.exec()
 
         logger.info("shutdown_started")
+        logger.debug("orchestrator_shutdown_begin")
         loop.run_until_complete(orchestrator.shutdown())
+        logger.debug("orchestrator_shutdown_done")
+        logger.debug("session_manager_close_begin")
         loop.run_until_complete(session_manager.close())
+        logger.debug("session_manager_close_done")
+        logger.debug("process_manager_cleanup_begin")
         loop.run_until_complete(process_manager.cleanup_all_async())
+        logger.debug("process_manager_cleanup_done")
 
         logger.info("shutdown_complete")
 
@@ -301,9 +310,7 @@ async def _initialize_providers(
     for provider_name, provider_class in providers:
         try:
             provider = provider_class()
-            creds = credentials.get_credentials(provider_name)
-
-            if creds:
+            if creds := credentials.get_credentials(provider_name):
                 await provider.connect(creds)
                 logger.info("provider_connected", extra={"provider": provider_name.value})
             else:

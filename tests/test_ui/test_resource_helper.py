@@ -142,7 +142,7 @@ class TestGetFontPath:
         assets = get_assets_path()
         fonts_dir = assets / "fonts"
         jetbrains_files = list(fonts_dir.glob("*JetBrains*"))
-        assert len(jetbrains_files) > 0, "JetBrains Mono font not found"
+        assert jetbrains_files, "JetBrains Mono font not found"
 
 
 class TestGetStylePath:

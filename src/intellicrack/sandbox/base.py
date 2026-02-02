@@ -44,15 +44,13 @@ def validate_file_operation(op: str) -> FileOperation:
         A valid FileOperation literal.
     """
     op_lower = op.lower()
-    if op_lower == "created" or op_lower in {"create", "add", "new"}:
+    if op_lower in {"created", "create", "add", "new"}:
         return "created"
-    if op_lower == "modified" or op_lower in {"modify", "change", "update", "write"}:
+    if op_lower in {"modified", "modify", "change", "update", "write"}:
         return "modified"
-    if op_lower == "deleted" or op_lower in {"delete", "remove", "unlink"}:
+    if op_lower in {"deleted", "delete", "remove", "unlink"}:
         return "deleted"
-    if op_lower == "renamed" or op_lower in {"rename", "move"}:
-        return "renamed"
-    return "modified"
+    return "renamed" if op_lower in {"renamed", "rename", "move"} else "modified"
 
 
 def validate_registry_operation(op: str) -> RegistryOperation:
@@ -65,11 +63,11 @@ def validate_registry_operation(op: str) -> RegistryOperation:
         A valid RegistryOperation literal.
     """
     op_lower = op.lower()
-    if op_lower == "created" or op_lower in {"create", "add", "new", "setvalue"}:
+    if op_lower in {"created", "create", "add", "new", "setvalue"}:
         return "created"
-    if op_lower == "modified" or op_lower in {"modify", "change", "update", "write"}:
+    if op_lower in {"modified", "modify", "change", "update", "write"}:
         return "modified"
-    if op_lower == "deleted" or op_lower in {"delete", "remove", "deletevalue"}:
+    if op_lower in {"deleted", "delete", "remove", "deletevalue"}:
         return "deleted"
     return "modified"
 
@@ -84,9 +82,16 @@ def validate_process_operation(op: str) -> ProcessOperation:
         A valid ProcessOperation literal.
     """
     op_lower = op.lower()
-    if op_lower == "created" or op_lower in {"create", "start", "spawn", "launched"}:
+    if op_lower in {"created", "create", "start", "spawn", "launched"}:
         return "created"
-    if op_lower == "terminated" or op_lower in {"terminate", "exit", "stopped", "killed", "ended"}:
+    if op_lower in {
+        "terminated",
+        "terminate",
+        "exit",
+        "stopped",
+        "killed",
+        "ended",
+    }:
         return "terminated"
     return "created"
 

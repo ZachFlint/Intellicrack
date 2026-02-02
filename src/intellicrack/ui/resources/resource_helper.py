@@ -6,14 +6,15 @@ and PyInstaller frozen applications.
 
 from __future__ import annotations
 
-import logging
 import os
 import sys
 from pathlib import Path
 from typing import Final
 
+from ...core.logging import get_logger
 
-_logger = logging.getLogger(__name__)
+
+_logger = get_logger("ui.resources.helper")
 
 _ASSETS_DIR_NAME: Final[str] = "assets"
 _PACKAGE_NAME: Final[str] = "intellicrack"
@@ -29,10 +30,7 @@ def _get_package_root() -> Path:
         meipass: str = getattr(sys, "_MEIPASS")  # noqa: B009
         base_path = Path(meipass)
         package_path = base_path / _PACKAGE_NAME
-        if package_path.exists():
-            return package_path
-        return base_path
-
+        return package_path if package_path.exists() else base_path
     current_file = Path(__file__).resolve()
     ui_resources_dir = current_file.parent
     ui_dir = ui_resources_dir.parent
@@ -92,7 +90,9 @@ def get_resource_path(resource_path: str) -> Path:
     """
     normalized_path = resource_path.replace("/", os.sep).replace("\\", os.sep)
     assets_dir = get_assets_path()
-    return assets_dir / normalized_path
+    resolved = assets_dir / normalized_path
+    _logger.debug("resource_path_resolved", extra={"resource": resource_path, "resolved": str(resolved)})
+    return resolved
 
 
 def get_icon_path(icon_name: str) -> Path:
@@ -107,14 +107,19 @@ def get_icon_path(icon_name: str) -> Path:
     icons_dir = get_assets_path() / "icons"
 
     if "." in icon_name:
-        return icons_dir / icon_name
+        resolved = icons_dir / icon_name
+        _logger.debug("icon_path_resolved", extra={"icon_name": icon_name, "path": str(resolved)})
+        return resolved
 
     for ext in (".svg", ".png", ".ico"):
         path = icons_dir / f"{icon_name}{ext}"
         if path.exists():
+            _logger.debug("icon_path_resolved", extra={"icon_name": icon_name, "path": str(path)})
             return path
 
-    return icons_dir / f"{icon_name}.svg"
+    fallback_path = icons_dir / f"{icon_name}.svg"
+    _logger.debug("icon_path_fallback", extra={"icon_name": icon_name, "path": str(fallback_path)})
+    return fallback_path
 
 
 def get_font_path(font_name: str) -> Path:
@@ -126,7 +131,9 @@ def get_font_path(font_name: str) -> Path:
     Returns:
         Path to the font file.
     """
-    return get_assets_path() / "fonts" / font_name
+    resolved = get_assets_path() / "fonts" / font_name
+    _logger.debug("font_path_resolved", extra={"font_name": font_name, "path": str(resolved)})
+    return resolved
 
 
 def get_style_path(style_name: str) -> Path:
@@ -138,7 +145,9 @@ def get_style_path(style_name: str) -> Path:
     Returns:
         Path to the stylesheet file.
     """
-    return get_assets_path() / "styles" / style_name
+    resolved = get_assets_path() / "styles" / style_name
+    _logger.debug("style_path_resolved", extra={"style_name": style_name, "path": str(resolved)})
+    return resolved
 
 
 def resource_exists(resource_path: str) -> bool:
@@ -152,6 +161,10 @@ def resource_exists(resource_path: str) -> bool:
     """
     try:
         path = get_resource_path(resource_path)
-        return path.exists()
+        exists = path.exists()
+        _logger.debug("resource_exists_check", extra={"resource": resource_path, "exists": exists})
     except FileNotFoundError:
+        _logger.warning("resource_not_found", extra={"resource": resource_path})
         return False
+    else:
+        return exists

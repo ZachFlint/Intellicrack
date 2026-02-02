@@ -134,7 +134,9 @@ class TestOpenRouterModelListing:
 
         models_with_pricing = [m for m in models if m.input_cost_per_1m_tokens is not None]
 
-        assert len(models_with_pricing) > 0, "Expected at least some models to have pricing information"
+        assert (
+            models_with_pricing
+        ), "Expected at least some models to have pricing information"
 
     @pytest.mark.asyncio
     async def test_multiple_calls_return_consistent_results(

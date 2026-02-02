@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import ctypes
 import json
-import logging
 import os
 import uuid
 from collections.abc import Callable
@@ -13,10 +12,11 @@ from ctypes import wintypes
 from dataclasses import dataclass
 from typing import Any, cast
 
+from ..core.logging import get_logger
 from ..core.types import ToolError
 
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("bridges.namedpipe")
 
 
 _LENGTH_PREFIX_SIZE = 4
@@ -311,6 +311,7 @@ class NamedPipeClient:
         kernel32 = ctypes.windll.kernel32
         data = bytearray()
         remaining = size
+        _logger.debug("pipe_read_started", extra={"requested_bytes": size})
 
         while remaining > 0:
             chunk_size = min(_CHUNK_SIZE, remaining)
@@ -338,9 +339,14 @@ class NamedPipeClient:
                 )
                 error_message = "Pipe closed"
                 raise ToolError(error_message)
+            _logger.debug(
+                "pipe_read_chunk",
+                extra={"chunk_bytes": bytes_read.value, "remaining": remaining - bytes_read.value},
+            )
             data.extend(buffer.raw[: bytes_read.value])
             remaining -= bytes_read.value
 
+        _logger.debug("pipe_read_complete", extra={"total_bytes": size})
         return bytes(data)
 
     def _write_sync(self, data: bytes) -> None:
@@ -351,6 +357,7 @@ class NamedPipeClient:
         kernel32 = ctypes.windll.kernel32
         total = len(data)
         offset = 0
+        _logger.debug("pipe_write_started", extra={"total_bytes": total})
 
         while offset < total:
             chunk = data[offset : offset + _CHUNK_SIZE]
@@ -370,12 +377,21 @@ class NamedPipeClient:
                 )
                 error_message = f"Pipe write failed (error {error})"
                 raise ToolError(error_message)
+            _logger.debug(
+                "pipe_write_chunk",
+                extra={"chunk_bytes": bytes_written.value, "offset": offset + bytes_written.value},
+            )
             offset += bytes_written.value
+
+        _logger.debug("pipe_write_complete", extra={"total_bytes": total})
 
     def _cancel_io(self) -> None:
         if self._handle is None:
             return
+        _logger.debug("pipe_cancelling_io", extra={"handle": self._handle})
         cancel = getattr(ctypes.windll.kernel32, "CancelIoEx", None)
         if cancel is None:
+            _logger.debug("pipe_cancel_unavailable")
             return
         cancel(self._handle, None)
+        _logger.debug("pipe_io_cancelled")

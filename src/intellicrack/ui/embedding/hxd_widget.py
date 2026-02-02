@@ -7,12 +7,12 @@ binary files within Intellicrack's interface.
 from __future__ import annotations
 
 import ctypes
-import logging
 import subprocess
 import winreg
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
+from intellicrack.core.logging import get_logger
 from intellicrack.ui.embedding.embedded_widget import EmbeddedToolWidget
 from intellicrack.ui.embedding.win32_helper import Win32WindowHelper
 
@@ -20,7 +20,7 @@ from intellicrack.ui.embedding.win32_helper import Win32WindowHelper
 if TYPE_CHECKING:
     from PyQt6.QtWidgets import QWidget
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("ui.embedding.hxd")
 
 _WM_COMMAND = 0x0111
 _WM_KEYDOWN = 0x0100
@@ -88,7 +88,8 @@ class HxDWidget(EmbeddedToolWidget):
                             self._exe_path = candidate
                             _logger.info("hxd_found_via_registry", extra={"path": str(candidate)})
                             return candidate
-            except (FileNotFoundError, OSError):
+            except OSError:
+                _logger.debug("registry_key_not_found", extra={"subkey": subkey})
                 continue
 
         for path in self._HXD_COMMON_PATHS:
@@ -97,8 +98,7 @@ class HxDWidget(EmbeddedToolWidget):
                 _logger.info("hxd_found_at_common_path", extra={"path": str(path)})
                 return path
 
-        found = Win32WindowHelper.find_executable_path("HxD.exe")
-        if found:
+        if found := Win32WindowHelper.find_executable_path("HxD.exe"):
             self._exe_path = found
             _logger.info("hxd_found_via_path_search", extra={"path": str(found)})
             return found
@@ -155,8 +155,10 @@ class HxDWidget(EmbeddedToolWidget):
             return False
 
         if not self.is_embedded():
+            _logger.debug("launching_hxd_for_file", extra={"path": str(file_path)})
             return self.start_tool(file_path)
 
+        _logger.debug("sending_open_file_command", extra={"path": str(file_path)})
         self._send_open_file_command(file_path)
         self._loaded_file = file_path
         return True

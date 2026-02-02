@@ -218,9 +218,7 @@ class OpenAIProvider(LLMProviderBase):
             return 16384
         if "gpt-4" in model_id:
             return 8192
-        if "gpt-3.5" in model_id:
-            return 4096
-        return 8192
+        return 4096 if "gpt-3.5" in model_id else 8192
 
     def _supports_tools(self, model_id: str) -> bool:
         """Check if model supports function calling.
@@ -274,10 +272,7 @@ class OpenAIProvider(LLMProviderBase):
         self._cancel_requested = False
 
         openai_messages = self._convert_messages_to_provider_format(messages)
-        openai_tools: list[dict[str, object]] | None = None
-        if tools:
-            openai_tools = self._convert_tools_to_provider_format(tools)
-
+        openai_tools = self._convert_tools_to_provider_format(tools) if tools else None
         log_provider_request(
             provider="openai",
             model=model,
@@ -332,11 +327,18 @@ class OpenAIProvider(LLMProviderBase):
                         arguments=arguments,
                     )
                     tool_calls.append(tool_call)
+                    self._logger.debug(
+                        "tool_call_parsed",
+                        extra={
+                            "tool_name": tool_call.tool_name,
+                            "arguments_count": len(tool_call.arguments),
+                        },
+                    )
 
             message = Message(
                 role="assistant",
                 content=content,
-                tool_calls=tool_calls if tool_calls else None,
+                tool_calls=tool_calls or None,
                 timestamp=datetime.now(),
             )
 
@@ -347,7 +349,7 @@ class OpenAIProvider(LLMProviderBase):
                 duration_ms=duration_ms,
             )
 
-            return message, tool_calls if tool_calls else None
+            return message, tool_calls or None
 
         except openai.RateLimitError as e:
             self._logger.exception(
@@ -398,10 +400,7 @@ class OpenAIProvider(LLMProviderBase):
         self._cancel_requested = False
 
         openai_messages = self._convert_messages_to_provider_format(messages)
-        openai_tools: list[dict[str, object]] | None = None
-        if tools:
-            openai_tools = self._convert_tools_to_provider_format(tools)
-
+        openai_tools = self._convert_tools_to_provider_format(tools) if tools else None
         try:
             typed_messages = cast("list[ChatCompletionMessageParam]", openai_messages)
             stream: AsyncStream[ChatCompletionChunk]

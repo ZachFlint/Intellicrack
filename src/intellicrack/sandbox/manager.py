@@ -124,7 +124,7 @@ class SandboxManager:
         Returns:
             Number of running sandboxes.
         """
-        return sum(1 for inst in self._instances.values() if inst.state.status == "running")
+        return sum(inst.state.status == "running" for inst in self._instances.values())
 
     async def get_available_types(self) -> list[SandboxType]:
         """Get list of available sandbox types.
@@ -329,10 +329,15 @@ class SandboxManager:
         Returns:
             Idle instance or None if not found.
         """
-        for instance in self._instances.values():
-            if instance.sandbox_type == sandbox_type and instance.state.status == "running":
-                return instance
-        return None
+        return next(
+            (
+                instance
+                for instance in self._instances.values()
+                if instance.sandbox_type == sandbox_type
+                and instance.state.status == "running"
+            ),
+            None,
+        )
 
     async def _find_oldest_idle(self) -> SandboxInstance | None:
         """Find the oldest idle sandbox instance.

@@ -285,12 +285,9 @@ class TestIconIntegrity:
 
     def test_all_icon_map_entries_have_files(self, icon_manager: IconManager) -> None:
         """Every entry in ICON_MAP corresponds to an existing file."""
-        missing_files = []
-
-        for name in ICON_MAP:
-            if not icon_manager.icon_exists(name):
-                missing_files.append(name)
-
+        missing_files = [
+            name for name in ICON_MAP if not icon_manager.icon_exists(name)
+        ]
         assert not missing_files, f"ICON_MAP entries without files: {missing_files}"
 
     def test_icons_load_without_errors(self, icon_manager: IconManager) -> None:

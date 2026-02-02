@@ -194,8 +194,6 @@ class AnthropicProvider(LLMProviderBase):
         Returns:
             Context window size in tokens.
         """
-        if "claude-3" in model_id or "claude-sonnet" in model_id or "claude-opus" in model_id:
-            return 200000
         return 200000
 
     @staticmethod
@@ -251,7 +249,9 @@ class AnthropicProvider(LLMProviderBase):
 
         self._cancel_requested = False
 
+        system_prompt = self.get_system_prompt(messages)
         anthropic_messages = self._convert_messages_to_provider_format(messages)
+        typed_messages = cast("list[MessageParam]", anthropic_messages)
         anthropic_tools: list[dict[str, object]] | None = None
         if tools:
             anthropic_tools = self._convert_tools_to_provider_format(tools)
@@ -266,12 +266,30 @@ class AnthropicProvider(LLMProviderBase):
         start_time = time.perf_counter()
 
         try:
-            if anthropic_tools:
-                response: AnthropicMessage = await self._client.messages.create(
+            response: AnthropicMessage
+            if system_prompt is not None and anthropic_tools:
+                response = await self._client.messages.create(
                     model=model,
                     max_tokens=max_tokens,
                     temperature=temperature,
-                    messages=cast("list[MessageParam]", anthropic_messages),
+                    system=system_prompt,
+                    messages=typed_messages,
+                    tools=cast("list[ToolParam]", anthropic_tools),
+                )
+            elif system_prompt is not None:
+                response = await self._client.messages.create(
+                    model=model,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    system=system_prompt,
+                    messages=typed_messages,
+                )
+            elif anthropic_tools:
+                response = await self._client.messages.create(
+                    model=model,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    messages=typed_messages,
                     tools=cast("list[ToolParam]", anthropic_tools),
                 )
             else:
@@ -279,7 +297,7 @@ class AnthropicProvider(LLMProviderBase):
                     model=model,
                     max_tokens=max_tokens,
                     temperature=temperature,
-                    messages=cast("list[MessageParam]", anthropic_messages),
+                    messages=typed_messages,
                 )
 
             duration_ms = (time.perf_counter() - start_time) * 1000
@@ -300,11 +318,18 @@ class AnthropicProvider(LLMProviderBase):
                         arguments=arguments,
                     )
                     tool_calls.append(tool_call)
+                    self._logger.debug(
+                        "tool_call_parsed",
+                        extra={
+                            "tool_name": tool_call.tool_name,
+                            "arguments_count": len(tool_call.arguments),
+                        },
+                    )
 
             message = Message(
                 role="assistant",
                 content=content,
-                tool_calls=tool_calls if tool_calls else None,
+                tool_calls=tool_calls or None,
                 timestamp=datetime.now(),
             )
 
@@ -322,7 +347,7 @@ class AnthropicProvider(LLMProviderBase):
         except Exception as e:
             raise ProviderError(_MSG_REQUEST_FAILED) from e
         else:
-            return message, tool_calls if tool_calls else None
+            return message, tool_calls or None
 
     async def chat_stream(
         self,
@@ -353,18 +378,37 @@ class AnthropicProvider(LLMProviderBase):
 
         self._cancel_requested = False
 
+        system_prompt = self.get_system_prompt(messages)
         anthropic_messages = self._convert_messages_to_provider_format(messages)
+        typed_messages = cast("list[MessageParam]", anthropic_messages)
         anthropic_tools: list[dict[str, object]] | None = None
         if tools:
             anthropic_tools = self._convert_tools_to_provider_format(tools)
 
         try:
-            if anthropic_tools:
+            if system_prompt is not None and anthropic_tools:
                 stream_context = self._client.messages.stream(
                     model=model,
                     max_tokens=max_tokens,
                     temperature=temperature,
-                    messages=cast("list[MessageParam]", anthropic_messages),
+                    system=system_prompt,
+                    messages=typed_messages,
+                    tools=cast("list[ToolParam]", anthropic_tools),
+                )
+            elif system_prompt is not None:
+                stream_context = self._client.messages.stream(
+                    model=model,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    system=system_prompt,
+                    messages=typed_messages,
+                )
+            elif anthropic_tools:
+                stream_context = self._client.messages.stream(
+                    model=model,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    messages=typed_messages,
                     tools=cast("list[ToolParam]", anthropic_tools),
                 )
             else:
@@ -372,7 +416,7 @@ class AnthropicProvider(LLMProviderBase):
                     model=model,
                     max_tokens=max_tokens,
                     temperature=temperature,
-                    messages=cast("list[MessageParam]", anthropic_messages),
+                    messages=typed_messages,
                 )
 
             async with stream_context as stream:
@@ -441,7 +485,7 @@ class AnthropicProvider(LLMProviderBase):
 
                 anthropic_messages.append({
                     "role": "assistant",
-                    "content": content if content else msg.content,
+                    "content": content or msg.content,
                 })
             elif msg.role == "tool" and msg.tool_results:
                 tool_results: list[dict[str, object]] = []
@@ -483,15 +527,15 @@ class AnthropicProvider(LLMProviderBase):
 
     @staticmethod
     def get_system_prompt(messages: list[Message]) -> str | None:
-        """Extract system prompt from messages.
+        """Extract and concatenate all system messages into a single prompt.
 
         Args:
-            messages: List of messages.
+            messages: List of messages to scan.
 
         Returns:
-            System prompt content or None.
+            Concatenated system prompt content, or None if no system messages.
         """
-        for msg in messages:
-            if msg.role == "system":
-                return msg.content
-        return None
+        system_parts: list[str] = [
+            msg.content for msg in messages if msg.role == "system" and msg.content
+        ]
+        return "\n\n".join(system_parts) if system_parts else None

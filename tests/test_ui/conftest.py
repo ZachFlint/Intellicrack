@@ -28,5 +28,4 @@ def qapp() -> Generator[QApplication]:
         yield existing
         return
 
-    app = QApplication([])
-    yield app
+    yield QApplication([])

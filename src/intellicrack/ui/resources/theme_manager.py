@@ -6,15 +6,15 @@ dark and light themes.
 
 from __future__ import annotations
 
-import logging
 from typing import ClassVar, Final
 
 from PyQt6.QtWidgets import QApplication
 
+from ...core.logging import get_logger
 from .resource_helper import get_assets_path
 
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("ui.resources.themes")
 
 
 THEME_DARK: Final[str] = "dark"
@@ -1026,9 +1026,13 @@ class ThemeManager:
         """
         try:
             styles_dir = get_assets_path() / "styles"
-            return styles_dir.exists()
-        except FileNotFoundError:
+            available = styles_dir.exists()
+            _logger.debug("styles_availability_check", extra={"available": available, "path": str(styles_dir)})
+        except FileNotFoundError as exc:
+            _logger.exception("styles_availability_check_failed", extra={"error": str(exc)})
             return False
+        else:
+            return available
 
     def apply_theme(self, theme: str = DEFAULT_THEME) -> bool:
         r"""Apply a theme to the application.
@@ -1065,8 +1069,10 @@ class ThemeManager:
             CSS stylesheet string.
         """
         if theme in self._theme_cache:
+            _logger.debug("theme_cache_hit", extra={"theme": theme})
             return self._theme_cache[theme]
 
+        _logger.debug("theme_cache_miss", extra={"theme": theme})
         stylesheet = self._load_stylesheet(theme)
         self._theme_cache[theme] = stylesheet
         return stylesheet
@@ -1090,7 +1096,7 @@ class ThemeManager:
                         if content.strip():
                             _logger.debug("stylesheet_loaded", extra={"path": str(style_path)})
                             return content
-            except (OSError, PermissionError) as e:
+            except OSError as e:
                 _logger.warning(
                     "stylesheet_load_failed",
                     extra={"style_file": filename, "error": str(e)},
@@ -1105,7 +1111,9 @@ class ThemeManager:
         Returns:
             The new theme name.
         """
+        old_theme = self._current_theme
         new_theme = THEME_LIGHT if self._current_theme == THEME_DARK else THEME_DARK
+        _logger.debug("theme_toggling", extra={"from_theme": old_theme, "to_theme": new_theme})
         self.apply_theme(new_theme)
         return new_theme
 
@@ -1128,7 +1136,9 @@ class ThemeManager:
 
     def clear_cache(self) -> None:
         """Clear the stylesheet cache."""
+        cache_count = len(self._theme_cache)
         self._theme_cache.clear()
+        _logger.debug("theme_cache_cleared", extra={"entries_cleared": cache_count})
 
     @staticmethod
     def get_available_themes() -> list[str]:

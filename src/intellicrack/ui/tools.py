@@ -8,7 +8,6 @@ specialized analysis panels (Licensing, Scripts, Stack).
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Protocol, cast, runtime_checkable
 
@@ -29,6 +28,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ..core.logging import get_logger
 from .highlighter import (
     get_highlighter_for_language,
 )
@@ -241,7 +241,7 @@ if TYPE_CHECKING:
     from ..core.types import LicensingAnalysis
     from .panels.licensing_panel import LicensingAnalysisPanel
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("ui.tools")
 
 
 OutputType = Literal[
@@ -755,8 +755,7 @@ class ToolOutputPanel(QFrame):
             tab_name: Name of the tab.
             content: Text content to display.
         """
-        tab = self._tabs.get(tab_name.lower())
-        if tab:
+        if tab := self._tabs.get(tab_name.lower()):
             tab.set_content(content)
 
     def set_tab_info(self, tab_name: OutputType, header: str, content: str) -> None:
@@ -767,8 +766,7 @@ class ToolOutputPanel(QFrame):
             header: Info header text.
             content: Info content text.
         """
-        tab = self._tabs.get(tab_name.lower())
-        if tab:
+        if tab := self._tabs.get(tab_name.lower()):
             tab.set_info(header, content)
 
     def append_tab_content(self, tab_name: OutputType, content: str) -> None:
@@ -778,8 +776,7 @@ class ToolOutputPanel(QFrame):
             tab_name: Name of the tab.
             content: Text content to append.
         """
-        tab = self._tabs.get(tab_name.lower())
-        if tab:
+        if tab := self._tabs.get(tab_name.lower()):
             tab.append_content(content)
 
     def set_current_address(self, address: int) -> None:
@@ -817,16 +814,14 @@ class ToolOutputPanel(QFrame):
         Args:
             tab_name: Name of the tab to activate.
         """
-        tab = self._tabs.get(tab_name.lower())
-        if tab:
+        if tab := self._tabs.get(tab_name.lower()):
             index = self._tab_widget.indexOf(tab)
             if index >= 0:
                 self._tab_widget.setCurrentIndex(index)
-        else:
-            # Check panels and embedded tools
-            widget = self._panels.get(tab_name.lower()) or self._embedded_tools.get(tab_name.lower())
-            if widget:
-                self._activate_tab_by_widget(widget)
+        elif widget := self._panels.get(
+            tab_name.lower()
+        ) or self._embedded_tools.get(tab_name.lower()):
+            self._activate_tab_by_widget(widget)
 
     def log(self, message: str) -> None:
         """Append a message to the log tab.
@@ -842,8 +837,7 @@ class ToolOutputPanel(QFrame):
         Args:
             tab_name: Name of the tab to clear.
         """
-        tab = self._tabs.get(tab_name.lower())
-        if tab:
+        if tab := self._tabs.get(tab_name.lower()):
             tab.set_content("")
 
     def clear_all(self) -> None:

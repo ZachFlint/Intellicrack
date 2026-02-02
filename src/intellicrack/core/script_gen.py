@@ -219,9 +219,7 @@ class ScriptContext:
 
         if self.additional_context:
             lines.append("\nAdditional Analysis Context:")
-            for k, v in self.additional_context.items():
-                lines.append(f"  - {k}: {v!r}")
-
+            lines.extend(f"  - {k}: {v!r}" for k, v in self.additional_context.items())
         if language:
             api_ref = {}
             if language == ScriptLanguage.JAVASCRIPT:
@@ -235,9 +233,7 @@ class ScriptContext:
 
             if api_ref:
                 lines.append(f"\n{language.value.upper()} API Reference:")
-                for category, usage in api_ref.items():
-                    lines.append(f"  {category}: {usage}")
-
+                lines.extend(f"  {category}: {usage}" for category, usage in api_ref.items())
         return "\n".join(lines)
 
 
@@ -286,8 +282,9 @@ class Script:
             path: File path to save to.
         """
         path.parent.mkdir(parents=True, exist_ok=True)
+        _logger.debug("directory_ensured", extra={"directory": str(path.parent)})
         path.write_text(self.content, encoding="utf-8")
-        _logger.info("script_saved", extra={"path": str(path)})
+        _logger.info("script_saved", extra={"path": str(path), "size": len(self.content)})
 
     def get_extension(self) -> str:
         """Get the appropriate file extension for this script type.
@@ -335,6 +332,7 @@ class ScriptValidator:
         Returns:
             Tuple of (is_valid, error_message).
         """
+        _logger.debug("validate_javascript_start", extra={"content_length": len(content)})
         try:
             with tempfile.NamedTemporaryFile(
                 mode="w",
@@ -344,25 +342,33 @@ class ScriptValidator:
             ) as f:
                 f.write(content)
                 temp_path = f.name
+            _logger.debug("temp_file_created", extra={"path": temp_path, "suffix": ".js"})
 
             process_manager = ProcessManager.get_instance()
+            cmd = ["node", "--check", temp_path]
+            _logger.debug("subprocess_execute", extra={"command": cmd})
             result = process_manager.run_tracked(
-                ["node", "--check", temp_path],
+                cmd,
                 name="node-syntax-check",
                 timeout=10,
             )
+            _logger.debug("subprocess_completed", extra={"command": cmd, "exit_code": result.returncode})
 
             Path(temp_path).unlink(missing_ok=True)
+            _logger.debug("temp_file_cleaned", extra={"path": temp_path})
 
             if result.returncode == 0:
                 return True, None
             return False, result.stderr.strip()
 
         except FileNotFoundError:
+            _logger.debug("node_not_found", extra={"reason": "node binary not available, skipping validation"})
             return True, None
         except subprocess.TimeoutExpired:
+            _logger.warning("validation_timeout", extra={"language": "javascript", "timeout_seconds": 10})
             return False, "Validation timed out"
-        except Exception:
+        except Exception as exc:
+            _logger.debug("validation_exception", extra={"language": "javascript", "error": str(exc)})
             return True, None
 
     @staticmethod
@@ -375,13 +381,16 @@ class ScriptValidator:
         Returns:
             Tuple of (is_valid, error_message).
         """
+        _logger.debug("validate_java_start", extra={"content_length": len(content)})
         required_elements = ["import", "public", "void run("]
         for element in required_elements:
             if element not in content:
+                _logger.debug("validate_java_missing_element", extra={"element": element})
                 return False, f"Missing required element: {element}"
 
         brace_count = content.count("{") - content.count("}")
         if brace_count != 0:
+            _logger.debug("validate_java_unbalanced_braces", extra={"brace_count": brace_count})
             return False, f"Unbalanced braces: {brace_count:+d}"
 
         return True, None
@@ -401,12 +410,14 @@ class ScriptValidator:
             ScriptLanguage.JAVA: self.validate_java,
         }
 
-        validator = validators.get(script.language)
-        if validator:
+        if validator := validators.get(script.language):
+            _logger.debug("script_validation_start", extra={"script": script.name, "language": script.language.value})
             is_valid, error = validator(script.content)
             script.verified = is_valid
+            _logger.debug("script_validation_result", extra={"script": script.name, "valid": is_valid, "error": error})
             return is_valid, error
 
+        _logger.debug("script_validation_skipped", extra={"script": script.name, "language": script.language.value})
         script.verified = True
         return True, None
 
@@ -506,9 +517,11 @@ class ScriptManager:
         if subdir:
             target_dir /= subdir
         target_dir.mkdir(parents=True, exist_ok=True)
+        _logger.debug("directory_ensured", extra={"directory": str(target_dir)})
 
         filename = f"{name}{script.get_extension()}"
         path = target_dir / filename
+        _logger.debug("script_save_start", extra={"script": name, "path": str(path)})
         script.save(path)
         return path
 
@@ -522,9 +535,11 @@ class ScriptManager:
             Loaded script or None if failed.
         """
         if not path.exists():
+            _logger.debug("script_load_not_found", extra={"path": str(path)})
             return None
 
         content = path.read_text(encoding="utf-8")
+        _logger.debug("script_file_read", extra={"path": str(path), "size": len(content)})
 
         ext = path.suffix.lower()
         language_map = {
@@ -557,6 +572,7 @@ class ScriptManager:
         )
 
         self.scripts[script.name] = script
+        _logger.debug("script_loaded", extra={"script": script.name, "language": language.value, "path": str(path)})
         return script
 
     def ensure_script_saved(self, name: str) -> bool:
@@ -568,9 +584,7 @@ class ScriptManager:
         Returns:
             True if saved successfully.
         """
-        if name not in self.scripts:
-            return False
-        return self.save_script(name) is not None
+        return self.save_script(name) is not None if name in self.scripts else False
 
     def reload_script(self, name: str) -> bool:
         """Reload a script from disk (if it exists).
@@ -584,8 +598,10 @@ class ScriptManager:
         # First try to find where it might be saved
         # This is a bit tricky since save_script logic handles paths
         # We assume standard location in scripts_dir
+        _logger.debug("script_reload_start", extra={"script": name})
         script = self.scripts.get(name)
         if not script:
+            _logger.debug("script_reload_not_in_cache", extra={"script": name})
             return False
 
         ext = script.get_extension()
@@ -593,11 +609,12 @@ class ScriptManager:
         path = self.scripts_dir / filename
 
         if not path.exists():
+            _logger.debug("script_reload_file_missing", extra={"script": name, "path": str(path)})
             return False
 
-        reloaded = self.load_script(path)
-        if reloaded:
+        if reloaded := self.load_script(path):
             self.scripts[name] = reloaded
+            _logger.debug("script_reloaded", extra={"script": name, "path": str(path)})
             return True
         return False
 
@@ -765,22 +782,27 @@ class _KeygenBuilder(ABC):
 
     def _generate_constants(self, analysis: LicensingAnalysis) -> str:
         lines: list[str] = [f"ALGORITHM = '{self._algorithm_label()}'"]
-        lines.append(f"KEY_FORMAT = '{analysis.key_format.value}'")
-        lines.append(f"KEY_LENGTH = {analysis.key_length}")
+        lines.extend(
+            (
+                f"KEY_FORMAT = '{analysis.key_format.value}'",
+                f"KEY_LENGTH = {analysis.key_length}",
+            )
+        )
         if analysis.group_size is not None:
             lines.append(f"GROUP_SIZE = {analysis.group_size}")
         else:
             lines.append("GROUP_SIZE = 4")
-        sep = analysis.group_separator if analysis.group_separator else "-"
+        sep = analysis.group_separator or "-"
         lines.append(f"GROUP_SEPARATOR = '{sep}'")
         if analysis.checksum_algorithm:
             lines.append(f"CHECKSUM_ALGORITHM = '{analysis.checksum_algorithm}'")
         if analysis.checksum_position:
             lines.append(f"CHECKSUM_POSITION = '{analysis.checksum_position}'")
-        magic_vals: list[int] = [
-            mc.value for mc in analysis.magic_constants if mc.usage_context not in {"rsa_modulus", "rsa_public_exponent"}
-        ]
-        if magic_vals:
+        if magic_vals := [
+            mc.value
+            for mc in analysis.magic_constants
+            if mc.usage_context not in {"rsa_modulus", "rsa_public_exponent"}
+        ]:
             lines.append(f"MAGIC_CONSTANTS = {magic_vals!r}")
         if analysis.feature_flags:
             lines.append(f"FEATURE_FLAGS = {analysis.feature_flags!r}")
@@ -804,16 +826,17 @@ def validate(self, username: str, key: str) -> bool:
 
     @staticmethod
     def _generate_format_helpers(analysis: LicensingAnalysis) -> str:
-        parts: list[str] = []
-        parts.append(
-            textwrap.dedent("""\
+        parts: list[str] = [
+            textwrap.dedent(
+                """\
             def _format_key(self, raw: str) -> str:
                 if KEY_FORMAT == 'serial_dashed':
                     groups = [raw[i:i+GROUP_SIZE] for i in range(0, len(raw), GROUP_SIZE)]
                     return GROUP_SEPARATOR.join(groups)
                 return raw
-        """)
-        )
+        """
+            )
+        ]
         if analysis.checksum_algorithm:
             parts.append(
                 textwrap.dedent("""\
@@ -841,14 +864,17 @@ def validate(self, username: str, key: str) -> bool:
         content_parts: list[str] = [header]
         if imports:
             content_parts.append(imports)
-        content_parts.append("")
-        content_parts.append(constants)
-        content_parts.append("")
-        content_parts.append("class Keygen:")
-        content_parts.append(textwrap.indent(body, "    "))
-        content_parts.append("")
-        content_parts.append(textwrap.indent(format_helpers, "    "))
-
+        content_parts.extend(
+            (
+                "",
+                constants,
+                "",
+                "class Keygen:",
+                textwrap.indent(body, "    "),
+                "",
+                textwrap.indent(format_helpers, "    "),
+            )
+        )
         content = "\n".join(content_parts)
         return GeneratedScript(
             name=f"{analysis.binary_name}_{label.lower()}_keygen",
@@ -1001,7 +1027,7 @@ class _RSAKeygenBuilder(_KeygenBuilder):
                 rsa_n = mc.value
             elif mc.usage_context == "rsa_public_exponent":
                 rsa_e = mc.value
-        return base + f"\nRSA_MODULUS = {rsa_n}\nRSA_PUBLIC_EXPONENT = {rsa_e}"
+        return f"{base}\nRSA_MODULUS = {rsa_n}\nRSA_PUBLIC_EXPONENT = {rsa_e}"
 
     @override
     def _generate_keygen_body(self, analysis: LicensingAnalysis) -> str:

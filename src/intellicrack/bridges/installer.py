@@ -345,7 +345,7 @@ class ToolInstaller:
                 version_str = result.stdout.strip()
                 return self._parse_version(version_str)
 
-        except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
+        except (subprocess.TimeoutExpired, OSError) as e:
             _logger.debug("version_check_failed", extra={"tool": str(tool), "error": str(e)})
 
         return None
@@ -362,12 +362,11 @@ class ToolInstaller:
         """
         version = ToolVersion(raw=version_str)
 
-        match = re.search(r"(\d+)\.(\d+)(?:\.(\d+))?", version_str)
-        if match:
-            version.major = int(match.group(1))
-            version.minor = int(match.group(2))
-            if match.group(3):
-                version.patch = int(match.group(3))
+        if match := re.search(r"(\d+)\.(\d+)(?:\.(\d+))?", version_str):
+            version.major = int(match[1])
+            version.minor = int(match[2])
+            if match[3]:
+                version.patch = int(match[3])
 
         return version
 
@@ -624,9 +623,7 @@ class ToolInstaller:
             _logger.exception("extraction_failed")
             raise ToolError(_ERR_EXTRACT_FAILED_FMT) from e
         else:
-            if len(subdirs) == 1:
-                return subdirs[0]
-            return tool_dir
+            return subdirs[0] if len(subdirs) == 1 else tool_dir
 
     @staticmethod
     def _extract_zip(archive_path: Path, dest_dir: Path) -> None:

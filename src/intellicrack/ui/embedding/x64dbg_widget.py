@@ -7,13 +7,13 @@ binaries within Intellicrack's interface.
 from __future__ import annotations
 
 import asyncio
-import logging
 import os
 import winreg
 from collections.abc import Coroutine
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from intellicrack.core.logging import get_logger
 from intellicrack.ui.embedding.embedded_widget import EmbeddedToolWidget
 from intellicrack.ui.embedding.win32_helper import Win32WindowHelper
 
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
     from intellicrack.bridges.x64dbg import X64DbgBridge
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("ui.embedding.x64dbg")
 
 
 class X64DbgWidget(EmbeddedToolWidget):
@@ -102,7 +102,8 @@ class X64DbgWidget(EmbeddedToolWidget):
                             if candidate.exists():
                                 self._install_dir = base
                                 return candidate
-            except (FileNotFoundError, OSError):
+            except OSError:
+                _logger.debug("registry_key_not_found", extra={"subkey": subkey})
                 continue
 
         for base in self._COMMON_PATHS:
@@ -118,8 +119,7 @@ class X64DbgWidget(EmbeddedToolWidget):
                     self._install_dir = base
                     return candidate
 
-        env_path = os.environ.get("X64DBG_PATH")
-        if env_path:
+        if env_path := os.environ.get("X64DBG_PATH"):
             base = Path(env_path)
             candidates = [
                 base / release_dir / arch_dir / exe_name,
@@ -131,8 +131,7 @@ class X64DbgWidget(EmbeddedToolWidget):
                     self._install_dir = base
                     return candidate
 
-        found = Win32WindowHelper.find_executable_path(exe_name)
-        if found:
+        if found := Win32WindowHelper.find_executable_path(exe_name):
             self._install_dir = found.parent.parent
             return found
 
@@ -226,6 +225,7 @@ class X64DbgWidget(EmbeddedToolWidget):
             else:
                 loop.run_until_complete(coro)
         except RuntimeError:
+            _logger.debug("bridge_async_fallback_to_asyncio_run", extra={})
             asyncio.run(coro)
 
     def debug_file(self, binary_path: Path) -> bool:
@@ -241,6 +241,7 @@ class X64DbgWidget(EmbeddedToolWidget):
             _logger.error("binary_not_found", extra={"path": str(binary_path)})
             return False
 
+        _logger.debug("debug_file_requested", extra={"path": str(binary_path), "embedded": self.is_embedded()})
         if self.is_embedded():
             return self._send_debug_command(binary_path)
 
@@ -433,7 +434,7 @@ class X64DbgWidget(EmbeddedToolWidget):
         Args:
             path: Path to x64dbg installation directory.
         """
-        if path.exists() and path.is_dir():
+        if path.is_dir():
             self._install_dir = path
             _logger.info("install_directory_set", extra={"path": str(path)})
         else:

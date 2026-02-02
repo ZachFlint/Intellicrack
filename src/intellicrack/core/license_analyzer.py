@@ -530,6 +530,8 @@ class LicenseAnalyzer:
         Raises:
             FileNotFoundError: If the binary does not exist.
         """
+        _logger.info("analyze_started", extra={"binary_path": str(path)})
+
         if not path.exists():
             raise FileNotFoundError(str(path))
 
@@ -549,7 +551,7 @@ class LicenseAnalyzer:
         )
         analysis_notes.extend(self._build_context_notes(view, filtered.license))
 
-        return LicensingAnalysis(
+        result = LicensingAnalysis(
             binary_name=view.path.name,
             algorithm_type=crypto_data.algorithm_type,
             secondary_algorithms=crypto_data.secondary_algorithms,
@@ -571,6 +573,19 @@ class LicenseAnalyzer:
             analysis_notes=analysis_notes,
         )
 
+        _logger.info(
+            "analyze_completed",
+            extra={
+                "binary_path": str(path),
+                "algorithm": crypto_data.algorithm_type.value,
+                "key_format": key_data.key_format.value,
+                "confidence": confidence_score,
+                "validation_functions_count": len(crypto_data.validation_functions),
+            },
+        )
+
+        return result
+
     def _extract_filtered_strings(self, strings: list[StringInfo]) -> FilteredStrings:
         """Extract and categorize strings by keyword groups.
 
@@ -580,7 +595,7 @@ class LicenseAnalyzer:
         Returns:
             FilteredStrings with categorized string lists.
         """
-        return FilteredStrings(
+        filtered = FilteredStrings(
             license=self._filter_strings(strings, self._license_keywords),
             feature=self._filter_strings(strings, self._feature_keywords),
             blacklist=self._filter_strings(strings, self._blacklist_keywords),
@@ -588,6 +603,18 @@ class LicenseAnalyzer:
             hardware=self._filter_strings(strings, self._hardware_keywords),
             network=self._filter_strings(strings, self._network_keywords),
         )
+        _logger.debug(
+            "strings_filtered",
+            extra={
+                "license_count": len(filtered.license),
+                "feature_count": len(filtered.feature),
+                "blacklist_count": len(filtered.blacklist),
+                "time_count": len(filtered.time),
+                "hardware_count": len(filtered.hardware),
+                "network_count": len(filtered.network),
+            },
+        )
+        return filtered
 
     def _analyze_crypto_data(
         self,
@@ -605,10 +632,21 @@ class LicenseAnalyzer:
         Returns:
             CryptoAnalysisData with crypto analysis results.
         """
+        _logger.debug("crypto_analysis_started", extra={"sections_count": len(view.sections)})
         crypto_api_calls = self._detect_crypto_apis(view, strings)
         magic_constants = self._extract_magic_constants(view)
         validation_functions = self._identify_validation_functions(view, license_strings, crypto_api_calls)
         algorithm_type, secondary_algorithms = self._detect_algorithms(crypto_api_calls, magic_constants, strings)
+        _logger.debug(
+            "crypto_analysis_completed",
+            extra={
+                "crypto_api_count": len(crypto_api_calls),
+                "magic_constants_count": len(magic_constants),
+                "validation_functions_count": len(validation_functions),
+                "algorithm": algorithm_type.value,
+                "secondary_count": len(secondary_algorithms),
+            },
+        )
         return CryptoAnalysisData(
             crypto_api_calls=crypto_api_calls,
             magic_constants=magic_constants,
@@ -635,6 +673,16 @@ class LicenseAnalyzer:
         """
         key_format, key_length, group_size, group_separator = self._detect_key_format(strings, algorithm_type)
         checksum_algorithm, checksum_position = self._detect_checksum_info(strings, magic_constants, algorithm_type, key_format, group_size)
+        _logger.debug(
+            "key_format_analysis_completed",
+            extra={
+                "key_format": key_format.value,
+                "key_length": key_length,
+                "group_size": group_size,
+                "checksum_algorithm": checksum_algorithm,
+                "checksum_position": checksum_position,
+            },
+        )
         return KeyFormatData(
             key_format=key_format,
             key_length=key_length,
@@ -654,11 +702,20 @@ class LicenseAnalyzer:
         Returns:
             RuntimeIndicators with runtime analysis results.
         """
+        _logger.debug("runtime_indicator_analysis_started", extra={"imports_count": len(view.imports)})
         hardware_id_apis = self._collect_matching_imports(view, self._hardware_api_keywords)
         if filtered.hardware:
             hardware_id_apis.extend(s.value for s in filtered.hardware if s.value not in hardware_id_apis)
         time_check_present = bool(self._collect_matching_imports(view, self._time_api_keywords) or filtered.time)
         online_validation = bool(self._collect_matching_imports(view, self._network_api_keywords) or filtered.network)
+        _logger.debug(
+            "runtime_indicator_analysis_completed",
+            extra={
+                "hardware_apis_count": len(hardware_id_apis),
+                "time_check": time_check_present,
+                "online_validation": online_validation,
+            },
+        )
         return RuntimeIndicators(
             hardware_id_apis=hardware_id_apis,
             time_check_present=time_check_present,
@@ -679,6 +736,16 @@ class LicenseAnalyzer:
         """
         file_type = self._detect_format(data)
         architecture, is_64bit = self._detect_architecture(data)
+        _logger.debug(
+            "binary_format_detected",
+            extra={
+                "path": str(path),
+                "file_type": file_type,
+                "architecture": architecture,
+                "is_64bit": is_64bit,
+                "data_size": len(data),
+            },
+        )
 
         if file_type == "pe":
             pe_view = self._parse_pe(path, data, architecture, is_64bit)
@@ -715,10 +782,12 @@ class LicenseAnalyzer:
         Returns:
             BinaryView if parsing succeeds, otherwise None.
         """
+        _logger.debug("pe_parse_attempt", extra={"path": str(path), "parser": "pefile"})
         pe_view = self._parse_pe_with_pefile(path, data, architecture, is_64bit)
         if pe_view is not None:
             return pe_view
 
+        _logger.debug("pe_parse_attempt", extra={"path": str(path), "parser": "lief"})
         return self._parse_pe_with_lief(path, data, architecture, is_64bit)
 
     @staticmethod
@@ -740,6 +809,7 @@ class LicenseAnalyzer:
             BinaryView or None if pefile is unavailable or parsing fails.
         """
         if _pefile_module is None:
+            _logger.debug("pefile_unavailable", extra={"path": str(path)})
             return None
 
         try:
@@ -753,6 +823,17 @@ class LicenseAnalyzer:
             sections = _extract_pefile_sections(pe, image_base)
             imports = _extract_pefile_imports(pe)
 
+            _logger.debug(
+                "pefile_parse_succeeded",
+                extra={
+                    "path": str(path),
+                    "image_base": hex(image_base),
+                    "entry_point": hex(entry_point),
+                    "sections_count": len(sections),
+                    "imports_count": len(imports),
+                },
+            )
+
             return BinaryView(
                 path=path,
                 data=data,
@@ -765,7 +846,7 @@ class LicenseAnalyzer:
                 imports=imports,
             )
         except Exception as exc:
-            _logger.warning("pefile_parse_failed", extra={"error": str(exc)})
+            _logger.warning("pefile_parse_failed", extra={"path": str(path), "error": str(exc)})
             return None
 
     @staticmethod
@@ -787,11 +868,13 @@ class LicenseAnalyzer:
             BinaryView or None if LIEF is unavailable or parsing fails.
         """
         if _lief_module is None:
+            _logger.debug("lief_unavailable", extra={"path": str(path)})
             return None
 
         try:
             binary = _lief_module.parse(str(path))
             if binary is None or binary.format != _lief_module.EXE_FORMATS.PE:
+                _logger.debug("lief_not_pe_format", extra={"path": str(path)})
                 return None
 
             image_base = int(getattr(binary.optional_header, "imagebase", 0))
@@ -801,6 +884,17 @@ class LicenseAnalyzer:
 
             sections = _extract_lief_sections(binary, image_base)
             imports = _extract_lief_imports(binary)
+
+            _logger.debug(
+                "lief_parse_succeeded",
+                extra={
+                    "path": str(path),
+                    "image_base": hex(image_base),
+                    "entry_point": hex(entry_point),
+                    "sections_count": len(sections),
+                    "imports_count": len(imports),
+                },
+            )
 
             return BinaryView(
                 path=path,
@@ -814,7 +908,7 @@ class LicenseAnalyzer:
                 imports=imports,
             )
         except Exception as exc:
-            _logger.warning("lief_parse_failed", extra={"error": str(exc)})
+            _logger.warning("lief_parse_failed", extra={"path": str(path), "error": str(exc)})
             return None
 
     @staticmethod
@@ -829,15 +923,16 @@ class LicenseAnalyzer:
         """
         if len(data) >= _MIN_HEADER_SIZE_PE and data[:_MIN_HEADER_SIZE_PE] == b"MZ":
             return "pe"
-        if len(data) >= _MIN_HEADER_SIZE_ELF and data[:_MIN_HEADER_SIZE_ELF] == b"\x7fELF":
-            return "elf"
-        if len(data) >= _MIN_HEADER_SIZE_ELF and data[:_MIN_HEADER_SIZE_ELF] in {
-            b"\xfe\xed\xfa\xce",
-            b"\xce\xfa\xed\xfe",
-            b"\xfe\xed\xfa\xcf",
-            b"\xcf\xfa\xed\xfe",
-        }:
-            return "macho"
+        if len(data) >= _MIN_HEADER_SIZE_ELF:
+            if data[:_MIN_HEADER_SIZE_ELF] == b"\x7fELF":
+                return "elf"
+            if data[:_MIN_HEADER_SIZE_ELF] in {
+                b"\xfe\xed\xfa\xce",
+                b"\xce\xfa\xed\xfe",
+                b"\xfe\xed\xfa\xcf",
+                b"\xcf\xfa\xed\xfe",
+            }:
+                return "macho"
         return "raw"
 
     @staticmethod
@@ -886,6 +981,10 @@ class LicenseAnalyzer:
         strings: list[StringInfo] = []
         strings.extend(self._extract_ascii_strings(view))
         strings.extend(self._extract_utf16le_strings(view))
+        _logger.debug(
+            "strings_extracted",
+            extra={"total_count": len(strings), "data_size": len(view.data)},
+        )
         return strings
 
     def _extract_ascii_strings(self, view: BinaryView) -> list[StringInfo]:
@@ -1018,6 +1117,10 @@ class LicenseAnalyzer:
         Returns:
             List of CryptoAPICall entries.
         """
+        _logger.debug(
+            "crypto_api_detection_started",
+            extra={"imports_count": len(view.imports), "strings_count": len(strings)},
+        )
         calls: list[CryptoAPICall] = []
         seen: set[tuple[str, int]] = set()
 
@@ -1052,6 +1155,7 @@ class LicenseAnalyzer:
                             )
                         )
                         seen.add(key)
+        _logger.debug("crypto_api_detection_completed", extra={"detected_count": len(calls)})
         return calls
 
     def _match_crypto_keyword(self, name: str) -> AlgorithmType | None:
@@ -1064,10 +1168,14 @@ class LicenseAnalyzer:
             AlgorithmType if matched, otherwise None.
         """
         lowered = name.lower()
-        for keyword, algo in self._crypto_api_keywords.items():
-            if keyword.lower() in lowered:
-                return algo
-        return None
+        return next(
+            (
+                algo
+                for keyword, algo in self._crypto_api_keywords.items()
+                if keyword.lower() in lowered
+            ),
+            None,
+        )
 
     def _extract_magic_constants(self, view: BinaryView) -> list[MagicConstant]:
         """Extract known magic constants from binary sections.
@@ -1078,6 +1186,10 @@ class LicenseAnalyzer:
         Returns:
             List of MagicConstant entries.
         """
+        _logger.debug(
+            "magic_constant_scan_started",
+            extra={"sections_count": len(view.sections), "known_constants_count": len(self._known_constants)},
+        )
         constants: list[MagicConstant] = []
         seen: set[tuple[int, int]] = set()
 
@@ -1099,6 +1211,7 @@ class LicenseAnalyzer:
                 constants.append(constant)
                 seen.add(key)
 
+        _logger.debug("magic_constant_scan_completed", extra={"constants_found": len(constants)})
         return constants
 
     @staticmethod
@@ -1123,7 +1236,11 @@ class LicenseAnalyzer:
         for fmt, width in (("<I", 32), ("<Q", 64)):
             try:
                 packed = struct.pack(fmt, value)
-            except struct.error:
+            except struct.error as exc:
+                _logger.debug(
+                    "constant_pack_skipped",
+                    extra={"value": hex(value), "format": fmt, "error": str(exc)},
+                )
                 continue
             offset = 0
             while True:
@@ -1155,24 +1272,26 @@ class LicenseAnalyzer:
         Returns:
             List of MagicConstant entries for RSA key data.
         """
+        _logger.debug("rsa_constant_extraction_started", extra={"data_size": len(view.data)})
         constants: list[MagicConstant] = []
         rsa_keys = LicenseAnalyzer._find_rsa_public_keys(view.data)
+        _logger.debug("rsa_keys_found", extra={"key_count": len(rsa_keys)})
         for modulus, exponent, offset in rsa_keys:
             mod_address, _ = view.offset_to_va(offset)
-            constants.append(
-                MagicConstant(
-                    value=modulus,
-                    address=mod_address,
-                    usage_context="rsa_modulus",
-                    bit_width=modulus.bit_length(),
-                )
-            )
-            constants.append(
-                MagicConstant(
-                    value=exponent,
-                    address=mod_address,
-                    usage_context="rsa_public_exponent",
-                    bit_width=exponent.bit_length(),
+            constants.extend(
+                (
+                    MagicConstant(
+                        value=modulus,
+                        address=mod_address,
+                        usage_context="rsa_modulus",
+                        bit_width=modulus.bit_length(),
+                    ),
+                    MagicConstant(
+                        value=exponent,
+                        address=mod_address,
+                        usage_context="rsa_public_exponent",
+                        bit_width=exponent.bit_length(),
+                    ),
                 )
             )
         return constants
@@ -1187,9 +1306,14 @@ class LicenseAnalyzer:
         Returns:
             List of tuples (modulus, exponent, offset).
         """
+        _logger.debug("rsa_key_search_started", extra={"data_size": len(data)})
         results: list[tuple[int, int, int]] = []
         results.extend(LicenseAnalyzer._find_pem_keys(data))
         results.extend(LicenseAnalyzer._find_der_keys(data))
+        _logger.debug(
+            "rsa_key_search_completed",
+            extra={"pem_and_der_total": len(results)},
+        )
         return results
 
     @staticmethod
@@ -1211,12 +1335,25 @@ class LicenseAnalyzer:
             payload = match.group(2)
             try:
                 der = base64.b64decode(payload, validate=True)
-            except binascii.Error:
+            except binascii.Error as exc:
+                _logger.debug(
+                    "pem_base64_decode_failed",
+                    extra={"offset": match.start(), "error": str(exc)},
+                )
                 continue
             parsed = LicenseAnalyzer._parse_rsa_public_key_der(der)
             if parsed is not None:
                 modulus, exponent = parsed
+                _logger.debug(
+                    "pem_rsa_key_extracted",
+                    extra={
+                        "offset": match.start(),
+                        "modulus_bits": modulus.bit_length(),
+                        "exponent": exponent,
+                    },
+                )
                 results.append((modulus, exponent, match.start()))
+        _logger.debug("pem_key_search_completed", extra={"keys_found": len(results)})
         return results
 
     @staticmethod
@@ -1237,7 +1374,16 @@ class LicenseAnalyzer:
             if parsed is None:
                 continue
             modulus, exponent, _total_len = parsed
+            _logger.debug(
+                "der_rsa_key_extracted",
+                extra={
+                    "offset": idx,
+                    "modulus_bits": modulus.bit_length(),
+                    "exponent": exponent,
+                },
+            )
             results.append((modulus, exponent, idx))
+        _logger.debug("der_key_search_completed", extra={"keys_found": len(results)})
         return results
 
     @staticmethod
@@ -1361,17 +1507,36 @@ class LicenseAnalyzer:
         Returns:
             List of ValidationFunctionInfo entries.
         """
+        _logger.debug(
+            "validation_function_detection_started",
+            extra={
+                "sections_count": len(view.sections),
+                "license_strings_count": len(license_strings),
+                "crypto_calls_count": len(crypto_calls),
+            },
+        )
         if not view.sections:
+            _logger.debug("validation_function_detection_skipped", extra={"reason": "no_sections"})
             return []
 
         instructions = LicenseAnalyzer._disassemble_sections(view)
         if not instructions:
+            _logger.debug("validation_function_detection_skipped", extra={"reason": "no_instructions"})
             return []
 
         lookup_maps = LicenseAnalyzer._build_validation_lookup_maps(view, license_strings, crypto_calls)
         function_ranges = LicenseAnalyzer._get_function_ranges(view, instructions)
+        _logger.debug(
+            "validation_function_ranges_built",
+            extra={
+                "instruction_count": len(instructions),
+                "function_range_count": len(function_ranges),
+            },
+        )
 
-        return LicenseAnalyzer._analyze_function_ranges(instructions, function_ranges, lookup_maps)
+        results = LicenseAnalyzer._analyze_function_ranges(instructions, function_ranges, lookup_maps)
+        _logger.debug("validation_function_detection_completed", extra={"candidates_found": len(results)})
+        return results
 
     @staticmethod
     def _build_validation_lookup_maps(
@@ -1553,12 +1718,17 @@ class LicenseAnalyzer:
             List of InstructionRecord entries.
         """
         if _capstone_module is None:
+            _logger.warning("disassembly_skipped", extra={"reason": "capstone_unavailable"})
             return []
 
         mode = _capstone_module.CS_MODE_64 if view.is_64bit else _capstone_module.CS_MODE_32
         md = _capstone_module.Cs(_capstone_module.CS_ARCH_X86, mode)
         md.detail = True
 
+        _logger.debug(
+            "disassembly_started",
+            extra={"is_64bit": view.is_64bit, "sections_count": len(view.sections)},
+        )
         instructions: list[InstructionRecord] = []
         for section in view.sections:
             if not section.executable or not section.data:
@@ -1577,6 +1747,7 @@ class LicenseAnalyzer:
                         raw_bytes=raw_bytes,
                     )
                 )
+        _logger.debug("disassembly_completed", extra={"instruction_count": len(instructions)})
         return instructions
 
     @staticmethod
@@ -1638,7 +1809,7 @@ class LicenseAnalyzer:
             end = starts_sorted[idx + 1] if idx + 1 < len(starts_sorted) else 0
             if end == 0:
                 section_end = LicenseAnalyzer._section_end_for_address(view, start)
-                end = section_end if section_end else start + _DEFAULT_FUNCTION_SIZE
+                end = section_end or start + _DEFAULT_FUNCTION_SIZE
             ranges.append((start, end))
         return ranges
 
@@ -1704,10 +1875,11 @@ class LicenseAnalyzer:
         Returns:
             Referenced address or None.
         """
-        rip_match = re.search(r"\[rip ([+-]) (0x[0-9a-fA-F]+)\]", instr.op_str)
-        if rip_match:
-            sign = 1 if rip_match.group(1) == "+" else -1
-            offset = int(rip_match.group(2), 16)
+        if rip_match := re.search(
+            r"\[rip ([+-]) (0x[0-9a-fA-F]+)\]", instr.op_str
+        ):
+            sign = 1 if rip_match[1] == "+" else -1
+            offset = int(rip_match[2], 16)
             return instr.address + instr.size + sign * offset
         return LicenseAnalyzer._parse_hex_address(instr.op_str)
 
@@ -1725,8 +1897,9 @@ class LicenseAnalyzer:
         if not match:
             return None
         try:
-            return int(match.group(0), 16)
-        except ValueError:
+            return int(match[0], 16)
+        except ValueError as exc:
+            _logger.debug("hex_address_parse_failed", extra={"text": text, "error": str(exc)})
             return None
 
     def _detect_algorithms(
@@ -1745,6 +1918,14 @@ class LicenseAnalyzer:
         Returns:
             Tuple of (primary_algorithm, secondary_algorithms).
         """
+        _logger.debug(
+            "algorithm_detection_started",
+            extra={
+                "crypto_calls_count": len(crypto_calls),
+                "constants_count": len(constants),
+                "strings_count": len(strings),
+            },
+        )
         detected: list[AlgorithmType] = []
         for call in crypto_calls:
             algo = self._match_crypto_keyword(call.api_name)
@@ -1771,6 +1952,14 @@ class LicenseAnalyzer:
 
         primary = detected[0] if detected else AlgorithmType.UNKNOWN
         secondary = detected[1:] if len(detected) > 1 else []
+        _logger.debug(
+            "algorithm_detection_completed",
+            extra={
+                "primary": primary.value,
+                "secondary": [a.value for a in secondary],
+                "total_detected": len(detected),
+            },
+        )
         return primary, secondary
 
     def _detect_key_format(
@@ -1787,6 +1976,10 @@ class LicenseAnalyzer:
         Returns:
             Tuple of (key_format, key_length, group_size, group_separator).
         """
+        _logger.debug(
+            "key_format_detection_started",
+            extra={"strings_count": len(strings), "algorithm": algorithm.value},
+        )
         best_match = ""
         for string in strings:
             for pattern in self._key_patterns:
@@ -1798,6 +1991,10 @@ class LicenseAnalyzer:
             if "-" in best_match:
                 groups = best_match.split("-")
                 group_size = len(groups[0])
+                _logger.debug(
+                    "key_format_detected",
+                    extra={"format": "serial_dashed", "key_length": len(best_match.replace("-", "")), "group_size": group_size},
+                )
                 return (
                     KeyFormat.SERIAL_DASHED,
                     len(best_match.replace("-", "")),
@@ -1805,11 +2002,15 @@ class LicenseAnalyzer:
                     "-",
                 )
             if best_match.isdigit():
+                _logger.debug("key_format_detected", extra={"format": "numeric_only", "key_length": len(best_match)})
                 return KeyFormat.NUMERIC_ONLY, len(best_match), None, None
             if re.fullmatch(r"[0-9A-Fa-f]+", best_match):
+                _logger.debug("key_format_detected", extra={"format": "hex_string", "key_length": len(best_match)})
                 return KeyFormat.HEX_STRING, len(best_match), None, None
             if re.fullmatch(r"[A-Za-z0-9+/=]+", best_match):
+                _logger.debug("key_format_detected", extra={"format": "base64", "key_length": len(best_match)})
                 return KeyFormat.BASE64, len(best_match), None, None
+            _logger.debug("key_format_detected", extra={"format": "alphanumeric", "key_length": len(best_match)})
             return KeyFormat.ALPHANUMERIC, len(best_match), None, None
 
         if algorithm in {AlgorithmType.MD5, AlgorithmType.SHA1, AlgorithmType.SHA256}:
@@ -1819,8 +2020,10 @@ class LicenseAnalyzer:
                 digest_len = _DIGEST_LEN_SHA1
             else:
                 digest_len = _DIGEST_LEN_SHA256
+            _logger.debug("key_format_detected", extra={"format": "hex_string", "key_length": digest_len, "source": "algorithm_hint"})
             return KeyFormat.HEX_STRING, digest_len, None, None
 
+        _logger.debug("key_format_detected", extra={"format": "unknown", "key_length": _DEFAULT_KEY_LENGTH})
         return KeyFormat.UNKNOWN, _DEFAULT_KEY_LENGTH, None, None
 
     @staticmethod
@@ -1843,13 +2046,16 @@ class LicenseAnalyzer:
         Returns:
             Tuple of (checksum_algorithm, checksum_position).
         """
-        checksum_algorithm: str | None = None
         checksum_position: Literal["prefix", "suffix", "embedded"] | None = None
 
-        for constant in constants:
-            if constant.usage_context.startswith("crc32"):
-                checksum_algorithm = "crc32"
-                break
+        checksum_algorithm: str | None = next(
+            (
+                "crc32"
+                for constant in constants
+                if constant.usage_context.startswith("crc32")
+            ),
+            None,
+        )
         if checksum_algorithm is None and algorithm == AlgorithmType.CRC32:
             checksum_algorithm = "crc32"
 
@@ -1923,6 +2129,16 @@ class LicenseAnalyzer:
         Returns:
             Tuple of (confidence_score, notes).
         """
+        _logger.debug(
+            "confidence_calculation_started",
+            extra={
+                "algorithm": algorithm.value,
+                "key_format": key_format.value,
+                "validation_count": len(validation_functions),
+                "crypto_call_count": len(crypto_calls),
+                "constant_count": len(constants),
+            },
+        )
         signals = 0
         notes: list[str] = []
         if algorithm != AlgorithmType.UNKNOWN:
@@ -1938,6 +2154,10 @@ class LicenseAnalyzer:
         score = min(1.0, signals / _CONFIDENCE_MAX_SIGNALS)
         if score < _CONFIDENCE_THRESHOLD_LOW:
             notes.append("Low confidence: limited signals found.")
+        _logger.debug(
+            "confidence_calculation_completed",
+            extra={"score": score, "signals": signals, "notes_count": len(notes)},
+        )
         return score, notes
 
     @staticmethod

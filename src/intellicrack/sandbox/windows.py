@@ -588,17 +588,10 @@ call "{sandbox_script_path}"
             )
             result = "success"
         except SandboxError as e:
-            if "timed out" in str(e):
-                result = "timeout"
-                exit_code = _RETURNCODE_FAILURE
-                stdout = ""
-                stderr = str(e)
-            else:
-                result = "error"
-                exit_code = _RETURNCODE_FAILURE
-                stdout = ""
-                stderr = str(e)
-
+            exit_code = _RETURNCODE_FAILURE
+            result = "timeout" if "timed out" in str(e) else "error"
+            stderr = str(e)
+            stdout = ""
         duration = time.time() - start_time
 
         file_changes: list[FileChange] = []

@@ -13,8 +13,9 @@ missing, ensuring failures are immediately identifiable.
 
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING
+
+from ...core.logging import get_logger
 
 
 if TYPE_CHECKING:
@@ -30,7 +31,7 @@ if TYPE_CHECKING:
         QTreeWidgetItem,
     )
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("ui.panels.qt_compat")
 
 _SORT_ENABLED = "setSortingEnabled"
 _HEADER_LABELS = "setHeaderLabels"

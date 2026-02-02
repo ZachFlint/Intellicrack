@@ -502,9 +502,7 @@ class BinaryBridge(BinaryOperationsBridge):
         parsed: _LiefParsedType = _lief_parse_raw(data)
         if parsed is None:
             return None
-        if isinstance(parsed, lief.COFF.Binary):
-            return None
-        return parsed
+        return None if isinstance(parsed, lief.COFF.Binary) else parsed
 
     def _detect_architecture(self) -> tuple[str, bool]:
         """Detect the CPU architecture.
@@ -546,10 +544,7 @@ class BinaryBridge(BinaryOperationsBridge):
         if self._pe is not None:
             return int(self._pe.OPTIONAL_HEADER.AddressOfEntryPoint)
 
-        if self._lief_binary is not None:
-            return self._lief_binary.entrypoint
-
-        return 0
+        return self._lief_binary.entrypoint if self._lief_binary is not None else 0
 
     async def _get_sections_internal(self) -> list[SectionInfo]:
         """Get section information.
@@ -637,7 +632,7 @@ class BinaryBridge(BinaryOperationsBridge):
                         ImportInfo(
                             dll=dll_name,
                             function=name,
-                            ordinal=int(imp.ordinal) if not imp.name else None,
+                            ordinal=None if imp.name else int(imp.ordinal),
                             address=int(imp.address),
                         )
                     )
@@ -905,17 +900,14 @@ class BinaryBridge(BinaryOperationsBridge):
             raise ToolError(_ERR_NO_BINARY)
 
         hex_pattern = hex_pattern.replace(" ", "")
-        regex_pattern = ""
-        i = 0
-        while i < len(hex_pattern):
-            if hex_pattern[i : i + 2] == "??":
-                regex_pattern += "."
-                i += 2
-            else:
-                byte_val = int(hex_pattern[i : i + 2], 16)
-                regex_pattern += re.escape(chr(byte_val))
-                i += 2
-
+        regex_pattern = "".join(
+            (
+                "."
+                if hex_pattern[i : i + 2] == "??"
+                else re.escape(chr(int(hex_pattern[i : i + 2], 16)))
+            )
+            for i in range(0, len(hex_pattern), 2)
+        )
         compiled = re.compile(regex_pattern.encode("latin-1"), re.DOTALL)
 
         results: list[int] = []

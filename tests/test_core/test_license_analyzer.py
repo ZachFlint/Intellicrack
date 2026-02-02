@@ -201,7 +201,7 @@ class TestArchitectureDetection:
     def test_detect_x64_pe(self) -> None:
         """Verify x86-64 PE detection."""
         pe_data = bytearray(512)
-        pe_data[0:2] = b"MZ"
+        pe_data[:2] = b"MZ"
         pe_data[0x3C:0x40] = struct.pack("<I", 64)
         pe_data[64:68] = b"PE\x00\x00"
         pe_data[68:70] = struct.pack("<H", 0x8664)
@@ -213,7 +213,7 @@ class TestArchitectureDetection:
     def test_detect_x86_pe(self) -> None:
         """Verify x86 PE detection."""
         pe_data = bytearray(512)
-        pe_data[0:2] = b"MZ"
+        pe_data[:2] = b"MZ"
         pe_data[0x3C:0x40] = struct.pack("<I", 64)
         pe_data[64:68] = b"PE\x00\x00"
         pe_data[68:70] = struct.pack("<H", 0x14C)
@@ -225,7 +225,7 @@ class TestArchitectureDetection:
     def test_detect_x64_elf(self) -> None:
         """Verify x86-64 ELF detection."""
         elf_data = bytearray(64)
-        elf_data[0:4] = b"\x7fELF"
+        elf_data[:4] = b"\x7fELF"
         elf_data[4] = 2
         analyzer = _TestableAnalyzer()
         arch, is_64bit = analyzer.detect_architecture(bytes(elf_data))

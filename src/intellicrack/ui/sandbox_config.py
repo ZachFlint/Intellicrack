@@ -9,7 +9,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
-import logging
 import os
 import subprocess
 import sys
@@ -38,12 +37,13 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager, ProcessType
 
 from .resources import IconManager
 
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("ui.sandbox_config")
 
 if TYPE_CHECKING:
     from intellicrack.sandbox.manager import SandboxManager
@@ -140,16 +140,28 @@ class SandboxTestWorker(QThread):
             self.finished.emit(True, "Windows Sandbox test completed successfully")
 
         except FileNotFoundError:
+            _logger.exception(
+                "sandbox_test_error",
+                extra={"error": "WindowsSandbox.exe not found"},
+            )
             self.finished.emit(
                 False,
                 "WindowsSandbox.exe not found. Windows Sandbox may not be installed.",
             )
         except PermissionError:
+            _logger.exception(
+                "sandbox_test_error",
+                extra={"error": "permission_denied"},
+            )
             self.finished.emit(
                 False,
                 "Permission denied. Administrator rights may be required.",
             )
         except OSError as e:
+            _logger.exception(
+                "sandbox_test_error",
+                extra={"error": str(e)},
+            )
             self.finished.emit(False, f"Failed to launch sandbox: {e}")
         finally:
             if self._wsb_file and self._wsb_file.exists():
@@ -162,9 +174,7 @@ class SandboxTestWorker(QThread):
         Returns:
             XML configuration string.
         """
-        config_lines = ["<Configuration>"]
-
-        config_lines.append("  <VGpu>Enable</VGpu>")
+        config_lines = ["<Configuration>", "  <VGpu>Enable</VGpu>"]
 
         if self._network_enabled:
             config_lines.append("  <Networking>Enable</Networking>")
@@ -177,20 +187,25 @@ class SandboxTestWorker(QThread):
         if self._shared_folder:
             shared_path = Path(self._shared_folder)
             if shared_path.exists():
-                config_lines.append("  <MappedFolders>")
-                config_lines.append("    <MappedFolder>")
-                config_lines.append(f"      <HostFolder>{shared_path}</HostFolder>")
-                config_lines.append("      <SandboxFolder>C:\\Shared</SandboxFolder>")
-                config_lines.append(f"      <ReadOnly>{'true' if self._read_only else 'false'}</ReadOnly>")
-                config_lines.append("    </MappedFolder>")
-                config_lines.append("  </MappedFolders>")
-
-        config_lines.append("  <LogonCommand>")
-        config_lines.append('    <Command>cmd.exe /c "echo Intellicrack Sandbox Test &amp;&amp; timeout /t 5"</Command>')
-        config_lines.append("  </LogonCommand>")
-
-        config_lines.append("</Configuration>")
-
+                config_lines.extend(
+                    (
+                        "  <MappedFolders>",
+                        "    <MappedFolder>",
+                        f"      <HostFolder>{shared_path}</HostFolder>",
+                        "      <SandboxFolder>C:\\Shared</SandboxFolder>",
+                        f"      <ReadOnly>{'true' if self._read_only else 'false'}</ReadOnly>",
+                        "    </MappedFolder>",
+                        "  </MappedFolders>",
+                    )
+                )
+        config_lines.extend(
+            (
+                "  <LogonCommand>",
+                '    <Command>cmd.exe /c "echo Intellicrack Sandbox Test &amp;&amp; timeout /t 5"</Command>',
+                "  </LogonCommand>",
+                "</Configuration>",
+            )
+        )
         return "\n".join(config_lines)
 
     def stop(self) -> None:
@@ -346,8 +361,9 @@ class SandboxConfigDialog(QDialog):
         button_box.accepted.connect(self._on_accept)
         button_box.rejected.connect(self.reject)
 
-        apply_button = button_box.button(QDialogButtonBox.StandardButton.Apply)
-        if apply_button:
+        if apply_button := button_box.button(
+            QDialogButtonBox.StandardButton.Apply
+        ):
             apply_button.clicked.connect(self._on_apply)
 
         button_layout.addWidget(button_box)
@@ -499,12 +515,11 @@ class SandboxConfigDialog(QDialog):
 
     def _browse_shared_folder(self) -> None:
         """Open folder browser for shared folder."""
-        path = QFileDialog.getExistingDirectory(
+        if path := QFileDialog.getExistingDirectory(
             self,
             "Select Shared Folder",
             self._shared_folder_input.text(),
-        )
-        if path:
+        ):
             self._shared_folder_input.setText(path)
 
     def _test_sandbox(self) -> None:
@@ -772,6 +787,10 @@ class SandboxMonitorWidget(QFrame):
                 asyncio.run(self._manager.destroy_all())
                 self.append_output("[Sandbox stopped via manager]")
             except Exception as e:
+                _logger.exception(
+                    "sandbox_stop_error",
+                    extra={"method": "manager", "error": str(e)},
+                )
                 self.append_output(f"[Error stopping sandbox: {e}]")
         elif self._sandbox_pid is not None:
             try:
@@ -789,7 +808,11 @@ class SandboxMonitorWidget(QFrame):
                 else:
                     os.kill(self._sandbox_pid, 9)
                     self.append_output(f"[Sandbox process {self._sandbox_pid} killed]")
-            except (subprocess.TimeoutExpired, OSError, ProcessLookupError) as e:
+            except (subprocess.TimeoutExpired, OSError) as e:
+                _logger.exception(
+                    "sandbox_stop_error",
+                    extra={"method": "pid_kill", "pid": self._sandbox_pid, "error": str(e)},
+                )
                 self.append_output(f"[Error terminating sandbox: {e}]")
         else:
             self._terminate_sandbox_by_name()
@@ -818,4 +841,8 @@ class SandboxMonitorWidget(QFrame):
             else:
                 self.append_output("[No Windows Sandbox process found]")
         except (subprocess.TimeoutExpired, OSError) as e:
+            _logger.exception(
+                "sandbox_stop_error",
+                extra={"method": "name_kill", "error": str(e)},
+            )
             self.append_output(f"[Error: {e}]")

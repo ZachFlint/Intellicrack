@@ -249,6 +249,10 @@ class Orchestrator:
 
         provider_instance = self._providers.get(provider)
         if provider_instance is None or not provider_instance.is_connected:
+            _logger.warning(
+                "provider_not_found",
+                extra={"provider": provider.value, "connected": getattr(provider_instance, "is_connected", None)},
+            )
             error_message = f"Provider not available: {provider.value}"
             raise ValueError(error_message)
 
@@ -304,8 +308,14 @@ class Orchestrator:
         Returns:
             Binary information.
         """
+        _logger.debug("binary_load_started", extra={"path": str(path)})
         binary_bridge = self._tools.get_binary_bridge()
-        return await binary_bridge.load_file(path)
+        info = await binary_bridge.load_file(path)
+        _logger.debug(
+            "binary_load_completed",
+            extra={"path": str(path), "file_type": info.file_type, "architecture": info.architecture},
+        )
+        return info
 
     async def process_user_input(self, text: str) -> None:
         """Process user input and generate response.
@@ -445,7 +455,12 @@ class Orchestrator:
             timestamp=datetime.now(),
         )
 
-        return [system_message, *self._current_session.messages]
+        messages = [system_message, *self._current_session.messages]
+        _logger.debug(
+            "messages_built",
+            extra={"message_count": len(messages), "system_prompt_length": len(system_prompt)},
+        )
+        return messages
 
     def _generate_system_prompt(self) -> str:
         """Generate system prompt for the LLM.
@@ -589,10 +604,20 @@ class Orchestrator:
         self._stats.total_tokens_used += input_tokens
 
         tools_available = bool(tools)
-        if self._should_use_streaming(
+        use_streaming = self._should_use_streaming(
             tools_available=tools_available,
             is_final_response=is_final_response,
-        ):
+        )
+        _logger.debug(
+            "llm_call_started",
+            extra={
+                "model": self._current_session.model,
+                "input_tokens": input_tokens,
+                "streaming": use_streaming,
+                "tool_count": len(tools),
+            },
+        )
+        if use_streaming:
             result = await self._stream_response(
                 provider=provider,
                 messages=messages,
@@ -605,8 +630,17 @@ class Orchestrator:
                 tools=tools,
             )
 
-        response, _ = result
-        self._stats.total_tokens_used += self._estimate_tokens(response.content)
+        response, tool_calls_result = result
+        output_tokens = self._estimate_tokens(response.content)
+        self._stats.total_tokens_used += output_tokens
+        _logger.debug(
+            "llm_call_completed",
+            extra={
+                "response_length": len(response.content),
+                "output_tokens": output_tokens,
+                "has_tool_calls": tool_calls_result is not None,
+            },
+        )
 
         return result
 
@@ -632,9 +666,7 @@ class Orchestrator:
         mode = self._config.stream_mode
         if mode == "never":
             return False
-        if mode == "always":
-            return True
-        return not (tools_available and not is_final_response)
+        return True if mode == "always" else not tools_available or is_final_response
 
     async def _stream_response(
         self,
@@ -677,6 +709,10 @@ class Orchestrator:
                 self._on_stream_chunk(chunk)
 
         content = "".join(content_parts)
+        _logger.debug(
+            "llm_stream_completed",
+            extra={"chunk_count": len(content_parts), "content_length": len(content)},
+        )
         return Message(
             role="assistant",
             content=content,
@@ -712,6 +748,14 @@ class Orchestrator:
             tools=tools,
             temperature=self._config.temperature,
             max_tokens=self._config.max_tokens,
+        )
+
+        _logger.debug(
+            "llm_response_parsed",
+            extra={
+                "content_length": len(response.content),
+                "tool_call_count": len(tool_calls) if tool_calls else 0,
+            },
         )
 
         return response, tool_calls
@@ -827,10 +871,27 @@ class Orchestrator:
             True if confirmation needed.
         """
         if self._config.confirmation_level == ConfirmationLevel.NONE:
+            _logger.debug(
+                "confirmation_skipped",
+                extra={"function": call.function_name, "reason": "level_none"},
+            )
             return False
         if self._config.confirmation_level == ConfirmationLevel.ALL:
+            _logger.debug(
+                "confirmation_required",
+                extra={"function": call.function_name, "reason": "level_all"},
+            )
             return True
-        return self._is_destructive_operation(call)
+        is_destructive = self._is_destructive_operation(call)
+        _logger.debug(
+            "confirmation_check",
+            extra={
+                "function": call.function_name,
+                "level": self._config.confirmation_level.value,
+                "is_destructive": is_destructive,
+            },
+        )
+        return is_destructive
 
     def _is_destructive_operation(self, call: ToolCall) -> bool:
         """Check if a tool call is destructive.
@@ -896,10 +957,20 @@ class Orchestrator:
 
         provider = self._providers.get(self._current_session.provider) if self._current_session else None
         if provider:
-            await provider.cancel_request()
+            provider_name = self._current_session.provider.value if self._current_session else "unknown"
+            try:
+                await provider.cancel_request()
+                _logger.debug("cancel_provider_request_sent", extra={"provider": provider_name})
+            except Exception:
+                _logger.exception("cancel_provider_request_failed", extra={"provider": provider_name})
 
         if self._pending_confirmation and not self._pending_confirmation.future.done():
-            self._pending_confirmation.future.set_result(False)
+            call_id = self._pending_confirmation.call.id
+            try:
+                self._pending_confirmation.future.set_result(False)
+                _logger.debug("cancel_pending_confirmation_declined", extra={"call_id": call_id})
+            except Exception:
+                _logger.exception("cancel_pending_confirmation_failed", extra={"call_id": call_id})
 
     async def add_binary(self, path: Path, run_license_analysis: bool = True) -> BinaryInfo:
         """Add a binary to the current session.
@@ -1217,11 +1288,25 @@ class Orchestrator:
         """Shutdown the orchestrator and cleanup resources."""
         _logger.info("orchestrator_shutdown_started")
 
-        await self.cancel()
-        await self._tools.shutdown()
+        try:
+            await self.cancel()
+        except Exception:
+            _logger.exception("shutdown_cancel_failed", extra={"state": self._state})
+
+        try:
+            await self._tools.shutdown()
+        except Exception:
+            _logger.exception("shutdown_tools_cleanup_failed", extra={"state": self._state})
 
         if self._current_session:
-            await self._sessions.update(self._current_session)
+            try:
+                await self._sessions.update(self._current_session)
+            except Exception:
+                _logger.exception(
+                    "shutdown_session_save_failed",
+                    extra={"session_id": self._current_session.id, "state": self._state},
+                )
 
         self._current_session = None
         self._state = "idle"
+        _logger.info("orchestrator_shutdown_completed")

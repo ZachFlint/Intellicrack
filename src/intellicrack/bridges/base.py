@@ -8,12 +8,14 @@ radare2, and other reverse engineering tools.
 from __future__ import annotations
 
 import abc
-import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
 
+from ..core.logging import get_logger
+
 
 if TYPE_CHECKING:
+    import logging
     from collections.abc import Sequence
     from pathlib import Path
 
@@ -244,7 +246,7 @@ class ToolBridgeBase(abc.ABC):
         """Initialize the base bridge."""
         self._state: BridgeState = BridgeState()
         self._capabilities: BridgeCapabilities = BridgeCapabilities()
-        self._logger: logging.Logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+        self._logger: logging.Logger = get_logger(f"bridges.{self.__class__.__name__.lower()}")
 
     @property
     @abc.abstractmethod

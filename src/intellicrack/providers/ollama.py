@@ -324,9 +324,7 @@ class OllamaProvider(LLMProviderBase):
             return 32768
         if "qwen" in name_lower:
             return 32768
-        if "deepseek" in name_lower:
-            return 16384
-        return 4096
+        return 16384 if "deepseek" in name_lower else 4096
 
     def _estimate_tool_support(self, model_name: str) -> bool:
         """Estimate if model supports tool calling.
@@ -455,11 +453,18 @@ class OllamaProvider(LLMProviderBase):
                         arguments=parsed_args,
                     )
                     tool_calls.append(tool_call)
+                    self._logger.debug(
+                        "tool_call_parsed",
+                        extra={
+                            "tool_name": tool_call.tool_name,
+                            "arguments_count": len(tool_call.arguments),
+                        },
+                    )
 
             message = Message(
                 role="assistant",
                 content=content,
-                tool_calls=tool_calls if tool_calls else None,
+                tool_calls=tool_calls or None,
                 timestamp=datetime.now(),
             )
 
@@ -470,7 +475,7 @@ class OllamaProvider(LLMProviderBase):
                 duration_ms=duration_ms,
             )
 
-            return message, tool_calls if tool_calls else None
+            return message, tool_calls or None
 
         except httpx.HTTPStatusError as e:
             raise ProviderError(f"Ollama API error: {e}") from e
@@ -525,10 +530,10 @@ class OllamaProvider(LLMProviderBase):
                 request_body["tools"] = self._convert_tools_to_provider_format(tools)
 
             async with client.stream(
-                "POST",
-                f"{base_url}/api/chat",
-                json=request_body,
-            ) as response:
+                        "POST",
+                        f"{base_url}/api/chat",
+                        json=request_body,
+                    ) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():
                     if self._cancel_requested:
@@ -536,10 +541,12 @@ class OllamaProvider(LLMProviderBase):
                     if line:
                         try:
                             chunk_data = json.loads(line)
-                            content = chunk_data.get("message", {}).get("content", "")
-                            if content:
+                            if content := chunk_data.get("message", {}).get(
+                                "content", ""
+                            ):
                                 yield content
-                        except json.JSONDecodeError:
+                        except json.JSONDecodeError as exc:
+                            self._logger.debug("stream_json_parse_skipped", extra={"error": str(exc)})
                             continue
 
         except Exception as e:
@@ -669,17 +676,16 @@ class OllamaProvider(LLMProviderBase):
 
         try:
             async with self._local_client.stream(
-                "POST",
-                f"{self._local_url}/api/pull",
-                json={"name": actual_model},
-            ) as response:
+                        "POST",
+                        f"{self._local_url}/api/pull",
+                        json={"name": actual_model},
+                    ) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():
                     if line:
                         try:
                             data = json.loads(line)
-                            status = data.get("status", "")
-                            if status:
+                            if status := data.get("status", ""):
                                 yield status
                         except json.JSONDecodeError:
                             continue

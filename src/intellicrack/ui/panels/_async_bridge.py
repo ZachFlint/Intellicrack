@@ -8,14 +8,15 @@ for both inline and event-loop-deferred execution paths.
 from __future__ import annotations
 
 import asyncio
-import logging
 from typing import TYPE_CHECKING
+
+from ...core.logging import get_logger
 
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("ui.panels.async_bridge")
 
 
 def run_bridge_coroutine[T](coro: Coroutine[object, object, T]) -> T | None:

@@ -615,7 +615,8 @@ class ProcessManager:
             The count of currently running tracked processes.
         """
         with self._process_lock:
-            return sum(1 for p in self._processes.values() if p.is_running)
+            return sum(bool(p.is_running)
+                   for p in self._processes.values())
 
     def __repr__(self) -> str:
         """Return string representation.
@@ -864,8 +865,7 @@ class ProcessManager:
             True if terminated successfully, False otherwise.
         """
         kernel32 = ctypes.windll.kernel32
-        handle = kernel32.OpenProcess(_WIN_PROCESS_TERMINATE, False, pid)
-        if handle:
+        if handle := kernel32.OpenProcess(_WIN_PROCESS_TERMINATE, False, pid):
             kernel32.TerminateProcess(handle, _WIN_PROCESS_TERMINATE)
             kernel32.CloseHandle(handle)
             logger.debug("windows_process_terminated", extra={"process_name": name, "pid": pid})

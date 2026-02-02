@@ -31,7 +31,7 @@ from .base import LLMProviderBase
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Sequence
+    from collections.abc import AsyncIterator
 
     from google.genai.types import GenerateContentResponse
 
@@ -266,6 +266,7 @@ class GoogleProvider(LLMProviderBase):
             },
         )
 
+        system_instruction = self._extract_system_instruction(messages)
         gemini_contents = self._convert_messages_to_provider_format(messages)
         gemini_tools = self._build_tool_declarations(tools) if tools else None
 
@@ -279,7 +280,9 @@ class GoogleProvider(LLMProviderBase):
         start_time = time.perf_counter()
 
         try:
-            config = self._create_config(temperature, max_tokens, gemini_tools)
+            config = self._create_config(
+                temperature, max_tokens, gemini_tools, system_instruction,
+            )
 
             client = self._client
             typed_contents = cast("types.ContentListUnionDict", gemini_contents)
@@ -296,10 +299,19 @@ class GoogleProvider(LLMProviderBase):
             duration_ms = (time.perf_counter() - start_time) * 1000
             content, tool_calls = self._parse_response(response)
 
+            for tc in tool_calls:
+                self._logger.debug(
+                    "tool_call_parsed",
+                    extra={
+                        "tool_name": tc.tool_name,
+                        "arguments_count": len(tc.arguments),
+                    },
+                )
+
             message = Message(
                 role="assistant",
                 content=content,
-                tool_calls=tool_calls if tool_calls else None,
+                tool_calls=tool_calls or None,
                 timestamp=datetime.now(),
             )
 
@@ -330,7 +342,7 @@ class GoogleProvider(LLMProviderBase):
                 raise RateLimitError(_MSG_RATE_LIMITED) from e
             raise ProviderError(_MSG_REQUEST_FAILED) from e
         else:
-            return message, tool_calls if tool_calls else None
+            return message, tool_calls or None
 
     @override
     async def chat_stream(
@@ -371,12 +383,15 @@ class GoogleProvider(LLMProviderBase):
             },
         )
 
+        system_instruction = self._extract_system_instruction(messages)
         gemini_contents = self._convert_messages_to_provider_format(messages)
         gemini_tools = self._build_tool_declarations(tools) if tools else None
         chunk_count = 0
 
         try:
-            config = self._create_config(temperature, max_tokens, gemini_tools)
+            config = self._create_config(
+                temperature, max_tokens, gemini_tools, system_instruction,
+            )
 
             client = self._client
             typed_contents = cast("types.ContentListUnionDict", gemini_contents)
@@ -430,10 +445,28 @@ class GoogleProvider(LLMProviderBase):
         )
 
     @staticmethod
+    def _extract_system_instruction(
+        messages: list[Message],
+    ) -> str | None:
+        """Extract and concatenate all system messages into a single instruction.
+
+        Args:
+            messages: List of Message objects to scan.
+
+        Returns:
+            Concatenated system instruction text, or None if no system messages.
+        """
+        system_parts: list[str] = [
+            msg.content for msg in messages if msg.role == "system" and msg.content
+        ]
+        return "\n\n".join(system_parts) if system_parts else None
+
+    @staticmethod
     def _create_config(
         temperature: float,
         max_tokens: int,
         gemini_tools: list[types.Tool] | None,
+        system_instruction: str | None = None,
     ) -> types.GenerateContentConfig:
         """Create a GenerateContentConfig with the given parameters.
 
@@ -441,20 +474,21 @@ class GoogleProvider(LLMProviderBase):
             temperature: Sampling temperature.
             max_tokens: Maximum output tokens.
             gemini_tools: Optional list of tool declarations.
+            system_instruction: Optional system instruction text.
 
         Returns:
             Configured GenerateContentConfig instance.
         """
-        if gemini_tools:
-            tools_seq: Sequence[types.Tool] = gemini_tools
-            return types.GenerateContentConfig(
-                temperature=temperature,
-                max_output_tokens=max_tokens,
-                tools=list(tools_seq),
-            )
+        tools_for_config: types.ToolListUnion | None = None
+        if gemini_tools is not None:
+            tools_for_config = []
+            tools_for_config.extend(gemini_tools)
+
         return types.GenerateContentConfig(
             temperature=temperature,
             max_output_tokens=max_tokens,
+            tools=tools_for_config,
+            system_instruction=system_instruction,
         )
 
     @staticmethod
@@ -469,15 +503,12 @@ class GoogleProvider(LLMProviderBase):
         Returns:
             Tuple of (content string, list of ToolCall objects).
         """
-        content = ""
         tool_calls: list[ToolCall] = []
 
-        if hasattr(response, "text") and response.text:
-            content = response.text
-
+        content = response.text if hasattr(response, "text") and response.text else ""
         if hasattr(response, "function_calls") and response.function_calls:
             for idx, fc in enumerate(response.function_calls):
-                func_name = fc.name if fc.name else ""
+                func_name = fc.name or ""
                 args = dict(fc.args) if fc.args else {}
 
                 tool_name = func_name.split(".")[0] if "." in func_name else func_name
@@ -492,10 +523,8 @@ class GoogleProvider(LLMProviderBase):
 
         if not content and hasattr(response, "candidates") and response.candidates:
             candidate = response.candidates[0]
-            if hasattr(candidate, "content") and candidate.content:
-                parts = candidate.content.parts
-                if parts:
-                    content = "".join(part.text for part in parts if hasattr(part, "text") and part.text)
+            if hasattr(candidate, "content") and candidate.content and (parts := candidate.content.parts):
+                content = "".join(part.text for part in parts if hasattr(part, "text") and part.text)
 
         return content, tool_calls
 
@@ -505,6 +534,9 @@ class GoogleProvider(LLMProviderBase):
         messages: list[Message],
     ) -> list[dict[str, object]]:
         """Convert internal messages to Gemini format.
+
+        System messages are excluded here because they are passed separately
+        via the native system_instruction parameter in GenerateContentConfig.
 
         Args:
             messages: List of Message objects to convert.
@@ -516,15 +548,8 @@ class GoogleProvider(LLMProviderBase):
 
         for msg in messages:
             if msg.role == "system":
-                contents.append({
-                    "role": "user",
-                    "parts": [{"text": f"[System Instruction]: {msg.content}"}],
-                })
-                contents.append({
-                    "role": "model",
-                    "parts": [{"text": "Understood. I will follow these instructions."}],
-                })
-            elif msg.role == "user":
+                continue
+            if msg.role == "user":
                 contents.append({
                     "role": "user",
                     "parts": [{"text": msg.content}],

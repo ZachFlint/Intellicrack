@@ -409,7 +409,7 @@ class GuestAgentClient:
                 connected = True
                 break
 
-            except (TimeoutError, ConnectionRefusedError, OSError):
+            except (TimeoutError, OSError):
                 await asyncio.sleep(retry_interval)
 
         if not connected:
@@ -618,8 +618,7 @@ class QEMUSandbox(SandboxBase):
         if self.TOOLS_PATH.exists():
             search_paths.append(self.TOOLS_PATH / f"{self.QEMU_EXE}.exe")
 
-        qemu_in_path = shutil.which(self.QEMU_EXE)
-        if qemu_in_path:
+        if qemu_in_path := shutil.which(self.QEMU_EXE):
             search_paths.append(Path(qemu_in_path))
 
         common_paths = [
@@ -632,11 +631,10 @@ class QEMUSandbox(SandboxBase):
             exe_name = f"{self.QEMU_EXE}.exe" if base.drive else self.QEMU_EXE
             search_paths.append(base / exe_name)
 
-        for path in search_paths:
-            if path.exists() and path.is_file():
-                return path
-
-        return None
+        return next(
+            (path for path in search_paths if path.exists() and path.is_file()),
+            None,
+        )
 
     async def _detect_accelerator(self) -> AcceleratorType:
         """Detect available hardware acceleration.
@@ -777,11 +775,12 @@ class QEMUSandbox(SandboxBase):
         if self._qemu_config.image_path is None or not self._qemu_config.image_path.exists():
             raise SandboxError(_ERR_NO_IMAGE)
 
-        cmd: list[str] = [str(self._qemu_path)]
-
-        cmd.extend(["-machine", "q35,accel=" + self._accelerator.value])
-
-        cmd.extend(["-cpu", "max"])
+        cmd: list[str] = [
+            str(self._qemu_path),
+            *["-machine", "q35,accel=" + self._accelerator.value],
+            "-cpu",
+            "max",
+        ]
 
         cmd.extend(["-smp", f"cores={self._qemu_config.cpu_cores}"])
 
@@ -1119,8 +1118,6 @@ while ($true) {
             startup_content = """@echo off
 powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File "Z:\\monitor\\agent.ps1"
 """
-            startup_script.write_text(startup_content, encoding="utf-8")
-
         else:
             agent_script = monitor_dir / "agent.py"
             agent_content = '''#!/usr/bin/env python3
@@ -1415,7 +1412,7 @@ if __name__ == "__main__":
             startup_content = """#!/bin/bash
 python3 /mnt/shared/monitor/agent.py &
 """
-            startup_script.write_text(startup_content, encoding="utf-8")
+        startup_script.write_text(startup_content, encoding="utf-8")
 
         _logger.debug("guest_agent_scripts_created", extra={"path": str(monitor_dir)})
 
@@ -1547,17 +1544,10 @@ echo $? > "/mnt/shared/output/{result_name}"
             )
             result = "success"
         except SandboxError as e:
-            if "timed out" in str(e):
-                result = "timeout"
-                exit_code = -1
-                stdout = ""
-                stderr = str(e)
-            else:
-                result = "error"
-                exit_code = -1
-                stdout = ""
-                stderr = str(e)
-
+            result = "timeout" if "timed out" in str(e) else "error"
+            stderr = str(e)
+            stdout = ""
+            exit_code = -1
         duration = time.time() - start_time
 
         file_changes: list[FileChange] = []

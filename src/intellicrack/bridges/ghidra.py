@@ -730,10 +730,7 @@ metadata
             return "pe"
         if data[:4] == _ELF_MAGIC:
             return "elf"
-        if data[:4] in _MACHO_MAGICS:
-            return "macho"
-
-        return "raw"
+        return "macho" if data[:4] in _MACHO_MAGICS else "raw"
 
     @staticmethod
     def _detect_architecture(data: bytes) -> tuple[str, bool]:
@@ -764,10 +761,7 @@ metadata
                     return "x86", False
 
         if data[:4] == _ELF_MAGIC:
-            if data[4] == _ELF_CLASS_64:
-                return "x86_64", True
-            return "x86", False
-
+            return ("x86_64", True) if data[4] == _ELF_CLASS_64 else ("x86", False)
         return "unknown", False
 
     async def analyze(self) -> None:

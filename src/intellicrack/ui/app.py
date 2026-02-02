@@ -135,17 +135,27 @@ class MainWindow(QMainWindow):
 
         self._current_binary: Path | None = None
 
+        _logger.debug("loading_icon_manager", extra={})
         self._icon_manager = IconManager.get_instance()
+        _logger.debug("loading_font_manager", extra={})
         self._font_manager = FontManager.get_instance()
+        _logger.debug("loading_theme_manager", extra={})
         self._theme_manager = ThemeManager.get_instance()
 
+        _logger.debug("loading_fonts", extra={})
         self._font_manager.load_fonts()
 
+        _logger.info("ui_init_setup_ui", extra={})
         self._setup_ui()
+        _logger.info("ui_init_setup_menus", extra={})
         self._setup_menus()
+        _logger.info("ui_init_setup_toolbar", extra={})
         self._setup_toolbar()
+        _logger.info("ui_init_setup_statusbar", extra={})
         self._setup_statusbar()
+        _logger.info("ui_init_connect_signals", extra={})
         self._connect_signals()
+        _logger.info("ui_init_configure_orchestrator", extra={})
         self._configure_orchestrator()
 
         self.setWindowTitle("Intellicrack")
@@ -583,7 +593,7 @@ class MainWindow(QMainWindow):
         if result.success and result.result:
             result_str = str(result.result)
             if len(result_str) > _MAX_RESULT_DISPLAY_LEN:
-                result_str = result_str[: _MAX_RESULT_DISPLAY_LEN - 3] + "..."
+                result_str = f"{result_str[:_MAX_RESULT_DISPLAY_LEN - 3]}..."
             self._tool_panel.log(f"Result: {result_str}")
 
         if result.error:
@@ -806,8 +816,7 @@ class MainWindow(QMainWindow):
                 with open(config_path, encoding="utf-8") as f:
                     loaded_json: dict[str, dict[str, str]] = json.load(f)
                     provider_section = loaded_json.get(provider_id, {})
-                    config_key = provider_section.get("api_key", "")
-                    if config_key:
+                    if config_key := provider_section.get("api_key", ""):
                         api_key = config_key
             except (json.JSONDecodeError, OSError):
                 pass
@@ -917,63 +926,83 @@ class MainWindow(QMainWindow):
 
     def _on_open_x64dbg(self) -> None:
         """Open x64dbg debugger in embedded tab."""
-        widget = self._tool_panel.add_x64dbg_tab(is_64bit=True)
-        if widget is None:
-            self._show_tool_error("x64dbg", "Failed to initialize x64dbg widget")
-            return
-        if not widget.start_tool():
-            self._show_tool_error(
-                "x64dbg",
-                "x64dbg executable not found. Check tools/x64dbg/ directory.",
-            )
+        try:
+            widget = self._tool_panel.add_x64dbg_tab(is_64bit=True)
+            if widget is None:
+                self._show_tool_error("x64dbg", "Failed to initialize x64dbg widget")
+                return
+            if not widget.start_tool():
+                self._show_tool_error(
+                    "x64dbg",
+                    "x64dbg executable not found. Check tools/x64dbg/ directory.",
+                )
+        except Exception as e:
+            _logger.exception("tool_embed_failed", extra={"tool_name": "x64dbg", "error": str(e)})
+            self._show_tool_error("x64dbg", f"Exception embedding x64dbg: {e}")
 
     def _on_open_cutter(self) -> None:
         """Open Cutter analysis tool in embedded tab."""
-        widget = self._tool_panel.add_cutter_tab()
-        if widget is None:
-            self._show_tool_error("Cutter", "Failed to initialize Cutter widget")
-            return
-        if not widget.start_tool():
-            self._show_tool_error(
-                "Cutter",
-                "Cutter executable not found. Check tools/cutter/ directory.",
-            )
+        try:
+            widget = self._tool_panel.add_cutter_tab()
+            if widget is None:
+                self._show_tool_error("Cutter", "Failed to initialize Cutter widget")
+                return
+            if not widget.start_tool():
+                self._show_tool_error(
+                    "Cutter",
+                    "Cutter executable not found. Check tools/cutter/ directory.",
+                )
+        except Exception as e:
+            _logger.exception("tool_embed_failed", extra={"tool_name": "Cutter", "error": str(e)})
+            self._show_tool_error("Cutter", f"Exception embedding Cutter: {e}")
 
     def _on_open_hxd(self) -> None:
         """Open HxD hex editor in embedded tab."""
-        widget = self._tool_panel.add_hxd_tab()
-        if widget is None:
-            self._show_tool_error("HxD", "Failed to initialize HxD widget")
-            return
-        if not widget.start_tool():
-            self._show_tool_error(
-                "HxD",
-                "HxD executable not found. Check tools/hxd/ directory.",
-            )
+        try:
+            widget = self._tool_panel.add_hxd_tab()
+            if widget is None:
+                self._show_tool_error("HxD", "Failed to initialize HxD widget")
+                return
+            if not widget.start_tool():
+                self._show_tool_error(
+                    "HxD",
+                    "HxD executable not found. Check tools/hxd/ directory.",
+                )
+        except Exception as e:
+            _logger.exception("tool_embed_failed", extra={"tool_name": "HxD", "error": str(e)})
+            self._show_tool_error("HxD", f"Exception embedding HxD: {e}")
 
     def _on_open_ghidra(self) -> None:
         """Open Ghidra in embedded tab."""
-        widget = self._tool_panel.add_ghidra_tab()
-        if widget is None:
-            self._show_tool_error("Ghidra", "Failed to initialize Ghidra widget")
-            return
-        if not widget.start_tool():
-            self._show_tool_error(
-                "Ghidra",
-                "Ghidra executable not found. Set GHIDRA_HOME or check tools/ghidra/ directory.",
-            )
+        try:
+            widget = self._tool_panel.add_ghidra_tab()
+            if widget is None:
+                self._show_tool_error("Ghidra", "Failed to initialize Ghidra widget")
+                return
+            if not widget.start_tool():
+                self._show_tool_error(
+                    "Ghidra",
+                    "Ghidra executable not found. Set GHIDRA_HOME or check tools/ghidra/ directory.",
+                )
+        except Exception as e:
+            _logger.exception("tool_embed_failed", extra={"tool_name": "Ghidra", "error": str(e)})
+            self._show_tool_error("Ghidra", f"Exception embedding Ghidra: {e}")
 
     def _on_open_radare2(self) -> None:
         """Open radare2/iaito GUI in embedded tab."""
-        widget = self._tool_panel.add_radare2_tab()
-        if widget is None:
-            self._show_tool_error("radare2", "Failed to initialize radare2 widget")
-            return
-        if not widget.start_tool():
-            self._show_tool_error(
-                "radare2",
-                "iaito/Cutter executable not found. Check tools/iaito/ or tools/cutter/ directory.",
-            )
+        try:
+            widget = self._tool_panel.add_radare2_tab()
+            if widget is None:
+                self._show_tool_error("radare2", "Failed to initialize radare2 widget")
+                return
+            if not widget.start_tool():
+                self._show_tool_error(
+                    "radare2",
+                    "iaito/Cutter executable not found. Check tools/iaito/ or tools/cutter/ directory.",
+                )
+        except Exception as e:
+            _logger.exception("tool_embed_failed", extra={"tool_name": "radare2", "error": str(e)})
+            self._show_tool_error("radare2", f"Exception embedding radare2: {e}")
 
     def _on_open_frida(self) -> None:
         """Open Frida instrumentation panel."""
@@ -1040,6 +1069,7 @@ class MainWindow(QMainWindow):
             tool_name: Name of the tool.
             message: Error message to display.
         """
+        _logger.error("tool_error", extra={"tool_name": tool_name, "error": message})
         QMessageBox.warning(
             self,
             f"{tool_name} Error",
@@ -1068,9 +1098,7 @@ class MainWindow(QMainWindow):
         """
         del index
         provider: object = self._provider_combo.currentData()
-        provider_value: str | None = None
-        if isinstance(provider, ProviderName):
-            provider_value = provider.value
+        provider_value = provider.value if isinstance(provider, ProviderName) else None
         _logger.info("provider_changed", extra={"provider": provider_value})
 
     def _on_sandbox_toggled(self, checked: bool) -> None:

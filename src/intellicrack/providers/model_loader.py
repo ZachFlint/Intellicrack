@@ -7,12 +7,13 @@ HuggingFace Transformers models optimized for Intel XPU and CPU inference.
 from __future__ import annotations
 
 import gc
-import logging
 import threading
 import time
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
+
+from ..core.logging import get_logger
 
 
 if TYPE_CHECKING:
@@ -20,7 +21,7 @@ if TYPE_CHECKING:
     from transformers import PreTrainedModel, PreTrainedTokenizerBase
 
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("providers.model_loader")
 
 DtypeOption = Literal["auto", "float32", "float16", "bfloat16", "int8", "int4"]
 DeviceType = Literal["xpu", "cpu", "auto"]
@@ -295,6 +296,19 @@ def estimate_model_memory(
     if include_activations:
         base_memory = int(base_memory * _ACTIVATION_OVERHEAD_MULTIPLIER)
 
+    _logger.debug(
+        "model_memory_estimated",
+        extra={
+            "model_id": model_id,
+            "dtype": dtype,
+            "param_count": param_count,
+            "bytes_per_param": bytes_per_param,
+            "include_activations": include_activations,
+            "estimated_bytes": base_memory,
+            "estimated_mb": base_memory // (1024 * 1024),
+        },
+    )
+
     return base_memory
 
 
@@ -332,6 +346,14 @@ def _estimate_parameter_count(model_id: str) -> int:
 
     for pattern, count in size_patterns:
         if pattern in model_lower:
+            _logger.debug(
+                "parameter_count_estimated",
+                extra={
+                    "model_id": model_id,
+                    "estimated_params": count,
+                    "estimated_params_b": round(count / 1_000_000_000, 1),
+                },
+            )
             return count
 
     named_models: dict[str, int] = {
@@ -350,11 +372,21 @@ def _estimate_parameter_count(model_id: str) -> int:
         "gemma-7b": 7_000_000_000,
     }
 
-    for name, count in named_models.items():
-        if name in model_lower:
-            return count
+    result = next(
+        (count for name, count in named_models.items() if name in model_lower),
+        7_000_000_000,
+    )
 
-    return 7_000_000_000
+    _logger.debug(
+        "parameter_count_estimated",
+        extra={
+            "model_id": model_id,
+            "estimated_params": result,
+            "estimated_params_b": round(result / 1_000_000_000, 1),
+        },
+    )
+
+    return result
 
 
 def select_dtype_for_memory(
@@ -375,13 +407,39 @@ def select_dtype_for_memory(
     if preferred_dtype != "auto":
         estimated = estimate_model_memory(model_id, preferred_dtype)
         if estimated < available_memory_bytes:
+            _logger.debug(
+                "dtype_selected_preferred",
+                extra={
+                    "model_id": model_id,
+                    "selected_dtype": preferred_dtype,
+                    "estimated_bytes": estimated,
+                    "available_bytes": available_memory_bytes,
+                },
+            )
             return preferred_dtype
 
     for dtype in ("bfloat16", "float16", "int8", "int4"):
         estimated = estimate_model_memory(model_id, dtype)
         if estimated < available_memory_bytes:
+            _logger.debug(
+                "dtype_selected_auto",
+                extra={
+                    "model_id": model_id,
+                    "selected_dtype": dtype,
+                    "estimated_bytes": estimated,
+                    "available_bytes": available_memory_bytes,
+                },
+            )
             return dtype
 
+    _logger.debug(
+        "dtype_selected_fallback",
+        extra={
+            "model_id": model_id,
+            "selected_dtype": "int4",
+            "available_bytes": available_memory_bytes,
+        },
+    )
     return "int4"
 
 
@@ -413,10 +471,10 @@ def load_model_for_xpu(
     if not is_xpu_available():
         raise RuntimeError("XPU is not available. Use load_model_for_cpu instead.")
 
-    device_type = "xpu"
     dtype_str = config.dtype
 
     if cache is not None:
+        device_type = "xpu"
         cached = cache.get(config.model_id, str(dtype_str), device_type)
         if cached is not None:
             return cached
@@ -526,10 +584,10 @@ def load_model_for_cpu(
     except ImportError as exc:
         raise ImportError("transformers and torch are required for model loading") from exc
 
-    device_type = "cpu"
     dtype_str = config.dtype
 
     if cache is not None:
+        device_type = "cpu"
         cached = cache.get(config.model_id, str(dtype_str), device_type)
         if cached is not None:
             return cached

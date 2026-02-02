@@ -143,9 +143,7 @@ class LocalTransformersProvider(LLMProviderBase):
         Returns:
             Model ID or None if no model is loaded.
         """
-        if self._loaded_model:
-            return self._loaded_model.model_id
-        return None
+        return self._loaded_model.model_id if self._loaded_model else None
 
     async def connect(self, credentials: ProviderCredentials | None) -> None:
         """Connect to the local transformers provider.
@@ -303,7 +301,7 @@ class LocalTransformersProvider(LLMProviderBase):
 
         self._cancel_requested = False
 
-        model_id = model if model else _DEFAULT_MODEL
+        model_id = model or _DEFAULT_MODEL
 
         await self._ensure_model_loaded(model_id)
 
@@ -382,7 +380,7 @@ class LocalTransformersProvider(LLMProviderBase):
 
         self._cancel_requested = False
 
-        model_id = model if model else _DEFAULT_MODEL
+        model_id = model or _DEFAULT_MODEL
 
         await self._ensure_model_loaded(model_id)
 
@@ -778,8 +776,10 @@ class LocalTransformersProvider(LLMProviderBase):
                 tool_results_raw = msg.get("tool_results")
                 if isinstance(tool_results_raw, list):
                     tool_results_typed = cast("list[dict[str, object]]", tool_results_raw)
-                    parts: list[str] = [str(tr_dict.get("result", "")) for tr_dict in tool_results_typed]
-                    if parts:
+                    if parts := [
+                        str(tr_dict.get("result", ""))
+                        for tr_dict in tool_results_typed
+                    ]:
                         chat_messages.append({
                             "role": "user",
                             "content": "[Tool Result]\n" + "\n".join(parts),
@@ -888,8 +888,7 @@ class LocalTransformersProvider(LLMProviderBase):
         Returns:
             Text before the tool call JSON.
         """
-        match = re.search(r'\{"tool_call":', response)
-        if match:
+        if match := re.search(r'\{"tool_call":', response):
             return response[: match.start()].strip()
         return response
 
@@ -949,10 +948,7 @@ class LocalTransformersProvider(LLMProviderBase):
         if "mistral" in model_lower:
             return 32768
 
-        if "tinyllama" in model_lower:
-            return 2048
-
-        return 4096
+        return 2048 if "tinyllama" in model_lower else 4096
 
     def get_device_info(self) -> dict[str, object]:
         """Get information about the current device.
@@ -968,8 +964,7 @@ class LocalTransformersProvider(LLMProviderBase):
         }
 
         if self._device_type == "xpu" and self._xpu_available:
-            device_info = get_xpu_device_info(0)
-            if device_info:
+            if device_info := get_xpu_device_info(0):
                 info["device_name"] = device_info.device_name
                 info["total_memory_gb"] = device_info.total_memory_bytes / (1024**3)
                 info["driver_version"] = device_info.driver_version

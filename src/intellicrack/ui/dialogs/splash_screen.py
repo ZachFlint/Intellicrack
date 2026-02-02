@@ -6,7 +6,6 @@ messages during application initialization.
 
 from __future__ import annotations
 
-import logging
 from typing import Final
 
 from PyQt6.QtCore import Qt, pyqtSignal
@@ -20,10 +19,11 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ...core.logging import get_logger
 from ..resources import get_assets_path
 
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("ui.dialogs.splash_screen")
 
 
 SPLASH_WIDTH: Final[int] = 600

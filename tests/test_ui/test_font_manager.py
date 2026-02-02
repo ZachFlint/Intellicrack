@@ -307,7 +307,7 @@ class TestFontAssets:
         assets = get_assets_path()
         fonts_dir = assets / "fonts"
         ttf_files = list(fonts_dir.glob("*.ttf"))
-        assert len(ttf_files) > 0, "No TTF fonts found"
+        assert ttf_files, "No TTF fonts found"
 
     def test_font_files_not_empty(self) -> None:
         """Font files are not empty."""

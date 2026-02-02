@@ -6,16 +6,16 @@ from TOML files, saving, and default configurations for all components.
 
 from __future__ import annotations
 
-import logging
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .logging import get_logger
 from .types import ConfirmationLevel, ProviderName, ToolName
 
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("core.config")
 
 
 _ERR_TOMLI_W_REQUIRED = "tomli_w is required for saving config"
@@ -292,12 +292,20 @@ class Config:
         try:
             default_provider = ProviderName(default_provider_str)
         except ValueError:
+            _logger.warning(
+                "config_invalid_provider_name",
+                extra={"value": default_provider_str, "fallback": ProviderName.ANTHROPIC.value},
+            )
             default_provider = ProviderName.ANTHROPIC
 
         confirmation_str = general.get("confirmation_level", "destructive")
         try:
             confirmation_level = ConfirmationLevel(confirmation_str)
         except ValueError:
+            _logger.warning(
+                "config_invalid_confirmation_level",
+                extra={"value": confirmation_str, "fallback": ConfirmationLevel.DESTRUCTIVE.value},
+            )
             confirmation_level = ConfirmationLevel.DESTRUCTIVE
 
         providers = _default_providers()
@@ -306,6 +314,10 @@ class Config:
             try:
                 provider_name = ProviderName(name_str)
             except ValueError:
+                _logger.warning(
+                    "config_unknown_provider_skipped",
+                    extra={"value": name_str},
+                )
                 continue
 
             if provider_name in providers:
@@ -324,6 +336,10 @@ class Config:
             try:
                 tool_name = ToolName(name_str)
             except ValueError:
+                _logger.warning(
+                    "config_unknown_tool_skipped",
+                    extra={"value": name_str},
+                )
                 continue
 
             if tool_name in tools:
@@ -486,9 +502,12 @@ class Config:
 
     def ensure_directories(self) -> None:
         """Create all configured directories if they don't exist."""
-        self.tools_directory.mkdir(parents=True, exist_ok=True)
-        self.logs_directory.mkdir(parents=True, exist_ok=True)
-        self.data_directory.mkdir(parents=True, exist_ok=True)
+        for directory in (self.tools_directory, self.logs_directory, self.data_directory):
+            directory.mkdir(parents=True, exist_ok=True)
+            _logger.info(
+                "config_directory_ensured",
+                extra={"path": str(directory)},
+            )
 
     def get_provider_config(self, provider: ProviderName) -> ProviderConfig:
         """Get configuration for a specific provider.

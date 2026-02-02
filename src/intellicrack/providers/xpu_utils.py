@@ -8,7 +8,6 @@ torch.xpu support. Specifically optimized for Intel Arc B580 GPU.
 from __future__ import annotations
 
 import json
-import logging
 import platform
 import re
 import subprocess
@@ -17,12 +16,14 @@ import types
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
+from ..core.logging import get_logger
+
 
 if TYPE_CHECKING:
     import torch
 
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("providers.xpu_utils")
 
 _B580_DEVICE_IDS: frozenset[str] = frozenset({"0xe20b", "e20b", "E20B", "0xE20B"})
 _ARC_DEVICE_PATTERNS: tuple[str, ...] = ("Arc", "A770", "A750", "A380", "A310", "B580")
@@ -201,9 +202,8 @@ def _parse_device_id_from_pnp(pnp_id: str) -> str:
     Returns:
         Extracted device ID or empty string.
     """
-    match = re.search(r"DEV_([0-9A-Fa-f]{4})", pnp_id)
-    if match:
-        return match.group(1).lower()
+    if match := re.search(r"DEV_([0-9A-Fa-f]{4})", pnp_id):
+        return match[1].lower()
     return ""
 
 
@@ -291,17 +291,24 @@ def _estimate_memory_from_name(device_name: str) -> int:
         Estimated memory in bytes.
     """
     name_lower = device_name.lower()
+    estimated: int
     if "b580" in name_lower:
-        return 12 * 1024 * 1024 * 1024
-    if "a770" in name_lower:
-        return 16 * 1024 * 1024 * 1024
-    if "a750" in name_lower:
-        return 8 * 1024 * 1024 * 1024
-    if "a380" in name_lower:
-        return 6 * 1024 * 1024 * 1024
-    if "a310" in name_lower:
-        return 4 * 1024 * 1024 * 1024
-    return 8 * 1024 * 1024 * 1024
+        estimated = 12 * 1024 * 1024 * 1024
+    elif "a770" in name_lower:
+        estimated = 16 * 1024 * 1024 * 1024
+    elif "a750" in name_lower:
+        estimated = 8 * 1024 * 1024 * 1024
+    elif "a380" in name_lower:
+        estimated = 6 * 1024 * 1024 * 1024
+    elif "a310" in name_lower:
+        estimated = 4 * 1024 * 1024 * 1024
+    else:
+        estimated = 8 * 1024 * 1024 * 1024
+    _logger.debug(
+        "xpu_memory_estimated",
+        extra={"device_name": device_name, "estimated_bytes": estimated},
+    )
+    return estimated
 
 
 def _is_b580_device(device_name: str, device_id: str) -> bool:
@@ -314,10 +321,12 @@ def _is_b580_device(device_name: str, device_id: str) -> bool:
     Returns:
         True if device is an Arc B580.
     """
-    if device_id.lower() in {"e20b", "0xe20b"}:
-        return True
-    name_lower = device_name.lower()
-    return "b580" in name_lower
+    result = device_id.lower() in {"e20b", "0xe20b"} or "b580" in device_name.lower()
+    _logger.debug(
+        "xpu_b580_detection",
+        extra={"device_name": device_name, "device_id": device_id, "is_b580": result},
+    )
+    return result
 
 
 def is_arc_b580() -> bool:
@@ -327,13 +336,17 @@ def is_arc_b580() -> bool:
         True if at least one Arc B580 device is detected.
     """
     if not is_xpu_available():
+        _logger.debug("xpu_b580_check_skipped", extra={"reason": "xpu not available"})
         return False
 
     device_count = get_xpu_device_count()
+    _logger.debug("xpu_b580_scan_started", extra={"device_count": device_count})
     for i in range(device_count):
         info = get_xpu_device_info(i)
         if info is not None and info.is_arc_b580:
+            _logger.debug("xpu_b580_found", extra={"device_index": i, "device_name": info.device_name})
             return True
+    _logger.debug("xpu_b580_not_found", extra={"devices_scanned": device_count})
     return False
 
 
@@ -382,12 +395,15 @@ def _validate_xpu_device(torch_mod: types.ModuleType, device: torch.device) -> N
     Raises:
         RuntimeError: If device validation fails.
     """
+    _logger.debug("xpu_device_validation_started", extra={"device": str(device)})
     try:
         test_tensor = torch_mod.zeros(10, device=device)
         _ = test_tensor + 1
         del test_tensor
         torch_mod.xpu.synchronize()
+        _logger.debug("xpu_device_validation_passed", extra={"device": str(device)})
     except Exception as exc:
+        _logger.debug("xpu_device_validation_failed", extra={"device": str(device), "error": str(exc)})
         raise RuntimeError(f"XPU device validation failed: {exc}") from exc
 
 
@@ -444,7 +460,7 @@ def clear_xpu_cache() -> None:
     try:
         if hasattr(torch, "xpu") and torch.xpu.is_available() and hasattr(torch.xpu, "empty_cache"):
             torch.xpu.empty_cache()
-            _logger.debug("xpu_cache_cleared")
+            _logger.debug("xpu_cache_cleared", extra={})
     except Exception as exc:
         _logger.debug("xpu_cache_clear_failed", extra={"error": str(exc)})
 
@@ -461,8 +477,10 @@ def check_windows_requirements() -> tuple[bool, list[str]]:
         Tuple of (all_requirements_met, list_of_warning_messages).
     """
     if platform.system() != "Windows":
+        _logger.debug("xpu_windows_check_skipped", extra={"platform": platform.system()})
         return (True, [])
 
+    _logger.debug("xpu_windows_requirements_check_started", extra={})
     warnings: list[str] = []
     all_met = True
 
@@ -482,6 +500,10 @@ def check_windows_requirements() -> tuple[bool, list[str]]:
     if not rebar_ok:
         warnings.append(rebar_warning)
 
+    _logger.debug(
+        "xpu_windows_requirements_check_complete",
+        extra={"all_met": all_met, "warning_count": len(warnings)},
+    )
     return (all_met, warnings)
 
 
@@ -491,6 +513,7 @@ def _check_intel_driver() -> tuple[bool, str]:
     Returns:
         Tuple of (driver_ok, warning_message).
     """
+    _logger.debug("xpu_driver_check_started", extra={})
     try:
         result = subprocess.run(
             [
@@ -504,9 +527,12 @@ def _check_intel_driver() -> tuple[bool, str]:
             check=False,
         )
         if result.returncode == 0 and result.stdout.strip():
+            _logger.debug("xpu_driver_detected", extra={})
             return (True, "")
+        _logger.debug("xpu_driver_not_found", extra={"returncode": result.returncode})
         return (False, "Intel Arc GPU driver not detected. Install the latest Intel Arc driver from intel.com")
-    except Exception:
+    except Exception as exc:
+        _logger.debug("xpu_driver_check_failed", extra={"error": str(exc)})
         return (False, "Could not verify Intel GPU driver status")
 
 
@@ -516,6 +542,7 @@ def _check_rebar_status() -> tuple[bool, str]:
     Returns:
         Tuple of (rebar_enabled, warning_message).
     """
+    _logger.debug("xpu_rebar_check_started", extra={})
     try:
         result = subprocess.run(
             [
@@ -531,9 +558,12 @@ def _check_rebar_status() -> tuple[bool, str]:
         if result.returncode == 0:
             count = result.stdout.strip()
             if count and int(count) > 0:
+                _logger.debug("xpu_rebar_enabled", extra={"count": count})
                 return (True, "")
+        _logger.debug("xpu_rebar_not_detected", extra={})
         return (False, "Resizable BAR (ReBAR) may not be enabled. Enable in BIOS for optimal performance")
-    except Exception:
+    except Exception as exc:
+        _logger.debug("xpu_rebar_check_failed", extra={"error": str(exc)})
         return (True, "")
 
 
@@ -545,11 +575,14 @@ def get_optimal_dtype_for_xpu() -> str:
     Returns:
         String dtype name ("float16", "bfloat16", or "float32").
     """
+    _logger.debug("xpu_dtype_detection_started", extra={})
     torch = _import_torch()
     if torch is None:
+        _logger.debug("xpu_dtype_selected", extra={"dtype": "float32", "reason": "torch unavailable"})
         return "float32"
 
     if not is_xpu_available():
+        _logger.debug("xpu_dtype_selected", extra={"dtype": "float32", "reason": "xpu unavailable"})
         return "float32"
 
     try:
@@ -558,6 +591,7 @@ def get_optimal_dtype_for_xpu() -> str:
         _ = test_bf16 + 1
         del test_bf16
         torch.xpu.synchronize()
+        _logger.debug("xpu_dtype_selected", extra={"dtype": "bfloat16"})
         return "bfloat16"
     except Exception as exc:
         _logger.debug("bf16_not_supported", extra={"error": str(exc)})
@@ -568,8 +602,10 @@ def get_optimal_dtype_for_xpu() -> str:
         _ = test_fp16 + 1
         del test_fp16
         torch.xpu.synchronize()
+        _logger.debug("xpu_dtype_selected", extra={"dtype": "float16"})
         return "float16"
     except Exception as exc:
         _logger.debug("fp16_not_supported", extra={"error": str(exc)})
 
+    _logger.debug("xpu_dtype_selected", extra={"dtype": "float32", "reason": "fallback"})
     return "float32"

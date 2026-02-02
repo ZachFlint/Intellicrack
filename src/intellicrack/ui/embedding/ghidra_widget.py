@@ -7,13 +7,13 @@ Intellicrack's interface via Win32 window embedding.
 from __future__ import annotations
 
 import asyncio
-import logging
 import os
 import winreg
 from collections.abc import Coroutine
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
+from intellicrack.core.logging import get_logger
 from intellicrack.ui.embedding.embedded_widget import EmbeddedToolWidget
 from intellicrack.ui.embedding.win32_helper import Win32WindowHelper
 
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
     from intellicrack.bridges.ghidra import GhidraBridge
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("ui.embedding.ghidra")
 
 _T = TypeVar("_T")
 
@@ -81,8 +81,7 @@ class GhidraWidget(EmbeddedToolWidget):
         if self._exe_path and self._exe_path.exists():
             return self._exe_path
 
-        ghidra_home = os.environ.get("GHIDRA_HOME")
-        if ghidra_home:
+        if ghidra_home := os.environ.get("GHIDRA_HOME"):
             home_path = Path(ghidra_home)
             candidate = home_path / "ghidraRun.bat"
             if candidate.exists():
@@ -106,7 +105,8 @@ class GhidraWidget(EmbeddedToolWidget):
                             self._exe_path = candidate
                             self._ghidra_home = base
                             return candidate
-            except (FileNotFoundError, OSError):
+            except OSError:
+                _logger.debug("registry_key_not_found", extra={"subkey": subkey})
                 continue
 
         for base in self._COMMON_PATHS:
@@ -141,13 +141,12 @@ class GhidraWidget(EmbeddedToolWidget):
                 self._ghidra_home = local_tools
                 return candidate
 
-        found = Win32WindowHelper.find_executable_path("ghidraRun.bat")
-        if found:
+        if found := Win32WindowHelper.find_executable_path("ghidraRun.bat"):
             self._exe_path = found
             self._ghidra_home = found.parent
             return found
 
-        _logger.warning("Ghidra executable not found")
+        _logger.warning("executable_not_found", extra={"tool": "ghidra"})
         return None
 
     def get_window_search_params(self) -> dict[str, str | None]:
@@ -172,10 +171,7 @@ class GhidraWidget(EmbeddedToolWidget):
         """
         del binary_path
         exe_path = self.get_executable_path()
-        if not exe_path:
-            return []
-
-        return [str(exe_path)]
+        return [str(exe_path)] if exe_path else []
 
     def start_tool(self, binary_path: Path | None = None) -> bool:
         """Launch Ghidra with extended startup delay for Java initialization.
@@ -211,6 +207,7 @@ class GhidraWidget(EmbeddedToolWidget):
                 return None
             return loop.run_until_complete(coro)
         except RuntimeError:
+            _logger.debug("bridge_async_fallback_to_asyncio_run", extra={})
             return asyncio.run(coro)
 
     def attach_to_bridge(self, bridge: GhidraBridge) -> None:
@@ -220,7 +217,7 @@ class GhidraWidget(EmbeddedToolWidget):
             bridge: The GhidraBridge instance to use.
         """
         self._bridge = bridge
-        _logger.info("ghidra_bridge_attached")
+        _logger.info("bridge_attached", extra={"tool": "ghidra"})
 
     def get_bridge(self) -> GhidraBridge | None:
         """Get the attached GhidraBridge instance.
@@ -240,19 +237,20 @@ class GhidraWidget(EmbeddedToolWidget):
             True if the binary was loaded successfully.
         """
         if self._bridge is None:
-            _logger.warning("ghidra_no_bridge_for_load")
+            _logger.warning("no_bridge_for_load", extra={"tool": "ghidra"})
             return False
 
         if not binary_path.exists():
-            _logger.warning("ghidra_binary_not_found", extra={"path": str(binary_path)})
+            _logger.warning("binary_not_found", extra={"tool": "ghidra", "path": str(binary_path)})
             return False
 
+        _logger.debug("loading_binary", extra={"tool": "ghidra", "path": str(binary_path)})
         try:
             self._run_bridge_coroutine(self._bridge.load_binary(binary_path))
             self._loaded_file = binary_path
-            _logger.info("ghidra_binary_loaded", extra={"path": str(binary_path)})
+            _logger.info("binary_loaded", extra={"tool": "ghidra", "path": str(binary_path)})
         except Exception as e:
-            _logger.warning("ghidra_binary_load_failed", extra={"error": str(e)})
+            _logger.warning("binary_load_failed", extra={"tool": "ghidra", "error": str(e)})
             return False
         else:
             return True
@@ -266,6 +264,6 @@ class GhidraWidget(EmbeddedToolWidget):
         if path.exists():
             self._exe_path = path
             self._ghidra_home = path.parent
-            _logger.info("ghidra_path_set", extra={"path": str(path)})
+            _logger.info("executable_path_set", extra={"tool": "ghidra", "path": str(path)})
         else:
-            _logger.warning("ghidra_path_not_found", extra={"path": str(path)})
+            _logger.warning("executable_path_not_found", extra={"tool": "ghidra", "path": str(path)})

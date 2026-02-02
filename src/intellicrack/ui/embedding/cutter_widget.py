@@ -7,13 +7,13 @@ within Intellicrack's interface.
 from __future__ import annotations
 
 import asyncio
-import logging
 import os
 import winreg
 from collections.abc import Coroutine
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
+from intellicrack.core.logging import get_logger
 from intellicrack.ui.embedding.embedded_widget import EmbeddedToolWidget
 from intellicrack.ui.embedding.win32_helper import Win32WindowHelper
 
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
     from intellicrack.bridges.radare2 import Radare2Bridge
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("ui.embedding.cutter")
 
 _T = TypeVar("_T")
 
@@ -92,7 +92,8 @@ class CutterWidget(EmbeddedToolWidget):
                             if candidate.exists():
                                 self._exe_path = candidate
                                 return candidate
-            except (FileNotFoundError, OSError):
+            except OSError:
+                _logger.debug("registry_key_not_found", extra={"subkey": subkey})
                 continue
 
         for base in self._COMMON_PATHS:
@@ -104,8 +105,7 @@ class CutterWidget(EmbeddedToolWidget):
                     self._exe_path = candidate
                     return candidate
 
-        env_path = os.environ.get("CUTTER_PATH")
-        if env_path:
+        if env_path := os.environ.get("CUTTER_PATH"):
             candidate = Path(env_path)
             if candidate.exists():
                 self._exe_path = candidate
@@ -117,8 +117,7 @@ class CutterWidget(EmbeddedToolWidget):
                     return candidate
 
         for exe_name in exe_names:
-            found = Win32WindowHelper.find_executable_path(exe_name)
-            if found:
+            if found := Win32WindowHelper.find_executable_path(exe_name):
                 self._exe_path = found
                 return found
 
@@ -128,7 +127,7 @@ class CutterWidget(EmbeddedToolWidget):
             self._exe_path = local_tools.resolve()
             return self._exe_path
 
-        _logger.warning("Cutter executable not found")
+        _logger.warning("executable_not_found", extra={"tool": "cutter"})
         return None
 
     def get_window_search_params(self) -> dict[str, str | None]:
@@ -166,7 +165,7 @@ class CutterWidget(EmbeddedToolWidget):
             bridge: The Radare2Bridge instance to sync with.
         """
         self._r2_bridge = bridge
-        _logger.info("Cutter widget synced with radare2 bridge")
+        _logger.info("bridge_synced", extra={"tool": "cutter", "bridge": "radare2"})
 
     def get_radare2_bridge(self) -> Radare2Bridge | None:
         """Get the attached radare2 bridge.
@@ -194,6 +193,7 @@ class CutterWidget(EmbeddedToolWidget):
                 return None
             return loop.run_until_complete(coro)
         except RuntimeError:
+            _logger.debug("bridge_async_fallback_to_asyncio_run", extra={})
             return asyncio.run(coro)
 
     def analyze_binary(self, binary_path: Path) -> bool:
@@ -210,7 +210,7 @@ class CutterWidget(EmbeddedToolWidget):
             return False
 
         if self.is_embedded():
-            _logger.info("Cutter already running, opening via menu needed")
+            _logger.info("already_embedded_open_via_menu", extra={"tool": "cutter", "path": str(binary_path)})
             self._loaded_file = binary_path
             return True
 
@@ -345,8 +345,7 @@ class CutterWidget(EmbeddedToolWidget):
         Returns:
             True if save was initiated.
         """
-        save_path = project_path or self._project_path
-        if save_path:
+        if save_path := project_path or self._project_path:
             self._project_path = save_path
             _logger.info("project_save_requested", extra={"path": str(save_path)})
             return True
@@ -356,7 +355,7 @@ class CutterWidget(EmbeddedToolWidget):
             _logger.info("project_save_requested", extra={"path": str(self._project_path)})
             return True
 
-        _logger.warning("No project path specified and no file loaded")
+        _logger.warning("project_save_no_path", extra={"tool": "cutter"})
         return False
 
     def load_project(self, project_path: Path) -> bool:

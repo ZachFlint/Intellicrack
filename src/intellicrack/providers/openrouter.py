@@ -319,11 +319,18 @@ class OpenRouterProvider(LLMProviderBase):
                         arguments=parsed_args,
                     )
                     tool_calls.append(tool_call)
+                    self._logger.debug(
+                        "tool_call_parsed",
+                        extra={
+                            "tool_name": tool_call.tool_name,
+                            "arguments_count": len(tool_call.arguments),
+                        },
+                    )
 
             message = Message(
                 role="assistant",
                 content=content,
-                tool_calls=tool_calls if tool_calls else None,
+                tool_calls=tool_calls or None,
                 timestamp=datetime.now(),
             )
 
@@ -344,7 +351,7 @@ class OpenRouterProvider(LLMProviderBase):
                 },
             )
 
-            return message, tool_calls if tool_calls else None
+            return message, tool_calls or None
 
         except RateLimitError:
             self._logger.warning(
@@ -421,10 +428,10 @@ class OpenRouterProvider(LLMProviderBase):
                 request_body["tools"] = self._convert_tools_to_provider_format(tools)
 
             async with self._client.stream(
-                "POST",
-                f"{self.BASE_URL}/chat/completions",
-                json=request_body,
-            ) as response:
+                        "POST",
+                        f"{self.BASE_URL}/chat/completions",
+                        json=request_body,
+                    ) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():
                     if self._cancel_requested:
@@ -439,14 +446,13 @@ class OpenRouterProvider(LLMProviderBase):
                             break
                         try:
                             data = json.loads(data_str)
-                            choices = data.get("choices", [])
-                            if choices:
+                            if choices := data.get("choices", []):
                                 delta = choices[0].get("delta", {})
-                                content = delta.get("content", "")
-                                if content:
+                                if content := delta.get("content", ""):
                                     chunks_yielded += 1
                                     yield content
-                        except json.JSONDecodeError:
+                        except json.JSONDecodeError as exc:
+                            self._logger.debug("stream_json_parse_skipped", extra={"error": str(exc)})
                             continue
 
             self._logger.info(

@@ -662,8 +662,7 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_KERNEL32_NA)
 
         for thread in threads:
-            handle = self._kernel32.OpenThread(0x0002, False, thread.tid)
-            if handle:
+            if handle := self._kernel32.OpenThread(0x0002, False, thread.tid):
                 self._kernel32.SuspendThread(handle)
                 self._kernel32.CloseHandle(handle)
 
@@ -692,8 +691,7 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_KERNEL32_NA)
 
         for thread in threads:
-            handle = self._kernel32.OpenThread(0x0002, False, thread.tid)
-            if handle:
+            if handle := self._kernel32.OpenThread(0x0002, False, thread.tid):
                 self._kernel32.ResumeThread(handle)
                 self._kernel32.CloseHandle(handle)
 
@@ -722,18 +720,16 @@ class ProcessBridge(ToolBridgeBase):
         buffer = ctypes.create_string_buffer(size)
         bytes_read = ctypes.c_size_t()
 
-        result = self._kernel32.ReadProcessMemory(
+        if self._kernel32.ReadProcessMemory(
             self._process_handle,
             ctypes.c_void_p(address),
             buffer,
             size,
             ctypes.byref(bytes_read),
-        )
-
-        if not result:
+        ):
+            return buffer.raw[: bytes_read.value]
+        else:
             raise ToolError(_ERR_READ_FAILED)
-
-        return buffer.raw[: bytes_read.value]
 
     async def write_memory(self, address: int, data: bytes) -> int:
         """Write memory to process.
@@ -1133,11 +1129,10 @@ class ProcessBridge(ToolBridgeBase):
                 data = await self.read_memory(region.base_address, chunk_size)
 
                 for i in range(len(data) - len(pattern_bytes) + 1):
-                    match = True
-                    for j, pb in enumerate(pattern_bytes):
-                        if pb is not None and data[i + j] != pb:
-                            match = False
-                            break
+                    match = not any(
+                        pb is not None and data[i + j] != pb
+                        for j, pb in enumerate(pattern_bytes)
+                    )
                     if match:
                         matches.append(region.base_address + i)
 

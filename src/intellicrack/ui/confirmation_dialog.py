@@ -7,7 +7,6 @@ allowing users to review and approve or deny potentially destructive operations.
 from __future__ import annotations
 
 import json
-import logging
 from typing import TYPE_CHECKING
 
 from PyQt6.QtWidgets import (
@@ -21,11 +20,13 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ..core.logging import get_logger
+
 
 if TYPE_CHECKING:
     from ..core.types import ToolCall
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("ui.confirmation_dialog")
 
 
 class ToolConfirmationDialog(QDialog):
@@ -55,6 +56,10 @@ class ToolConfirmationDialog(QDialog):
         self._call = call
         self._approved = False
         self._remember_similar = False
+        _logger.debug(
+            "tool_confirmation_dialog_opened",
+            extra={"tool": call.tool_name, "function": call.function_name},
+        )
         self._setup_ui()
 
     @property

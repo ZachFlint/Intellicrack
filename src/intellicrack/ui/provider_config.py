@@ -9,7 +9,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
-import logging
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -41,10 +40,11 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.types import ProviderName
 
+from ..core.logging import get_logger
 from .resources import IconManager
 
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("ui.provider_config")
 
 if TYPE_CHECKING:
     from intellicrack.core.types import ModelInfo
@@ -143,14 +143,10 @@ class CredentialSourceDetector:
             return CredentialSource.ENVIRONMENT
 
         if self._config_path.exists():
-            try:
-                with self._config_path.open("r", encoding="utf-8") as f:
-                    config = json.load(f)
-                    if provider_id in config and config[provider_id].get("api_key") == current_key:
-                        return CredentialSource.MANUAL
-            except (OSError, json.JSONDecodeError):
-                pass
-
+            with contextlib.suppress(OSError, json.JSONDecodeError), self._config_path.open("r", encoding="utf-8") as f:
+                config = json.load(f)
+                if provider_id in config and config[provider_id].get("api_key") == current_key:
+                    return CredentialSource.MANUAL
         return CredentialSource.MANUAL
 
     @staticmethod
@@ -265,6 +261,7 @@ class ConnectionTestWorker(QThread):
         except httpx.ConnectError:
             return False, "Could not connect to Anthropic API"
         except Exception as e:
+            _logger.exception("provider_test_failed", extra={"provider": "anthropic", "error": str(e)})
             return False, str(e)
 
     def _test_openai(self, timeout: httpx.Timeout) -> tuple[bool, str]:
@@ -291,6 +288,7 @@ class ConnectionTestWorker(QThread):
         except httpx.ConnectError:
             return False, "Could not connect to OpenAI API"
         except Exception as e:
+            _logger.exception("provider_test_failed", extra={"provider": "openai", "error": str(e)})
             return False, str(e)
 
     def _test_google(self, timeout: httpx.Timeout) -> tuple[bool, str]:
@@ -305,7 +303,8 @@ class ConnectionTestWorker(QThread):
         try:
             with httpx.Client(timeout=timeout) as client:
                 response = client.get(
-                    f"https://generativelanguage.googleapis.com/v1beta/models?key={self._api_key}",
+                    "https://generativelanguage.googleapis.com/v1beta/models",
+                    headers={"x-goog-api-key": self._api_key},
                 )
                 if response.status_code == HTTP_OK:
                     return True, "Connected to Google Gemini API"
@@ -315,6 +314,7 @@ class ConnectionTestWorker(QThread):
         except httpx.ConnectError:
             return False, "Could not connect to Google API"
         except Exception as e:
+            _logger.exception("provider_test_failed", extra={"provider": "google", "error": str(e)})
             return False, str(e)
 
     def _test_ollama(self, timeout: httpx.Timeout) -> tuple[bool, str]:
@@ -336,6 +336,7 @@ class ConnectionTestWorker(QThread):
         except httpx.ConnectError:
             return False, "Could not connect to Ollama (is it running?)"
         except Exception as e:
+            _logger.exception("provider_test_failed", extra={"provider": "ollama", "error": str(e)})
             return False, str(e)
 
     def _test_openrouter(self, timeout: httpx.Timeout) -> tuple[bool, str]:
@@ -362,6 +363,7 @@ class ConnectionTestWorker(QThread):
         except httpx.ConnectError:
             return False, "Could not connect to OpenRouter API"
         except Exception as e:
+            _logger.exception("provider_test_failed", extra={"provider": "openrouter", "error": str(e)})
             return False, str(e)
 
     def _test_huggingface(self, timeout: httpx.Timeout) -> tuple[bool, str]:
@@ -388,6 +390,7 @@ class ConnectionTestWorker(QThread):
         except httpx.ConnectError:
             return False, "Could not connect to HuggingFace API"
         except Exception as e:
+            _logger.exception("provider_test_failed", extra={"provider": "huggingface", "error": str(e)})
             return False, str(e)
 
 
@@ -440,8 +443,7 @@ class ModelRefreshWorker(QThread):
         if self._provider is not None and self._provider.is_connected:
             try:
                 model_infos = asyncio.run(self._provider.list_models())
-                model_ids = sorted(m.id for m in model_infos)
-                if model_ids:
+                if model_ids := sorted(m.id for m in model_infos):
                     return True, model_ids, f"Found {len(model_ids)} models"
             except Exception as exc:
                 _logger.warning(
@@ -513,18 +515,19 @@ class ModelRefreshWorker(QThread):
                         return True, fallback_models, f"API error {resp.status_code}, showing defaults"
 
                     data = resp.json()
-                    for model_entry in data.get("data", []):
-                        model_id = model_entry.get("id", "")
-                        if model_id:
-                            all_models.append(model_id)
+                    all_models.extend(
+                        model_id
+                        for model_entry in data.get("data", [])
+                        if (model_id := model_entry.get("id", ""))
+                    )
 
                     if not data.get("has_more", False):
                         break
-                    last_id = data.get("last_id")
-                    if not last_id:
-                        break
-                    after_id = last_id
+                    if last_id := data.get("last_id"):
+                        after_id = last_id
 
+                    else:
+                        break
         except Exception:
             return True, fallback_models, "API unavailable, showing defaults"
         else:
@@ -570,7 +573,8 @@ class ModelRefreshWorker(QThread):
         try:
             with httpx.Client(timeout=timeout) as client:
                 response = client.get(
-                    f"https://generativelanguage.googleapis.com/v1beta/models?key={self._api_key}",
+                    "https://generativelanguage.googleapis.com/v1beta/models",
+                    headers={"x-goog-api-key": self._api_key},
                 )
                 if response.status_code == HTTP_OK:
                     data = response.json()
@@ -762,8 +766,9 @@ class ProviderConfigDialog(QDialog):
         button_box.accepted.connect(self._on_accept)
         button_box.rejected.connect(self.reject)
 
-        apply_button = button_box.button(QDialogButtonBox.StandardButton.Apply)
-        if apply_button:
+        if apply_button := button_box.button(
+            QDialogButtonBox.StandardButton.Apply
+        ):
             apply_button.clicked.connect(self._on_apply)
 
         main_layout.addWidget(button_box)
@@ -893,8 +898,7 @@ class ProviderConfigDialog(QDialog):
 
     def _update_active_label(self) -> None:
         """Update the active provider display label."""
-        active_name = self._get_active_provider_name()
-        if active_name:
+        if active_name := self._get_active_provider_name():
             display_names = {
                 "anthropic": "Anthropic",
                 "openai": "OpenAI",
@@ -970,12 +974,10 @@ class ProviderConfigDialog(QDialog):
         Args:
             index: The selected provider index.
         """
-        if index >= 0:
-            item = self._provider_list.item(index)
-            if item:
-                provider_id = item.data(Qt.ItemDataRole.UserRole)
-                self._current_provider = provider_id
-                self._settings_stack.setCurrentIndex(index)
+        if index >= 0 and (item := self._provider_list.item(index)):
+            provider_id = item.data(Qt.ItemDataRole.UserRole)
+            self._current_provider = provider_id
+            self._settings_stack.setCurrentIndex(index)
 
     def _on_accept(self) -> None:
         """Handle dialog acceptance."""
@@ -998,9 +1000,10 @@ class ProviderConfigDialog(QDialog):
         Returns:
             Dictionary mapping provider IDs to their settings.
         """
-        settings: dict[str, dict[str, Any]] = {}
-        for provider_id, widget in self._provider_widgets.items():
-            settings[provider_id] = widget.get_settings()
+        settings: dict[str, dict[str, Any]] = {
+            provider_id: widget.get_settings()
+            for provider_id, widget in self._provider_widgets.items()
+        }
         return settings
 
 
@@ -1226,19 +1229,23 @@ class ProviderSettingsWidget(QFrame):
 
         try:
             loop: asyncio.AbstractEventLoop | None = None
-            with contextlib.suppress(RuntimeError):
+            try:
                 loop = asyncio.get_running_loop()
+            except RuntimeError:
+                _logger.debug("no_running_event_loop", extra={"provider": self._provider_id})
 
             if loop is not None and loop.is_running():
                 self._recommended_label.setText("")
                 return
 
-            recommended = asyncio.run(self._discovery.get_recommended_model(self._provider_id))
-            if recommended:
+            if recommended := asyncio.run(
+                self._discovery.get_recommended_model(self._provider_id)
+            ):
                 self._recommended_label.setText(f"Recommended: {recommended.name}")
             else:
                 self._recommended_label.setText("")
-        except Exception:
+        except Exception as e:
+            _logger.exception("recommended_model_update_failed", extra={"provider": self._provider_id, "error": str(e)})
             self._recommended_label.setText("")
 
     def _load_settings(self) -> None:
@@ -1364,6 +1371,7 @@ class ProviderSettingsWidget(QFrame):
 
     def _refresh_models(self) -> None:
         """Refresh the model list from the provider API."""
+        _logger.debug("model_refresh_started", extra={"provider": self._provider_id})
         icon_manager = IconManager.get_instance()
         self._status_icon.setPixmap(icon_manager.get_pixmap("status_loading", 16))
         self._status_label.setText("Refreshing models...")
@@ -1397,7 +1405,9 @@ class ProviderSettingsWidget(QFrame):
     def _auto_refresh_models(self) -> None:
         """Auto-refresh models if no refresh is already running."""
         if self._refresh_worker is not None and self._refresh_worker.isRunning():
+            _logger.debug("model_auto_refresh_skipped", extra={"provider": self._provider_id, "reason": "refresh_in_progress"})
             return
+        _logger.debug("model_auto_refresh_triggered", extra={"provider": self._provider_id})
         self._refresh_models()
 
     def _on_models_refreshed(self, success: bool, models: list[str], message: str) -> None:
@@ -1657,21 +1667,19 @@ class ModelSelectionDialog(QDialog):
         Args:
             index: Selected model index.
         """
-        if index >= 0:
-            item = self._model_list.item(index)
-            if item:
-                model: ModelInfo = item.data(Qt.ItemDataRole.UserRole)
-                info_parts = [
-                    f"<b>{model.name}</b>",
-                    f"ID: {model.id}",
-                    f"Context: {model.context_window:,} tokens",
-                ]
-                if model.supports_tools:
-                    info_parts.append("Supports tool calling")
-                if model.supports_vision:
-                    info_parts.append("Supports vision")
+        if index >= 0 and (item := self._model_list.item(index)):
+            model: ModelInfo = item.data(Qt.ItemDataRole.UserRole)
+            info_parts = [
+                f"<b>{model.name}</b>",
+                f"ID: {model.id}",
+                f"Context: {model.context_window:,} tokens",
+            ]
+            if model.supports_tools:
+                info_parts.append("Supports tool calling")
+            if model.supports_vision:
+                info_parts.append("Supports vision")
 
-                self._info_label.setText("<br>".join(info_parts))
+            self._info_label.setText("<br>".join(info_parts))
 
     def _on_item_double_clicked(self, _item: QListWidgetItem) -> None:
         """Handle double-click on model item.
@@ -1683,8 +1691,7 @@ class ModelSelectionDialog(QDialog):
 
     def _on_accept(self) -> None:
         """Handle dialog acceptance."""
-        current_item = self._model_list.currentItem()
-        if current_item:
+        if current_item := self._model_list.currentItem():
             model: ModelInfo = current_item.data(Qt.ItemDataRole.UserRole)
             self.model_selected.emit(model.id)
             self.accept()
@@ -1695,8 +1702,7 @@ class ModelSelectionDialog(QDialog):
         Returns:
             Selected model ID or None if nothing selected.
         """
-        current_item = self._model_list.currentItem()
-        if current_item:
+        if current_item := self._model_list.currentItem():
             model: ModelInfo = current_item.data(Qt.ItemDataRole.UserRole)
             return model.id
         return None

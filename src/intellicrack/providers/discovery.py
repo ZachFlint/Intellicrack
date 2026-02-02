@@ -175,9 +175,7 @@ class DiscoveryCache:
             True if cache entry doesn't exist or is expired.
         """
         entry = self._cache.get(provider)
-        if entry is None:
-            return True
-        return time.time() > entry.expires_at
+        return True if entry is None else time.time() > entry.expires_at
 
     def get_all_cached(self) -> dict[ProviderName, list[ModelInfo]]:
         """Get all non-expired cached models.
@@ -186,12 +184,11 @@ class DiscoveryCache:
             Dictionary mapping providers to their cached models.
         """
         now = time.time()
-        result: dict[ProviderName, list[ModelInfo]] = {}
-
-        for provider, entry in self._cache.items():
-            if now <= entry.expires_at:
-                result[provider] = entry.models
-
+        result: dict[ProviderName, list[ModelInfo]] = {
+            provider: entry.models
+            for provider, entry in self._cache.items()
+            if now <= entry.expires_at
+        }
         return result
 
     async def save_to_disk(self, path: Path) -> None:
@@ -649,11 +646,7 @@ class ModelDiscovery:
         if cached is None:
             return None
 
-        for model in cached:
-            if model.id == model_id:
-                return model
-
-        return None
+        return next((model for model in cached if model.id == model_id), None)
 
     def get_discovery_events(
         self,
@@ -684,10 +677,14 @@ class ModelDiscovery:
         Returns:
             Most recent DiscoveryEvent or None if none exists.
         """
-        for event in reversed(self._events):
-            if event.provider == provider:
-                return event
-        return None
+        return next(
+            (
+                event
+                for event in reversed(self._events)
+                if event.provider == provider
+            ),
+            None,
+        )
 
     async def get_recommended_model(
         self,

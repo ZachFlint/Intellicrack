@@ -488,11 +488,9 @@ class FridaBridge(InstrumentationBridge):
         except Exception as e:
             raise ToolError(_ERR_ATTACH_FAILED) from e
 
-        target_pid: int | None = None
-        for proc in processes:
-            if proc.name == name:
-                target_pid = proc.pid
-                break
+        target_pid: int | None = next(
+            (proc.pid for proc in processes if proc.name == name), None
+        )
         if target_pid is None:
             raise ToolError(_ERR_PROCESS_NOT_FOUND)
 
@@ -1108,9 +1106,7 @@ class FridaBridge(InstrumentationBridge):
         value = result.get("value", 0)
         if isinstance(value, int):
             return value
-        if isinstance(value, (str, float)):
-            return int(value)
-        return 0
+        return int(value) if isinstance(value, (str, float)) else 0
 
     async def _execute_script_and_wait(
         self,

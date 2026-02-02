@@ -6,7 +6,6 @@ with support for Frida, Ghidra, radare2, x64dbg, and Python scripts.
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, cast, override
 
@@ -30,13 +29,14 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.core.logging import get_logger
 from intellicrack.core.script_gen import Script, ScriptLanguage, ScriptType
 
 
 if TYPE_CHECKING:
     from intellicrack.core.script_gen import ScriptManager, ScriptValidator
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("ui.panels.script_manager")
 
 
 class ScriptTypeInfo:
@@ -311,8 +311,7 @@ class ScriptListWidget(QListWidget):
         Args:
             item: Clicked list item.
         """
-        script_id = item.data(Qt.ItemDataRole.UserRole)
-        if script_id:
+        if script_id := item.data(Qt.ItemDataRole.UserRole):
             self.script_selected.emit(script_id)
 
     def add_script(self, script_id: str, name: str, script_type: str) -> None:
@@ -364,8 +363,7 @@ class ScriptListWidget(QListWidget):
         Returns:
             Selected script ID or None.
         """
-        current = self.currentItem()
-        if current:
+        if current := self.currentItem():
             return current.data(Qt.ItemDataRole.UserRole)
         return None
 
@@ -573,8 +571,7 @@ class ScriptManagerPanel(QWidget):
         Args:
             _index: Selected index (unused, data retrieved from combo).
         """
-        script_type = self._type_combo.currentData()
-        if script_type:
+        if script_type := self._type_combo.currentData():
             language = ScriptTypeInfo.get_language(script_type)
             self._editor.set_language(language)
 
@@ -651,6 +648,7 @@ class ScriptManagerPanel(QWidget):
         self._editor.set_content(script.content)
         self._modified = False
         self._status_bar.showMessage(f"Loaded: {script.name}")
+        _logger.debug("script_loaded", extra={"script_id": script_id, "script_name": script.name})
 
     def _on_content_changed(self) -> None:
         """Handle editor content change."""
@@ -678,6 +676,7 @@ class ScriptManagerPanel(QWidget):
         self._editor.set_content(template)
         self._modified = False
         self._status_bar.showMessage("New script created")
+        _logger.debug("script_new_created", extra={"script_type": script_type or "frida"})
 
     def _on_save(self) -> None:
         """Handle save button."""
@@ -691,8 +690,7 @@ class ScriptManagerPanel(QWidget):
 
         if self._backend:
             script = self._build_script(name, script_type, content)
-            success = self._backend.add_script(script, validate=False)
-            if success:
+            if self._backend.add_script(script, validate=False):
                 if not self._current_script_id:
                     self._current_script_id = name
                     self._script_list.add_script(name, name, script_type)
@@ -702,6 +700,7 @@ class ScriptManagerPanel(QWidget):
 
         self._modified = False
         self._status_bar.showMessage(f"Saved: {name}")
+        _logger.info("script_saved", extra={"script_name": name, "script_type": script_type})
 
     def _on_delete(self) -> None:
         """Handle delete button."""
@@ -725,6 +724,7 @@ class ScriptManagerPanel(QWidget):
             self._editor.set_content("")
             self._modified = False
             self._status_bar.showMessage("Script deleted")
+            _logger.info("script_deleted")
 
     def _on_load_file(self) -> None:
         """Handle load file button."""
@@ -774,7 +774,7 @@ class ScriptManagerPanel(QWidget):
                 self._status_bar.showMessage("Validation passed")
                 self._status_bar.setStyleSheet("background-color: #4ec9b0; color: black;")
             else:
-                error_text = error_msg if error_msg else "Unknown error"
+                error_text = error_msg or "Unknown error"
                 self._status_bar.showMessage(f"Validation failed: {error_text}")
                 self._status_bar.setStyleSheet("background-color: #f14c4c; color: white;")
 
@@ -793,6 +793,7 @@ class ScriptManagerPanel(QWidget):
             QMessageBox.warning(self, "Error", "Cannot execute empty script.")
             return
 
+        _logger.info("script_execute_requested", extra={"script_name": name, "script_type": script_type})
         self._status_bar.showMessage(f"Executing: {name}...")
         self.script_execute.emit(name, script_type, content)
 
@@ -807,11 +808,10 @@ class ScriptManagerPanel(QWidget):
         self._validator = validator
 
         for script_id in manager.list_scripts():
-            script = manager.get_script(script_id)
-            if script:
+            if script := manager.get_script(script_id):
                 self._script_list.add_script(script_id, script.name, script.script_type)
 
-        _logger.info("Script manager backend attached")
+        _logger.info("script_manager_backend_attached", extra={"script_count": len(manager.list_scripts())})
 
     def get_current_script(self) -> tuple[str, str, str] | None:
         """Get the current script data.

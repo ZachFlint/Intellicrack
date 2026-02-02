@@ -6,7 +6,6 @@ for direct binary inspection and modification.
 
 from __future__ import annotations
 
-import logging
 import struct
 from pathlib import Path
 
@@ -30,6 +29,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels._qt_compat import (
     set_header_labels,
     tree_item_data,
@@ -37,7 +37,7 @@ from intellicrack.ui.panels._qt_compat import (
 )
 
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("ui.panels.binary")
 
 _ASCII_PRINTABLE_MIN = 32
 _ASCII_PRINTABLE_MAX = 127
@@ -402,6 +402,7 @@ class BinaryPanel(QWidget):
             return
 
         offset = max(0, min(offset, len(self._file_data) - 1))
+        _logger.debug("hex_goto_offset", extra={"offset": f"0x{offset:08X}"})
         self._populate_hex_view(offset)
 
     def _on_search(self) -> None:
@@ -422,6 +423,7 @@ class BinaryPanel(QWidget):
             idx = self._file_data.find(hex_bytes, 0)
 
         if idx >= 0:
+            _logger.debug("hex_search_found", extra={"offset": f"0x{idx:08X}", "pattern_size": len(hex_bytes)})
             self._populate_hex_view(idx)
             self._offset_input.setText(f"0x{idx:08X}")
 

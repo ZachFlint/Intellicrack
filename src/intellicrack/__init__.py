@@ -21,8 +21,11 @@ Example:
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
+
+_logger = logging.getLogger("intellicrack")
 
 __version__ = "1.0.0"
 __author__ = "Zachary Flint"
@@ -57,29 +60,36 @@ def __getattr__(name: str) -> object:
     if name == "main":
         from intellicrack.main import main as _main  # noqa: PLC0415
 
+        _logger.debug("lazy_import_resolved", extra={"attribute": name})
         return _main
     if name == "Config":
         from intellicrack.core.config import Config as _Config  # noqa: PLC0415
 
+        _logger.debug("lazy_import_resolved", extra={"attribute": name})
         return _Config
     if name == "Orchestrator":
         from intellicrack.core.orchestrator import Orchestrator as _Orchestrator  # noqa: PLC0415
 
+        _logger.debug("lazy_import_resolved", extra={"attribute": name})
         return _Orchestrator
     if name == "SessionManager":
         from intellicrack.core.session import SessionManager as _SessionManager  # noqa: PLC0415
 
+        _logger.debug("lazy_import_resolved", extra={"attribute": name})
         return _SessionManager
     if name == "ToolRegistry":
         from intellicrack.core.tools import ToolRegistry as _ToolRegistry  # noqa: PLC0415
 
+        _logger.debug("lazy_import_resolved", extra={"attribute": name})
         return _ToolRegistry
     if name == "ScriptManager":
         from intellicrack.core.script_gen import ScriptManager as _ScriptManager  # noqa: PLC0415
 
+        _logger.debug("lazy_import_resolved", extra={"attribute": name})
         return _ScriptManager
 
     msg = f"module {__name__!r} has no attribute {name!r}"
+    _logger.debug("lazy_import_attribute_error", extra={"attribute": name})
     raise AttributeError(msg)
 
 

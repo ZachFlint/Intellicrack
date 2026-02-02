@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import ctypes
 import ctypes.wintypes
-import logging
 import struct
 from typing import TYPE_CHECKING
 
@@ -30,13 +29,14 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels._qt_compat import set_header_labels, set_sorting_enabled
 
 
 if TYPE_CHECKING:
     from intellicrack.core.process_manager import ProcessManager
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("ui.panels.process")
 
 _BITS_PER_BYTE = 8
 _POINTER_BITS_64 = 64
@@ -403,6 +403,7 @@ class ProcessPanel(QWidget):
 
     def _on_refresh(self) -> None:
         """Refresh the process list from the system."""
+        _logger.debug("process_list_refresh_started")
         current_filter = self._search_input.text().strip().lower()
         processes = _enumerate_processes()
 
@@ -443,6 +444,7 @@ class ProcessPanel(QWidget):
 
         set_sorting_enabled(self._process_table, enable=True)
         self._proc_count_label.setText(f"{visible_count} processes")
+        _logger.debug("process_list_refreshed", extra={"visible_count": visible_count, "total_count": len(processes)})
 
     def _on_filter_changed(self, _text: str) -> None:
         """Handle search filter text changes.
@@ -491,6 +493,7 @@ class ProcessPanel(QWidget):
         Args:
             pid: Process ID to inspect.
         """
+        _logger.debug("process_details_loading", extra={"pid": pid})
         self._modules_tree.clear()
         modules = _enumerate_modules(pid)
         for mod in modules:
@@ -520,10 +523,7 @@ class ProcessPanel(QWidget):
         proc_name = name_item.text() if name_item else "Unknown"
         mem_mb = _get_process_memory_mb(pid)
 
-        exe_path = ""
-        if modules:
-            exe_path = str(modules[0].get("path", ""))
-
+        exe_path = str(modules[0].get("path", "")) if modules else ""
         self._info_label.setText(
             f"Process: {proc_name}\n"
             f"PID: {pid}\n"
@@ -536,6 +536,7 @@ class ProcessPanel(QWidget):
     def _on_attach(self) -> None:
         """Signal that the selected process should be attached to."""
         if self._selected_pid is not None:
+            _logger.info("process_attach_requested", extra={"pid": self._selected_pid})
             self.process_attached.emit(self._selected_pid)
             self.tool_started.emit()
 
@@ -545,15 +546,16 @@ class ProcessPanel(QWidget):
             return
 
         try:
-            handle = _kernel32.OpenProcess(_PROCESS_TERMINATE, False, self._selected_pid)
-            if handle:
+            if handle := _kernel32.OpenProcess(
+                _PROCESS_TERMINATE, False, self._selected_pid
+            ):
                 _kernel32.TerminateProcess(handle, 1)
                 _kernel32.CloseHandle(handle)
                 _logger.info("process_terminated", extra={"pid": self._selected_pid})
                 self._selected_pid = None
                 QTimer.singleShot(500, self._on_refresh)
         except Exception as e:
-            _logger.warning("process_terminate_failed", extra={"error": str(e)})
+            _logger.exception("process_terminate_failed", extra={"pid": self._selected_pid, "error": str(e)})
 
     def get_selected_pid(self) -> int | None:
         """Get the currently selected process ID.

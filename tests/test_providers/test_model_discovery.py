@@ -217,5 +217,5 @@ class TestAllProvidersModelCount:
 
         print("=" * 60)
 
-        configured_count = sum(1 for v in results.values() if isinstance(v, int))
+        configured_count = sum(isinstance(v, int) for v in results.values())
         assert configured_count > 0, "At least one provider should be configured"

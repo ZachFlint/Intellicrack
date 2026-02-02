@@ -5,16 +5,16 @@ Provides centralized icon loading with caching and fallback support.
 
 from __future__ import annotations
 
-import logging
 from typing import ClassVar, Final
 
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QColor, QIcon, QPainter, QPixmap
 
+from ...core.logging import get_logger
 from .resource_helper import get_assets_path, get_icon_path
 
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("ui.resources.icons")
 
 
 ICON_MAP: Final[dict[str, str]] = {
@@ -213,11 +213,13 @@ class IconManager:
         """
         try:
             icons_dir = get_assets_path() / "icons"
-            if not icons_dir.exists():
-                return False
-            return any(icons_dir.iterdir())
-        except (FileNotFoundError, PermissionError):
+            available = any(icons_dir.iterdir()) if icons_dir.exists() else False
+            _logger.debug("icons_availability_check", extra={"available": available, "path": str(icons_dir)})
+        except (FileNotFoundError, PermissionError) as exc:
+            _logger.exception("icons_availability_check_failed", extra={"error": str(exc)})
             return False
+        else:
+            return available
 
     def get_icon(self, name: str, size: int = 24) -> QIcon:
         """Get an icon by name with caching.
@@ -231,8 +233,10 @@ class IconManager:
         """
         cache_key = f"{name}_{size}"
         if cache_key in self._icon_cache:
+            _logger.debug("icon_cache_hit", extra={"icon_name": name, "size": size})
             return self._icon_cache[cache_key]
 
+        _logger.debug("icon_cache_miss", extra={"icon_name": name, "size": size})
         icon = self._load_icon(name, size)
         self._icon_cache[cache_key] = icon
         return icon
@@ -254,9 +258,13 @@ class IconManager:
             if icon_path.exists():
                 icon = QIcon(str(icon_path))
                 if not icon.isNull():
+                    _logger.debug("icon_loaded_from_file", extra={"icon_name": name, "path": str(icon_path)})
                     return icon
-                _logger.debug("icon_load_failed", extra={"icon_path": str(icon_path)})
+                _logger.warning("icon_load_failed", extra={"icon_path": str(icon_path)})
+            else:
+                _logger.debug("icon_file_not_found", extra={"icon_name": name, "path": str(icon_path)})
 
+        _logger.warning("icon_using_fallback", extra={"icon_name": name, "size": size})
         return IconManager._create_fallback_icon(name, size)
 
     @staticmethod
@@ -270,11 +278,11 @@ class IconManager:
         Returns:
             QIcon with rendered Unicode character or empty icon.
         """
-        fallback_char = UNICODE_FALLBACK.get(name, "")
-        if not fallback_char:
-            return QIcon()
-
-        return IconManager._render_text_icon(fallback_char, size)
+        if fallback_char := UNICODE_FALLBACK.get(name, ""):
+            _logger.debug("fallback_icon_generated", extra={"icon_name": name, "char": fallback_char, "size": size})
+            return IconManager._render_text_icon(fallback_char, size)
+        _logger.warning("no_fallback_icon_available", extra={"icon_name": name})
+        return QIcon()
 
     @staticmethod
     def _render_text_icon(
@@ -328,8 +336,10 @@ class IconManager:
         """
         cache_key = (name, size)
         if cache_key in self._pixmap_cache:
+            _logger.debug("pixmap_cache_hit", extra={"icon_name": name, "size": size})
             return self._pixmap_cache[cache_key]
 
+        _logger.debug("pixmap_cache_miss", extra={"icon_name": name, "size": size})
         icon = self.get_icon(name, size)
         pixmap = icon.pixmap(QSize(size, size))
         self._pixmap_cache[cache_key] = pixmap
@@ -349,11 +359,14 @@ class IconManager:
             if icon_path.exists():
                 icon = QIcon(str(icon_path))
                 if not icon.isNull():
+                    _logger.debug("app_icon_loaded", extra={"path": str(icon_path)})
                     self._icon_cache["app_icon"] = icon
                     return icon
+                _logger.warning("app_icon_load_failed", extra={"path": str(icon_path)})
         except FileNotFoundError:
-            _logger.debug("application_icon_not_found")
+            _logger.warning("app_icon_not_found", extra={})
 
+        _logger.debug("app_icon_using_fallback", extra={})
         fallback = IconManager._render_text_icon("IC", 256, QColor("#007acc"))
         self._icon_cache["app_icon"] = fallback
         return fallback
@@ -385,8 +398,14 @@ class IconManager:
 
     def clear_cache(self) -> None:
         """Clear all cached icons and pixmaps."""
+        icon_count = len(self._icon_cache)
+        pixmap_count = len(self._pixmap_cache)
         self._icon_cache.clear()
         self._pixmap_cache.clear()
+        _logger.debug(
+            "icon_cache_cleared",
+            extra={"icons_cleared": icon_count, "pixmaps_cleared": pixmap_count},
+        )
 
     def preload_icons(self, names: list[str] | None = None) -> None:
         """Preload icons into cache for faster access.
@@ -406,6 +425,7 @@ class IconManager:
                 "file_save",
             ]
 
+        _logger.debug("preloading_icons", extra={"count": len(names)})
         for name in names:
             self.get_icon(name)
 

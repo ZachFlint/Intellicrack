@@ -121,6 +121,7 @@ class ToolInstallWorker(QThread):
         try:
             self._install_tool()
         except Exception as e:
+            _logger.exception("tool_install_failed", extra={"error": str(e)})
             self.install_finished.emit(False, f"Installation failed: {e}")
 
     def _install_tool(self) -> None:
@@ -166,10 +167,12 @@ class ToolInstallWorker(QThread):
                                 pct = int(10 + (downloaded / total) * 70)
                                 self.progress.emit(pct)
 
-            except httpx.TimeoutException:
+            except httpx.TimeoutException as exc:
+                _logger.exception("tool_download_timeout", extra={"tool_id": self._tool_id, "error": str(exc)})
                 self.install_finished.emit(False, "Download timed out")
                 return
-            except httpx.ConnectError:
+            except httpx.ConnectError as exc:
+                _logger.exception("tool_download_connect_error", extra={"tool_id": self._tool_id, "error": str(exc)})
                 self.install_finished.emit(False, "Could not connect to download server")
                 return
 
@@ -178,7 +181,8 @@ class ToolInstallWorker(QThread):
             try:
                 with zipfile.ZipFile(zip_path, "r") as zf:
                     zf.extractall(self._install_path)
-            except zipfile.BadZipFile:
+            except zipfile.BadZipFile as exc:
+                _logger.exception("tool_extraction_bad_zip", extra={"tool_id": self._tool_id, "error": str(exc)})
                 self.install_finished.emit(False, "Downloaded file is not a valid ZIP archive")
                 return
 
@@ -198,12 +202,14 @@ class ToolInstallWorker(QThread):
         Raises:
             RuntimeError: If Ghidra installation not found or bridge install fails.
         """
-        ghidra_root: Path | None = None
-        for item in self._install_path.iterdir():
-            if item.is_dir() and item.name.startswith("ghidra_"):
-                ghidra_root = item
-                break
-
+        ghidra_root: Path | None = next(
+            (
+                item
+                for item in self._install_path.iterdir()
+                if item.is_dir() and item.name.startswith("ghidra_")
+            ),
+            None,
+        )
         if ghidra_root is None:
             candidate = self._install_path / "ghidraRun.bat"
             if candidate.exists():
@@ -397,6 +403,7 @@ class ToolInstallWorker(QThread):
     @staticmethod
     def _broadcast_environment_change() -> None:
         """Broadcast environment change to running processes."""
+        _logger.debug("environment_change_broadcast_starting", extra={})
         try:
             ctypes.windll.user32.SendMessageTimeoutW(
                 _hwnd_broadcast,
@@ -407,6 +414,7 @@ class ToolInstallWorker(QThread):
                 5000,
                 None,
             )
+            _logger.debug("environment_change_broadcast_completed", extra={})
         except Exception as exc:
             _logger.warning("environment_change_broadcast_failed", extra={"error": str(exc)})
 
@@ -470,9 +478,12 @@ class ToolStatusCheckWorker(QThread):
     def run(self) -> None:
         """Run the status check in a separate thread."""
         try:
+            _logger.debug("tool_status_check_started", extra={"tool_id": self._tool_id, "tool_path": self._tool_path})
             is_available, message = self._check_tool()
+            _logger.debug("tool_status_check_completed", extra={"tool_id": self._tool_id, "available": is_available, "status_message": message})
             self.status_checked.emit(self._tool_id, is_available, message)
         except Exception as e:
+            _logger.exception("tool_status_check_failed", extra={"tool_id": self._tool_id, "error": str(e)})
             self.status_checked.emit(self._tool_id, False, f"Check failed: {e}")
 
     def _check_tool(self) -> tuple[bool, str]:
@@ -560,16 +571,19 @@ class ToolStatusCheckWorker(QThread):
         x64dbg_exe = tool_path / "release" / "x64" / "x64dbg.exe"
         x32dbg_exe = tool_path / "release" / "x32" / "x32dbg.exe"
 
-        for candidate in [
-            x64dbg_exe,
-            x32dbg_exe,
-            tool_path / "x64" / "x64dbg.exe",
-            tool_path / "x64dbg.exe",
-        ]:
-            if candidate.exists():
-                return True, "x64dbg installed"
-
-        return False, "x64dbg.exe not found"
+        return next(
+            (
+                (True, "x64dbg installed")
+                for candidate in [
+                    x64dbg_exe,
+                    x32dbg_exe,
+                    tool_path / "x64" / "x64dbg.exe",
+                    tool_path / "x64dbg.exe",
+                ]
+                if candidate.exists()
+            ),
+            (False, "x64dbg.exe not found"),
+        )
 
     @staticmethod
     def _check_radare2(tool_path: Path) -> tuple[bool, str]:
@@ -675,8 +689,9 @@ class ToolConfigDialog(QDialog):
         button_box.accepted.connect(self._on_accept)
         button_box.rejected.connect(self.reject)
 
-        apply_button = button_box.button(QDialogButtonBox.StandardButton.Apply)
-        if apply_button:
+        if apply_button := button_box.button(
+            QDialogButtonBox.StandardButton.Apply
+        ):
             apply_button.clicked.connect(self._on_apply)
 
         layout.addWidget(button_box)
@@ -719,8 +734,7 @@ class ToolConfigDialog(QDialog):
             index: The selected tool index.
         """
         if index >= 0:
-            item = self._tool_list.item(index)
-            if item:
+            if item := self._tool_list.item(index):
                 tool_id = item.data(Qt.ItemDataRole.UserRole)
                 self._current_tool = tool_id
                 self._settings_stack.setCurrentIndex(index)
@@ -746,9 +760,10 @@ class ToolConfigDialog(QDialog):
         Returns:
             Dictionary mapping tool IDs to their settings.
         """
-        settings: dict[str, dict[str, Any]] = {}
-        for tool_id, widget in self._tool_widgets.items():
-            settings[tool_id] = widget.get_settings()
+        settings: dict[str, dict[str, Any]] = {
+            tool_id: widget.get_settings()
+            for tool_id, widget in self._tool_widgets.items()
+        }
         return settings
 
 
@@ -933,12 +948,11 @@ class ToolSettingsWidget(QFrame):
 
     def _browse_path(self) -> None:
         """Open file browser for tool path."""
-        path = QFileDialog.getExistingDirectory(
+        if path := QFileDialog.getExistingDirectory(
             self,
             f"Select {self._display_name} Installation",
             str(self._tools_directory),
-        )
-        if path:
+        ):
             self._path_input.setText(path)
 
     def _check_status(self) -> None:
@@ -969,11 +983,9 @@ class ToolSettingsWidget(QFrame):
 
         if is_available:
             self._status_icon.setPixmap(icon_manager.get_pixmap("status_success", 16))
-            self._status_label.setText(message)
         else:
             self._status_icon.setPixmap(icon_manager.get_pixmap("status_error", 16))
-            self._status_label.setText(message)
-
+        self._status_label.setText(message)
         self.status_changed.emit(tool_id, is_available)
 
     def _install_tool(self) -> None:
@@ -1155,10 +1167,8 @@ class ToolCapabilitiesWidget(QFrame):
         }
 
         for cap_id, cap_key in cap_mapping.items():
-            label = self._cap_labels.get(cap_id)
-            if label:
-                supported = capabilities.get(cap_key, False)
-                if supported:
+            if label := self._cap_labels.get(cap_id):
+                if capabilities.get(cap_key, False):
                     label.setText("\u25cf")
                     label.setStyleSheet("color: #4ec9b0;")
                 else:
@@ -1337,8 +1347,7 @@ class ToolStatusDialog(QDialog):
 
     def _on_configure(self) -> None:
         """Open configuration dialog for selected tool."""
-        current_item = self._status_list.currentItem()
-        if current_item:
+        if self._status_list.currentItem():
             config_dialog = ToolConfigDialog(parent=self)
             config_dialog.exec()
             self._refresh_status()

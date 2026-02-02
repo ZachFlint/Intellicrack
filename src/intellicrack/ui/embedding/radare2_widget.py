@@ -8,12 +8,12 @@ Falls back to Cutter if iaito is unavailable.
 from __future__ import annotations
 
 import asyncio
-import logging
 import os
 from collections.abc import Coroutine
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
+from intellicrack.core.logging import get_logger
 from intellicrack.ui.embedding.embedded_widget import EmbeddedToolWidget
 from intellicrack.ui.embedding.win32_helper import Win32WindowHelper
 
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
     from intellicrack.bridges.radare2 import Radare2Bridge
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("ui.embedding.radare2")
 
 _T = TypeVar("_T")
 
@@ -79,8 +79,7 @@ class Radare2Widget(EmbeddedToolWidget):
         if self._exe_path and self._exe_path.exists():
             return self._exe_path
 
-        iaito_path = os.environ.get("IAITO_PATH")
-        if iaito_path:
+        if iaito_path := os.environ.get("IAITO_PATH"):
             candidate = Path(iaito_path)
             if candidate.exists() and candidate.is_file():
                 self._exe_path = candidate
@@ -124,20 +123,18 @@ class Radare2Widget(EmbeddedToolWidget):
                     return self._exe_path
 
         for exe_name in ("iaito.exe", "iaito"):
-            found = Win32WindowHelper.find_executable_path(exe_name)
-            if found:
+            if found := Win32WindowHelper.find_executable_path(exe_name):
                 self._exe_path = found
                 self._using_iaito = True
                 return found
 
         for exe_name in ("Cutter.exe", "cutter.exe"):
-            found = Win32WindowHelper.find_executable_path(exe_name)
-            if found:
+            if found := Win32WindowHelper.find_executable_path(exe_name):
                 self._exe_path = found
                 self._using_iaito = False
                 return found
 
-        _logger.warning("iaito/Cutter executable not found")
+        _logger.warning("executable_not_found", extra={"tool": "iaito_cutter"})
         return None
 
     def get_window_search_params(self) -> dict[str, str | None]:
@@ -186,6 +183,7 @@ class Radare2Widget(EmbeddedToolWidget):
                 return None
             return loop.run_until_complete(coro)
         except RuntimeError:
+            _logger.debug("bridge_async_fallback_to_asyncio_run", extra={})
             return asyncio.run(coro)
 
     def sync_with_bridge(self, bridge: Radare2Bridge) -> None:
@@ -195,7 +193,7 @@ class Radare2Widget(EmbeddedToolWidget):
             bridge: The Radare2Bridge instance to use.
         """
         self._bridge = bridge
-        _logger.info("radare2_bridge_synced")
+        _logger.info("bridge_synced", extra={"tool": "radare2"})
 
     def get_bridge(self) -> Radare2Bridge | None:
         """Get the attached Radare2Bridge instance.
@@ -221,10 +219,11 @@ class Radare2Widget(EmbeddedToolWidget):
         self._loaded_file = binary_path
 
         if self._bridge is not None:
+            _logger.debug("analyzing_binary_via_bridge", extra={"path": str(binary_path)})
             try:
                 self._run_bridge_coroutine(self._bridge.load_binary(binary_path))
                 self._run_bridge_coroutine(self._bridge.analyze())
-                _logger.info("radare2_binary_analyzed", extra={"path": str(binary_path)})
+                _logger.info("binary_analyzed", extra={"tool": "radare2", "path": str(binary_path)})
             except Exception as e:
                 _logger.warning("radare2_analysis_failed", extra={"error": str(e)})
                 return False

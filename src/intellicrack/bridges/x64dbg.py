@@ -286,7 +286,7 @@ def _read_unicode_string_from_params(handle: int, params_addr: int, ptr_size: in
     if not ustr_bytes or len(ustr_bytes) < ustr_size:
         return None
 
-    length = int.from_bytes(ustr_bytes[0:2], "little")
+    length = int.from_bytes(ustr_bytes[:2], "little")
     buf_offset = POINTER_SIZE_64 if ptr_size == POINTER_SIZE_64 else POINTER_SIZE_32
     buf_ptr = int.from_bytes(ustr_bytes[buf_offset : buf_offset + ptr_size], "little")
 
@@ -947,10 +947,7 @@ class X64DbgBridge(DebuggerBridge):
 
         machine = int.from_bytes(data[pe_offset + 4 : pe_offset + 6], "little")
 
-        if machine == PE32_MACHINE:
-            return False
-
-        return machine == PE64_MACHINE
+        return False if machine == PE32_MACHINE else machine == PE64_MACHINE
 
     async def attach(self, pid: int) -> None:
         """Attach to a running process.
@@ -1199,9 +1196,7 @@ class X64DbgBridge(DebuggerBridge):
         def get_reg(primary: str, alt: str | None = None) -> int:
             if primary in result:
                 return parse_int(result[primary])
-            if alt and alt in result:
-                return parse_int(result[alt])
-            return 0
+            return parse_int(result[alt]) if alt and alt in result else 0
 
         return RegisterState(
             rax=get_reg("rax", "eax"),
@@ -1669,10 +1664,10 @@ class X64DbgBridge(DebuggerBridge):
                     break
 
                 if self._is_64bit:
-                    saved_rbp = int.from_bytes(data[0:8], "little")
+                    saved_rbp = int.from_bytes(data[:8], "little")
                     return_addr = int.from_bytes(data[8:16], "little")
                 else:
-                    saved_rbp = int.from_bytes(data[0:4], "little")
+                    saved_rbp = int.from_bytes(data[:4], "little")
                     return_addr = int.from_bytes(data[4:8], "little")
 
                 if return_addr == 0 or saved_rbp == 0:
@@ -2021,7 +2016,4 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             Command line string, or None if not accessible.
         """
-        if sys.platform != "win32":
-            return None
-
-        return _read_process_command_line(pid)
+        return None if sys.platform != "win32" else _read_process_command_line(pid)

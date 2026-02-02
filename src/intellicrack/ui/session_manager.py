@@ -7,7 +7,6 @@ including listing, loading, saving, and deleting sessions.
 from __future__ import annotations
 
 import json
-import logging
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, cast
@@ -34,8 +33,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ..core.logging import get_logger
 
-_logger = logging.getLogger(__name__)
+
+_logger = get_logger("ui.session_manager")
 
 if TYPE_CHECKING:
     from intellicrack.core.session import SessionManager, SessionMetadata
@@ -272,8 +273,7 @@ class SessionManagerDialog(QDialog):
 
             if session["id"] == self._current_session_id:
                 for col in range(4):
-                    item = self._session_table.item(row, col)
-                    if item:
+                    if item := self._session_table.item(row, col):
                         font = item.font()
                         font.setBold(True)
                         item.setFont(font)
@@ -310,7 +310,11 @@ class SessionManagerDialog(QDialog):
 
                 self._sessions.append(session_data)
 
-            except (json.JSONDecodeError, OSError):
+            except (json.JSONDecodeError, OSError) as e:
+                _logger.debug(
+                    "session_file_load_failed",
+                    extra={"file": str(session_file), "error": str(e)},
+                )
                 continue
 
         self._sessions.sort(
@@ -355,22 +359,16 @@ class SessionManagerDialog(QDialog):
 
     def _on_selection_changed(self) -> None:
         """Handle session selection change."""
-        selected_rows = self._session_table.selectionModel().selectedRows()
-
-        if selected_rows:
+        if selected_rows := self._session_table.selectionModel().selectedRows():
             row = selected_rows[0].row()
             name_item = self._session_table.item(row, 0)
             if name_item is None:
                 return
             session_id = name_item.data(Qt.ItemDataRole.UserRole)
 
-            session = None
-            for s in self._sessions:
-                if s["id"] == session_id:
-                    session = s
-                    break
-
-            if session:
+            if session := next(
+                (s for s in self._sessions if s["id"] == session_id), None
+            ):
                 self._update_details(session)
                 self._load_btn.setEnabled(True)
                 self._delete_btn.setEnabled(session["id"] != self._current_session_id)
@@ -434,7 +432,7 @@ class SessionManagerDialog(QDialog):
                 role = msg.get("role", "unknown")
                 content = msg.get("content", "")
                 if len(content) > MESSAGE_PREVIEW_MAX_LENGTH:
-                    content = content[:MESSAGE_PREVIEW_MAX_LENGTH] + "..."
+                    content = f"{content[:MESSAGE_PREVIEW_MAX_LENGTH]}..."
                 preview_text += f"  [{role}]: {content}\n"
 
         self._preview_text.setText(preview_text)
@@ -478,6 +476,7 @@ class SessionManagerDialog(QDialog):
         )
 
         if reply == QMessageBox.StandardButton.Yes:
+            _logger.debug("session_load_requested", extra={"session_id": session_id})
             self.session_loaded.emit(session_id)
             self.accept()
 
@@ -510,9 +509,7 @@ class SessionManagerDialog(QDialog):
         )
 
         if reply == QMessageBox.StandardButton.Yes:
-            deleted = self._delete_session_sync(session_id)
-
-            if deleted:
+            if self._delete_session_sync(session_id):
                 _logger.info("session_deleted", extra={"session_id": session_id})
                 self.session_deleted.emit(session_id)
                 self._load_sessions()
@@ -531,6 +528,10 @@ class SessionManagerDialog(QDialog):
             try:
                 session_file.unlink()
             except OSError as e:
+                _logger.exception(
+                    "session_delete_failed",
+                    extra={"session_id": session_id, "error": str(e)},
+                )
                 QMessageBox.warning(
                     self,
                     "Delete Failed",
@@ -559,12 +560,7 @@ class SessionManagerDialog(QDialog):
         session_id: str = name_item.data(Qt.ItemDataRole.UserRole)
         session_name: str = name_item.text()
 
-        session_data = None
-        for s in self._sessions:
-            if s["id"] == session_id:
-                session_data = s
-                break
-
+        session_data = next((s for s in self._sessions if s["id"] == session_id), None)
         if session_data is None:
             QMessageBox.warning(
                 self,
@@ -588,12 +584,20 @@ class SessionManagerDialog(QDialog):
                 with open(path, "w", encoding="utf-8") as f:
                     json.dump(export_data, f, indent=2, default=str)
 
+                _logger.debug(
+                    "session_exported",
+                    extra={"session_id": session_id, "path": path},
+                )
                 QMessageBox.information(
                     self,
                     "Export Complete",
                     f"Session exported to:\n{path}",
                 )
             except (OSError, TypeError) as e:
+                _logger.exception(
+                    "session_export_failed",
+                    extra={"session_id": session_id, "error": str(e)},
+                )
                 QMessageBox.warning(
                     self,
                     "Export Failed",
@@ -696,6 +700,10 @@ class SessionManagerDialog(QDialog):
 
             self._save_session_to_disk(import_data)
 
+            _logger.debug(
+                "session_imported",
+                extra={"session_id": import_data.get("id"), "path": path},
+            )
             QMessageBox.information(
                 self,
                 "Import Complete",
@@ -704,12 +712,20 @@ class SessionManagerDialog(QDialog):
             self._load_sessions()
 
         except json.JSONDecodeError as e:
+            _logger.exception(
+                "session_import_failed",
+                extra={"path": path, "error": str(e)},
+            )
             QMessageBox.warning(
                 self,
                 "Import Failed",
                 f"Invalid JSON file:\n{e}",
             )
         except OSError as e:
+            _logger.exception(
+                "session_import_failed",
+                extra={"path": path, "error": str(e)},
+            )
             QMessageBox.warning(
                 self,
                 "Import Failed",
@@ -730,14 +746,18 @@ class SessionManagerDialog(QDialog):
         with open(session_file, "w", encoding="utf-8") as f:
             json.dump(session_data, f, indent=2, default=str)
 
+        _logger.debug(
+            "session_saved_to_disk",
+            extra={"session_id": session_id, "file": str(session_file)},
+        )
+
     def get_selected_session_id(self) -> str | None:
         """Get the ID of the currently selected session.
 
         Returns:
             Selected session ID or None.
         """
-        selected_rows = self._session_table.selectionModel().selectedRows()
-        if selected_rows:
+        if selected_rows := self._session_table.selectionModel().selectedRows():
             row = selected_rows[0].row()
             item = self._session_table.item(row, 0)
             if item is not None:

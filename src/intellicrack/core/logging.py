@@ -86,16 +86,12 @@ class ColoredConsoleRenderer:
         elif logger_name:
             location = logger_name
 
-        context_parts: list[str] = []
-        for key, value in sorted(event_dict.items()):
-            if key.startswith("_"):
-                continue
-            context_parts.append(f"{key}={value!r}")
-
-        context_str = ""
-        if context_parts:
-            context_str = " [" + ", ".join(context_parts) + "]"
-
+        context_parts: list[str] = [
+            f"{key}={value!r}"
+            for key, value in sorted(event_dict.items())
+            if not key.startswith("_")
+        ]
+        context_str = " [" + ", ".join(context_parts) + "]" if context_parts else ""
         return f"{timestamp} | {color}{level_str}{self.RESET} | {location} | {event}{context_str}"
 
 
@@ -384,18 +380,15 @@ def get_logger(name: str | None = None) -> logging.Logger:
     Returns:
         Logger instance. Falls back to a basic logger if not configured.
     """
-    if _app_logger is None:
-        fallback = logging.getLogger("intellicrack")
-        if not fallback.handlers:
-            handler = logging.StreamHandler(sys.stdout)
-            handler.setFormatter(logging.Formatter("%(asctime)s | %(levelname)s | %(message)s"))
-            fallback.addHandler(handler)
-            fallback.setLevel(logging.INFO)
-        if name:
-            return fallback.getChild(name)
-        return fallback
-
-    return _app_logger.get_logger(name)
+    if _app_logger is not None:
+        return _app_logger.get_logger(name)
+    fallback = logging.getLogger("intellicrack")
+    if not fallback.handlers:
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(logging.Formatter("%(asctime)s | %(levelname)s | %(message)s"))
+        fallback.addHandler(handler)
+        fallback.setLevel(logging.INFO)
+    return fallback.getChild(name) if name else fallback
 
 
 def get_structlog_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:

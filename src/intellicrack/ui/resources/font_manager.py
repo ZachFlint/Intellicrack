@@ -6,16 +6,16 @@ Provides custom font loading and application for the Intellicrack interface.
 from __future__ import annotations
 
 import json
-import logging
 from pathlib import Path  # noqa: TC003
 from typing import ClassVar, Final, cast
 
 from PyQt6.QtGui import QFont, QFontDatabase
 
+from ...core.logging import get_logger
 from .resource_helper import get_assets_path
 
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("ui.resources.fonts")
 
 
 DEFAULT_CODE_FONT: Final[str] = "JetBrains Mono"
@@ -82,6 +82,7 @@ class FontManager:
             True if at least one font was loaded successfully.
         """
         if self._fonts_loaded:
+            _logger.debug("fonts_already_loaded", extra={"families_count": len(self._loaded_families)})
             return bool(self._loaded_families)
 
         self._fonts_loaded = True
@@ -141,8 +142,7 @@ class FontManager:
             _logger.warning("font_load_failed", extra={"path": str(font_path)})
             return False
 
-        families = QFontDatabase.applicationFontFamilies(font_id)
-        if families:
+        if families := QFontDatabase.applicationFontFamilies(font_id):
             self._loaded_families.extend(families)
             _logger.debug("font_families_loaded", extra={"families": families, "file": font_path.name})
             return True
@@ -169,6 +169,10 @@ class FontManager:
         """Set up fallback fonts when custom fonts are not available."""
         self._code_font_family = FontManager._find_available_font(FALLBACK_CODE_FONTS)
         self._ui_font_family = FontManager._find_available_font(FALLBACK_UI_FONTS)
+        _logger.warning(
+            "using_fallback_fonts",
+            extra={"code_font": self._code_font_family, "ui_font": self._ui_font_family},
+        )
 
     @staticmethod
     def _find_available_font(candidates: list[str]) -> str:
@@ -204,6 +208,7 @@ class FontManager:
         if not self._fonts_loaded:
             self.load_fonts()
 
+        _logger.debug("get_code_font", extra={"family": self._code_font_family, "size": size})
         font = QFont(self._code_font_family, size)
         font.setStyleHint(QFont.StyleHint.Monospace)
         font.setFixedPitch(True)
@@ -234,6 +239,7 @@ class FontManager:
         if not self._fonts_loaded:
             self.load_fonts()
 
+        _logger.debug("get_ui_font", extra={"family": self._ui_font_family, "size": size})
         font = QFont(self._ui_font_family, size)
         font.setStyleHint(QFont.StyleHint.SansSerif)
         return font

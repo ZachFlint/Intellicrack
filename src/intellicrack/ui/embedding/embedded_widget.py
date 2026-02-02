@@ -6,7 +6,6 @@ Cutter, etc.) within Qt container widgets using Win32 window parenting.
 
 from __future__ import annotations
 
-import logging
 import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -14,6 +13,7 @@ from typing import TYPE_CHECKING
 from PyQt6.QtCore import QTimer, pyqtSignal
 from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
+from intellicrack.core.logging import get_logger
 from intellicrack.ui.embedding.win32_helper import Win32WindowHelper
 
 
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
     from PyQt6.QtGui import QCloseEvent, QFocusEvent, QResizeEvent
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("ui.embedding.base")
 
 _SW_SHOW = 5
 _SW_HIDE = 0
@@ -164,15 +164,18 @@ class EmbeddedToolWidget(QWidget):
         Returns:
             Popen object for the launched process.
         """
+        _logger.debug("process_launching", extra={"launch_args": args})
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         startupinfo.wShowWindow = _SW_HIDE
 
-        return subprocess.Popen(
+        proc = subprocess.Popen(
             args,
             startupinfo=startupinfo,
             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
         )
+        _logger.debug("process_launched", extra={"pid": proc.pid, "launch_args": args})
+        return proc
 
     def _attempt_embedding(self) -> None:
         """Attempt to find and embed the tool window."""
@@ -210,8 +213,13 @@ class EmbeddedToolWidget(QWidget):
             True if embedding succeeded, False otherwise.
         """
         if not Win32WindowHelper.is_window_valid(hwnd):
+            _logger.debug("embed_window_invalid_hwnd", extra={"hwnd": hex(hwnd)})
             return False
 
+        _logger.debug(
+            "window_embedding_started",
+            extra={"hwnd": hex(hwnd), "tool": self.get_tool_display_name()},
+        )
         self._embedded_hwnd = hwnd
         self._container_hwnd = int(self.winId())
 
@@ -272,10 +280,12 @@ class EmbeddedToolWidget(QWidget):
             return
 
         if not Win32WindowHelper.is_window_valid(self._embedded_hwnd):
+            _logger.debug("restore_window_invalid_hwnd", extra={"hwnd": hex(self._embedded_hwnd)})
             self._embedded_hwnd = 0
             return
 
-        parent_hwnd = self._original_parent if self._original_parent else 0
+        _logger.debug("restoring_window", extra={"hwnd": hex(self._embedded_hwnd)})
+        parent_hwnd = self._original_parent or 0
         Win32WindowHelper.set_parent(self._embedded_hwnd, parent_hwnd)
 
         Win32WindowHelper.restore_window_borders(self._embedded_hwnd)
@@ -283,46 +293,60 @@ class EmbeddedToolWidget(QWidget):
 
         self._embedded_hwnd = 0
         self._original_parent = 0
+        _logger.debug("window_restored", extra={"tool": self.get_tool_display_name()})
 
     def stop_tool(self) -> None:
         """Stop the embedded tool and clean up."""
+        _logger.debug("stop_tool_started", extra={"tool": self.get_tool_display_name()})
         self._cleanup_timer()
 
         if self._embedded_hwnd and Win32WindowHelper.is_window_valid(self._embedded_hwnd):
+            _logger.debug("closing_embedded_window", extra={"hwnd": hex(self._embedded_hwnd)})
             Win32WindowHelper.close_window(self._embedded_hwnd)
 
         self._embedded_hwnd = 0
 
         if self._process and self._process.poll() is None:
+            pid = self._process.pid
+            _logger.debug("terminating_tool_process", extra={"pid": pid})
             try:
                 self._process.terminate()
                 self._process.wait(timeout=3.0)
+                _logger.debug("process_terminated", extra={"pid": pid})
             except subprocess.TimeoutExpired:
+                _logger.debug("process_terminate_timeout_killing", extra={"pid": pid})
                 self._process.kill()
             except Exception as e:
                 _logger.warning(
                     "process_termination_error",
-                    extra={"error": str(e)},
+                    extra={"pid": pid, "error": str(e)},
                 )
 
         self._process = None
         self._loaded_file = None
+        _logger.debug("stop_tool_complete", extra={"tool": self.get_tool_display_name()})
 
     def cleanup(self) -> None:
         """Full cleanup including restoring window state."""
+        _logger.debug("cleanup_started", extra={"tool": self.get_tool_display_name()})
         self._cleanup_timer()
         self._restore_window()
 
         if self._process and self._process.poll() is None:
+            pid = self._process.pid
+            _logger.debug("cleanup_terminating_process", extra={"pid": pid})
             try:
                 self._process.terminate()
                 self._process.wait(timeout=2.0)
+                _logger.debug("cleanup_process_terminated", extra={"pid": pid})
             except subprocess.TimeoutExpired:
+                _logger.debug("cleanup_process_timeout_killing", extra={"pid": pid})
                 self._process.kill()
             except Exception:
-                _logger.debug("cleanup_exception_ignored")
+                _logger.debug("cleanup_exception_ignored", extra={"pid": pid})
 
         self._process = None
+        _logger.debug("cleanup_complete", extra={"tool": self.get_tool_display_name()})
 
     def is_tool_running(self) -> bool:
         """Check if the tool process is running.

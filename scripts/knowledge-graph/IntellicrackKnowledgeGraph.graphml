@@ -103,6 +103,12 @@
       <data key="d3">src.intellicrack.bridges.base</data>
     </node>
     <node id="abc" />
+    <node id="src.intellicrack.core.logging">
+      <data key="d0">module</data>
+      <data key="d1">python</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack\core\logging.py</data>
+      <data key="d3">src.intellicrack.core.logging</data>
+    </node>
     <node id="src.intellicrack.bridges.base.DisassemblyLine">
       <data key="d0">class</data>
       <data key="d1">python</data>
@@ -574,12 +580,6 @@
     <node id="lief.OAT" />
     <node id="lief.PE" />
     <node id="pefile" />
-    <node id="src.intellicrack.core.logging">
-      <data key="d0">module</data>
-      <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\logging.py</data>
-      <data key="d3">src.intellicrack.core.logging</data>
-    </node>
     <node id="src.intellicrack.bridges.binary.BinaryBridge">
       <data key="d0">class</data>
       <data key="d1">python</data>
@@ -5813,11 +5813,17 @@
       <data key="d3">cancel_request</data>
       <data key="d4">['self']</data>
     </node>
+    <node id="src.intellicrack.providers.google._extract_system_instruction">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_extract_system_instruction</data>
+      <data key="d4">['messages']</data>
+    </node>
     <node id="src.intellicrack.providers.google._create_config">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_create_config</data>
-      <data key="d4">['temperature', 'max_tokens', 'gemini_tools']</data>
+      <data key="d4">['temperature', 'max_tokens', 'gemini_tools', 'system_instruction']</data>
     </node>
     <node id="src.intellicrack.providers.google._parse_response">
       <data key="d0">function</data>
@@ -12325,6 +12331,9 @@
     <edge source="src.intellicrack.__init__" target="__future__">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.__init__" target="logging">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.__init__" target="typing">
       <data key="d5">imports</data>
     </edge>
@@ -12355,6 +12364,9 @@
     <edge source="src.intellicrack.__main__" target="__future__">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.__main__" target="logging">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.__main__" target="sys">
       <data key="d5">imports</data>
     </edge>
@@ -12370,13 +12382,13 @@
     <edge source="src.intellicrack.bridges.base" target="abc">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.bridges.base" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.bridges.base" target="dataclasses">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.bridges.base" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.base" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.bridges.base" target="src.intellicrack.bridges.base.DisassemblyLine">
@@ -12414,6 +12426,9 @@
     </edge>
     <edge source="src.intellicrack.bridges.base" target="src.intellicrack.bridges.base.BinaryOperationsBridge">
       <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.base" target="logging">
+      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.bridges.base" target="collections.abc">
       <data key="d5">imports</data>
@@ -12614,6 +12629,114 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.bridges.base" target="src.intellicrack.bridges.base.calculate_checksum">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="__future__">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="inspect">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="logging">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="sys">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="time">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="datetime">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="logging.handlers">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="pathlib">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="structlog">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.ColoredConsoleRenderer">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.cleanup_old_logs">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging._add_call_info">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging._configure_structlog">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.IntellicrackLogger">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.setup_logging">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.get_logger">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.get_structlog_logger">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.log_exception">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.log_tool_call">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging._sanitize_arguments">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.log_provider_request">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.log_provider_response">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.log_binary_operation">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.log_sandbox_operation">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.log_session_operation">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.log_analysis_operation">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.OperationTimer">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="types">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="structlog.types">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.__call__">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.__init__">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.configure">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.config">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.__enter__">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.__exit__">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.bridges.base.StaticAnalysisBridge" target="ToolBridgeBase">
@@ -12980,114 +13103,6 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.bridges.binary" target="src.intellicrack.bridges.binary.get_strings">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="__future__">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="inspect">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="logging">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="sys">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="time">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="datetime">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="logging.handlers">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="pathlib">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="typing">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="structlog">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.ColoredConsoleRenderer">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.cleanup_old_logs">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging._add_call_info">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging._configure_structlog">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.IntellicrackLogger">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.setup_logging">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.get_logger">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.get_structlog_logger">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.log_exception">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.log_tool_call">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging._sanitize_arguments">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.log_provider_request">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.log_provider_response">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.log_binary_operation">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.log_sandbox_operation">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.log_session_operation">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.log_analysis_operation">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.OperationTimer">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="types">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="structlog.types">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.__call__">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.__init__">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.configure">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.config">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.__enter__">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.logging" target="src.intellicrack.core.logging.__exit__">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.bridges.binary.BinaryBridge" target="src.intellicrack.bridges.base.BinaryOperationsBridge">
@@ -13645,9 +13660,6 @@
     <edge source="src.intellicrack.bridges.named_pipe_client" target="json">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.bridges.named_pipe_client" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.bridges.named_pipe_client" target="os">
       <data key="d5">imports</data>
     </edge>
@@ -13661,6 +13673,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.bridges.named_pipe_client" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.named_pipe_client" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.bridges.named_pipe_client" target="src.intellicrack.core.types">
@@ -14476,9 +14491,6 @@
     <edge source="src.intellicrack.core.config" target="__future__">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.core.config" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.core.config" target="tomllib">
       <data key="d5">imports</data>
     </edge>
@@ -14489,6 +14501,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.core.config" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.config" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.core.config" target="src.intellicrack.core.types">
@@ -15007,9 +15022,6 @@
     <edge source="src.intellicrack.providers.base" target="__future__">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.providers.base" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.providers.base" target="abc">
       <data key="d5">imports</data>
     </edge>
@@ -15017,6 +15029,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.base" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.providers.base" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.base" target="src.intellicrack.core.types">
@@ -15069,6 +15084,9 @@
     </edge>
     <edge source="src.intellicrack.providers.base" target="src.intellicrack.providers.base.create_google_tool_schema">
       <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.base" target="logging">
+      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.base" target="collections.abc">
       <data key="d5">imports</data>
@@ -15790,9 +15808,6 @@
     <edge source="src.intellicrack.credentials.env_loader" target="__future__">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.credentials.env_loader" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.credentials.env_loader" target="os">
       <data key="d5">imports</data>
     </edge>
@@ -15806,6 +15821,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.credentials.env_loader" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.credentials.env_loader" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.credentials.env_loader" target="src.intellicrack.core.types">
@@ -15883,9 +15901,6 @@
     <edge source="src.intellicrack.credentials.oauth" target="json">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.credentials.oauth" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.credentials.oauth" target="secrets">
       <data key="d5">imports</data>
     </edge>
@@ -15914,6 +15929,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.credentials.oauth" target="httpx">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.credentials.oauth" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.credentials.oauth" target="src.intellicrack.core.types">
@@ -16078,9 +16096,6 @@
     <edge source="src.intellicrack.credentials.store" target="json">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.credentials.store" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.credentials.store" target="dataclasses">
       <data key="d5">imports</data>
     </edge>
@@ -16097,6 +16112,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.credentials.store" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.credentials.store" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.credentials.store" target="src.intellicrack.core.types">
@@ -16519,6 +16537,9 @@
     <edge source="src.intellicrack.providers.google" target="src.intellicrack.providers.google.cancel_request">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.providers.google" target="src.intellicrack.providers.google._extract_system_instruction">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.providers.google" target="src.intellicrack.providers.google._create_config">
       <data key="d5">defines</data>
     </edge>
@@ -16855,9 +16876,6 @@
     <edge source="src.intellicrack.providers.model_loader" target="gc">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.providers.model_loader" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.providers.model_loader" target="threading">
       <data key="d5">imports</data>
     </edge>
@@ -16871,6 +16889,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.model_loader" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.providers.model_loader" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.model_loader" target="src.intellicrack.providers.model_loader.LoadedModel">
@@ -16957,9 +16978,6 @@
     <edge source="src.intellicrack.providers.xpu_utils" target="json">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.providers.xpu_utils" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.providers.xpu_utils" target="platform">
       <data key="d5">imports</data>
     </edge>
@@ -16979,6 +16997,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.xpu_utils" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.providers.xpu_utils" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.xpu_utils" target="src.intellicrack.providers.xpu_utils.XPUDeviceInfo">
@@ -18160,9 +18181,6 @@
     <edge source="src.intellicrack.ui.chat" target="__future__">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.chat" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.chat" target="datetime">
       <data key="d5">imports</data>
     </edge>
@@ -18176,6 +18194,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.chat" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.chat" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.chat" target="src.intellicrack.core.types">
@@ -18268,9 +18289,6 @@
     <edge source="src.intellicrack.ui.provider_config" target="json">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.provider_config" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.provider_config" target="os">
       <data key="d5">imports</data>
     </edge>
@@ -18293,6 +18311,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.provider_config" target="intellicrack.core.types">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.resources">
@@ -18502,9 +18523,6 @@
     <edge source="src.intellicrack.ui.sandbox_config" target="json">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.sandbox_config" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.sandbox_config" target="os">
       <data key="d5">imports</data>
     </edge>
@@ -18527,6 +18545,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.sandbox_config" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.sandbox_config" target="intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.sandbox_config" target="intellicrack.core.process_manager">
@@ -18625,9 +18646,6 @@
     <edge source="src.intellicrack.ui.session_manager" target="json">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.session_manager" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.session_manager" target="datetime">
       <data key="d5">imports</data>
     </edge>
@@ -18641,6 +18659,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.session_manager" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.session_manager" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.session_manager" target="src.intellicrack.ui.session_manager.SessionManagerDialog">
@@ -18916,9 +18937,6 @@
     <edge source="src.intellicrack.ui.tools" target="__future__">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.tools" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.tools" target="pathlib">
       <data key="d5">imports</data>
     </edge>
@@ -18932,6 +18950,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.tools" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.highlighter">
@@ -19225,13 +19246,13 @@
     <edge source="src.intellicrack.ui.confirmation_dialog" target="json">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.confirmation_dialog" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.confirmation_dialog" target="typing">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.confirmation_dialog" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.confirmation_dialog" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.confirmation_dialog" target="src.intellicrack.ui.confirmation_dialog.ToolConfirmationDialog">
@@ -19537,9 +19558,6 @@
     <edge source="src.intellicrack.ui.panels.licensing_panel" target="__future__">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.panels.licensing_panel" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.panels.licensing_panel" target="typing">
       <data key="d5">imports</data>
     </edge>
@@ -19550,6 +19568,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.licensing_panel" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.licensing_panel" target="intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.licensing_panel" target="src.intellicrack.ui.panels.licensing_panel.SummaryCard">
@@ -19618,9 +19639,6 @@
     <edge source="src.intellicrack.ui.panels.script_manager" target="__future__">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.panels.script_manager" target="pathlib">
       <data key="d5">imports</data>
     </edge>
@@ -19634,6 +19652,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.script_manager" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.script_manager" target="intellicrack.core.script_gen">
@@ -19750,9 +19771,6 @@
     <edge source="src.intellicrack.ui.panels.stack_viewer" target="datetime">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.panels.stack_viewer" target="dataclasses">
       <data key="d5">imports</data>
     </edge>
@@ -19766,6 +19784,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.stack_viewer" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.StackFrame">
@@ -19849,9 +19870,6 @@
     <edge source="src.intellicrack.ui.embedding.hxd_widget" target="ctypes">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.embedding.hxd_widget" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.embedding.hxd_widget" target="subprocess">
       <data key="d5">imports</data>
     </edge>
@@ -19862,6 +19880,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.hxd_widget" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.hxd_widget" target="intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.hxd_widget" target="intellicrack.ui.embedding.embedded_widget">
@@ -19927,9 +19948,6 @@
     <edge source="src.intellicrack.ui.embedding.x64dbg_widget" target="asyncio">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.embedding.x64dbg_widget" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.embedding.x64dbg_widget" target="os">
       <data key="d5">imports</data>
     </edge>
@@ -19943,6 +19961,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.x64dbg_widget" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.x64dbg_widget" target="intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.x64dbg_widget" target="intellicrack.ui.embedding.embedded_widget">
@@ -20032,9 +20053,6 @@
     <edge source="src.intellicrack.ui.embedding.cutter_widget" target="asyncio">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.embedding.cutter_widget" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.embedding.cutter_widget" target="os">
       <data key="d5">imports</data>
     </edge>
@@ -20048,6 +20066,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.cutter_widget" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.cutter_widget" target="intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.cutter_widget" target="intellicrack.ui.embedding.embedded_widget">
@@ -20128,9 +20149,6 @@
     <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="asyncio">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="os">
       <data key="d5">imports</data>
     </edge>
@@ -20144,6 +20162,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="intellicrack.ui.embedding.embedded_widget">
@@ -20200,9 +20221,6 @@
     <edge source="src.intellicrack.ui.embedding.radare2_widget" target="asyncio">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.embedding.radare2_widget" target="os">
       <data key="d5">imports</data>
     </edge>
@@ -20213,6 +20231,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.radare2_widget" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.radare2_widget" target="intellicrack.ui.embedding.embedded_widget">
@@ -20269,9 +20290,6 @@
     <edge source="src.intellicrack.ui.panels.frida_panel" target="contextlib">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.panels.frida_panel" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.panels.frida_panel" target="typing">
       <data key="d5">imports</data>
     </edge>
@@ -20282,6 +20300,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.frida_panel" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.frida_panel" target="intellicrack.ui.panels._async_bridge">
@@ -20362,9 +20383,6 @@
     <edge source="src.intellicrack.ui.panels.process_panel" target="ctypes.wintypes">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.panels.process_panel" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.panels.process_panel" target="struct">
       <data key="d5">imports</data>
     </edge>
@@ -20378,6 +20396,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.process_panel" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.process_panel" target="intellicrack.ui.panels._qt_compat">
@@ -20458,9 +20479,6 @@
     <edge source="src.intellicrack.ui.panels.binary_panel" target="__future__">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.panels.binary_panel" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.panels.binary_panel" target="struct">
       <data key="d5">imports</data>
     </edge>
@@ -20474,6 +20492,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.binary_panel" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.binary_panel" target="intellicrack.ui.panels._qt_compat">
@@ -20545,9 +20566,6 @@
     <edge source="src.intellicrack.ui.panels.sandbox_panel" target="contextlib">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.panels.sandbox_panel" target="pathlib">
       <data key="d5">imports</data>
     </edge>
@@ -20561,6 +20579,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.sandbox_panel" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.sandbox_panel" target="intellicrack.ui.panels._async_bridge">
@@ -20680,9 +20701,6 @@
     <edge source="src.intellicrack.ui.dialogs.splash_screen" target="__future__">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.dialogs.splash_screen" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.dialogs.splash_screen" target="typing">
       <data key="d5">imports</data>
     </edge>
@@ -20693,6 +20711,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.dialogs.splash_screen" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.dialogs.splash_screen" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.dialogs.splash_screen" target="src.intellicrack.ui.resources">
@@ -20746,9 +20767,6 @@
     <edge source="src.intellicrack.ui.embedding.embedded_widget" target="__future__">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.embedding.embedded_widget" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.embedding.embedded_widget" target="subprocess">
       <data key="d5">imports</data>
     </edge>
@@ -20762,6 +20780,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.embedded_widget" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.embedded_widget" target="intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.embedded_widget" target="intellicrack.ui.embedding.win32_helper">
@@ -20857,9 +20878,6 @@
     <edge source="src.intellicrack.ui.embedding.win32_helper" target="ctypes">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.embedding.win32_helper" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.embedding.win32_helper" target="shutil">
       <data key="d5">imports</data>
     </edge>
@@ -20873,6 +20891,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.win32_helper" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.win32_helper" target="intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.win32_helper" target="src.intellicrack.ui.embedding.win32_helper._configure_api_signatures">
@@ -21046,10 +21067,10 @@
     <edge source="src.intellicrack.ui.panels._async_bridge" target="asyncio">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.panels._async_bridge" target="logging">
+    <edge source="src.intellicrack.ui.panels._async_bridge" target="typing">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.panels._async_bridge" target="typing">
+    <edge source="src.intellicrack.ui.panels._async_bridge" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels._async_bridge" target="src.intellicrack.ui.panels._async_bridge.run_bridge_coroutine">
@@ -21064,10 +21085,10 @@
     <edge source="src.intellicrack.ui.panels._qt_compat" target="__future__">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.panels._qt_compat" target="logging">
+    <edge source="src.intellicrack.ui.panels._qt_compat" target="typing">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.panels._qt_compat" target="typing">
+    <edge source="src.intellicrack.ui.panels._qt_compat" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels._qt_compat" target="src.intellicrack.ui.panels._qt_compat._resolve">
@@ -21133,9 +21154,6 @@
     <edge source="src.intellicrack.ui.resources.font_manager" target="json">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.resources.font_manager" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.resources.font_manager" target="pathlib">
       <data key="d5">imports</data>
     </edge>
@@ -21143,6 +21161,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.resources.font_manager" target="PyQt6.QtGui">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.resources.font_manager" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.resources.font_manager" target="src.intellicrack.ui.resources.resource_helper">
@@ -21211,9 +21232,6 @@
     <edge source="src.intellicrack.ui.resources.resource_helper" target="__future__">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.resources.resource_helper" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.resources.resource_helper" target="os">
       <data key="d5">imports</data>
     </edge>
@@ -21224,6 +21242,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.resources.resource_helper" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.resources.resource_helper" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.resources.resource_helper" target="src.intellicrack.ui.resources.resource_helper._get_package_root">
@@ -21250,9 +21271,6 @@
     <edge source="src.intellicrack.ui.resources.icon_manager" target="__future__">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.resources.icon_manager" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.resources.icon_manager" target="typing">
       <data key="d5">imports</data>
     </edge>
@@ -21260,6 +21278,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.resources.icon_manager" target="PyQt6.QtGui">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.resources.icon_manager" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.resources.icon_manager" target="src.intellicrack.ui.resources.resource_helper">
@@ -21319,13 +21340,13 @@
     <edge source="src.intellicrack.ui.resources.theme_manager" target="__future__">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.resources.theme_manager" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.resources.theme_manager" target="typing">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.resources.theme_manager" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.resources.theme_manager" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.resources.theme_manager" target="src.intellicrack.ui.resources.resource_helper">

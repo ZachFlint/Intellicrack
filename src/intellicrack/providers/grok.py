@@ -190,9 +190,7 @@ class GrokProvider(LLMProviderBase):
         """
         if "grok-4" in model_id:
             return 131072
-        if "grok-3" in model_id:
-            return 131072
-        return 32768
+        return 131072 if "grok-3" in model_id else 32768
 
     def _supports_tools(self, model_id: str) -> bool:
         """Check if model supports function calling.
@@ -306,11 +304,18 @@ class GrokProvider(LLMProviderBase):
                         arguments=parsed_args,
                     )
                     tool_calls.append(tool_call)
+                    self._logger.debug(
+                        "tool_call_parsed",
+                        extra={
+                            "tool_name": tool_call.tool_name,
+                            "arguments_count": len(tool_call.arguments),
+                        },
+                    )
 
             message = Message(
                 role="assistant",
                 content=content,
-                tool_calls=tool_calls if tool_calls else None,
+                tool_calls=tool_calls or None,
                 timestamp=datetime.now(),
             )
 
@@ -321,7 +326,7 @@ class GrokProvider(LLMProviderBase):
                 duration_ms=duration_ms,
             )
 
-            return message, tool_calls if tool_calls else None
+            return message, tool_calls or None
 
         except openai.RateLimitError as e:
             raise RateLimitError(f"Grok rate limit exceeded: {e}") from e

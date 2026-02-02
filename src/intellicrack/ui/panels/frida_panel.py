@@ -7,7 +7,6 @@ for interacting with Frida dynamic instrumentation framework.
 from __future__ import annotations
 
 import contextlib
-import logging
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt, pyqtSignal
@@ -28,6 +27,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels._async_bridge import run_bridge_coroutine
 from intellicrack.ui.panels._qt_compat import edit_table_item, set_max_block_count
 
@@ -35,7 +35,7 @@ from intellicrack.ui.panels._qt_compat import edit_table_item, set_max_block_cou
 if TYPE_CHECKING:
     from intellicrack.bridges.frida_bridge import FridaBridge
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger("ui.panels.frida")
 
 
 _DEFAULT_FRIDA_SCRIPT = """Interceptor.attach(ptr('ADDRESS'), {
@@ -286,6 +286,7 @@ class FridaPanel(QWidget):
         """Attach to a target process."""
         if self._bridge is None:
             self._console.appendPlainText("[!] No Frida bridge available")
+            _logger.warning("frida_attach_failed_no_bridge")
             return
 
         target = self._target_input.text().strip()
@@ -293,16 +294,20 @@ class FridaPanel(QWidget):
             self._console.appendPlainText("[!] Enter a PID or process name")
             return
 
+        _logger.debug("frida_attach_started", extra={"target": target})
         try:
             pid = int(target)
             run_bridge_coroutine(self._bridge.attach(pid))
             self._attached_pid = pid
             self._console.appendPlainText(f"[+] Attached to PID {pid}")
+            _logger.info("frida_attached_pid", extra={"pid": pid})
         except ValueError:
             run_bridge_coroutine(self._bridge.attach_by_name(target))
             self._console.appendPlainText(f"[+] Attached to '{target}'")
+            _logger.info("frida_attached_name", extra={"process_name": target})
         except Exception as e:
             self._console.appendPlainText(f"[-] Attach failed: {e}")
+            _logger.exception("frida_attach_failed", extra={"target": target, "error": str(e)})
             return
 
         self._status_label.setText("Attached")
@@ -315,11 +320,14 @@ class FridaPanel(QWidget):
         if self._bridge is None:
             return
 
+        _logger.debug("frida_detach_started", extra={"pid": self._attached_pid})
         try:
             run_bridge_coroutine(self._bridge.detach())
             self._console.appendPlainText("[+] Detached")
+            _logger.info("frida_detached", extra={"pid": self._attached_pid})
         except Exception as e:
             self._console.appendPlainText(f"[-] Detach failed: {e}")
+            _logger.exception("frida_detach_failed", extra={"error": str(e)})
 
         self._attached_pid = None
         self._status_label.setText("Not attached")
@@ -338,14 +346,17 @@ class FridaPanel(QWidget):
             self._console.appendPlainText("[!] Script is empty")
             return
 
+        _logger.debug("frida_script_execution_started", extra={"script_size": len(source)})
         try:
             run_bridge_coroutine(self._bridge.execute_script(source))
             self._console.appendPlainText("[+] Script executed")
             self._run_btn.setEnabled(False)
             self._stop_btn.setEnabled(True)
             self.script_executed.emit()
+            _logger.info("frida_script_executed", extra={"script_size": len(source)})
         except Exception as e:
             self._console.appendPlainText(f"[-] Script execution failed: {e}")
+            _logger.exception("frida_script_execution_failed", extra={"error": str(e)})
 
     def _on_stop_script(self) -> None:
         """Stop the currently running script."""
@@ -382,8 +393,10 @@ class FridaPanel(QWidget):
             try:
                 run_bridge_coroutine(self._bridge.remove_hook(hook_id))
                 self._console.appendPlainText(f"[+] Removed hook {hook_id}")
+                _logger.info("frida_hook_removed", extra={"hook_id": hook_id})
             except Exception as e:
                 self._console.appendPlainText(f"[-] Failed to remove hook: {e}")
+                _logger.exception("frida_hook_remove_failed", extra={"hook_id": hook_id, "error": str(e)})
             self._hook_ids.pop(selected)
 
         self._hooks_table.removeRow(selected)
@@ -413,6 +426,7 @@ class FridaPanel(QWidget):
         self._hooks_table.setItem(row, _HOOK_COL_STATUS, QTableWidgetItem(status))
         self._hook_ids.append(hook_id)
         self.hook_added.emit(address)
+        _logger.debug("frida_hook_entry_added", extra={"address": address, "target_module": module, "function": function})
 
     def start_tool(self) -> bool:
         """Start the Frida panel (no-op for native panels).
