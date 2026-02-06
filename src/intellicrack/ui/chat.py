@@ -136,7 +136,8 @@ class MessageBubble(QFrame):
         }
         self.setStyleSheet(role_styles.get(self._message.role, ""))
 
-    def _create_tool_call_widget(self, call: ToolCall) -> QFrame:    # noqa: PLR6301
+    @staticmethod
+    def _create_tool_call_widget(call: ToolCall) -> QFrame:
         """Create a widget displaying a tool call.
 
         Args:
@@ -160,7 +161,7 @@ class MessageBubble(QFrame):
         if call.arguments:
             args_text = ", ".join(f"{k}={v!r}" for k, v in call.arguments.items())
             if len(args_text) > _MAX_ARGS_DISPLAY_LEN:
-                args_text = f"{args_text[:_MAX_ARGS_DISPLAY_LEN - 3]}..."
+                args_text = f"{args_text[: _MAX_ARGS_DISPLAY_LEN - 3]}..."
             args_label = QLabel(args_text)
             args_label.setFont(QFont("JetBrains Mono", 8))
             args_label.setObjectName("tool_call_args")
@@ -169,7 +170,8 @@ class MessageBubble(QFrame):
 
         return frame
 
-    def _create_tool_result_widget(self, result: ToolResult) -> QFrame:    # noqa: PLR6301
+    @staticmethod
+    def _create_tool_result_widget(result: ToolResult) -> QFrame:
         """Create a widget displaying a tool result.
 
         Args:
@@ -200,7 +202,7 @@ class MessageBubble(QFrame):
         elif result.result is not None:
             result_text = str(result.result)
             if len(result_text) > _MAX_RESULT_DISPLAY_LEN:
-                result_text = f"{result_text[:_MAX_RESULT_DISPLAY_LEN - 3]}..."
+                result_text = f"{result_text[: _MAX_RESULT_DISPLAY_LEN - 3]}..."
             result_label = QLabel(result_text)
             result_label.setFont(QFont("JetBrains Mono", 8))
             result_label.setObjectName("result_text")

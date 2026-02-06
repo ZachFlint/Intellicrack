@@ -430,14 +430,19 @@ class SandboxPanel(QWidget):
                 item = QTreeWidgetItem([str(proto), str(dest), str(port), f"{size} bytes"])
                 self._network_tree.addTopLevelItem(item)
 
-        self._log(f"[+] Execution report loaded: {len(report.file_changes)} file changes, "
-                  f"{len(report.registry_changes)} registry changes, "
-                  f"{len(report.network_activity)} network events")
-        _logger.info("execution_report_loaded", extra={
-            "file_changes": len(report.file_changes),
-            "registry_changes": len(report.registry_changes),
-            "network_events": len(report.network_activity),
-        })
+        self._log(
+            f"[+] Execution report loaded: {len(report.file_changes)} file changes, "
+            f"{len(report.registry_changes)} registry changes, "
+            f"{len(report.network_activity)} network events"
+        )
+        _logger.info(
+            "execution_report_loaded",
+            extra={
+                "file_changes": len(report.file_changes),
+                "registry_changes": len(report.registry_changes),
+                "network_events": len(report.network_activity),
+            },
+        )
 
     def start_tool(self) -> bool:
         """Start the sandbox panel.

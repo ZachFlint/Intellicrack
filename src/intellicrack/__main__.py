@@ -10,6 +10,7 @@ Example:
 
 from __future__ import annotations
 
+import importlib
 import logging
 import sys
 
@@ -25,13 +26,14 @@ def run() -> None:
     from the main module, handling any import errors gracefully.
     """
     try:
-        from intellicrack.main import main  # noqa: PLC0415
+        main_module = importlib.import_module("intellicrack.main")
+        main_func = main_module.main
     except ImportError as e:
         _logger.exception("import_failed", extra={"error": str(e)})
         _logger.warning("dependency_check_hint")
         sys.exit(1)
 
-    sys.exit(main())
+    sys.exit(main_func())
 
 
 if __name__ == "__main__":

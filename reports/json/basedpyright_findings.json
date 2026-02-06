@@ -1,7 +1,62 @@
 {
   "tool": "basedpyright",
-  "generated": "2026-01-31T12:24:48.152456",
-  "total_findings": 0,
-  "total_files": 0,
-  "files": []
+  "generated": "2026-02-06T13:37:32.925457",
+  "total_findings": 6,
+  "total_files": 1,
+  "files": [
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py",
+      "count": 6,
+      "findings": [
+        {
+          "line": 281,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Type of \"seen_pids\" is partially unknown\n\u00a0\u00a0Type of \"seen_pids\" is \"set[Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:281:9: [error] Type of \"seen_pids\" is partially unknown\n\u00a0\u00a0Type of \"seen_pids\" is \"set[Unknown]\""
+        },
+        {
+          "line": 285,
+          "column": 17,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"add\" is partially unknown\n\u00a0\u00a0Type of \"add\" is \"(element: Unknown, /) -> None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:285:17: [error] Type of \"add\" is partially unknown\n\u00a0\u00a0Type of \"add\" is \"(element: Unknown, /) -> None\""
+        },
+        {
+          "line": 286,
+          "column": 17,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"append\" is partially unknown\n\u00a0\u00a0Type of \"append\" is \"(object: Unknown, /) -> None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:286:17: [error] Type of \"append\" is partially unknown\n\u00a0\u00a0Type of \"append\" is \"(object: Unknown, /) -> None\""
+        },
+        {
+          "line": 289,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Type of \"p\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:289:13: [error] Type of \"p\" is unknown"
+        },
+        {
+          "line": 291,
+          "column": 17,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"terminate\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:291:17: [error] Type of \"terminate\" is unknown"
+        },
+        {
+          "line": 294,
+          "column": 38,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"procs\" in function \"wait_procs\"\n\u00a0\u00a0Argument type is \"list[Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:294:38: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"procs\" in function \"wait_procs\"\n\u00a0\u00a0Argument type is \"list[Unknown]\""
+        }
+      ]
+    }
+  ]
 }

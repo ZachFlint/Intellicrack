@@ -1,122 +1,28 @@
 {
   "tool": "pydocstyle",
-  "generated": "2026-01-30T22:13:01.491827",
-  "total_findings": 22,
+  "generated": "2026-02-06T13:37:06.369574",
+  "total_findings": 12,
   "total_files": 10,
   "files": [
-    {
-      "path": "src/intellicrack\\ui\\tools.py",
-      "count": 11,
-      "findings": [
-        {
-          "line": 42,
-          "column": null,
-          "code": "D102",
-          "context": "in public method `tool_started`:",
-          "message": "in public method `tool_started`: - Missing docstring in public method",
-          "raw": "src/intellicrack\\ui\\tools.py:42: D102: in public method `tool_started`: - Missing docstring in public method"
-        },
-        {
-          "line": 44,
-          "column": null,
-          "code": "D102",
-          "context": "in public method `tool_closed`:",
-          "message": "in public method `tool_closed`: - Missing docstring in public method",
-          "raw": "src/intellicrack\\ui\\tools.py:44: D102: in public method `tool_closed`: - Missing docstring in public method"
-        },
-        {
-          "line": 46,
-          "column": null,
-          "code": "D102",
-          "context": "in public method `start_tool`:",
-          "message": "in public method `start_tool`: - Missing docstring in public method",
-          "raw": "src/intellicrack\\ui\\tools.py:46: D102: in public method `start_tool`: - Missing docstring in public method"
-        },
-        {
-          "line": 47,
-          "column": null,
-          "code": "D102",
-          "context": "in public method `stop_tool`:",
-          "message": "in public method `stop_tool`: - Missing docstring in public method",
-          "raw": "src/intellicrack\\ui\\tools.py:47: D102: in public method `stop_tool`: - Missing docstring in public method"
-        },
-        {
-          "line": 51,
-          "column": null,
-          "code": "D101",
-          "context": "in public class `HxDWidgetProtocol`:",
-          "message": "in public class `HxDWidgetProtocol`: - Missing docstring in public class",
-          "raw": "src/intellicrack\\ui\\tools.py:51: D101: in public class `HxDWidgetProtocol`: - Missing docstring in public class"
-        },
-        {
-          "line": 52,
-          "column": null,
-          "code": "D102",
-          "context": "in public method `load_file`:",
-          "message": "in public method `load_file`: - Missing docstring in public method",
-          "raw": "src/intellicrack\\ui\\tools.py:52: D102: in public method `load_file`: - Missing docstring in public method"
-        },
-        {
-          "line": 56,
-          "column": null,
-          "code": "D101",
-          "context": "in public class `X64DbgWidgetProtocol`:",
-          "message": "in public class `X64DbgWidgetProtocol`: - Missing docstring in public class",
-          "raw": "src/intellicrack\\ui\\tools.py:56: D101: in public class `X64DbgWidgetProtocol`: - Missing docstring in public class"
-        },
-        {
-          "line": 57,
-          "column": null,
-          "code": "D102",
-          "context": "in public method `debug_file`:",
-          "message": "in public method `debug_file`: - Missing docstring in public method",
-          "raw": "src/intellicrack\\ui\\tools.py:57: D102: in public method `debug_file`: - Missing docstring in public method"
-        },
-        {
-          "line": 61,
-          "column": null,
-          "code": "D101",
-          "context": "in public class `CutterWidgetProtocol`:",
-          "message": "in public class `CutterWidgetProtocol`: - Missing docstring in public class",
-          "raw": "src/intellicrack\\ui\\tools.py:61: D101: in public class `CutterWidgetProtocol`: - Missing docstring in public class"
-        },
-        {
-          "line": 62,
-          "column": null,
-          "code": "D102",
-          "context": "in public method `analyze_binary`:",
-          "message": "in public method `analyze_binary`: - Missing docstring in public method",
-          "raw": "src/intellicrack\\ui\\tools.py:62: D102: in public method `analyze_binary`: - Missing docstring in public method"
-        },
-        {
-          "line": 69,
-          "column": null,
-          "code": "D102",
-          "context": "in public method `set_analysis`:",
-          "message": "in public method `set_analysis`: - Missing docstring in public method",
-          "raw": "src/intellicrack\\ui\\tools.py:69: D102: in public method `set_analysis`: - Missing docstring in public method"
-        }
-      ]
-    },
     {
       "path": "src/intellicrack\\bridges\\base.py",
       "count": 2,
       "findings": [
         {
-          "line": 776,
+          "line": 799,
           "column": null,
           "code": "D401",
           "context": "in public method `hook_function`:",
           "message": "in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')",
-          "raw": "src/intellicrack\\bridges\\base.py:776: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
+          "raw": "src/intellicrack\\bridges\\base.py:799: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
         },
         {
-          "line": 827,
+          "line": 850,
           "column": null,
           "code": "D401",
           "context": "in public method `intercept_return`:",
           "message": "in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')",
-          "raw": "src/intellicrack\\bridges\\base.py:827: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
+          "raw": "src/intellicrack\\bridges\\base.py:850: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
         }
       ]
     },
@@ -125,20 +31,20 @@
       "count": 2,
       "findings": [
         {
-          "line": 925,
+          "line": 935,
           "column": null,
           "code": "D401",
           "context": "in public method `hook_function`:",
           "message": "in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')",
-          "raw": "src/intellicrack\\bridges\\frida_bridge.py:925: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
+          "raw": "src/intellicrack\\bridges\\frida_bridge.py:935: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
         },
         {
-          "line": 1058,
+          "line": 1068,
           "column": null,
           "code": "D401",
           "context": "in public method `intercept_return`:",
           "message": "in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')",
-          "raw": "src/intellicrack\\bridges\\frida_bridge.py:1058: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
+          "raw": "src/intellicrack\\bridges\\frida_bridge.py:1068: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
         }
       ]
     },
@@ -147,12 +53,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 258,
+          "line": 259,
           "column": null,
           "code": "D401",
           "context": "in private method `_sync_cleanup`:",
           "message": "in private method `_sync_cleanup`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')",
-          "raw": "src/intellicrack\\core\\process_manager.py:258: D401: in private method `_sync_cleanup`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')"
+          "raw": "src/intellicrack\\core\\process_manager.py:259: D401: in private method `_sync_cleanup`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')"
         }
       ]
     },
@@ -161,12 +67,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 350,
+          "line": 377,
           "column": null,
           "code": "D401",
           "context": "in public method `validate_java`:",
           "message": "in public method `validate_java`: - First line should be in imperative mood; try rephrasing (found 'Basic')",
-          "raw": "src/intellicrack\\core\\script_gen.py:350: D401: in public method `validate_java`: - First line should be in imperative mood; try rephrasing (found 'Basic')"
+          "raw": "src/intellicrack\\core\\script_gen.py:377: D401: in public method `validate_java`: - First line should be in imperative mood; try rephrasing (found 'Basic')"
         }
       ]
     },
@@ -175,12 +81,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 899,
+          "line": 902,
           "column": null,
           "code": "D401",
           "context": "in public function `authorize_google`:",
           "message": "in public function `authorize_google`: - First line should be in imperative mood; try rephrasing (found 'Convenience')",
-          "raw": "src/intellicrack\\credentials\\oauth.py:899: D401: in public function `authorize_google`: - First line should be in imperative mood; try rephrasing (found 'Convenience')"
+          "raw": "src/intellicrack\\credentials\\oauth.py:902: D401: in public function `authorize_google`: - First line should be in imperative mood; try rephrasing (found 'Convenience')"
         }
       ]
     },
@@ -189,12 +95,26 @@
       "count": 1,
       "findings": [
         {
-          "line": 475,
+          "line": 470,
           "column": null,
           "code": "D401",
           "context": "in private method `_generate_sync`:",
           "message": "in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')",
-          "raw": "src/intellicrack\\providers\\local_transformers.py:475: D401: in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')"
+          "raw": "src/intellicrack\\providers\\local_transformers.py:470: D401: in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack\\ui\\panels\\_async_bridge.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 22,
+          "column": null,
+          "code": "D103",
+          "context": "in public function `run_bridge_coroutine`:",
+          "message": "in public function `run_bridge_coroutine`: - Missing docstring in public function",
+          "raw": "src/intellicrack\\ui\\panels\\_async_bridge.py:22: D103: in public function `run_bridge_coroutine`: - Missing docstring in public function"
         }
       ]
     },

@@ -21,6 +21,7 @@ Example:
 
 from __future__ import annotations
 
+import importlib
 import logging
 from typing import TYPE_CHECKING
 
@@ -29,7 +30,7 @@ _logger = logging.getLogger("intellicrack")
 
 __version__ = "1.0.0"
 __author__ = "Zachary Flint"
-__email__ = "zach.flint2@gmail.com"  # noqa: RUF067
+__email__ = "zach.flint2@gmail.com"
 
 if TYPE_CHECKING:
     from intellicrack.core import (
@@ -40,6 +41,15 @@ if TYPE_CHECKING:
         ToolRegistry,
     )
     from intellicrack.main import main
+
+_LAZY_IMPORT_MAP: dict[str, tuple[str, str]] = {
+    "main": ("intellicrack.main", "main"),
+    "Config": ("intellicrack.core.config", "Config"),
+    "Orchestrator": ("intellicrack.core.orchestrator", "Orchestrator"),
+    "SessionManager": ("intellicrack.core.session", "SessionManager"),
+    "ToolRegistry": ("intellicrack.core.tools", "ToolRegistry"),
+    "ScriptManager": ("intellicrack.core.script_gen", "ScriptManager"),
+}
 
 
 def __getattr__(name: str) -> object:
@@ -57,36 +67,12 @@ def __getattr__(name: str) -> object:
     Raises:
         AttributeError: If the attribute is not found.
     """
-    if name == "main":
-        from intellicrack.main import main as _main  # noqa: PLC0415
-
+    if name in _LAZY_IMPORT_MAP:
+        module_path, attr_name = _LAZY_IMPORT_MAP[name]
+        module = importlib.import_module(module_path)
+        attr = getattr(module, attr_name)
         _logger.debug("lazy_import_resolved", extra={"attribute": name})
-        return _main
-    if name == "Config":
-        from intellicrack.core.config import Config as _Config  # noqa: PLC0415
-
-        _logger.debug("lazy_import_resolved", extra={"attribute": name})
-        return _Config
-    if name == "Orchestrator":
-        from intellicrack.core.orchestrator import Orchestrator as _Orchestrator  # noqa: PLC0415
-
-        _logger.debug("lazy_import_resolved", extra={"attribute": name})
-        return _Orchestrator
-    if name == "SessionManager":
-        from intellicrack.core.session import SessionManager as _SessionManager  # noqa: PLC0415
-
-        _logger.debug("lazy_import_resolved", extra={"attribute": name})
-        return _SessionManager
-    if name == "ToolRegistry":
-        from intellicrack.core.tools import ToolRegistry as _ToolRegistry  # noqa: PLC0415
-
-        _logger.debug("lazy_import_resolved", extra={"attribute": name})
-        return _ToolRegistry
-    if name == "ScriptManager":
-        from intellicrack.core.script_gen import ScriptManager as _ScriptManager  # noqa: PLC0415
-
-        _logger.debug("lazy_import_resolved", extra={"attribute": name})
-        return _ScriptManager
+        return attr
 
     msg = f"module {__name__!r} has no attribute {name!r}"
     _logger.debug("lazy_import_attribute_error", extra={"attribute": name})

@@ -197,9 +197,7 @@ class FridaPanel(QWidget):
         self._script_editor = QPlainTextEdit()
         self._script_editor.setFont(QFont("JetBrains Mono", 10))
         self._script_editor.setPlainText(_DEFAULT_FRIDA_SCRIPT)
-        self._script_editor.setTabStopDistance(
-            QFontMetrics(self._script_editor.font()).horizontalAdvance(" ") * 4
-        )
+        self._script_editor.setTabStopDistance(QFontMetrics(self._script_editor.font()).horizontalAdvance(" ") * 4)
         editor_layout.addWidget(self._script_editor)
         return editor_container
 

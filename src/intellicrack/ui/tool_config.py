@@ -203,11 +203,7 @@ class ToolInstallWorker(QThread):
             RuntimeError: If Ghidra installation not found or bridge install fails.
         """
         ghidra_root: Path | None = next(
-            (
-                item
-                for item in self._install_path.iterdir()
-                if item.is_dir() and item.name.startswith("ghidra_")
-            ),
+            (item for item in self._install_path.iterdir() if item.is_dir() and item.name.startswith("ghidra_")),
             None,
         )
         if ghidra_root is None:
@@ -480,7 +476,9 @@ class ToolStatusCheckWorker(QThread):
         try:
             _logger.debug("tool_status_check_started", extra={"tool_id": self._tool_id, "tool_path": self._tool_path})
             is_available, message = self._check_tool()
-            _logger.debug("tool_status_check_completed", extra={"tool_id": self._tool_id, "available": is_available, "status_message": message})
+            _logger.debug(
+                "tool_status_check_completed", extra={"tool_id": self._tool_id, "available": is_available, "status_message": message}
+            )
             self.status_checked.emit(self._tool_id, is_available, message)
         except Exception as e:
             _logger.exception("tool_status_check_failed", extra={"tool_id": self._tool_id, "error": str(e)})
@@ -689,9 +687,7 @@ class ToolConfigDialog(QDialog):
         button_box.accepted.connect(self._on_accept)
         button_box.rejected.connect(self.reject)
 
-        if apply_button := button_box.button(
-            QDialogButtonBox.StandardButton.Apply
-        ):
+        if apply_button := button_box.button(QDialogButtonBox.StandardButton.Apply):
             apply_button.clicked.connect(self._on_apply)
 
         layout.addWidget(button_box)
@@ -760,10 +756,7 @@ class ToolConfigDialog(QDialog):
         Returns:
             Dictionary mapping tool IDs to their settings.
         """
-        settings: dict[str, dict[str, Any]] = {
-            tool_id: widget.get_settings()
-            for tool_id, widget in self._tool_widgets.items()
-        }
+        settings: dict[str, dict[str, Any]] = {tool_id: widget.get_settings() for tool_id, widget in self._tool_widgets.items()}
         return settings
 
 

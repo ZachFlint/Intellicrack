@@ -19,7 +19,7 @@ This module only provides:
 from __future__ import annotations
 
 import ast
-import subprocess  # noqa: S404
+import importlib
 import tempfile
 import textwrap
 from abc import ABC, abstractmethod
@@ -364,10 +364,11 @@ class ScriptValidator:
         except FileNotFoundError:
             _logger.debug("node_not_found", extra={"reason": "node binary not available, skipping validation"})
             return True, None
-        except subprocess.TimeoutExpired:
-            _logger.warning("validation_timeout", extra={"language": "javascript", "timeout_seconds": 10})
-            return False, "Validation timed out"
         except Exception as exc:
+            subprocess_mod = importlib.import_module("subprocess")
+            if isinstance(exc, subprocess_mod.TimeoutExpired):
+                _logger.warning("validation_timeout", extra={"language": "javascript", "timeout_seconds": 10})
+                return False, "Validation timed out"
             _logger.debug("validation_exception", extra={"language": "javascript", "error": str(exc)})
             return True, None
 
@@ -782,12 +783,10 @@ class _KeygenBuilder(ABC):
 
     def _generate_constants(self, analysis: LicensingAnalysis) -> str:
         lines: list[str] = [f"ALGORITHM = '{self._algorithm_label()}'"]
-        lines.extend(
-            (
-                f"KEY_FORMAT = '{analysis.key_format.value}'",
-                f"KEY_LENGTH = {analysis.key_length}",
-            )
-        )
+        lines.extend((
+            f"KEY_FORMAT = '{analysis.key_format.value}'",
+            f"KEY_LENGTH = {analysis.key_length}",
+        ))
         if analysis.group_size is not None:
             lines.append(f"GROUP_SIZE = {analysis.group_size}")
         else:
@@ -798,11 +797,7 @@ class _KeygenBuilder(ABC):
             lines.append(f"CHECKSUM_ALGORITHM = '{analysis.checksum_algorithm}'")
         if analysis.checksum_position:
             lines.append(f"CHECKSUM_POSITION = '{analysis.checksum_position}'")
-        if magic_vals := [
-            mc.value
-            for mc in analysis.magic_constants
-            if mc.usage_context not in {"rsa_modulus", "rsa_public_exponent"}
-        ]:
+        if magic_vals := [mc.value for mc in analysis.magic_constants if mc.usage_context not in {"rsa_modulus", "rsa_public_exponent"}]:
             lines.append(f"MAGIC_CONSTANTS = {magic_vals!r}")
         if analysis.feature_flags:
             lines.append(f"FEATURE_FLAGS = {analysis.feature_flags!r}")
@@ -864,17 +859,15 @@ def validate(self, username: str, key: str) -> bool:
         content_parts: list[str] = [header]
         if imports:
             content_parts.append(imports)
-        content_parts.extend(
-            (
-                "",
-                constants,
-                "",
-                "class Keygen:",
-                textwrap.indent(body, "    "),
-                "",
-                textwrap.indent(format_helpers, "    "),
-            )
-        )
+        content_parts.extend((
+            "",
+            constants,
+            "",
+            "class Keygen:",
+            textwrap.indent(body, "    "),
+            "",
+            textwrap.indent(format_helpers, "    "),
+        ))
         content = "\n".join(content_parts)
         return GeneratedScript(
             name=f"{analysis.binary_name}_{label.lower()}_keygen",

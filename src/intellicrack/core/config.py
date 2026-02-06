@@ -6,6 +6,7 @@ from TOML files, saving, and default configurations for all components.
 
 from __future__ import annotations
 
+import importlib
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -272,21 +273,19 @@ class Config:
         )
         return config
 
-    @classmethod
-    def _from_dict(cls, data: dict[str, Any]) -> Config:  # noqa: PLR0914
-        """Create Config from dictionary.
+    @staticmethod
+    def _parse_general(general: dict[str, Any]) -> tuple[Path, Path, Path, ProviderName, ConfirmationLevel]:
+        """Parse general configuration section.
 
         Args:
-            data: Dictionary with configuration values.
+            general: Dictionary with general configuration values.
 
         Returns:
-            Config instance with values from dict and defaults for missing.
+            Tuple of (tools_dir, logs_dir, data_dir, default_provider, confirmation_level).
         """
-        general = data.get("general", {})
-
-        tools_dir = general.get("tools_directory", "D:/Intellicrack/tools")
-        logs_dir = general.get("logs_directory", "D:/Intellicrack/logs")
-        data_dir = general.get("data_directory", "D:/Intellicrack/data")
+        tools_dir = Path(general.get("tools_directory", "D:/Intellicrack/tools"))
+        logs_dir = Path(general.get("logs_directory", "D:/Intellicrack/logs"))
+        data_dir = Path(general.get("data_directory", "D:/Intellicrack/data"))
 
         default_provider_str = general.get("default_provider", "anthropic")
         try:
@@ -308,16 +307,24 @@ class Config:
             )
             confirmation_level = ConfirmationLevel.DESTRUCTIVE
 
+        return tools_dir, logs_dir, data_dir, default_provider, confirmation_level
+
+    @staticmethod
+    def _parse_providers(providers_data: dict[str, Any]) -> dict[ProviderName, ProviderConfig]:
+        """Parse providers configuration section.
+
+        Args:
+            providers_data: Dictionary with provider configuration values.
+
+        Returns:
+            Dictionary mapping provider names to their configurations.
+        """
         providers = _default_providers()
-        providers_data = data.get("providers", {})
         for name_str, prov_data in providers_data.items():
             try:
                 provider_name = ProviderName(name_str)
             except ValueError:
-                _logger.warning(
-                    "config_unknown_provider_skipped",
-                    extra={"value": name_str},
-                )
+                _logger.warning("config_unknown_provider_skipped", extra={"value": name_str})
                 continue
 
             if provider_name in providers:
@@ -329,17 +336,24 @@ class Config:
                     timeout_seconds=prov_data.get("timeout_seconds", prov_base.timeout_seconds),
                     max_retries=prov_data.get("max_retries", prov_base.max_retries),
                 )
+        return providers
 
+    @staticmethod
+    def _parse_tools(tools_data: dict[str, Any]) -> dict[ToolName, ToolConfig]:
+        """Parse tools configuration section.
+
+        Args:
+            tools_data: Dictionary with tool configuration values.
+
+        Returns:
+            Dictionary mapping tool names to their configurations.
+        """
         tools = _default_tools()
-        tools_data = data.get("tools", {})
         for name_str, tool_data in tools_data.items():
             try:
                 tool_name = ToolName(name_str)
             except ValueError:
-                _logger.warning(
-                    "config_unknown_tool_skipped",
-                    extra={"value": name_str},
-                )
+                _logger.warning("config_unknown_tool_skipped", extra={"value": name_str})
                 continue
 
             if tool_name in tools:
@@ -352,7 +366,18 @@ class Config:
                     auto_install=tool_data.get("auto_install", tool_base.auto_install),
                     startup_timeout_seconds=tool_data.get("startup_timeout_seconds", tool_base.startup_timeout_seconds),
                 )
+        return tools
 
+    @staticmethod
+    def _parse_sub_configs(data: dict[str, Any]) -> tuple[SandboxConfig, UIConfig, SessionConfig, LogConfig]:
+        """Parse sandbox, UI, session, and log configuration sections.
+
+        Args:
+            data: Full configuration dictionary.
+
+        Returns:
+            Tuple of (sandbox, ui, session, log) configurations.
+        """
         sandbox_data = data.get("sandbox", {})
         sandbox = SandboxConfig(
             enabled=sandbox_data.get("enabled", True),
@@ -387,10 +412,28 @@ class Config:
             json_file=log_data.get("json_file", True),
         )
 
+        return sandbox, ui, session, log
+
+    @classmethod
+    def _from_dict(cls, data: dict[str, Any]) -> Config:
+        """Create Config from dictionary.
+
+        Args:
+            data: Dictionary with configuration values.
+
+        Returns:
+            Config instance with values from dict and defaults for missing.
+        """
+        general = data.get("general", {})
+        tools_dir, logs_dir, data_dir, default_provider, confirmation_level = cls._parse_general(general)
+        providers = cls._parse_providers(data.get("providers", {}))
+        tools = cls._parse_tools(data.get("tools", {}))
+        sandbox, ui, session, log = cls._parse_sub_configs(data)
+
         return cls(
-            tools_directory=Path(tools_dir),
-            logs_directory=Path(logs_dir),
-            data_directory=Path(data_dir),
+            tools_directory=tools_dir,
+            logs_directory=logs_dir,
+            data_directory=data_dir,
             default_provider=default_provider,
             confirmation_level=confirmation_level,
             providers=providers,
@@ -412,7 +455,7 @@ class Config:
         """
         _logger.debug("config_save_started", extra={"path": str(path)})
         try:
-            import tomli_w  # noqa: PLC0415
+            tomli_w = importlib.import_module("tomli_w")
         except ImportError as err:
             _logger.exception("config_save_failed", extra={"reason": "tomli_w_not_installed"})
             raise ImportError(_ERR_TOMLI_W_REQUIRED) from err

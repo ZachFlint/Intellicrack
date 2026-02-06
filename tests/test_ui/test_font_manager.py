@@ -28,12 +28,13 @@ _STYLE_HINT_SANS_SERIF_VALUE: int = 0
 
 @pytest.fixture
 def font_manager(
-    qapp: QApplication,  # noqa: ARG001
+    qapp: QApplication,
 ) -> Generator[FontManager]:
     """Provide a fresh FontManager instance for each test.
 
     Requires qapp fixture for Qt font database access.
     """
+    del qapp
     FontManager.reset_instance()
     yield FontManager.get_instance()
     FontManager.reset_instance()

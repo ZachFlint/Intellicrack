@@ -69,22 +69,20 @@ def create_test_analysis(
             for i, val in enumerate(magic_constants)
         )
     if rsa_modulus:
-        constants.extend(
-            (
-                MagicConstant(
-                    value=rsa_modulus,
-                    address=0x5000,
-                    usage_context="rsa_modulus",
-                    bit_width=rsa_modulus.bit_length(),
-                ),
-                MagicConstant(
-                    value=rsa_exponent,
-                    address=0x5008,
-                    usage_context="rsa_public_exponent",
-                    bit_width=rsa_exponent.bit_length(),
-                ),
-            )
-        )
+        constants.extend((
+            MagicConstant(
+                value=rsa_modulus,
+                address=0x5000,
+                usage_context="rsa_modulus",
+                bit_width=rsa_modulus.bit_length(),
+            ),
+            MagicConstant(
+                value=rsa_exponent,
+                address=0x5008,
+                usage_context="rsa_public_exponent",
+                bit_width=rsa_exponent.bit_length(),
+            ),
+        ))
     return LicensingAnalysis(
         binary_name="test_app.exe",
         algorithm_type=algorithm,

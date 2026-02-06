@@ -20,6 +20,8 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, Literal
 
+import psutil
+
 from ..core.logging import get_logger
 from ..core.process_manager import ProcessManager, ProcessType
 from .base import (
@@ -68,6 +70,7 @@ _ERR_VM_STATUS = "VM status query failed"
 _ERR_SANDBOX_START = "sandbox start failed"
 _ERR_SANDBOX_STOP = "sandbox stop failed"
 _ERR_CMD_TIMEOUT = "command timed out"
+_ERR_PIDFILE_UNREADABLE = "QEMU pidfile unreadable after retries - daemon may be orphaned"
 _ERR_BINARY_NOT_FOUND = "binary not found"
 _ERR_SOURCE_NOT_FOUND = "source not found"
 _ERR_COPY_TO_SANDBOX = "copy to sandbox failed"
@@ -77,6 +80,8 @@ _ERR_SNAPSHOT_RESTORE = "snapshot restore failed"
 _ERR_SNAPSHOT_DELETE = "snapshot delete failed"
 _PROCESS_LOG_NAME_INDEX = 3
 _PROCESS_LOG_PATH_INDEX = 4
+_PIDFILE_MAX_RETRIES = 3
+_PIDFILE_RETRY_DELAY = 2.0
 
 
 class GuestOS(Enum):
@@ -780,16 +785,13 @@ class QEMUSandbox(SandboxBase):
             *["-machine", "q35,accel=" + self._accelerator.value],
             "-cpu",
             "max",
+            *["-smp", f"cores={self._qemu_config.cpu_cores}"],
+            *["-m", str(self._qemu_config.memory_mb)],
+            *[
+                "-drive",
+                f"file={self._qemu_config.image_path},format=qcow2,if=virtio",
+            ],
         ]
-
-        cmd.extend(["-smp", f"cores={self._qemu_config.cpu_cores}"])
-
-        cmd.extend(["-m", str(self._qemu_config.memory_mb)])
-
-        cmd.extend([
-            "-drive",
-            f"file={self._qemu_config.image_path},format=qcow2,if=virtio",
-        ])
 
         if self._qemu_config.display == "none":
             cmd.extend(["-display", "none"])
@@ -903,30 +905,43 @@ class QEMUSandbox(SandboxBase):
 
             self._check_qemu_started(process.returncode, stderr)
 
-            await asyncio.sleep(5)
+            qemu_pid: int | None = None
+            if self._pidfile_path is not None:
+                for attempt in range(_PIDFILE_MAX_RETRIES):
+                    await asyncio.sleep(_PIDFILE_RETRY_DELAY)
+                    if self._pidfile_path.exists():
+                        try:
+                            pid_content = await asyncio.to_thread(
+                                self._pidfile_path.read_text,
+                                encoding="utf-8",
+                            )
+                            qemu_pid = int(pid_content.strip())
+                            break
+                        except (ValueError, OSError):
+                            _logger.debug(
+                                "pidfile_read_retry",
+                                extra={"attempt": attempt + 1},
+                            )
 
-            if self._pidfile_path is not None and self._pidfile_path.exists():
-                try:
-                    pid_content = await asyncio.to_thread(
-                        self._pidfile_path.read_text,
-                        encoding="utf-8",
-                    )
-                    self._qemu_pid = int(pid_content.strip())
-                    self._state.pid = self._qemu_pid
-                    _logger.info("qemu_started", extra={"pid": self._qemu_pid})
+            if qemu_pid is None:
+                _logger.error("qemu_pidfile_unreadable")
+                await self._cleanup()
+                raise SandboxError(_ERR_PIDFILE_UNREADABLE)  # noqa: TRY301
 
-                    process_manager = ProcessManager.get_instance()
-                    process_manager.register_external_pid(
-                        self._qemu_pid,
-                        name="qemu-vm",
-                        process_type=ProcessType.SANDBOX,
-                        metadata={
-                            "guest_os": self._qemu_config.guest_os.value,
-                            "image": str(self._qemu_config.image_path),
-                        },
-                    )
-                except (ValueError, OSError) as e:
-                    _logger.warning("qemu_pidfile_read_failed", extra={"error": str(e)})
+            self._qemu_pid = qemu_pid
+            self._state.pid = qemu_pid
+            _logger.info("qemu_started", extra={"pid": qemu_pid})
+
+            process_manager = ProcessManager.get_instance()
+            process_manager.register_external_pid(
+                qemu_pid,
+                name="qemu-vm",
+                process_type=ProcessType.SANDBOX,
+                metadata={
+                    "guest_os": self._qemu_config.guest_os.value,
+                    "image": str(self._qemu_config.image_path),
+                },
+            )
 
             await self._connect_and_verify_qmp()
 
@@ -986,6 +1001,19 @@ class QEMUSandbox(SandboxBase):
 
     async def _cleanup(self) -> None:
         """Clean up temporary files and resources."""
+        if self._temp_dir is not None:
+            pid_path = self._temp_dir / "qemu.pid"
+            if pid_path.exists():
+                try:
+                    pid_content = await asyncio.to_thread(pid_path.read_text, encoding="utf-8")
+                    pid = int(pid_content.strip())
+                    # Kill orphan QEMU process if it exists
+                    with contextlib.suppress(psutil.NoSuchProcess):
+                        ProcessManager.terminate_tree(pid, graceful_timeout=2.0, force_timeout=2.0)
+                        _logger.debug("cleanup_killed_orphan_qemu_tree", extra={"pid": pid})
+                except Exception as e:
+                    _logger.debug("cleanup_pid_check_failed", extra={"error": str(e)})
+
         if self._temp_dir is not None and self._temp_dir.exists():
             try:
                 await asyncio.to_thread(
@@ -1480,7 +1508,7 @@ echo $? > "/mnt/shared/output/{result_name}"
                     result_text = result_path.read_text(encoding="utf-8").strip()
                     exit_code = int(result_text) if result_text.isdigit() else -1
                 except Exception as e:
-                    _logger.warning("result_read_failed", extra={"error": str(e)})
+                    _logger.debug("result_read_failed", extra={"error": str(e)})
                 else:
                     return (exit_code, "", "")
 

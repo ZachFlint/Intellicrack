@@ -1,6 +1,6 @@
 {
   "tool": "markdownlint",
-  "generated": "2026-01-30T22:11:47.800932",
+  "generated": "2026-02-06T13:36:02.860068",
   "total_findings": 65,
   "total_files": 5,
   "files": [
@@ -463,7 +463,7 @@
       ]
     },
     {
-      "path": "Claude.md",
+      "path": "CLAUDE.md",
       "count": 3,
       "findings": [
         {
@@ -471,21 +471,21 @@
           "column": null,
           "code": "error",
           "message": "MD036/no-emphasis-as-heading Emphasis used instead of a heading [Context: \"TOOLS\"]",
-          "raw": "Claude.md:64 error MD036/no-emphasis-as-heading Emphasis used instead of a heading [Context: \"TOOLS\"]"
+          "raw": "CLAUDE.md:64 error MD036/no-emphasis-as-heading Emphasis used instead of a heading [Context: \"TOOLS\"]"
         },
         {
           "line": 74,
           "column": 81,
           "code": "error",
           "message": "MD013/line-length Line length [Expected: 80; Actual: 101]",
-          "raw": "Claude.md:74:81 error MD013/line-length Line length [Expected: 80; Actual: 101]"
+          "raw": "CLAUDE.md:74:81 error MD013/line-length Line length [Expected: 80; Actual: 101]"
         },
         {
           "line": 107,
           "column": 81,
           "code": "error",
           "message": "MD013/line-length Line length [Expected: 80; Actual: 86]",
-          "raw": "Claude.md:107:81 error MD013/line-length Line length [Expected: 80; Actual: 86]"
+          "raw": "CLAUDE.md:107:81 error MD013/line-length Line length [Expected: 80; Actual: 86]"
         }
       ]
     }

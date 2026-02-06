@@ -333,8 +333,7 @@ class SandboxManager:
             (
                 instance
                 for instance in self._instances.values()
-                if instance.sandbox_type == sandbox_type
-                and instance.state.status == "running"
+                if instance.sandbox_type == sandbox_type and instance.state.status == "running"
             ),
             None,
         )

@@ -47,6 +47,8 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from types import ModuleType
 
+_logger = get_logger("bridges.x64dbg")
+
 # Optional disassembler/assembler imports
 _capstone: ModuleType | None = None
 _keystone: ModuleType | None = None
@@ -56,14 +58,14 @@ try:
 
     _capstone = _capstone_module
 except ImportError:
-    pass
+    _logger.debug("capstone_not_available")
 
 try:
     import keystone as _keystone_module
 
     _keystone = _keystone_module
 except ImportError:
-    pass
+    _logger.debug("keystone_not_available")
 
 
 def get_capstone() -> ModuleType | None:
@@ -123,8 +125,6 @@ UNICODE_STRING_SIZE_64 = 16
 UNICODE_STRING_SIZE_32 = 8
 STACK_FRAME_SIZE_64 = 16  # Size of 64-bit stack frame (saved RBP + return address)
 
-
-_logger = get_logger("bridges.x64dbg")
 
 _ERR_REQUIRES_WINDOWS = "requires Windows platform"
 _ERR_NOT_ATTACHED = "not attached to a process"
@@ -198,7 +198,8 @@ def _read_process_command_line(pid: int) -> str | None:
         finally:
             kernel32.CloseHandle(handle)
 
-    except Exception:
+    except Exception as e:
+        _logger.warning("command_line_read_failed", extra={"error": str(e)})
         return None
 
 
@@ -348,6 +349,15 @@ class X64DbgBridge(DebuggerBridge):
         """
         return self._attached_pid
 
+    @attached_pid.setter
+    def attached_pid(self, value: int | None) -> None:
+        """Set the currently attached process ID.
+
+        Args:
+            value: The PID to set, or None to clear.
+        """
+        self._attached_pid = value
+
     @property
     def binary_path(self) -> Path | None:
         """Get the path to the loaded binary.
@@ -357,6 +367,15 @@ class X64DbgBridge(DebuggerBridge):
         """
         return self._binary_path
 
+    @binary_path.setter
+    def binary_path(self, value: Path | None) -> None:
+        """Set the path to the loaded binary.
+
+        Args:
+            value: The binary file path, or None to clear.
+        """
+        self._binary_path = value
+
     @property
     def is_64bit(self) -> bool:
         """Get whether the bridge is in 64-bit mode.
@@ -365,6 +384,15 @@ class X64DbgBridge(DebuggerBridge):
             True if operating in 64-bit mode.
         """
         return self._is_64bit
+
+    @is_64bit.setter
+    def is_64bit(self, value: bool) -> None:
+        """Set whether the bridge is in 64-bit mode.
+
+        Args:
+            value: True for 64-bit mode, False for 32-bit.
+        """
+        self._is_64bit = value
 
     @property
     def breakpoints(self) -> dict[int, BreakpointInfo]:
@@ -376,6 +404,24 @@ class X64DbgBridge(DebuggerBridge):
         return self._breakpoints
 
     @property
+    def next_bp_id(self) -> int:
+        """Get the next breakpoint ID.
+
+        Returns:
+            The next breakpoint ID to be assigned.
+        """
+        return self._next_bp_id
+
+    @next_bp_id.setter
+    def next_bp_id(self, value: int) -> None:
+        """Set the next breakpoint ID.
+
+        Args:
+            value: The next breakpoint ID value.
+        """
+        self._next_bp_id = value
+
+    @property
     def watchpoints(self) -> dict[int, WatchpointInfo]:
         """Get the watchpoints dictionary.
 
@@ -385,6 +431,24 @@ class X64DbgBridge(DebuggerBridge):
         return self._watchpoints
 
     @property
+    def next_wp_id(self) -> int:
+        """Get the next watchpoint ID.
+
+        Returns:
+            The next watchpoint ID to be assigned.
+        """
+        return self._next_wp_id
+
+    @next_wp_id.setter
+    def next_wp_id(self, value: int) -> None:
+        """Set the next watchpoint ID.
+
+        Args:
+            value: The next watchpoint ID value.
+        """
+        self._next_wp_id = value
+
+    @property
     def x64dbg_path(self) -> Path | None:
         """Get the path to the x64dbg installation.
 
@@ -392,6 +456,15 @@ class X64DbgBridge(DebuggerBridge):
             The x64dbg installation path, or None if not found.
         """
         return self._x64dbg_path
+
+    @x64dbg_path.setter
+    def x64dbg_path(self, value: Path | None) -> None:
+        """Set the path to the x64dbg installation.
+
+        Args:
+            value: The x64dbg installation path, or None to clear.
+        """
+        self._x64dbg_path = value
 
     @property
     def name(self) -> ToolName:
@@ -696,8 +769,8 @@ class X64DbgBridge(DebuggerBridge):
         await self._close_connection()
 
         if self._process is not None:
+            pid = self._process.pid
             process_manager = ProcessManager.get_instance()
-            process_manager.unregister(self._process.pid)
 
             self._process.terminate()
             try:
@@ -707,6 +780,9 @@ class X64DbgBridge(DebuggerBridge):
                 )
             except TimeoutError:
                 self._process.kill()
+                await asyncio.to_thread(self._process.wait)
+
+            process_manager.unregister(pid)
             self._process = None
 
         self._attached_pid = None
@@ -928,7 +1004,8 @@ class X64DbgBridge(DebuggerBridge):
         """
         try:
             data = path.read_bytes()
-        except Exception:
+        except Exception as e:
+            _logger.debug("architecture_detection_failed", extra={"error": str(e)})
             return True
 
         if len(data) < PE_MAGIC_OFFSET:
@@ -1595,7 +1672,7 @@ class X64DbgBridge(DebuggerBridge):
                     break
 
         except Exception as e:
-            _logger.warning("disassembly_failed", extra={"error": str(e)})
+            _logger.error("disassembly_failed", extra={"error": str(e)})
             return []
         else:
             return lines
@@ -1687,7 +1764,8 @@ class X64DbgBridge(DebuggerBridge):
 
                 rbp = saved_rbp
 
-            except ToolError:
+            except ToolError as e:
+                _logger.warning("stack_trace_unavailable", extra={"error": str(e)})
                 break
 
         return frames
@@ -1733,7 +1811,8 @@ class X64DbgBridge(DebuggerBridge):
                     )
                     offset = idx + 1
 
-            except ToolError:
+            except ToolError as e:
+                _logger.warning("memory_scan_failed", extra={"error": str(e)})
                 continue
 
         return matches
@@ -1783,57 +1862,53 @@ class X64DbgBridge(DebuggerBridge):
             msg = f"get_threads: {_ERR_NOT_ATTACHED}"
             raise ToolError(msg, tool_name="x64dbg")
 
+        kernel32 = ctypes.windll.kernel32
+
+        class ThreadEntry32(ctypes.Structure):
+            _fields_ = [
+                ("dwSize", wintypes.DWORD),
+                ("cntUsage", wintypes.DWORD),
+                ("th32ThreadID", wintypes.DWORD),
+                ("th32OwnerProcessID", wintypes.DWORD),
+                ("tpBasePri", wintypes.LONG),
+                ("tpDeltaPri", wintypes.LONG),
+                ("dwFlags", wintypes.DWORD),
+            ]
+
+        snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0)
+        if snapshot in {INVALID_HANDLE_VALUE, DWORD_MASK}:
+            error_code = ctypes.get_last_error()
+            msg = f"{_ERR_CREATE_SNAPSHOT_FAILED} for threads: error {error_code}"
+            raise ToolError(msg, tool_name="x64dbg", exit_code=error_code)
+
+        threads: list[ThreadInfo] = []
+
         try:
-            kernel32 = ctypes.windll.kernel32
+            te32 = ThreadEntry32()
+            te32.dwSize = ctypes.sizeof(ThreadEntry32)
+            _logger.debug("initialized_thread_entry", extra={"size": te32.dwSize})
 
-            class ThreadEntry32(ctypes.Structure):
-                _fields_ = [
-                    ("dwSize", wintypes.DWORD),
-                    ("cntUsage", wintypes.DWORD),
-                    ("th32ThreadID", wintypes.DWORD),
-                    ("th32OwnerProcessID", wintypes.DWORD),
-                    ("tpBasePri", wintypes.LONG),
-                    ("tpDeltaPri", wintypes.LONG),
-                    ("dwFlags", wintypes.DWORD),
-                ]
-
-            snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0)
-            if snapshot in {INVALID_HANDLE_VALUE, DWORD_MASK}:
-                error_code = ctypes.get_last_error()
-                msg = f"{_ERR_CREATE_SNAPSHOT_FAILED} for threads: error {error_code}"
-                raise ToolError(msg, tool_name="x64dbg", exit_code=error_code)  # noqa: TRY301
-
-            threads: list[ThreadInfo] = []
-
-            try:
-                te32 = ThreadEntry32()
-                te32.dwSize = ctypes.sizeof(ThreadEntry32)
-                _logger.debug("initialized_thread_entry", extra={"size": te32.dwSize})
-
-                if kernel32.Thread32First(snapshot, ctypes.byref(te32)):
-                    while True:
-                        if te32.th32OwnerProcessID == self._attached_pid:
-                            threads.append(
-                                ThreadInfo(
-                                    tid=te32.th32ThreadID,
-                                    start_address=0,
-                                    state="unknown",
-                                    priority=te32.tpBasePri,
-                                )
+            if kernel32.Thread32First(snapshot, ctypes.byref(te32)):
+                while True:
+                    if te32.th32OwnerProcessID == self._attached_pid:
+                        threads.append(
+                            ThreadInfo(
+                                tid=te32.th32ThreadID,
+                                start_address=0,
+                                state="unknown",
+                                priority=te32.tpBasePri,
                             )
-                        if not kernel32.Thread32Next(snapshot, ctypes.byref(te32)):
-                            break
-            finally:
-                kernel32.CloseHandle(snapshot)
-
-        except ToolError:
-            raise
+                        )
+                    if not kernel32.Thread32Next(snapshot, ctypes.byref(te32)):
+                        break
         except Exception as e:
             msg = f"{_ERR_GET_THREADS_FAILED}: {e}"
             raise ToolError(msg, tool_name="x64dbg") from e
-        else:
-            _logger.debug("threads_found", extra={"count": len(threads), "pid": self._attached_pid})
-            return threads
+        finally:
+            kernel32.CloseHandle(snapshot)
+
+        _logger.debug("threads_found", extra={"count": len(threads), "pid": self._attached_pid})
+        return threads
 
     async def _get_modules(self) -> list[ModuleInfo]:
         """Get loaded modules for the attached process.
@@ -1855,64 +1930,60 @@ class X64DbgBridge(DebuggerBridge):
             msg = f"get_modules: {_ERR_NOT_ATTACHED}"
             raise ToolError(msg, tool_name="x64dbg")
 
+        kernel32 = ctypes.windll.kernel32
+
+        class ModuleEntry32W(ctypes.Structure):
+            _fields_ = [
+                ("dwSize", wintypes.DWORD),
+                ("th32ModuleID", wintypes.DWORD),
+                ("th32ProcessID", wintypes.DWORD),
+                ("GlblcntUsage", wintypes.DWORD),
+                ("ProccntUsage", wintypes.DWORD),
+                ("modBaseAddr", ctypes.c_void_p),
+                ("modBaseSize", wintypes.DWORD),
+                ("hModule", ctypes.c_void_p),
+                ("szModule", ctypes.c_wchar * 256),
+                ("szExePath", ctypes.c_wchar * 260),
+            ]
+
+        snapshot = kernel32.CreateToolhelp32Snapshot(
+            TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32,
+            self._attached_pid,
+        )
+        if snapshot in {INVALID_HANDLE_VALUE, DWORD_MASK}:
+            error_code = ctypes.get_last_error()
+            msg = f"{_ERR_CREATE_SNAPSHOT_FAILED} for modules PID {self._attached_pid}: error {error_code}"
+            raise ToolError(msg, tool_name="x64dbg", exit_code=error_code)
+
+        modules: list[ModuleInfo] = []
+
         try:
-            kernel32 = ctypes.windll.kernel32
+            me32 = ModuleEntry32W()
+            me32.dwSize = ctypes.sizeof(ModuleEntry32W)
+            _logger.debug("initialized_module_entry", extra={"size": me32.dwSize})
 
-            class ModuleEntry32W(ctypes.Structure):
-                _fields_ = [
-                    ("dwSize", wintypes.DWORD),
-                    ("th32ModuleID", wintypes.DWORD),
-                    ("th32ProcessID", wintypes.DWORD),
-                    ("GlblcntUsage", wintypes.DWORD),
-                    ("ProccntUsage", wintypes.DWORD),
-                    ("modBaseAddr", ctypes.c_void_p),
-                    ("modBaseSize", wintypes.DWORD),
-                    ("hModule", ctypes.c_void_p),
-                    ("szModule", ctypes.c_wchar * 256),
-                    ("szExePath", ctypes.c_wchar * 260),
-                ]
-
-            snapshot = kernel32.CreateToolhelp32Snapshot(
-                TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32,
-                self._attached_pid,
-            )
-            if snapshot in {INVALID_HANDLE_VALUE, DWORD_MASK}:
-                error_code = ctypes.get_last_error()
-                msg = f"{_ERR_CREATE_SNAPSHOT_FAILED} for modules PID {self._attached_pid}: error {error_code}"
-                raise ToolError(msg, tool_name="x64dbg", exit_code=error_code)  # noqa: TRY301
-
-            modules: list[ModuleInfo] = []
-
-            try:
-                me32 = ModuleEntry32W()
-                me32.dwSize = ctypes.sizeof(ModuleEntry32W)
-                _logger.debug("initialized_module_entry", extra={"size": me32.dwSize})
-
-                if kernel32.Module32FirstW(snapshot, ctypes.byref(me32)):
-                    while True:
-                        base_addr = me32.modBaseAddr or 0
-                        modules.append(
-                            ModuleInfo(
-                                name=me32.szModule,
-                                path=Path(me32.szExePath),
-                                base_address=base_addr,
-                                size=me32.modBaseSize,
-                                entry_point=0,
-                            )
+            if kernel32.Module32FirstW(snapshot, ctypes.byref(me32)):
+                while True:
+                    base_addr = me32.modBaseAddr or 0
+                    modules.append(
+                        ModuleInfo(
+                            name=me32.szModule,
+                            path=Path(me32.szExePath),
+                            base_address=base_addr,
+                            size=me32.modBaseSize,
+                            entry_point=0,
                         )
-                        if not kernel32.Module32NextW(snapshot, ctypes.byref(me32)):
-                            break
-            finally:
-                kernel32.CloseHandle(snapshot)
-
-        except ToolError:
-            raise
+                    )
+                    if not kernel32.Module32NextW(snapshot, ctypes.byref(me32)):
+                        break
         except Exception as e:
             msg = f"{_ERR_GET_MODULES_FAILED}: {e}"
             raise ToolError(msg, tool_name="x64dbg") from e
-        else:
-            _logger.debug("modules_found", extra={"count": len(modules), "pid": self._attached_pid})
-            return modules
+        finally:
+            kernel32.CloseHandle(snapshot)
+
+        _logger.debug("modules_found", extra={"count": len(modules), "pid": self._attached_pid})
+        return modules
 
     async def _get_process_info(self) -> ProcessInfo | None:
         """Get complete process information including threads and modules.
@@ -1960,51 +2031,47 @@ class X64DbgBridge(DebuggerBridge):
             raise ToolError(msg, tool_name="x64dbg")
 
         parent_pid: int = 0
+        kernel32 = ctypes.windll.kernel32
+
+        class ProcessEntry32W(ctypes.Structure):
+            _fields_ = [
+                ("dwSize", wintypes.DWORD),
+                ("cntUsage", wintypes.DWORD),
+                ("th32ProcessID", wintypes.DWORD),
+                ("th32DefaultHeapID", ctypes.POINTER(ctypes.c_ulong)),
+                ("th32ModuleID", wintypes.DWORD),
+                ("cntThreads", wintypes.DWORD),
+                ("th32ParentProcessID", wintypes.DWORD),
+                ("pcPriClassBase", wintypes.LONG),
+                ("dwFlags", wintypes.DWORD),
+                ("szExeFile", ctypes.c_wchar * 260),
+            ]
+
+        snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+        if snapshot in {INVALID_HANDLE_VALUE, DWORD_MASK}:
+            error_code = ctypes.get_last_error()
+            msg = f"{_ERR_CREATE_SNAPSHOT_FAILED} for process: error {error_code}"
+            raise ToolError(msg, tool_name="x64dbg", exit_code=error_code)
+
         try:
-            kernel32 = ctypes.windll.kernel32
+            pe32 = ProcessEntry32W()
+            pe32.dwSize = ctypes.sizeof(ProcessEntry32W)
+            _logger.debug("initialized_process_entry", extra={"size": pe32.dwSize})
 
-            class ProcessEntry32W(ctypes.Structure):
-                _fields_ = [
-                    ("dwSize", wintypes.DWORD),
-                    ("cntUsage", wintypes.DWORD),
-                    ("th32ProcessID", wintypes.DWORD),
-                    ("th32DefaultHeapID", ctypes.POINTER(ctypes.c_ulong)),
-                    ("th32ModuleID", wintypes.DWORD),
-                    ("cntThreads", wintypes.DWORD),
-                    ("th32ParentProcessID", wintypes.DWORD),
-                    ("pcPriClassBase", wintypes.LONG),
-                    ("dwFlags", wintypes.DWORD),
-                    ("szExeFile", ctypes.c_wchar * 260),
-                ]
-
-            snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
-            if snapshot in {INVALID_HANDLE_VALUE, DWORD_MASK}:
-                error_code = ctypes.get_last_error()
-                msg = f"{_ERR_CREATE_SNAPSHOT_FAILED} for process: error {error_code}"
-                raise ToolError(msg, tool_name="x64dbg", exit_code=error_code)  # noqa: TRY301
-
-            try:
-                pe32 = ProcessEntry32W()
-                pe32.dwSize = ctypes.sizeof(ProcessEntry32W)
-                _logger.debug("initialized_process_entry", extra={"size": pe32.dwSize})
-
-                if kernel32.Process32FirstW(snapshot, ctypes.byref(pe32)):
-                    while True:
-                        if pe32.th32ProcessID == pid:
-                            parent_pid = int(pe32.th32ParentProcessID)
-                            break
-                        if not kernel32.Process32NextW(snapshot, ctypes.byref(pe32)):
-                            break
-            finally:
-                kernel32.CloseHandle(snapshot)
-
-        except ToolError:
-            raise
+            if kernel32.Process32FirstW(snapshot, ctypes.byref(pe32)):
+                while True:
+                    if pe32.th32ProcessID == pid:
+                        parent_pid = int(pe32.th32ParentProcessID)
+                        break
+                    if not kernel32.Process32NextW(snapshot, ctypes.byref(pe32)):
+                        break
         except Exception as e:
             msg = f"{_ERR_GET_PARENT_PID_FAILED}: {e}"
             raise ToolError(msg, tool_name="x64dbg") from e
-        else:
-            return parent_pid
+        finally:
+            kernel32.CloseHandle(snapshot)
+
+        return parent_pid
 
     @staticmethod
     def _get_command_line(pid: int) -> str | None:

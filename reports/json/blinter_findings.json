@@ -1,7 +1,22 @@
 {
   "tool": "blinter",
-  "generated": "2026-01-30T22:10:23.391879",
-  "total_findings": 0,
-  "total_files": 0,
-  "files": []
+  "generated": "2026-02-06T13:34:41.022970",
+  "total_findings": 1,
+  "total_files": 1,
+  "files": [
+    {
+      "path": "D:\\Intellicrack\\Intellicrack.cmd",
+      "count": 1,
+      "findings": [
+        {
+          "line": 5,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 5: Missing exit code (W001)"
+        }
+      ]
+    }
+  ]
 }

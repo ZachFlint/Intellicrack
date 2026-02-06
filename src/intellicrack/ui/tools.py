@@ -8,6 +8,7 @@ specialized analysis panels (Licensing, Scripts, Stack).
 
 from __future__ import annotations
 
+import importlib
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Protocol, cast, runtime_checkable
 
@@ -509,7 +510,7 @@ class FunctionListPanel(QFrame):
             name = item.text().split("  ")[1]
             self.function_selected.emit(name, address)
         except (ValueError, IndexError):
-            _logger.exception("failed_to_parse_function_item", extra={"text": item.text()})
+            _logger.warning("failed_to_parse_function_item", extra={"text": item.text()})
 
     def set_functions(self, functions: list[tuple[str, int]]) -> None:
         """Set the function list.
@@ -818,9 +819,7 @@ class ToolOutputPanel(QFrame):
             index = self._tab_widget.indexOf(tab)
             if index >= 0:
                 self._tab_widget.setCurrentIndex(index)
-        elif widget := self._panels.get(
-            tab_name.lower()
-        ) or self._embedded_tools.get(tab_name.lower()):
+        elif widget := self._panels.get(tab_name.lower()) or self._embedded_tools.get(tab_name.lower()):
             self._activate_tab_by_widget(widget)
 
     def log(self, message: str) -> None:
@@ -872,13 +871,13 @@ class ToolOutputPanel(QFrame):
         if self._licensing_panel is not None:
             return self._licensing_panel
 
-        from .panels.licensing_panel import LicensingAnalysisPanel  # noqa: PLC0415
-
-        self._licensing_panel = LicensingAnalysisPanel()
-        self._tab_widget.addTab(self._licensing_panel, "Licensing")
-        self._panels["licensing"] = self._licensing_panel
+        panel_module = importlib.import_module(".panels.licensing_panel", "intellicrack.ui")
+        panel = cast("LicensingAnalysisPanel", panel_module.LicensingAnalysisPanel())
+        self._licensing_panel = panel
+        self._tab_widget.addTab(panel, "Licensing")
+        self._panels["licensing"] = panel
         _logger.info("licensing_panel_added")
-        return self._licensing_panel
+        return panel
 
     def add_script_panel(self) -> QWidget:
         """Add the script manager panel as a tab.
@@ -889,13 +888,13 @@ class ToolOutputPanel(QFrame):
         if self._script_panel is not None:
             return self._script_panel
 
-        from .panels.script_manager import ScriptManagerPanel  # noqa: PLC0415
-
-        self._script_panel = ScriptManagerPanel()
-        self._tab_widget.addTab(self._script_panel, "Scripts")
-        self._panels["scripts"] = self._script_panel
+        panel_module = importlib.import_module(".panels.script_manager", "intellicrack.ui")
+        panel = cast("QWidget", panel_module.ScriptManagerPanel())
+        self._script_panel = panel
+        self._tab_widget.addTab(panel, "Scripts")
+        self._panels["scripts"] = panel
         _logger.info("script_panel_added")
-        return self._script_panel
+        return panel
 
     def add_stack_panel(self) -> QWidget:
         """Add the stack viewer panel as a tab.
@@ -906,13 +905,13 @@ class ToolOutputPanel(QFrame):
         if self._stack_panel is not None:
             return self._stack_panel
 
-        from .panels.stack_viewer import StackViewerPanel  # noqa: PLC0415
-
-        self._stack_panel = StackViewerPanel()
-        self._tab_widget.addTab(self._stack_panel, "Stack")
-        self._panels["stack"] = self._stack_panel
+        panel_module = importlib.import_module(".panels.stack_viewer", "intellicrack.ui")
+        panel = cast("QWidget", panel_module.StackViewerPanel())
+        self._stack_panel = panel
+        self._tab_widget.addTab(panel, "Stack")
+        self._panels["stack"] = panel
         _logger.info("stack_panel_added")
-        return self._stack_panel
+        return panel
 
     def add_hxd_tab(self) -> HxDWidgetProtocol | None:
         """Add the HxD hex editor as an embedded tab.
@@ -924,13 +923,14 @@ class ToolOutputPanel(QFrame):
             return self._hxd_widget
 
         try:
-            from .embedding.hxd_widget import HxDWidget  # noqa: PLC0415
-
-            self._hxd_widget = cast("HxDWidgetProtocol", HxDWidget())
+            widget_module = importlib.import_module(".embedding.hxd_widget", "intellicrack.ui")
+            raw_widget = widget_module.HxDWidget()
+            self._hxd_widget = cast("HxDWidgetProtocol", raw_widget)
+            qwidget = cast("QWidget", raw_widget)
             self._hxd_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("hxd"))
             self._hxd_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("hxd"))
-            self._tab_widget.addTab(cast("QWidget", self._hxd_widget), "HxD")
-            self._embedded_tools["hxd"] = cast("QWidget", self._hxd_widget)
+            self._tab_widget.addTab(qwidget, "HxD")
+            self._embedded_tools["hxd"] = qwidget
             _logger.info("hxd_tab_added")
         except Exception as e:
             _logger.warning("hxd_tab_add_failed", extra={"error": str(e)})
@@ -951,14 +951,15 @@ class ToolOutputPanel(QFrame):
             return self._x64dbg_widget
 
         try:
-            from .embedding.x64dbg_widget import X64DbgWidget  # noqa: PLC0415
-
-            self._x64dbg_widget = cast("X64DbgWidgetProtocol", X64DbgWidget(use_64bit=is_64bit))
+            widget_module = importlib.import_module(".embedding.x64dbg_widget", "intellicrack.ui")
+            raw_widget = widget_module.X64DbgWidget(use_64bit=is_64bit)
+            self._x64dbg_widget = cast("X64DbgWidgetProtocol", raw_widget)
+            qwidget = cast("QWidget", raw_widget)
             self._x64dbg_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("x64dbg"))
             self._x64dbg_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("x64dbg"))
             tab_name = "x64dbg" if is_64bit else "x32dbg"
-            self._tab_widget.addTab(cast("QWidget", self._x64dbg_widget), tab_name)
-            self._embedded_tools["x64dbg"] = cast("QWidget", self._x64dbg_widget)
+            self._tab_widget.addTab(qwidget, tab_name)
+            self._embedded_tools["x64dbg"] = qwidget
             _logger.info("x64dbg_tab_added", extra={"is_64bit": is_64bit})
         except Exception as e:
             _logger.warning("x64dbg_tab_add_failed", extra={"error": str(e)})
@@ -976,13 +977,14 @@ class ToolOutputPanel(QFrame):
             return self._cutter_widget
 
         try:
-            from .embedding.cutter_widget import CutterWidget  # noqa: PLC0415
-
-            self._cutter_widget = cast("CutterWidgetProtocol", CutterWidget())
+            widget_module = importlib.import_module(".embedding.cutter_widget", "intellicrack.ui")
+            raw_widget = widget_module.CutterWidget()
+            self._cutter_widget = cast("CutterWidgetProtocol", raw_widget)
+            qwidget = cast("QWidget", raw_widget)
             self._cutter_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("cutter"))
             self._cutter_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("cutter"))
-            self._tab_widget.addTab(cast("QWidget", self._cutter_widget), "Cutter")
-            self._embedded_tools["cutter"] = cast("QWidget", self._cutter_widget)
+            self._tab_widget.addTab(qwidget, "Cutter")
+            self._embedded_tools["cutter"] = qwidget
             _logger.info("cutter_tab_added")
         except Exception as e:
             _logger.warning("cutter_tab_add_failed", extra={"error": str(e)})
@@ -1000,13 +1002,14 @@ class ToolOutputPanel(QFrame):
             return self._ghidra_widget
 
         try:
-            from .embedding.ghidra_widget import GhidraWidget  # noqa: PLC0415
-
-            self._ghidra_widget = cast("GhidraWidgetProtocol", GhidraWidget())
+            widget_module = importlib.import_module(".embedding.ghidra_widget", "intellicrack.ui")
+            raw_widget = widget_module.GhidraWidget()
+            self._ghidra_widget = cast("GhidraWidgetProtocol", raw_widget)
+            qwidget = cast("QWidget", raw_widget)
             self._ghidra_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("ghidra"))
             self._ghidra_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("ghidra"))
-            self._tab_widget.addTab(cast("QWidget", self._ghidra_widget), "Ghidra (Embed)")
-            self._embedded_tools["ghidra"] = cast("QWidget", self._ghidra_widget)
+            self._tab_widget.addTab(qwidget, "Ghidra (Embed)")
+            self._embedded_tools["ghidra"] = qwidget
             _logger.info("ghidra_tab_added")
         except Exception as e:
             _logger.warning("ghidra_tab_add_failed", extra={"error": str(e)})
@@ -1024,13 +1027,14 @@ class ToolOutputPanel(QFrame):
             return self._radare2_widget
 
         try:
-            from .embedding.radare2_widget import Radare2Widget  # noqa: PLC0415
-
-            self._radare2_widget = cast("Radare2WidgetProtocol", Radare2Widget())
+            widget_module = importlib.import_module(".embedding.radare2_widget", "intellicrack.ui")
+            raw_widget = widget_module.Radare2Widget()
+            self._radare2_widget = cast("Radare2WidgetProtocol", raw_widget)
+            qwidget = cast("QWidget", raw_widget)
             self._radare2_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("radare2"))
             self._radare2_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("radare2"))
-            self._tab_widget.addTab(cast("QWidget", self._radare2_widget), "radare2")
-            self._embedded_tools["radare2_gui"] = cast("QWidget", self._radare2_widget)
+            self._tab_widget.addTab(qwidget, "radare2")
+            self._embedded_tools["radare2_gui"] = qwidget
             _logger.info("radare2_tab_added")
         except Exception as e:
             _logger.warning("radare2_tab_add_failed", extra={"error": str(e)})
@@ -1048,13 +1052,14 @@ class ToolOutputPanel(QFrame):
             return self._frida_panel
 
         try:
-            from .panels.frida_panel import FridaPanel  # noqa: PLC0415
-
-            self._frida_panel = cast("FridaPanelProtocol", FridaPanel())
+            panel_module = importlib.import_module(".panels.frida_panel", "intellicrack.ui")
+            raw_widget = panel_module.FridaPanel()
+            self._frida_panel = cast("FridaPanelProtocol", raw_widget)
+            qwidget = cast("QWidget", raw_widget)
             self._frida_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("frida"))
             self._frida_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("frida"))
-            self._tab_widget.addTab(cast("QWidget", self._frida_panel), "Frida")
-            self._panels["frida"] = cast("QWidget", self._frida_panel)
+            self._tab_widget.addTab(qwidget, "Frida")
+            self._panels["frida"] = qwidget
             _logger.info("frida_tab_added")
         except Exception as e:
             _logger.warning("frida_tab_add_failed", extra={"error": str(e)})
@@ -1072,13 +1077,14 @@ class ToolOutputPanel(QFrame):
             return self._process_panel
 
         try:
-            from .panels.process_panel import ProcessPanel  # noqa: PLC0415
-
-            self._process_panel = cast("ProcessPanelProtocol", ProcessPanel())
+            panel_module = importlib.import_module(".panels.process_panel", "intellicrack.ui")
+            raw_widget = panel_module.ProcessPanel()
+            self._process_panel = cast("ProcessPanelProtocol", raw_widget)
+            qwidget = cast("QWidget", raw_widget)
             self._process_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("process"))
             self._process_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("process"))
-            self._tab_widget.addTab(cast("QWidget", self._process_panel), "Process")
-            self._panels["process"] = cast("QWidget", self._process_panel)
+            self._tab_widget.addTab(qwidget, "Process")
+            self._panels["process"] = qwidget
             _logger.info("process_tab_added")
         except Exception as e:
             _logger.warning("process_tab_add_failed", extra={"error": str(e)})
@@ -1096,13 +1102,14 @@ class ToolOutputPanel(QFrame):
             return self._binary_panel
 
         try:
-            from .panels.binary_panel import BinaryPanel  # noqa: PLC0415
-
-            self._binary_panel = cast("BinaryPanelProtocol", BinaryPanel())
+            panel_module = importlib.import_module(".panels.binary_panel", "intellicrack.ui")
+            raw_widget = panel_module.BinaryPanel()
+            self._binary_panel = cast("BinaryPanelProtocol", raw_widget)
+            qwidget = cast("QWidget", raw_widget)
             self._binary_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("binary"))
             self._binary_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("binary"))
-            self._tab_widget.addTab(cast("QWidget", self._binary_panel), "Binary")
-            self._panels["binary"] = cast("QWidget", self._binary_panel)
+            self._tab_widget.addTab(qwidget, "Binary")
+            self._panels["binary"] = qwidget
             _logger.info("binary_tab_added")
         except Exception as e:
             _logger.warning("binary_tab_add_failed", extra={"error": str(e)})
@@ -1120,13 +1127,14 @@ class ToolOutputPanel(QFrame):
             return self._sandbox_panel
 
         try:
-            from .panels.sandbox_panel import SandboxPanel  # noqa: PLC0415
-
-            self._sandbox_panel = cast("SandboxPanelProtocol", SandboxPanel())
+            panel_module = importlib.import_module(".panels.sandbox_panel", "intellicrack.ui")
+            raw_widget = panel_module.SandboxPanel()
+            self._sandbox_panel = cast("SandboxPanelProtocol", raw_widget)
+            qwidget = cast("QWidget", raw_widget)
             self._sandbox_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("sandbox"))
             self._sandbox_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("sandbox"))
-            self._tab_widget.addTab(cast("QWidget", self._sandbox_panel), "Sandbox")
-            self._panels["sandbox"] = cast("QWidget", self._sandbox_panel)
+            self._tab_widget.addTab(qwidget, "Sandbox")
+            self._panels["sandbox"] = qwidget
             _logger.info("sandbox_tab_added")
         except Exception as e:
             _logger.warning("sandbox_tab_add_failed", extra={"error": str(e)})

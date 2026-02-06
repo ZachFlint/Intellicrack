@@ -1,108 +1,24 @@
-41 findings in D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py
+3 findings in D:\Intellicrack\src\intellicrack\__init__.py
 
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:177:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+D:\Intellicrack\src\intellicrack\__init__.py:29:1: RUF067 `__init__` module should only contain docstrings and re-exports
 
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:178:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+D:\Intellicrack\src\intellicrack\__init__.py:33:1: RUF067 `__init__` module should only contain docstrings and re-exports
 
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:179:35: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:202:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:203:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:204:35: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:233:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:235:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:237:39: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:257:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:258:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:261:43: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:284:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:286:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:288:39: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:310:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:312:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:314:36: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:338:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:341:40: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:359:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:362:42: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:380:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:383:43: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:402:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:403:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:405:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:407:36: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:427:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:428:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:430:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:432:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:452:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:453:38: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:455:17: B010 Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:457:39: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:480:42: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:499:43: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:503:42: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:524:42: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_ui\test_app_embedded_tools.py:548:44: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+D:\Intellicrack\src\intellicrack\__init__.py:45:1: RUF067 `__init__` module should only contain docstrings and re-exports
 
 
-4 findings in D:\Intellicrack\tests\test_bridges\test_x64dbg_api_coverage.py
+2 findings in D:\Intellicrack\src\intellicrack\ui\tool_config.py
 
-D:\Intellicrack\tests\test_bridges\test_x64dbg_api_coverage.py:8:1: I001 Import block is un-sorted or un-formatted
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:732:9: SIM102 Use a single `if` statement instead of nested `if` statements
 
-D:\Intellicrack\tests\test_bridges\test_x64dbg_api_coverage.py:10:8: F401 `asyncio` imported but unused
-
-D:\Intellicrack\tests\test_bridges\test_x64dbg_api_coverage.py:13:27: F401 `unittest.mock.MagicMock` imported but unused
-
-D:\Intellicrack\tests\test_bridges\test_x64dbg_api_coverage.py:13:38: F401 `unittest.mock.patch` imported but unused
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:1164:46: RUF056 Avoid providing a falsy fallback to `dict.get()` in boolean test positions. The default fallback `None` is already falsy.
 
 
-3 findings in D:\Intellicrack\tests\test_providers\test_local_transformers_provider.py
+1 findings in D:\Intellicrack\src\intellicrack\providers\anthropic.py
 
-D:\Intellicrack\tests\test_providers\test_local_transformers_provider.py:10:27: F401 `unittest.mock.MagicMock` imported but unused
-
-D:\Intellicrack\tests\test_providers\test_local_transformers_provider.py:10:38: F401 `unittest.mock.patch` imported but unused
-
-D:\Intellicrack\tests\test_providers\test_local_transformers_provider.py:31:5: TC005 Found empty type-checking block
+D:\Intellicrack\src\intellicrack\providers\anthropic.py:188:29: ARG004 Unused static method argument: `model_id`
 
 
-1 findings in D:\Intellicrack\tests\test_ui\test_tools_logic.py
+1 findings in D:\Intellicrack\src\intellicrack\ui\resources\font_manager.py
 
-D:\Intellicrack\tests\test_ui\test_tools_logic.py:12:26: F401 `PyQt6.QtCore.Qt` imported but unused
+D:\Intellicrack\src\intellicrack\ui\resources\font_manager.py:9:21: TC003 Move standard library import `pathlib.Path` into a type-checking block

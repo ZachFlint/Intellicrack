@@ -435,9 +435,9 @@ class TestPromptFormatting:
         provider = LocalTransformersProvider()
         messages = [{"role": "user", "content": "Hello"}]
         prompt = provider._format_prompt(messages)
-        assert "<|user|>" in prompt
+        assert "<|im_start|>user" in prompt
         assert "Hello" in prompt
-        assert "<|assistant|>" in prompt
+        assert "<|im_start|>assistant" in prompt
 
     def test_format_prompt_with_system(self) -> None:
         """Should include system message."""
@@ -447,7 +447,7 @@ class TestPromptFormatting:
             {"role": "user", "content": "Hi"},
         ]
         prompt = provider._format_prompt(messages)
-        assert "<|system|>" in prompt
+        assert "<|im_start|>system" in prompt
         assert "Be helpful" in prompt
 
 

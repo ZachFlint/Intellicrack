@@ -255,12 +255,14 @@ class HxDIntegration:
     """Standalone HxD integration for non-embedded usage.
 
     Provides methods to launch HxD and open files without
-    embedding the window into a Qt widget.
+    embedding the window into a Qt widget. Standalone processes
+    are tracked for monitoring but NOT auto-killed on app exit.
     """
 
     def __init__(self) -> None:
         """Initialize HxD integration."""
         self._exe_path: Path | None = None
+        self._standalone_processes: list[subprocess.Popen[bytes]] = []
 
     def find_hxd(self) -> Path | None:
         """Find HxD installation.
@@ -291,11 +293,16 @@ class HxDIntegration:
             return False
 
         try:
-            subprocess.Popen([str(exe), str(file_path)])
+            proc = subprocess.Popen([str(exe), str(file_path)])
         except OSError:
             _logger.exception("hxd_launch_failed", extra={"path": str(file_path)})
             return False
         else:
+            self._standalone_processes.append(proc)
+            _logger.info(
+                "hxd_standalone_launched",
+                extra={"pid": proc.pid, "path": str(file_path)},
+            )
             return True
 
     def open_at_offset(self, file_path: Path, offset: int) -> bool:
@@ -316,3 +323,29 @@ class HxDIntegration:
             extra={"path": str(file_path), "offset": hex(offset), "note": "manual_navigation_required"},
         )
         return self.open_file(file_path)
+
+    def get_standalone_pids(self) -> list[int]:
+        """Get PIDs of all tracked standalone HxD processes.
+
+        Returns:
+            List of PIDs for running standalone processes.
+        """
+        return [p.pid for p in self._standalone_processes if p.poll() is None]
+
+    def cleanup_standalone(self) -> None:
+        """Terminate all tracked standalone HxD processes.
+
+        This is intended for manual invocation when the caller
+        explicitly wants to close standalone HxD instances.
+        """
+        for proc in self._standalone_processes:
+            if proc.poll() is None:
+                _logger.info("hxd_standalone_terminating", extra={"pid": proc.pid})
+                try:
+                    proc.terminate()
+                    proc.wait(timeout=5.0)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                except OSError:
+                    _logger.debug("hxd_standalone_cleanup_error", extra={"pid": proc.pid})
+        self._standalone_processes.clear()

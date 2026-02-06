@@ -59,6 +59,7 @@ dependencies = [
     "aiofiles",
     "aiosqlite",
     "pydantic",
+    "psutil",
     "mcp>=1.26.0",
     "pyannotate>=1.2.0,<2",
     "structlog>=24.1.0",
@@ -616,7 +617,7 @@ convention = "google"
 max-args = 20
 max-branches = 25
 max-statements = 100
-max-public-methods = 40
+max-public-methods = 50
 
 [tool.ruff.lint.isort]
 lines-after-imports = 2

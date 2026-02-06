@@ -449,3 +449,6 @@ target/
 # Templates were constraining AI functionality - removed in favor of dynamic generation
 intellicrack/ai/templates/
 intellicrack/utils/templates/
+
+.gemini/
+gha-creds-*.json

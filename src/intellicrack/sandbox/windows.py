@@ -141,7 +141,7 @@ class WindowsSandbox(SandboxBase):
                 is_available = False
 
         except Exception as e:
-            _logger.debug("windows_sandbox_availability_check_failed", extra={"error": str(e)})
+            _logger.warning("windows_sandbox_availability_check_failed", extra={"error": str(e)})
             return False
         else:
             return is_available
@@ -236,14 +236,25 @@ class WindowsSandbox(SandboxBase):
 
         try:
             if self._process is not None:
+                pid = self._process.pid
                 process_manager = ProcessManager.get_instance()
-                process_manager.unregister(self._process.pid)
 
-                await process_manager.run_tracked_async(
-                    ["taskkill", "/F", "/IM", "WindowsSandbox.exe"],
-                    name="taskkill-sandbox",
-                    timeout=_TASKKILL_TIMEOUT,
-                )
+                try:
+                    await process_manager.run_tracked_async(
+                        ["taskkill", "/F", "/PID", str(pid)],
+                        name="taskkill-sandbox-pid",
+                        timeout=_TASKKILL_TIMEOUT,
+                    )
+                except Exception:
+                    _logger.warning(
+                        "pid_taskkill_failed_trying_image_name",
+                        extra={"pid": pid},
+                    )
+                    await process_manager.run_tracked_async(
+                        ["taskkill", "/F", "/IM", "WindowsSandbox.exe"],
+                        name="taskkill-sandbox-fallback",
+                        timeout=_TASKKILL_TIMEOUT,
+                    )
 
                 try:
                     await asyncio.wait_for(
@@ -252,7 +263,9 @@ class WindowsSandbox(SandboxBase):
                     )
                 except TimeoutError:
                     self._process.kill()
+                    await asyncio.to_thread(self._process.wait)
 
+                process_manager.unregister(pid)
                 self._process = None
 
             await self._cleanup()
@@ -524,7 +537,7 @@ call "{sandbox_script_path}"
                     result_text = result_path.read_text(encoding="utf-8").strip()
                     exit_code = int(result_text) if result_text.isdigit() else _RETURNCODE_FAILURE
                 except Exception as e:
-                    _logger.warning("result_read_failed", extra={"error": str(e)})
+                    _logger.debug("result_read_failed", extra={"error": str(e)})
                 else:
                     return (exit_code, "", "")
 

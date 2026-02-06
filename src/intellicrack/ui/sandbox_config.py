@@ -139,6 +139,12 @@ class SandboxTestWorker(QThread):
 
             self.finished.emit(True, "Windows Sandbox test completed successfully")
 
+        except subprocess.SubprocessError as e:
+            _logger.exception(
+                "sandbox_test_error",
+                extra={"error": str(e)},
+            )
+            self.finished.emit(False, f"Sandbox process error: {e}")
         except FileNotFoundError:
             _logger.exception(
                 "sandbox_test_error",
@@ -164,6 +170,16 @@ class SandboxTestWorker(QThread):
             )
             self.finished.emit(False, f"Failed to launch sandbox: {e}")
         finally:
+            if self._process is not None and self._process.poll() is None:
+                pid = self._process.pid
+                try:
+                    ProcessManager.terminate_tree(pid, graceful_timeout=5.0, force_timeout=3.0)
+                except Exception:
+                    _logger.debug(
+                        "sandbox_test_terminate_failed",
+                        extra={"pid": pid},
+                    )
+                ProcessManager.get_instance().unregister(pid)
             if self._wsb_file and self._wsb_file.exists():
                 with contextlib.suppress(OSError):
                     self._wsb_file.unlink()
@@ -187,32 +203,28 @@ class SandboxTestWorker(QThread):
         if self._shared_folder:
             shared_path = Path(self._shared_folder)
             if shared_path.exists():
-                config_lines.extend(
-                    (
-                        "  <MappedFolders>",
-                        "    <MappedFolder>",
-                        f"      <HostFolder>{shared_path}</HostFolder>",
-                        "      <SandboxFolder>C:\\Shared</SandboxFolder>",
-                        f"      <ReadOnly>{'true' if self._read_only else 'false'}</ReadOnly>",
-                        "    </MappedFolder>",
-                        "  </MappedFolders>",
-                    )
-                )
-        config_lines.extend(
-            (
-                "  <LogonCommand>",
-                '    <Command>cmd.exe /c "echo Intellicrack Sandbox Test &amp;&amp; timeout /t 5"</Command>',
-                "  </LogonCommand>",
-                "</Configuration>",
-            )
-        )
+                config_lines.extend((
+                    "  <MappedFolders>",
+                    "    <MappedFolder>",
+                    f"      <HostFolder>{shared_path}</HostFolder>",
+                    "      <SandboxFolder>C:\\Shared</SandboxFolder>",
+                    f"      <ReadOnly>{'true' if self._read_only else 'false'}</ReadOnly>",
+                    "    </MappedFolder>",
+                    "  </MappedFolders>",
+                ))
+        config_lines.extend((
+            "  <LogonCommand>",
+            '    <Command>cmd.exe /c "echo Intellicrack Sandbox Test &amp;&amp; timeout /t 5"</Command>',
+            "  </LogonCommand>",
+            "</Configuration>",
+        ))
         return "\n".join(config_lines)
 
     def stop(self) -> None:
         """Stop the sandbox test and terminate the process."""
         if self._process:
+            pid = self._process.pid
             process_manager = ProcessManager.get_instance()
-            process_manager.unregister(self._process.pid)
 
             try:
                 self._process.terminate()
@@ -220,6 +232,9 @@ class SandboxTestWorker(QThread):
             except (subprocess.TimeoutExpired, OSError):
                 with contextlib.suppress(OSError):
                     self._process.kill()
+                    self._process.wait()
+
+            process_manager.unregister(pid)
 
 
 class SandboxConfigDialog(QDialog):
@@ -361,9 +376,7 @@ class SandboxConfigDialog(QDialog):
         button_box.accepted.connect(self._on_accept)
         button_box.rejected.connect(self.reject)
 
-        if apply_button := button_box.button(
-            QDialogButtonBox.StandardButton.Apply
-        ):
+        if apply_button := button_box.button(QDialogButtonBox.StandardButton.Apply):
             apply_button.clicked.connect(self._on_apply)
 
         button_layout.addWidget(button_box)

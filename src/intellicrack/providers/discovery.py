@@ -185,9 +185,7 @@ class DiscoveryCache:
         """
         now = time.time()
         result: dict[ProviderName, list[ModelInfo]] = {
-            provider: entry.models
-            for provider, entry in self._cache.items()
-            if now <= entry.expires_at
+            provider: entry.models for provider, entry in self._cache.items() if now <= entry.expires_at
         }
         return result
 
@@ -678,11 +676,7 @@ class ModelDiscovery:
             Most recent DiscoveryEvent or None if none exists.
         """
         return next(
-            (
-                event
-                for event in reversed(self._events)
-                if event.provider == provider
-            ),
+            (event for event in reversed(self._events) if event.provider == provider),
             None,
         )
 

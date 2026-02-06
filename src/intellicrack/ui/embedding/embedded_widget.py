@@ -14,6 +14,7 @@ from PyQt6.QtCore import QTimer, pyqtSignal
 from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from intellicrack.core.logging import get_logger
+from intellicrack.core.process_manager import ProcessManager, ProcessType
 from intellicrack.ui.embedding.win32_helper import Win32WindowHelper
 
 
@@ -174,6 +175,11 @@ class EmbeddedToolWidget(QWidget):
             startupinfo=startupinfo,
             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
         )
+        ProcessManager.get_instance().register(
+            proc,
+            name=self.get_tool_display_name(),
+            process_type=ProcessType.EXTERNAL_TOOL,
+        )
         _logger.debug("process_launched", extra={"pid": proc.pid, "launch_args": args})
         return proc
 
@@ -310,17 +316,14 @@ class EmbeddedToolWidget(QWidget):
             pid = self._process.pid
             _logger.debug("terminating_tool_process", extra={"pid": pid})
             try:
-                self._process.terminate()
-                self._process.wait(timeout=3.0)
-                _logger.debug("process_terminated", extra={"pid": pid})
-            except subprocess.TimeoutExpired:
-                _logger.debug("process_terminate_timeout_killing", extra={"pid": pid})
-                self._process.kill()
+                ProcessManager.terminate_tree(pid, 3.0, 2.0)
+                _logger.debug("process_tree_terminated", extra={"pid": pid})
             except Exception as e:
                 _logger.warning(
                     "process_termination_error",
                     extra={"pid": pid, "error": str(e)},
                 )
+            ProcessManager.get_instance().unregister(pid)
 
         self._process = None
         self._loaded_file = None
@@ -336,14 +339,11 @@ class EmbeddedToolWidget(QWidget):
             pid = self._process.pid
             _logger.debug("cleanup_terminating_process", extra={"pid": pid})
             try:
-                self._process.terminate()
-                self._process.wait(timeout=2.0)
-                _logger.debug("cleanup_process_terminated", extra={"pid": pid})
-            except subprocess.TimeoutExpired:
-                _logger.debug("cleanup_process_timeout_killing", extra={"pid": pid})
-                self._process.kill()
+                ProcessManager.terminate_tree(pid, 2.0, 2.0)
+                _logger.debug("cleanup_process_tree_terminated", extra={"pid": pid})
             except Exception:
                 _logger.debug("cleanup_exception_ignored", extra={"pid": pid})
+            ProcessManager.get_instance().unregister(pid)
 
         self._process = None
         _logger.debug("cleanup_complete", extra={"tool": self.get_tool_display_name()})

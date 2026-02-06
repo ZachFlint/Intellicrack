@@ -147,7 +147,7 @@ class HuggingFaceProvider(LLMProviderBase):
                 extra={"has_custom_base": credentials.api_base is not None},
             )
         except httpx.HTTPStatusError as e:
-            self._logger.exception(
+            self._logger.warning(
                 "huggingface_connect_failed",
                 extra={"status_code": e.response.status_code},
             )
@@ -155,7 +155,7 @@ class HuggingFaceProvider(LLMProviderBase):
                 raise AuthenticationError(f"Invalid HuggingFace API token: {e}") from e
             raise ProviderError(f"Failed to connect to HuggingFace: {e}") from e
         except Exception as e:
-            self._logger.exception(
+            self._logger.warning(
                 "huggingface_connect_failed",
                 extra={"error_type": type(e).__name__},
             )
@@ -258,7 +258,7 @@ class HuggingFaceProvider(LLMProviderBase):
             return models
 
         except Exception as e:
-            self._logger.exception(
+            self._logger.warning(
                 "huggingface_list_models_failed",
                 extra={"error_type": type(e).__name__},
             )
@@ -380,114 +380,112 @@ class HuggingFaceProvider(LLMProviderBase):
 
         start_time = time.perf_counter()
 
+        request_body: dict[str, object] = {
+            "model": model,
+            "messages": hf_messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "stream": False,
+        }
+
+        if tools:
+            request_body["tools"] = self._convert_tools_to_provider_format(tools)
+
         try:
-            request_body: dict[str, object] = {
-                "model": model,
-                "messages": hf_messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-                "stream": False,
-            }
-
-            if tools:
-                request_body["tools"] = self._convert_tools_to_provider_format(tools)
-
             response = await self._client.post(
                 f"{self._base_url}/models/{model}/v1/chat/completions",
                 json=request_body,
             )
-
-            if response.status_code == HTTP_RATE_LIMITED:
-                raise RateLimitError("HuggingFace rate limit exceeded")  # noqa: TRY301
-            if response.status_code == HTTP_SERVICE_UNAVAILABLE:
-                error_data = response.json()
-                error_msg = error_data.get("error", "Model is loading")
-                raise ProviderError(f"Model is loading: {error_msg}")  # noqa: TRY301
-            response.raise_for_status()
-
-            data = response.json()
-            duration_ms = (time.perf_counter() - start_time) * 1000
-
-            choices = data.get("choices", [])
-            if not choices:
-                raise ProviderError("No response choices returned")  # noqa: TRY301
-
-            response_message = choices[0].get("message", {})
-            content = response_message.get("content", "") or ""
-            tool_calls: list[ToolCall] = []
-
-            if response_message.get("tool_calls"):
-                for tc in response_message["tool_calls"]:
-                    func_data = tc.get("function", {})
-                    func_name = func_data.get("name", "")
-                    args_str = func_data.get("arguments", "{}")
-                    try:
-                        args: dict[str, object] = json.loads(args_str)
-                    except json.JSONDecodeError:
-                        args = {}
-
-                    tool_call = ToolCall(
-                        id=tc.get("id", f"call_{len(tool_calls)}"),
-                        tool_name=(func_name.split(".")[0] if "." in func_name else func_name),
-                        function_name=func_name,
-                        arguments=args,
-                    )
-                    tool_calls.append(tool_call)
-                    self._logger.debug(
-                        "tool_call_parsed",
-                        extra={
-                            "tool_name": tool_call.tool_name,
-                            "arguments_count": len(tool_call.arguments),
-                        },
-                    )
-
-            message = Message(
-                role="assistant",
-                content=content,
-                tool_calls=tool_calls or None,
-                timestamp=datetime.now(),
-            )
-
-            log_provider_response(
-                provider="huggingface",
-                model=model,
-                tool_calls_count=len(tool_calls),
-                duration_ms=duration_ms,
-            )
-
-            self._logger.info(
-                "huggingface_chat_completed",
-                extra={
-                    "model": model,
-                    "messages_count": len(messages),
-                    "tool_calls_count": len(tool_calls),
-                    "duration_ms": round(duration_ms, 2),
-                    "has_tools": tools is not None,
-                },
-            )
-
-            return message, tool_calls or None
-
-        except RateLimitError:
-            self._logger.warning(
-                "huggingface_rate_limited",
-                extra={"model": model},
-            )
-            raise
-        except ProviderError:
-            raise
         except httpx.HTTPStatusError as e:
-            self._logger.exception(
+            self._logger.warning(
                 "huggingface_chat_http_error",
                 extra={"model": model, "status_code": e.response.status_code},
             )
             raise ProviderError(f"HuggingFace API error: {e}") from e
-        except Exception as e:
-            self._logger.exception(
-                "huggingface_chat_failed",
-                extra={"model": model, "error_type": type(e).__name__},
+
+        if response.status_code == HTTP_RATE_LIMITED:
+            self._logger.warning(
+                "huggingface_rate_limited",
+                extra={"model": model},
             )
-            raise ProviderError(f"HuggingFace request failed: {e}") from e
+            raise RateLimitError("HuggingFace rate limit exceeded")
+        if response.status_code == HTTP_SERVICE_UNAVAILABLE:
+            error_data = response.json()
+            error_msg = error_data.get("error", "Model is loading")
+            raise ProviderError(f"Model is loading: {error_msg}")
+
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            self._logger.warning(
+                "huggingface_chat_http_error",
+                extra={"model": model, "status_code": e.response.status_code},
+            )
+            raise ProviderError(f"HuggingFace API error: {e}") from e
+
+        data = response.json()
+        duration_ms = (time.perf_counter() - start_time) * 1000
+
+        choices = data.get("choices", [])
+        if not choices:
+            raise ProviderError("No response choices returned")
+
+        response_message = choices[0].get("message", {})
+        content = response_message.get("content", "") or ""
+        tool_calls: list[ToolCall] = []
+
+        if response_message.get("tool_calls"):
+            for tc in response_message["tool_calls"]:
+                func_data = tc.get("function", {})
+                func_name = func_data.get("name", "")
+                args_str = func_data.get("arguments", "{}")
+                try:
+                    args: dict[str, object] = json.loads(args_str)
+                except json.JSONDecodeError:
+                    self._logger.debug("tool_argument_parse_failed", extra={"raw_args": str(args_str)[:200]})
+                    args = {}
+
+                tool_call = ToolCall(
+                    id=tc.get("id", f"call_{len(tool_calls)}"),
+                    tool_name=(func_name.split(".")[0] if "." in func_name else func_name),
+                    function_name=func_name,
+                    arguments=args,
+                )
+                tool_calls.append(tool_call)
+                self._logger.debug(
+                    "tool_call_parsed",
+                    extra={
+                        "tool_name": tool_call.tool_name,
+                        "arguments_count": len(tool_call.arguments),
+                    },
+                )
+
+        message = Message(
+            role="assistant",
+            content=content,
+            tool_calls=tool_calls or None,
+            timestamp=datetime.now(),
+        )
+
+        log_provider_response(
+            provider="huggingface",
+            model=model,
+            tool_calls_count=len(tool_calls),
+            duration_ms=duration_ms,
+        )
+
+        self._logger.info(
+            "huggingface_chat_completed",
+            extra={
+                "model": model,
+                "messages_count": len(messages),
+                "tool_calls_count": len(tool_calls),
+                "duration_ms": round(duration_ms, 2),
+                "has_tools": tools is not None,
+            },
+        )
+
+        return message, tool_calls or None
 
     async def chat_stream(
         self,
@@ -542,14 +540,11 @@ class HuggingFaceProvider(LLMProviderBase):
                 request_body["tools"] = self._convert_tools_to_provider_format(tools)
 
             async with self._client.stream(
-                        "POST",
-                        f"{self._base_url}/models/{model}/v1/chat/completions",
-                        json=request_body,
-                    ) as response:
-                if response.status_code == HTTP_SERVICE_UNAVAILABLE:
-                    raise ProviderError(  # noqa: TRY301
-                        "Model is loading. Please wait and try again."
-                    )
+                "POST",
+                f"{self._base_url}/models/{model}/v1/chat/completions",
+                json=request_body,
+            ) as response:
+                self._check_stream_response_status(response, model)
                 response.raise_for_status()
 
                 async for line in response.aiter_lines():
@@ -583,7 +578,7 @@ class HuggingFaceProvider(LLMProviderBase):
             raise
         except Exception as e:
             if not self._cancel_requested:
-                self._logger.exception(
+                self._logger.warning(
                     "huggingface_stream_failed",
                     extra={"model": model, "error_type": type(e).__name__},
                 )
@@ -596,6 +591,23 @@ class HuggingFaceProvider(LLMProviderBase):
             "huggingface_cancel_requested",
             extra={"was_connected": self._connected},
         )
+
+    def _check_stream_response_status(self, response: httpx.Response, model: str) -> None:
+        """Check streaming response status and raise appropriate errors.
+
+        Args:
+            response: The HTTP response from the streaming request.
+            model: The model name for error logging.
+
+        Raises:
+            ProviderError: If the model is loading or unavailable.
+        """
+        if response.status_code == HTTP_SERVICE_UNAVAILABLE:
+            self._logger.warning(
+                "huggingface_model_loading",
+                extra={"model": model},
+            )
+            raise ProviderError("Model is loading. Please wait and try again.")
 
     def _convert_messages_to_provider_format(
         self,

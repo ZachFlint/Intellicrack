@@ -3,35 +3,77 @@ API Reference
 
 This section contains the complete API reference for Intellicrack.
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Modules:
+.. autosummary::
+   :toctree: _autosummary
+   :template: custom-module-template.rst
+   :recursive:
 
-Intellicrack Package
---------------------
+   intellicrack
+
+Module Index
+------------
+
+Core Modules
+~~~~~~~~~~~~
 
 .. autosummary::
    :toctree: _autosummary
    :recursive:
 
-   intellicrack
+   intellicrack.core
 
-Core Modules
-------------
+Bridge Integrations
+~~~~~~~~~~~~~~~~~~~
 
-The core analysis engine provides binary analysis capabilities.
+The ``intellicrack.bridges`` module provides external tool integrations:
 
-AI Integration
---------------
+* **GhidraBridge** - Ghidra headless analysis and decompilation
+* **Radare2Bridge** - radare2/rizin binary analysis
+* **FridaBridge** - Dynamic instrumentation via Frida
+* **X64DbgBridge** - x64dbg debugger integration
+* **BinaryBridge** - Generic binary operations (PE/ELF/Mach-O)
+* **ProcessBridge** - Windows process manipulation
 
-AI providers for assisted analysis.
+AI Providers
+~~~~~~~~~~~~
 
-UI Components
--------------
+The ``intellicrack.providers`` module contains LLM integrations:
 
-PyQt6-based graphical interface components.
+* **AnthropicProvider** - Claude API integration
+* **OpenAIProvider** - GPT API integration
+* **GoogleProvider** - Gemini API integration
+* **OllamaProvider** - Local Ollama models
+* **OpenRouterProvider** - OpenRouter API aggregator
+* **HuggingFaceProvider** - Transformers integration
+* **GrokProvider** - xAI Grok integration
 
-Utilities
----------
+Sandbox Environment
+~~~~~~~~~~~~~~~~~~~
 
-Helper functions and utilities.
+The ``intellicrack.sandbox`` module provides isolated execution:
+
+* **WindowsSandbox** - Windows Sandbox integration
+* **QEMUSandbox** - QEMU VM sandbox for cross-platform analysis
+* **SandboxManager** - Unified sandbox management interface
+* **SandboxConfig** - Configuration for sandbox instances
+* **ExecutionReport** - Analysis execution results
+
+Credentials Management
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: _autosummary
+   :recursive:
+
+   intellicrack.credentials
+
+User Interface
+~~~~~~~~~~~~~~
+
+The ``intellicrack.ui`` module contains PyQt6 GUI components:
+
+* **MainWindow** - Primary application window
+* **ChatWidget** - AI chat interface
+* **HexEditorWidget** - Binary hex editor
+* **DisassemblyView** - Disassembly display
+* **AnalysisPanel** - Analysis results panel

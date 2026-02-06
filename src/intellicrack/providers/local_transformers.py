@@ -776,10 +776,7 @@ class LocalTransformersProvider(LLMProviderBase):
                 tool_results_raw = msg.get("tool_results")
                 if isinstance(tool_results_raw, list):
                     tool_results_typed = cast("list[dict[str, object]]", tool_results_raw)
-                    if parts := [
-                        str(tr_dict.get("result", ""))
-                        for tr_dict in tool_results_typed
-                    ]:
+                    if parts := [str(tr_dict.get("result", "")) for tr_dict in tool_results_typed]:
                         chat_messages.append({
                             "role": "user",
                             "content": "[Tool Result]\n" + "\n".join(parts),

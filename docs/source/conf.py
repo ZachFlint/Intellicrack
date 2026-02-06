@@ -5,14 +5,15 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
 project = "Intellicrack"
-copyright = f"{datetime.now().year}, Intellicrack Team"
+copyright = f"{datetime.now().year}, Intellicrack Team"  # noqa: A001
 author = "Intellicrack Team"
-release = "0.1.0"
-version = "0.1"
+release = "1.0.0"
+version = "1.0"
 
 extensions = [
     "sphinx.ext.autodoc",
@@ -23,8 +24,48 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.coverage",
     "sphinx.ext.githubpages",
-    "sphinx_autodoc_typehints",
     "myst_parser",
+    "sphinx_copybutton",
+    "sphinx_tabs.tabs",
+    "sphinxcontrib.mermaid",
+]
+
+autodoc_mock_imports = [
+    "PyQt6",
+    "PyQt5",
+    "PySide6",
+    "qdarkstyle",
+    "frida",
+    "pefile",
+    "lief",
+    "capstone",
+    "keystone",
+    "unicorn",
+    "angr",
+    "cle",
+    "archinfo",
+    "claripy",
+    "win32api",
+    "win32con",
+    "win32gui",
+    "win32process",
+    "win32security",
+    "pywintypes",
+    "wmi",
+    "torch",
+    "transformers",
+    "accelerate",
+    "bitsandbytes",
+    "llama_cpp",
+    "ghidra_bridge",
+    "r2pipe",
+    "inotify",
+    "inotify_simple",
+    "httpx",
+    "aiohttp",
+    "Crypto",
+    "Cryptodome",
+    "cryptography",
 ]
 
 templates_path = ["_templates"]
@@ -45,7 +86,6 @@ html_theme_options = {
     "sticky_navigation": True,
     "includehidden": True,
     "titles_only": False,
-    "display_version": True,
     "prev_next_buttons_location": "both",
 }
 
@@ -70,13 +110,14 @@ autodoc_default_options = {
 autodoc_typehints = "description"
 autodoc_typehints_format = "short"
 autodoc_class_signature = "separated"
-autodoc_warningiserror = False
 autodoc_inherit_docstrings = False
 
 suppress_warnings = [
     "autodoc",
-    "autodoc.import_object",
     "ref.python",
+    "app.add_directive",
+    "toc.not_included",
+    "autosummary",
 ]
 
 nitpicky = False
@@ -94,7 +135,7 @@ nitpick_ignore_regex = [
 ]
 
 autosummary_generate = True
-autosummary_imported_members = True
+autosummary_imported_members = False
 
 napoleon_google_docstring = True
 napoleon_numpy_docstring = True

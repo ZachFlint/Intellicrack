@@ -901,11 +901,7 @@ class BinaryBridge(BinaryOperationsBridge):
 
         hex_pattern = hex_pattern.replace(" ", "")
         regex_pattern = "".join(
-            (
-                "."
-                if hex_pattern[i : i + 2] == "??"
-                else re.escape(chr(int(hex_pattern[i : i + 2], 16)))
-            )
+            ("." if hex_pattern[i : i + 2] == "??" else re.escape(chr(int(hex_pattern[i : i + 2], 16))))
             for i in range(0, len(hex_pattern), 2)
         )
         compiled = re.compile(regex_pattern.encode("latin-1"), re.DOTALL)

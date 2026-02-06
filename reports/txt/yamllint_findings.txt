@@ -471,6 +471,19 @@
 .\.github\workflows\claude-type-fix-oauth.yml:513:121: [warning] line too long (122 > 120 characters)  (line-length)
 
 
+5 findings in .\.github\workflows\gemini-dispatch.yml
+
+.\.github\workflows\gemini-dispatch.yml:59:121: [warning] line too long (189 > 120 characters)  (line-length)
+
+.\.github\workflows\gemini-dispatch.yml:76:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.github\workflows\gemini-dispatch.yml:119:121: [warning] line too long (236 > 120 characters)  (line-length)
+
+.\.github\workflows\gemini-dispatch.yml:186:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.github\workflows\gemini-dispatch.yml:199:121: [warning] line too long (212 > 120 characters)  (line-length)
+
+
 3 findings in .\qodana.yaml
 
 .\qodana.yaml:1:117: [error] wrong new line character: expected \n  (new-lines)
@@ -478,6 +491,36 @@
 .\qodana.yaml:8:5: [error] wrong indentation: expected 2 but found 4  (indentation)
 
 .\qodana.yaml:10:5: [error] wrong indentation: expected 2 but found 4  (indentation)
+
+
+3 findings in .\.github\workflows\gemini-triage.yml
+
+.\.github\workflows\gemini-triage.yml:12:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.github\workflows\gemini-triage.yml:115:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.github\workflows\gemini-triage.yml:157:121: [warning] line too long (127 > 120 characters)  (line-length)
+
+
+2 findings in .\.github\workflows\gemini-invoke.yml
+
+.\.github\workflows\gemini-invoke.yml:12:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.github\workflows\gemini-invoke.yml:32:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+
+2 findings in .\.github\workflows\gemini-review.yml
+
+.\.github\workflows\gemini-review.yml:12:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.github\workflows\gemini-review.yml:33:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+
+2 findings in .\.github\workflows\gemini-scheduled-triage.yml
+
+.\.github\workflows\gemini-scheduled-triage.yml:150:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.github\workflows\gemini-scheduled-triage.yml:206:121: [warning] line too long (139 > 120 characters)  (line-length)
 
 
 1 findings in .\.yarnrc.yml

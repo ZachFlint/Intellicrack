@@ -10,19 +10,20 @@ Overview
 .. code-block:: text
 
    intellicrack/
-   ├── ai/              # AI integration (providers, prompts)
+   ├── bridges/         # External tool integrations (Ghidra, radare2, Frida)
    ├── core/            # Core analysis engine
-   ├── ui/              # PyQt6 GUI components
-   ├── utils/           # Utility functions
-   └── providers/       # External tool integrations
+   ├── credentials/     # Credential and OAuth management
+   ├── providers/       # AI provider integrations
+   ├── sandbox/         # Sandbox environment management
+   └── ui/              # PyQt6 GUI components
 
 Core Components
 ---------------
 
-AI Module
-~~~~~~~~~
+AI Providers
+~~~~~~~~~~~~
 
-The AI module provides integration with multiple AI providers:
+The providers module provides integration with multiple AI providers:
 
 * OpenAI (GPT-4, GPT-3.5)
 * Anthropic (Claude)
@@ -49,8 +50,8 @@ The GUI is built with PyQt6:
 * Interactive hex editor
 * Analysis result visualization
 
-Provider Integrations
-~~~~~~~~~~~~~~~~~~~~~
+Bridge Integrations
+~~~~~~~~~~~~~~~~~~~
 
 External tool integrations:
 

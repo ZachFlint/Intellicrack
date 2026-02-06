@@ -24,8 +24,9 @@ if TYPE_CHECKING:
 
     from structlog.types import EventDict, Processor, WrappedLogger
 
+    from intellicrack.core.config import LogConfig
 
-_ERR_INVALID_CONFIG = "expected LogConfig"
+
 _DEFAULT_LOG_DIR = Path("D:/Intellicrack/logs")
 _DEFAULT_LOG_FILE = "intellicrack.log"
 _CALL_INFO_DEPTH = 2
@@ -86,11 +87,7 @@ class ColoredConsoleRenderer:
         elif logger_name:
             location = logger_name
 
-        context_parts: list[str] = [
-            f"{key}={value!r}"
-            for key, value in sorted(event_dict.items())
-            if not key.startswith("_")
-        ]
+        context_parts: list[str] = [f"{key}={value!r}" for key, value in sorted(event_dict.items()) if not key.startswith("_")]
         context_str = " [" + ", ".join(context_parts) + "]" if context_parts else ""
         return f"{timestamp} | {color}{level_str}{self.RESET} | {location} | {event}{context_str}"
 
@@ -119,6 +116,7 @@ def cleanup_old_logs(log_dir: Path, retention_days: int) -> int:
                 log_file.unlink()
                 deleted_count += 1
         except OSError:
+            logging.getLogger(__name__).debug("log_cleanup_file_error", extra={"file": str(log_file)})
             continue
 
     return deleted_count
@@ -331,10 +329,16 @@ class IntellicrackLogger:
         return logging.getLogger(f"{self.name}.{name}")
 
 
-_app_logger: IntellicrackLogger | None = None
+class _LoggerState:
+    """Container for the global logger state."""
+
+    app_logger: IntellicrackLogger | None = None
 
 
-def setup_logging(config: object) -> IntellicrackLogger:
+_logger_state = _LoggerState()
+
+
+def setup_logging(config: LogConfig) -> IntellicrackLogger:
     """Set up application logging from configuration.
 
     Args:
@@ -342,17 +346,7 @@ def setup_logging(config: object) -> IntellicrackLogger:
 
     Returns:
         Configured IntellicrackLogger instance.
-
-    Raises:
-        TypeError: If config is not a LogConfig instance.
     """
-    global _app_logger  # noqa: PLW0603
-
-    from .config import LogConfig as LogConfigType  # noqa: PLC0415
-
-    if not isinstance(config, LogConfigType):
-        raise TypeError(_ERR_INVALID_CONFIG)
-
     log_dir = _DEFAULT_LOG_DIR
 
     logger = IntellicrackLogger("intellicrack")
@@ -367,7 +361,7 @@ def setup_logging(config: object) -> IntellicrackLogger:
         json_file=config.json_file,
     )
 
-    _app_logger = logger
+    _logger_state.app_logger = logger
     return logger
 
 
@@ -380,8 +374,8 @@ def get_logger(name: str | None = None) -> logging.Logger:
     Returns:
         Logger instance. Falls back to a basic logger if not configured.
     """
-    if _app_logger is not None:
-        return _app_logger.get_logger(name)
+    if _logger_state.app_logger is not None:
+        return _logger_state.app_logger.get_logger(name)
     fallback = logging.getLogger("intellicrack")
     if not fallback.handlers:
         handler = logging.StreamHandler(sys.stdout)

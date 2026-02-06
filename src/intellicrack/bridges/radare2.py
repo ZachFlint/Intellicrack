@@ -57,7 +57,9 @@ _ERR_CMD_FAILED = "command execution failed"
 _ERR_TOOL_NOT_AVAILABLE = "radare2 not available"
 _ERR_DECOMPILE_NA = "decompilation not available"
 _ERR_ASSEMBLE_FAILED = "failed to assemble instruction"
+_ERR_CMD_TIMEOUT = "radare2 command timed out"
 _BITS_64 = 64
+_R2_COMMAND_TIMEOUT: float = 60.0
 
 
 def _get_str(data: dict[str, Any], key: str, default: str = "") -> str:
@@ -201,11 +203,21 @@ class Radare2Bridge(StaticAnalysisBridge):
             Command output as string, empty string if None.
 
         Raises:
-            ToolError: If r2 is not connected.
+            ToolError: If r2 is not connected or command times out.
         """
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
-        result = await asyncio.to_thread(self._r2.cmd, command)
+        try:
+            result = await asyncio.wait_for(
+                asyncio.to_thread(self._r2.cmd, command),
+                timeout=_R2_COMMAND_TIMEOUT,
+            )
+        except TimeoutError:
+            _logger.warning(
+                "r2_command_timeout",
+                extra={"command": command, "timeout": _R2_COMMAND_TIMEOUT},
+            )
+            raise ToolError(f"{_ERR_CMD_TIMEOUT} after {_R2_COMMAND_TIMEOUT}s: {command}") from None
         return "" if result is None else result
 
     @property
@@ -507,16 +519,95 @@ class Radare2Bridge(StaticAnalysisBridge):
         Returns:
             True if radare2 can be used.
         """
+        r2: r2pipe.open | None = None
         try:
-            r2: r2pipe.open = await asyncio.to_thread(r2pipe.open, "-")
+            r2 = await asyncio.to_thread(r2pipe.open, "-")
             version: str | None = await asyncio.to_thread(r2.cmd, "?V")
-            await asyncio.to_thread(r2.quit)
-        except Exception:
+        except Exception as e:
+            _logger.debug("radare2_availability_check_failed", extra={"error": str(e)})
             return False
         else:
             return bool(version)
+        finally:
+            if r2 is not None:
+                try:
+                    await asyncio.to_thread(r2.quit)
+                except Exception as e:
+                    _logger.debug("radare2_cleanup_failed", extra={"error": str(e)})
 
-    async def load_binary(self, path: Path) -> BinaryInfo:  # noqa: PLR0914
+    async def _close_existing_r2(self) -> None:
+        """Close existing radare2 session and unregister process."""
+        if self._r2 is not None:
+            await asyncio.to_thread(self._r2.quit)
+            if self._r2_pid is not None:
+                process_manager = ProcessManager.get_instance()
+                process_manager.unregister_external_pid(self._r2_pid)
+                self._r2_pid = None
+
+    def _register_r2_process(self, path: Path) -> None:
+        """Register radare2 process with process manager.
+
+        Args:
+            path: Path to the binary being analyzed.
+        """
+        if not hasattr(self._r2, "_child"):
+            return
+
+        child: object = getattr(self._r2, "_child", None)
+        if child is None or not hasattr(child, "pid"):
+            return
+
+        pid_val: object = getattr(child, "pid", None)
+        if not isinstance(pid_val, int):
+            return
+
+        self._r2_pid = pid_val
+        process_manager = ProcessManager.get_instance()
+        process_manager.register_external_pid(
+            self._r2_pid,
+            name=f"radare2-{path.name}",
+            process_type=ProcessType.EXTERNAL_TOOL,
+            metadata={"binary": str(path)},
+        )
+        _logger.debug("radare2_process_registered", extra={"pid": self._r2_pid})
+
+    async def _extract_hashes(self) -> tuple[str, str]:
+        """Extract MD5 and SHA256 hashes from loaded binary.
+
+        Returns:
+            Tuple of (md5, sha256) hash strings.
+        """
+        hashes = await self._cmd_json("itj")
+        md5 = ""
+        sha256 = ""
+        for h in hashes:
+            hash_type = _get_str(h, "type")
+            if hash_type == "md5":
+                md5 = _get_str(h, "hash")
+            elif hash_type == "sha256":
+                sha256 = _get_str(h, "hash")
+        return md5, sha256
+
+    async def _extract_binary_metadata(self) -> tuple[str, str, int, int]:
+        """Extract binary metadata from radare2.
+
+        Returns:
+            Tuple of (file_type, arch, bits, entry_point).
+        """
+        info_list = await self._cmd_json("ij")
+        info = info_list[0] if info_list else {}
+
+        bin_info = _get_dict(info, "bin")
+        file_type = _get_str(bin_info, "class", "unknown")
+        arch = _get_str(bin_info, "arch", "unknown")
+        bits = _get_int(bin_info, "bits", 32)
+        baddr = _get_int(bin_info, "baddr", 0)
+        entry_offset = _get_int(bin_info, "entry", 0)
+        entry = baddr + entry_offset
+
+        return file_type, arch, bits, entry
+
+    async def load_binary(self, path: Path) -> BinaryInfo:
         """Load a binary file into radare2.
 
         Args:
@@ -532,54 +623,17 @@ class Radare2Bridge(StaticAnalysisBridge):
             raise ToolError(_ERR_FILE_NOT_FOUND)
 
         try:
-            if self._r2 is not None:
-                await asyncio.to_thread(self._r2.quit)
-                if self._r2_pid is not None:
-                    process_manager = ProcessManager.get_instance()
-                    process_manager.unregister_external_pid(self._r2_pid)
-                    self._r2_pid = None
+            await self._close_existing_r2()
 
             self._r2 = await asyncio.to_thread(r2pipe.open, str(path), ["-2"])
             self._binary_path = path.resolve()
             self._analyzed = False
 
-            if hasattr(self._r2, "_child"):
-                child: object = getattr(self._r2, "_child", None)
-                if child is not None and hasattr(child, "pid"):
-                    pid_val: object = getattr(child, "pid", None)
-                    if isinstance(pid_val, int):
-                        self._r2_pid = pid_val
-                        process_manager = ProcessManager.get_instance()
-                        process_manager.register_external_pid(
-                            self._r2_pid,
-                            name=f"radare2-{path.name}",
-                            process_type=ProcessType.EXTERNAL_TOOL,
-                            metadata={"binary": str(path)},
-                        )
-                        _logger.debug("radare2_process_registered", extra={"pid": self._r2_pid})
+            self._register_r2_process(path)
 
-            info_list = await self._cmd_json("ij")
-            info = info_list[0] if info_list else {}
-
-            bin_info = _get_dict(info, "bin")
-            file_type = _get_str(bin_info, "class", "unknown")
-            arch = _get_str(bin_info, "arch", "unknown")
-            bits = _get_int(bin_info, "bits", 32)
-            baddr = _get_int(bin_info, "baddr", 0)
-            entry_offset = _get_int(bin_info, "entry", 0)
-            entry = baddr + entry_offset
-
+            file_type, arch, bits, entry = await self._extract_binary_metadata()
             await self._r2_cmd("e io.cache=true")
-
-            hashes = await self._cmd_json("itj")
-            md5 = ""
-            sha256 = ""
-            for h in hashes:
-                hash_type = _get_str(h, "type")
-                if hash_type == "md5":
-                    md5 = _get_str(h, "hash")
-                elif hash_type == "sha256":
-                    sha256 = _get_str(h, "hash")
+            md5, sha256 = await self._extract_hashes()
 
             sections = await self._get_sections_internal()
             imports = await self._get_imports_internal()
@@ -592,10 +646,8 @@ class Radare2Bridge(StaticAnalysisBridge):
 
             _logger.info("binary_loaded", extra={"path": path.name, "file_type": file_type, "arch": arch, "bits": bits})
 
-            binary_path = self._binary_path
-
             return BinaryInfo(
-                path=binary_path,
+                path=self._binary_path,
                 name=path.name,
                 size=path.stat().st_size,
                 md5=md5,
@@ -942,7 +994,7 @@ class Radare2Bridge(StaticAnalysisBridge):
                     encoding = "utf-16be"
                 elif raw_encoding == "utf-8":
                     encoding = "utf-8"
-                elif raw_encoding in ["wide", "utf-16le"]:
+                elif raw_encoding in {"wide", "utf-16le"}:
                     encoding = "utf-16le"
                 else:
                     encoding = "ascii"
@@ -1009,7 +1061,7 @@ class Radare2Bridge(StaticAnalysisBridge):
             List of section info.
         """
         if self._r2 is None:
-            _logger.warning("radare2_unavailable", extra={"operation": "_get_sections_internal"})
+            _logger.error("radare2_unavailable", extra={"operation": "_get_sections_internal"})
             return []
 
         sections = await self._cmd_json("iSj")
@@ -1033,7 +1085,7 @@ class Radare2Bridge(StaticAnalysisBridge):
             List of import info.
         """
         if self._r2 is None:
-            _logger.warning("radare2_unavailable", extra={"operation": "_get_imports_internal"})
+            _logger.error("radare2_unavailable", extra={"operation": "_get_imports_internal"})
             return []
 
         imports = await self._cmd_json("iij")
@@ -1055,7 +1107,7 @@ class Radare2Bridge(StaticAnalysisBridge):
             List of export info.
         """
         if self._r2 is None:
-            _logger.warning("radare2_unavailable", extra={"operation": "_get_exports_internal"})
+            _logger.error("radare2_unavailable", extra={"operation": "_get_exports_internal"})
             return []
 
         exports = await self._cmd_json("iEj")
@@ -1204,7 +1256,7 @@ class Radare2Bridge(StaticAnalysisBridge):
             Parsed JSON as list of dicts.
         """
         if self._r2 is None:
-            _logger.warning("radare2_unavailable", extra={"operation": "_cmd_json"})
+            _logger.error("radare2_unavailable", extra={"operation": "_cmd_json"})
             return []
 
         result = await self._r2_cmd(command)
@@ -1215,7 +1267,7 @@ class Radare2Bridge(StaticAnalysisBridge):
         try:
             parsed = json.loads(result)
         except json.JSONDecodeError:
-            _logger.warning("json_parse_failed", extra={"command": command})
+            _logger.error("json_parse_failed", extra={"command": command})
             return []
         else:
             if isinstance(parsed, list):

@@ -281,7 +281,10 @@ class GoogleProvider(LLMProviderBase):
 
         try:
             config = self._create_config(
-                temperature, max_tokens, gemini_tools, system_instruction,
+                temperature,
+                max_tokens,
+                gemini_tools,
+                system_instruction,
             )
 
             client = self._client
@@ -390,7 +393,10 @@ class GoogleProvider(LLMProviderBase):
 
         try:
             config = self._create_config(
-                temperature, max_tokens, gemini_tools, system_instruction,
+                temperature,
+                max_tokens,
+                gemini_tools,
+                system_instruction,
             )
 
             client = self._client
@@ -456,9 +462,7 @@ class GoogleProvider(LLMProviderBase):
         Returns:
             Concatenated system instruction text, or None if no system messages.
         """
-        system_parts: list[str] = [
-            msg.content for msg in messages if msg.role == "system" and msg.content
-        ]
+        system_parts: list[str] = [msg.content for msg in messages if msg.role == "system" and msg.content]
         return "\n\n".join(system_parts) if system_parts else None
 
     @staticmethod

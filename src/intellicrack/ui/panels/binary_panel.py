@@ -271,9 +271,7 @@ class BinaryPanel(QWidget):
             hex_item = QTableWidgetItem(hex_str)
             self._hex_table.setItem(row_idx, _HEX_COL_HEX, hex_item)
 
-            ascii_str = "".join(
-                chr(b) if _ASCII_PRINTABLE_MIN <= b < _ASCII_PRINTABLE_MAX else "." for b in chunk
-            )
+            ascii_str = "".join(chr(b) if _ASCII_PRINTABLE_MIN <= b < _ASCII_PRINTABLE_MAX else "." for b in chunk)
             ascii_item = QTableWidgetItem(ascii_str)
             ascii_item.setFlags(ascii_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self._hex_table.setItem(row_idx, _HEX_COL_ASCII, ascii_item)
@@ -531,12 +529,8 @@ class BinaryPanel(QWidget):
             row = self._patches_table.rowCount()
             self._patches_table.insertRow(row)
             self._patches_table.setItem(row, 0, QTableWidgetItem(f"0x{offset:08X}"))
-            self._patches_table.setItem(
-                row, 1, QTableWidgetItem(" ".join(f"{b:02X}" for b in original[:16]))
-            )
-            self._patches_table.setItem(
-                row, 2, QTableWidgetItem(" ".join(f"{b:02X}" for b in patched[:16]))
-            )
+            self._patches_table.setItem(row, 1, QTableWidgetItem(" ".join(f"{b:02X}" for b in original[:16])))
+            self._patches_table.setItem(row, 2, QTableWidgetItem(" ".join(f"{b:02X}" for b in patched[:16])))
 
     def get_file_data(self) -> bytearray:
         """Get the current binary data (with any applied patches).

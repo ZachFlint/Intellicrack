@@ -395,13 +395,13 @@ class FridaBridge(InstrumentationBridge):
             try:
                 await self._unload_script(script_id)
             except Exception as e:
-                _logger.warning("script_unload_failed", extra={"script_id": script_id, "error": str(e)})
+                _logger.error("script_unload_failed", extra={"script_id": script_id, "error": str(e)})
 
         if self._session is not None:
             try:
                 await asyncio.to_thread(self._session.detach)
             except Exception as e:
-                _logger.warning("session_detach_failed", extra={"error": str(e)})
+                _logger.error("session_detach_failed", extra={"error": str(e)})
             self._session = None
 
         if self._spawned_pid is not None and self._device is not None:
@@ -409,7 +409,7 @@ class FridaBridge(InstrumentationBridge):
                 await asyncio.to_thread(self._device.kill, self._spawned_pid)
                 _logger.info("spawned_process_killed", extra={"pid": self._spawned_pid})
             except Exception as e:
-                _logger.warning("spawned_process_kill_failed", extra={"pid": self._spawned_pid, "error": str(e)})
+                _logger.error("spawned_process_kill_failed", extra={"pid": self._spawned_pid, "error": str(e)})
 
             process_manager = ProcessManager.get_instance()
             process_manager.unregister_external_pid(self._spawned_pid)
@@ -429,7 +429,8 @@ class FridaBridge(InstrumentationBridge):
         """
         try:
             await asyncio.to_thread(frida.get_local_device)
-        except Exception:
+        except Exception as e:
+            _logger.debug("frida_availability_check_failed", extra={"error": str(e)})
             return False
         else:
             return True
@@ -488,9 +489,7 @@ class FridaBridge(InstrumentationBridge):
         except Exception as e:
             raise ToolError(_ERR_ATTACH_FAILED) from e
 
-        target_pid: int | None = next(
-            (proc.pid for proc in processes if proc.name == name), None
-        )
+        target_pid: int | None = next((proc.pid for proc in processes if proc.name == name), None)
         if target_pid is None:
             raise ToolError(_ERR_PROCESS_NOT_FOUND)
 
@@ -536,16 +535,20 @@ class FridaBridge(InstrumentationBridge):
         if device is None:
             raise ToolError(_ERR_DEVICE_FAILED)
 
-        try:
-            spawn_argv: list[str | bytes] = [str(path)]
-            if args:
-                spawn_argv.extend(args)
+        spawn_argv: list[str | bytes] = [str(path)]
+        if args:
+            spawn_argv.extend(args)
 
+        try:
             pid: int = await asyncio.to_thread(
                 device.spawn,
                 str(path),
                 argv=spawn_argv,
             )
+        except Exception as e:
+            raise ToolError(_ERR_ATTACH_FAILED) from e
+
+        try:
             self._session = await asyncio.to_thread(
                 device.attach,
                 pid,
@@ -568,10 +571,18 @@ class FridaBridge(InstrumentationBridge):
             self._state.target_pid = pid
 
             _logger.info("process_spawned", extra={"process_name": path.name, "pid": pid})
-        except Exception as e:
-            raise ToolError(_ERR_ATTACH_FAILED) from e
-        else:
             return pid
+
+        except Exception as e:
+            # Cleanup leaked process if attach/registration fails
+            try:
+                await asyncio.to_thread(device.kill, pid)
+            except Exception as kill_err:
+                _logger.error(
+                    "failed_to_kill_leaked_process",
+                    extra={"pid": pid, "error": str(kill_err)},
+                )
+            raise ToolError(_ERR_ATTACH_FAILED) from e
 
     async def resume(self) -> None:
         """Resume a spawned process.
@@ -613,7 +624,7 @@ class FridaBridge(InstrumentationBridge):
                     await asyncio.to_thread(self._device.kill, self._spawned_pid)
                     _logger.info("spawned_process_killed", extra={"pid": self._spawned_pid})
                 except Exception as e:
-                    _logger.warning("spawned_process_kill_failed", extra={"pid": self._spawned_pid, "error": str(e)})
+                    _logger.error("spawned_process_kill_failed", extra={"pid": self._spawned_pid, "error": str(e)})
 
                 process_manager = ProcessManager.get_instance()
                 process_manager.unregister_external_pid(self._spawned_pid)
@@ -1166,7 +1177,7 @@ class FridaBridge(InstrumentationBridge):
             try:
                 await asyncio.to_thread(script.unload)
             except Exception as e:
-                _logger.warning("script_unload_failed", extra={"script_id": script_id, "error": str(e)})
+                _logger.error("script_unload_failed", extra={"script_id": script_id, "error": str(e)})
             del self._scripts[script_id]
 
     def set_message_handler(

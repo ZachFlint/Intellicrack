@@ -620,12 +620,15 @@ class LicensingAnalysisPanel(QWidget):
         Args:
             analysis: The licensing analysis results.
         """
-        _logger.debug("analysis_update_started", extra={
-            "binary_name": analysis.binary_name,
-            "validation_functions": len(analysis.validation_functions),
-            "crypto_api_calls": len(analysis.crypto_api_calls),
-            "magic_constants": len(analysis.magic_constants),
-        })
+        _logger.debug(
+            "analysis_update_started",
+            extra={
+                "binary_name": analysis.binary_name,
+                "validation_functions": len(analysis.validation_functions),
+                "crypto_api_calls": len(analysis.crypto_api_calls),
+                "magic_constants": len(analysis.magic_constants),
+            },
+        )
         self._current_analysis = analysis
 
         self._summary_card.update_from_analysis(analysis)
@@ -655,11 +658,14 @@ class LicensingAnalysisPanel(QWidget):
             self._hwid_apis_label.setText("None detected")
             self._hwid_apis_label.setStyleSheet("color: #aaa; padding: 4px;")
 
-        _logger.info("analysis_panel_updated", extra={
-            "binary_name": analysis.binary_name,
-            "algorithm": analysis.algorithm_type.value,
-            "confidence": analysis.confidence_score,
-        })
+        _logger.info(
+            "analysis_panel_updated",
+            extra={
+                "binary_name": analysis.binary_name,
+                "algorithm": analysis.algorithm_type.value,
+                "confidence": analysis.confidence_score,
+            },
+        )
 
     def get_current_analysis(self) -> LicensingAnalysis | None:
         """Get the current analysis results.

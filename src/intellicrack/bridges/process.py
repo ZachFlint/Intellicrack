@@ -5,6 +5,8 @@ memory access, thread manipulation, and module enumeration using
 Windows API.
 """
 
+from __future__ import annotations
+
 import ctypes
 from ctypes import wintypes
 from pathlib import Path
@@ -104,7 +106,7 @@ class MODULEENTRY32(ctypes.Structure):
     ]
 
 
-class MEMORY_BASIC_INFORMATION(ctypes.Structure):  # noqa: N801
+class MemoryBasicInformation(ctypes.Structure):
     """Windows MEMORY_BASIC_INFORMATION structure."""
 
     _fields_ = [
@@ -116,6 +118,9 @@ class MEMORY_BASIC_INFORMATION(ctypes.Structure):  # noqa: N801
         ("Protect", wintypes.DWORD),
         ("Type", wintypes.DWORD),
     ]
+
+
+MEMORY_BASIC_INFORMATION = MemoryBasicInformation
 
 
 class ProcessBridge(ToolBridgeBase):
@@ -471,7 +476,8 @@ class ProcessBridge(ToolBridgeBase):
         """
         try:
             _ = ctypes.windll.kernel32
-        except AttributeError:
+        except AttributeError as e:
+            _logger.debug("kernel32_check_failed", extra={"error": str(e)})
             return False
         else:
             return True
@@ -728,8 +734,7 @@ class ProcessBridge(ToolBridgeBase):
             ctypes.byref(bytes_read),
         ):
             return buffer.raw[: bytes_read.value]
-        else:
-            raise ToolError(_ERR_READ_FAILED)
+        raise ToolError(_ERR_READ_FAILED)
 
     async def write_memory(self, address: int, data: bytes) -> int:
         """Write memory to process.
@@ -928,7 +933,7 @@ class ProcessBridge(ToolBridgeBase):
 
         if snapshot == -1:
             error_code = ctypes.get_last_error()
-            _logger.warning("module_snapshot_failed", extra={"pid": target_pid, "error_code": error_code})
+            _logger.error("module_snapshot_failed", extra={"pid": target_pid, "error_code": error_code})
             return []
 
         modules: list[ModuleInfo] = []
@@ -990,7 +995,7 @@ class ProcessBridge(ToolBridgeBase):
 
         if snapshot == -1:
             error_code = ctypes.get_last_error()
-            _logger.warning("thread_snapshot_failed", extra={"error_code": error_code})
+            _logger.error("thread_snapshot_failed", extra={"error_code": error_code})
             return []
 
         threads: list[ThreadInfo] = []
@@ -1129,14 +1134,12 @@ class ProcessBridge(ToolBridgeBase):
                 data = await self.read_memory(region.base_address, chunk_size)
 
                 for i in range(len(data) - len(pattern_bytes) + 1):
-                    match = not any(
-                        pb is not None and data[i + j] != pb
-                        for j, pb in enumerate(pattern_bytes)
-                    )
+                    match = not any(pb is not None and data[i + j] != pb for j, pb in enumerate(pattern_bytes))
                     if match:
                         matches.append(region.base_address + i)
 
-            except ToolError:
+            except ToolError as e:
+                _logger.warning("pattern_search_failed", extra={"error": str(e)})
                 continue
 
         return matches

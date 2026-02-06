@@ -10,13 +10,13 @@ from __future__ import annotations
 import json
 import platform
 import re
-import subprocess
 import sys
 import types
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
 from ..core.logging import get_logger
+from ..core.process_manager import ProcessManager
 
 
 if TYPE_CHECKING:
@@ -158,14 +158,13 @@ def _get_windows_gpu_info() -> list[dict[str, str]]:
 
     gpus: list[dict[str, str]] = []
     try:
-        result = subprocess.run(
+        result = ProcessManager.get_instance().run_tracked(
             [
-                "powershell",
+                "pwsh",
                 "-Command",
                 "Get-WmiObject Win32_VideoController | Select-Object Name,PNPDeviceID,DriverVersion | ConvertTo-Json",
             ],
-            capture_output=True,
-            text=True,
+            name="xpu-gpu-detect",
             timeout=10,
             check=False,
         )
@@ -515,14 +514,13 @@ def _check_intel_driver() -> tuple[bool, str]:
     """
     _logger.debug("xpu_driver_check_started", extra={})
     try:
-        result = subprocess.run(
+        result = ProcessManager.get_instance().run_tracked(
             [
-                "powershell",
+                "pwsh",
                 "-Command",
                 "Get-WmiObject Win32_VideoController | Where-Object {$_.Name -like '*Intel*Arc*'} | Select-Object DriverVersion | ConvertTo-Json",
             ],
-            capture_output=True,
-            text=True,
+            name="xpu-driver-check",
             timeout=10,
             check=False,
         )
@@ -544,14 +542,13 @@ def _check_rebar_status() -> tuple[bool, str]:
     """
     _logger.debug("xpu_rebar_check_started", extra={})
     try:
-        result = subprocess.run(
+        result = ProcessManager.get_instance().run_tracked(
             [
-                "powershell",
+                "pwsh",
                 "-Command",
                 "(Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Video\\*\\*' -ErrorAction SilentlyContinue | Where-Object {$_.RmGpuLdPciResizableBar -eq 1}).Count",
             ],
-            capture_output=True,
-            text=True,
+            name="xpu-rebar-check",
             timeout=10,
             check=False,
         )

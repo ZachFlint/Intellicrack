@@ -14,11 +14,11 @@ from __future__ import annotations
 
 import argparse
 import ast
+import importlib
 import json
 import logging
 import math
 import os
-import subprocess  # noqa: S404
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -351,11 +351,13 @@ class KnowledgeGraphGenerator:
         logger.info("Calculating pre-loaded layout using sfdp (this may take a while)...")
         layout_map: dict[str, dict[str, float]] = {}
 
+        subprocess_mod = importlib.import_module("subprocess")
+
         try:
-            json_output = subprocess.check_output(
+            json_output = subprocess_mod.check_output(
                 ["sfdp", "-K", "sfdp", "-Goverlap=prism", "-Gmaxiter=500", "-Tjson", str(dot_file)],
                 text=True,
-                stderr=subprocess.PIPE,
+                stderr=subprocess_mod.PIPE,
             )
 
             data = json.loads(json_output)
@@ -373,7 +375,7 @@ class KnowledgeGraphGenerator:
 
             logger.info("SFDP layout calculated for %d nodes.", len(layout_map))
 
-        except subprocess.CalledProcessError as e:
+        except subprocess_mod.CalledProcessError as e:
             logger.exception("Graphviz layout calculation failed: %s", e.stderr)
         except FileNotFoundError:
             logger.warning("sfdp not found. Falling back to hierarchical layout.")

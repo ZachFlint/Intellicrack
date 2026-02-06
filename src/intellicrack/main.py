@@ -8,17 +8,30 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import importlib
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from logging import Logger
 
+    from PyQt6.QtWidgets import QApplication
+
+    from intellicrack.core.config import Config, LogConfig
+    from intellicrack.core.orchestrator import Orchestrator
+    from intellicrack.core.process_manager import ProcessManager
+    from intellicrack.core.session import SessionManager, SessionStore
+    from intellicrack.core.tools import ToolRegistry
     from intellicrack.credentials.env_loader import CredentialLoader
     from intellicrack.providers.registry import ProviderRegistry
+    from intellicrack.ui.app import MainWindow
+    from intellicrack.ui.dialogs import SplashScreen
+    from intellicrack.ui.resources.icon_manager import IconManager
+    from intellicrack.ui.resources.theme_manager import ThemeManager
 
 _APP_VERSION = "2.0.0"
 _VALID_LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
@@ -44,28 +57,28 @@ def _parse_args() -> tuple[_CLIOptions, list[str]]:
         prog="intellicrack",
         description="Intellicrack - Advanced Binary Analysis Platform",
     )
-    parser.add_argument(
+    _ = parser.add_argument(
         "--version",
         action="version",
         version=f"Intellicrack {_APP_VERSION}",
     )
 
     verbosity_group = parser.add_mutually_exclusive_group()
-    verbosity_group.add_argument(
+    _ = verbosity_group.add_argument(
         "-v",
         "--verbose",
         action="store_true",
         default=False,
         help="Enable DEBUG level logging (maximum verbosity)",
     )
-    verbosity_group.add_argument(
+    _ = verbosity_group.add_argument(
         "-q",
         "--quiet",
         action="store_true",
         default=False,
         help="Enable WARNING level logging (reduced output)",
     )
-    verbosity_group.add_argument(
+    _ = verbosity_group.add_argument(
         "--log-level",
         choices=list(_VALID_LOG_LEVELS),
         default=None,
@@ -73,13 +86,13 @@ def _parse_args() -> tuple[_CLIOptions, list[str]]:
         help="Set explicit log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
     )
 
-    parser.add_argument(
+    _ = parser.add_argument(
         "--no-console-log",
         action="store_true",
         default=False,
         help="Disable console log output",
     )
-    parser.add_argument(
+    _ = parser.add_argument(
         "--no-file-log",
         action="store_true",
         default=False,
@@ -107,18 +120,13 @@ def _parse_args() -> tuple[_CLIOptions, list[str]]:
     )
 
 
-def _apply_cli_overrides(config: object, cli: _CLIOptions) -> None:
+def _apply_cli_overrides(config: Config, cli: _CLIOptions) -> None:
     """Apply CLI flag overrides to the loaded config in-place.
 
     Args:
         config: Config instance whose log sub-config will be mutated.
         cli: Parsed CLI options with any overrides.
     """
-    from intellicrack.core.config import Config  # noqa: PLC0415
-
-    if not isinstance(config, Config):
-        return
-
     if cli.log_level is not None:
         config.log.level = cli.log_level
     if cli.disable_console_log:
@@ -127,155 +135,188 @@ def _apply_cli_overrides(config: object, cli: _CLIOptions) -> None:
         config.log.file_enabled = False
 
 
-def main() -> int:  # noqa: PLR0914
-    """Run the Intellicrack application.
+def _import_config_class() -> type[Config]:
+    """Import the Config class dynamically.
 
     Returns:
-        Exit code (0 for success, non-zero for failure).
+        The Config class.
     """
-    from intellicrack.core.config import Config  # noqa: PLC0415
-    from intellicrack.core.logging import get_logger, setup_logging  # noqa: PLC0415
-    from intellicrack.core.process_manager import ProcessManager  # noqa: PLC0415
+    mod = importlib.import_module("intellicrack.core.config")
+    return cast("type[Config]", mod.Config)
 
-    cli_options, remaining_args = _parse_args()
-    sys.argv = [sys.argv[0], *remaining_args]
 
-    config_path = Path("config.toml")
-    config = Config.load(config_path) if config_path.exists() else Config.default()
+def _import_logging_funcs() -> tuple[Callable[[str], Logger], Callable[[LogConfig], None]]:
+    """Import logging functions dynamically.
 
-    _apply_cli_overrides(config, cli_options)
-
-    setup_logging(config.log)
-    logger = get_logger("main")
-    logger.info(
-        "app_starting",
-        extra={"version": _APP_VERSION, "log_level": config.log.level},
+    Returns:
+        Tuple of (get_logger function, setup_logging function).
+    """
+    mod = importlib.import_module("intellicrack.core.logging")
+    return cast(
+        "tuple[Callable[[str], Logger], Callable[[LogConfig], None]]",
+        (mod.get_logger, mod.setup_logging),
     )
 
-    process_manager = ProcessManager.get_instance()
-    process_manager.install_handlers()
-    logger.debug("process_manager_initialized", extra={"handlers_installed": True})
 
+def _import_process_manager() -> type[ProcessManager]:
+    """Import the ProcessManager class dynamically.
+
+    Returns:
+        The ProcessManager class.
+    """
+    mod = importlib.import_module("intellicrack.core.process_manager")
+    return cast("type[ProcessManager]", mod.ProcessManager)
+
+
+def _import_qt_app() -> type[QApplication]:
+    """Import QApplication dynamically.
+
+    Returns:
+        The QApplication class.
+    """
+    mod = importlib.import_module("PyQt6.QtWidgets")
+    return cast("type[QApplication]", mod.QApplication)
+
+
+def _import_splash_screen() -> type[SplashScreen]:
+    """Import SplashScreen dynamically.
+
+    Returns:
+        The SplashScreen class.
+    """
+    mod = importlib.import_module("intellicrack.ui.dialogs")
+    return cast("type[SplashScreen]", mod.SplashScreen)
+
+
+def _import_theme_icon_managers() -> tuple[type[ThemeManager], type[IconManager]]:
+    """Import theme and icon manager classes dynamically.
+
+    Returns:
+        Tuple of (ThemeManager class, IconManager class).
+    """
+    mod = importlib.import_module("intellicrack.ui.resources")
+    return cast(
+        "tuple[type[ThemeManager], type[IconManager]]",
+        (mod.ThemeManager, mod.IconManager),
+    )
+
+
+def _import_orchestrator() -> type[Orchestrator]:
+    """Import the Orchestrator class dynamically.
+
+    Returns:
+        The Orchestrator class.
+    """
+    mod = importlib.import_module("intellicrack.core.orchestrator")
+    return cast("type[Orchestrator]", mod.Orchestrator)
+
+
+def _import_session_classes() -> tuple[type[SessionManager], type[SessionStore]]:
+    """Import session management classes dynamically.
+
+    Returns:
+        Tuple of (SessionManager class, SessionStore class).
+    """
+    mod = importlib.import_module("intellicrack.core.session")
+    return (
+        cast("type[SessionManager]", mod.SessionManager),
+        cast("type[SessionStore]", mod.SessionStore),
+    )
+
+
+def _import_tool_registry() -> type[ToolRegistry]:
+    """Import the ToolRegistry class dynamically.
+
+    Returns:
+        The ToolRegistry class.
+    """
+    mod = importlib.import_module("intellicrack.core.tools")
+    return cast("type[ToolRegistry]", mod.ToolRegistry)
+
+
+def _import_credential_loader() -> type[CredentialLoader]:
+    """Import the CredentialLoader class dynamically.
+
+    Returns:
+        The CredentialLoader class.
+    """
+    mod = importlib.import_module("intellicrack.credentials.env_loader")
+    return cast("type[CredentialLoader]", mod.CredentialLoader)
+
+
+def _import_provider_registry() -> type[ProviderRegistry]:
+    """Import the ProviderRegistry class dynamically.
+
+    Returns:
+        The ProviderRegistry class.
+    """
+    mod = importlib.import_module("intellicrack.providers.registry")
+    return cast("type[ProviderRegistry]", mod.ProviderRegistry)
+
+
+def _import_main_window() -> type[MainWindow]:
+    """Import the MainWindow class dynamically.
+
+    Returns:
+        The MainWindow class.
+    """
+    mod = importlib.import_module("intellicrack.ui.app")
+    return cast("type[MainWindow]", mod.MainWindow)
+
+
+def _setup_qt_and_splash(
+    logger: Logger,
+) -> tuple[QApplication, SplashScreen] | None:
+    """Set up Qt application with theme, icons, and splash screen.
+
+    Args:
+        logger: Logger for error reporting.
+
+    Returns:
+        Tuple of (app, splash) or None if imports failed.
+    """
     try:
-        from PyQt6.QtWidgets import QApplication  # noqa: PLC0415
-
-        from intellicrack.core.orchestrator import Orchestrator  # noqa: PLC0415
-        from intellicrack.core.session import SessionManager, SessionStore  # noqa: PLC0415
-        from intellicrack.core.tools import ToolRegistry  # noqa: PLC0415
-        from intellicrack.credentials.env_loader import CredentialLoader  # noqa: PLC0415
-        from intellicrack.providers.registry import ProviderRegistry  # noqa: PLC0415
-        from intellicrack.ui.app import MainWindow  # noqa: PLC0415
-
+        qt_app_cls = _import_qt_app()
+        splash_cls = _import_splash_screen()
+        theme_mgr_cls, icon_mgr_cls = _import_theme_icon_managers()
     except ImportError as e:
         logger.exception("dependency_import_failed", extra={"error": str(e)})
         logger.warning("install_hint", extra={"command": "pixi install"})
-        return 1
+        return None
 
-    app = QApplication(sys.argv)
-    qt_app: type[QApplication] = QApplication
-    qt_app.setApplicationName("Intellicrack")
-    qt_app.setApplicationVersion(_APP_VERSION)
+    app = qt_app_cls(sys.argv)
+    qt_app_cls.setApplicationName("Intellicrack")
+    qt_app_cls.setApplicationVersion(_APP_VERSION)
     app.setStyle("Fusion")
 
-    from intellicrack.ui.dialogs import SplashScreen  # noqa: PLC0415
-    from intellicrack.ui.resources import IconManager, ThemeManager  # noqa: PLC0415
-
-    theme_manager = ThemeManager.get_instance()
+    theme_manager = theme_mgr_cls.get_instance()
     theme_manager.apply_theme("dark")
 
-    icon_manager = IconManager.get_instance()
-    qt_app.setWindowIcon(icon_manager.get_app_icon())
+    icon_manager = icon_mgr_cls.get_instance()
+    qt_app_cls.setWindowIcon(icon_manager.get_app_icon())
 
-    splash = SplashScreen()
+    splash = splash_cls()
     splash.show()
     app.processEvents()
-    logger.info("splash_screen_shown")
 
-    splash.set_progress(5, "Loading configuration...")
-    app.processEvents()
+    return app, splash
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
 
-    try:
-        splash.set_progress(10, "Loading credentials...")
-        app.processEvents()
+def _initialize_providers_sync(
+    loop: asyncio.AbstractEventLoop,
+    registry: ProviderRegistry,
+    credentials: CredentialLoader,
+    logger: Logger,
+) -> None:
+    """Initialize providers synchronously using event loop.
 
-        env_path = Path(".env")
-        credential_loader = CredentialLoader(env_path)
-
-        splash.set_progress(20, "Initializing providers...")
-        app.processEvents()
-
-        provider_registry = ProviderRegistry()
-        logger.info("provider_initialization_started")
-        loop.run_until_complete(
-            _initialize_providers(
-                provider_registry,
-                credential_loader,
-                logger,
-            )
-        )
-        logger.info("provider_initialization_complete")
-
-        splash.set_progress(50, "Initializing tools...")
-        app.processEvents()
-
-        tool_registry = ToolRegistry(config.tools_directory)
-        loop.run_until_complete(tool_registry.initialize())
-
-        splash.set_progress(70, "Initializing session manager...")
-        app.processEvents()
-
-        session_store = SessionStore(config.data_directory / "sessions.db")
-        session_manager = SessionManager(session_store)
-
-        splash.set_progress(85, "Creating orchestrator...")
-        app.processEvents()
-
-        orchestrator = Orchestrator(
-            provider_registry=provider_registry,
-            tool_registry=tool_registry,
-            session_manager=session_manager,
-        )
-
-        splash.set_progress(95, "Initializing UI...")
-        app.processEvents()
-
-        window = MainWindow(config, orchestrator)
-
-        splash.set_progress(100, "Ready")
-        app.processEvents()
-
-        splash.finish(window)
-        window.show()
-
-        logger.info("ui_started")
-        exit_code = app.exec()
-
-        logger.info("shutdown_started")
-        logger.debug("orchestrator_shutdown_begin")
-        loop.run_until_complete(orchestrator.shutdown())
-        logger.debug("orchestrator_shutdown_done")
-        logger.debug("session_manager_close_begin")
-        loop.run_until_complete(session_manager.close())
-        logger.debug("session_manager_close_done")
-        logger.debug("process_manager_cleanup_begin")
-        loop.run_until_complete(process_manager.cleanup_all_async())
-        logger.debug("process_manager_cleanup_done")
-
-        logger.info("shutdown_complete")
-
-    except Exception:
-        logger.exception("startup_failed")
-        return 1
-    else:
-        return exit_code
-
-    finally:
-        loop.run_until_complete(process_manager.cleanup_all_async())
-        process_manager.uninstall_handlers()
-        loop.close()
+    Args:
+        loop: Event loop to run async initialization.
+        registry: Provider registry to populate.
+        credentials: Credential loader for API keys.
+        logger: Logger instance.
+    """
+    loop.run_until_complete(_initialize_providers(registry, credentials, logger))
 
 
 async def _initialize_providers(
@@ -290,21 +331,23 @@ async def _initialize_providers(
         credentials: Credential loader for API keys.
         logger: Logger instance.
     """
-    from intellicrack.core.types import ProviderName  # noqa: PLC0415
-    from intellicrack.providers.anthropic import AnthropicProvider  # noqa: PLC0415
-    from intellicrack.providers.google import GoogleProvider  # noqa: PLC0415
-    from intellicrack.providers.huggingface import HuggingFaceProvider  # noqa: PLC0415
-    from intellicrack.providers.ollama import OllamaProvider  # noqa: PLC0415
-    from intellicrack.providers.openai import OpenAIProvider  # noqa: PLC0415
-    from intellicrack.providers.openrouter import OpenRouterProvider  # noqa: PLC0415
+    types_mod = importlib.import_module("intellicrack.core.types")
+    provider_name_enum = types_mod.ProviderName
+
+    anthropic_mod = importlib.import_module("intellicrack.providers.anthropic")
+    google_mod = importlib.import_module("intellicrack.providers.google")
+    hf_mod = importlib.import_module("intellicrack.providers.huggingface")
+    ollama_mod = importlib.import_module("intellicrack.providers.ollama")
+    openai_mod = importlib.import_module("intellicrack.providers.openai")
+    openrouter_mod = importlib.import_module("intellicrack.providers.openrouter")
 
     providers = [
-        (ProviderName.ANTHROPIC, AnthropicProvider),
-        (ProviderName.OPENAI, OpenAIProvider),
-        (ProviderName.GOOGLE, GoogleProvider),
-        (ProviderName.OLLAMA, OllamaProvider),
-        (ProviderName.OPENROUTER, OpenRouterProvider),
-        (ProviderName.HUGGINGFACE, HuggingFaceProvider),
+        (provider_name_enum.ANTHROPIC, anthropic_mod.AnthropicProvider),
+        (provider_name_enum.OPENAI, openai_mod.OpenAIProvider),
+        (provider_name_enum.GOOGLE, google_mod.GoogleProvider),
+        (provider_name_enum.OLLAMA, ollama_mod.OllamaProvider),
+        (provider_name_enum.OPENROUTER, openrouter_mod.OpenRouterProvider),
+        (provider_name_enum.HUGGINGFACE, hf_mod.HuggingFaceProvider),
     ]
 
     for provider_name, provider_class in providers:
@@ -320,6 +363,139 @@ async def _initialize_providers(
 
         except Exception as e:
             logger.warning("provider_init_failed", extra={"provider": provider_name.value, "error": str(e)})
+
+
+def main() -> int:
+    """Run the Intellicrack application.
+
+    Returns:
+        Exit code (0 for success, non-zero for failure).
+    """
+    config_cls = _import_config_class()
+    get_logger, setup_logging = _import_logging_funcs()
+    pm_cls = _import_process_manager()
+
+    cli_options, remaining_args = _parse_args()
+    sys.argv = [sys.argv[0], *remaining_args]
+
+    config_path = Path("config.toml")
+    config = config_cls.load(config_path) if config_path.exists() else config_cls.default()
+
+    _apply_cli_overrides(config, cli_options)
+
+    setup_logging(config.log)
+    logger = get_logger("main")
+    logger.info("app_starting", extra={"version": _APP_VERSION, "log_level": config.log.level})
+
+    process_manager = pm_cls.get_instance()
+    process_manager.install_handlers()
+    logger.debug("process_manager_initialized", extra={"handlers_installed": True})
+
+    result = _setup_qt_and_splash(logger)
+    if result is None:
+        return 1
+
+    app, splash = result
+    logger.info("splash_screen_shown")
+
+    splash.set_progress(5, "Loading configuration...")
+    app.processEvents()
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    try:
+        return _run_application(config, app, splash, loop, process_manager, logger)
+    except Exception:
+        logger.exception("startup_failed")
+        return 1
+    finally:
+        loop.run_until_complete(process_manager.cleanup_all_async())
+        process_manager.uninstall_handlers()
+        loop.close()
+
+
+def _run_application(
+    config: Config,
+    app: QApplication,
+    splash: SplashScreen,
+    loop: asyncio.AbstractEventLoop,
+    process_manager: ProcessManager,
+    logger: Logger,
+) -> int:
+    """Run the main application logic.
+
+    Args:
+        config: Application configuration.
+        app: Qt application instance.
+        splash: Splash screen instance.
+        loop: Asyncio event loop.
+        process_manager: Process manager instance.
+        logger: Logger instance.
+
+    Returns:
+        Application exit code.
+    """
+    splash.set_progress(10, "Loading credentials...")
+    app.processEvents()
+
+    cred_loader_cls = _import_credential_loader()
+    credential_loader = cred_loader_cls(Path(".env"))
+
+    splash.set_progress(20, "Initializing providers...")
+    app.processEvents()
+
+    prov_reg_cls = _import_provider_registry()
+    provider_registry = prov_reg_cls()
+    logger.info("provider_initialization_started")
+    _initialize_providers_sync(loop, provider_registry, credential_loader, logger)
+    logger.info("provider_initialization_complete")
+
+    splash.set_progress(50, "Initializing tools...")
+    app.processEvents()
+
+    tool_reg_cls = _import_tool_registry()
+    tool_registry = tool_reg_cls(config.tools_directory)
+    loop.run_until_complete(tool_registry.initialize())
+
+    splash.set_progress(70, "Initializing session manager...")
+    app.processEvents()
+
+    session_mgr_cls, session_store_cls = _import_session_classes()
+    session_store = session_store_cls(config.data_directory / "sessions.db")
+    session_manager = session_mgr_cls(session_store)
+
+    splash.set_progress(85, "Creating orchestrator...")
+    app.processEvents()
+
+    orch_cls = _import_orchestrator()
+    orchestrator = orch_cls(
+        provider_registry=provider_registry,
+        tool_registry=tool_registry,
+        session_manager=session_manager,
+    )
+
+    splash.set_progress(95, "Initializing UI...")
+    app.processEvents()
+
+    main_window_cls = _import_main_window()
+    window = main_window_cls(config, orchestrator)
+
+    splash.set_progress(100, "Ready")
+    app.processEvents()
+    splash.finish(window)
+    window.show()
+
+    logger.info("ui_started")
+    exit_code = app.exec()
+
+    logger.info("shutdown_started")
+    loop.run_until_complete(orchestrator.shutdown())
+    loop.run_until_complete(session_manager.close())
+    loop.run_until_complete(process_manager.cleanup_all_async())
+    logger.info("shutdown_complete")
+
+    return exit_code
 
 
 if __name__ == "__main__":

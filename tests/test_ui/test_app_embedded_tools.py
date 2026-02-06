@@ -93,21 +93,13 @@ class TestEmbeddedToolsMenuIntegration:
                 assert menubar is not None, "Menu bar not found"
 
                 tools_menu = next(
-                    (
-                        action.menu()
-                        for action in menubar.actions()
-                        if action.text() == "&Tools"
-                    ),
+                    (action.menu() for action in menubar.actions() if action.text() == "&Tools"),
                     None,
                 )
                 assert tools_menu is not None, "Tools menu not found"
 
                 embedded_menu = next(
-                    (
-                        action.menu()
-                        for action in tools_menu.actions()
-                        if action.text() == "&Embedded Tools"
-                    ),
+                    (action.menu() for action in tools_menu.actions() if action.text() == "&Embedded Tools"),
                     None,
                 )
                 assert embedded_menu is not None, "Embedded Tools submenu not found"
@@ -129,11 +121,7 @@ class TestEmbeddedToolsMenuIntegration:
                 assert menubar is not None
 
                 tools_menu = next(
-                    (
-                        action.menu()
-                        for action in menubar.actions()
-                        if action.text() == "&Tools"
-                    ),
+                    (action.menu() for action in menubar.actions() if action.text() == "&Tools"),
                     None,
                 )
                 embedded_menu = None

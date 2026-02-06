@@ -125,11 +125,7 @@ class ProviderRegistry:
         Returns:
             List of connected provider names.
         """
-        connected: list[ProviderName] = [
-            name
-            for name, provider in self._providers.items()
-            if provider.is_connected
-        ]
+        connected: list[ProviderName] = [name for name, provider in self._providers.items() if provider.is_connected]
         return connected
 
     async def connect_provider(

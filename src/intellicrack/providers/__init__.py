@@ -5,6 +5,8 @@ Anthropic Claude, OpenAI GPT, Google Gemini, Ollama, OpenRouter, and local
 Transformers with Intel XPU acceleration.
 """
 
+from __future__ import annotations
+
 from .anthropic import AnthropicProvider
 from .base import (
     AnthropicToolSchema,

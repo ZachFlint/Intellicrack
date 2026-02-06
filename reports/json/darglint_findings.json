@@ -1,462 +1,474 @@
 {
   "tool": "darglint",
-  "generated": "2026-01-31T23:26:35.811426",
-  "total_findings": 48,
-  "total_files": 12,
+  "generated": "2026-02-06T13:38:08.229642",
+  "total_findings": 57,
+  "total_files": 2,
   "files": [
     {
-      "path": "src\\intellicrack\\core\\types.py",
-      "count": 14,
-      "findings": [
-        {
-          "line": 124,
-          "column": null,
-          "function": "is_hash",
-          "code": "DAR201",
-          "message": "[is_hash] - return",
-          "raw": "src\\intellicrack\\core\\types.py:is_hash:124: DAR201: - return"
-        },
-        {
-          "line": 150,
-          "column": null,
-          "function": "requires_hardware_id",
-          "code": "DAR201",
-          "message": "[requires_hardware_id] - return",
-          "raw": "src\\intellicrack\\core\\types.py:requires_hardware_id:150: DAR201: - return"
-        },
-        {
-          "line": 155,
-          "column": null,
-          "function": "is_text_based",
-          "code": "DAR201",
-          "message": "[is_text_based] - return",
-          "raw": "src\\intellicrack\\core\\types.py:is_text_based:155: DAR201: - return"
-        },
-        {
-          "line": 242,
-          "column": null,
-          "function": "is_executable",
-          "code": "DAR201",
-          "message": "[is_executable] - return",
-          "raw": "src\\intellicrack\\core\\types.py:is_executable:242: DAR201: - return"
-        },
-        {
-          "line": 247,
-          "column": null,
-          "function": "is_readable",
-          "code": "DAR201",
-          "message": "[is_readable] - return",
-          "raw": "src\\intellicrack\\core\\types.py:is_readable:247: DAR201: - return"
-        },
-        {
-          "line": 252,
-          "column": null,
-          "function": "is_writable",
-          "code": "DAR201",
-          "message": "[is_writable] - return",
-          "raw": "src\\intellicrack\\core\\types.py:is_writable:252: DAR201: - return"
-        },
-        {
-          "line": 381,
-          "column": null,
-          "function": "display_type",
-          "code": "DAR201",
-          "message": "[display_type] - return",
-          "raw": "src\\intellicrack\\core\\types.py:display_type:381: DAR201: - return"
-        },
-        {
-          "line": 417,
-          "column": null,
-          "function": "has_code",
-          "code": "DAR201",
-          "message": "[has_code] - return",
-          "raw": "src\\intellicrack\\core\\types.py:has_code:417: DAR201: - return"
-        },
-        {
-          "line": 422,
-          "column": null,
-          "function": "summary",
-          "code": "DAR201",
-          "message": "[summary] - return",
-          "raw": "src\\intellicrack\\core\\types.py:summary:422: DAR201: - return"
-        },
-        {
-          "line": 472,
-          "column": null,
-          "function": "summary",
-          "code": "DAR201",
-          "message": "[summary] - return",
-          "raw": "src\\intellicrack\\core\\types.py:summary:472: DAR201: - return"
-        },
-        {
-          "line": 511,
-          "column": null,
-          "function": "__str__",
-          "code": "DAR201",
-          "message": "[__str__] - return",
-          "raw": "src\\intellicrack\\core\\types.py:__str__:511: DAR201: - return"
-        },
-        {
-          "line": 602,
-          "column": null,
-          "function": "__str__",
-          "code": "DAR201",
-          "message": "[__str__] - return",
-          "raw": "src\\intellicrack\\core\\types.py:__str__:602: DAR201: - return"
-        },
-        {
-          "line": 739,
-          "column": null,
-          "function": "__str__",
-          "code": "DAR201",
-          "message": "[__str__] - return",
-          "raw": "src\\intellicrack\\core\\types.py:__str__:739: DAR201: - return"
-        },
-        {
-          "line": 955,
-          "column": null,
-          "function": "signature",
-          "code": "DAR201",
-          "message": "[signature] - return",
-          "raw": "src\\intellicrack\\core\\types.py:signature:955: DAR201: - return"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\bridges\\base.py",
-      "count": 8,
+      "count": 55,
       "findings": [
         {
-          "line": 161,
+          "line": 255,
           "column": null,
-          "function": "has_capability",
-          "code": "DAR101",
-          "message": "[has_capability] - capability",
-          "raw": "src\\intellicrack\\bridges\\base.py:has_capability:161: DAR101: - capability"
+          "function": "name",
+          "code": "DAR401",
+          "message": "[name] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:name:255: DAR401: -r RuntimeError"
         },
         {
-          "line": 161,
+          "line": 283,
           "column": null,
-          "function": "has_capability",
-          "code": "DAR201",
-          "message": "[has_capability] - return",
-          "raw": "src\\intellicrack\\bridges\\base.py:has_capability:161: DAR201: - return"
+          "function": "tool_definition",
+          "code": "DAR401",
+          "message": "[tool_definition] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:tool_definition:283: DAR401: -r RuntimeError"
         },
         {
-          "line": 165,
+          "line": 292,
           "column": null,
-          "function": "supports_arch",
-          "code": "DAR101",
-          "message": "[supports_arch] - arch",
-          "raw": "src\\intellicrack\\bridges\\base.py:supports_arch:165: DAR101: - arch"
+          "function": "initialize",
+          "code": "DAR401",
+          "message": "[initialize] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:initialize:292: DAR401: -r RuntimeError"
         },
         {
-          "line": 165,
+          "line": 307,
           "column": null,
-          "function": "supports_arch",
-          "code": "DAR201",
-          "message": "[supports_arch] - return",
-          "raw": "src\\intellicrack\\bridges\\base.py:supports_arch:165: DAR201: - return"
+          "function": "is_available",
+          "code": "DAR401",
+          "message": "[is_available] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:is_available:307: DAR401: -r RuntimeError"
         },
         {
-          "line": 169,
+          "line": 334,
           "column": null,
-          "function": "supports_format",
-          "code": "DAR101",
-          "message": "[supports_format] - fmt",
-          "raw": "src\\intellicrack\\bridges\\base.py:supports_format:169: DAR101: - fmt"
-        },
-        {
-          "line": 169,
-          "column": null,
-          "function": "supports_format",
-          "code": "DAR201",
-          "message": "[supports_format] - return",
-          "raw": "src\\intellicrack\\bridges\\base.py:supports_format:169: DAR201: - return"
-        },
-        {
-          "line": 196,
-          "column": null,
-          "function": "is_ready",
-          "code": "DAR201",
-          "message": "[is_ready] - return",
-          "raw": "src\\intellicrack\\bridges\\base.py:is_ready:196: DAR201: - return"
-        },
-        {
-          "line": 323,
-          "column": null,
-          "function": "analyze",
-          "code": "DAR402",
-          "message": "[analyze] +r ToolError",
-          "raw": "src\\intellicrack\\bridges\\base.py:analyze:323: DAR402: +r ToolError"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\bridges\\x64dbg.py",
-      "count": 8,
-      "findings": [
-        {
-          "line": 69,
-          "column": null,
-          "function": "get_capstone",
-          "code": "DAR201",
-          "message": "[get_capstone] - return",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:get_capstone:69: DAR201: - return"
-        },
-        {
-          "line": 74,
-          "column": null,
-          "function": "get_keystone",
-          "code": "DAR201",
-          "message": "[get_keystone] - return",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:get_keystone:74: DAR201: - return"
-        },
-        {
-          "line": 336,
-          "column": null,
-          "function": "attached_pid",
-          "code": "DAR201",
-          "message": "[attached_pid] - return",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:attached_pid:336: DAR201: - return"
-        },
-        {
-          "line": 341,
-          "column": null,
-          "function": "binary_path",
-          "code": "DAR201",
-          "message": "[binary_path] - return",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:binary_path:341: DAR201: - return"
+          "function": "load_binary",
+          "code": "DAR401",
+          "message": "[load_binary] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:load_binary:334: DAR401: -r RuntimeError"
         },
         {
           "line": 346,
           "column": null,
-          "function": "is_64bit",
-          "code": "DAR201",
-          "message": "[is_64bit] - return",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:is_64bit:346: DAR201: - return"
+          "function": "analyze",
+          "code": "DAR401",
+          "message": "[analyze] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:analyze:346: DAR401: -r RuntimeError"
         },
         {
-          "line": 351,
+          "line": 353,
           "column": null,
-          "function": "breakpoints",
-          "code": "DAR201",
-          "message": "[breakpoints] - return",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:breakpoints:351: DAR201: - return"
+          "function": "get_functions",
+          "code": "DAR401",
+          "message": "[get_functions] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:get_functions:353: DAR401: -r RuntimeError"
         },
         {
-          "line": 356,
+          "line": 366,
           "column": null,
-          "function": "watchpoints",
-          "code": "DAR201",
-          "message": "[watchpoints] - return",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:watchpoints:356: DAR201: - return"
+          "function": "get_function",
+          "code": "DAR401",
+          "message": "[get_function] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:get_function:366: DAR401: -r RuntimeError"
         },
         {
-          "line": 361,
+          "line": 378,
           "column": null,
-          "function": "x64dbg_path",
-          "code": "DAR201",
-          "message": "[x64dbg_path] - return",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:x64dbg_path:361: DAR201: - return"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\core\\script_gen.py",
-      "count": 5,
-      "findings": [
-        {
-          "line": 46,
-          "column": null,
-          "function": "_empty_str_list",
-          "code": "DAR201",
-          "message": "[_empty_str_list] - return",
-          "raw": "src\\intellicrack\\core\\script_gen.py:_empty_str_list:46: DAR201: - return"
+          "function": "decompile",
+          "code": "DAR401",
+          "message": "[decompile] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:decompile:378: DAR401: -r RuntimeError"
         },
         {
-          "line": 51,
+          "line": 393,
           "column": null,
-          "function": "_empty_int_list",
-          "code": "DAR201",
-          "message": "[_empty_int_list] - return",
-          "raw": "src\\intellicrack\\core\\script_gen.py:_empty_int_list:51: DAR201: - return"
+          "function": "disassemble",
+          "code": "DAR401",
+          "message": "[disassemble] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:disassemble:393: DAR401: -r RuntimeError"
         },
         {
-          "line": 56,
+          "line": 407,
           "column": null,
-          "function": "_empty_dict_list",
-          "code": "DAR201",
-          "message": "[_empty_dict_list] - return",
-          "raw": "src\\intellicrack\\core\\script_gen.py:_empty_dict_list:56: DAR201: - return"
+          "function": "get_xrefs_to",
+          "code": "DAR401",
+          "message": "[get_xrefs_to] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:get_xrefs_to:407: DAR401: -r RuntimeError"
         },
         {
-          "line": 61,
+          "line": 419,
           "column": null,
-          "function": "_empty_str_any_dict",
-          "code": "DAR201",
-          "message": "[_empty_str_any_dict] - return",
-          "raw": "src\\intellicrack\\core\\script_gen.py:_empty_str_any_dict:61: DAR201: - return"
+          "function": "get_xrefs_from",
+          "code": "DAR401",
+          "message": "[get_xrefs_from] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:get_xrefs_from:419: DAR401: -r RuntimeError"
         },
         {
-          "line": 96,
+          "line": 431,
           "column": null,
-          "function": "description",
-          "code": "DAR201",
-          "message": "[description] - return",
-          "raw": "src\\intellicrack\\core\\script_gen.py:description:96: DAR201: - return"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\local_transformers.py",
-      "count": 3,
-      "findings": [
+          "function": "search_strings",
+          "code": "DAR401",
+          "message": "[search_strings] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:search_strings:431: DAR401: -r RuntimeError"
+        },
         {
-          "line": 160,
+          "line": 443,
           "column": null,
-          "function": "connect",
-          "code": "DAR402",
-          "message": "[connect] +r ProviderError",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:connect:160: DAR402: +r ProviderError"
+          "function": "search_bytes",
+          "code": "DAR401",
+          "message": "[search_bytes] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:search_bytes:443: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 455,
+          "column": null,
+          "function": "get_imports",
+          "code": "DAR401",
+          "message": "[get_imports] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:get_imports:455: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 464,
+          "column": null,
+          "function": "get_exports",
+          "code": "DAR401",
+          "message": "[get_exports] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:get_exports:464: DAR401: -r RuntimeError"
         },
         {
           "line": 473,
           "column": null,
-          "function": "_generate_sync",
+          "function": "rename_function",
           "code": "DAR401",
-          "message": "[_generate_sync] -r RuntimeError",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:_generate_sync:473: DAR401: -r RuntimeError"
+          "message": "[rename_function] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:rename_function:473: DAR401: -r RuntimeError"
         },
         {
-          "line": 520,
+          "line": 490,
           "column": null,
-          "function": "_stream_generate",
+          "function": "add_comment",
           "code": "DAR401",
-          "message": "[_stream_generate] -r RuntimeError",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:_stream_generate:520: DAR401: -r RuntimeError"
+          "message": "[add_comment] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:add_comment:490: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 524,
+          "column": null,
+          "function": "attach",
+          "code": "DAR401",
+          "message": "[attach] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:attach:524: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 536,
+          "column": null,
+          "function": "spawn",
+          "code": "DAR401",
+          "message": "[spawn] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:spawn:536: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 550,
+          "column": null,
+          "function": "detach",
+          "code": "DAR401",
+          "message": "[detach] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:detach:550: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 555,
+          "column": null,
+          "function": "read_memory",
+          "code": "DAR401",
+          "message": "[read_memory] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:read_memory:555: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 568,
+          "column": null,
+          "function": "write_memory",
+          "code": "DAR401",
+          "message": "[write_memory] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:write_memory:568: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 581,
+          "column": null,
+          "function": "get_memory_regions",
+          "code": "DAR401",
+          "message": "[get_memory_regions] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:get_memory_regions:581: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 590,
+          "column": null,
+          "function": "scan_memory",
+          "code": "DAR401",
+          "message": "[scan_memory] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:scan_memory:590: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 615,
+          "column": null,
+          "function": "run",
+          "code": "DAR401",
+          "message": "[run] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:run:615: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 620,
+          "column": null,
+          "function": "pause",
+          "code": "DAR401",
+          "message": "[pause] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:pause:620: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 625,
+          "column": null,
+          "function": "stop",
+          "code": "DAR401",
+          "message": "[stop] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:stop:625: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 630,
+          "column": null,
+          "function": "step_into",
+          "code": "DAR401",
+          "message": "[step_into] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:step_into:630: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 639,
+          "column": null,
+          "function": "step_over",
+          "code": "DAR401",
+          "message": "[step_over] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:step_over:639: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 648,
+          "column": null,
+          "function": "step_out",
+          "code": "DAR401",
+          "message": "[step_out] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:step_out:648: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 661,
+          "column": null,
+          "function": "set_breakpoint",
+          "code": "DAR401",
+          "message": "[set_breakpoint] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:set_breakpoint:661: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 676,
+          "column": null,
+          "function": "remove_breakpoint",
+          "code": "DAR401",
+          "message": "[remove_breakpoint] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:remove_breakpoint:676: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 688,
+          "column": null,
+          "function": "get_breakpoints",
+          "code": "DAR401",
+          "message": "[get_breakpoints] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:get_breakpoints:688: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 697,
+          "column": null,
+          "function": "get_registers",
+          "code": "DAR401",
+          "message": "[get_registers] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:get_registers:697: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 706,
+          "column": null,
+          "function": "set_register",
+          "code": "DAR401",
+          "message": "[set_register] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:set_register:706: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 719,
+          "column": null,
+          "function": "get_stack_trace",
+          "code": "DAR401",
+          "message": "[get_stack_trace] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:get_stack_trace:719: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 731,
+          "column": null,
+          "function": "disassemble_at",
+          "code": "DAR401",
+          "message": "[disassemble_at] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:disassemble_at:731: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 745,
+          "column": null,
+          "function": "assemble_at",
+          "code": "DAR401",
+          "message": "[assemble_at] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:assemble_at:745: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 771,
+          "column": null,
+          "function": "enumerate_modules",
+          "code": "DAR401",
+          "message": "[enumerate_modules] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:enumerate_modules:771: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 781,
+          "column": null,
+          "function": "enumerate_exports",
+          "code": "DAR401",
+          "message": "[enumerate_exports] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:enumerate_exports:781: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 798,
+          "column": null,
+          "function": "hook_function",
+          "code": "DAR401",
+          "message": "[hook_function] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:hook_function:798: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 814,
+          "column": null,
+          "function": "remove_hook",
+          "code": "DAR401",
+          "message": "[remove_hook] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:remove_hook:814: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 827,
+          "column": null,
+          "function": "get_hooks",
+          "code": "DAR401",
+          "message": "[get_hooks] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:get_hooks:827: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 837,
+          "column": null,
+          "function": "execute_script",
+          "code": "DAR401",
+          "message": "[execute_script] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:execute_script:837: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 850,
+          "column": null,
+          "function": "intercept_return",
+          "code": "DAR401",
+          "message": "[intercept_return] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:intercept_return:850: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 867,
+          "column": null,
+          "function": "call_function",
+          "code": "DAR401",
+          "message": "[call_function] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:call_function:867: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 900,
+          "column": null,
+          "function": "load_file",
+          "code": "DAR401",
+          "message": "[load_file] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:load_file:900: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 913,
+          "column": null,
+          "function": "read_bytes",
+          "code": "DAR401",
+          "message": "[read_bytes] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:read_bytes:913: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 927,
+          "column": null,
+          "function": "write_bytes",
+          "code": "DAR401",
+          "message": "[write_bytes] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:write_bytes:927: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 937,
+          "column": null,
+          "function": "apply_patch",
+          "code": "DAR401",
+          "message": "[apply_patch] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:apply_patch:937: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 950,
+          "column": null,
+          "function": "revert_patch",
+          "code": "DAR401",
+          "message": "[revert_patch] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:revert_patch:950: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 963,
+          "column": null,
+          "function": "save",
+          "code": "DAR401",
+          "message": "[save] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:save:963: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 980,
+          "column": null,
+          "function": "search_pattern",
+          "code": "DAR401",
+          "message": "[search_pattern] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:search_pattern:980: DAR401: -r RuntimeError"
+        },
+        {
+          "line": 998,
+          "column": null,
+          "function": "calculate_checksum",
+          "code": "DAR401",
+          "message": "[calculate_checksum] -r RuntimeError",
+          "raw": "src\\intellicrack\\bridges\\base.py:calculate_checksum:998: DAR401: -r RuntimeError"
         }
       ]
     },
     {
-      "path": "src\\intellicrack\\bridges\\binary.py",
+      "path": "src\\intellicrack\\ui\\resources\\resource_helper.py",
       "count": 2,
       "findings": [
         {
-          "line": 46,
+          "line": 57,
           "column": null,
-          "function": "_lief_parse_raw",
-          "code": "DAR101",
-          "message": "[_lief_parse_raw] - data",
-          "raw": "src\\intellicrack\\bridges\\binary.py:_lief_parse_raw:46: DAR101: - data"
+          "function": "get_assets_path",
+          "code": "DAR401",
+          "message": "[get_assets_path] -r AssetNotFoundError",
+          "raw": "src\\intellicrack\\ui\\resources\\resource_helper.py:get_assets_path:57: DAR401: -r AssetNotFoundError"
         },
         {
-          "line": 46,
+          "line": 64,
           "column": null,
-          "function": "_lief_parse_raw",
-          "code": "DAR201",
-          "message": "[_lief_parse_raw] - return",
-          "raw": "src\\intellicrack\\bridges\\binary.py:_lief_parse_raw:46: DAR201: - return"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\model_loader.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 108,
-          "column": null,
-          "function": "max_memory_bytes",
-          "code": "DAR201",
-          "message": "[max_memory_bytes] - return",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:max_memory_bytes:108: DAR201: - return"
-        },
-        {
-          "line": 113,
-          "column": null,
-          "function": "max_memory_bytes",
-          "code": "DAR101",
-          "message": "[max_memory_bytes] - value",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:max_memory_bytes:113: DAR101: - value"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\tools.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 43,
-          "column": null,
-          "function": "tool_started",
-          "code": "DAR201",
-          "message": "[tool_started] - return",
-          "raw": "src\\intellicrack\\ui\\tools.py:tool_started:43: DAR201: - return"
-        },
-        {
-          "line": 48,
-          "column": null,
-          "function": "tool_closed",
-          "code": "DAR201",
-          "message": "[tool_closed] - return",
-          "raw": "src\\intellicrack\\ui\\tools.py:tool_closed:48: DAR201: - return"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\bridges\\radare2.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 1220,
-          "column": null,
-          "function": "execute_command",
+          "function": "get_assets_path",
           "code": "DAR402",
-          "message": "[execute_command] +r ToolError",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:execute_command:1220: DAR402: +r ToolError"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\sandbox\\qemu.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 378,
-          "column": null,
-          "function": "is_connected",
-          "code": "DAR201",
-          "message": "[is_connected] - return",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:is_connected:378: DAR201: - return"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\frida_panel.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 273,
-          "column": null,
-          "function": "_on_frida_message",
-          "code": "DAR102",
-          "message": "[_on_frida_message] + data",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:_on_frida_message:273: DAR102: + data"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\process_panel.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 181,
-          "column": null,
-          "function": "_detect_process_architecture",
-          "code": "DAR203",
-          "message": "[_detect_process_architecture] ~Return: expected str but was Architecture string",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:_detect_process_architecture:181: DAR203:  ~Return: expected str but was Architecture string"
+          "message": "[get_assets_path] +r FileNotFoundError",
+          "raw": "src\\intellicrack\\ui\\resources\\resource_helper.py:get_assets_path:64: DAR402: +r FileNotFoundError"
         }
       ]
     }

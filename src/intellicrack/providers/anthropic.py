@@ -535,7 +535,5 @@ class AnthropicProvider(LLMProviderBase):
         Returns:
             Concatenated system prompt content, or None if no system messages.
         """
-        system_parts: list[str] = [
-            msg.content for msg in messages if msg.role == "system" and msg.content
-        ]
+        system_parts: list[str] = [msg.content for msg in messages if msg.role == "system" and msg.content]
         return "\n\n".join(system_parts) if system_parts else None

@@ -1,57 +1,57 @@
 {
   "tool": "xenon",
-  "generated": "2026-01-30T22:11:41.856784",
-  "total_findings": 77,
-  "total_files": 36,
+  "generated": "2026-02-06T13:35:57.336656",
+  "total_findings": 80,
+  "total_files": 39,
   "files": [
     {
       "path": "src\\intellicrack\\core\\license_analyzer.py",
       "count": 5,
       "findings": [
         {
-          "line": 1732,
+          "line": 1897,
           "column": null,
           "name": "_detect_algorithms",
           "rank": "D",
           "complexity": 30,
           "message": "'_detect_algorithms' has rank D (complexity > threshold)",
-          "raw": "src\\intellicrack\\core\\license_analyzer.py:1732: '_detect_algorithms' has rank D"
+          "raw": "src\\intellicrack\\core\\license_analyzer.py:1897: '_detect_algorithms' has rank D"
         },
         {
-          "line": 1776,
+          "line": 1957,
           "column": null,
           "name": "_detect_key_format",
           "rank": "C",
           "complexity": 20,
           "message": "'_detect_key_format' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\core\\license_analyzer.py:1776: '_detect_key_format' has rank C"
+          "raw": "src\\intellicrack\\core\\license_analyzer.py:1957: '_detect_key_format' has rank C"
         },
         {
-          "line": 1827,
+          "line": 2022,
           "column": null,
           "name": "_detect_checksum_info",
           "rank": "C",
           "complexity": 20,
           "message": "'_detect_checksum_info' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\core\\license_analyzer.py:1827: '_detect_checksum_info' has rank C"
+          "raw": "src\\intellicrack\\core\\license_analyzer.py:2022: '_detect_checksum_info' has rank C"
         },
         {
-          "line": 1476,
+          "line": 1635,
           "column": null,
           "name": "_update_context_for_instruction",
           "rank": "C",
           "complexity": 20,
           "message": "'_update_context_for_instruction' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\core\\license_analyzer.py:1476: '_update_context_for_instruction' has rank C"
+          "raw": "src\\intellicrack\\core\\license_analyzer.py:1635: '_update_context_for_instruction' has rank C"
         },
         {
-          "line": 1583,
+          "line": 1748,
           "column": null,
           "name": "_collect_function_candidates",
           "rank": "C",
           "complexity": 20,
           "message": "'_collect_function_candidates' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\core\\license_analyzer.py:1583: '_collect_function_candidates' has rank C"
+          "raw": "src\\intellicrack\\core\\license_analyzer.py:1748: '_collect_function_candidates' has rank C"
         }
       ]
     },
@@ -60,13 +60,13 @@
       "count": 5,
       "findings": [
         {
-          "line": 348,
+          "line": 343,
           "column": null,
           "name": "chat",
           "rank": "C",
           "complexity": 20,
           "message": "'chat' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\huggingface.py:348: 'chat' has rank C"
+          "raw": "src\\intellicrack\\providers\\huggingface.py:343: 'chat' has rank C"
         },
         {
           "line": 490,
@@ -78,15 +78,6 @@
           "raw": "src\\intellicrack\\providers\\huggingface.py:490: 'chat_stream' has rank C"
         },
         {
-          "line": 267,
-          "column": null,
-          "name": "_estimate_context_window",
-          "rank": "C",
-          "complexity": 20,
-          "message": "'_estimate_context_window' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\huggingface.py:267: '_estimate_context_window' has rank C"
-        },
-        {
           "line": 178,
           "column": null,
           "name": "list_models",
@@ -96,55 +87,22 @@
           "raw": "src\\intellicrack\\providers\\huggingface.py:178: 'list_models' has rank C"
         },
         {
-          "line": 599,
+          "line": 267,
+          "column": null,
+          "name": "_estimate_context_window",
+          "rank": "C",
+          "complexity": 20,
+          "message": "'_estimate_context_window' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\providers\\huggingface.py:267: '_estimate_context_window' has rank C"
+        },
+        {
+          "line": 612,
           "column": null,
           "name": "_convert_messages_to_provider_format",
           "rank": "C",
           "complexity": 20,
           "message": "'_convert_messages_to_provider_format' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\huggingface.py:599: '_convert_messages_to_provider_format' has rank C"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\bridges\\x64dbg.py",
-      "count": 4,
-      "findings": [
-        {
-          "line": 258,
-          "column": null,
-          "name": "_read_unicode_string_from_params",
-          "rank": "C",
-          "complexity": 20,
-          "message": "'_read_unicode_string_from_params' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:258: '_read_unicode_string_from_params' has rank C"
-        },
-        {
-          "line": 1482,
-          "column": null,
-          "name": "get_memory_regions",
-          "rank": "C",
-          "complexity": 20,
-          "message": "'get_memory_regions' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1482: 'get_memory_regions' has rank C"
-        },
-        {
-          "line": 1779,
-          "column": null,
-          "name": "get_threads",
-          "rank": "C",
-          "complexity": 20,
-          "message": "'get_threads' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1779: 'get_threads' has rank C"
-        },
-        {
-          "line": 1851,
-          "column": null,
-          "name": "get_modules",
-          "rank": "C",
-          "complexity": 20,
-          "message": "'get_modules' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1851: 'get_modules' has rank C"
+          "raw": "src\\intellicrack\\providers\\huggingface.py:612: '_convert_messages_to_provider_format' has rank C"
         }
       ]
     },
@@ -153,40 +111,40 @@
       "count": 4,
       "findings": [
         {
-          "line": 450,
+          "line": 499,
           "column": null,
           "name": "_parse_response",
           "rank": "C",
           "complexity": 20,
           "message": "'_parse_response' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\google.py:450: '_parse_response' has rank C"
+          "raw": "src\\intellicrack\\providers\\google.py:499: '_parse_response' has rank C"
         },
         {
-          "line": 229,
+          "line": 230,
           "column": null,
           "name": "chat",
           "rank": "C",
           "complexity": 20,
           "message": "'chat' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\google.py:229: 'chat' has rank C"
+          "raw": "src\\intellicrack\\providers\\google.py:230: 'chat' has rank C"
         },
         {
-          "line": 330,
+          "line": 351,
           "column": null,
           "name": "chat_stream",
           "rank": "C",
           "complexity": 20,
           "message": "'chat_stream' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\google.py:330: 'chat_stream' has rank C"
+          "raw": "src\\intellicrack\\providers\\google.py:351: 'chat_stream' has rank C"
         },
         {
-          "line": 492,
+          "line": 536,
           "column": null,
           "name": "_convert_messages_to_provider_format",
           "rank": "C",
           "complexity": 20,
           "message": "'_convert_messages_to_provider_format' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\google.py:492: '_convert_messages_to_provider_format' has rank C"
+          "raw": "src\\intellicrack\\providers\\google.py:536: '_convert_messages_to_provider_format' has rank C"
         }
       ]
     },
@@ -195,40 +153,40 @@
       "count": 4,
       "findings": [
         {
-          "line": 758,
+          "line": 768,
           "column": null,
           "name": "_build_qemu_command",
           "rank": "C",
           "complexity": 20,
           "message": "'_build_qemu_command' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:758: '_build_qemu_command' has rank C"
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:768: '_build_qemu_command' has rank C"
         },
         {
-          "line": 1415,
+          "line": 1448,
           "column": null,
           "name": "execute",
           "rank": "C",
           "complexity": 20,
           "message": "'execute' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:1415: 'execute' has rank C"
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:1448: 'execute' has rank C"
         },
         {
-          "line": 1486,
+          "line": 1519,
           "column": null,
           "name": "run_binary",
           "rank": "C",
           "complexity": 20,
           "message": "'run_binary' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:1486: 'run_binary' has rank C"
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:1519: 'run_binary' has rank C"
         },
         {
-          "line": 1645,
+          "line": 1671,
           "column": null,
           "name": "_parse_network_log",
           "rank": "C",
           "complexity": 20,
           "message": "'_parse_network_log' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:1645: '_parse_network_log' has rank C"
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:1671: '_parse_network_log' has rank C"
         }
       ]
     },
@@ -237,40 +195,40 @@
       "count": 4,
       "findings": [
         {
-          "line": 228,
+          "line": 229,
           "column": null,
           "name": "_load_sessions",
           "rank": "C",
           "complexity": 20,
           "message": "'_load_sessions' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:228: '_load_sessions' has rank C"
+          "raw": "src\\intellicrack\\ui\\session_manager.py:229: '_load_sessions' has rank C"
         },
         {
-          "line": 283,
+          "line": 284,
           "column": null,
           "name": "_load_sessions_from_disk",
           "rank": "C",
           "complexity": 20,
           "message": "'_load_sessions_from_disk' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:283: '_load_sessions_from_disk' has rank C"
+          "raw": "src\\intellicrack\\ui\\session_manager.py:284: '_load_sessions_from_disk' has rank C"
         },
         {
-          "line": 544,
+          "line": 546,
           "column": null,
           "name": "_export_session",
           "rank": "C",
           "complexity": 20,
           "message": "'_export_session' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:544: '_export_session' has rank C"
+          "raw": "src\\intellicrack\\ui\\session_manager.py:546: '_export_session' has rank C"
         },
         {
-          "line": 604,
+          "line": 609,
           "column": null,
           "name": "_prepare_export_data",
           "rank": "C",
           "complexity": 20,
           "message": "'_prepare_export_data' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:604: '_prepare_export_data' has rank C"
+          "raw": "src\\intellicrack\\ui\\session_manager.py:609: '_prepare_export_data' has rank C"
         }
       ]
     },
@@ -279,31 +237,31 @@
       "count": 3,
       "findings": [
         {
-          "line": 225,
+          "line": 223,
           "column": null,
           "name": "chat",
           "rank": "C",
           "complexity": 20,
           "message": "'chat' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:225: 'chat' has rank C"
+          "raw": "src\\intellicrack\\providers\\anthropic.py:223: 'chat' has rank C"
         },
         {
-          "line": 402,
-          "column": null,
-          "name": "_convert_messages_to_provider_format",
-          "rank": "C",
-          "complexity": 20,
-          "message": "'_convert_messages_to_provider_format' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:402: '_convert_messages_to_provider_format' has rank C"
-        },
-        {
-          "line": 327,
+          "line": 352,
           "column": null,
           "name": "chat_stream",
           "rank": "C",
           "complexity": 20,
           "message": "'chat_stream' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:327: 'chat_stream' has rank C"
+          "raw": "src\\intellicrack\\providers\\anthropic.py:352: 'chat_stream' has rank C"
+        },
+        {
+          "line": 446,
+          "column": null,
+          "name": "_convert_messages_to_provider_format",
+          "rank": "C",
+          "complexity": 20,
+          "message": "'_convert_messages_to_provider_format' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\providers\\anthropic.py:446: '_convert_messages_to_provider_format' has rank C"
         }
       ]
     },
@@ -312,31 +270,31 @@
       "count": 3,
       "findings": [
         {
-          "line": 580,
+          "line": 575,
           "column": null,
           "name": "filter",
           "rank": "C",
           "complexity": 20,
           "message": "'filter' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\discovery.py:580: 'filter' has rank C"
+          "raw": "src\\intellicrack\\providers\\discovery.py:575: 'filter' has rank C"
         },
         {
-          "line": 692,
+          "line": 683,
           "column": null,
           "name": "get_recommended_model",
           "rank": "C",
           "complexity": 20,
           "message": "'get_recommended_model' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\discovery.py:692: 'get_recommended_model' has rank C"
+          "raw": "src\\intellicrack\\providers\\discovery.py:683: 'get_recommended_model' has rank C"
         },
         {
-          "line": 489,
+          "line": 484,
           "column": null,
           "name": "discover_provider",
           "rank": "C",
           "complexity": 20,
           "message": "'discover_provider' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\discovery.py:489: 'discover_provider' has rank C"
+          "raw": "src\\intellicrack\\providers\\discovery.py:484: 'discover_provider' has rank C"
         }
       ]
     },
@@ -345,31 +303,31 @@
       "count": 3,
       "findings": [
         {
-          "line": 219,
+          "line": 217,
           "column": null,
           "name": "chat",
           "rank": "C",
           "complexity": 20,
           "message": "'chat' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\grok.py:219: 'chat' has rank C"
+          "raw": "src\\intellicrack\\providers\\grok.py:217: 'chat' has rank C"
         },
         {
-          "line": 333,
+          "line": 338,
           "column": null,
           "name": "chat_stream",
           "rank": "C",
           "complexity": 20,
           "message": "'chat_stream' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\grok.py:333: 'chat_stream' has rank C"
+          "raw": "src\\intellicrack\\providers\\grok.py:338: 'chat_stream' has rank C"
         },
         {
-          "line": 409,
+          "line": 414,
           "column": null,
           "name": "_convert_messages_to_provider_format",
           "rank": "C",
           "complexity": 20,
           "message": "'_convert_messages_to_provider_format' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\grok.py:409: '_convert_messages_to_provider_format' has rank C"
+          "raw": "src\\intellicrack\\providers\\grok.py:414: '_convert_messages_to_provider_format' has rank C"
         }
       ]
     },
@@ -378,13 +336,13 @@
       "count": 3,
       "findings": [
         {
-          "line": 367,
+          "line": 365,
           "column": null,
           "name": "chat",
           "rank": "C",
           "complexity": 20,
           "message": "'chat' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\ollama.py:367: 'chat' has rank C"
+          "raw": "src\\intellicrack\\providers\\ollama.py:365: 'chat' has rank C"
         },
         {
           "line": 277,
@@ -396,13 +354,13 @@
           "raw": "src\\intellicrack\\providers\\ollama.py:277: '_get_client_and_model' has rank C"
         },
         {
-          "line": 548,
+          "line": 558,
           "column": null,
           "name": "_convert_messages_to_provider_format",
           "rank": "C",
           "complexity": 20,
           "message": "'_convert_messages_to_provider_format' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\ollama.py:548: '_convert_messages_to_provider_format' has rank C"
+          "raw": "src\\intellicrack\\providers\\ollama.py:558: '_convert_messages_to_provider_format' has rank C"
         }
       ]
     },
@@ -411,31 +369,31 @@
       "count": 3,
       "findings": [
         {
-          "line": 244,
+          "line": 245,
           "column": null,
           "name": "chat",
           "rank": "C",
           "complexity": 20,
           "message": "'chat' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\openai.py:244: 'chat' has rank C"
+          "raw": "src\\intellicrack\\providers\\openai.py:245: 'chat' has rank C"
         },
         {
-          "line": 367,
+          "line": 373,
           "column": null,
           "name": "chat_stream",
           "rank": "C",
           "complexity": 20,
           "message": "'chat_stream' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\openai.py:367: 'chat_stream' has rank C"
+          "raw": "src\\intellicrack\\providers\\openai.py:373: 'chat_stream' has rank C"
         },
         {
-          "line": 459,
+          "line": 462,
           "column": null,
           "name": "_convert_messages_to_provider_format",
           "rank": "C",
           "complexity": 20,
           "message": "'_convert_messages_to_provider_format' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\openai.py:459: '_convert_messages_to_provider_format' has rank C"
+          "raw": "src\\intellicrack\\providers\\openai.py:462: '_convert_messages_to_provider_format' has rank C"
         }
       ]
     },
@@ -444,31 +402,64 @@
       "count": 3,
       "findings": [
         {
-          "line": 221,
+          "line": 223,
           "column": null,
           "name": "chat",
           "rank": "C",
           "complexity": 20,
           "message": "'chat' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\openrouter.py:221: 'chat' has rank C"
+          "raw": "src\\intellicrack\\providers\\openrouter.py:223: 'chat' has rank C"
         },
         {
-          "line": 367,
+          "line": 378,
           "column": null,
           "name": "chat_stream",
           "rank": "C",
           "complexity": 20,
           "message": "'chat_stream' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\openrouter.py:367: 'chat_stream' has rank C"
+          "raw": "src\\intellicrack\\providers\\openrouter.py:378: 'chat_stream' has rank C"
         },
         {
-          "line": 469,
+          "line": 479,
           "column": null,
           "name": "_convert_messages_to_provider_format",
           "rank": "C",
           "complexity": 20,
           "message": "'_convert_messages_to_provider_format' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\openrouter.py:469: '_convert_messages_to_provider_format' has rank C"
+          "raw": "src\\intellicrack\\providers\\openrouter.py:479: '_convert_messages_to_provider_format' has rank C"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\provider_config.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 477,
+          "column": null,
+          "name": "_fetch_anthropic_models",
+          "rank": "C",
+          "complexity": 20,
+          "message": "'_fetch_anthropic_models' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:477: '_fetch_anthropic_models' has rank C"
+        },
+        {
+          "line": 444,
+          "column": null,
+          "name": "_fetch_models",
+          "rank": "C",
+          "complexity": 20,
+          "message": "'_fetch_models' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:444: '_fetch_models' has rank C"
+        },
+        {
+          "line": 1248,
+          "column": null,
+          "name": "_load_settings",
+          "rank": "C",
+          "complexity": 20,
+          "message": "'_load_settings' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1248: '_load_settings' has rank C"
         }
       ]
     },
@@ -477,22 +468,22 @@
       "count": 2,
       "findings": [
         {
-          "line": 502,
+          "line": 507,
           "column": null,
           "name": "_detect_architecture",
           "rank": "C",
           "complexity": 20,
           "message": "'_detect_architecture' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\bridges\\binary.py:502: '_detect_architecture' has rank C"
+          "raw": "src\\intellicrack\\bridges\\binary.py:507: '_detect_architecture' has rank C"
         },
         {
-          "line": 616,
+          "line": 618,
           "column": null,
           "name": "_get_imports_internal",
           "rank": "C",
           "complexity": 20,
           "message": "'_get_imports_internal' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\bridges\\binary.py:616: '_get_imports_internal' has rank C"
+          "raw": "src\\intellicrack\\bridges\\binary.py:618: '_get_imports_internal' has rank C"
         }
       ]
     },
@@ -510,13 +501,13 @@
           "raw": "src\\intellicrack\\bridges\\installer.py:230: 'find_tool' has rank C"
         },
         {
-          "line": 508,
+          "line": 507,
           "column": null,
           "name": "_get_latest_release_url",
           "rank": "C",
           "complexity": 20,
           "message": "'_get_latest_release_url' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\bridges\\installer.py:508: '_get_latest_release_url' has rank C"
+          "raw": "src\\intellicrack\\bridges\\installer.py:507: '_get_latest_release_url' has rank C"
         }
       ]
     },
@@ -545,26 +536,50 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\bridges\\x64dbg.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 269,
+          "column": null,
+          "name": "_read_unicode_string_from_params",
+          "rank": "C",
+          "complexity": 20,
+          "message": "'_read_unicode_string_from_params' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:269: '_read_unicode_string_from_params' has rank C"
+        },
+        {
+          "line": 1546,
+          "column": null,
+          "name": "get_memory_regions",
+          "rank": "C",
+          "complexity": 20,
+          "message": "'get_memory_regions' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1546: 'get_memory_regions' has rank C"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\core\\script_gen.py",
       "count": 2,
       "findings": [
         {
-          "line": 114,
+          "line": 134,
           "column": null,
           "name": "ScriptContext",
           "rank": "D",
           "complexity": 30,
           "message": "'ScriptContext' has rank D (complexity > threshold)",
-          "raw": "src\\intellicrack\\core\\script_gen.py:114: 'ScriptContext' has rank D"
+          "raw": "src\\intellicrack\\core\\script_gen.py:134: 'ScriptContext' has rank D"
         },
         {
-          "line": 145,
+          "line": 165,
           "column": null,
           "name": "to_prompt_context",
           "rank": "D",
           "complexity": 30,
           "message": "'to_prompt_context' has rank D (complexity > threshold)",
-          "raw": "src\\intellicrack\\core\\script_gen.py:145: 'to_prompt_context' has rank D"
+          "raw": "src\\intellicrack\\core\\script_gen.py:165: 'to_prompt_context' has rank D"
         }
       ]
     },
@@ -582,13 +597,13 @@
           "raw": "src\\intellicrack\\providers\\local_transformers.py:815: '_parse_tool_calls' has rank C"
         },
         {
-          "line": 913,
+          "line": 912,
           "column": null,
           "name": "_estimate_context_window",
           "rank": "C",
           "complexity": 20,
           "message": "'_estimate_context_window' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:913: '_estimate_context_window' has rank C"
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:912: '_estimate_context_window' has rank C"
         }
       ]
     },
@@ -597,22 +612,22 @@
       "count": 2,
       "findings": [
         {
-          "line": 288,
+          "line": 299,
           "column": null,
           "name": "_generate_wsb_config",
           "rank": "C",
           "complexity": 20,
           "message": "'_generate_wsb_config' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\sandbox\\windows.py:288: '_generate_wsb_config' has rank C"
+          "raw": "src\\intellicrack\\sandbox\\windows.py:299: '_generate_wsb_config' has rank C"
         },
         {
-          "line": 535,
+          "line": 546,
           "column": null,
           "name": "run_binary",
           "rank": "C",
           "complexity": 20,
           "message": "'run_binary' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\sandbox\\windows.py:535: 'run_binary' has rank C"
+          "raw": "src\\intellicrack\\sandbox\\windows.py:546: 'run_binary' has rank C"
         }
       ]
     },
@@ -669,22 +684,22 @@
       "count": 2,
       "findings": [
         {
-          "line": 114,
+          "line": 109,
           "column": null,
           "name": "test_embedded_tools_menu_actions_count",
           "rank": "C",
           "complexity": 20,
           "message": "'test_embedded_tools_menu_actions_count' has rank C (complexity > threshold)",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:114: 'test_embedded_tools_menu_actions_count' has rank C"
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:109: 'test_embedded_tools_menu_actions_count' has rank C"
         },
         {
-          "line": 79,
+          "line": 78,
           "column": null,
           "name": "TestEmbeddedToolsMenuIntegration",
           "rank": "C",
           "complexity": 20,
           "message": "'TestEmbeddedToolsMenuIntegration' has rank C (complexity > threshold)",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:79: 'TestEmbeddedToolsMenuIntegration' has rank C"
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:78: 'TestEmbeddedToolsMenuIntegration' has rank C"
         }
       ]
     },
@@ -693,13 +708,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 919,
+          "line": 929,
           "column": null,
           "name": "hook_function",
           "rank": "C",
           "complexity": 20,
           "message": "'hook_function' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:919: 'hook_function' has rank C"
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:929: 'hook_function' has rank C"
         }
       ]
     },
@@ -708,28 +723,28 @@
       "count": 1,
       "findings": [
         {
-          "line": 1095,
+          "line": 1096,
           "column": null,
           "name": "search_pattern",
           "rank": "C",
           "complexity": 20,
           "message": "'search_pattern' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\bridges\\process.py:1095: 'search_pattern' has rank C"
+          "raw": "src\\intellicrack\\bridges\\process.py:1096: 'search_pattern' has rank C"
         }
       ]
     },
     {
-      "path": "src\\intellicrack\\bridges\\radare2.py",
+      "path": "src\\intellicrack\\core\\logging.py",
       "count": 1,
       "findings": [
         {
-          "line": 535,
+          "line": 448,
           "column": null,
-          "name": "load_binary",
+          "name": "_sanitize_arguments",
           "rank": "C",
           "complexity": 20,
-          "message": "'load_binary' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:535: 'load_binary' has rank C"
+          "message": "'_sanitize_arguments' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\core\\logging.py:448: '_sanitize_arguments' has rank C"
         }
       ]
     },
@@ -738,28 +753,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 354,
+          "line": 370,
           "column": null,
           "name": "_run_agent_loop",
           "rank": "C",
           "complexity": 20,
           "message": "'_run_agent_loop' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:354: '_run_agent_loop' has rank C"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\core\\process_manager.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 628,
-          "column": null,
-          "name": "run_tracked",
-          "rank": "C",
-          "complexity": 20,
-          "message": "'run_tracked' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\core\\process_manager.py:628: 'run_tracked' has rank C"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:370: '_run_agent_loop' has rank C"
         }
       ]
     },
@@ -768,13 +768,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 285,
+          "line": 283,
           "column": null,
           "name": "_validate_key_format",
           "rank": "C",
           "complexity": 20,
           "message": "'_validate_key_format' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\credentials\\env_loader.py:285: '_validate_key_format' has rank C"
+          "raw": "src\\intellicrack\\credentials\\env_loader.py:283: '_validate_key_format' has rank C"
         }
       ]
     },
@@ -783,13 +783,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 380,
+          "line": 446,
           "column": null,
           "name": "load_model_for_xpu",
           "rank": "C",
           "complexity": 20,
           "message": "'load_model_for_xpu' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:380: 'load_model_for_xpu' has rank C"
+          "raw": "src\\intellicrack\\providers\\model_loader.py:446: 'load_model_for_xpu' has rank C"
         }
       ]
     },
@@ -798,13 +798,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 204,
+          "line": 209,
           "column": null,
           "name": "get_xpu_device_info",
           "rank": "D",
           "complexity": 30,
           "message": "'get_xpu_device_info' has rank D (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\xpu_utils.py:204: 'get_xpu_device_info' has rank D"
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:209: 'get_xpu_device_info' has rank D"
         }
       ]
     },
@@ -828,13 +828,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 353,
+          "line": 355,
           "column": null,
           "name": "_update_radare2_path",
           "rank": "C",
           "complexity": 20,
           "message": "'_update_radare2_path' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\tool_config.py:353: '_update_radare2_path' has rank C"
+          "raw": "src\\intellicrack\\ui\\tool_config.py:355: '_update_radare2_path' has rank C"
         }
       ]
     },
@@ -843,13 +843,28 @@
       "count": 1,
       "findings": [
         {
-          "line": 66,
+          "line": 71,
           "column": null,
           "name": "get_executable_path",
           "rank": "C",
           "complexity": 20,
           "message": "'get_executable_path' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:66: 'get_executable_path' has rank C"
+          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:71: 'get_executable_path' has rank C"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 72,
+          "column": null,
+          "name": "get_executable_path",
+          "rank": "D",
+          "complexity": 30,
+          "message": "'get_executable_path' has rank D (complexity > threshold)",
+          "raw": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py:72: 'get_executable_path' has rank D"
         }
       ]
     },
@@ -869,6 +884,21 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\embedding\\radare2_widget.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 69,
+          "column": null,
+          "name": "get_executable_path",
+          "rank": "D",
+          "complexity": 30,
+          "message": "'get_executable_path' has rank D (complexity > threshold)",
+          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py:69: 'get_executable_path' has rank D"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py",
       "count": 1,
       "findings": [
@@ -884,17 +914,32 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\panels\\binary_panel.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 281,
+          "column": null,
+          "name": "_parse_sections",
+          "rank": "C",
+          "complexity": 20,
+          "message": "'_parse_sections' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:281: '_parse_sections' has rank C"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py",
       "count": 1,
       "findings": [
         {
-          "line": 133,
+          "line": 134,
           "column": null,
           "name": "update_from_analysis",
           "rank": "C",
           "complexity": 20,
           "message": "'update_from_analysis' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:133: 'update_from_analysis' has rank C"
+          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:134: 'update_from_analysis' has rank C"
         }
       ]
     },

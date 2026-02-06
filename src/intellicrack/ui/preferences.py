@@ -150,16 +150,12 @@ class GeneralSettingsWidget(QWidget):
 
     def _browse_tools(self) -> None:
         """Browse for tools directory."""
-        if path := QFileDialog.getExistingDirectory(
-            self, "Select Tools Directory", self._tools_path.text()
-        ):
+        if path := QFileDialog.getExistingDirectory(self, "Select Tools Directory", self._tools_path.text()):
             self._tools_path.setText(path)
 
     def _browse_logs(self) -> None:
         """Browse for logs directory."""
-        if path := QFileDialog.getExistingDirectory(
-            self, "Select Logs Directory", self._logs_path.text()
-        ):
+        if path := QFileDialog.getExistingDirectory(self, "Select Logs Directory", self._logs_path.text()):
             self._logs_path.setText(path)
 
     def _load_settings(self) -> None:
@@ -616,9 +612,7 @@ class PreferencesDialog(QDialog):
         )
         button_box.accepted.connect(self._on_accept)
         button_box.rejected.connect(self.reject)
-        if apply_button := button_box.button(
-            QDialogButtonBox.StandardButton.Apply
-        ):
+        if apply_button := button_box.button(QDialogButtonBox.StandardButton.Apply):
             apply_button.clicked.connect(self._on_apply)
 
         button_layout.addStretch()

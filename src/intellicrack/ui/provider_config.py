@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import importlib
 import json
 import os
 from pathlib import Path
@@ -114,7 +115,8 @@ class CredentialSourceDetector:
                                 if key:
                                     self._env_file_vars.add(key)
                     break
-                except OSError:
+                except OSError as e:
+                    _logger.debug("env_file_read_failed", extra={"path": str(env_path), "error": str(e)})
                     continue
 
     def detect_source(self, provider_id: str, current_key: str) -> str:
@@ -143,10 +145,13 @@ class CredentialSourceDetector:
             return CredentialSource.ENVIRONMENT
 
         if self._config_path.exists():
-            with contextlib.suppress(OSError, json.JSONDecodeError), self._config_path.open("r", encoding="utf-8") as f:
-                config = json.load(f)
-                if provider_id in config and config[provider_id].get("api_key") == current_key:
-                    return CredentialSource.MANUAL
+            try:
+                with self._config_path.open("r", encoding="utf-8") as f:
+                    config = json.load(f)
+                    if provider_id in config and config[provider_id].get("api_key") == current_key:
+                        return CredentialSource.MANUAL
+            except (OSError, json.JSONDecodeError) as e:
+                _logger.debug("config_file_read_failed", extra={"error": str(e)})
         return CredentialSource.MANUAL
 
     @staticmethod
@@ -205,6 +210,7 @@ class ConnectionTestWorker(QThread):
             success, message = self._test_provider_connection()
             self.test_finished.emit(success, message)
         except Exception as e:
+            _logger.warning("connection_test_failed", extra={"provider": self._provider_id, "error": str(e)})
             self.test_finished.emit(False, f"Connection error: {e}")
 
     def _test_provider_connection(self) -> tuple[bool, str]:
@@ -261,7 +267,7 @@ class ConnectionTestWorker(QThread):
         except httpx.ConnectError:
             return False, "Could not connect to Anthropic API"
         except Exception as e:
-            _logger.exception("provider_test_failed", extra={"provider": "anthropic", "error": str(e)})
+            _logger.warning("provider_test_failed", extra={"provider": "anthropic", "error": str(e)})
             return False, str(e)
 
     def _test_openai(self, timeout: httpx.Timeout) -> tuple[bool, str]:
@@ -288,7 +294,7 @@ class ConnectionTestWorker(QThread):
         except httpx.ConnectError:
             return False, "Could not connect to OpenAI API"
         except Exception as e:
-            _logger.exception("provider_test_failed", extra={"provider": "openai", "error": str(e)})
+            _logger.warning("provider_test_failed", extra={"provider": "openai", "error": str(e)})
             return False, str(e)
 
     def _test_google(self, timeout: httpx.Timeout) -> tuple[bool, str]:
@@ -314,7 +320,7 @@ class ConnectionTestWorker(QThread):
         except httpx.ConnectError:
             return False, "Could not connect to Google API"
         except Exception as e:
-            _logger.exception("provider_test_failed", extra={"provider": "google", "error": str(e)})
+            _logger.warning("provider_test_failed", extra={"provider": "google", "error": str(e)})
             return False, str(e)
 
     def _test_ollama(self, timeout: httpx.Timeout) -> tuple[bool, str]:
@@ -336,7 +342,7 @@ class ConnectionTestWorker(QThread):
         except httpx.ConnectError:
             return False, "Could not connect to Ollama (is it running?)"
         except Exception as e:
-            _logger.exception("provider_test_failed", extra={"provider": "ollama", "error": str(e)})
+            _logger.warning("provider_test_failed", extra={"provider": "ollama", "error": str(e)})
             return False, str(e)
 
     def _test_openrouter(self, timeout: httpx.Timeout) -> tuple[bool, str]:
@@ -363,7 +369,7 @@ class ConnectionTestWorker(QThread):
         except httpx.ConnectError:
             return False, "Could not connect to OpenRouter API"
         except Exception as e:
-            _logger.exception("provider_test_failed", extra={"provider": "openrouter", "error": str(e)})
+            _logger.warning("provider_test_failed", extra={"provider": "openrouter", "error": str(e)})
             return False, str(e)
 
     def _test_huggingface(self, timeout: httpx.Timeout) -> tuple[bool, str]:
@@ -390,7 +396,7 @@ class ConnectionTestWorker(QThread):
         except httpx.ConnectError:
             return False, "Could not connect to HuggingFace API"
         except Exception as e:
-            _logger.exception("provider_test_failed", extra={"provider": "huggingface", "error": str(e)})
+            _logger.warning("provider_test_failed", extra={"provider": "huggingface", "error": str(e)})
             return False, str(e)
 
 
@@ -432,6 +438,7 @@ class ModelRefreshWorker(QThread):
             success, models, message = self._fetch_models()
             self.refresh_finished.emit(success, models, message)
         except Exception as e:
+            _logger.warning("model_refresh_failed", extra={"error": str(e)})
             self.refresh_finished.emit(False, [], f"Error fetching models: {e}")
 
     def _fetch_models(self) -> tuple[bool, list[str], str]:
@@ -515,11 +522,7 @@ class ModelRefreshWorker(QThread):
                         return True, fallback_models, f"API error {resp.status_code}, showing defaults"
 
                     data = resp.json()
-                    all_models.extend(
-                        model_id
-                        for model_entry in data.get("data", [])
-                        if (model_id := model_entry.get("id", ""))
-                    )
+                    all_models.extend(model_id for model_entry in data.get("data", []) if (model_id := model_entry.get("id", "")))
 
                     if not data.get("has_more", False):
                         break
@@ -528,7 +531,8 @@ class ModelRefreshWorker(QThread):
 
                     else:
                         break
-        except Exception:
+        except Exception as e:
+            _logger.debug("anthropic_models_api_unavailable", extra={"error": str(e)})
             return True, fallback_models, "API unavailable, showing defaults"
         else:
             if all_models:
@@ -766,9 +770,7 @@ class ProviderConfigDialog(QDialog):
         button_box.accepted.connect(self._on_accept)
         button_box.rejected.connect(self.reject)
 
-        if apply_button := button_box.button(
-            QDialogButtonBox.StandardButton.Apply
-        ):
+        if apply_button := button_box.button(QDialogButtonBox.StandardButton.Apply):
             apply_button.clicked.connect(self._on_apply)
 
         main_layout.addWidget(button_box)
@@ -1000,10 +1002,7 @@ class ProviderConfigDialog(QDialog):
         Returns:
             Dictionary mapping provider IDs to their settings.
         """
-        settings: dict[str, dict[str, Any]] = {
-            provider_id: widget.get_settings()
-            for provider_id, widget in self._provider_widgets.items()
-        }
+        settings: dict[str, dict[str, Any]] = {provider_id: widget.get_settings() for provider_id, widget in self._provider_widgets.items()}
         return settings
 
 
@@ -1238,9 +1237,7 @@ class ProviderSettingsWidget(QFrame):
                 self._recommended_label.setText("")
                 return
 
-            if recommended := asyncio.run(
-                self._discovery.get_recommended_model(self._provider_id)
-            ):
+            if recommended := asyncio.run(self._discovery.get_recommended_model(self._provider_id)):
                 self._recommended_label.setText(f"Recommended: {recommended.name}")
             else:
                 self._recommended_label.setText("")
@@ -1316,7 +1313,8 @@ class ProviderSettingsWidget(QFrame):
                 all_settings: dict[str, Any] = json.load(f)
                 result: dict[str, Any] = all_settings.get(self._provider_id, {})
                 return result
-        except (json.JSONDecodeError, OSError):
+        except (json.JSONDecodeError, OSError) as e:
+            _logger.warning("provider_config_load_failed", extra={"error": str(e)})
             return {}
 
     def _populate_default_models(self) -> None:
@@ -1530,7 +1528,8 @@ class ProviderSettingsWidget(QFrame):
             try:
                 with open(self._config_path, encoding="utf-8") as f:
                     all_settings = json.load(f)
-            except (json.JSONDecodeError, OSError):
+            except (json.JSONDecodeError, OSError) as e:
+                _logger.warning("provider_config_read_failed_using_empty", extra={"error": str(e)})
                 all_settings = {}
 
         settings = self.get_settings()
@@ -1579,9 +1578,8 @@ class ProviderSettingsWidget(QFrame):
             return
 
         try:
-            from intellicrack.credentials.env_loader import get_credential_loader  # noqa: PLC0415
-
-            loader = get_credential_loader()
+            creds_mod = importlib.import_module("intellicrack.credentials.env_loader")
+            loader = creds_mod.get_credential_loader()
             loader.save_to_env_file(env_var_mapping[self._provider_id], api_key)
 
             if self._provider_id == "ollama" and self._api_base_input:
@@ -1589,6 +1587,7 @@ class ProviderSettingsWidget(QFrame):
                 if host and host != "http://localhost:11434":
                     loader.save_to_env_file("OLLAMA_HOST", host)
         except Exception as e:
+            _logger.warning("env_file_update_failed", extra={"error": str(e)})
             QMessageBox.warning(
                 self,
                 "Save Warning",

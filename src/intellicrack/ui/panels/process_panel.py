@@ -358,9 +358,7 @@ class ProcessPanel(QWidget):
             selection_model.currentChanged.connect(self._on_process_selection_changed)
         else:
             _logger.warning("process_table_selection_model_unavailable")
-        self._process_table.horizontalHeader().setSectionResizeMode(
-            _PROC_COL_NAME, QHeaderView.ResizeMode.Stretch
-        )
+        self._process_table.horizontalHeader().setSectionResizeMode(_PROC_COL_NAME, QHeaderView.ResizeMode.Stretch)
         main_splitter.addWidget(self._process_table)
 
         details_panel = QWidget()
@@ -517,9 +515,7 @@ class ProcessPanel(QWidget):
             pri_item.setData(Qt.ItemDataRole.DisplayRole, thread["priority"])
             self._threads_table.setItem(row, 1, pri_item)
 
-        name_item = self._process_table.item(
-            self._process_table.currentRow(), _PROC_COL_NAME
-        )
+        name_item = self._process_table.item(self._process_table.currentRow(), _PROC_COL_NAME)
         proc_name = name_item.text() if name_item else "Unknown"
         mem_mb = _get_process_memory_mb(pid)
 
@@ -546,9 +542,7 @@ class ProcessPanel(QWidget):
             return
 
         try:
-            if handle := _kernel32.OpenProcess(
-                _PROCESS_TERMINATE, False, self._selected_pid
-            ):
+            if handle := _kernel32.OpenProcess(_PROCESS_TERMINATE, False, self._selected_pid):
                 _kernel32.TerminateProcess(handle, 1)
                 _kernel32.CloseHandle(handle)
                 _logger.info("process_terminated", extra={"pid": self._selected_pid})

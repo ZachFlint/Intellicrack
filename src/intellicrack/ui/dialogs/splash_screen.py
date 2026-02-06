@@ -6,7 +6,7 @@ messages during application initialization.
 
 from __future__ import annotations
 
-from typing import Final
+from typing import Final, final
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QPainter, QPixmap, QResizeEvent
@@ -33,6 +33,7 @@ FALLBACK_TEXT_COLOR: Final[str] = "#d4d4d4"
 FALLBACK_ACCENT_COLOR: Final[str] = "#007acc"
 
 
+@final
 class SplashScreen(QSplashScreen):
     """Custom splash screen with progress bar and status messages.
 
@@ -54,6 +55,7 @@ class SplashScreen(QSplashScreen):
 
         self._setup_overlay()
         self.progress_updated.connect(self._on_progress_updated)
+        self.resizeEvent = self.resize_event_handler
 
     @staticmethod
     def _load_splash_pixmap() -> QPixmap:
@@ -204,11 +206,11 @@ class SplashScreen(QSplashScreen):
         """
         self.set_progress(progress, step)
 
-    def resizeEvent(self, a0: QResizeEvent | None) -> None:  # noqa: N802
+    def resize_event_handler(self, a0: QResizeEvent | None) -> None:
         """Handle resize events to adjust overlay.
 
         Args:
-            a0: Resize event.
+            a0: Resize event from Qt.
         """
         super().resizeEvent(a0)
         if hasattr(self, "_overlay"):

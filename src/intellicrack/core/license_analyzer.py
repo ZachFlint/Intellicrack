@@ -1169,11 +1169,7 @@ class LicenseAnalyzer:
         """
         lowered = name.lower()
         return next(
-            (
-                algo
-                for keyword, algo in self._crypto_api_keywords.items()
-                if keyword.lower() in lowered
-            ),
+            (algo for keyword, algo in self._crypto_api_keywords.items() if keyword.lower() in lowered),
             None,
         )
 
@@ -1278,22 +1274,20 @@ class LicenseAnalyzer:
         _logger.debug("rsa_keys_found", extra={"key_count": len(rsa_keys)})
         for modulus, exponent, offset in rsa_keys:
             mod_address, _ = view.offset_to_va(offset)
-            constants.extend(
-                (
-                    MagicConstant(
-                        value=modulus,
-                        address=mod_address,
-                        usage_context="rsa_modulus",
-                        bit_width=modulus.bit_length(),
-                    ),
-                    MagicConstant(
-                        value=exponent,
-                        address=mod_address,
-                        usage_context="rsa_public_exponent",
-                        bit_width=exponent.bit_length(),
-                    ),
-                )
-            )
+            constants.extend((
+                MagicConstant(
+                    value=modulus,
+                    address=mod_address,
+                    usage_context="rsa_modulus",
+                    bit_width=modulus.bit_length(),
+                ),
+                MagicConstant(
+                    value=exponent,
+                    address=mod_address,
+                    usage_context="rsa_public_exponent",
+                    bit_width=exponent.bit_length(),
+                ),
+            ))
         return constants
 
     @staticmethod
@@ -1875,9 +1869,7 @@ class LicenseAnalyzer:
         Returns:
             Referenced address or None.
         """
-        if rip_match := re.search(
-            r"\[rip ([+-]) (0x[0-9a-fA-F]+)\]", instr.op_str
-        ):
+        if rip_match := re.search(r"\[rip ([+-]) (0x[0-9a-fA-F]+)\]", instr.op_str):
             sign = 1 if rip_match[1] == "+" else -1
             offset = int(rip_match[2], 16)
             return instr.address + instr.size + sign * offset
@@ -2049,11 +2041,7 @@ class LicenseAnalyzer:
         checksum_position: Literal["prefix", "suffix", "embedded"] | None = None
 
         checksum_algorithm: str | None = next(
-            (
-                "crc32"
-                for constant in constants
-                if constant.usage_context.startswith("crc32")
-            ),
+            ("crc32" for constant in constants if constant.usage_context.startswith("crc32")),
             None,
         )
         if checksum_algorithm is None and algorithm == AlgorithmType.CRC32:

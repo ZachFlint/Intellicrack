@@ -1,0 +1,13 @@
+file,line,rule,description
+src\intellicrack\core\script_gen.py,165,low-code-quality,Low code quality found in ScriptContext.to_prompt_context - 23%
+src\intellicrack\providers\grok.py,217,low-code-quality,Low code quality found in GrokProvider.chat - 24%
+src\intellicrack\providers\huggingface.py,343,low-code-quality,Low code quality found in HuggingFaceProvider.chat - 23%
+src\intellicrack\providers\ollama.py,365,low-code-quality,Low code quality found in OllamaProvider.chat - 24%
+src\intellicrack\providers\openai.py,245,low-code-quality,Low code quality found in OpenAIProvider.chat - 24%
+src\intellicrack\sandbox\qemu.py,783,merge-list-extend,Merge extend into list declaration
+src\intellicrack\sandbox\qemu.py,815,swap-nested-ifs,Swap positions of nested conditionals
+src\intellicrack\sandbox\qemu.py,816,hoist-similar-statement-from-if,Hoist nested repeated code outside conditional statements
+src\intellicrack\sandbox\qemu.py,1448,low-code-quality,Low code quality found in QEMUSandbox.execute - 23%
+src\intellicrack\ui\embedding\ghidra_widget.py,72,low-code-quality,Low code quality found in GhidraWidget.get_executable_path - 23%
+src\intellicrack\ui\embedding\x64dbg_widget.py,70,low-code-quality,Low code quality found in X64DbgWidget.get_executable_path - 22%
+

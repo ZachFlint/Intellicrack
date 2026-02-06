@@ -20,6 +20,22 @@ _ASSETS_DIR_NAME: Final[str] = "assets"
 _PACKAGE_NAME: Final[str] = "intellicrack"
 
 
+class AssetNotFoundError(FileNotFoundError):
+    """Raised when an asset directory or file cannot be found."""
+
+    searched_paths: list[Path]
+
+    def __init__(self, searched_paths: list[Path]) -> None:
+        """Initialize the error with searched paths.
+
+        Args:
+            searched_paths: List of paths that were searched.
+        """
+        paths_str = ", ".join(str(p) for p in searched_paths)
+        super().__init__(f"Assets directory not found. Searched: [{paths_str}]")
+        self.searched_paths = searched_paths
+
+
 def _get_package_root() -> Path:
     """Get the root directory of the intellicrack package.
 
@@ -27,7 +43,8 @@ def _get_package_root() -> Path:
         Path to the package root directory.
     """
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-        meipass: str = getattr(sys, "_MEIPASS")  # noqa: B009
+        meipass_attr = "_MEIPASS"
+        meipass: str = getattr(sys, meipass_attr)
         base_path = Path(meipass)
         package_path = base_path / _PACKAGE_NAME
         return package_path if package_path.exists() else base_path
@@ -68,9 +85,7 @@ def get_assets_path() -> Path:
         "assets_path_not_found",
         extra={"searched_paths": [str(p) for p in search_paths]},
     )
-    raise FileNotFoundError(  # noqa: TRY003
-        f"Assets directory not found. Searched: {[str(p) for p in search_paths]}"
-    )
+    raise AssetNotFoundError(search_paths)
 
 
 def get_resource_path(resource_path: str) -> Path:

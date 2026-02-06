@@ -10,7 +10,6 @@ import asyncio
 import atexit
 import contextlib
 import ctypes
-import os
 import signal
 import subprocess
 import sys
@@ -21,6 +20,8 @@ from datetime import datetime
 from enum import Enum
 from types import FrameType
 from typing import TYPE_CHECKING, Any
+
+import psutil
 
 from .logging import get_logger
 
@@ -261,36 +262,44 @@ class ProcessManager:
 
         self._cleanup_in_progress = True
         logger = ProcessManager._get_logger()
+        logger.info("sync_cleanup_started")
 
         with self._process_lock:
             processes = list(self._processes.values())
             external_pids = list(self._external_pids.keys())
 
-        for tracked in processes:
-            if not tracked.is_running:
-                continue
+        # Collect all processes including children
+        all_procs_psutil: list[psutil.Process] = []
+        root_pids = [p.pid for p in processes if p.pid is not None] + external_pids
 
-            try:
-                logger.debug("process_terminating", extra={"process_name": tracked.name, "pid": tracked.pid})
-                self._terminate_process_sync(tracked.process)
-            except Exception as e:
-                logger.warning("process_terminate_failed", extra={"process_name": tracked.name, "error": str(e)})
+        for pid in root_pids:
+            with contextlib.suppress(psutil.NoSuchProcess):
+                proc = psutil.Process(pid)
+                all_procs_psutil.append(proc)
+                all_procs_psutil.extend(proc.children(recursive=True))
+        # Deduplicate based on PID
+        seen_pids = set()
+        unique_procs = []
+        for p in all_procs_psutil:
+            if p.pid not in seen_pids:
+                seen_pids.add(p.pid)
+                unique_procs.append(p)
 
-        for tracked in processes:
-            if not tracked.is_running:
-                continue
+        # 1. Terminate all
+        for p in unique_procs:
+            with contextlib.suppress(psutil.NoSuchProcess):
+                p.terminate()
 
-            try:
-                self._wait_or_kill_sync(tracked.process, tracked.name)
-            except Exception as e:
-                logger.warning("process_kill_failed", extra={"process_name": tracked.name, "error": str(e)})
+        # 2. Wait for graceful termination
+        _, alive = psutil.wait_procs(unique_procs, timeout=self.DEFAULT_GRACEFUL_TIMEOUT)
 
-        for ext_pid in external_pids:
-            try:
-                logger.debug("external_pid_terminating", extra={"pid": ext_pid})
-                self.terminate_external_pid(ext_pid, force=True)
-            except Exception as e:
-                logger.warning("external_pid_terminate_failed", extra={"pid": ext_pid, "error": str(e)})
+        # 3. Kill survivors
+        if alive:
+            logger.warning("sync_cleanup_force_kill", extra={"count": len(alive)})
+            for p in alive:
+                with contextlib.suppress(psutil.NoSuchProcess):
+                    p.kill()
+            psutil.wait_procs(alive, timeout=self.DEFAULT_FORCE_TIMEOUT)
 
         with self._process_lock:
             self._processes.clear()
@@ -308,7 +317,62 @@ class ProcessManager:
         Args:
             process: The process to terminate.
         """
-        process.terminate()
+        ProcessManager._terminate_tree_with_psutil(
+            process.pid,
+            ProcessManager.DEFAULT_GRACEFUL_TIMEOUT,
+            ProcessManager.DEFAULT_FORCE_TIMEOUT,
+        )
+
+    @staticmethod
+    def terminate_tree(
+        pid: int,
+        graceful_timeout: float = DEFAULT_GRACEFUL_TIMEOUT,
+        force_timeout: float = DEFAULT_FORCE_TIMEOUT,
+    ) -> None:
+        """Terminate a process tree using psutil.
+
+        Kills the root process and all its descendants. First sends
+        SIGTERM and waits for graceful_timeout, then sends SIGKILL
+        to any survivors and waits for force_timeout.
+
+        Args:
+            pid: Root process ID.
+            graceful_timeout: Seconds to wait for SIGTERM.
+            force_timeout: Seconds to wait for SIGKILL.
+        """
+        ProcessManager._terminate_tree_with_psutil(pid, graceful_timeout, force_timeout)
+
+    @staticmethod
+    def _terminate_tree_with_psutil(
+        pid: int,
+        graceful_timeout: float,
+        force_timeout: float,
+    ) -> None:
+        """Terminate a process tree using psutil (internal).
+
+        Args:
+            pid: Root process ID.
+            graceful_timeout: Seconds to wait for SIGTERM.
+            force_timeout: Seconds to wait for SIGKILL.
+        """
+        parent = psutil.Process(pid)
+        children = parent.children(recursive=True)
+
+        all_procs = [*children, parent]
+
+        # Graceful
+        for p in all_procs:
+            with contextlib.suppress(psutil.NoSuchProcess):
+                p.terminate()
+
+        _, alive = psutil.wait_procs(all_procs, timeout=graceful_timeout)
+
+        # Forceful
+        if alive:
+            for p in alive:
+                with contextlib.suppress(psutil.NoSuchProcess):
+                    p.kill()
+            psutil.wait_procs(alive, timeout=force_timeout)
 
     def _wait_or_kill_sync(
         self,
@@ -492,24 +556,24 @@ class ProcessManager:
         """
         logger = ProcessManager._get_logger()
 
-        process.terminate()
+        await asyncio.to_thread(
+            ProcessManager._terminate_tree_with_psutil,
+            process.pid,
+            graceful_timeout,
+            force_timeout,
+        )
 
-        try:
-            await asyncio.wait_for(
-                asyncio.to_thread(process.wait),
-                timeout=graceful_timeout,
-            )
-            logger.debug("process_terminated_gracefully", extra={"process_name": name})
-        except TimeoutError:
-            logger.warning("process_graceful_terminate_failed", extra={"process_name": name})
-            process.kill()
+        # Ensure the Python object reflects the termination
+        if process.poll() is None:
             try:
-                await asyncio.wait_for(
-                    asyncio.to_thread(process.wait),
-                    timeout=force_timeout,
-                )
-            except TimeoutError:
-                logger.warning("process_kill_timeout", extra={"process_name": name})
+                await asyncio.to_thread(process.wait, timeout=0.1)
+            except subprocess.TimeoutExpired:
+                # Should not happen if psutil worked, but as fallback
+                logger.warning("process_zombie_fallback", extra={"process_name": name})
+                process.kill()
+                await asyncio.to_thread(process.wait)
+
+        logger.debug("process_terminated_tree", extra={"process_name": name})
 
     @staticmethod
     async def _terminate_async_subprocess(
@@ -528,18 +592,22 @@ class ProcessManager:
         """
         logger = ProcessManager._get_logger()
 
-        process.terminate()
+        await asyncio.to_thread(
+            ProcessManager._terminate_tree_with_psutil,
+            process.pid,
+            graceful_timeout,
+            force_timeout,
+        )
 
         try:
-            await asyncio.wait_for(process.wait(), timeout=graceful_timeout)
-            logger.debug("async_process_terminated_gracefully", extra={"process_name": name})
+            await asyncio.wait_for(process.wait(), timeout=0.1)
         except TimeoutError:
-            logger.warning("async_process_graceful_terminate_failed", extra={"process_name": name})
+            logger.warning("async_process_zombie_fallback", extra={"process_name": name})
             process.kill()
-            try:
-                await asyncio.wait_for(process.wait(), timeout=force_timeout)
-            except TimeoutError:
-                logger.warning("async_process_kill_timeout", extra={"process_name": name})
+            with contextlib.suppress(Exception):
+                await process.wait()
+
+        logger.debug("async_process_terminated_tree", extra={"process_name": name})
 
     async def cleanup_all_async(
         self,
@@ -615,8 +683,7 @@ class ProcessManager:
             The count of currently running tracked processes.
         """
         with self._process_lock:
-            return sum(bool(p.is_running)
-                   for p in self._processes.values())
+            return sum(bool(p.is_running) for p in self._processes.values())
 
     def __repr__(self) -> str:
         """Return string representation.
@@ -792,7 +859,7 @@ class ProcessManager:
                 return
 
             self._external_pids[pid] = {
-                "process_name": name,
+                "name": name,
                 "process_type": process_type,
                 "metadata": metadata or {},
                 "registered_at": datetime.now(),
@@ -820,14 +887,14 @@ class ProcessManager:
         return False
 
     def terminate_external_pid(self, pid: int, force: bool = False) -> bool:
-        """Terminate an external process by PID using OS-level signals.
+        """Terminate an external process by PID using psutil (tree kill).
 
         Args:
             pid: The process ID to terminate.
-            force: If True, use SIGKILL immediately; otherwise try SIGTERM first.
+            force: If True, skip graceful termination and kill immediately.
 
         Returns:
-            True if process was terminated, False if not found or error.
+            True if process was terminated (or already gone), False on error.
         """
         logger = ProcessManager._get_logger()
 
@@ -835,23 +902,31 @@ class ProcessManager:
             info = self._external_pids.get(pid)
             name = info["name"] if info else f"PID-{pid}"
 
-        success = False
         try:
-            if sys.platform == "win32":
-                success = self._terminate_windows_process(pid, name, logger)
-            else:
-                sig = _SIGNAL_SIGKILL if force else _SIGNAL_SIGTERM
-                os.kill(pid, sig)
-                logger.debug("signal_sent", extra={"signal": sig, "process_name": name, "pid": pid})
-                self.unregister_external_pid(pid)
-                success = True
-        except (ProcessLookupError, PermissionError) as e:
-            logger.debug("external_pid_terminate_skipped", extra={"pid": pid, "error": str(e)})
-            self.unregister_external_pid(pid)
-        except Exception as e:
-            logger.warning("external_pid_terminate_error", extra={"pid": pid, "error": str(e)})
+            graceful = 0.1 if force else self.DEFAULT_GRACEFUL_TIMEOUT
+            force_to = self.DEFAULT_FORCE_TIMEOUT
 
-        return success
+            self._terminate_tree_with_psutil(pid, graceful, force_to)
+
+            self.unregister_external_pid(pid)
+            logger.debug(
+                "external_pid_terminated",
+                extra={"process_name": name, "pid": pid},
+            )
+
+        except psutil.NoSuchProcess:
+            self.unregister_external_pid(pid)
+            return False
+
+        except Exception as e:
+            logger.warning(
+                "external_pid_terminate_error",
+                extra={"pid": pid, "error": str(e)},
+            )
+            return False
+
+        else:
+            return True
 
     def _terminate_windows_process(self, pid: int, name: str, logger: logging.Logger) -> bool:
         """Terminate a process using Windows API.

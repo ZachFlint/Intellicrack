@@ -1,117 +1,48 @@
 {
   "tool": "bandit",
-  "generated": "2026-01-30T22:10:53.916832",
-  "total_findings": 32,
-  "total_files": 15,
+  "generated": "2026-02-06T13:35:13.159450",
+  "total_findings": 24,
+  "total_files": 13,
   "files": [
-    {
-      "path": "src/intellicrack/providers\\xpu_utils.py",
-      "count": 7,
-      "findings": [
-        {
-          "line": 14,
-          "column": null,
-          "severity": "Low",
-          "confidence": "High",
-          "code": "B404:blacklist",
-          "message": "Consider possible security implications associated with the subprocess module.",
-          "raw": "src/intellicrack/providers\\xpu_utils.py:14: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
-        },
-        {
-          "line": 160,
-          "column": null,
-          "severity": "Low",
-          "confidence": "High",
-          "code": "B607:start_process_with_partial_path",
-          "message": "Starting a process with a partial executable path",
-          "raw": "src/intellicrack/providers\\xpu_utils.py:160: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path"
-        },
-        {
-          "line": 160,
-          "column": null,
-          "severity": "Low",
-          "confidence": "High",
-          "code": "B603:subprocess_without_shell_equals_true",
-          "message": "subprocess call - check for execution of untrusted input.",
-          "raw": "src/intellicrack/providers\\xpu_utils.py:160: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
-        },
-        {
-          "line": 489,
-          "column": null,
-          "severity": "Low",
-          "confidence": "High",
-          "code": "B607:start_process_with_partial_path",
-          "message": "Starting a process with a partial executable path",
-          "raw": "src/intellicrack/providers\\xpu_utils.py:489: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path"
-        },
-        {
-          "line": 489,
-          "column": null,
-          "severity": "Low",
-          "confidence": "High",
-          "code": "B603:subprocess_without_shell_equals_true",
-          "message": "subprocess call - check for execution of untrusted input.",
-          "raw": "src/intellicrack/providers\\xpu_utils.py:489: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
-        },
-        {
-          "line": 514,
-          "column": null,
-          "severity": "Low",
-          "confidence": "High",
-          "code": "B607:start_process_with_partial_path",
-          "message": "Starting a process with a partial executable path",
-          "raw": "src/intellicrack/providers\\xpu_utils.py:514: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path"
-        },
-        {
-          "line": 514,
-          "column": null,
-          "severity": "Low",
-          "confidence": "High",
-          "code": "B603:subprocess_without_shell_equals_true",
-          "message": "subprocess call - check for execution of untrusted input.",
-          "raw": "src/intellicrack/providers\\xpu_utils.py:514: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
-        }
-      ]
-    },
     {
       "path": "src/intellicrack/providers\\model_loader.py",
       "count": 4,
       "findings": [
         {
-          "line": 438,
+          "line": 504,
           "column": null,
           "severity": "Medium",
           "confidence": "High",
           "code": "B615:huggingface_unsafe_download",
           "message": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()",
-          "raw": "src/intellicrack/providers\\model_loader.py:438: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+          "raw": "src/intellicrack/providers\\model_loader.py:504: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
         },
         {
-          "line": 457,
+          "line": 523,
           "column": null,
           "severity": "Medium",
           "confidence": "High",
           "code": "B615:huggingface_unsafe_download",
           "message": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()",
-          "raw": "src/intellicrack/providers\\model_loader.py:457: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+          "raw": "src/intellicrack/providers\\model_loader.py:523: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
         },
         {
-          "line": 545,
+          "line": 611,
           "column": null,
           "severity": "Medium",
           "confidence": "High",
           "code": "B615:huggingface_unsafe_download",
           "message": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()",
-          "raw": "src/intellicrack/providers\\model_loader.py:545: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+          "raw": "src/intellicrack/providers\\model_loader.py:611: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
         },
         {
-          "line": 564,
+          "line": 630,
           "column": null,
           "severity": "Medium",
           "confidence": "High",
           "code": "B615:huggingface_unsafe_download",
           "message": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()",
-          "raw": "src/intellicrack/providers\\model_loader.py:564: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+          "raw": "src/intellicrack/providers\\model_loader.py:630: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
         }
       ]
     },
@@ -120,31 +51,31 @@
       "count": 3,
       "findings": [
         {
-          "line": 10,
+          "line": 9,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B404:blacklist",
           "message": "Consider possible security implications associated with the subprocess module.",
-          "raw": "src/intellicrack/ui\\embedding\\embedded_widget.py:10: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
+          "raw": "src/intellicrack/ui\\embedding\\embedded_widget.py:9: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
         },
         {
-          "line": 21,
+          "line": 22,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B404:blacklist",
           "message": "Consider possible security implications associated with the subprocess module.",
-          "raw": "src/intellicrack/ui\\embedding\\embedded_widget.py:21: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
+          "raw": "src/intellicrack/ui\\embedding\\embedded_widget.py:22: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
         },
         {
-          "line": 171,
+          "line": 173,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B603:subprocess_without_shell_equals_true",
           "message": "subprocess call - check for execution of untrusted input.",
-          "raw": "src/intellicrack/ui\\embedding\\embedded_widget.py:171: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
+          "raw": "src/intellicrack/ui\\embedding\\embedded_widget.py:173: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
         }
       ]
     },
@@ -153,13 +84,13 @@
       "count": 3,
       "findings": [
         {
-          "line": 14,
+          "line": 13,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B404:blacklist",
           "message": "Consider possible security implications associated with the subprocess module.",
-          "raw": "src/intellicrack/ui\\sandbox_config.py:14: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
+          "raw": "src/intellicrack/ui\\sandbox_config.py:13: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
         },
         {
           "line": 113,
@@ -182,7 +113,7 @@
       ]
     },
     {
-      "path": "src/intellicrack/core\\process_manager.py",
+      "path": "src/intellicrack/bridges\\ghidra.py",
       "count": 2,
       "findings": [
         {
@@ -192,40 +123,40 @@
           "confidence": "High",
           "code": "B404:blacklist",
           "message": "Consider possible security implications associated with the subprocess module.",
-          "raw": "src/intellicrack/core\\process_manager.py:15: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
+          "raw": "src/intellicrack/bridges\\ghidra.py:15: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
         },
         {
-          "line": 668,
+          "line": 470,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B603:subprocess_without_shell_equals_true",
           "message": "subprocess call - check for execution of untrusted input.",
-          "raw": "src/intellicrack/core\\process_manager.py:668: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
+          "raw": "src/intellicrack/bridges\\ghidra.py:470: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
         }
       ]
     },
     {
-      "path": "src/intellicrack/credentials\\oauth.py",
+      "path": "src/intellicrack/core\\process_manager.py",
       "count": 2,
       "findings": [
         {
-          "line": 222,
-          "column": null,
-          "severity": "Low",
-          "confidence": "Medium",
-          "code": "B106:hardcoded_password_funcarg",
-          "message": "Possible hardcoded password: 'https://oauth2.googleapis.com/token'",
-          "raw": "src/intellicrack/credentials\\oauth.py:222: [Low] B106:hardcoded_password_funcarg: Possible hardcoded password: 'https://oauth2.googleapis.com/token'"
-        },
-        {
-          "line": 810,
+          "line": 14,
           "column": null,
           "severity": "Low",
           "confidence": "High",
-          "code": "B110:try_except_pass",
-          "message": "Try, Except, Pass detected.",
-          "raw": "src/intellicrack/credentials\\oauth.py:810: [Low] B110:try_except_pass: Try, Except, Pass detected."
+          "code": "B404:blacklist",
+          "message": "Consider possible security implications associated with the subprocess module.",
+          "raw": "src/intellicrack/core\\process_manager.py:14: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
+        },
+        {
+          "line": 736,
+          "column": null,
+          "severity": "Low",
+          "confidence": "High",
+          "code": "B603:subprocess_without_shell_equals_true",
+          "message": "subprocess call - check for execution of untrusted input.",
+          "raw": "src/intellicrack/core\\process_manager.py:736: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
         }
       ]
     },
@@ -258,37 +189,22 @@
       "count": 2,
       "findings": [
         {
-          "line": 11,
+          "line": 10,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B404:blacklist",
           "message": "Consider possible security implications associated with the subprocess module.",
-          "raw": "src/intellicrack/ui\\embedding\\hxd_widget.py:11: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
+          "raw": "src/intellicrack/ui\\embedding\\hxd_widget.py:10: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
         },
         {
-          "line": 292,
+          "line": 296,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B603:subprocess_without_shell_equals_true",
           "message": "subprocess call - check for execution of untrusted input.",
-          "raw": "src/intellicrack/ui\\embedding\\hxd_widget.py:292: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
-        }
-      ]
-    },
-    {
-      "path": "src/intellicrack/bridges\\ghidra.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 13,
-          "column": null,
-          "severity": "Low",
-          "confidence": "High",
-          "code": "B404:blacklist",
-          "message": "Consider possible security implications associated with the subprocess module.",
-          "raw": "src/intellicrack/bridges\\ghidra.py:13: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
+          "raw": "src/intellicrack/ui\\embedding\\hxd_widget.py:296: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input."
         }
       ]
     },
@@ -327,28 +243,28 @@
       "count": 1,
       "findings": [
         {
-          "line": 22,
+          "line": 368,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B404:blacklist",
           "message": "Consider possible security implications associated with the subprocess module.",
-          "raw": "src/intellicrack/core\\script_gen.py:22: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
+          "raw": "src/intellicrack/core\\script_gen.py:368: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
         }
       ]
     },
     {
-      "path": "src/intellicrack/credentials\\store.py",
+      "path": "src/intellicrack/credentials\\oauth.py",
       "count": 1,
       "findings": [
         {
-          "line": 412,
+          "line": 222,
           "column": null,
           "severity": "Low",
-          "confidence": "High",
-          "code": "B110:try_except_pass",
-          "message": "Try, Except, Pass detected.",
-          "raw": "src/intellicrack/credentials\\store.py:412: [Low] B110:try_except_pass: Try, Except, Pass detected."
+          "confidence": "Medium",
+          "code": "B106:hardcoded_password_funcarg",
+          "message": "Possible hardcoded password: 'https://oauth2.googleapis.com/token'",
+          "raw": "src/intellicrack/credentials\\oauth.py:222: [Low] B106:hardcoded_password_funcarg: Possible hardcoded password: 'https://oauth2.googleapis.com/token'"
         }
       ]
     },

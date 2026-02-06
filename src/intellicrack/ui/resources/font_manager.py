@@ -6,7 +6,7 @@ Provides custom font loading and application for the Intellicrack interface.
 from __future__ import annotations
 
 import json
-from pathlib import Path  # noqa: TC003
+from pathlib import Path
 from typing import ClassVar, Final, cast
 
 from PyQt6.QtGui import QFont, QFontDatabase

@@ -29,9 +29,10 @@ _STAYS_ON_TOP_HINT: int = 262144
 
 @pytest.fixture
 def splash_screen(
-    qapp: QApplication,  # noqa: ARG001
+    qapp: QApplication,
 ) -> Generator[SplashScreen]:
     """Provide a SplashScreen instance for testing."""
+    del qapp
     splash = SplashScreen()
     yield splash
     splash.close()

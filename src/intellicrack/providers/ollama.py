@@ -530,10 +530,10 @@ class OllamaProvider(LLMProviderBase):
                 request_body["tools"] = self._convert_tools_to_provider_format(tools)
 
             async with client.stream(
-                        "POST",
-                        f"{base_url}/api/chat",
-                        json=request_body,
-                    ) as response:
+                "POST",
+                f"{base_url}/api/chat",
+                json=request_body,
+            ) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():
                     if self._cancel_requested:
@@ -541,9 +541,7 @@ class OllamaProvider(LLMProviderBase):
                     if line:
                         try:
                             chunk_data = json.loads(line)
-                            if content := chunk_data.get("message", {}).get(
-                                "content", ""
-                            ):
+                            if content := chunk_data.get("message", {}).get("content", ""):
                                 yield content
                         except json.JSONDecodeError as exc:
                             self._logger.debug("stream_json_parse_skipped", extra={"error": str(exc)})
@@ -676,10 +674,10 @@ class OllamaProvider(LLMProviderBase):
 
         try:
             async with self._local_client.stream(
-                        "POST",
-                        f"{self._local_url}/api/pull",
-                        json={"name": actual_model},
-                    ) as response:
+                "POST",
+                f"{self._local_url}/api/pull",
+                json={"name": actual_model},
+            ) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():
                     if line:

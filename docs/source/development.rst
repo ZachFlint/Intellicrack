@@ -16,7 +16,7 @@ Code Style
 Intellicrack follows strict code style guidelines:
 
 * **Python**: PEP 8 with Ruff enforcement
-* **Type Hints**: Full mypy strict compliance
+* **Type Hints**: Full basedpyright strict compliance
 * **Docstrings**: Google-style docstrings
 
 Running Linters
@@ -26,7 +26,7 @@ Running Linters
 
    just lint        # Check code style
    just lint-fix    # Auto-fix issues
-   just mypy        # Type checking
+   just basedpyright    # Type checking
    just ruff        # Ruff linting
 
 Testing

@@ -134,10 +134,10 @@ AGENTS.md:68 error MD024/no-duplicate-heading Multiple headings with the same co
 AGENTS.md:108:81 error MD013/line-length Line length [Expected: 80; Actual: 118]
 
 
-3 findings in Claude.md
+3 findings in CLAUDE.md
 
-Claude.md:64 error MD036/no-emphasis-as-heading Emphasis used instead of a heading [Context: "TOOLS"]
+CLAUDE.md:64 error MD036/no-emphasis-as-heading Emphasis used instead of a heading [Context: "TOOLS"]
 
-Claude.md:74:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
+CLAUDE.md:74:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
 
-Claude.md:107:81 error MD013/line-length Line length [Expected: 80; Actual: 86]
+CLAUDE.md:107:81 error MD013/line-length Line length [Expected: 80; Actual: 86]

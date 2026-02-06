@@ -225,7 +225,8 @@ def run_command(
     args: list[str],
     cwd: Path | None = None,
     timeout: int | None = None,
-    capture_output: bool = True,  # noqa: ARG001, FBT001, FBT002
+    *,
+    capture_output: bool = True,
     tool_name: str | None = None,
 ) -> dict[str, Any]:
     """Execute a subprocess command with proper error handling.
@@ -240,6 +241,7 @@ def run_command(
     Returns:
         Dict with success, stdout, stderr, and return_code.
     """
+    del capture_output
     effective_timeout = timeout or TIMEOUT
     effective_cwd = cwd or WORKING_DIR
     detected_tool = tool_name or _detect_tool_name(args)

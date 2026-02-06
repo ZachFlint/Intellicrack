@@ -1,1 +1,18 @@
-No findings.
+6 findings in d:\Intellicrack\src\intellicrack\core\process_manager.py
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:281:9: [error] Type of "seen_pids" is partially unknown
+  Type of "seen_pids" is "set[Unknown]"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:285:17: [error] Type of "add" is partially unknown
+  Type of "add" is "(element: Unknown, /) -> None"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:286:17: [error] Type of "append" is partially unknown
+  Type of "append" is "(object: Unknown, /) -> None"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:289:13: [error] Type of "p" is unknown
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:291:17: [error] Type of "terminate" is unknown
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:294:38: [error] Argument type is partially unknown
+  Argument corresponds to parameter "procs" in function "wait_procs"
+  Argument type is "list[Unknown]"

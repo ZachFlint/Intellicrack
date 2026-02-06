@@ -1,61 +1,44 @@
-7 findings in src/intellicrack/providers\xpu_utils.py
-
-src/intellicrack/providers\xpu_utils.py:14: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
-
-src/intellicrack/providers\xpu_utils.py:160: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path
-
-src/intellicrack/providers\xpu_utils.py:160: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input.
-
-src/intellicrack/providers\xpu_utils.py:489: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path
-
-src/intellicrack/providers\xpu_utils.py:489: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input.
-
-src/intellicrack/providers\xpu_utils.py:514: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path
-
-src/intellicrack/providers\xpu_utils.py:514: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input.
-
-
 4 findings in src/intellicrack/providers\model_loader.py
 
-src/intellicrack/providers\model_loader.py:438: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()
+src/intellicrack/providers\model_loader.py:504: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()
 
-src/intellicrack/providers\model_loader.py:457: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()
+src/intellicrack/providers\model_loader.py:523: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()
 
-src/intellicrack/providers\model_loader.py:545: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()
+src/intellicrack/providers\model_loader.py:611: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()
 
-src/intellicrack/providers\model_loader.py:564: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()
+src/intellicrack/providers\model_loader.py:630: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()
 
 
 3 findings in src/intellicrack/ui\embedding\embedded_widget.py
 
-src/intellicrack/ui\embedding\embedded_widget.py:10: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
+src/intellicrack/ui\embedding\embedded_widget.py:9: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
 
-src/intellicrack/ui\embedding\embedded_widget.py:21: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
+src/intellicrack/ui\embedding\embedded_widget.py:22: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
 
-src/intellicrack/ui\embedding\embedded_widget.py:171: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input.
+src/intellicrack/ui\embedding\embedded_widget.py:173: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input.
 
 
 3 findings in src/intellicrack/ui\sandbox_config.py
 
-src/intellicrack/ui\sandbox_config.py:14: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
+src/intellicrack/ui\sandbox_config.py:13: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
 
 src/intellicrack/ui\sandbox_config.py:113: [Low] B607:start_process_with_partial_path: Starting a process with a partial executable path
 
 src/intellicrack/ui\sandbox_config.py:113: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input.
 
 
+2 findings in src/intellicrack/bridges\ghidra.py
+
+src/intellicrack/bridges\ghidra.py:15: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
+
+src/intellicrack/bridges\ghidra.py:470: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input.
+
+
 2 findings in src/intellicrack/core\process_manager.py
 
-src/intellicrack/core\process_manager.py:15: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
+src/intellicrack/core\process_manager.py:14: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
 
-src/intellicrack/core\process_manager.py:668: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input.
-
-
-2 findings in src/intellicrack/credentials\oauth.py
-
-src/intellicrack/credentials\oauth.py:222: [Low] B106:hardcoded_password_funcarg: Possible hardcoded password: 'https://oauth2.googleapis.com/token'
-
-src/intellicrack/credentials\oauth.py:810: [Low] B110:try_except_pass: Try, Except, Pass detected.
+src/intellicrack/core\process_manager.py:736: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input.
 
 
 2 findings in src/intellicrack/sandbox\windows.py
@@ -67,14 +50,9 @@ src/intellicrack/sandbox\windows.py:14: [Low] B405:blacklist: Using xml.etree.El
 
 2 findings in src/intellicrack/ui\embedding\hxd_widget.py
 
-src/intellicrack/ui\embedding\hxd_widget.py:11: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
+src/intellicrack/ui\embedding\hxd_widget.py:10: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
 
-src/intellicrack/ui\embedding\hxd_widget.py:292: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input.
-
-
-1 findings in src/intellicrack/bridges\ghidra.py
-
-src/intellicrack/bridges\ghidra.py:13: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
+src/intellicrack/ui\embedding\hxd_widget.py:296: [Low] B603:subprocess_without_shell_equals_true: subprocess call - check for execution of untrusted input.
 
 
 1 findings in src/intellicrack/bridges\installer.py
@@ -89,12 +67,12 @@ src/intellicrack/bridges\x64dbg.py:10: [Low] B404:blacklist: Consider possible s
 
 1 findings in src/intellicrack/core\script_gen.py
 
-src/intellicrack/core\script_gen.py:22: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
+src/intellicrack/core\script_gen.py:368: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
 
 
-1 findings in src/intellicrack/credentials\store.py
+1 findings in src/intellicrack/credentials\oauth.py
 
-src/intellicrack/credentials\store.py:412: [Low] B110:try_except_pass: Try, Except, Pass detected.
+src/intellicrack/credentials\oauth.py:222: [Low] B106:hardcoded_password_funcarg: Possible hardcoded password: 'https://oauth2.googleapis.com/token'
 
 
 1 findings in src/intellicrack/ui\resources\icon_manager.py

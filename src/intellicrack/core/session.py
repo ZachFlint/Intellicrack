@@ -20,11 +20,16 @@ from uuid import uuid4
 from .logging import get_logger
 from .types import (
     BinaryInfo,
+    ExportInfo,
+    ImportInfo,
     LicensingAnalysis,
     Message,
     PatchInfo,
     ProviderName,
+    SectionInfo,
+    ToolCall,
     ToolName,
+    ToolResult,
     ToolState,
 )
 
@@ -550,8 +555,6 @@ class SessionStore:
         Returns:
             Reconstructed BinaryInfo instance.
         """
-        from .types import ExportInfo, ImportInfo, SectionInfo  # noqa: PLC0415
-
         return BinaryInfo(
             path=Path(data["path"]),
             name=data["name"],
@@ -610,8 +613,6 @@ class SessionStore:
         Returns:
             Reconstructed Message instance.
         """
-        from .types import ToolCall, ToolResult  # noqa: PLC0415
-
         tool_calls = None
         if "tool_calls" in data:
             tool_calls = [ToolCall(**tc) for tc in data["tool_calls"]]

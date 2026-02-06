@@ -7,8 +7,10 @@ all UI components and connects them to the orchestrator.
 from __future__ import annotations
 
 import asyncio
+import importlib
 import json
 import os
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -163,6 +165,8 @@ class MainWindow(QMainWindow):
 
         self._apply_smart_window_size()
 
+        self.closeEvent = self.close_event_handler
+
     def _apply_smart_window_size(self) -> None:
         """Size and center the window based on available screen geometry.
 
@@ -255,125 +259,127 @@ class MainWindow(QMainWindow):
             }
         """)
 
-    def _setup_menus(self) -> None:  # noqa: PLR0914
-        """Set up the menu bar."""
-        menubar: QMenuBar | None = self.menuBar()
-        assert menubar is not None
+    def _add_menu_action(
+        self,
+        menu: QMenu,
+        text: str,
+        handler: Callable[[], object],
+        shortcut: str | None = None,
+    ) -> None:
+        """Add an action to a menu with optional shortcut.
 
+        Args:
+            menu: The menu to add the action to.
+            text: The action text/label.
+            handler: The slot to connect to the triggered signal.
+            shortcut: Optional keyboard shortcut.
+        """
+        action = QAction(text, self)
+        if shortcut is not None:
+            action.setShortcut(shortcut)
+        action.triggered.connect(handler)
+        menu.addAction(action)
+
+    def _setup_file_menu(self, menubar: QMenuBar) -> None:
+        """Set up the File menu.
+
+        Args:
+            menubar: The menu bar to add the menu to.
+        """
         file_menu: QMenu | None = menubar.addMenu("&File")
         assert file_menu is not None
 
-        load_action = QAction("Load Binary...", self)
-        load_action.setShortcut("Ctrl+O")
-        load_action.triggered.connect(self._on_load_binary)
-        file_menu.addAction(load_action)
-
+        self._add_menu_action(file_menu, "Load Binary...", self._on_load_binary, "Ctrl+O")
         file_menu.addSeparator()
-
-        new_session_action = QAction("New Session", self)
-        new_session_action.setShortcut("Ctrl+N")
-        new_session_action.triggered.connect(self._on_new_session)
-        file_menu.addAction(new_session_action)
-
-        load_session_action = QAction("Load Session...", self)
-        load_session_action.triggered.connect(self._on_load_session)
-        file_menu.addAction(load_session_action)
-
-        save_session_action = QAction("Save Session", self)
-        save_session_action.setShortcut("Ctrl+S")
-        save_session_action.triggered.connect(self._on_save_session)
-        file_menu.addAction(save_session_action)
-
+        self._add_menu_action(file_menu, "New Session", self._on_new_session, "Ctrl+N")
+        self._add_menu_action(file_menu, "Load Session...", self._on_load_session)
+        self._add_menu_action(file_menu, "Save Session", self._on_save_session, "Ctrl+S")
         file_menu.addSeparator()
-
-        export_action = QAction("Export Chat...", self)
-        export_action.triggered.connect(self._on_export_chat)
-        file_menu.addAction(export_action)
-
+        self._add_menu_action(file_menu, "Export Chat...", self._on_export_chat)
         file_menu.addSeparator()
+        self._add_menu_action(file_menu, "Exit", self.close, "Alt+F4")
 
-        exit_action = QAction("Exit", self)
-        exit_action.setShortcut("Alt+F4")
-        exit_action.triggered.connect(self.close)
-        file_menu.addAction(exit_action)
+    def _setup_tools_menu(self, menubar: QMenuBar) -> None:
+        """Set up the Tools menu.
 
+        Args:
+            menubar: The menu bar to add the menu to.
+        """
         tools_menu: QMenu | None = menubar.addMenu("&Tools")
         assert tools_menu is not None
 
-        tool_status_action = QAction("Tool Status...", self)
-        tool_status_action.triggered.connect(self._on_tool_status)
-        tools_menu.addAction(tool_status_action)
-
-        configure_tools_action = QAction("Configure Tools...", self)
-        configure_tools_action.triggered.connect(self._on_configure_tools)
-        tools_menu.addAction(configure_tools_action)
-
+        self._add_menu_action(tools_menu, "Tool Status...", self._on_tool_status)
+        self._add_menu_action(tools_menu, "Configure Tools...", self._on_configure_tools)
         tools_menu.addSeparator()
 
         embedded_menu: QMenu | None = tools_menu.addMenu("&Embedded Tools")
         assert embedded_menu is not None
 
-        open_x64dbg_action = QAction("Open x64dbg Debugger", self)
-        open_x64dbg_action.triggered.connect(self._on_open_x64dbg)
-        embedded_menu.addAction(open_x64dbg_action)
-
-        open_cutter_action = QAction("Open Cutter Analysis", self)
-        open_cutter_action.triggered.connect(self._on_open_cutter)
-        embedded_menu.addAction(open_cutter_action)
-
-        open_hxd_action = QAction("Open HxD Hex Editor", self)
-        open_hxd_action.triggered.connect(self._on_open_hxd)
-        embedded_menu.addAction(open_hxd_action)
-
+        self._add_menu_action(embedded_menu, "Open x64dbg Debugger", self._on_open_x64dbg)
+        self._add_menu_action(embedded_menu, "Open Cutter Analysis", self._on_open_cutter)
+        self._add_menu_action(embedded_menu, "Open HxD Hex Editor", self._on_open_hxd)
         embedded_menu.addSeparator()
+        self._add_menu_action(embedded_menu, "Debug Current Binary...", self._on_debug_current_binary)
+        self._add_menu_action(embedded_menu, "Analyze Current Binary...", self._on_analyze_current_binary)
+        self._add_menu_action(embedded_menu, "Hex Edit Current Binary...", self._on_hex_edit_current_binary)
 
-        debug_binary_action = QAction("Debug Current Binary...", self)
-        debug_binary_action.triggered.connect(self._on_debug_current_binary)
-        embedded_menu.addAction(debug_binary_action)
+    def _setup_providers_menu(self, menubar: QMenuBar) -> None:
+        """Set up the Providers menu.
 
-        analyze_binary_action = QAction("Analyze Current Binary...", self)
-        analyze_binary_action.triggered.connect(self._on_analyze_current_binary)
-        embedded_menu.addAction(analyze_binary_action)
-
-        hex_edit_binary_action = QAction("Hex Edit Current Binary...", self)
-        hex_edit_binary_action.triggered.connect(self._on_hex_edit_current_binary)
-        embedded_menu.addAction(hex_edit_binary_action)
-
+        Args:
+            menubar: The menu bar to add the menu to.
+        """
         providers_menu: QMenu | None = menubar.addMenu("&Providers")
         assert providers_menu is not None
 
-        configure_providers_action = QAction("Configure Providers...", self)
-        configure_providers_action.triggered.connect(self._on_configure_providers)
-        providers_menu.addAction(configure_providers_action)
+        self._add_menu_action(providers_menu, "Configure Providers...", self._on_configure_providers)
+        self._add_menu_action(providers_menu, "Refresh Models", self._on_refresh_models)
 
-        refresh_models_action = QAction("Refresh Models", self)
-        refresh_models_action.triggered.connect(self._on_refresh_models)
-        providers_menu.addAction(refresh_models_action)
+    def _setup_sandbox_menu(self, menubar: QMenuBar) -> None:
+        """Set up the Sandbox menu.
 
+        Args:
+            menubar: The menu bar to add the menu to.
+        """
         sandbox_menu: QMenu | None = menubar.addMenu("&Sandbox")
         assert sandbox_menu is not None
 
-        configure_sandbox_action = QAction("Configure Sandbox...", self)
-        configure_sandbox_action.triggered.connect(self._on_configure_sandbox)
-        sandbox_menu.addAction(configure_sandbox_action)
+        self._add_menu_action(sandbox_menu, "Configure Sandbox...", self._on_configure_sandbox)
+        self._add_menu_action(sandbox_menu, "Open Sandbox", self._on_open_sandbox)
 
-        open_sandbox_action = QAction("Open Sandbox", self)
-        open_sandbox_action.triggered.connect(self._on_open_sandbox)
-        sandbox_menu.addAction(open_sandbox_action)
+    def _setup_settings_menu(self, menubar: QMenuBar) -> None:
+        """Set up the Settings menu.
 
+        Args:
+            menubar: The menu bar to add the menu to.
+        """
         settings_menu: QMenu | None = menubar.addMenu("&Settings")
         assert settings_menu is not None
 
-        preferences_action = QAction("Preferences...", self)
-        preferences_action.triggered.connect(self._on_preferences)
-        settings_menu.addAction(preferences_action)
+        self._add_menu_action(settings_menu, "Preferences...", self._on_preferences)
 
+    def _setup_help_menu(self, menubar: QMenuBar) -> None:
+        """Set up the Help menu.
+
+        Args:
+            menubar: The menu bar to add the menu to.
+        """
         help_menu: QMenu | None = menubar.addMenu("&Help")
         assert help_menu is not None
 
-        about_action = QAction("About", self)
-        about_action.triggered.connect(self._on_about)
-        help_menu.addAction(about_action)
+        self._add_menu_action(help_menu, "About", self._on_about)
+
+    def _setup_menus(self) -> None:
+        """Set up the menu bar."""
+        menubar: QMenuBar | None = self.menuBar()
+        assert menubar is not None
+
+        self._setup_file_menu(menubar)
+        self._setup_tools_menu(menubar)
+        self._setup_providers_menu(menubar)
+        self._setup_sandbox_menu(menubar)
+        self._setup_settings_menu(menubar)
+        self._setup_help_menu(menubar)
 
     def _setup_toolbar(self) -> None:
         """Set up the toolbar."""
@@ -532,12 +538,12 @@ class MainWindow(QMainWindow):
         Returns:
             Future that resolves to True if approved, False otherwise.
         """
-        from .confirmation_dialog import ToolConfirmationDialog  # noqa: PLC0415
+        confirmation_module = importlib.import_module(".confirmation_dialog", "intellicrack.ui")
 
         future: asyncio.Future[bool] = asyncio.get_event_loop().create_future()
 
         def show_dialog() -> None:
-            dialog = ToolConfirmationDialog(call, self)
+            dialog = confirmation_module.ToolConfirmationDialog(call, self)
             dialog.exec()
             try:
                 future.set_result(dialog.approved)
@@ -593,7 +599,7 @@ class MainWindow(QMainWindow):
         if result.success and result.result:
             result_str = str(result.result)
             if len(result_str) > _MAX_RESULT_DISPLAY_LEN:
-                result_str = f"{result_str[:_MAX_RESULT_DISPLAY_LEN - 3]}..."
+                result_str = f"{result_str[: _MAX_RESULT_DISPLAY_LEN - 3]}..."
             self._tool_panel.log(f"Result: {result_str}")
 
         if result.error:
@@ -610,12 +616,13 @@ class MainWindow(QMainWindow):
         self._current_worker.error.connect(self._on_async_error)
         self._current_worker.start()
 
-    def _on_async_finished(self, result: object) -> None:  # noqa: ARG002
+    def _on_async_finished(self, result: object) -> None:
         """Handle async operation completion.
 
         Args:
             result: Operation result.
         """
+        del result
         self._chat_panel.set_input_enabled(True)
         self._stream_append = None
         self.status_update.emit("Ready")
@@ -909,9 +916,8 @@ class MainWindow(QMainWindow):
 
     def _on_preferences(self) -> None:
         """Handle preferences action."""
-        from .preferences import PreferencesDialog  # noqa: PLC0415
-
-        dialog = PreferencesDialog(self._config, self)
+        preferences_module = importlib.import_module(".preferences", "intellicrack.ui")
+        dialog = preferences_module.PreferencesDialog(self._config, self)
         if dialog.exec():
             self._config = dialog.get_config()
             self.status_update.emit("Preferences saved")
@@ -1115,15 +1121,15 @@ class MainWindow(QMainWindow):
         Args:
             checked: Whether auto-approve is enabled.
         """
-        from ..core.types import ConfirmationLevel  # noqa: PLC0415
+        types_module = importlib.import_module("intellicrack.core.types")
 
         self._auto_approve_btn.setText(f"Auto-approve: {'ON' if checked else 'OFF'}")
 
         if checked:
-            self._orchestrator.set_confirmation_level(ConfirmationLevel.NONE)
+            self._orchestrator.set_confirmation_level(types_module.ConfirmationLevel.NONE)
             self.status_update.emit("Auto-approve enabled - all tool calls will be approved automatically")
         else:
-            self._orchestrator.set_confirmation_level(ConfirmationLevel.DESTRUCTIVE)
+            self._orchestrator.set_confirmation_level(types_module.ConfirmationLevel.DESTRUCTIVE)
             self.status_update.emit("Auto-approve disabled - destructive operations require confirmation")
 
     def _on_cancel(self) -> None:
@@ -1135,7 +1141,7 @@ class MainWindow(QMainWindow):
         self._run_async(cancel())
         self.status_update.emit("Cancelling...")
 
-    def closeEvent(self, a0: QCloseEvent | None) -> None:  # noqa: N802
+    def close_event_handler(self, a0: QCloseEvent | None) -> None:
         """Handle window close event.
 
         Args:

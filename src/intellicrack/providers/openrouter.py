@@ -4,6 +4,8 @@ This module provides integration with OpenRouter which provides access
 to many different LLM providers through a unified API.
 """
 
+from __future__ import annotations
+
 import json
 import time
 from collections.abc import AsyncIterator
@@ -95,7 +97,7 @@ class OpenRouterProvider(LLMProviderBase):
                 extra={"has_custom_base": credentials.api_base is not None},
             )
         except httpx.HTTPStatusError as e:
-            self._logger.exception(
+            self._logger.warning(
                 "openrouter_connect_failed",
                 extra={"status_code": e.response.status_code},
             )
@@ -103,7 +105,7 @@ class OpenRouterProvider(LLMProviderBase):
                 raise AuthenticationError(f"Invalid OpenRouter API key: {e}") from e
             raise ProviderError(f"Failed to connect to OpenRouter: {e}") from e
         except Exception as e:
-            self._logger.exception("openrouter_connect_failed", extra={"error": str(e)})
+            self._logger.warning("openrouter_connect_failed", extra={"error": str(e)})
             raise ProviderError(f"Failed to connect to OpenRouter: {e}") from e
 
     async def disconnect(self) -> None:
@@ -168,7 +170,7 @@ class OpenRouterProvider(LLMProviderBase):
             )
             return sorted_models
         except Exception as e:
-            self._logger.exception(
+            self._logger.warning(
                 "openrouter_list_models_failed",
                 extra={"error": str(e)},
             )
@@ -270,107 +272,108 @@ class OpenRouterProvider(LLMProviderBase):
 
         start_time = time.perf_counter()
 
+        request_body: dict[str, object] = {
+            "model": model,
+            "messages": openrouter_messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+
+        if tools:
+            request_body["tools"] = self._convert_tools_to_provider_format(tools)
+
         try:
-            request_body: dict[str, object] = {
-                "model": model,
-                "messages": openrouter_messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-            }
-
-            if tools:
-                request_body["tools"] = self._convert_tools_to_provider_format(tools)
-
             response = await self._client.post(
                 f"{self.BASE_URL}/chat/completions",
                 json=request_body,
             )
-
-            if response.status_code == HTTP_RATE_LIMITED:
-                raise RateLimitError("OpenRouter rate limit exceeded")  # noqa: TRY301
-            response.raise_for_status()
-
-            data = response.json()
-            duration_ms = (time.perf_counter() - start_time) * 1000
-
-            choices = data.get("choices", [])
-            if not choices:
-                raise ProviderError("No response choices returned")  # noqa: TRY301
-
-            response_message = choices[0].get("message", {})
-            content = response_message.get("content", "") or ""
-            tool_calls: list[ToolCall] = []
-
-            if "tool_calls" in response_message:
-                for tc in response_message["tool_calls"]:
-                    func_data = tc.get("function", {})
-                    func_name = func_data.get("name", "")
-                    args_str = func_data.get("arguments", "{}")
-                    parsed_args: dict[str, Any]
-                    try:
-                        parsed_args = json.loads(str(args_str))
-                    except json.JSONDecodeError:
-                        parsed_args = {}
-
-                    tool_call = ToolCall(
-                        id=tc.get("id", f"call_{len(tool_calls)}"),
-                        tool_name=func_name.split(".")[0] if "." in func_name else func_name,
-                        function_name=func_name,
-                        arguments=parsed_args,
-                    )
-                    tool_calls.append(tool_call)
-                    self._logger.debug(
-                        "tool_call_parsed",
-                        extra={
-                            "tool_name": tool_call.tool_name,
-                            "arguments_count": len(tool_call.arguments),
-                        },
-                    )
-
-            message = Message(
-                role="assistant",
-                content=content,
-                tool_calls=tool_calls or None,
-                timestamp=datetime.now(),
-            )
-
-            log_provider_response(
-                provider="openrouter",
-                model=model,
-                tool_calls_count=len(tool_calls),
-                duration_ms=duration_ms,
-            )
-
-            self._logger.info(
-                "openrouter_chat_completed",
-                extra={
-                    "model": model,
-                    "tool_calls_count": len(tool_calls),
-                    "duration_ms": round(duration_ms, 2),
-                    "content_length": len(content),
-                },
-            )
-
-            return message, tool_calls or None
-
-        except RateLimitError:
-            self._logger.warning(
-                "openrouter_rate_limited",
-                extra={"model": model},
-            )
-            raise
         except httpx.HTTPStatusError as e:
-            self._logger.exception(
+            self._logger.warning(
                 "openrouter_chat_http_error",
                 extra={"model": model, "status_code": e.response.status_code},
             )
             raise ProviderError(f"OpenRouter API error: {e}") from e
-        except Exception as e:
-            self._logger.exception(
-                "openrouter_chat_failed",
-                extra={"model": model, "error": str(e)},
+
+        if response.status_code == HTTP_RATE_LIMITED:
+            self._logger.warning(
+                "openrouter_rate_limited",
+                extra={"model": model},
             )
-            raise ProviderError(f"OpenRouter request failed: {e}") from e
+            raise RateLimitError("OpenRouter rate limit exceeded")
+
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            self._logger.warning(
+                "openrouter_chat_http_error",
+                extra={"model": model, "status_code": e.response.status_code},
+            )
+            raise ProviderError(f"OpenRouter API error: {e}") from e
+
+        data = response.json()
+        duration_ms = (time.perf_counter() - start_time) * 1000
+
+        choices = data.get("choices", [])
+        if not choices:
+            msg = "No response choices returned"
+            raise ProviderError(msg)
+
+        response_message = choices[0].get("message", {})
+        content = response_message.get("content", "") or ""
+        tool_calls: list[ToolCall] = []
+
+        if "tool_calls" in response_message:
+            for tc in response_message["tool_calls"]:
+                func_data = tc.get("function", {})
+                func_name = func_data.get("name", "")
+                args_str = func_data.get("arguments", "{}")
+                parsed_args: dict[str, Any]
+                try:
+                    parsed_args = json.loads(str(args_str))
+                except json.JSONDecodeError:
+                    self._logger.debug("tool_argument_parse_failed", extra={"raw_args": str(args_str)[:200]})
+                    parsed_args = {}
+
+                tool_call = ToolCall(
+                    id=tc.get("id", f"call_{len(tool_calls)}"),
+                    tool_name=func_name.split(".")[0] if "." in func_name else func_name,
+                    function_name=func_name,
+                    arguments=parsed_args,
+                )
+                tool_calls.append(tool_call)
+                self._logger.debug(
+                    "tool_call_parsed",
+                    extra={
+                        "tool_name": tool_call.tool_name,
+                        "arguments_count": len(tool_call.arguments),
+                    },
+                )
+
+        message = Message(
+            role="assistant",
+            content=content,
+            tool_calls=tool_calls or None,
+            timestamp=datetime.now(),
+        )
+
+        log_provider_response(
+            provider="openrouter",
+            model=model,
+            tool_calls_count=len(tool_calls),
+            duration_ms=duration_ms,
+        )
+
+        self._logger.info(
+            "openrouter_chat_completed",
+            extra={
+                "model": model,
+                "tool_calls_count": len(tool_calls),
+                "duration_ms": round(duration_ms, 2),
+                "content_length": len(content),
+            },
+        )
+
+        return message, tool_calls or None
 
     async def chat_stream(
         self,
@@ -428,10 +431,10 @@ class OpenRouterProvider(LLMProviderBase):
                 request_body["tools"] = self._convert_tools_to_provider_format(tools)
 
             async with self._client.stream(
-                        "POST",
-                        f"{self.BASE_URL}/chat/completions",
-                        json=request_body,
-                    ) as response:
+                "POST",
+                f"{self.BASE_URL}/chat/completions",
+                json=request_body,
+            ) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():
                     if self._cancel_requested:
@@ -462,7 +465,7 @@ class OpenRouterProvider(LLMProviderBase):
 
         except Exception as e:
             if not self._cancel_requested:
-                self._logger.exception(
+                self._logger.warning(
                     "openrouter_chat_stream_failed",
                     extra={"model": model, "chunks_yielded": chunks_yielded, "error": str(e)},
                 )
@@ -613,7 +616,7 @@ class OpenRouterProvider(LLMProviderBase):
             )
             return result
         except Exception as e:
-            self._logger.exception(
+            self._logger.warning(
                 "openrouter_get_generation_failed",
                 extra={"generation_id": generation_id, "error": str(e)},
             )
