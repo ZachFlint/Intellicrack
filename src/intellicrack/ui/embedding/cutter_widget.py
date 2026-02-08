@@ -9,9 +9,8 @@ from __future__ import annotations
 import asyncio
 import os
 import winreg
-from collections.abc import Coroutine
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, override
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.embedding.embedded_widget import EmbeddedToolWidget
@@ -19,6 +18,8 @@ from intellicrack.ui.embedding.win32_helper import Win32WindowHelper
 
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
+
     from PyQt6.QtWidgets import QWidget
 
     from intellicrack.bridges.radare2 import Radare2Bridge
@@ -60,6 +61,7 @@ class CutterWidget(EmbeddedToolWidget):
         self._background_tasks: set[asyncio.Task[object]] = set()
         super().__init__(parent)
 
+    @override
     def get_tool_display_name(self) -> str:
         """Get display name for Cutter.
 

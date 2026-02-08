@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import asyncio
 import os
-from collections.abc import Coroutine
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
@@ -19,6 +18,8 @@ from intellicrack.ui.embedding.win32_helper import Win32WindowHelper
 
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
+
     from PyQt6.QtWidgets import QWidget
 
     from intellicrack.bridges.radare2 import Radare2Bridge

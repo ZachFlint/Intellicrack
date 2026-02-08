@@ -7,15 +7,13 @@ API, so this implementation leverages the OpenAI SDK with a custom base URL.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import time
-from datetime import datetime
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import TYPE_CHECKING, TypedDict, cast, override
 
 import openai
 
-from ..core.logging import get_logger, log_provider_request, log_provider_response
+from ..core.logging import get_logger, log_provider_request
 from ..core.types import (
     AuthenticationError,
     Message,
@@ -30,10 +28,24 @@ from ..core.types import (
 from .base import LLMProviderBase, create_openai_tool_schema
 
 
+_ERR_KEY_REQUIRED = "Grok API key is required"
+_ERR_NOT_CONNECTED = "Not connected to Grok API"
+_ERR_INVALID_API_KEY = "Invalid Grok API key: %s"
+_ERR_API_REQUEST = "Grok API request error: %s"
+_ERR_CONNECT_FAILED = "Failed to connect to Grok: %s"
+_ERR_LIST_MODELS_FAILED = "Failed to list Grok models: %s"
+_ERR_RATE_LIMITED = "Grok rate limit exceeded: %s"
+_ERR_API_ERROR = "Grok API error: %s"
+_ERR_REQUEST_FAILED = "Grok request failed: %s"
+_ERR_STREAM_FAILED = "Grok stream failed: %s"
+
 if TYPE_CHECKING:
+    import asyncio
     from collections.abc import AsyncIterator
 
     from openai.types.chat import ChatCompletionMessageParam, ChatCompletionToolParam
+    from openai.types.chat.chat_completion import ChatCompletion
+    from openai.types.chat.chat_completion_message import ChatCompletionMessage
 
 
 class GrokMessageContent(TypedDict, total=False):
@@ -95,7 +107,7 @@ class GrokProvider(LLMProviderBase):
             ProviderError: If connection fails.
         """
         if not credentials.api_key:
-            raise AuthenticationError("Grok API key is required")
+            raise AuthenticationError(_ERR_KEY_REQUIRED)
 
         base_url = credentials.api_base or self.BASE_URL
 
@@ -109,14 +121,14 @@ class GrokProvider(LLMProviderBase):
             self._connected = True
             self._logger.info("grok_api_connected", extra={"base_url": base_url})
         except openai.AuthenticationError as e:
-            raise AuthenticationError(f"Invalid Grok API key: {e}") from e
+            raise AuthenticationError(_ERR_INVALID_API_KEY % e) from e
         except openai.BadRequestError as e:
             error_str = str(e).lower()
             if "api key" in error_str or "incorrect" in error_str:
-                raise AuthenticationError(f"Invalid Grok API key: {e}") from e
-            raise ProviderError(f"Grok API request error: {e}") from e
+                raise AuthenticationError(_ERR_INVALID_API_KEY % e) from e
+            raise ProviderError(_ERR_API_REQUEST % e) from e
         except Exception as e:
-            raise ProviderError(f"Failed to connect to Grok: {e}") from e
+            raise ProviderError(_ERR_CONNECT_FAILED % e) from e
 
     async def disconnect(self) -> None:
         """Disconnect from Grok API."""
@@ -135,7 +147,7 @@ class GrokProvider(LLMProviderBase):
             ProviderError: If not connected.
         """
         if not self._connected or self._client is None:
-            raise ProviderError("Not connected to Grok API")
+            raise ProviderError(_ERR_NOT_CONNECTED)
 
         try:
             response = await self._client.models.list()
@@ -166,9 +178,10 @@ class GrokProvider(LLMProviderBase):
 
             return sorted(models, key=lambda m: m.id, reverse=True)
         except Exception as e:
-            raise ProviderError(f"Failed to list Grok models: {e}") from e
+            raise ProviderError(_ERR_LIST_MODELS_FAILED % e) from e
 
-    def _is_grok_model(self, model_id: str) -> bool:
+    @staticmethod
+    def _is_grok_model(model_id: str) -> bool:
         """Check if model is a valid Grok chat model.
 
         Args:
@@ -179,7 +192,8 @@ class GrokProvider(LLMProviderBase):
         """
         return model_id.startswith("grok-")
 
-    def _get_context_window(self, model_id: str) -> int:
+    @staticmethod
+    def _get_context_window(model_id: str) -> int:
         """Get context window size for a Grok model.
 
         Args:
@@ -192,7 +206,8 @@ class GrokProvider(LLMProviderBase):
             return 131072
         return 131072 if "grok-3" in model_id else 32768
 
-    def _supports_tools(self, model_id: str) -> bool:
+    @staticmethod
+    def _supports_tools(model_id: str) -> bool:
         """Check if model supports function calling.
 
         Args:
@@ -203,7 +218,8 @@ class GrokProvider(LLMProviderBase):
         """
         return model_id.startswith("grok-")
 
-    def _supports_vision(self, model_id: str) -> bool:
+    @staticmethod
+    def _supports_vision(model_id: str) -> bool:
         """Check if model supports image input.
 
         Args:
@@ -236,10 +252,9 @@ class GrokProvider(LLMProviderBase):
 
         Raises:
             ProviderError: If not connected or request fails.
-            RateLimitError: If rate limited.
         """
         if not self._connected or self._client is None:
-            raise ProviderError("Not connected to Grok API")
+            raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False
 
@@ -259,81 +274,111 @@ class GrokProvider(LLMProviderBase):
         )
 
         start_time = time.perf_counter()
+        response = await self._make_grok_api_call(
+            model=model,
+            messages=grok_messages_typed,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            tools=grok_tools_typed,
+        )
+        duration_ms = (time.perf_counter() - start_time) * 1000
+
+        response_message = response.choices[0].message
+        content = response_message.content or ""
+        tool_calls = self._parse_grok_tool_calls(response_message)
+
+        return self._build_chat_response(
+            provider="grok",
+            model=model,
+            content=content,
+            tool_calls=tool_calls,
+            duration_ms=duration_ms,
+        )
+
+    async def _make_grok_api_call(
+        self,
+        *,
+        model: str,
+        messages: list[ChatCompletionMessageParam],
+        temperature: float,
+        max_tokens: int,
+        tools: list[ChatCompletionToolParam] | None,
+    ) -> ChatCompletion:
+        """Execute the Grok API chat completion call with error handling.
+
+        Args:
+            model: Model ID to use.
+            messages: Formatted messages for the API.
+            temperature: Sampling temperature.
+            max_tokens: Maximum tokens in response.
+            tools: Formatted tools for the API, or None.
+
+        Returns:
+            The chat completion response object.
+
+        Raises:
+            ProviderError: If the API call fails.
+            RateLimitError: If rate limited.
+        """
+        if self._client is None:
+            raise ProviderError(_ERR_NOT_CONNECTED)
 
         try:
-            if grok_tools_typed:
-                response = await self._client.chat.completions.create(
+            if tools:
+                return await self._client.chat.completions.create(
                     model=model,
-                    messages=grok_messages_typed,
+                    messages=messages,
                     temperature=temperature,
                     max_tokens=max_tokens,
-                    tools=grok_tools_typed,
+                    tools=tools,
                 )
-            else:
-                response = await self._client.chat.completions.create(
-                    model=model,
-                    messages=grok_messages_typed,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                )
-
-            duration_ms = (time.perf_counter() - start_time) * 1000
-
-            choice = response.choices[0]
-            response_message = choice.message
-
-            content = response_message.content or ""
-            tool_calls: list[ToolCall] = []
-
-            if response_message.tool_calls:
-                for tc in response_message.tool_calls:
-                    tc_function = getattr(tc, "function", None)
-                    if tc_function is None:
-                        continue
-                    try:
-                        parsed_args: dict[str, Any] = json.loads(tc_function.arguments)
-                    except json.JSONDecodeError:
-                        parsed_args = {}
-
-                    func_name = tc_function.name
-                    tool_name = func_name.split(".")[0] if "." in func_name else func_name
-                    tool_call = ToolCall(
-                        id=tc.id,
-                        tool_name=tool_name,
-                        function_name=func_name,
-                        arguments=parsed_args,
-                    )
-                    tool_calls.append(tool_call)
-                    self._logger.debug(
-                        "tool_call_parsed",
-                        extra={
-                            "tool_name": tool_call.tool_name,
-                            "arguments_count": len(tool_call.arguments),
-                        },
-                    )
-
-            message = Message(
-                role="assistant",
-                content=content,
-                tool_calls=tool_calls or None,
-                timestamp=datetime.now(),
-            )
-
-            log_provider_response(
-                provider="grok",
+            return await self._client.chat.completions.create(
                 model=model,
-                tool_calls_count=len(tool_calls),
-                duration_ms=duration_ms,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
             )
-
-            return message, tool_calls or None
-
         except openai.RateLimitError as e:
-            raise RateLimitError(f"Grok rate limit exceeded: {e}") from e
+            raise RateLimitError(_ERR_RATE_LIMITED % e) from e
         except openai.APIError as e:
-            raise ProviderError(f"Grok API error: {e}") from e
+            raise ProviderError(_ERR_API_ERROR % e) from e
         except Exception as e:
-            raise ProviderError(f"Grok request failed: {e}") from e
+            raise ProviderError(_ERR_REQUEST_FAILED % e) from e
+
+    def _parse_grok_tool_calls(
+        self,
+        response_message: ChatCompletionMessage,
+    ) -> list[ToolCall]:
+        """Parse tool calls from a Grok API response message.
+
+        Args:
+            response_message: The message from the Grok API response.
+
+        Returns:
+            List of parsed ToolCall instances.
+        """
+        tool_calls: list[ToolCall] = []
+        if not response_message.tool_calls:
+            return tool_calls
+
+        for tc in response_message.tool_calls:
+            tc_function = getattr(tc, "function", None)
+            if tc_function is None:
+                continue
+            tool_call = self._parse_tool_call_common(
+                call_id=tc.id,
+                function_name=tc_function.name,
+                raw_arguments=tc_function.arguments,
+            )
+            tool_calls.append(tool_call)
+            self._logger.debug(
+                "tool_call_parsed",
+                extra={
+                    "tool_name": tool_call.tool_name,
+                    "arguments_count": len(tool_call.arguments),
+                },
+            )
+        return tool_calls
 
     async def chat_stream(
         self,
@@ -360,7 +405,7 @@ class GrokProvider(LLMProviderBase):
             RateLimitError: If rate limit is exceeded.
         """
         if not self._connected or self._client is None:
-            raise ProviderError("Not connected to Grok API")
+            raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False
 
@@ -398,12 +443,12 @@ class GrokProvider(LLMProviderBase):
                     yield chunk.choices[0].delta.content
 
         except openai.RateLimitError as e:
-            raise RateLimitError(f"Grok rate limit exceeded: {e}") from e
+            raise RateLimitError(_ERR_RATE_LIMITED % e) from e
         except openai.APIError as e:
-            raise ProviderError(f"Grok API error: {e}") from e
+            raise ProviderError(_ERR_API_ERROR % e) from e
         except Exception as e:
             if not self._cancel_requested:
-                raise ProviderError(f"Grok stream failed: {e}") from e
+                raise ProviderError(_ERR_STREAM_FAILED % e) from e
 
     async def cancel_request(self) -> None:
         """Cancel any in-flight request."""
@@ -411,6 +456,7 @@ class GrokProvider(LLMProviderBase):
         if self._current_task is not None and not self._current_task.done():
             self._current_task.cancel()
 
+    @override
     def _convert_messages_to_provider_format(
         self,
         messages: list[Message],
@@ -469,6 +515,7 @@ class GrokProvider(LLMProviderBase):
 
         return grok_messages
 
+    @override
     def _convert_tools_to_provider_format(
         self,
         tools: list[ToolDefinition],

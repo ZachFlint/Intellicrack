@@ -11,7 +11,6 @@ import atexit
 import contextlib
 import ctypes
 import signal
-import subprocess
 import sys
 import threading
 from collections.abc import Callable
@@ -22,6 +21,8 @@ from types import FrameType
 from typing import TYPE_CHECKING, Any
 
 import psutil
+
+from intellicrack.core._subprocess import PIPE, CalledProcessError, CompletedProcess, Popen, TimeoutExpired
 
 from .logging import get_logger
 
@@ -51,7 +52,7 @@ class ProcessType(Enum):
 class TrackedProcess:
     """Information about a tracked process."""
 
-    process: subprocess.Popen[bytes] | asyncio.subprocess.Process
+    process: Popen[bytes] | asyncio.subprocess.Process
     process_type: ProcessType
     name: str
     registered_at: datetime = field(default_factory=datetime.now)
@@ -74,7 +75,7 @@ class TrackedProcess:
         Returns:
             True if the process is still running, False otherwise.
         """
-        if isinstance(self.process, subprocess.Popen):
+        if isinstance(self.process, Popen):
             return self.process.poll() is None
         return self.process.returncode is None
 
@@ -88,7 +89,7 @@ class TrackedProcess:
         Returns:
             True if the process is still running, False otherwise.
         """
-        if isinstance(self.process, subprocess.Popen):
+        if isinstance(self.process, Popen):
             return self.process.poll() is None
         return self.process.returncode is None
 
@@ -278,8 +279,8 @@ class ProcessManager:
                 all_procs_psutil.append(proc)
                 all_procs_psutil.extend(proc.children(recursive=True))
         # Deduplicate based on PID
-        seen_pids = set()
-        unique_procs = []
+        seen_pids: set[int] = set()
+        unique_procs: list[psutil.Process] = []
         for p in all_procs_psutil:
             if p.pid not in seen_pids:
                 seen_pids.add(p.pid)
@@ -310,7 +311,7 @@ class ProcessManager:
 
     @staticmethod
     def _terminate_process_sync(
-        process: subprocess.Popen[bytes] | asyncio.subprocess.Process,
+        process: Popen[bytes] | asyncio.subprocess.Process,
     ) -> None:
         """Terminate a process synchronously.
 
@@ -376,7 +377,7 @@ class ProcessManager:
 
     def _wait_or_kill_sync(
         self,
-        process: subprocess.Popen[bytes] | asyncio.subprocess.Process,
+        process: Popen[bytes] | asyncio.subprocess.Process,
         name: str,
     ) -> None:
         """Wait for process to terminate, then kill if needed.
@@ -387,20 +388,20 @@ class ProcessManager:
         """
         logger = ProcessManager._get_logger()
 
-        if isinstance(process, subprocess.Popen):
+        if isinstance(process, Popen):
             try:
                 process.wait(timeout=self.DEFAULT_GRACEFUL_TIMEOUT)
-            except subprocess.TimeoutExpired:
+            except TimeoutExpired:
                 logger.warning("process_graceful_terminate_failed", extra={"process_name": name})
                 process.kill()
                 try:
                     process.wait(timeout=self.DEFAULT_FORCE_TIMEOUT)
-                except subprocess.TimeoutExpired:
+                except TimeoutExpired:
                     logger.warning("process_kill_timeout", extra={"process_name": name})
 
     def register(
         self,
-        process: subprocess.Popen[bytes] | asyncio.subprocess.Process,
+        process: Popen[bytes] | asyncio.subprocess.Process,
         name: str,
         process_type: ProcessType = ProcessType.SUBPROCESS,
         metadata: dict[str, Any] | None = None,
@@ -531,7 +532,7 @@ class ProcessManager:
 
         process = tracked.process
 
-        if isinstance(process, subprocess.Popen):
+        if isinstance(process, Popen):
             await ProcessManager._terminate_subprocess(process, tracked.name, graceful_timeout, force_timeout)
         else:
             await ProcessManager._terminate_async_subprocess(process, tracked.name, graceful_timeout, force_timeout)
@@ -541,12 +542,12 @@ class ProcessManager:
 
     @staticmethod
     async def _terminate_subprocess(
-        process: subprocess.Popen[bytes],
+        process: Popen[bytes],
         name: str,
         graceful_timeout: float,
         force_timeout: float,
     ) -> None:
-        """Terminate a subprocess.Popen process.
+        """Terminate a Popen process.
 
         Args:
             process: The subprocess to terminate.
@@ -567,7 +568,7 @@ class ProcessManager:
         if process.poll() is None:
             try:
                 await asyncio.to_thread(process.wait, timeout=0.1)
-            except subprocess.TimeoutExpired:
+            except TimeoutExpired:
                 # Should not happen if psutil worked, but as fallback
                 logger.warning("process_zombie_fallback", extra={"process_name": name})
                 process.kill()
@@ -705,7 +706,7 @@ class ProcessManager:
         env: dict[str, str] | None = None,
         check: bool = False,
         creationflags: int = 0,
-    ) -> subprocess.CompletedProcess[Any]:
+    ) -> CompletedProcess[Any]:
         """Execute a subprocess with ProcessManager tracking.
 
         This method wraps subprocess execution to ensure the process is tracked
@@ -726,14 +727,14 @@ class ProcessManager:
             CompletedProcess with execution results (stdout/stderr as str if text=True).
 
         Raises:
-            subprocess.TimeoutExpired: If timeout exceeded.
+            TimeoutExpired: If timeout exceeded.
             CalledProcessError: If check=True and process failed.
         """
         logger = ProcessManager._get_logger()
-        stdout_pipe = subprocess.PIPE if capture_output else None
-        stderr_pipe = subprocess.PIPE if capture_output else None
+        stdout_pipe = PIPE if capture_output else None
+        stderr_pipe = PIPE if capture_output else None
 
-        process = subprocess.Popen(
+        process = Popen(
             args,
             stdout=stdout_pipe,
             stderr=stderr_pipe,
@@ -760,7 +761,7 @@ class ProcessManager:
 
             returncode = process.returncode
 
-        except subprocess.TimeoutExpired:
+        except TimeoutExpired:
             logger.warning("process_timeout", extra={"process_name": name, "pid": pid})
             process.kill()
             process.wait()
@@ -770,7 +771,7 @@ class ProcessManager:
         finally:
             self.unregister(pid)
 
-        result: subprocess.CompletedProcess[Any] = subprocess.CompletedProcess(
+        result: CompletedProcess[Any] = CompletedProcess(
             args=args,
             returncode=returncode if returncode is not None else -1,
             stdout=stdout_result,
@@ -778,7 +779,7 @@ class ProcessManager:
         )
 
         if check and result.returncode != 0:
-            raise subprocess.CalledProcessError(
+            raise CalledProcessError(
                 result.returncode,
                 args,
                 output=result.stdout,
@@ -799,7 +800,7 @@ class ProcessManager:
         env: dict[str, str] | None = None,
         check: bool = False,
         creationflags: int = 0,
-    ) -> subprocess.CompletedProcess[Any]:
+    ) -> CompletedProcess[Any]:
         """Execute a subprocess asynchronously with ProcessManager tracking.
 
         This method wraps subprocess execution to ensure the process is tracked

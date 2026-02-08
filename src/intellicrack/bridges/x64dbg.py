@@ -7,10 +7,11 @@ debugging, and memory manipulation on Windows systems.
 from __future__ import annotations
 
 import asyncio
-import subprocess
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
+
+from intellicrack.core._subprocess import CREATE_NEW_CONSOLE, PIPE, Popen
 
 from ..core.logging import get_logger
 from ..core.process_manager import ProcessManager, ProcessType
@@ -321,7 +322,7 @@ class X64DbgBridge(DebuggerBridge):
         """Initialize the x64dbg bridge."""
         super().__init__()
         self._x64dbg_path: Path | None = None
-        self._process: subprocess.Popen[bytes] | None = None
+        self._process: Popen[bytes] | None = None
         self._pipe_client: NamedPipeClient | None = None
         self._attached_pid: int | None = None
         self._port: int = self.DEFAULT_PORT
@@ -831,11 +832,11 @@ class X64DbgBridge(DebuggerBridge):
         _logger.info("x64dbg_starting", extra={"path": str(exe_path)})
 
         self._process = await asyncio.to_thread(
-            subprocess.Popen,
+            Popen,
             [str(exe_path)],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            creationflags=subprocess.CREATE_NEW_CONSOLE,
+            stdout=PIPE,
+            stderr=PIPE,
+            creationflags=CREATE_NEW_CONSOLE,
         )
 
         process_manager = ProcessManager.get_instance()
@@ -1671,8 +1672,8 @@ class X64DbgBridge(DebuggerBridge):
                 if len(lines) >= count:
                     break
 
-        except Exception as e:
-            _logger.error("disassembly_failed", extra={"error": str(e)})
+        except Exception:
+            _logger.exception("disassembly_failed")
             return []
         else:
             return lines

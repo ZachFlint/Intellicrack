@@ -6,20 +6,25 @@ Cutter, etc.) within Qt container widgets using Win32 window parenting.
 
 from __future__ import annotations
 
-import subprocess
-from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from PyQt6.QtCore import QTimer, pyqtSignal
 from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
+from intellicrack.core._subprocess import (
+    CREATE_NEW_PROCESS_GROUP,
+    STARTF_USESHOWWINDOW,
+    STARTUPINFO,
+    Popen,
+    SubprocessError,
+)
 from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager, ProcessType
 from intellicrack.ui.embedding.win32_helper import Win32WindowHelper
 
 
 if TYPE_CHECKING:
-    from subprocess import Popen
+    from pathlib import Path
 
     from PyQt6.QtGui import QCloseEvent, QFocusEvent, QResizeEvent
 
@@ -67,7 +72,8 @@ class EmbeddedToolWidget(QWidget):
         self._status_label.setStyleSheet("color: #888; font-size: 14px; padding: 20px;")
         self._layout.addWidget(self._status_label)
 
-    def get_executable_path(self) -> Path | None:
+    @staticmethod
+    def get_executable_path() -> Path | None:
         """Get the path to the tool executable.
 
         Subclasses must override this method to return the actual tool path.
@@ -77,7 +83,8 @@ class EmbeddedToolWidget(QWidget):
         """
         return None
 
-    def get_window_search_params(self) -> dict[str, str | None]:
+    @staticmethod
+    def get_window_search_params() -> dict[str, str | None]:
         """Get parameters for finding the tool's main window.
 
         Subclasses should override to provide tool-specific search criteria.
@@ -87,7 +94,8 @@ class EmbeddedToolWidget(QWidget):
         """
         return {"class_name": None, "title_contains": None}
 
-    def get_tool_display_name(self) -> str:
+    @staticmethod
+    def get_tool_display_name() -> str:
         """Get the display name of the tool.
 
         Subclasses should override to provide the actual tool name.
@@ -143,7 +151,7 @@ class EmbeddedToolWidget(QWidget):
                 "tool_started",
                 extra={"executable": exe_path.name, "pid": self._process.pid},
             )
-        except (OSError, subprocess.SubprocessError) as e:
+        except (OSError, SubprocessError) as e:
             error_msg = f"Failed to start {exe_path.name}: {e}"
             _logger.exception(
                 "tool_start_failed",
@@ -166,14 +174,14 @@ class EmbeddedToolWidget(QWidget):
             Popen object for the launched process.
         """
         _logger.debug("process_launching", extra={"launch_args": args})
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo = STARTUPINFO()
+        startupinfo.dwFlags |= STARTF_USESHOWWINDOW
         startupinfo.wShowWindow = _SW_HIDE
 
-        proc = subprocess.Popen(
+        proc = Popen(
             args,
             startupinfo=startupinfo,
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+            creationflags=CREATE_NEW_PROCESS_GROUP,
         )
         ProcessManager.get_instance().register(
             proc,
@@ -372,6 +380,7 @@ class EmbeddedToolWidget(QWidget):
         """
         return self._loaded_file
 
+    @override
     def resizeEvent(self, event: QResizeEvent | None) -> None:
         """Handle resize events by forwarding to embedded window.
 
@@ -381,6 +390,7 @@ class EmbeddedToolWidget(QWidget):
         super().resizeEvent(event)
         self._resize_embedded()
 
+    @override
     def focusInEvent(self, event: QFocusEvent | None) -> None:
         """Handle focus events by forwarding to embedded window.
 
@@ -391,6 +401,7 @@ class EmbeddedToolWidget(QWidget):
         if self._embedded_hwnd and Win32WindowHelper.is_window_valid(self._embedded_hwnd):
             Win32WindowHelper.set_foreground_window(self._embedded_hwnd)
 
+    @override
     def closeEvent(self, event: QCloseEvent | None) -> None:
         """Handle close events by cleaning up the embedded tool.
 

@@ -10,7 +10,6 @@ import asyncio
 import contextlib
 import json
 import os
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -37,6 +36,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.core._subprocess import CREATE_NO_WINDOW, PIPE, Popen, SubprocessError, TimeoutExpired
 from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager, ProcessType
 
@@ -86,7 +86,7 @@ class SandboxTestWorker(QThread):
         self._shared_folder = shared_folder
         self._read_only = read_only
         self._wsb_file: Path | None = None
-        self._process: subprocess.Popen[bytes] | None = None
+        self._process: Popen[bytes] | None = None
 
     def run(self) -> None:
         """Execute the sandbox test."""
@@ -110,11 +110,11 @@ class SandboxTestWorker(QThread):
             self.output.emit(f"Configuration file: {self._wsb_file}")
             self.output.emit("Launching Windows Sandbox...")
 
-            self._process = subprocess.Popen(
+            self._process = Popen(
                 ["WindowsSandbox.exe", str(self._wsb_file)],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0,
+                stdout=PIPE,
+                stderr=PIPE,
+                creationflags=CREATE_NO_WINDOW,
             )
 
             process_manager = ProcessManager.get_instance()
@@ -134,12 +134,12 @@ class SandboxTestWorker(QThread):
                     stderr_output = self._process.stderr.read().decode("utf-8", errors="replace") if self._process.stderr else ""
                     self.finished.emit(False, f"Sandbox exited with error: {stderr_output}")
                     return
-            except subprocess.TimeoutExpired:
+            except TimeoutExpired:
                 self.output.emit("Sandbox is running normally")
 
             self.finished.emit(True, "Windows Sandbox test completed successfully")
 
-        except subprocess.SubprocessError as e:
+        except SubprocessError as e:
             _logger.exception(
                 "sandbox_test_error",
                 extra={"error": str(e)},
@@ -229,7 +229,7 @@ class SandboxTestWorker(QThread):
             try:
                 self._process.terminate()
                 self._process.wait(timeout=5)
-            except (subprocess.TimeoutExpired, OSError):
+            except (TimeoutExpired, OSError):
                 with contextlib.suppress(OSError):
                     self._process.kill()
                     self._process.wait()
@@ -395,7 +395,7 @@ class SandboxConfigDialog(QDialog):
 
         try:
             process_manager = ProcessManager.get_instance()
-            creation_flags = subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0
+            creation_flags = CREATE_NO_WINDOW
             result = process_manager.run_tracked(
                 [
                     "powershell",
@@ -419,7 +419,7 @@ class SandboxConfigDialog(QDialog):
                     extra={"valid": False, "reason": "feature_not_enabled"},
                 )
                 self._set_unavailable("Windows Sandbox feature is not enabled")
-        except subprocess.TimeoutExpired:
+        except TimeoutExpired:
             _logger.exception(
                 "sandbox_config_error",
                 extra={"operation": "availability_check", "error": "timeout"},
@@ -809,7 +809,7 @@ class SandboxMonitorWidget(QFrame):
             try:
                 if sys.platform == "win32":
                     process_manager = ProcessManager.get_instance()
-                    creation_flags = subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0
+                    creation_flags = CREATE_NO_WINDOW
                     process_manager.run_tracked(
                         ["taskkill", "/F", "/PID", str(self._sandbox_pid)],
                         name="taskkill-sandbox-pid",
@@ -821,7 +821,7 @@ class SandboxMonitorWidget(QFrame):
                 else:
                     os.kill(self._sandbox_pid, 9)
                     self.append_output(f"[Sandbox process {self._sandbox_pid} killed]")
-            except (subprocess.TimeoutExpired, OSError) as e:
+            except (TimeoutExpired, OSError) as e:
                 _logger.exception(
                     "sandbox_stop_error",
                     extra={"method": "pid_kill", "pid": self._sandbox_pid, "error": str(e)},
@@ -841,7 +841,7 @@ class SandboxMonitorWidget(QFrame):
 
         try:
             process_manager = ProcessManager.get_instance()
-            creation_flags = subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0
+            creation_flags = CREATE_NO_WINDOW
             result = process_manager.run_tracked(
                 ["taskkill", "/F", "/IM", "WindowsSandbox.exe"],
                 name="taskkill-sandbox-name",
@@ -853,7 +853,7 @@ class SandboxMonitorWidget(QFrame):
                 self.append_output("[Windows Sandbox terminated]")
             else:
                 self.append_output("[No Windows Sandbox process found]")
-        except (subprocess.TimeoutExpired, OSError) as e:
+        except (TimeoutExpired, OSError) as e:
             _logger.exception(
                 "sandbox_stop_error",
                 extra={"method": "name_kill", "error": str(e)},

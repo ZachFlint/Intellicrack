@@ -140,6 +140,41 @@ def process_knip(data: dict[str, Any]) -> tuple[dict[str, list[dict[str, Any]]],
     return grouped, cnt
 
 
+def process_semgrep(data: dict[str, Any]) -> tuple[dict[str, list[dict[str, Any]]], int]:
+    """Process Semgrep native JSON output."""
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for result in data.get("results", []):
+        fp = result.get("path", "")
+        start = result.get("start", {})
+        line_num = start.get("line")
+        col_num = start.get("col")
+        check_id = result.get("check_id", "")
+        extra = result.get("extra", {})
+        message = extra.get("message", "")
+        severity = extra.get("severity", "WARNING").lower()
+        grouped[fp].append({
+            "line": line_num,
+            "column": col_num,
+            "severity": severity,
+            "rule": check_id,
+            "message": message,
+            "raw": f"{fp}:{line_num}:{col_num}: [{severity}] {check_id}: {message}",
+        })
+    for error in data.get("errors", []):
+        fp = error.get("path", error.get("spans", [{}])[0].get("file", "unknown")) if error.get("path") or error.get("spans") else "unknown"
+        message = error.get("message", error.get("long_msg", str(error)))
+        grouped[fp].append({
+            "line": None,
+            "column": None,
+            "severity": "error",
+            "rule": error.get("type", "semgrep-error"),
+            "message": message,
+            "raw": f"{fp}: [error] {message}",
+        })
+    cnt = sum(len(v) for v in grouped.values())
+    return grouped, cnt
+
+
 def process_biome_json(data: dict[str, Any]) -> tuple[dict[str, list[dict[str, Any]]], int]:
     """Process Biome native JSON output."""
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -1119,6 +1154,50 @@ def process_xenon_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]
     return grouped, cnt
 
 
+def process_complexipy_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
+    r"""Process complexipy cognitive complexity analysis text output.
+
+    Complexipy ``--failed --color no`` output format:
+    file_path
+        FunctionName  N  FAILED
+
+    Example:
+    src\intellicrack\bridges\binary.py
+        BinaryBridge::_detect_architecture 18 FAILED
+
+    src\intellicrack\bridges\frida_bridge.py
+        FridaBridge::hook_function 29 FAILED
+    """
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    file_pattern = re.compile(r"^(\S+\.py)\s*$")
+    finding_pattern = re.compile(r"^\s+(\S+)\s+(\d+)\s+FAILED\s*$")
+    current_file = ""
+
+    for line in text_output.strip().split("\n"):
+        if not line.strip():
+            continue
+        if line.strip().startswith("\u2500") or "complexipy" in line.lower() or "Analysis completed" in line or "Failed functions:" in line:
+            continue
+        file_match = file_pattern.match(line)
+        if file_match:
+            current_file = file_match.group(1)
+            continue
+        finding_match = finding_pattern.match(line)
+        if finding_match and current_file:
+            name = finding_match.group(1)
+            complexity = int(finding_match.group(2))
+            grouped[current_file].append({
+                "line": None,
+                "column": None,
+                "name": name,
+                "complexity": complexity,
+                "message": f"{name} - cognitive complexity {complexity} (exceeds threshold)",
+                "raw": f"{current_file}: {name} - cognitive complexity {complexity} (exceeds threshold)",
+            })
+    cnt = sum(len(v) for v in grouped.values())
+    return grouped, cnt
+
+
 def escape_xml(s: str) -> str:
     """Escape special XML characters."""
     return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
@@ -1260,6 +1339,7 @@ TEXT_PROCESSORS: dict[str, Callable[[str], tuple[dict[str, list[dict[str, Any]]]
     "pydocstyle": process_pydocstyle_text,
     "radon": process_radon_text,
     "xenon": process_xenon_text,
+    "complexipy": process_complexipy_text,
 }
 
 JSON_PROCESSORS: dict[str, tuple[Callable[..., tuple[dict[str, list[dict[str, Any]]], int]], Any]] = {
@@ -1269,6 +1349,7 @@ JSON_PROCESSORS: dict[str, tuple[Callable[..., tuple[dict[str, list[dict[str, An
     "mypy": (process_mypy_json, []),
     "knip": (process_knip, {"issues": []}),
     "biome": (process_biome_json, {"diagnostics": []}),
+    "semgrep": (process_semgrep, {"results": []}),
 }
 
 ALL_TOOLS = sorted(set(TEXT_PROCESSORS.keys()) | set(JSON_PROCESSORS.keys()))

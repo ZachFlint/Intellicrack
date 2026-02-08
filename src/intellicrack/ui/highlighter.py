@@ -6,7 +6,7 @@ and x86/x64 assembly disassembly.
 
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import ClassVar, override
 
 from PyQt6.QtCore import QRegularExpression
 from PyQt6.QtGui import (
@@ -206,6 +206,7 @@ class CSyntaxHighlighter(QSyntaxHighlighter):
         operator_format = CSyntaxHighlighter._create_format("#D4D4D4")
         self._rules.append(HighlightRule(r"[+\-*/%&|^~<>=!]+", operator_format))
 
+    @override
     def highlightBlock(self, text: str) -> None:
         """Apply highlighting to a block of text.
 
@@ -548,6 +549,7 @@ class AssemblySyntaxHighlighter(QSyntaxHighlighter):
         self._rules.append(HighlightRule(r'"[^"]*"', string_format))
         self._rules.append(HighlightRule(r"'[^']*'", string_format))
 
+    @override
     def highlightBlock(self, text: str) -> None:
         """Apply highlighting to a block of text.
 
@@ -750,6 +752,7 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
         self._rules.append(HighlightRule(r"\bself\b", self_format))
         self._rules.append(HighlightRule(r"\bcls\b", self_format))
 
+    @override
     def highlightBlock(self, text: str) -> None:
         """Apply highlighting to a block of text.
 
@@ -909,6 +912,7 @@ class JavaScriptSyntaxHighlighter(QSyntaxHighlighter):
         self._rules.append(HighlightRule(r"//[^\n]*", comment_format))
         self._multi_line_comment_format = comment_format
 
+    @override
     def highlightBlock(self, text: str) -> None:
         """Apply highlighting to a block of text.
 

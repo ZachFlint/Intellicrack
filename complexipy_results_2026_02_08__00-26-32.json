@@ -1,0 +1,356 @@
+[
+  {
+    "complexity": 18,
+    "file_name": "binary.py",
+    "function_name": "BinaryBridge::_detect_architecture",
+    "path": "src\\intellicrack\\bridges\\binary.py"
+  },
+  {
+    "complexity": 18,
+    "file_name": "binary.py",
+    "function_name": "BinaryBridge::_get_imports_internal",
+    "path": "src\\intellicrack\\bridges\\binary.py"
+  },
+  {
+    "complexity": 29,
+    "file_name": "frida_bridge.py",
+    "function_name": "FridaBridge::hook_function",
+    "path": "src\\intellicrack\\bridges\\frida_bridge.py"
+  },
+  {
+    "complexity": 16,
+    "file_name": "installer.py",
+    "function_name": "ToolInstaller::_download_file",
+    "path": "src\\intellicrack\\bridges\\installer.py"
+  },
+  {
+    "complexity": 23,
+    "file_name": "installer.py",
+    "function_name": "ToolInstaller::_get_latest_release_url",
+    "path": "src\\intellicrack\\bridges\\installer.py"
+  },
+  {
+    "complexity": 34,
+    "file_name": "installer.py",
+    "function_name": "ToolInstaller::find_tool",
+    "path": "src\\intellicrack\\bridges\\installer.py"
+  },
+  {
+    "complexity": 16,
+    "file_name": "process.py",
+    "function_name": "ProcessBridge::list_processes",
+    "path": "src\\intellicrack\\bridges\\process.py"
+  },
+  {
+    "complexity": 17,
+    "file_name": "process.py",
+    "function_name": "ProcessBridge::get_threads",
+    "path": "src\\intellicrack\\bridges\\process.py"
+  },
+  {
+    "complexity": 21,
+    "file_name": "process.py",
+    "function_name": "ProcessBridge::search_pattern",
+    "path": "src\\intellicrack\\bridges\\process.py"
+  },
+  {
+    "complexity": 16,
+    "file_name": "x64dbg.py",
+    "function_name": "X64DbgBridge::_get_parent_pid",
+    "path": "src\\intellicrack\\bridges\\x64dbg.py"
+  },
+  {
+    "complexity": 16,
+    "file_name": "x64dbg.py",
+    "function_name": "X64DbgBridge::get_stack_trace",
+    "path": "src\\intellicrack\\bridges\\x64dbg.py"
+  },
+  {
+    "complexity": 17,
+    "file_name": "x64dbg.py",
+    "function_name": "X64DbgBridge::_get_threads",
+    "path": "src\\intellicrack\\bridges\\x64dbg.py"
+  },
+  {
+    "complexity": 16,
+    "file_name": "license_analyzer.py",
+    "function_name": "LicenseAnalyzer::_detect_crypto_apis",
+    "path": "src\\intellicrack\\core\\license_analyzer.py"
+  },
+  {
+    "complexity": 21,
+    "file_name": "license_analyzer.py",
+    "function_name": "LicenseAnalyzer::_detect_key_format",
+    "path": "src\\intellicrack\\core\\license_analyzer.py"
+  },
+  {
+    "complexity": 29,
+    "file_name": "license_analyzer.py",
+    "function_name": "LicenseAnalyzer::_detect_algorithms",
+    "path": "src\\intellicrack\\core\\license_analyzer.py"
+  },
+  {
+    "complexity": 21,
+    "file_name": "logging.py",
+    "function_name": "_sanitize_arguments",
+    "path": "src\\intellicrack\\core\\logging.py"
+  },
+  {
+    "complexity": 19,
+    "file_name": "anthropic.py",
+    "function_name": "AnthropicProvider::chat",
+    "path": "src\\intellicrack\\providers\\anthropic.py"
+  },
+  {
+    "complexity": 19,
+    "file_name": "anthropic.py",
+    "function_name": "AnthropicProvider::list_models",
+    "path": "src\\intellicrack\\providers\\anthropic.py"
+  },
+  {
+    "complexity": 21,
+    "file_name": "anthropic.py",
+    "function_name": "AnthropicProvider::_convert_messages_to_provider_format",
+    "path": "src\\intellicrack\\providers\\anthropic.py"
+  },
+  {
+    "complexity": 21,
+    "file_name": "anthropic.py",
+    "function_name": "AnthropicProvider::chat_stream",
+    "path": "src\\intellicrack\\providers\\anthropic.py"
+  },
+  {
+    "complexity": 16,
+    "file_name": "discovery.py",
+    "function_name": "DiscoveryCache::load_from_disk",
+    "path": "src\\intellicrack\\providers\\discovery.py"
+  },
+  {
+    "complexity": 17,
+    "file_name": "discovery.py",
+    "function_name": "ModelDiscovery::discover_all",
+    "path": "src\\intellicrack\\providers\\discovery.py"
+  },
+  {
+    "complexity": 32,
+    "file_name": "discovery.py",
+    "function_name": "ModelDiscovery::filter",
+    "path": "src\\intellicrack\\providers\\discovery.py"
+  },
+  {
+    "complexity": 17,
+    "file_name": "google.py",
+    "function_name": "GoogleProvider::chat_stream",
+    "path": "src\\intellicrack\\providers\\google.py"
+  },
+  {
+    "complexity": 18,
+    "file_name": "google.py",
+    "function_name": "GoogleProvider::_parse_response",
+    "path": "src\\intellicrack\\providers\\google.py"
+  },
+  {
+    "complexity": 17,
+    "file_name": "grok.py",
+    "function_name": "GrokProvider::_convert_messages_to_provider_format",
+    "path": "src\\intellicrack\\providers\\grok.py"
+  },
+  {
+    "complexity": 20,
+    "file_name": "grok.py",
+    "function_name": "GrokProvider::chat_stream",
+    "path": "src\\intellicrack\\providers\\grok.py"
+  },
+  {
+    "complexity": 17,
+    "file_name": "huggingface.py",
+    "function_name": "HuggingFaceProvider::_convert_messages_to_provider_format",
+    "path": "src\\intellicrack\\providers\\huggingface.py"
+  },
+  {
+    "complexity": 17,
+    "file_name": "huggingface.py",
+    "function_name": "HuggingFaceProvider::list_models",
+    "path": "src\\intellicrack\\providers\\huggingface.py"
+  },
+  {
+    "complexity": 38,
+    "file_name": "huggingface.py",
+    "function_name": "HuggingFaceProvider::chat_stream",
+    "path": "src\\intellicrack\\providers\\huggingface.py"
+  },
+  {
+    "complexity": 17,
+    "file_name": "local_transformers.py",
+    "function_name": "LocalTransformersProvider::_stream_generate",
+    "path": "src\\intellicrack\\providers\\local_transformers.py"
+  },
+  {
+    "complexity": 23,
+    "file_name": "local_transformers.py",
+    "function_name": "LocalTransformersProvider::_parse_tool_calls",
+    "path": "src\\intellicrack\\providers\\local_transformers.py"
+  },
+  {
+    "complexity": 17,
+    "file_name": "model_loader.py",
+    "function_name": "load_model_for_xpu",
+    "path": "src\\intellicrack\\providers\\model_loader.py"
+  },
+  {
+    "complexity": 17,
+    "file_name": "ollama.py",
+    "function_name": "OllamaProvider::_convert_messages_to_provider_format",
+    "path": "src\\intellicrack\\providers\\ollama.py"
+  },
+  {
+    "complexity": 18,
+    "file_name": "ollama.py",
+    "function_name": "OllamaProvider::pull_model",
+    "path": "src\\intellicrack\\providers\\ollama.py"
+  },
+  {
+    "complexity": 24,
+    "file_name": "ollama.py",
+    "function_name": "OllamaProvider::chat_stream",
+    "path": "src\\intellicrack\\providers\\ollama.py"
+  },
+  {
+    "complexity": 17,
+    "file_name": "openai.py",
+    "function_name": "OpenAIProvider::_convert_messages_to_provider_format",
+    "path": "src\\intellicrack\\providers\\openai.py"
+  },
+  {
+    "complexity": 20,
+    "file_name": "openai.py",
+    "function_name": "OpenAIProvider::chat_stream",
+    "path": "src\\intellicrack\\providers\\openai.py"
+  },
+  {
+    "complexity": 17,
+    "file_name": "openrouter.py",
+    "function_name": "OpenRouterProvider::_convert_messages_to_provider_format",
+    "path": "src\\intellicrack\\providers\\openrouter.py"
+  },
+  {
+    "complexity": 38,
+    "file_name": "openrouter.py",
+    "function_name": "OpenRouterProvider::chat_stream",
+    "path": "src\\intellicrack\\providers\\openrouter.py"
+  },
+  {
+    "complexity": 17,
+    "file_name": "xpu_utils.py",
+    "function_name": "get_xpu_memory_info",
+    "path": "src\\intellicrack\\providers\\xpu_utils.py"
+  },
+  {
+    "complexity": 47,
+    "file_name": "xpu_utils.py",
+    "function_name": "get_xpu_device_info",
+    "path": "src\\intellicrack\\providers\\xpu_utils.py"
+  },
+  {
+    "complexity": 16,
+    "file_name": "manager.py",
+    "function_name": "SandboxManager::create",
+    "path": "src\\intellicrack\\sandbox\\manager.py"
+  },
+  {
+    "complexity": 16,
+    "file_name": "qemu.py",
+    "function_name": "QEMUSandbox::_build_qemu_command",
+    "path": "src\\intellicrack\\sandbox\\qemu.py"
+  },
+  {
+    "complexity": 16,
+    "file_name": "qemu.py",
+    "function_name": "QEMUSandbox::_detect_accelerator",
+    "path": "src\\intellicrack\\sandbox\\qemu.py"
+  },
+  {
+    "complexity": 20,
+    "file_name": "qemu.py",
+    "function_name": "GuestAgentClient::send_command",
+    "path": "src\\intellicrack\\sandbox\\qemu.py"
+  },
+  {
+    "complexity": 39,
+    "file_name": "cutter_widget.py",
+    "function_name": "CutterWidget::get_executable_path",
+    "path": "src\\intellicrack\\ui\\embedding\\cutter_widget.py"
+  },
+  {
+    "complexity": 18,
+    "file_name": "hxd_widget.py",
+    "function_name": "HxDWidget::get_executable_path",
+    "path": "src\\intellicrack\\ui\\embedding\\hxd_widget.py"
+  },
+  {
+    "complexity": 37,
+    "file_name": "radare2_widget.py",
+    "function_name": "Radare2Widget::get_executable_path",
+    "path": "src\\intellicrack\\ui\\embedding\\radare2_widget.py"
+  },
+  {
+    "complexity": 21,
+    "file_name": "win32_helper.py",
+    "function_name": "Win32WindowHelper::find_window_by_pid",
+    "path": "src\\intellicrack\\ui\\embedding\\win32_helper.py"
+  },
+  {
+    "complexity": 17,
+    "file_name": "x64dbg_widget.py",
+    "function_name": "X64DbgWidget::_search_registry_for_x64dbg",
+    "path": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py"
+  },
+  {
+    "complexity": 16,
+    "file_name": "binary_panel.py",
+    "function_name": "BinaryPanel::_extract_strings",
+    "path": "src\\intellicrack\\ui\\panels\\binary_panel.py"
+  },
+  {
+    "complexity": 24,
+    "file_name": "binary_panel.py",
+    "function_name": "BinaryPanel::_parse_sections",
+    "path": "src\\intellicrack\\ui\\panels\\binary_panel.py"
+  },
+  {
+    "complexity": 28,
+    "file_name": "provider_config.py",
+    "function_name": "ModelRefreshWorker::_fetch_anthropic_models",
+    "path": "src\\intellicrack\\ui\\provider_config.py"
+  },
+  {
+    "complexity": 30,
+    "file_name": "provider_config.py",
+    "function_name": "CredentialSourceDetector::_load_env_file_vars",
+    "path": "src\\intellicrack\\ui\\provider_config.py"
+  },
+  {
+    "complexity": 20,
+    "file_name": "sandbox_config.py",
+    "function_name": "SandboxTestWorker::run",
+    "path": "src\\intellicrack\\ui\\sandbox_config.py"
+  },
+  {
+    "complexity": 19,
+    "file_name": "session_manager.py",
+    "function_name": "SessionManagerDialog::_load_sessions_from_disk",
+    "path": "src\\intellicrack\\ui\\session_manager.py"
+  },
+  {
+    "complexity": 24,
+    "file_name": "session_manager.py",
+    "function_name": "SessionManagerDialog::_load_sessions",
+    "path": "src\\intellicrack\\ui\\session_manager.py"
+  },
+  {
+    "complexity": 22,
+    "file_name": "tool_config.py",
+    "function_name": "ToolInstallWorker::_install_tool",
+    "path": "src\\intellicrack\\ui\\tool_config.py"
+  }
+]

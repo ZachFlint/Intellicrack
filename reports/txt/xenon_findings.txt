@@ -11,19 +11,6 @@ src\intellicrack\core\license_analyzer.py:1635: '_update_context_for_instruction
 src\intellicrack\core\license_analyzer.py:1748: '_collect_function_candidates' has rank C
 
 
-5 findings in src\intellicrack\providers\huggingface.py
-
-src\intellicrack\providers\huggingface.py:343: 'chat' has rank C
-
-src\intellicrack\providers\huggingface.py:490: 'chat_stream' has rank C
-
-src\intellicrack\providers\huggingface.py:178: 'list_models' has rank C
-
-src\intellicrack\providers\huggingface.py:267: '_estimate_context_window' has rank C
-
-src\intellicrack\providers\huggingface.py:612: '_convert_messages_to_provider_format' has rank C
-
-
 4 findings in src\intellicrack\providers\google.py
 
 src\intellicrack\providers\google.py:499: '_parse_response' has rank C
@@ -35,15 +22,15 @@ src\intellicrack\providers\google.py:351: 'chat_stream' has rank C
 src\intellicrack\providers\google.py:536: '_convert_messages_to_provider_format' has rank C
 
 
-4 findings in src\intellicrack\sandbox\qemu.py
+4 findings in src\intellicrack\providers\huggingface.py
 
-src\intellicrack\sandbox\qemu.py:768: '_build_qemu_command' has rank C
+src\intellicrack\providers\huggingface.py:526: 'chat_stream' has rank C
 
-src\intellicrack\sandbox\qemu.py:1448: 'execute' has rank C
+src\intellicrack\providers\huggingface.py:189: 'list_models' has rank C
 
-src\intellicrack\sandbox\qemu.py:1519: 'run_binary' has rank C
+src\intellicrack\providers\huggingface.py:278: '_estimate_context_window' has rank C
 
-src\intellicrack\sandbox\qemu.py:1671: '_parse_network_log' has rank C
+src\intellicrack\providers\huggingface.py:649: '_convert_messages_to_provider_format' has rank C
 
 
 4 findings in src\intellicrack\ui\session_manager.py
@@ -75,40 +62,22 @@ src\intellicrack\providers\discovery.py:683: 'get_recommended_model' has rank C
 src\intellicrack\providers\discovery.py:484: 'discover_provider' has rank C
 
 
-3 findings in src\intellicrack\providers\grok.py
-
-src\intellicrack\providers\grok.py:217: 'chat' has rank C
-
-src\intellicrack\providers\grok.py:338: 'chat_stream' has rank C
-
-src\intellicrack\providers\grok.py:414: '_convert_messages_to_provider_format' has rank C
-
-
-3 findings in src\intellicrack\providers\ollama.py
-
-src\intellicrack\providers\ollama.py:365: 'chat' has rank C
-
-src\intellicrack\providers\ollama.py:277: '_get_client_and_model' has rank C
-
-src\intellicrack\providers\ollama.py:558: '_convert_messages_to_provider_format' has rank C
-
-
-3 findings in src\intellicrack\providers\openai.py
-
-src\intellicrack\providers\openai.py:245: 'chat' has rank C
-
-src\intellicrack\providers\openai.py:373: 'chat_stream' has rank C
-
-src\intellicrack\providers\openai.py:462: '_convert_messages_to_provider_format' has rank C
-
-
 3 findings in src\intellicrack\providers\openrouter.py
 
-src\intellicrack\providers\openrouter.py:223: 'chat' has rank C
+src\intellicrack\providers\openrouter.py:411: 'chat_stream' has rank C
 
-src\intellicrack\providers\openrouter.py:378: 'chat_stream' has rank C
+src\intellicrack\providers\openrouter.py:239: 'chat' has rank C
 
-src\intellicrack\providers\openrouter.py:479: '_convert_messages_to_provider_format' has rank C
+src\intellicrack\providers\openrouter.py:513: '_convert_messages_to_provider_format' has rank C
+
+
+3 findings in src\intellicrack\sandbox\qemu.py
+
+src\intellicrack\sandbox\qemu.py:768: '_build_qemu_command' has rank C
+
+src\intellicrack\sandbox\qemu.py:1560: 'run_binary' has rank C
+
+src\intellicrack\sandbox\qemu.py:1712: '_parse_network_log' has rank C
 
 
 3 findings in src\intellicrack\ui\provider_config.py
@@ -122,16 +91,16 @@ src\intellicrack\ui\provider_config.py:1248: '_load_settings' has rank C
 
 2 findings in src\intellicrack\bridges\binary.py
 
-src\intellicrack\bridges\binary.py:507: '_detect_architecture' has rank C
+src\intellicrack\bridges\binary.py:508: '_detect_architecture' has rank C
 
-src\intellicrack\bridges\binary.py:618: '_get_imports_internal' has rank C
+src\intellicrack\bridges\binary.py:619: '_get_imports_internal' has rank C
 
 
 2 findings in src\intellicrack\bridges\installer.py
 
-src\intellicrack\bridges\installer.py:230: 'find_tool' has rank C
+src\intellicrack\bridges\installer.py:231: 'find_tool' has rank C
 
-src\intellicrack\bridges\installer.py:507: '_get_latest_release_url' has rank C
+src\intellicrack\bridges\installer.py:509: '_get_latest_release_url' has rank C
 
 
 2 findings in src\intellicrack\bridges\schemas.py
@@ -143,30 +112,58 @@ src\intellicrack\bridges\schemas.py:295: 'validate_tool_parameter' has rank C
 
 2 findings in src\intellicrack\bridges\x64dbg.py
 
-src\intellicrack\bridges\x64dbg.py:269: '_read_unicode_string_from_params' has rank C
+src\intellicrack\bridges\x64dbg.py:270: '_read_unicode_string_from_params' has rank C
 
-src\intellicrack\bridges\x64dbg.py:1546: 'get_memory_regions' has rank C
+src\intellicrack\bridges\x64dbg.py:1547: 'get_memory_regions' has rank C
 
 
-2 findings in src\intellicrack\core\script_gen.py
+2 findings in src\intellicrack\providers\grok.py
 
-src\intellicrack\core\script_gen.py:134: 'ScriptContext' has rank D
+src\intellicrack\providers\grok.py:383: 'chat_stream' has rank C
 
-src\intellicrack\core\script_gen.py:165: 'to_prompt_context' has rank D
+src\intellicrack\providers\grok.py:460: '_convert_messages_to_provider_format' has rank C
 
 
 2 findings in src\intellicrack\providers\local_transformers.py
 
-src\intellicrack\providers\local_transformers.py:815: '_parse_tool_calls' has rank C
+src\intellicrack\providers\local_transformers.py:830: '_parse_tool_calls' has rank C
 
-src\intellicrack\providers\local_transformers.py:912: '_estimate_context_window' has rank C
+src\intellicrack\providers\local_transformers.py:930: '_estimate_context_window' has rank C
+
+
+2 findings in src\intellicrack\providers\model_loader.py
+
+src\intellicrack\providers\model_loader.py:468: 'load_model_for_xpu' has rank C
+
+src\intellicrack\providers\model_loader.py:580: 'load_model_for_cpu' has rank C
+
+
+2 findings in src\intellicrack\providers\ollama.py
+
+src\intellicrack\providers\ollama.py:285: '_get_client_and_model' has rank C
+
+src\intellicrack\providers\ollama.py:596: '_convert_messages_to_provider_format' has rank C
+
+
+2 findings in src\intellicrack\providers\openai.py
+
+src\intellicrack\providers\openai.py:418: 'chat_stream' has rank C
+
+src\intellicrack\providers\openai.py:508: '_convert_messages_to_provider_format' has rank C
+
+
+2 findings in src\intellicrack\providers\xpu_utils.py
+
+src\intellicrack\providers\xpu_utils.py:217: 'get_xpu_device_info' has rank D
+
+src\intellicrack\providers\xpu_utils.py:419: 'get_xpu_memory_info' has rank C
 
 
 2 findings in src\intellicrack\sandbox\windows.py
 
-src\intellicrack\sandbox\windows.py:299: '_generate_wsb_config' has rank C
+src\intellicrack\sandbox\windows.py:300: '_generate_wsb_config' has rank C
 
-src\intellicrack\sandbox\windows.py:546: 'run_binary' has rank C
+src\intellicrack\sandbox\windows.py:547: 'run_binary' has rank C
 
 
 2 findings in tests\test_core\test_license_analyzer.py
@@ -197,7 +194,7 @@ src\intellicrack\bridges\frida_bridge.py:929: 'hook_function' has rank C
 
 1 findings in src\intellicrack\bridges\process.py
 
-src\intellicrack\bridges\process.py:1096: 'search_pattern' has rank C
+src\intellicrack\bridges\process.py:1097: 'search_pattern' has rank C
 
 
 1 findings in src\intellicrack\core\logging.py
@@ -210,19 +207,14 @@ src\intellicrack\core\logging.py:448: '_sanitize_arguments' has rank C
 src\intellicrack\core\orchestrator.py:370: '_run_agent_loop' has rank C
 
 
+1 findings in src\intellicrack\core\script_gen.py
+
+src\intellicrack\core\script_gen.py:175: 'to_prompt_context' has rank C
+
+
 1 findings in src\intellicrack\credentials\env_loader.py
 
 src\intellicrack\credentials\env_loader.py:283: '_validate_key_format' has rank C
-
-
-1 findings in src\intellicrack\providers\model_loader.py
-
-src\intellicrack\providers\model_loader.py:446: 'load_model_for_xpu' has rank C
-
-
-1 findings in src\intellicrack\providers\xpu_utils.py
-
-src\intellicrack\providers\xpu_utils.py:209: 'get_xpu_device_info' has rank D
 
 
 1 findings in src\intellicrack\ui\sandbox_config.py
@@ -232,32 +224,22 @@ src\intellicrack\ui\sandbox_config.py:91: 'run' has rank C
 
 1 findings in src\intellicrack\ui\tool_config.py
 
-src\intellicrack\ui\tool_config.py:355: '_update_radare2_path' has rank C
+src\intellicrack\ui\tool_config.py:356: '_update_radare2_path' has rank C
 
 
 1 findings in src\intellicrack\ui\embedding\cutter_widget.py
 
-src\intellicrack\ui\embedding\cutter_widget.py:71: 'get_executable_path' has rank C
-
-
-1 findings in src\intellicrack\ui\embedding\ghidra_widget.py
-
-src\intellicrack\ui\embedding\ghidra_widget.py:72: 'get_executable_path' has rank D
+src\intellicrack\ui\embedding\cutter_widget.py:73: 'get_executable_path' has rank C
 
 
 1 findings in src\intellicrack\ui\embedding\hxd_widget.py
 
-src\intellicrack\ui\embedding\hxd_widget.py:69: 'get_executable_path' has rank C
+src\intellicrack\ui\embedding\hxd_widget.py:70: 'get_executable_path' has rank C
 
 
 1 findings in src\intellicrack\ui\embedding\radare2_widget.py
 
-src\intellicrack\ui\embedding\radare2_widget.py:69: 'get_executable_path' has rank D
-
-
-1 findings in src\intellicrack\ui\embedding\x64dbg_widget.py
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:70: 'get_executable_path' has rank C
+src\intellicrack\ui\embedding\radare2_widget.py:70: 'get_executable_path' has rank D
 
 
 1 findings in src\intellicrack\ui\panels\binary_panel.py

@@ -310,7 +310,7 @@ class SandboxBase:
         await self.stop()
         await self.start()
 
-    async def execute(
+    async def run_command(
         self,
         command: str,
         timeout: int | None = None,

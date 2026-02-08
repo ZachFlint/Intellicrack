@@ -34,133 +34,133 @@ src\intellicrack\bridges\base.py:219: unused method 'is_ready' (60% confidence)
 
 src\intellicrack\bridges\base.py:227: unused method 'clear_error' (60% confidence)
 
-src\intellicrack\bridges\base.py:364: unused method 'get_function' (60% confidence)
+src\intellicrack\bridges\base.py:386: unused method 'get_function' (60% confidence)
 
-src\intellicrack\bridges\base.py:376: unused method 'decompile' (60% confidence)
+src\intellicrack\bridges\base.py:401: unused method 'decompile' (60% confidence)
 
-src\intellicrack\bridges\base.py:388: unused method 'disassemble' (60% confidence)
+src\intellicrack\bridges\base.py:416: unused method 'disassemble' (60% confidence)
 
-src\intellicrack\bridges\base.py:405: unused method 'get_xrefs_to' (60% confidence)
+src\intellicrack\bridges\base.py:436: unused method 'get_xrefs_to' (60% confidence)
 
-src\intellicrack\bridges\base.py:417: unused method 'get_xrefs_from' (60% confidence)
+src\intellicrack\bridges\base.py:451: unused method 'get_xrefs_from' (60% confidence)
 
-src\intellicrack\bridges\base.py:441: unused method 'search_bytes' (60% confidence)
+src\intellicrack\bridges\base.py:481: unused method 'search_bytes' (60% confidence)
 
-src\intellicrack\bridges\base.py:471: unused method 'rename_function' (60% confidence)
+src\intellicrack\bridges\base.py:520: unused method 'rename_function' (60% confidence)
 
-src\intellicrack\bridges\base.py:484: unused method 'add_comment' (60% confidence)
+src\intellicrack\bridges\base.py:536: unused method 'add_comment' (60% confidence)
 
-src\intellicrack\bridges\base.py:588: unused method 'scan_memory' (60% confidence)
+src\intellicrack\bridges\base.py:662: unused method 'scan_memory' (60% confidence)
 
-src\intellicrack\bridges\base.py:611: unused attribute 'supports_debugging' (60% confidence)
+src\intellicrack\bridges\base.py:688: unused attribute 'supports_debugging' (60% confidence)
 
-src\intellicrack\bridges\base.py:646: unused method 'step_out' (60% confidence)
+src\intellicrack\bridges\base.py:741: unused method 'step_out' (60% confidence)
 
-src\intellicrack\bridges\base.py:686: unused method 'get_breakpoints' (60% confidence)
+src\intellicrack\bridges\base.py:790: unused method 'get_breakpoints' (60% confidence)
 
-src\intellicrack\bridges\base.py:704: unused method 'set_register' (60% confidence)
+src\intellicrack\bridges\base.py:814: unused method 'set_register' (60% confidence)
 
-src\intellicrack\bridges\base.py:726: unused method 'disassemble_at' (60% confidence)
+src\intellicrack\bridges\base.py:842: unused method 'disassemble_at' (60% confidence)
 
-src\intellicrack\bridges\base.py:743: unused method 'assemble_at' (60% confidence)
+src\intellicrack\bridges\base.py:862: unused method 'assemble_at' (60% confidence)
 
-src\intellicrack\bridges\base.py:767: unused attribute 'supports_scripting' (60% confidence)
+src\intellicrack\bridges\base.py:889: unused attribute 'supports_scripting' (60% confidence)
 
-src\intellicrack\bridges\base.py:769: unused method 'enumerate_modules' (60% confidence)
+src\intellicrack\bridges\base.py:891: unused method 'enumerate_modules' (60% confidence)
 
-src\intellicrack\bridges\base.py:779: unused method 'enumerate_exports' (60% confidence)
+src\intellicrack\bridges\base.py:904: unused method 'enumerate_exports' (60% confidence)
 
-src\intellicrack\bridges\base.py:825: unused method 'get_hooks' (60% confidence)
+src\intellicrack\bridges\base.py:959: unused method 'get_hooks' (60% confidence)
 
-src\intellicrack\bridges\base.py:848: unused method 'intercept_return' (60% confidence)
+src\intellicrack\bridges\base.py:988: unused method 'intercept_return' (60% confidence)
 
-src\intellicrack\bridges\base.py:862: unused method 'call_function' (60% confidence)
+src\intellicrack\bridges\base.py:1005: unused method 'call_function' (60% confidence)
 
-src\intellicrack\bridges\base.py:935: unused method 'apply_patch' (60% confidence)
+src\intellicrack\bridges\base.py:1090: unused method 'apply_patch' (60% confidence)
 
-src\intellicrack\bridges\base.py:948: unused method 'revert_patch' (60% confidence)
+src\intellicrack\bridges\base.py:1106: unused method 'revert_patch' (60% confidence)
 
-src\intellicrack\bridges\base.py:974: unused method 'search_pattern' (60% confidence)
+src\intellicrack\bridges\base.py:1138: unused method 'search_pattern' (60% confidence)
 
-src\intellicrack\bridges\base.py:994: unused method 'calculate_checksum' (60% confidence)
+src\intellicrack\bridges\base.py:1161: unused method 'calculate_checksum' (60% confidence)
 
 
 18 findings in src\intellicrack\bridges\x64dbg.py
 
-src\intellicrack\bridges\x64dbg.py:71: unused function 'get_capstone' (60% confidence)
+src\intellicrack\bridges\x64dbg.py:72: unused function 'get_capstone' (60% confidence)
 
-src\intellicrack\bridges\x64dbg.py:80: unused function 'get_keystone' (60% confidence)
+src\intellicrack\bridges\x64dbg.py:81: unused function 'get_keystone' (60% confidence)
 
-src\intellicrack\bridges\x64dbg.py:397: unused property 'breakpoints' (60% confidence)
+src\intellicrack\bridges\x64dbg.py:398: unused property 'breakpoints' (60% confidence)
 
-src\intellicrack\bridges\x64dbg.py:424: unused property 'watchpoints' (60% confidence)
+src\intellicrack\bridges\x64dbg.py:425: unused property 'watchpoints' (60% confidence)
 
-src\intellicrack\bridges\x64dbg.py:990: unused attribute 'binary_loaded' (60% confidence)
+src\intellicrack\bridges\x64dbg.py:991: unused attribute 'binary_loaded' (60% confidence)
 
-src\intellicrack\bridges\x64dbg.py:1102: unused method 'step_out' (60% confidence)
+src\intellicrack\bridges\x64dbg.py:1103: unused method 'step_out' (60% confidence)
 
-src\intellicrack\bridges\x64dbg.py:1169: unused method 'get_breakpoints' (60% confidence)
+src\intellicrack\bridges\x64dbg.py:1170: unused method 'get_breakpoints' (60% confidence)
 
-src\intellicrack\bridges\x64dbg.py:1177: unused method 'set_watchpoint' (60% confidence)
+src\intellicrack\bridges\x64dbg.py:1178: unused method 'set_watchpoint' (60% confidence)
 
-src\intellicrack\bridges\x64dbg.py:1219: unused method 'remove_watchpoint' (60% confidence)
+src\intellicrack\bridges\x64dbg.py:1220: unused method 'remove_watchpoint' (60% confidence)
 
-src\intellicrack\bridges\x64dbg.py:1241: unused method 'get_watchpoints' (60% confidence)
+src\intellicrack\bridges\x64dbg.py:1242: unused method 'get_watchpoints' (60% confidence)
 
-src\intellicrack\bridges\x64dbg.py:1305: unused method '_get_register_value' (60% confidence)
+src\intellicrack\bridges\x64dbg.py:1306: unused method '_get_register_value' (60% confidence)
 
-src\intellicrack\bridges\x64dbg.py:1327: unused method 'set_register' (60% confidence)
+src\intellicrack\bridges\x64dbg.py:1328: unused method 'set_register' (60% confidence)
 
-src\intellicrack\bridges\x64dbg.py:1452: unused method 'allocate_memory' (60% confidence)
+src\intellicrack\bridges\x64dbg.py:1453: unused method 'allocate_memory' (60% confidence)
 
-src\intellicrack\bridges\x64dbg.py:1507: unused method 'free_memory' (60% confidence)
+src\intellicrack\bridges\x64dbg.py:1508: unused method 'free_memory' (60% confidence)
 
-src\intellicrack\bridges\x64dbg.py:1635: unused method 'disassemble_at' (60% confidence)
+src\intellicrack\bridges\x64dbg.py:1636: unused method 'disassemble_at' (60% confidence)
 
-src\intellicrack\bridges\x64dbg.py:1680: unused method 'assemble_at' (60% confidence)
+src\intellicrack\bridges\x64dbg.py:1681: unused method 'assemble_at' (60% confidence)
 
-src\intellicrack\bridges\x64dbg.py:1773: unused method 'scan_memory' (60% confidence)
+src\intellicrack\bridges\x64dbg.py:1774: unused method 'scan_memory' (60% confidence)
 
-src\intellicrack\bridges\x64dbg.py:1988: unused method '_get_process_info' (60% confidence)
+src\intellicrack\bridges\x64dbg.py:1989: unused method '_get_process_info' (60% confidence)
 
 
 18 findings in src\intellicrack\providers\base.py
 
-src\intellicrack\providers\base.py:56: unused variable 'input_schema' (60% confidence)
+src\intellicrack\providers\base.py:58: unused variable 'input_schema' (60% confidence)
 
-src\intellicrack\providers\base.py:82: unused class 'MessageDict' (60% confidence)
+src\intellicrack\providers\base.py:84: unused class 'MessageDict' (60% confidence)
 
-src\intellicrack\providers\base.py:104: unused attribute '_credentials' (60% confidence)
+src\intellicrack\providers\base.py:106: unused attribute '_credentials' (60% confidence)
 
-src\intellicrack\providers\base.py:145: unused attribute '_credentials' (60% confidence)
+src\intellicrack\providers\base.py:147: unused attribute '_credentials' (60% confidence)
 
-src\intellicrack\providers\base.py:253: unused class 'ProviderCapabilities' (60% confidence)
+src\intellicrack\providers\base.py:327: unused class 'ProviderCapabilities' (60% confidence)
 
-src\intellicrack\providers\base.py:268: unused variable 'supports_json_mode' (60% confidence)
+src\intellicrack\providers\base.py:342: unused variable 'supports_json_mode' (60% confidence)
 
-src\intellicrack\providers\base.py:269: unused variable 'max_context_window' (60% confidence)
+src\intellicrack\providers\base.py:343: unused variable 'max_context_window' (60% confidence)
 
-src\intellicrack\providers\base.py:272: unused class 'ProviderState' (60% confidence)
+src\intellicrack\providers\base.py:346: unused class 'ProviderState' (60% confidence)
 
-src\intellicrack\providers\base.py:286: unused variable 'authenticated' (60% confidence)
+src\intellicrack\providers\base.py:360: unused variable 'authenticated' (60% confidence)
 
-src\intellicrack\providers\base.py:287: unused variable 'last_request_time' (60% confidence)
+src\intellicrack\providers\base.py:361: unused variable 'last_request_time' (60% confidence)
 
-src\intellicrack\providers\base.py:288: unused variable 'requests_made' (60% confidence)
+src\intellicrack\providers\base.py:362: unused variable 'requests_made' (60% confidence)
 
-src\intellicrack\providers\base.py:289: unused variable 'errors_count' (60% confidence)
+src\intellicrack\providers\base.py:363: unused variable 'errors_count' (60% confidence)
 
-src\intellicrack\providers\base.py:293: unused class 'ChatRequest' (60% confidence)
+src\intellicrack\providers\base.py:367: unused class 'ChatRequest' (60% confidence)
 
-src\intellicrack\providers\base.py:314: unused class 'ChatResponse' (60% confidence)
+src\intellicrack\providers\base.py:388: unused class 'ChatResponse' (60% confidence)
 
-src\intellicrack\providers\base.py:329: unused variable 'finish_reason' (60% confidence)
+src\intellicrack\providers\base.py:403: unused variable 'finish_reason' (60% confidence)
 
-src\intellicrack\providers\base.py:330: unused variable 'usage_prompt_tokens' (60% confidence)
+src\intellicrack\providers\base.py:404: unused variable 'usage_prompt_tokens' (60% confidence)
 
-src\intellicrack\providers\base.py:331: unused variable 'usage_completion_tokens' (60% confidence)
+src\intellicrack\providers\base.py:405: unused variable 'usage_completion_tokens' (60% confidence)
 
-src\intellicrack\providers\base.py:453: unused function 'create_google_tool_schema' (60% confidence)
+src\intellicrack\providers\base.py:527: unused function 'create_google_tool_schema' (60% confidence)
 
 
 17 findings in src\intellicrack\ui\tools.py
@@ -231,60 +231,31 @@ src\intellicrack\core\types.py:734: unused method 'get_segment_registers' (60% c
 src\intellicrack\core\types.py:1005: unused property 'signature' (60% confidence)
 
 
-13 findings in src\intellicrack\ui\embedding\ghidra_widget.py
-
-src\intellicrack\ui\embedding\ghidra_widget.py:60: unused attribute '_ghidra_home' (60% confidence)
-
-src\intellicrack\ui\embedding\ghidra_widget.py:89: unused attribute '_ghidra_home' (60% confidence)
-
-src\intellicrack\ui\embedding\ghidra_widget.py:94: unused attribute '_ghidra_home' (60% confidence)
-
-src\intellicrack\ui\embedding\ghidra_widget.py:106: unused attribute '_ghidra_home' (60% confidence)
-
-src\intellicrack\ui\embedding\ghidra_widget.py:120: unused attribute '_ghidra_home' (60% confidence)
-
-src\intellicrack\ui\embedding\ghidra_widget.py:125: unused attribute '_ghidra_home' (60% confidence)
-
-src\intellicrack\ui\embedding\ghidra_widget.py:136: unused attribute '_ghidra_home' (60% confidence)
-
-src\intellicrack\ui\embedding\ghidra_widget.py:141: unused attribute '_ghidra_home' (60% confidence)
-
-src\intellicrack\ui\embedding\ghidra_widget.py:146: unused attribute '_ghidra_home' (60% confidence)
-
-src\intellicrack\ui\embedding\ghidra_widget.py:213: unused method 'attach_to_bridge' (60% confidence)
-
-src\intellicrack\ui\embedding\ghidra_widget.py:222: unused method 'get_bridge' (60% confidence)
-
-src\intellicrack\ui\embedding\ghidra_widget.py:258: unused method 'set_executable_path' (60% confidence)
-
-src\intellicrack\ui\embedding\ghidra_widget.py:266: unused attribute '_ghidra_home' (60% confidence)
-
-
 12 findings in src\intellicrack\bridges\ghidra.py
 
-src\intellicrack\bridges\ghidra.py:426: unused method 'start_headless' (60% confidence)
+src\intellicrack\bridges\ghidra.py:427: unused method 'start_headless' (60% confidence)
 
-src\intellicrack\bridges\ghidra.py:565: unused attribute 'binary_loaded' (60% confidence)
+src\intellicrack\bridges\ghidra.py:566: unused attribute 'binary_loaded' (60% confidence)
 
-src\intellicrack\bridges\ghidra.py:863: unused method 'get_function' (60% confidence)
+src\intellicrack\bridges\ghidra.py:864: unused method 'get_function' (60% confidence)
 
-src\intellicrack\bridges\ghidra.py:947: unused method 'decompile' (60% confidence)
+src\intellicrack\bridges\ghidra.py:948: unused method 'decompile' (60% confidence)
 
-src\intellicrack\bridges\ghidra.py:989: unused method 'disassemble' (60% confidence)
+src\intellicrack\bridges\ghidra.py:990: unused method 'disassemble' (60% confidence)
 
-src\intellicrack\bridges\ghidra.py:1046: unused method 'get_xrefs_to' (60% confidence)
+src\intellicrack\bridges\ghidra.py:1047: unused method 'get_xrefs_to' (60% confidence)
 
-src\intellicrack\bridges\ghidra.py:1090: unused method 'get_xrefs_from' (60% confidence)
+src\intellicrack\bridges\ghidra.py:1091: unused method 'get_xrefs_from' (60% confidence)
 
-src\intellicrack\bridges\ghidra.py:1180: unused method 'search_bytes' (60% confidence)
+src\intellicrack\bridges\ghidra.py:1181: unused method 'search_bytes' (60% confidence)
 
-src\intellicrack\bridges\ghidra.py:1218: unused method 'rename_function' (60% confidence)
+src\intellicrack\bridges\ghidra.py:1219: unused method 'rename_function' (60% confidence)
 
-src\intellicrack\bridges\ghidra.py:1252: unused method 'add_comment' (60% confidence)
+src\intellicrack\bridges\ghidra.py:1253: unused method 'add_comment' (60% confidence)
 
-src\intellicrack\bridges\ghidra.py:1379: unused method 'get_data_type' (60% confidence)
+src\intellicrack\bridges\ghidra.py:1380: unused method 'get_data_type' (60% confidence)
 
-src\intellicrack\bridges\ghidra.py:1442: unused method 'set_data_type' (60% confidence)
+src\intellicrack\bridges\ghidra.py:1443: unused method 'set_data_type' (60% confidence)
 
 
 12 findings in src\intellicrack\credentials\oauth.py
@@ -341,6 +312,33 @@ src\intellicrack\sandbox\base.py:173: unused variable 'environment_variables' (6
 src\intellicrack\sandbox\base.py:188: unused variable 'started_at' (60% confidence)
 
 
+12 findings in src\intellicrack\ui\embedding\ghidra_widget.py
+
+src\intellicrack\ui\embedding\ghidra_widget.py:61: unused attribute '_ghidra_home' (60% confidence)
+
+src\intellicrack\ui\embedding\ghidra_widget.py:92: unused attribute '_ghidra_home' (60% confidence)
+
+src\intellicrack\ui\embedding\ghidra_widget.py:106: unused attribute '_ghidra_home' (60% confidence)
+
+src\intellicrack\ui\embedding\ghidra_widget.py:127: unused attribute '_ghidra_home' (60% confidence)
+
+src\intellicrack\ui\embedding\ghidra_widget.py:148: unused attribute '_ghidra_home' (60% confidence)
+
+src\intellicrack\ui\embedding\ghidra_widget.py:153: unused attribute '_ghidra_home' (60% confidence)
+
+src\intellicrack\ui\embedding\ghidra_widget.py:173: unused attribute '_ghidra_home' (60% confidence)
+
+src\intellicrack\ui\embedding\ghidra_widget.py:178: unused attribute '_ghidra_home' (60% confidence)
+
+src\intellicrack\ui\embedding\ghidra_widget.py:243: unused method 'attach_to_bridge' (60% confidence)
+
+src\intellicrack\ui\embedding\ghidra_widget.py:252: unused method 'get_bridge' (60% confidence)
+
+src\intellicrack\ui\embedding\ghidra_widget.py:288: unused method 'set_executable_path' (60% confidence)
+
+src\intellicrack\ui\embedding\ghidra_widget.py:296: unused attribute '_ghidra_home' (60% confidence)
+
+
 12 findings in src\intellicrack\ui\embedding\win32_helper.py
 
 src\intellicrack\ui\embedding\win32_helper.py:48: unused variable 'WM_SETFOCUS' (60% confidence)
@@ -370,27 +368,27 @@ src\intellicrack\ui\embedding\win32_helper.py:636: unused method 'get_process_id
 
 11 findings in src\intellicrack\bridges\radare2.py
 
-src\intellicrack\bridges\radare2.py:644: unused attribute 'binary_loaded' (60% confidence)
+src\intellicrack\bridges\radare2.py:646: unused attribute 'binary_loaded' (60% confidence)
 
-src\intellicrack\bridges\radare2.py:738: unused method 'get_function' (60% confidence)
+src\intellicrack\bridges\radare2.py:740: unused method 'get_function' (60% confidence)
 
-src\intellicrack\bridges\radare2.py:810: unused method 'decompile' (60% confidence)
+src\intellicrack\bridges\radare2.py:812: unused method 'decompile' (60% confidence)
 
-src\intellicrack\bridges\radare2.py:838: unused method 'disassemble' (60% confidence)
+src\intellicrack\bridges\radare2.py:840: unused method 'disassemble' (60% confidence)
 
-src\intellicrack\bridges\radare2.py:882: unused method 'get_xrefs_to' (60% confidence)
+src\intellicrack\bridges\radare2.py:884: unused method 'get_xrefs_to' (60% confidence)
 
-src\intellicrack\bridges\radare2.py:924: unused method 'get_xrefs_from' (60% confidence)
+src\intellicrack\bridges\radare2.py:926: unused method 'get_xrefs_from' (60% confidence)
 
-src\intellicrack\bridges\radare2.py:1013: unused method 'search_bytes' (60% confidence)
+src\intellicrack\bridges\radare2.py:1015: unused method 'search_bytes' (60% confidence)
 
-src\intellicrack\bridges\radare2.py:1035: unused method 'search_bytes_wildcard' (60% confidence)
+src\intellicrack\bridges\radare2.py:1037: unused method 'search_bytes_wildcard' (60% confidence)
 
-src\intellicrack\bridges\radare2.py:1141: unused method 'rename_function' (60% confidence)
+src\intellicrack\bridges\radare2.py:1143: unused method 'rename_function' (60% confidence)
 
-src\intellicrack\bridges\radare2.py:1163: unused method 'add_comment' (60% confidence)
+src\intellicrack\bridges\radare2.py:1165: unused method 'add_comment' (60% confidence)
 
-src\intellicrack\bridges\radare2.py:1210: unused method 'assemble_at' (60% confidence)
+src\intellicrack\bridges\radare2.py:1212: unused method 'assemble_at' (60% confidence)
 
 
 11 findings in src\intellicrack\core\logging.py
@@ -426,90 +424,90 @@ src\intellicrack\ui\panels\stack_viewer.py:54: unused variable 'stack_pointer' (
 
 src\intellicrack\ui\panels\stack_viewer.py:57: unused class 'StackDataSource' (60% confidence)
 
-src\intellicrack\ui\panels\stack_viewer.py:81: unused method 'get_source_name' (60% confidence)
+src\intellicrack\ui\panels\stack_viewer.py:83: unused method 'get_source_name' (60% confidence)
 
-src\intellicrack\ui\panels\stack_viewer.py:152: unused method 'get_source_name' (60% confidence)
+src\intellicrack\ui\panels\stack_viewer.py:155: unused method 'get_source_name' (60% confidence)
 
-src\intellicrack\ui\panels\stack_viewer.py:233: unused method 'get_source_name' (60% confidence)
+src\intellicrack\ui\panels\stack_viewer.py:236: unused method 'get_source_name' (60% confidence)
 
-src\intellicrack\ui\panels\stack_viewer.py:366: unused attribute '_auto_refresh' (60% confidence)
+src\intellicrack\ui\panels\stack_viewer.py:369: unused attribute '_auto_refresh' (60% confidence)
 
-src\intellicrack\ui\panels\stack_viewer.py:454: unused attribute '_auto_refresh' (60% confidence)
+src\intellicrack\ui\panels\stack_viewer.py:457: unused attribute '_auto_refresh' (60% confidence)
 
-src\intellicrack\ui\panels\stack_viewer.py:513: unused method 'set_x64dbg_bridge' (60% confidence)
+src\intellicrack\ui\panels\stack_viewer.py:516: unused method 'set_x64dbg_bridge' (60% confidence)
 
-src\intellicrack\ui\panels\stack_viewer.py:524: unused method 'set_frida_bridge' (60% confidence)
+src\intellicrack\ui\panels\stack_viewer.py:527: unused method 'set_frida_bridge' (60% confidence)
 
-src\intellicrack\ui\panels\stack_viewer.py:535: unused method 'add_source' (60% confidence)
+src\intellicrack\ui\panels\stack_viewer.py:538: unused method 'add_source' (60% confidence)
 
 
 10 findings in src\intellicrack\bridges\binary.py
 
-src\intellicrack\bridges\binary.py:440: unused attribute 'binary_loaded' (60% confidence)
+src\intellicrack\bridges\binary.py:441: unused attribute 'binary_loaded' (60% confidence)
 
-src\intellicrack\bridges\binary.py:736: unused method 'apply_patch' (60% confidence)
+src\intellicrack\bridges\binary.py:737: unused method 'apply_patch' (60% confidence)
 
-src\intellicrack\bridges\binary.py:787: unused method 'revert_patch' (60% confidence)
+src\intellicrack\bridges\binary.py:788: unused method 'revert_patch' (60% confidence)
 
-src\intellicrack\bridges\binary.py:845: unused method 'search_pattern' (60% confidence)
+src\intellicrack\bridges\binary.py:846: unused method 'search_pattern' (60% confidence)
 
-src\intellicrack\bridges\binary.py:880: unused method 'search_pattern_with_wildcards' (60% confidence)
+src\intellicrack\bridges\binary.py:881: unused method 'search_pattern_with_wildcards' (60% confidence)
 
-src\intellicrack\bridges\binary.py:919: unused method 'disassemble_at_offset' (60% confidence)
+src\intellicrack\bridges\binary.py:920: unused method 'disassemble_at_offset' (60% confidence)
 
-src\intellicrack\bridges\binary.py:951: unused attribute 'detail' (60% confidence)
+src\intellicrack\bridges\binary.py:952: unused attribute 'detail' (60% confidence)
 
-src\intellicrack\bridges\binary.py:966: unused method 'calculate_checksum' (60% confidence)
+src\intellicrack\bridges\binary.py:967: unused method 'calculate_checksum' (60% confidence)
 
-src\intellicrack\bridges\binary.py:1011: unused method 'offset_to_rva' (60% confidence)
+src\intellicrack\bridges\binary.py:1010: unused method 'offset_to_rva' (60% confidence)
 
-src\intellicrack\bridges\binary.py:1034: unused method 'get_strings' (60% confidence)
+src\intellicrack\bridges\binary.py:1033: unused method 'get_strings' (60% confidence)
 
 
 10 findings in src\intellicrack\core\process_manager.py
 
-src\intellicrack\core\process_manager.py:44: unused variable 'ASYNC_SUBPROCESS' (60% confidence)
+src\intellicrack\core\process_manager.py:45: unused variable 'ASYNC_SUBPROCESS' (60% confidence)
 
-src\intellicrack\core\process_manager.py:57: unused variable 'registered_at' (60% confidence)
+src\intellicrack\core\process_manager.py:58: unused variable 'registered_at' (60% confidence)
 
-src\intellicrack\core\process_manager.py:161: unused method 'reset_instance' (60% confidence)
+src\intellicrack\core\process_manager.py:162: unused method 'reset_instance' (60% confidence)
 
-src\intellicrack\core\process_manager.py:311: unused method '_terminate_process_sync' (60% confidence)
+src\intellicrack\core\process_manager.py:312: unused method '_terminate_process_sync' (60% confidence)
 
-src\intellicrack\core\process_manager.py:377: unused method '_wait_or_kill_sync' (60% confidence)
+src\intellicrack\core\process_manager.py:378: unused method '_wait_or_kill_sync' (60% confidence)
 
-src\intellicrack\core\process_manager.py:473: unused method 'get_all_tracked' (60% confidence)
+src\intellicrack\core\process_manager.py:474: unused method 'get_all_tracked' (60% confidence)
 
-src\intellicrack\core\process_manager.py:482: unused method 'get_running_processes' (60% confidence)
+src\intellicrack\core\process_manager.py:483: unused method 'get_running_processes' (60% confidence)
 
-src\intellicrack\core\process_manager.py:656: unused method 'is_shutdown_requested' (60% confidence)
+src\intellicrack\core\process_manager.py:657: unused method 'is_shutdown_requested' (60% confidence)
 
-src\intellicrack\core\process_manager.py:664: unused method 'clear_shutdown_request' (60% confidence)
+src\intellicrack\core\process_manager.py:665: unused method 'clear_shutdown_request' (60% confidence)
 
-src\intellicrack\core\process_manager.py:931: unused method '_terminate_windows_process' (60% confidence)
+src\intellicrack\core\process_manager.py:932: unused method '_terminate_windows_process' (60% confidence)
 
 
 10 findings in src\intellicrack\ui\resources\font_manager.py
 
-src\intellicrack\ui\resources\font_manager.py:21: unused variable 'DEFAULT_CODE_FONT' (60% confidence)
+src\intellicrack\ui\resources\font_manager.py:24: unused variable 'DEFAULT_CODE_FONT' (60% confidence)
 
-src\intellicrack\ui\resources\font_manager.py:22: unused variable 'DEFAULT_UI_FONT' (60% confidence)
+src\intellicrack\ui\resources\font_manager.py:25: unused variable 'DEFAULT_UI_FONT' (60% confidence)
 
-src\intellicrack\ui\resources\font_manager.py:73: unused method 'reset_instance' (60% confidence)
+src\intellicrack\ui\resources\font_manager.py:76: unused method 'reset_instance' (60% confidence)
 
-src\intellicrack\ui\resources\font_manager.py:217: unused method 'get_code_font_bold' (60% confidence)
+src\intellicrack\ui\resources\font_manager.py:220: unused method 'get_code_font_bold' (60% confidence)
 
-src\intellicrack\ui\resources\font_manager.py:247: unused method 'get_ui_font_bold' (60% confidence)
+src\intellicrack\ui\resources\font_manager.py:250: unused method 'get_ui_font_bold' (60% confidence)
 
-src\intellicrack\ui\resources\font_manager.py:260: unused method 'get_heading_font' (60% confidence)
+src\intellicrack\ui\resources\font_manager.py:263: unused method 'get_heading_font' (60% confidence)
 
-src\intellicrack\ui\resources\font_manager.py:273: unused property 'code_font_family' (60% confidence)
+src\intellicrack\ui\resources\font_manager.py:276: unused property 'code_font_family' (60% confidence)
 
-src\intellicrack\ui\resources\font_manager.py:284: unused property 'ui_font_family' (60% confidence)
+src\intellicrack\ui\resources\font_manager.py:287: unused property 'ui_font_family' (60% confidence)
 
-src\intellicrack\ui\resources\font_manager.py:295: unused property 'loaded_families' (60% confidence)
+src\intellicrack\ui\resources\font_manager.py:298: unused property 'loaded_families' (60% confidence)
 
-src\intellicrack\ui\resources\font_manager.py:312: unused method 'get_font_info' (60% confidence)
+src\intellicrack\ui\resources\font_manager.py:315: unused method 'get_font_info' (60% confidence)
 
 
 9 findings in src\intellicrack\providers\discovery.py
@@ -547,11 +545,11 @@ src\intellicrack\sandbox\qemu.py:558: unused variable 'GUEST_SHARED_PATH_WINDOWS
 
 src\intellicrack\sandbox\qemu.py:559: unused variable 'GUEST_SHARED_PATH_LINUX' (60% confidence)
 
-src\intellicrack\sandbox\qemu.py:952: unused attribute 'started_at' (60% confidence)
+src\intellicrack\sandbox\qemu.py:949: unused attribute 'started_at' (60% confidence)
 
-src\intellicrack\sandbox\qemu.py:1842: unused method 'list_snapshots' (60% confidence)
+src\intellicrack\sandbox\qemu.py:1883: unused method 'list_snapshots' (60% confidence)
 
-src\intellicrack\sandbox\qemu.py:1864: unused method 'delete_snapshot' (60% confidence)
+src\intellicrack\sandbox\qemu.py:1905: unused method 'delete_snapshot' (60% confidence)
 
 
 8 findings in src\intellicrack\core\tools.py
@@ -575,40 +573,40 @@ src\intellicrack\core\tools.py:453: unused method 'ensure_tool_ready' (60% confi
 
 8 findings in src\intellicrack\providers\local_transformers.py
 
-src\intellicrack\providers\local_transformers.py:68: unused class 'LocalTransformersProvider' (60% confidence)
+src\intellicrack\providers\local_transformers.py:77: unused class 'LocalTransformersProvider' (60% confidence)
 
-src\intellicrack\providers\local_transformers.py:121: unused property 'xpu_available' (60% confidence)
+src\intellicrack\providers\local_transformers.py:130: unused property 'xpu_available' (60% confidence)
 
-src\intellicrack\providers\local_transformers.py:130: unused property 'is_b580_detected' (60% confidence)
+src\intellicrack\providers\local_transformers.py:139: unused property 'is_b580_detected' (60% confidence)
 
-src\intellicrack\providers\local_transformers.py:139: unused property 'current_model_id' (60% confidence)
+src\intellicrack\providers\local_transformers.py:148: unused property 'current_model_id' (60% confidence)
 
-src\intellicrack\providers\local_transformers.py:157: unused attribute '_credentials' (60% confidence)
+src\intellicrack\providers\local_transformers.py:166: unused attribute '_credentials' (60% confidence)
 
-src\intellicrack\providers\local_transformers.py:950: unused method 'get_device_info' (60% confidence)
+src\intellicrack\providers\local_transformers.py:968: unused method 'get_device_info' (60% confidence)
 
-src\intellicrack\providers\local_transformers.py:982: unused method 'unload_model' (60% confidence)
+src\intellicrack\providers\local_transformers.py:1000: unused method 'unload_model' (60% confidence)
 
-src\intellicrack\providers\local_transformers.py:995: unused method 'clear_cache' (60% confidence)
+src\intellicrack\providers\local_transformers.py:1013: unused method 'clear_cache' (60% confidence)
 
 
 8 findings in src\intellicrack\ui\embedding\cutter_widget.py
 
-src\intellicrack\ui\embedding\cutter_widget.py:161: unused method 'sync_with_radare2_bridge' (60% confidence)
+src\intellicrack\ui\embedding\cutter_widget.py:163: unused method 'sync_with_radare2_bridge' (60% confidence)
 
-src\intellicrack\ui\embedding\cutter_widget.py:170: unused method 'get_radare2_bridge' (60% confidence)
+src\intellicrack\ui\embedding\cutter_widget.py:172: unused method 'get_radare2_bridge' (60% confidence)
 
-src\intellicrack\ui\embedding\cutter_widget.py:242: unused method 'goto_function' (60% confidence)
+src\intellicrack\ui\embedding\cutter_widget.py:244: unused method 'goto_function' (60% confidence)
 
-src\intellicrack\ui\embedding\cutter_widget.py:282: unused method 'get_strings' (60% confidence)
+src\intellicrack\ui\embedding\cutter_widget.py:284: unused method 'get_strings' (60% confidence)
 
-src\intellicrack\ui\embedding\cutter_widget.py:339: unused method 'save_project' (60% confidence)
+src\intellicrack\ui\embedding\cutter_widget.py:341: unused method 'save_project' (60% confidence)
 
-src\intellicrack\ui\embedding\cutter_widget.py:361: unused method 'load_project' (60% confidence)
+src\intellicrack\ui\embedding\cutter_widget.py:363: unused method 'load_project' (60% confidence)
 
-src\intellicrack\ui\embedding\cutter_widget.py:382: unused method 'set_executable_path' (60% confidence)
+src\intellicrack\ui\embedding\cutter_widget.py:384: unused method 'set_executable_path' (60% confidence)
 
-src\intellicrack\ui\embedding\cutter_widget.py:394: unused method 'get_project_path' (60% confidence)
+src\intellicrack\ui\embedding\cutter_widget.py:396: unused method 'get_project_path' (60% confidence)
 
 
 7 findings in src\intellicrack\providers\registry.py
@@ -662,17 +660,17 @@ src\intellicrack\bridges\frida_bridge.py:1083: unused method 'call_function' (60
 
 6 findings in src\intellicrack\bridges\process.py
 
-src\intellicrack\bridges\process.py:541: unused method 'open_process' (60% confidence)
+src\intellicrack\bridges\process.py:542: unused method 'open_process' (60% confidence)
 
-src\intellicrack\bridges\process.py:649: unused method 'suspend' (60% confidence)
+src\intellicrack\bridges\process.py:650: unused method 'suspend' (60% confidence)
 
-src\intellicrack\bridges\process.py:855: unused method 'protect' (60% confidence)
+src\intellicrack\bridges\process.py:856: unused method 'protect' (60% confidence)
 
-src\intellicrack\bridges\process.py:1096: unused method 'search_pattern' (60% confidence)
+src\intellicrack\bridges\process.py:1097: unused method 'search_pattern' (60% confidence)
 
-src\intellicrack\bridges\process.py:1147: unused method 'inject_dll' (60% confidence)
+src\intellicrack\bridges\process.py:1148: unused method 'inject_dll' (60% confidence)
 
-src\intellicrack\bridges\process.py:1209: unused method 'get_process_info' (60% confidence)
+src\intellicrack\bridges\process.py:1210: unused method 'get_process_info' (60% confidence)
 
 
 6 findings in src\intellicrack\core\orchestrator.py
@@ -692,17 +690,17 @@ src\intellicrack\core\orchestrator.py:1265: unused method 'activate_binary_by_na
 
 6 findings in src\intellicrack\core\script_gen.py
 
-src\intellicrack\core\script_gen.py:268: unused method 'add_execution_result' (60% confidence)
+src\intellicrack\core\script_gen.py:301: unused method 'add_execution_result' (60% confidence)
 
-src\intellicrack\core\script_gen.py:579: unused method 'ensure_script_saved' (60% confidence)
+src\intellicrack\core\script_gen.py:612: unused method 'ensure_script_saved' (60% confidence)
 
-src\intellicrack\core\script_gen.py:590: unused method 'reload_script' (60% confidence)
+src\intellicrack\core\script_gen.py:623: unused method 'reload_script' (60% confidence)
 
-src\intellicrack\core\script_gen.py:705: unused class 'ScriptGenerator' (60% confidence)
+src\intellicrack\core\script_gen.py:738: unused class 'ScriptGenerator' (60% confidence)
 
-src\intellicrack\core\script_gen.py:715: unused method 'prepare_ai_prompt' (60% confidence)
+src\intellicrack\core\script_gen.py:748: unused method 'prepare_ai_prompt' (60% confidence)
 
-src\intellicrack\core\script_gen.py:744: unused method 'generate_keygen_from_analysis' (60% confidence)
+src\intellicrack\core\script_gen.py:777: unused method 'generate_keygen_from_analysis' (60% confidence)
 
 
 6 findings in src\intellicrack\core\session.py
@@ -752,47 +750,47 @@ src\intellicrack\credentials\store.py:525: unused method 'get_source' (60% confi
 
 6 findings in src\intellicrack\ui\embedding\hxd_widget.py
 
-src\intellicrack\ui\embedding\hxd_widget.py:214: unused method 'select_range' (60% confidence)
+src\intellicrack\ui\embedding\hxd_widget.py:215: unused method 'select_range' (60% confidence)
 
-src\intellicrack\ui\embedding\hxd_widget.py:233: unused method 'get_current_offset' (60% confidence)
+src\intellicrack\ui\embedding\hxd_widget.py:234: unused method 'get_current_offset' (60% confidence)
 
-src\intellicrack\ui\embedding\hxd_widget.py:241: unused method 'set_executable_path' (60% confidence)
+src\intellicrack\ui\embedding\hxd_widget.py:242: unused method 'set_executable_path' (60% confidence)
 
-src\intellicrack\ui\embedding\hxd_widget.py:308: unused method 'open_at_offset' (60% confidence)
+src\intellicrack\ui\embedding\hxd_widget.py:309: unused method 'open_at_offset' (60% confidence)
 
-src\intellicrack\ui\embedding\hxd_widget.py:327: unused method 'get_standalone_pids' (60% confidence)
+src\intellicrack\ui\embedding\hxd_widget.py:328: unused method 'get_standalone_pids' (60% confidence)
 
-src\intellicrack\ui\embedding\hxd_widget.py:335: unused method 'cleanup_standalone' (60% confidence)
+src\intellicrack\ui\embedding\hxd_widget.py:336: unused method 'cleanup_standalone' (60% confidence)
 
 
 6 findings in src\intellicrack\ui\embedding\x64dbg_widget.py
 
-src\intellicrack\ui\embedding\x64dbg_widget.py:174: unused method 'set_64bit' (60% confidence)
+src\intellicrack\ui\embedding\x64dbg_widget.py:196: unused method 'set_64bit' (60% confidence)
 
-src\intellicrack\ui\embedding\x64dbg_widget.py:197: unused method 'attach_to_bridge' (60% confidence)
+src\intellicrack\ui\embedding\x64dbg_widget.py:219: unused method 'attach_to_bridge' (60% confidence)
 
-src\intellicrack\ui\embedding\x64dbg_widget.py:206: unused method 'get_bridge' (60% confidence)
+src\intellicrack\ui\embedding\x64dbg_widget.py:228: unused method 'get_bridge' (60% confidence)
 
-src\intellicrack\ui\embedding\x64dbg_widget.py:272: unused method 'attach_to_process' (60% confidence)
+src\intellicrack\ui\embedding\x64dbg_widget.py:295: unused method 'attach_to_process' (60% confidence)
 
-src\intellicrack\ui\embedding\x64dbg_widget.py:423: unused method 'get_attached_pid' (60% confidence)
+src\intellicrack\ui\embedding\x64dbg_widget.py:446: unused method 'get_attached_pid' (60% confidence)
 
-src\intellicrack\ui\embedding\x64dbg_widget.py:431: unused method 'set_install_directory' (60% confidence)
+src\intellicrack\ui\embedding\x64dbg_widget.py:454: unused method 'set_install_directory' (60% confidence)
 
 
 6 findings in src\intellicrack\ui\highlighter.py
 
 src\intellicrack\ui\highlighter.py:209: unused method 'highlightBlock' (60% confidence)
 
-src\intellicrack\ui\highlighter.py:551: unused method 'highlightBlock' (60% confidence)
+src\intellicrack\ui\highlighter.py:552: unused method 'highlightBlock' (60% confidence)
 
-src\intellicrack\ui\highlighter.py:689: unused attribute '_triple_quote_format' (60% confidence)
+src\intellicrack\ui\highlighter.py:691: unused attribute '_triple_quote_format' (60% confidence)
 
-src\intellicrack\ui\highlighter.py:735: unused attribute '_triple_quote_format' (60% confidence)
+src\intellicrack\ui\highlighter.py:737: unused attribute '_triple_quote_format' (60% confidence)
 
-src\intellicrack\ui\highlighter.py:753: unused method 'highlightBlock' (60% confidence)
+src\intellicrack\ui\highlighter.py:755: unused method 'highlightBlock' (60% confidence)
 
-src\intellicrack\ui\highlighter.py:912: unused method 'highlightBlock' (60% confidence)
+src\intellicrack\ui\highlighter.py:915: unused method 'highlightBlock' (60% confidence)
 
 
 6 findings in src\intellicrack\ui\resources\theme_manager.py
@@ -810,30 +808,17 @@ src\intellicrack\ui\resources\theme_manager.py:1137: unused method 'clear_cache'
 src\intellicrack\ui\resources\theme_manager.py:1143: unused method 'get_available_themes' (60% confidence)
 
 
-5 findings in src\intellicrack\providers\grok.py
-
-src\intellicrack\providers\grok.py:36: unused import 'ChatCompletionMessageParam' (90% confidence)
-
-src\intellicrack\providers\grok.py:46: unused class 'GrokMessage' (60% confidence)
-
-src\intellicrack\providers\grok.py:52: unused variable 'tool_call_id' (60% confidence)
-
-src\intellicrack\providers\grok.py:56: unused class 'GrokProvider' (60% confidence)
-
-src\intellicrack\providers\grok.py:108: unused attribute '_credentials' (60% confidence)
-
-
 5 findings in src\intellicrack\providers\model_loader.py
 
-src\intellicrack\providers\model_loader.py:82: unused variable 'use_flash_attention' (60% confidence)
+src\intellicrack\providers\model_loader.py:105: unused variable 'use_flash_attention' (60% confidence)
 
-src\intellicrack\providers\model_loader.py:83: unused variable 'quantization_config' (60% confidence)
+src\intellicrack\providers\model_loader.py:106: unused variable 'quantization_config' (60% confidence)
 
-src\intellicrack\providers\model_loader.py:175: unused method 'remove' (60% confidence)
+src\intellicrack\providers\model_loader.py:198: unused method 'remove' (60% confidence)
 
-src\intellicrack\providers\model_loader.py:205: unused method 'get_memory_usage' (60% confidence)
+src\intellicrack\providers\model_loader.py:228: unused method 'get_memory_usage' (60% confidence)
 
-src\intellicrack\providers\model_loader.py:752: unused function 'set_global_cache_size' (60% confidence)
+src\intellicrack\providers\model_loader.py:770: unused function 'set_global_cache_size' (60% confidence)
 
 
 5 findings in src\intellicrack\ui\panels\script_manager.py
@@ -844,20 +829,20 @@ src\intellicrack\ui\panels\script_manager.py:384: unused attribute '_current_lan
 
 src\intellicrack\ui\panels\script_manager.py:409: unused attribute '_current_language' (60% confidence)
 
-src\intellicrack\ui\panels\script_manager.py:800: unused method 'set_backend' (60% confidence)
+src\intellicrack\ui\panels\script_manager.py:801: unused method 'set_backend' (60% confidence)
 
-src\intellicrack\ui\panels\script_manager.py:816: unused method 'get_current_script' (60% confidence)
+src\intellicrack\ui\panels\script_manager.py:817: unused method 'get_current_script' (60% confidence)
 
 
 4 findings in src\intellicrack\bridges\sandbox_bridge.py
 
-src\intellicrack\bridges\sandbox_bridge.py:535: unused method 'copy_to' (60% confidence)
+src\intellicrack\bridges\sandbox_bridge.py:552: unused method 'copy_to' (60% confidence)
 
-src\intellicrack\bridges\sandbox_bridge.py:580: unused method 'copy_from' (60% confidence)
+src\intellicrack\bridges\sandbox_bridge.py:599: unused method 'copy_from' (60% confidence)
 
-src\intellicrack\bridges\sandbox_bridge.py:652: unused method 'snapshot_create' (60% confidence)
+src\intellicrack\bridges\sandbox_bridge.py:672: unused method 'snapshot_create' (60% confidence)
 
-src\intellicrack\bridges\sandbox_bridge.py:693: unused method 'snapshot_restore' (60% confidence)
+src\intellicrack\bridges\sandbox_bridge.py:714: unused method 'snapshot_restore' (60% confidence)
 
 
 4 findings in src\intellicrack\bridges\schemas.py
@@ -873,46 +858,46 @@ src\intellicrack\bridges\schemas.py:624: unused function 'validate_and_convert' 
 
 4 findings in src\intellicrack\providers\anthropic.py
 
-src\intellicrack\providers\anthropic.py:16: unused import 'MessageParam' (90% confidence)
+src\intellicrack\providers\anthropic.py:15: unused import 'MessageParam' (90% confidence)
 
-src\intellicrack\providers\anthropic.py:16: unused import 'ToolParam' (90% confidence)
+src\intellicrack\providers\anthropic.py:15: unused import 'ToolParam' (90% confidence)
 
 src\intellicrack\providers\anthropic.py:64: unused variable 'KNOWN_MODELS' (60% confidence)
 
 src\intellicrack\providers\anthropic.py:119: unused attribute '_credentials' (60% confidence)
 
 
+4 findings in src\intellicrack\providers\grok.py
+
+src\intellicrack\providers\grok.py:58: unused class 'GrokMessage' (60% confidence)
+
+src\intellicrack\providers\grok.py:64: unused variable 'tool_call_id' (60% confidence)
+
+src\intellicrack\providers\grok.py:68: unused class 'GrokProvider' (60% confidence)
+
+src\intellicrack\providers\grok.py:120: unused attribute '_credentials' (60% confidence)
+
+
 4 findings in src\intellicrack\providers\huggingface.py
 
-src\intellicrack\providers\huggingface.py:94: unused attribute '_api_token' (60% confidence)
+src\intellicrack\providers\huggingface.py:105: unused attribute '_api_token' (60% confidence)
 
-src\intellicrack\providers\huggingface.py:121: unused attribute '_api_token' (60% confidence)
+src\intellicrack\providers\huggingface.py:132: unused attribute '_api_token' (60% confidence)
 
-src\intellicrack\providers\huggingface.py:143: unused attribute '_credentials' (60% confidence)
+src\intellicrack\providers\huggingface.py:154: unused attribute '_credentials' (60% confidence)
 
-src\intellicrack\providers\huggingface.py:171: unused attribute '_api_token' (60% confidence)
+src\intellicrack\providers\huggingface.py:182: unused attribute '_api_token' (60% confidence)
 
 
 4 findings in src\intellicrack\providers\ollama.py
 
-src\intellicrack\providers\ollama.py:76: unused property 'local_available' (60% confidence)
+src\intellicrack\providers\ollama.py:84: unused property 'local_available' (60% confidence)
 
-src\intellicrack\providers\ollama.py:85: unused property 'cloud_available' (60% confidence)
+src\intellicrack\providers\ollama.py:93: unused property 'cloud_available' (60% confidence)
 
-src\intellicrack\providers\ollama.py:116: unused attribute '_credentials' (60% confidence)
+src\intellicrack\providers\ollama.py:124: unused attribute '_credentials' (60% confidence)
 
-src\intellicrack\providers\ollama.py:656: unused method 'pull_model' (60% confidence)
-
-
-4 findings in src\intellicrack\providers\openai.py
-
-src\intellicrack\providers\openai.py:24: unused import 'ChatCompletionMessageParam' (90% confidence)
-
-src\intellicrack\providers\openai.py:52: unused class 'OpenAIMessage' (60% confidence)
-
-src\intellicrack\providers\openai.py:58: unused variable 'tool_call_id' (60% confidence)
-
-src\intellicrack\providers\openai.py:110: unused attribute '_credentials' (60% confidence)
+src\intellicrack\providers\ollama.py:695: unused method 'pull_model' (60% confidence)
 
 
 4 findings in src\intellicrack\ui\panels\process_panel.py
@@ -935,22 +920,31 @@ src\intellicrack\core\config.py:577: unused method 'is_provider_enabled' (60% co
 src\intellicrack\core\config.py:589: unused method 'is_tool_enabled' (60% confidence)
 
 
+3 findings in src\intellicrack\providers\openai.py
+
+src\intellicrack\providers\openai.py:65: unused class 'OpenAIMessage' (60% confidence)
+
+src\intellicrack\providers\openai.py:71: unused variable 'tool_call_id' (60% confidence)
+
+src\intellicrack\providers\openai.py:123: unused attribute '_credentials' (60% confidence)
+
+
 3 findings in src\intellicrack\ui\embedding\embedded_widget.py
 
-src\intellicrack\ui\embedding\embedded_widget.py:170: unused attribute 'dwFlags' (60% confidence)
+src\intellicrack\ui\embedding\embedded_widget.py:178: unused attribute 'dwFlags' (60% confidence)
 
-src\intellicrack\ui\embedding\embedded_widget.py:171: unused attribute 'wShowWindow' (60% confidence)
+src\intellicrack\ui\embedding\embedded_widget.py:179: unused attribute 'wShowWindow' (60% confidence)
 
-src\intellicrack\ui\embedding\embedded_widget.py:367: unused method 'get_loaded_file' (60% confidence)
+src\intellicrack\ui\embedding\embedded_widget.py:375: unused method 'get_loaded_file' (60% confidence)
 
 
 3 findings in src\intellicrack\ui\embedding\radare2_widget.py
 
-src\intellicrack\ui\embedding\radare2_widget.py:189: unused method 'sync_with_bridge' (60% confidence)
+src\intellicrack\ui\embedding\radare2_widget.py:190: unused method 'sync_with_bridge' (60% confidence)
 
-src\intellicrack\ui\embedding\radare2_widget.py:198: unused method 'get_bridge' (60% confidence)
+src\intellicrack\ui\embedding\radare2_widget.py:199: unused method 'get_bridge' (60% confidence)
 
-src\intellicrack\ui\embedding\radare2_widget.py:253: unused method 'set_executable_path' (60% confidence)
+src\intellicrack\ui\embedding\radare2_widget.py:254: unused method 'set_executable_path' (60% confidence)
 
 
 3 findings in src\intellicrack\ui\panels\frida_panel.py
@@ -982,16 +976,16 @@ src\intellicrack\ui\resources\resource_helper.py:168: unused function 'resource_
 
 2 findings in src\intellicrack\providers\google.py
 
-src\intellicrack\providers\google.py:59: unused variable 'KNOWN_MODELS' (60% confidence)
+src\intellicrack\providers\google.py:58: unused variable 'KNOWN_MODELS' (60% confidence)
 
-src\intellicrack\providers\google.py:102: unused attribute '_credentials' (60% confidence)
+src\intellicrack\providers\google.py:101: unused attribute '_credentials' (60% confidence)
 
 
 2 findings in src\intellicrack\providers\openrouter.py
 
-src\intellicrack\providers\openrouter.py:93: unused attribute '_credentials' (60% confidence)
+src\intellicrack\providers\openrouter.py:106: unused attribute '_credentials' (60% confidence)
 
-src\intellicrack\providers\openrouter.py:586: unused method 'get_generation' (60% confidence)
+src\intellicrack\providers\openrouter.py:621: unused method 'get_generation' (60% confidence)
 
 
 2 findings in src\intellicrack\ui\panels\binary_panel.py
@@ -1024,19 +1018,19 @@ src\intellicrack\ui\session_manager.py:824: unused method 'get_description' (60%
 
 2 findings in src\intellicrack\ui\tool_config.py
 
-src\intellicrack\ui\tool_config.py:657: unused attribute '_current_tool' (60% confidence)
+src\intellicrack\ui\tool_config.py:658: unused attribute '_current_tool' (60% confidence)
 
 src\intellicrack\ui\tool_config.py:735: unused attribute '_current_tool' (60% confidence)
 
 
 1 findings in src\intellicrack\__init__.py
 
-src\intellicrack\__init__.py:55: unused function '__getattr__' (60% confidence)
+src\intellicrack\__init__.py:42: unused function '__getattr__' (60% confidence)
 
 
 1 findings in src\intellicrack\bridges\installer.py
 
-src\intellicrack\bridges\installer.py:664: unused method 'get_all_tool_status' (60% confidence)
+src\intellicrack\bridges\installer.py:666: unused method 'get_all_tool_status' (60% confidence)
 
 
 1 findings in src\intellicrack\bridges\named_pipe_client.py
@@ -1051,7 +1045,7 @@ src\intellicrack\core\license_analyzer.py:1720: unused attribute 'detail' (60% c
 
 1 findings in src\intellicrack\providers\xpu_utils.py
 
-src\intellicrack\providers\xpu_utils.py:567: unused function 'get_optimal_dtype_for_xpu' (60% confidence)
+src\intellicrack\providers\xpu_utils.py:578: unused function 'get_optimal_dtype_for_xpu' (60% confidence)
 
 
 1 findings in src\intellicrack\sandbox\manager.py
@@ -1061,12 +1055,12 @@ src\intellicrack\sandbox\manager.py:357: unused method 'cleanup_stale' (60% conf
 
 1 findings in src\intellicrack\sandbox\windows.py
 
-src\intellicrack\sandbox\windows.py:212: unused attribute 'started_at' (60% confidence)
+src\intellicrack\sandbox\windows.py:213: unused attribute 'started_at' (60% confidence)
 
 
 1 findings in src\intellicrack\ui\app.py
 
-src\intellicrack\ui\app.py:145: unused attribute '_theme_manager' (60% confidence)
+src\intellicrack\ui\app.py:146: unused attribute '_theme_manager' (60% confidence)
 
 
 1 findings in src\intellicrack\ui\chat.py

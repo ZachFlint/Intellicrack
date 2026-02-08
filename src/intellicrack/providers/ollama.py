@@ -8,9 +8,8 @@ from __future__ import annotations
 
 import json
 import time
-from datetime import datetime
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, cast, override
 
 import httpx
 
@@ -18,7 +17,7 @@ import httpx
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-from ..core.logging import get_logger, log_provider_request, log_provider_response
+from ..core.logging import get_logger, log_provider_request
 from ..core.types import (
     Message,
     ModelInfo,
@@ -32,6 +31,15 @@ from .base import LLMProviderBase
 
 
 _MSG_NOT_CONNECTED = "Not connected"
+_ERR_CONNECT_BOTH_FAILED = "Could not connect to local or cloud Ollama. Ensure local Ollama is running or provide a valid API key."
+_ERR_CLOUD_NOT_AVAILABLE = "Ollama cloud not available"
+_ERR_LOCAL_NOT_AVAILABLE = "Local Ollama not available"
+_ERR_NO_CLIENT = "No Ollama client available"
+_ERR_API_ERROR = "Ollama API error: %s"
+_ERR_REQUEST_FAILED = "Ollama request failed: %s"
+_ERR_STREAM_FAILED = "Ollama stream failed: %s"
+_ERR_LOCAL_PULL_UNAVAILABLE = "Local Ollama not available for model pull"
+_ERR_PULL_FAILED = "Failed to pull model %s: %s"
 
 
 class OllamaProvider(LLMProviderBase):
@@ -111,7 +119,7 @@ class OllamaProvider(LLMProviderBase):
         await self._connect_cloud()
 
         if not self._local_available and not self._cloud_available:
-            raise ProviderError("Could not connect to local or cloud Ollama. Ensure local Ollama is running or provide a valid API key.")
+            raise ProviderError(_ERR_CONNECT_BOTH_FAILED)
 
         self._credentials = credentials
         self._connected = True
@@ -288,12 +296,12 @@ class OllamaProvider(LLMProviderBase):
         """
         if model.startswith("cloud/"):
             if not self._cloud_available or not self._cloud_client:
-                raise ProviderError("Ollama cloud not available")
+                raise ProviderError(_ERR_CLOUD_NOT_AVAILABLE)
             return self._cloud_client, self.CLOUD_API_URL, model[6:]
 
         if model.startswith("local/"):
             if not self._local_available or not self._local_client:
-                raise ProviderError("Local Ollama not available")
+                raise ProviderError(_ERR_LOCAL_NOT_AVAILABLE)
             return self._local_client, self._local_url, model[6:]
 
         if self._local_available and self._local_client:
@@ -301,9 +309,10 @@ class OllamaProvider(LLMProviderBase):
         if self._cloud_available and self._cloud_client:
             return self._cloud_client, self.CLOUD_API_URL, model
 
-        raise ProviderError("No Ollama client available")
+        raise ProviderError(_ERR_NO_CLIENT)
 
-    def _estimate_context_window(self, model_name: str, _details: dict[str, object]) -> int:
+    @staticmethod
+    def _estimate_context_window(model_name: str, _details: dict[str, object]) -> int:
         """Estimate context window for a model.
 
         Args:
@@ -326,7 +335,8 @@ class OllamaProvider(LLMProviderBase):
             return 32768
         return 16384 if "deepseek" in name_lower else 4096
 
-    def _estimate_tool_support(self, model_name: str) -> bool:
+    @staticmethod
+    def _estimate_tool_support(model_name: str) -> bool:
         """Estimate if model supports tool calling.
 
         Args:
@@ -350,7 +360,8 @@ class OllamaProvider(LLMProviderBase):
         ]
         return any(cap in name_lower for cap in tool_capable)
 
-    def _estimate_vision_support(self, model_name: str) -> bool:
+    @staticmethod
+    def _estimate_vision_support(model_name: str) -> bool:
         """Estimate if model supports vision.
 
         Args:
@@ -402,85 +413,111 @@ class OllamaProvider(LLMProviderBase):
             tools_count=len(tools) if tools else 0,
         )
 
+        request_body: dict[str, object] = {
+            "model": actual_model,
+            "messages": ollama_messages,
+            "stream": False,
+            "options": {
+                "temperature": temperature,
+                "num_predict": max_tokens,
+            },
+        }
+        if tools:
+            request_body["tools"] = self._convert_tools_to_provider_format(tools)
+
         start_time = time.perf_counter()
+        data = await self._make_ollama_api_call(
+            client=client,
+            base_url=base_url,
+            request_body=request_body,
+        )
+        duration_ms = (time.perf_counter() - start_time) * 1000
 
+        content = data.get("message", {}).get("content", "")
+        tool_calls = self._parse_ollama_tool_calls(data)
+
+        return self._build_chat_response(
+            provider="ollama",
+            model=actual_model,
+            content=content,
+            tool_calls=tool_calls,
+            duration_ms=duration_ms,
+        )
+
+    @staticmethod
+    async def _make_ollama_api_call(
+        *,
+        client: httpx.AsyncClient,
+        base_url: str,
+        request_body: dict[str, object],
+    ) -> dict[str, Any]:
+        """Execute the Ollama API chat call with error handling.
+
+        Args:
+            client: The httpx async client to use.
+            base_url: The base URL for the Ollama API.
+            request_body: The request payload.
+
+        Returns:
+            Parsed JSON response dictionary.
+
+        Raises:
+            ProviderError: If the API call fails.
+        """
         try:
-            request_body: dict[str, object] = {
-                "model": actual_model,
-                "messages": ollama_messages,
-                "stream": False,
-                "options": {
-                    "temperature": temperature,
-                    "num_predict": max_tokens,
-                },
-            }
-
-            if tools:
-                request_body["tools"] = self._convert_tools_to_provider_format(tools)
-
             response = await client.post(
                 f"{base_url}/api/chat",
                 json=request_body,
             )
             response.raise_for_status()
-            data = response.json()
-
-            duration_ms = (time.perf_counter() - start_time) * 1000
-
-            content = data.get("message", {}).get("content", "")
-            tool_calls: list[ToolCall] = []
-
-            if "message" in data and "tool_calls" in data["message"]:
-                for idx, tc in enumerate(data["message"]["tool_calls"]):
-                    func_data = tc.get("function", {})
-                    func_name = func_data.get("name", "")
-                    raw_args = func_data.get("arguments", {})
-                    parsed_args: dict[str, Any]
-                    if isinstance(raw_args, str):
-                        try:
-                            parsed_args = json.loads(raw_args)
-                        except json.JSONDecodeError:
-                            parsed_args = {}
-                    elif isinstance(raw_args, dict):
-                        parsed_args = cast("dict[str, Any]", raw_args)
-                    else:
-                        parsed_args = {}
-
-                    tool_call = ToolCall(
-                        id=f"call_{idx}",
-                        tool_name=(func_name.split(".")[0] if "." in func_name else func_name),
-                        function_name=func_name,
-                        arguments=parsed_args,
-                    )
-                    tool_calls.append(tool_call)
-                    self._logger.debug(
-                        "tool_call_parsed",
-                        extra={
-                            "tool_name": tool_call.tool_name,
-                            "arguments_count": len(tool_call.arguments),
-                        },
-                    )
-
-            message = Message(
-                role="assistant",
-                content=content,
-                tool_calls=tool_calls or None,
-                timestamp=datetime.now(),
-            )
-
-            log_provider_response(
-                provider="ollama",
-                model=actual_model,
-                tool_calls_count=len(tool_calls),
-                duration_ms=duration_ms,
-            )
-
-            return message, tool_calls or None
-
+            return cast("dict[str, Any]", response.json())
         except httpx.HTTPStatusError as e:
-            raise ProviderError(f"Ollama API error: {e}") from e
+            raise ProviderError(_ERR_API_ERROR % e) from e
         except Exception as e:
-            raise ProviderError(f"Ollama request failed: {e}") from e
+            raise ProviderError(_ERR_REQUEST_FAILED % e) from e
+
+    def _parse_ollama_tool_calls(self, data: dict[str, Any]) -> list[ToolCall]:
+        """Parse tool calls from an Ollama API response.
+
+        Args:
+            data: The parsed JSON response from Ollama.
+
+        Returns:
+            List of parsed ToolCall instances.
+        """
+        tool_calls: list[ToolCall] = []
+        message_data = data.get("message")
+        if not isinstance(message_data, dict) or "tool_calls" not in message_data:
+            return tool_calls
+
+        raw_tool_calls = cast("list[dict[str, Any]]", message_data["tool_calls"])
+        for idx, tc in enumerate(raw_tool_calls):
+            func_data: dict[str, Any] = tc.get("function", {})
+            func_name: str = str(func_data.get("name", ""))
+            raw_args: Any = func_data.get("arguments", {})
+
+            raw_arguments: str | dict[str, object]
+            if isinstance(raw_args, str):
+                raw_arguments = raw_args
+            elif isinstance(raw_args, dict):
+                raw_arguments = cast("dict[str, object]", raw_args)
+            else:
+                raw_arguments = "{}"
+
+            tool_call = self._parse_tool_call_common(
+                call_id=f"call_{idx}",
+                function_name=func_name,
+                raw_arguments=raw_arguments,
+            )
+            tool_calls.append(tool_call)
+            self._logger.debug(
+                "tool_call_parsed",
+                extra={
+                    "tool_name": tool_call.tool_name,
+                    "arguments_count": len(tool_call.arguments),
+                },
+            )
+        return tool_calls
 
     async def chat_stream(
         self,
@@ -549,12 +586,13 @@ class OllamaProvider(LLMProviderBase):
 
         except Exception as e:
             if not self._cancel_requested:
-                raise ProviderError(f"Ollama stream failed: {e}") from e
+                raise ProviderError(_ERR_STREAM_FAILED % e) from e
 
     async def cancel_request(self) -> None:
         """Cancel any in-flight request."""
         self._cancel_requested = True
 
+    @override
     def _convert_messages_to_provider_format(
         self,
         messages: list[Message],
@@ -608,6 +646,7 @@ class OllamaProvider(LLMProviderBase):
 
         return ollama_messages
 
+    @override
     def _convert_tools_to_provider_format(
         self,
         tools: list[ToolDefinition],
@@ -666,7 +705,7 @@ class OllamaProvider(LLMProviderBase):
             ProviderError: If local Ollama not connected or pull fails.
         """
         if not self._local_available or not self._local_client:
-            raise ProviderError("Local Ollama not available for model pull")
+            raise ProviderError(_ERR_LOCAL_PULL_UNAVAILABLE)
 
         actual_model = model_name
         if model_name.startswith("local/"):
@@ -688,4 +727,4 @@ class OllamaProvider(LLMProviderBase):
                         except json.JSONDecodeError:
                             continue
         except Exception as e:
-            raise ProviderError(f"Failed to pull model {actual_model}: {e}") from e
+            raise ProviderError(_ERR_PULL_FAILED % (actual_model, e)) from e

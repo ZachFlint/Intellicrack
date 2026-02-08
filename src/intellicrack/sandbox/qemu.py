@@ -822,9 +822,7 @@ class QEMUSandbox(SandboxBase):
                     "virtio-9p-pci,fsdev=fsdev0,mount_tag=shared",
                 ])
 
-        cmd.extend(["-netdev", netdev])
-        cmd.extend(["-device", "virtio-net-pci,netdev=net0"])
-
+        cmd.extend(["-netdev", netdev, "-device", "virtio-net-pci,netdev=net0"])
         cmd.extend(["-qmp", f"tcp:127.0.0.1:{monitor_port},server,nowait"])
 
         cmd.extend([
@@ -1444,7 +1442,7 @@ python3 /mnt/shared/monitor/agent.py &
 
         _logger.debug("guest_agent_scripts_created", extra={"path": str(monitor_dir)})
 
-    async def execute(
+    async def run_command(
         self,
         command: str,
         timeout: int | None = None,
@@ -1477,10 +1475,41 @@ python3 /mnt/shared/monitor/agent.py &
             raise SandboxError(_ERR_NO_SHARED_FOLDER)
 
         script_id = secrets.token_hex(8)
+        result_name = f"result_{script_id}.txt"
+        script_name, script_content = self._generate_execution_script(
+            command=command,
+            working_directory=working_directory,
+            script_id=script_id,
+            result_name=result_name,
+        )
+
+        script_path = self._shared_folder / "input" / script_name
+        result_path = self._shared_folder / "output" / result_name
+        script_path.write_text(script_content, encoding="utf-8")
+
+        return await self._poll_for_result(result_path=result_path, timeout=effective_timeout)
+
+    def _generate_execution_script(
+        self,
+        *,
+        command: str,
+        working_directory: str | None,
+        script_id: str,
+        result_name: str,
+    ) -> tuple[str, str]:
+        """Generate an OS-specific execution script for the sandbox guest.
+
+        Args:
+            command: Command to execute in the guest.
+            working_directory: Optional working directory for the command.
+            script_id: Unique identifier for the script file.
+            result_name: Name of the result file.
+
+        Returns:
+            Tuple of (script_filename, script_content).
+        """
         if self._qemu_config.guest_os == GuestOS.WINDOWS:
             script_name = f"exec_{script_id}.cmd"
-            result_name = f"result_{script_id}.txt"
-
             script_content = f"""@echo off
 {f'cd /d "{working_directory}"' if working_directory else ""}
 {command}
@@ -1488,20 +1517,33 @@ echo %ERRORLEVEL% > "Z:\\output\\{result_name}"
 """
         else:
             script_name = f"exec_{script_id}.sh"
-            result_name = f"result_{script_id}.txt"
-
             script_content = f"""#!/bin/bash
 {f'cd "{working_directory}"' if working_directory else ""}
 {command}
 echo $? > "/mnt/shared/output/{result_name}"
 """
+        return script_name, script_content
 
-        script_path = self._shared_folder / "input" / script_name
-        result_path = self._shared_folder / "output" / result_name
-        script_path.write_text(script_content, encoding="utf-8")
+    @staticmethod
+    async def _poll_for_result(
+        *,
+        result_path: Path,
+        timeout: int,
+    ) -> tuple[int, str, str]:
+        """Poll the shared folder for command execution results.
 
+        Args:
+            result_path: Path to the expected result file.
+            timeout: Maximum time in seconds to wait.
+
+        Returns:
+            Tuple of (exit_code, stdout, stderr).
+
+        Raises:
+            SandboxError: If the command times out.
+        """
         start_time = time.time()
-        while time.time() - start_time < effective_timeout:
+        while time.time() - start_time < timeout:
             await asyncio.sleep(1)
             if result_path.exists():
                 try:
@@ -1512,7 +1554,7 @@ echo $? > "/mnt/shared/output/{result_name}"
                 else:
                     return (exit_code, "", "")
 
-        _logger.error("command_timed_out", extra={"timeout_seconds": effective_timeout})
+        _logger.error("command_timed_out", extra={"timeout_seconds": timeout})
         raise SandboxError(_ERR_CMD_TIMEOUT)
 
     async def run_binary(
@@ -1566,7 +1608,7 @@ echo $? > "/mnt/shared/output/{result_name}"
 
         result: ExecutionResult
         try:
-            exit_code, stdout, stderr = await self.execute(
+            exit_code, stdout, stderr = await self.run_command(
                 command,
                 timeout=effective_timeout,
             )

@@ -11,7 +11,7 @@ import hashlib
 import math
 import re
 from collections import Counter
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 import capstone
 import lief
@@ -259,10 +259,10 @@ class BinaryBridge(BinaryOperationsBridge):
                         ToolParameter(
                             name="algorithm",
                             type="string",
-                            description="Hash algorithm (md5, sha1, sha256)",
+                            description="Hash algorithm (md5, sha256)",
                             required=False,
                             default="sha256",
-                            enum=["md5", "sha1", "sha256"],
+                            enum=["md5", "sha256"],
                         ),
                     ],
                     returns="Hex digest of hash",
@@ -377,6 +377,7 @@ class BinaryBridge(BinaryOperationsBridge):
         await super().shutdown()
         _logger.info("bridge_shutdown")
 
+    @override
     async def is_available(self) -> bool:
         """Check if binary operations are available.
 
@@ -967,7 +968,7 @@ class BinaryBridge(BinaryOperationsBridge):
         """Calculate hash of the binary.
 
         Args:
-            algorithm: Hash algorithm (md5, sha1, sha256).
+            algorithm: Hash algorithm (md5, sha256).
 
         Returns:
             Hex digest of hash.
@@ -980,8 +981,6 @@ class BinaryBridge(BinaryOperationsBridge):
 
         if algorithm == "md5":
             return hashlib.md5(self._data, usedforsecurity=False).hexdigest()
-        if algorithm == "sha1":
-            return hashlib.sha1(self._data, usedforsecurity=False).hexdigest()
         if algorithm == "sha256":
             return hashlib.sha256(self._data).hexdigest()
         raise ToolError(_ERR_UNKNOWN_ALGO)

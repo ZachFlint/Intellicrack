@@ -10,7 +10,7 @@ from __future__ import annotations
 import ctypes
 from ctypes import wintypes
 from pathlib import Path
-from typing import Literal, cast
+from typing import Literal, cast, override
 
 from ..core.logging import get_logger
 from ..core.types import (
@@ -468,6 +468,7 @@ class ProcessBridge(ToolBridgeBase):
         await super().shutdown()
         _logger.info("process_bridge_shutdown")
 
+    @override
     async def is_available(self) -> bool:
         """Check if process bridge is available.
 

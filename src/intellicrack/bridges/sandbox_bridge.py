@@ -32,6 +32,19 @@ if TYPE_CHECKING:
 
 _logger = get_logger("bridges.sandbox")
 
+_ERR_CREATE_FAILED = "Failed to create sandbox"
+_ERR_DESTROY_FAILED = "Failed to destroy sandbox"
+_ERR_BINARY_NOT_FOUND = "Binary not found"
+_ERR_EXECUTION_FAILED = "Binary execution failed"
+_ERR_INSTANCE_NOT_FOUND = "Sandbox instance not found"
+_ERR_CMD_EXEC_FAILED = "Command execution failed"
+_ERR_SRC_NOT_FOUND = "Source file not found"
+_ERR_COPY_TO_FAILED = "Copy to sandbox failed"
+_ERR_COPY_FROM_FAILED = "Copy from sandbox failed"
+_ERR_QEMU_ONLY = "Snapshots only supported for QEMU sandboxes"
+_ERR_SNAPSHOT_CREATE_FAILED = "Snapshot creation failed"
+_ERR_SNAPSHOT_RESTORE_FAILED = "Snapshot restore failed"
+
 
 class SandboxBridge(ToolBridgeBase):
     """Bridge for sandbox operations.
@@ -410,8 +423,9 @@ class SandboxBridge(ToolBridgeBase):
             }
 
         except SandboxError as e:
-            _logger.error("sandbox_create_failed", extra={"error": str(e)})
-            raise ToolError(f"Failed to create sandbox: {e}") from e
+            _logger.warning("sandbox_create_failed", extra={"error": str(e)})
+            msg = f"{_ERR_CREATE_FAILED}: {e}"
+            raise ToolError(msg) from e
 
     async def destroy(self, instance_id: str) -> dict[str, Any]:
         """Destroy a sandbox instance.
@@ -430,11 +444,12 @@ class SandboxBridge(ToolBridgeBase):
         try:
             await manager.destroy(instance_id)
             _logger.info("sandbox_destroyed", extra={"instance_id": instance_id})
-            return {"success": True, "instance_id": instance_id}
-
         except SandboxError as e:
-            _logger.error("sandbox_destroy_failed", extra={"instance_id": instance_id, "error": str(e)})
-            raise ToolError(f"Failed to destroy sandbox: {e}") from e
+            _logger.warning("sandbox_destroy_failed", extra={"instance_id": instance_id, "error": str(e)})
+            msg = f"{_ERR_DESTROY_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
+            return {"success": True, "instance_id": instance_id}
 
     async def run_binary(
         self,
@@ -463,7 +478,8 @@ class SandboxBridge(ToolBridgeBase):
 
         path = Path(binary_path)
         if not path.exists():
-            raise ToolError(f"Binary not found: {binary_path}")
+            msg = f"{_ERR_BINARY_NOT_FOUND}: {binary_path}"
+            raise ToolError(msg)
 
         try:
             sb_type: SandboxType = "windows" if sandbox_type == "windows" else "qemu"
@@ -478,12 +494,12 @@ class SandboxBridge(ToolBridgeBase):
             _logger.info(
                 "binary_execution_completed", extra={"instance_id": instance.id, "result": report.result, "exit_code": report.exit_code}
             )
-
-            return self._report_to_dict(report, instance.id)
-
         except Exception as e:
-            _logger.error("binary_execution_failed", extra={"error": str(e)})
-            raise ToolError(f"Binary execution failed: {e}") from e
+            _logger.warning("binary_execution_failed", extra={"error": str(e)})
+            msg = f"{_ERR_EXECUTION_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
+            return self._report_to_dict(report, instance.id)
 
     async def execute(
         self,
@@ -510,10 +526,11 @@ class SandboxBridge(ToolBridgeBase):
 
         instance = await manager.get(instance_id)
         if instance is None:
-            raise ToolError(f"Sandbox instance not found: {instance_id}")
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
 
         try:
-            exit_code, stdout, stderr = await instance.sandbox.execute(
+            exit_code, stdout, stderr = await instance.sandbox.run_command(
                 command=command,
                 timeout=timeout,
                 working_directory=working_directory,
@@ -521,16 +538,16 @@ class SandboxBridge(ToolBridgeBase):
 
             instance.touch()
             _logger.info("command_executed", extra={"instance_id": instance_id, "exit_code": exit_code})
-
+        except SandboxError as e:
+            _logger.warning("command_execution_failed", extra={"instance_id": instance_id, "error": str(e)})
+            msg = f"{_ERR_CMD_EXEC_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
             return {
                 "exit_code": exit_code,
                 "stdout": stdout,
                 "stderr": stderr,
             }
-
-        except SandboxError as e:
-            _logger.error("command_execution_failed", extra={"instance_id": instance_id, "error": str(e)})
-            raise ToolError(f"Command execution failed: {e}") from e
 
     async def copy_to(
         self,
@@ -555,27 +572,29 @@ class SandboxBridge(ToolBridgeBase):
 
         instance = await manager.get(instance_id)
         if instance is None:
-            raise ToolError(f"Sandbox instance not found: {instance_id}")
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
 
         source_path = Path(source)
         if not source_path.exists():
-            raise ToolError(f"Source file not found: {source}")
+            msg = f"{_ERR_SRC_NOT_FOUND}: {source}"
+            raise ToolError(msg)
 
         try:
             await instance.sandbox.copy_to_sandbox(source_path, dest)
             instance.touch()
             _logger.info("file_copied_to_sandbox", extra={"source": source, "instance_id": instance_id, "dest": dest})
-
+        except SandboxError as e:
+            _logger.warning("copy_to_sandbox_failed", extra={"error": str(e)})
+            msg = f"{_ERR_COPY_TO_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
             return {
                 "success": True,
                 "source": source,
                 "dest": dest,
                 "instance_id": instance_id,
             }
-
-        except SandboxError as e:
-            _logger.error("copy_to_sandbox_failed", extra={"error": str(e)})
-            raise ToolError(f"Copy to sandbox failed: {e}") from e
 
     async def copy_from(
         self,
@@ -600,7 +619,8 @@ class SandboxBridge(ToolBridgeBase):
 
         instance = await manager.get(instance_id)
         if instance is None:
-            raise ToolError(f"Sandbox instance not found: {instance_id}")
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
 
         dest_path = Path(dest)
 
@@ -608,17 +628,17 @@ class SandboxBridge(ToolBridgeBase):
             await instance.sandbox.copy_from_sandbox(source, dest_path)
             instance.touch()
             _logger.info("file_copied_from_sandbox", extra={"instance_id": instance_id, "source": source, "dest": dest})
-
+        except SandboxError as e:
+            _logger.warning("copy_from_sandbox_failed", extra={"error": str(e)})
+            msg = f"{_ERR_COPY_FROM_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
             return {
                 "success": True,
                 "source": source,
                 "dest": dest,
                 "instance_id": instance_id,
             }
-
-        except SandboxError as e:
-            _logger.error("copy_from_sandbox_failed", extra={"error": str(e)})
-            raise ToolError(f"Copy from sandbox failed: {e}") from e
 
     async def status(self) -> dict[str, Any]:
         """Get sandbox manager status.
@@ -670,25 +690,26 @@ class SandboxBridge(ToolBridgeBase):
 
         instance = await manager.get(instance_id)
         if instance is None:
-            raise ToolError(f"Sandbox instance not found: {instance_id}")
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
 
         if instance.sandbox_type != "qemu":
-            raise ToolError("Snapshots only supported for QEMU sandboxes")
+            raise ToolError(_ERR_QEMU_ONLY)
 
         try:
             snapshot_id = await instance.sandbox.take_snapshot(name)
             instance.touch()
             _logger.info("snapshot_created", extra={"snapshot_name": name, "instance_id": instance_id, "snapshot_id": snapshot_id})
-
+        except SandboxError as e:
+            _logger.warning("snapshot_creation_failed", extra={"error": str(e)})
+            msg = f"{_ERR_SNAPSHOT_CREATE_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
             return {
                 "snapshot_id": snapshot_id,
                 "name": name,
                 "instance_id": instance_id,
             }
-
-        except SandboxError as e:
-            _logger.error("snapshot_creation_failed", extra={"error": str(e)})
-            raise ToolError(f"Snapshot creation failed: {e}") from e
 
     async def snapshot_restore(
         self,
@@ -711,28 +732,29 @@ class SandboxBridge(ToolBridgeBase):
 
         instance = await manager.get(instance_id)
         if instance is None:
-            raise ToolError(f"Sandbox instance not found: {instance_id}")
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
 
         if instance.sandbox_type != "qemu":
-            raise ToolError("Snapshots only supported for QEMU sandboxes")
+            raise ToolError(_ERR_QEMU_ONLY)
 
         try:
             await instance.sandbox.restore_snapshot(snapshot_id)
             instance.touch()
             _logger.info("snapshot_restored", extra={"instance_id": instance_id, "snapshot_id": snapshot_id})
-
+        except SandboxError as e:
+            _logger.warning("snapshot_restore_failed", extra={"error": str(e)})
+            msg = f"{_ERR_SNAPSHOT_RESTORE_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
             return {
                 "success": True,
                 "instance_id": instance_id,
                 "snapshot_id": snapshot_id,
             }
 
-        except SandboxError as e:
-            _logger.error("snapshot_restore_failed", extra={"error": str(e)})
-            raise ToolError(f"Snapshot restore failed: {e}") from e
-
+    @staticmethod
     def _report_to_dict(
-        self,
         report: ExecutionReport,
         instance_id: str,
     ) -> dict[str, Any]:

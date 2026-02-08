@@ -1789,7 +1789,7 @@ packages:
 - pypi: ./
   name: intellicrack
   version: 1.0.0
-  sha256: e006177e2fab5c25fa48baaa45a316cf70a7e97a7481bbf70d034a0c2f278c89
+  sha256: 81ced5cc91189b4e09a868a05488e510526b86c2a6e0c610802629521cb93207
   requires_dist:
   - networkx>=3.6.1,<4
   - markdown-it-py>=3.0,<4

@@ -556,10 +556,8 @@ unfixable = [
 
 ignore = [
     "E501",    # line-too-long
-    "T201",    # print
     "D203",    # incorrect-blank-line-before-class
     "D213",    # multi-line-summary-second-line
-    "S101",    # assert
     "S603",    # subprocess-without-shell-equals-true
     "S607",    # partial-path
     "PLR0911", # too-many-return-statements
@@ -573,42 +571,10 @@ fixable = ["ALL"]
 dummy-variable-rgx = "^(_+|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.ruff.lint.per-file-ignores]
-"src/intellicrack/ui/highlighter.py" = ["N802"]
-"src/intellicrack/bridges/*.py" = ["S404", "TRY003", "TRY300", "TRY400", "PLR6301"]
-"src/intellicrack/sandbox/*.py" = ["S404"]
-"src/intellicrack/ui/tool_config.py" = ["S404"]
-"src/intellicrack/ui/sandbox_config.py" = ["S404"]
-"scripts/generate_tree.py" = ["S404"]
-"src/intellicrack/ui/app.py" = ["SIM105"]
-"src/intellicrack/core/process_manager.py" = ["S404"]
-"src/intellicrack/ui/embedding/*.py" = [
-    "S404",     # subprocess module - needed for launching external tools
-    "N802",     # Qt method names (resizeEvent, closeEvent, etc.) - framework requirement
-    "PLR6301",  # Methods could be static - designed as template methods for subclasses
-    "TC003",    # Path import - used at runtime, not just type hints
-]
-"src/intellicrack/ui/panels/*.py" = [
-    "PLR6301",  # Methods could be static - designed for subclass implementation
-]
-"src/intellicrack/providers/base.py" = ["TC001"]
-"src/intellicrack/providers/*.py" = ["TC003", "TRY003", "PLR6301", "TRY300", "PLR0914", "S404", "PLC0415", "PLW0603", "F401"]
-"tests/**/*.py" = [
-    "PLR6301",  # Method could be a function - pytest test methods need self
-    "PLR2004",  # Magic value used - test values are intentional
-    "ARG002",   # Unused function argument - fixtures may be unused
-    "S102",     # Use of exec - may be needed for dynamic code testing
-    "S404",     # subprocess module - needed for process management tests
-    "D104",     # Missing docstring in public package - __init__.py files
-    "TC002",    # Third-party import in TYPE_CHECKING - test fixtures often need runtime imports
-    "TC003",    # Standard library import in TYPE_CHECKING - test fixtures often need runtime imports
-    "PLC0415",  # Import at top-level - dynamic imports acceptable in tests
-    "SIM108",   # Use ternary operator - readability preference in tests
-    "PLR6201",  # Use set literal - tuple membership is fine
-    "PERF401",  # Use list comprehension - explicit loops can be clearer in tests
-]
+"tests/**" = ["S101", "S102", "S404"]
 
 [tool.ruff.lint.mccabe]
-max-complexity = 50
+max-complexity = 30
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

@@ -25,12 +25,8 @@ import importlib
 import logging
 from typing import TYPE_CHECKING
 
+from intellicrack._metadata import __author__, __email__, __version__
 
-_logger = logging.getLogger("intellicrack")
-
-__version__ = "1.0.0"
-__author__ = "Zachary Flint"
-__email__ = "zach.flint2@gmail.com"
 
 if TYPE_CHECKING:
     from intellicrack.core import (
@@ -41,15 +37,6 @@ if TYPE_CHECKING:
         ToolRegistry,
     )
     from intellicrack.main import main
-
-_LAZY_IMPORT_MAP: dict[str, tuple[str, str]] = {
-    "main": ("intellicrack.main", "main"),
-    "Config": ("intellicrack.core.config", "Config"),
-    "Orchestrator": ("intellicrack.core.orchestrator", "Orchestrator"),
-    "SessionManager": ("intellicrack.core.session", "SessionManager"),
-    "ToolRegistry": ("intellicrack.core.tools", "ToolRegistry"),
-    "ScriptManager": ("intellicrack.core.script_gen", "ScriptManager"),
-}
 
 
 def __getattr__(name: str) -> object:
@@ -67,16 +54,26 @@ def __getattr__(name: str) -> object:
     Raises:
         AttributeError: If the attribute is not found.
     """
-    if name in _LAZY_IMPORT_MAP:
-        module_path, attr_name = _LAZY_IMPORT_MAP[name]
-        module = importlib.import_module(module_path)
-        attr = getattr(module, attr_name)
-        _logger.debug("lazy_import_resolved", extra={"attribute": name})
-        return attr
+    attr: object
+    if name == "main":
+        attr = importlib.import_module("intellicrack.main").main
+    elif name == "Config":
+        attr = importlib.import_module("intellicrack.core.config").Config
+    elif name == "Orchestrator":
+        attr = importlib.import_module("intellicrack.core.orchestrator").Orchestrator
+    elif name == "SessionManager":
+        attr = importlib.import_module("intellicrack.core.session").SessionManager
+    elif name == "ToolRegistry":
+        attr = importlib.import_module("intellicrack.core.tools").ToolRegistry
+    elif name == "ScriptManager":
+        attr = importlib.import_module("intellicrack.core.script_gen").ScriptManager
+    else:
+        msg = f"module {__name__!r} has no attribute {name!r}"
+        raise AttributeError(msg)
 
-    msg = f"module {__name__!r} has no attribute {name!r}"
-    _logger.debug("lazy_import_attribute_error", extra={"attribute": name})
-    raise AttributeError(msg)
+    logger = logging.getLogger("intellicrack")
+    logger.debug("lazy_import_resolved", extra={"attribute": name})
+    return attr
 
 
 __all__: list[str] = [

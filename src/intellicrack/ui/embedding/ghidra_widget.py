@@ -9,9 +9,8 @@ from __future__ import annotations
 import asyncio
 import os
 import winreg
-from collections.abc import Coroutine
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, override
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.embedding.embedded_widget import EmbeddedToolWidget
@@ -19,6 +18,8 @@ from intellicrack.ui.embedding.win32_helper import Win32WindowHelper
 
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
+
     from PyQt6.QtWidgets import QWidget
 
     from intellicrack.bridges.ghidra import GhidraBridge
@@ -61,6 +62,7 @@ class GhidraWidget(EmbeddedToolWidget):
         self._background_tasks: set[asyncio.Task[object]] = set()
         super().__init__(parent)
 
+    @override
     def get_tool_display_name(self) -> str:
         """Get display name for Ghidra.
 
@@ -83,17 +85,36 @@ class GhidraWidget(EmbeddedToolWidget):
 
         if ghidra_home := os.environ.get("GHIDRA_HOME"):
             home_path = Path(ghidra_home)
-            candidate = home_path / "ghidraRun.bat"
-            if candidate.exists():
-                self._exe_path = candidate
-                self._ghidra_home = home_path
-                return candidate
-            candidate = home_path / "ghidraRun"
-            if candidate.exists():
-                self._exe_path = candidate
-                self._ghidra_home = home_path
-                return candidate
+            for name in ("ghidraRun.bat", "ghidraRun"):
+                candidate = home_path / name
+                if candidate.exists():
+                    self._exe_path = candidate
+                    self._ghidra_home = home_path
+                    return candidate
 
+        if found := self._search_registry_for_ghidra():
+            return found
+
+        if found := self._search_common_paths_for_ghidra():
+            return found
+
+        if found := self._search_project_tools_for_ghidra():
+            return found
+
+        if found := Win32WindowHelper.find_executable_path("ghidraRun.bat"):
+            self._exe_path = found
+            self._ghidra_home = found.parent
+            return found
+
+        _logger.warning("executable_not_found", extra={"tool": "ghidra"})
+        return None
+
+    def _search_registry_for_ghidra(self) -> Path | None:
+        """Search Windows registry for Ghidra installation path.
+
+        Returns:
+            Path to ghidraRun.bat if found, None otherwise.
+        """
         for hkey, subkey in self._REGISTRY_PATHS:
             try:
                 with winreg.OpenKey(hkey, subkey) as key:
@@ -108,7 +129,14 @@ class GhidraWidget(EmbeddedToolWidget):
             except OSError:
                 _logger.debug("registry_key_not_found", extra={"subkey": subkey})
                 continue
+        return None
 
+    def _search_common_paths_for_ghidra(self) -> Path | None:
+        """Search common installation directories for Ghidra.
+
+        Returns:
+            Path to ghidraRun.bat if found, None otherwise.
+        """
         for base in self._COMMON_PATHS:
             if not base.exists():
                 continue
@@ -124,29 +152,31 @@ class GhidraWidget(EmbeddedToolWidget):
                 self._exe_path = candidate
                 self._ghidra_home = base
                 return candidate
+        return None
 
+    def _search_project_tools_for_ghidra(self) -> Path | None:
+        """Search the project tools directory for Ghidra.
+
+        Returns:
+            Path to ghidraRun.bat if found, None otherwise.
+        """
         project_root = Path(__file__).parent.parent.parent.parent.parent
         local_tools = project_root / "tools" / "ghidra"
-        if local_tools.exists():
-            for entry in local_tools.iterdir():
-                if entry.is_dir():
-                    candidate = entry / "ghidraRun.bat"
-                    if candidate.exists():
-                        self._exe_path = candidate
-                        self._ghidra_home = entry
-                        return candidate
-            candidate = local_tools / "ghidraRun.bat"
-            if candidate.exists():
-                self._exe_path = candidate
-                self._ghidra_home = local_tools
-                return candidate
+        if not local_tools.exists():
+            return None
 
-        if found := Win32WindowHelper.find_executable_path("ghidraRun.bat"):
-            self._exe_path = found
-            self._ghidra_home = found.parent
-            return found
-
-        _logger.warning("executable_not_found", extra={"tool": "ghidra"})
+        for entry in local_tools.iterdir():
+            if entry.is_dir():
+                candidate = entry / "ghidraRun.bat"
+                if candidate.exists():
+                    self._exe_path = candidate
+                    self._ghidra_home = entry
+                    return candidate
+        candidate = local_tools / "ghidraRun.bat"
+        if candidate.exists():
+            self._exe_path = candidate
+            self._ghidra_home = local_tools
+            return candidate
         return None
 
     def get_window_search_params(self) -> dict[str, str | None]:

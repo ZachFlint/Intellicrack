@@ -10,7 +10,6 @@ import asyncio
 import os
 import re
 import shutil
-import subprocess
 import tempfile
 import zipfile
 from dataclasses import dataclass, field
@@ -18,6 +17,8 @@ from pathlib import Path
 from typing import Any, cast
 
 import httpx
+
+from intellicrack.core._subprocess import TimeoutExpired
 
 from ..core.logging import get_logger
 from ..core.process_manager import ProcessManager
@@ -284,7 +285,8 @@ class ToolInstaller:
         _logger.debug("tool_not_found", extra={"tool": tool_info.display_name})
         return None
 
-    async def _find_frida(self) -> Path | None:
+    @staticmethod
+    async def _find_frida() -> Path | None:
         """Check if Frida Python package is installed.
 
         Returns:
@@ -300,7 +302,7 @@ class ToolInstaller:
             if result.returncode == 0:
                 _logger.info("frida_installed", extra={"version": result.stdout.strip()})
                 return Path("frida-python")
-        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+        except (TimeoutExpired, FileNotFoundError) as e:
             _logger.debug("frida_check_failed", extra={"error": str(e)})
         return None
 
@@ -345,7 +347,7 @@ class ToolInstaller:
                 version_str = result.stdout.strip()
                 return self._parse_version(version_str)
 
-        except (subprocess.TimeoutExpired, OSError) as e:
+        except (TimeoutExpired, OSError) as e:
             _logger.debug("version_check_failed", extra={"tool": str(tool), "error": str(e)})
 
         return None

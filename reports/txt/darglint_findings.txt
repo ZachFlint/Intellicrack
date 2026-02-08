@@ -1,118 +1,15 @@
-55 findings in src\intellicrack\bridges\base.py
+7 findings in src\intellicrack\ui\app.py
 
-src\intellicrack\bridges\base.py:name:255: DAR401: -r RuntimeError
+src\intellicrack\ui\app.py:_setup_file_menu:284: DAR401: -r TypeError
 
-src\intellicrack\bridges\base.py:tool_definition:283: DAR401: -r RuntimeError
+src\intellicrack\ui\app.py:_setup_tools_menu:305: DAR401: -r TypeError
 
-src\intellicrack\bridges\base.py:initialize:292: DAR401: -r RuntimeError
+src\intellicrack\ui\app.py:_setup_providers_menu:333: DAR401: -r TypeError
 
-src\intellicrack\bridges\base.py:is_available:307: DAR401: -r RuntimeError
+src\intellicrack\ui\app.py:_setup_sandbox_menu:347: DAR401: -r TypeError
 
-src\intellicrack\bridges\base.py:load_binary:334: DAR401: -r RuntimeError
+src\intellicrack\ui\app.py:_setup_settings_menu:361: DAR401: -r TypeError
 
-src\intellicrack\bridges\base.py:analyze:346: DAR401: -r RuntimeError
+src\intellicrack\ui\app.py:_setup_help_menu:374: DAR401: -r TypeError
 
-src\intellicrack\bridges\base.py:get_functions:353: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:get_function:366: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:decompile:378: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:disassemble:393: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:get_xrefs_to:407: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:get_xrefs_from:419: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:search_strings:431: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:search_bytes:443: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:get_imports:455: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:get_exports:464: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:rename_function:473: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:add_comment:490: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:attach:524: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:spawn:536: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:detach:550: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:read_memory:555: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:write_memory:568: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:get_memory_regions:581: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:scan_memory:590: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:run:615: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:pause:620: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:stop:625: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:step_into:630: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:step_over:639: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:step_out:648: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:set_breakpoint:661: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:remove_breakpoint:676: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:get_breakpoints:688: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:get_registers:697: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:set_register:706: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:get_stack_trace:719: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:disassemble_at:731: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:assemble_at:745: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:enumerate_modules:771: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:enumerate_exports:781: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:hook_function:798: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:remove_hook:814: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:get_hooks:827: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:execute_script:837: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:intercept_return:850: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:call_function:867: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:load_file:900: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:read_bytes:913: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:write_bytes:927: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:apply_patch:937: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:revert_patch:950: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:save:963: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:search_pattern:980: DAR401: -r RuntimeError
-
-src\intellicrack\bridges\base.py:calculate_checksum:998: DAR401: -r RuntimeError
-
-
-2 findings in src\intellicrack\ui\resources\resource_helper.py
-
-src\intellicrack\ui\resources\resource_helper.py:get_assets_path:57: DAR401: -r AssetNotFoundError
-
-src\intellicrack\ui\resources\resource_helper.py:get_assets_path:64: DAR402: +r FileNotFoundError
+src\intellicrack\ui\app.py:_setup_menus:387: DAR401: -r TypeError

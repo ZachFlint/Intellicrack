@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast, override
 
 import r2pipe
 
@@ -217,7 +217,8 @@ class Radare2Bridge(StaticAnalysisBridge):
                 "r2_command_timeout",
                 extra={"command": command, "timeout": _R2_COMMAND_TIMEOUT},
             )
-            raise ToolError(f"{_ERR_CMD_TIMEOUT} after {_R2_COMMAND_TIMEOUT}s: {command}") from None
+            msg = f"{_ERR_CMD_TIMEOUT} after {_R2_COMMAND_TIMEOUT}s: {command}"
+            raise ToolError(msg) from None
         return "" if result is None else result
 
     @property
@@ -513,6 +514,7 @@ class Radare2Bridge(StaticAnalysisBridge):
         await super().shutdown()
         _logger.info("radare2_bridge_shutdown")
 
+    @override
     async def is_available(self) -> bool:
         """Check if radare2 is available.
 
@@ -1267,7 +1269,7 @@ class Radare2Bridge(StaticAnalysisBridge):
         try:
             parsed = json.loads(result)
         except json.JSONDecodeError:
-            _logger.error("json_parse_failed", extra={"command": command})
+            _logger.exception("json_parse_failed", extra={"command": command})
             return []
         else:
             if isinstance(parsed, list):

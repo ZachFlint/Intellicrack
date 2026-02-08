@@ -16,12 +16,35 @@ from typing import TYPE_CHECKING, Literal
 from ..core.logging import get_logger
 
 
-if TYPE_CHECKING:
+try:
     import torch
+except ImportError:
+    torch = None
+
+try:
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+except ImportError:
+    AutoModelForCausalLM = None
+    AutoTokenizer = None
+
+try:
+    from transformers import BitsAndBytesConfig
+except ImportError:
+    BitsAndBytesConfig = None
+
+from .xpu_utils import clear_xpu_cache, get_xpu_memory_info, initialize_xpu, is_xpu_available
+
+
+if TYPE_CHECKING:
     from transformers import PreTrainedModel, PreTrainedTokenizerBase
 
 
 _logger = get_logger("providers.model_loader")
+
+_ERR_MISSING_DEPS = "transformers and torch are required for model loading"
+_ERR_XPU_NOT_AVAILABLE = "XPU is not available. Use load_model_for_cpu instead."
+_ERR_LOAD_XPU_FAILED = "Failed to load model %s on XPU: %s"
+_ERR_LOAD_CPU_FAILED = "Failed to load model %s on CPU: %s"
 
 DtypeOption = Literal["auto", "float32", "float16", "bfloat16", "int8", "int4"]
 DeviceType = Literal["xpu", "cpu", "auto"]
@@ -211,7 +234,8 @@ class ModelCache:
         with self._lock:
             return self._current_memory_bytes
 
-    def _make_key(self, model_id: str, dtype: str, device_type: str) -> str:
+    @staticmethod
+    def _make_key(model_id: str, dtype: str, device_type: str) -> str:
         """Create a cache key.
 
         Args:
@@ -255,9 +279,7 @@ def _unload_model(loaded_model: LoadedModel) -> None:
         gc.collect()
 
         try:
-            import torch
-
-            if hasattr(torch, "xpu") and torch.xpu.is_available():
+            if torch is not None and hasattr(torch, "xpu") and torch.xpu.is_available():
                 torch.xpu.empty_cache()
         except Exception as inner_exc:
             _logger.debug("xpu_cache_clear_on_unload_failed", extra={"error": str(inner_exc)})
@@ -460,16 +482,11 @@ def load_model_for_xpu(
         RuntimeError: If model loading fails.
         ImportError: If required packages are not installed.
     """
-    try:
-        __import__("torch")
-        from transformers import AutoModelForCausalLM, AutoTokenizer
-    except ImportError as exc:
-        raise ImportError("transformers and torch are required for model loading") from exc
-
-    from .xpu_utils import clear_xpu_cache, get_xpu_memory_info, initialize_xpu, is_xpu_available
+    if torch is None or AutoModelForCausalLM is None or AutoTokenizer is None:
+        raise ImportError(_ERR_MISSING_DEPS)
 
     if not is_xpu_available():
-        raise RuntimeError("XPU is not available. Use load_model_for_cpu instead.")
+        raise RuntimeError(_ERR_XPU_NOT_AVAILABLE)
 
     dtype_str = config.dtype
 
@@ -553,12 +570,11 @@ def load_model_for_xpu(
                 "memory_mb": memory_usage // (1024 * 1024),
             },
         )
-
-        return loaded_model
-
     except Exception as exc:
         clear_xpu_cache()
-        raise RuntimeError(f"Failed to load model {config.model_id} on XPU: {exc}") from exc
+        raise RuntimeError(_ERR_LOAD_XPU_FAILED % (config.model_id, exc)) from exc
+    else:
+        return loaded_model
 
 
 def load_model_for_cpu(
@@ -578,11 +594,8 @@ def load_model_for_cpu(
         RuntimeError: If model loading fails.
         ImportError: If required packages are not installed.
     """
-    try:
-        import torch
-        from transformers import AutoModelForCausalLM, AutoTokenizer
-    except ImportError as exc:
-        raise ImportError("transformers and torch are required for model loading") from exc
+    if torch is None or AutoModelForCausalLM is None or AutoTokenizer is None:
+        raise ImportError(_ERR_MISSING_DEPS)
 
     dtype_str = config.dtype
 
@@ -656,12 +669,11 @@ def load_model_for_cpu(
                 "memory_mb": memory_usage // (1024 * 1024),
             },
         )
-
-        return loaded_model
-
     except Exception as exc:
         gc.collect()
-        raise RuntimeError(f"Failed to load model {config.model_id} on CPU: {exc}") from exc
+        raise RuntimeError(_ERR_LOAD_CPU_FAILED % (config.model_id, exc)) from exc
+    else:
+        return loaded_model
 
 
 def _get_torch_dtype(dtype_str: str) -> torch.dtype:
@@ -672,8 +684,12 @@ def _get_torch_dtype(dtype_str: str) -> torch.dtype:
 
     Returns:
         Corresponding torch.dtype.
+
+    Raises:
+        ImportError: If torch is not installed.
     """
-    import torch
+    if torch is None:
+        raise ImportError(_ERR_MISSING_DEPS)
 
     dtype_map: dict[str, torch.dtype] = {
         "float32": torch.float32,
@@ -699,10 +715,12 @@ def _get_quantization_config(dtype_str: str) -> object:
     Returns:
         A ``BitsAndBytesConfig`` instance (preferred) or a plain
         ``dict`` when the config class is unavailable.
+
+    Raises:
+        ImportError: If ``torch`` is required for int4 quantization
+            but not installed.
     """
-    try:
-        from transformers import BitsAndBytesConfig
-    except ImportError:
+    if BitsAndBytesConfig is None:
         _logger.warning(
             "bitsandbytes_config_unavailable",
             extra={"dtype": dtype_str},
@@ -721,7 +739,8 @@ def _get_quantization_config(dtype_str: str) -> object:
         return BitsAndBytesConfig(load_in_8bit=True)
 
     if dtype_str == "int4":
-        import torch
+        if torch is None:
+            raise ImportError(_ERR_MISSING_DEPS)
 
         return BitsAndBytesConfig(
             load_in_4bit=True,
@@ -732,7 +751,7 @@ def _get_quantization_config(dtype_str: str) -> object:
     return BitsAndBytesConfig()
 
 
-_global_cache: ModelCache | None = None
+_cache_state: dict[str, ModelCache] = {}
 _cache_lock = threading.Lock()
 
 
@@ -742,11 +761,10 @@ def get_global_model_cache() -> ModelCache:
     Returns:
         The global ModelCache instance.
     """
-    global _global_cache
     with _cache_lock:
-        if _global_cache is None:
-            _global_cache = ModelCache()
-        return _global_cache
+        if "cache" not in _cache_state:
+            _cache_state["cache"] = ModelCache()
+        return _cache_state["cache"]
 
 
 def set_global_cache_size(max_memory_bytes: int) -> None:

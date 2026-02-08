@@ -9,9 +9,8 @@ from __future__ import annotations
 import asyncio
 import os
 import winreg
-from collections.abc import Coroutine
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, override
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.embedding.embedded_widget import EmbeddedToolWidget
@@ -19,6 +18,8 @@ from intellicrack.ui.embedding.win32_helper import Win32WindowHelper
 
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
+
     from PyQt6.QtWidgets import QWidget
 
     from intellicrack.bridges.x64dbg import X64DbgBridge
@@ -59,6 +60,7 @@ class X64DbgWidget(EmbeddedToolWidget):
         self._attached_pid: int | None = None
         super().__init__(parent)
 
+    @override
     def get_tool_display_name(self) -> str:
         """Get display name based on bitness.
 
@@ -74,62 +76,18 @@ class X64DbgWidget(EmbeddedToolWidget):
             Path to executable if found.
         """
         exe_name = "x64dbg.exe" if self._use_64bit else "x32dbg.exe"
-        release_dir = "release"
         arch_dir = "x64" if self._use_64bit else "x32"
 
         if self._install_dir:
-            candidates = [
-                self._install_dir / release_dir / arch_dir / exe_name,
-                self._install_dir / arch_dir / exe_name,
-                self._install_dir / exe_name,
-            ]
-            for candidate in candidates:
+            for candidate in self._build_x64dbg_candidates(self._install_dir, arch_dir, exe_name):
                 if candidate.exists():
                     return candidate
 
-        for hkey, subkey in self._REGISTRY_PATHS:
-            try:
-                with winreg.OpenKey(hkey, subkey) as key:
-                    install_path, _ = winreg.QueryValueEx(key, "InstallPath")
-                    if install_path:
-                        base = Path(install_path)
-                        candidates = [
-                            base / release_dir / arch_dir / exe_name,
-                            base / arch_dir / exe_name,
-                            base / exe_name,
-                        ]
-                        for candidate in candidates:
-                            if candidate.exists():
-                                self._install_dir = base
-                                return candidate
-            except OSError:
-                _logger.debug("registry_key_not_found", extra={"subkey": subkey})
-                continue
+        if found := self._search_registry_for_x64dbg(arch_dir, exe_name):
+            return found
 
-        for base in self._COMMON_PATHS:
-            if not base.exists():
-                continue
-            candidates = [
-                base / release_dir / arch_dir / exe_name,
-                base / arch_dir / exe_name,
-                base / exe_name,
-            ]
-            for candidate in candidates:
-                if candidate.exists():
-                    self._install_dir = base
-                    return candidate
-
-        if env_path := os.environ.get("X64DBG_PATH"):
-            base = Path(env_path)
-            candidates = [
-                base / release_dir / arch_dir / exe_name,
-                base / arch_dir / exe_name,
-                base / exe_name,
-            ]
-            for candidate in candidates:
-                if candidate.exists():
-                    self._install_dir = base
-                    return candidate
+        if found := self._search_common_paths_for_x64dbg(arch_dir, exe_name):
+            return found
 
         if found := Win32WindowHelper.find_executable_path(exe_name):
             self._install_dir = found.parent.parent
@@ -142,6 +100,70 @@ class X64DbgWidget(EmbeddedToolWidget):
             return local_tools.resolve()
 
         _logger.warning("executable_not_found", extra={"exe_name": exe_name})
+        return None
+
+    @staticmethod
+    def _build_x64dbg_candidates(base: Path, arch_dir: str, exe_name: str) -> list[Path]:
+        """Build candidate executable paths from a base directory.
+
+        Args:
+            base: Base directory to search from.
+            arch_dir: Architecture subdirectory ('x64' or 'x32').
+            exe_name: Executable filename.
+
+        Returns:
+            List of candidate paths to check.
+        """
+        return [
+            base / "release" / arch_dir / exe_name,
+            base / arch_dir / exe_name,
+            base / exe_name,
+        ]
+
+    def _search_registry_for_x64dbg(self, arch_dir: str, exe_name: str) -> Path | None:
+        """Search Windows registry for x64dbg installation path.
+
+        Args:
+            arch_dir: Architecture subdirectory ('x64' or 'x32').
+            exe_name: Executable filename.
+
+        Returns:
+            Path to executable if found, None otherwise.
+        """
+        for hkey, subkey in self._REGISTRY_PATHS:
+            try:
+                with winreg.OpenKey(hkey, subkey) as key:
+                    install_path, _ = winreg.QueryValueEx(key, "InstallPath")
+                    if install_path:
+                        base = Path(install_path)
+                        for candidate in self._build_x64dbg_candidates(base, arch_dir, exe_name):
+                            if candidate.exists():
+                                self._install_dir = base
+                                return candidate
+            except OSError:
+                _logger.debug("registry_key_not_found", extra={"subkey": subkey})
+                continue
+        return None
+
+    def _search_common_paths_for_x64dbg(self, arch_dir: str, exe_name: str) -> Path | None:
+        """Search common paths and X64DBG_PATH env var for x64dbg.
+
+        Args:
+            arch_dir: Architecture subdirectory ('x64' or 'x32').
+            exe_name: Executable filename.
+
+        Returns:
+            Path to executable if found, None otherwise.
+        """
+        search_bases: list[Path] = [p for p in self._COMMON_PATHS if p.exists()]
+        if env_path := os.environ.get("X64DBG_PATH"):
+            search_bases.append(Path(env_path))
+
+        for base in search_bases:
+            for candidate in self._build_x64dbg_candidates(base, arch_dir, exe_name):
+                if candidate.exists():
+                    self._install_dir = base
+                    return candidate
         return None
 
     def get_window_search_params(self) -> dict[str, str | None]:
@@ -211,7 +233,8 @@ class X64DbgWidget(EmbeddedToolWidget):
         """
         return self._bridge
 
-    def _run_bridge_async(self, coro: Coroutine[Any, Any, Any]) -> None:
+    @staticmethod
+    def _run_bridge_async(coro: Coroutine[Any, Any, Any]) -> None:
         """Run an async bridge coroutine in the background.
 
         Args:

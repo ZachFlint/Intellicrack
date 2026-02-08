@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import asyncio
 import time
-from collections.abc import Iterable
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, ClassVar, cast, override
 
@@ -31,7 +30,7 @@ from .base import LLMProviderBase
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Iterable
 
     from google.genai.types import GenerateContentResponse
 
@@ -180,13 +179,14 @@ class GoogleProvider(LLMProviderBase):
                 "google_models_listed",
                 extra={"count": len(sorted_models)},
             )
-            return sorted_models
         except Exception as e:
             self._logger.exception(
                 "google_list_models_failed",
                 extra={"error": str(e)},
             )
             raise ProviderError(_MSG_REQUEST_FAILED) from e
+        else:
+            return sorted_models
 
     @staticmethod
     def _is_generative_model(model_name: str) -> bool:

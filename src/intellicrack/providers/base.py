@@ -7,11 +7,13 @@ Ollama, and OpenRouter.
 
 from __future__ import annotations
 
+import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, TypedDict
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, TypedDict
 
-from ..core.logging import get_logger
+from ..core.logging import get_logger, log_provider_response
 from ..core.types import (
     Message,
     ModelInfo,
@@ -248,6 +250,78 @@ class LLMProviderBase(ABC):
         Returns:
             List of messages in provider's format.
         """
+
+    @staticmethod
+    def _build_chat_response(
+        *,
+        provider: str,
+        model: str,
+        content: str,
+        tool_calls: list[ToolCall],
+        duration_ms: float,
+    ) -> tuple[Message, list[ToolCall] | None]:
+        """Create a standard chat response tuple and log the response.
+
+        Args:
+            provider: Provider name for logging.
+            model: Model identifier for logging.
+            content: Response text content.
+            tool_calls: Parsed tool calls from the response.
+            duration_ms: Request duration in milliseconds.
+
+        Returns:
+            Tuple of (assistant message, tool calls or None).
+        """
+        message = Message(
+            role="assistant",
+            content=content,
+            tool_calls=tool_calls or None,
+            timestamp=datetime.now(),
+        )
+        log_provider_response(
+            provider=provider,
+            model=model,
+            tool_calls_count=len(tool_calls),
+            duration_ms=duration_ms,
+        )
+        return message, tool_calls or None
+
+    @staticmethod
+    def _parse_tool_call_common(
+        *,
+        call_id: str,
+        function_name: str,
+        raw_arguments: str | dict[str, object],
+    ) -> ToolCall:
+        """Parse a tool call from provider-specific data into a ToolCall.
+
+        Handles JSON argument parsing and tool name extraction from
+        dotted function names.
+
+        Args:
+            call_id: Unique identifier for the tool call.
+            function_name: Function name from the provider response.
+            raw_arguments: Arguments as a JSON string or pre-parsed dict.
+
+        Returns:
+            Parsed ToolCall instance.
+        """
+        parsed_args: dict[str, Any]
+        if isinstance(raw_arguments, str):
+            try:
+                parsed_args = json.loads(raw_arguments)
+            except json.JSONDecodeError:
+                parsed_args = {}
+        else:
+            parsed_args = dict(raw_arguments)
+
+        tool_name = function_name.split(".", maxsplit=1)[0] if "." in function_name else function_name
+        return ToolCall(
+            id=call_id,
+            tool_name=tool_name,
+            function_name=function_name,
+            arguments=parsed_args,
+        )
 
 
 @dataclass

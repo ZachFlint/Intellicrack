@@ -23,11 +23,12 @@ import importlib
 import tempfile
 import textwrap
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, override
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, override
 
 from .logging import get_logger
 from .process_manager import ProcessManager
@@ -41,6 +42,8 @@ if TYPE_CHECKING:
 _logger = get_logger("core.script_gen")
 
 ScriptType = Literal["frida", "ghidra", "radare2", "python", "x64dbg"]
+
+_ApiRefGetter = Callable[[], dict[str, str]]
 
 
 def _empty_str_list() -> list[str]:
@@ -162,6 +165,13 @@ class ScriptContext:
     magic_constants: list[int] = field(default_factory=_empty_int_list)
     additional_context: dict[str, Any] = field(default_factory=_empty_str_any_dict)
 
+    _LANGUAGE_API_MAP: ClassVar[dict[ScriptLanguage, str]] = {
+        ScriptLanguage.JAVASCRIPT: "frida",
+        ScriptLanguage.JAVA: "ghidra",
+        ScriptLanguage.R2_COMMANDS: "radare2",
+        ScriptLanguage.X64DBG_SCRIPT: "x64dbg",
+    }
+
     def to_prompt_context(self, language: ScriptLanguage | None = None) -> str:
         """Convert context to a string suitable for AI prompts.
 
@@ -184,24 +194,7 @@ class ScriptContext:
             lines.append(f"Module Base: 0x{self.module_base:X}")
 
         if self.target_functions:
-            lines.append("\nTarget Functions:")
-            for func in self.target_functions:
-                name = func.get("name", "unknown")
-                addr = func.get("address", 0)
-                strategy_raw = func.get("strategy", "unknown")
-
-                strategy_desc = str(strategy_raw)
-                # Try to map string to Enum if possible
-                try:
-                    if isinstance(strategy_raw, str):
-                        strategy_enum = BypassStrategy(strategy_raw)
-                        strategy_desc = f"{strategy_enum.value} ({strategy_enum.description})"
-                    elif isinstance(strategy_raw, BypassStrategy):
-                        strategy_desc = f"{strategy_raw.value} ({strategy_raw.description})"
-                except ValueError:
-                    pass
-
-                lines.append(f"  - {name} @ 0x{addr:X} (strategy: {strategy_desc})")
+            self._format_target_functions(lines)
 
         if self.identified_protections:
             lines.append(f"\nProtections: {', '.join(self.identified_protections)}")
@@ -220,21 +213,61 @@ class ScriptContext:
         if self.additional_context:
             lines.append("\nAdditional Analysis Context:")
             lines.extend(f"  - {k}: {v!r}" for k, v in self.additional_context.items())
-        if language:
-            api_ref = {}
-            if language == ScriptLanguage.JAVASCRIPT:
-                api_ref = get_frida_api_reference()
-            elif language == ScriptLanguage.JAVA:
-                api_ref = get_ghidra_api_reference()
-            elif language == ScriptLanguage.R2_COMMANDS:
-                api_ref = get_radare2_reference()
-            elif language == ScriptLanguage.X64DBG_SCRIPT:
-                api_ref = get_x64dbg_reference()
 
-            if api_ref:
-                lines.append(f"\n{language.value.upper()} API Reference:")
-                lines.extend(f"  {category}: {usage}" for category, usage in api_ref.items())
+        if language:
+            self._format_api_reference(language, lines)
+
         return "\n".join(lines)
+
+    def _format_target_functions(self, lines: list[str]) -> None:
+        """Format target function entries and append them to lines.
+
+        Args:
+            lines: List of output lines to append to.
+        """
+        lines.append("\nTarget Functions:")
+        for func in self.target_functions:
+            name = func.get("name", "unknown")
+            addr = func.get("address", 0)
+            strategy_raw = func.get("strategy", "unknown")
+
+            strategy_desc = str(strategy_raw)
+            try:
+                if isinstance(strategy_raw, str):
+                    strategy_enum = BypassStrategy(strategy_raw)
+                    strategy_desc = f"{strategy_enum.value} ({strategy_enum.description})"
+                elif isinstance(strategy_raw, BypassStrategy):
+                    strategy_desc = f"{strategy_raw.value} ({strategy_raw.description})"
+            except ValueError:
+                pass
+
+            lines.append(f"  - {name} @ 0x{addr:X} (strategy: {strategy_desc})")
+
+    def _format_api_reference(self, language: ScriptLanguage, lines: list[str]) -> None:
+        """Look up and format the API reference section for a language.
+
+        Args:
+            language: The script language to get API reference for.
+            lines: List of output lines to append to.
+        """
+        api_ref_key = self._LANGUAGE_API_MAP.get(language)
+        if api_ref_key is None:
+            return
+
+        api_getters: dict[str, _ApiRefGetter] = {
+            "frida": get_frida_api_reference,
+            "ghidra": get_ghidra_api_reference,
+            "radare2": get_radare2_reference,
+            "x64dbg": get_x64dbg_reference,
+        }
+        getter = api_getters.get(api_ref_key)
+        if getter is None:
+            return
+
+        api_ref = getter()
+        if api_ref:
+            lines.append(f"\n{language.value.upper()} API Reference:")
+            lines.extend(f"  {category}: {usage}" for category, usage in api_ref.items())
 
 
 @dataclass

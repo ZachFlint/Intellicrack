@@ -62,7 +62,8 @@ class StackDataSource(Protocol):
     stack frames from debugging sessions.
     """
 
-    def get_stack_frames(self) -> list[StackFrame]:
+    @staticmethod
+    def get_stack_frames() -> list[StackFrame]:
         """Get current stack frames from the data source.
 
         Returns:
@@ -70,7 +71,8 @@ class StackDataSource(Protocol):
         """
         return []
 
-    def is_connected(self) -> bool:
+    @staticmethod
+    def is_connected() -> bool:
         """Check if the data source is connected.
 
         Returns:
@@ -78,7 +80,8 @@ class StackDataSource(Protocol):
         """
         return False
 
-    def get_source_name(self) -> str:
+    @staticmethod
+    def get_source_name() -> str:
         """Get the name of this data source.
 
         Returns:

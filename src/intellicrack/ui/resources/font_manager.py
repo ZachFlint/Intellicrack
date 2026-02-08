@@ -6,13 +6,16 @@ Provides custom font loading and application for the Intellicrack interface.
 from __future__ import annotations
 
 import json
-from pathlib import Path
-from typing import ClassVar, Final, cast
+from typing import TYPE_CHECKING, ClassVar, Final, cast
 
 from PyQt6.QtGui import QFont, QFontDatabase
 
 from ...core.logging import get_logger
 from .resource_helper import get_assets_path
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 _logger = get_logger("ui.resources.fonts")

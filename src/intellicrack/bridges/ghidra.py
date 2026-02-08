@@ -12,11 +12,12 @@ import importlib
 import importlib.util
 import json
 import re
-import subprocess
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, cast
+
+from intellicrack.core._subprocess import PIPE, Popen
 
 from ..core.logging import get_logger
 from ..core.process_manager import ProcessManager, ProcessType
@@ -88,7 +89,7 @@ class GhidraBridge(StaticAnalysisBridge):
         super().__init__()
         self._ghidra_path: Path | None = None
         self._bridge: object | None = None
-        self._process: subprocess.Popen[bytes] | None = None
+        self._process: Popen[bytes] | None = None
         self._binary_path: Path | None = None
         self._project_path: Path | None = None
         self._port: int = self.DEFAULT_PORT
@@ -368,12 +369,12 @@ class GhidraBridge(StaticAnalysisBridge):
             self._state.connected = False
             self._state.tool_running = False
 
-        except Exception as e:
-            _logger.error("ghidra_connect_failed", extra={"error": str(e)})
+        except Exception as exc:
+            _logger.exception("ghidra_connect_failed")
             self._bridge = None
             self._state.connected = False
             self._state.tool_running = False
-            self._state.last_error = str(e)
+            self._state.last_error = str(exc)
 
     async def shutdown(self) -> None:
         """Shutdown Ghidra and cleanup resources."""
@@ -466,11 +467,11 @@ class GhidraBridge(StaticAnalysisBridge):
 
         _logger.info("ghidra_headless_starting", extra={"command": " ".join(cmd)})
 
-        def _start_process() -> subprocess.Popen[bytes]:
-            return subprocess.Popen(
+        def _start_process() -> Popen[bytes]:
+            return Popen(
                 cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stdout=PIPE,
+                stderr=PIPE,
             )
 
         self._process = await asyncio.to_thread(_start_process)
@@ -550,8 +551,8 @@ ghidra_bridge_server.GhidraBridgeServer(
         if self._bridge is not None:
             try:
                 await self._execute_remote(f'importFile(java.io.File("{path.as_posix()}"))')
-            except Exception as e:
-                _logger.error("ghidra_remote_import_failed", extra={"error": str(e)})
+            except Exception:
+                _logger.exception("ghidra_remote_import_failed")
 
         data = path.read_bytes()
         md5 = hashlib.md5(data, usedforsecurity=False).hexdigest()
@@ -575,8 +576,8 @@ ghidra_bridge_server.GhidraBridgeServer(
         if self._bridge is not None:
             try:
                 entry_point, sections, imports, exports = await self._extract_binary_metadata()
-            except Exception as e:
-                _logger.error("ghidra_metadata_extraction_failed", extra={"error": str(e)})
+            except Exception:
+                _logger.exception("ghidra_metadata_extraction_failed")
 
         return BinaryInfo(
             path=self._binary_path,
@@ -854,8 +855,8 @@ metadata
                     )
                 )
 
-        except Exception as e:
-            _logger.error("get_functions_failed", extra={"error": str(e)})
+        except Exception:
+            _logger.exception("get_functions_failed")
             return []
 
         return functions
@@ -940,8 +941,8 @@ metadata
                 disassembly=None,
             )
 
-        except Exception as e:
-            _logger.error("get_function_failed", extra={"error": str(e)})
+        except Exception:
+            _logger.exception("get_function_failed")
             return None
 
     async def decompile(self, address: int) -> str:
@@ -1039,8 +1040,8 @@ metadata
                 for i in result_list
             ]
 
-        except Exception as e:
-            _logger.error("disassembly_failed", extra={"error": str(e)})
+        except Exception:
+            _logger.exception("disassembly_failed")
             return []
 
     async def get_xrefs_to(self, address: int) -> list[CrossReference]:
@@ -1083,8 +1084,8 @@ metadata
                 for x in result_list
             ]
 
-        except Exception as e:
-            _logger.error("get_xrefs_to_failed", extra={"error": str(e)})
+        except Exception:
+            _logger.exception("get_xrefs_to_failed")
             return []
 
     async def get_xrefs_from(self, address: int) -> list[CrossReference]:
@@ -1127,8 +1128,8 @@ metadata
                 for x in result_list
             ]
 
-        except Exception as e:
-            _logger.error("get_xrefs_from_failed", extra={"error": str(e)})
+        except Exception:
+            _logger.exception("get_xrefs_from_failed")
             return []
 
     async def search_strings(self, pattern: str) -> list[StringInfo]:
@@ -1173,8 +1174,8 @@ metadata
                 for s in result_list
             ]
 
-        except Exception as e:
-            _logger.error("string_search_failed", extra={"error": str(e)})
+        except Exception:
+            _logger.exception("string_search_failed")
             return []
 
     async def search_bytes(self, pattern: bytes) -> list[int]:
@@ -1211,8 +1212,8 @@ metadata
 
             if isinstance(result, list):
                 return [int(addr) for addr in cast("list[int | float | str]", result)]
-        except Exception as e:
-            _logger.error("byte_search_failed", extra={"error": str(e)})
+        except Exception:
+            _logger.exception("byte_search_failed")
         return []
 
     async def rename_function(self, address: int, new_name: str) -> bool:
@@ -1333,8 +1334,8 @@ metadata
                 for i in result_list
             ]
 
-        except Exception as e:
-            _logger.error("get_imports_failed", extra={"error": str(e)})
+        except Exception:
+            _logger.exception("get_imports_failed")
             return []
 
     async def get_exports(self) -> list[ExportInfo]:
@@ -1372,8 +1373,8 @@ metadata
                 for idx, e in enumerate(result_list)
             ]
 
-        except Exception as exc:
-            _logger.error("get_exports_failed", extra={"error": str(exc)})
+        except Exception:
+            _logger.exception("get_exports_failed")
             return []
 
     async def get_data_type(self, address: int) -> DataTypeInfo | None:
@@ -1435,8 +1436,8 @@ metadata
                 base_type=(str(result_dict["base_type"]) if result_dict.get("base_type") is not None else None),
             )
 
-        except Exception as e:
-            _logger.error("get_data_type_failed", extra={"error": str(e)})
+        except Exception:
+            _logger.exception("get_data_type_failed")
             return None
 
     async def set_data_type(self, address: int, data_type: str) -> bool:

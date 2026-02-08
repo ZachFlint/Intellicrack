@@ -6,12 +6,9 @@ chat completion and tool/function calling.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import time
-from collections.abc import AsyncIterator
-from datetime import datetime
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import TYPE_CHECKING, TypedDict, cast, override
 
 import openai
 from openai import AsyncStream
@@ -21,13 +18,18 @@ from openai.types.chat.chat_completion_message_function_tool_call import (
 
 
 if TYPE_CHECKING:
+    import asyncio
+    from collections.abc import AsyncIterator
+
     from openai.types.chat import (
         ChatCompletionChunk,
         ChatCompletionMessageParam,
         ChatCompletionToolParam,
     )
+    from openai.types.chat.chat_completion import ChatCompletion
+    from openai.types.chat.chat_completion_message import ChatCompletionMessage
 
-from ..core.logging import get_logger, log_provider_request, log_provider_response
+from ..core.logging import get_logger, log_provider_request
 from ..core.types import (
     AuthenticationError,
     Message,
@@ -40,6 +42,17 @@ from ..core.types import (
     ToolDefinition,
 )
 from .base import LLMProviderBase, create_openai_tool_schema
+
+
+_ERR_NOT_CONNECTED = "Not connected to OpenAI API"
+_ERR_KEY_REQUIRED = "OpenAI API key is required"
+_ERR_INVALID_KEY = "Invalid OpenAI API key: %s"
+_ERR_CONNECT_FAILED = "Failed to connect to OpenAI: %s"
+_ERR_LIST_MODELS_FAILED = "Failed to list OpenAI models: %s"
+_ERR_RATE_LIMITED = "OpenAI rate limit exceeded: %s"
+_ERR_API_ERROR = "OpenAI API error: %s"
+_ERR_REQUEST_FAILED = "OpenAI request failed: %s"
+_ERR_STREAM_FAILED = "OpenAI stream failed: %s"
 
 
 class OpenAIMessageContent(TypedDict, total=False):
@@ -97,7 +110,7 @@ class OpenAIProvider(LLMProviderBase):
             ProviderError: If connection fails.
         """
         if not credentials.api_key:
-            raise AuthenticationError("OpenAI API key is required")
+            raise AuthenticationError(_ERR_KEY_REQUIRED)
 
         try:
             self._client = openai.AsyncOpenAI(
@@ -122,13 +135,13 @@ class OpenAIProvider(LLMProviderBase):
                 "openai_connect_auth_failed",
                 extra={"error": str(e)},
             )
-            raise AuthenticationError(f"Invalid OpenAI API key: {e}") from e
+            raise AuthenticationError(_ERR_INVALID_KEY % e) from e
         except Exception as e:
             self._logger.exception(
                 "openai_connect_failed",
                 extra={"error": str(e)},
             )
-            raise ProviderError(f"Failed to connect to OpenAI: {e}") from e
+            raise ProviderError(_ERR_CONNECT_FAILED % e) from e
 
     async def disconnect(self) -> None:
         """Disconnect from OpenAI API."""
@@ -147,7 +160,7 @@ class OpenAIProvider(LLMProviderBase):
             ProviderError: If not connected.
         """
         if not self._connected or self._client is None:
-            raise ProviderError("Not connected to OpenAI API")
+            raise ProviderError(_ERR_NOT_CONNECTED)
 
         try:
             response = await self._client.models.list()
@@ -181,15 +194,17 @@ class OpenAIProvider(LLMProviderBase):
                 "openai_models_listed",
                 extra={"count": len(sorted_models)},
             )
-            return sorted_models
         except Exception as e:
             self._logger.exception(
                 "openai_list_models_failed",
                 extra={"error": str(e)},
             )
-            raise ProviderError(f"Failed to list OpenAI models: {e}") from e
+            raise ProviderError(_ERR_LIST_MODELS_FAILED % e) from e
+        else:
+            return sorted_models
 
-    def _is_chat_model(self, model_id: str) -> bool:
+    @staticmethod
+    def _is_chat_model(model_id: str) -> bool:
         """Check if model supports chat completions.
 
         Args:
@@ -201,7 +216,8 @@ class OpenAIProvider(LLMProviderBase):
         chat_prefixes = ("gpt-4", "gpt-3.5", "o1", "o3", "chatgpt")
         return any(model_id.startswith(prefix) for prefix in chat_prefixes)
 
-    def _get_context_window(self, model_id: str) -> int:
+    @staticmethod
+    def _get_context_window(model_id: str) -> int:
         """Get context window size for a model.
 
         Args:
@@ -220,7 +236,8 @@ class OpenAIProvider(LLMProviderBase):
             return 8192
         return 4096 if "gpt-3.5" in model_id else 8192
 
-    def _supports_tools(self, model_id: str) -> bool:
+    @staticmethod
+    def _supports_tools(model_id: str) -> bool:
         """Check if model supports function calling.
 
         Args:
@@ -231,7 +248,8 @@ class OpenAIProvider(LLMProviderBase):
         """
         return "gpt-4" in model_id or "gpt-3.5-turbo" in model_id
 
-    def _supports_vision(self, model_id: str) -> bool:
+    @staticmethod
+    def _supports_vision(model_id: str) -> bool:
         """Check if model supports image input.
 
         Args:
@@ -264,10 +282,9 @@ class OpenAIProvider(LLMProviderBase):
 
         Raises:
             ProviderError: If not connected or request fails.
-            RateLimitError: If rate limited.
         """
         if not self._connected or self._client is None:
-            raise ProviderError("Not connected to OpenAI API")
+            raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False
 
@@ -281,94 +298,122 @@ class OpenAIProvider(LLMProviderBase):
         )
 
         start_time = time.perf_counter()
+        response = await self._make_openai_api_call(
+            model=model,
+            messages=cast("list[ChatCompletionMessageParam]", openai_messages),
+            temperature=temperature,
+            max_tokens=max_tokens,
+            tools=cast("list[ChatCompletionToolParam]", openai_tools) if openai_tools else None,
+        )
+        duration_ms = (time.perf_counter() - start_time) * 1000
+
+        response_message = response.choices[0].message
+        content = response_message.content or ""
+        tool_calls = self._parse_openai_tool_calls(response_message)
+
+        return self._build_chat_response(
+            provider="openai",
+            model=model,
+            content=content,
+            tool_calls=tool_calls,
+            duration_ms=duration_ms,
+        )
+
+    async def _make_openai_api_call(
+        self,
+        *,
+        model: str,
+        messages: list[ChatCompletionMessageParam],
+        temperature: float,
+        max_tokens: int,
+        tools: list[ChatCompletionToolParam] | None,
+    ) -> ChatCompletion:
+        """Execute the OpenAI API chat completion call with error handling.
+
+        Args:
+            model: Model ID to use.
+            messages: Formatted messages for the API.
+            temperature: Sampling temperature.
+            max_tokens: Maximum tokens in response.
+            tools: Formatted tools for the API, or None.
+
+        Returns:
+            The chat completion response object.
+
+        Raises:
+            ProviderError: If the API call fails.
+            RateLimitError: If rate limited.
+        """
+        if self._client is None:
+            raise ProviderError(_ERR_NOT_CONNECTED)
 
         try:
-            typed_messages = cast("list[ChatCompletionMessageParam]", openai_messages)
-            if openai_tools:
-                typed_tools = cast("list[ChatCompletionToolParam]", openai_tools)
-                response = await self._client.chat.completions.create(
+            if tools:
+                return await self._client.chat.completions.create(
                     model=model,
-                    messages=typed_messages,
+                    messages=messages,
                     temperature=temperature,
                     max_tokens=max_tokens,
-                    tools=typed_tools,
+                    tools=tools,
                 )
-            else:
-                response = await self._client.chat.completions.create(
-                    model=model,
-                    messages=typed_messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                )
-
-            duration_ms = (time.perf_counter() - start_time) * 1000
-
-            choice = response.choices[0]
-            response_message = choice.message
-
-            content = response_message.content or ""
-            tool_calls: list[ToolCall] = []
-
-            if response_message.tool_calls:
-                for tc in response_message.tool_calls:
-                    if not isinstance(tc, ChatCompletionMessageFunctionToolCall):
-                        continue
-                    arguments: dict[str, Any]
-                    try:
-                        arguments = json.loads(tc.function.arguments)
-                    except json.JSONDecodeError:
-                        arguments = {}
-
-                    func_name: str = tc.function.name
-                    tool_call = ToolCall(
-                        id=tc.id,
-                        tool_name=func_name.split(".", maxsplit=1)[0] if "." in func_name else func_name,
-                        function_name=func_name,
-                        arguments=arguments,
-                    )
-                    tool_calls.append(tool_call)
-                    self._logger.debug(
-                        "tool_call_parsed",
-                        extra={
-                            "tool_name": tool_call.tool_name,
-                            "arguments_count": len(tool_call.arguments),
-                        },
-                    )
-
-            message = Message(
-                role="assistant",
-                content=content,
-                tool_calls=tool_calls or None,
-                timestamp=datetime.now(),
-            )
-
-            log_provider_response(
-                provider="openai",
+            return await self._client.chat.completions.create(
                 model=model,
-                tool_calls_count=len(tool_calls),
-                duration_ms=duration_ms,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
             )
-
-            return message, tool_calls or None
-
         except openai.RateLimitError as e:
             self._logger.exception(
                 "openai_chat_rate_limited",
                 extra={"model": model, "error": str(e)},
             )
-            raise RateLimitError(f"OpenAI rate limit exceeded: {e}") from e
+            raise RateLimitError(_ERR_RATE_LIMITED % e) from e
         except openai.APIError as e:
             self._logger.exception(
                 "openai_chat_api_error",
                 extra={"model": model, "error": str(e)},
             )
-            raise ProviderError(f"OpenAI API error: {e}") from e
+            raise ProviderError(_ERR_API_ERROR % e) from e
         except Exception as e:
             self._logger.exception(
                 "openai_chat_failed",
                 extra={"model": model, "error": str(e)},
             )
-            raise ProviderError(f"OpenAI request failed: {e}") from e
+            raise ProviderError(_ERR_REQUEST_FAILED % e) from e
+
+    def _parse_openai_tool_calls(
+        self,
+        response_message: ChatCompletionMessage,
+    ) -> list[ToolCall]:
+        """Parse tool calls from an OpenAI API response message.
+
+        Args:
+            response_message: The message from the OpenAI API response.
+
+        Returns:
+            List of parsed ToolCall instances.
+        """
+        tool_calls: list[ToolCall] = []
+        if not response_message.tool_calls:
+            return tool_calls
+
+        for tc in response_message.tool_calls:
+            if not isinstance(tc, ChatCompletionMessageFunctionToolCall):
+                continue
+            tool_call = self._parse_tool_call_common(
+                call_id=tc.id,
+                function_name=tc.function.name,
+                raw_arguments=tc.function.arguments,
+            )
+            tool_calls.append(tool_call)
+            self._logger.debug(
+                "tool_call_parsed",
+                extra={
+                    "tool_name": tool_call.tool_name,
+                    "arguments_count": len(tool_call.arguments),
+                },
+            )
+        return tool_calls
 
     async def chat_stream(
         self,
@@ -395,7 +440,7 @@ class OpenAIProvider(LLMProviderBase):
             RateLimitError: If rate limited by OpenAI.
         """
         if not self._connected or self._client is None:
-            raise ProviderError("Not connected to OpenAI API")
+            raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False
 
@@ -434,20 +479,20 @@ class OpenAIProvider(LLMProviderBase):
                 "openai_stream_rate_limited",
                 extra={"model": model, "error": str(e)},
             )
-            raise RateLimitError(f"OpenAI rate limit exceeded: {e}") from e
+            raise RateLimitError(_ERR_RATE_LIMITED % e) from e
         except openai.APIError as e:
             self._logger.exception(
                 "openai_stream_api_error",
                 extra={"model": model, "error": str(e)},
             )
-            raise ProviderError(f"OpenAI API error: {e}") from e
+            raise ProviderError(_ERR_API_ERROR % e) from e
         except Exception as e:
             if not self._cancel_requested:
                 self._logger.exception(
                     "openai_stream_failed",
                     extra={"model": model, "error": str(e)},
                 )
-                raise ProviderError(f"OpenAI stream failed: {e}") from e
+                raise ProviderError(_ERR_STREAM_FAILED % e) from e
 
     async def cancel_request(self) -> None:
         """Cancel any in-flight request."""
@@ -459,6 +504,7 @@ class OpenAIProvider(LLMProviderBase):
             extra={"had_active_task": self._current_task is not None},
         )
 
+    @override
     def _convert_messages_to_provider_format(
         self,
         messages: list[Message],
@@ -515,6 +561,7 @@ class OpenAIProvider(LLMProviderBase):
 
         return openai_messages
 
+    @override
     def _convert_tools_to_provider_format(
         self,
         tools: list[ToolDefinition],

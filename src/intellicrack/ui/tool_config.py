@@ -11,7 +11,6 @@ import importlib
 import importlib.util
 import json
 import os
-import subprocess
 import sys
 import tempfile
 import zipfile
@@ -42,6 +41,8 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from intellicrack.core._subprocess import TimeoutExpired
 
 from ..core.logging import get_logger
 from ..core.process_manager import ProcessManager
@@ -611,7 +612,7 @@ class ToolStatusCheckWorker(QThread):
             )
             if result.returncode == _RETURNCODE_SUCCESS:
                 return True, "radare2 available in PATH"
-        except subprocess.TimeoutExpired:
+        except TimeoutExpired:
             _logger.debug("radare2_path_check_timed_out", extra={})
         except FileNotFoundError:
             _logger.debug("radare2_executable_not_in_path", extra={})
@@ -729,11 +730,10 @@ class ToolConfigDialog(QDialog):
         Args:
             index: The selected tool index.
         """
-        if index >= 0:
-            if item := self._tool_list.item(index):
-                tool_id = item.data(Qt.ItemDataRole.UserRole)
-                self._current_tool = tool_id
-                self._settings_stack.setCurrentIndex(index)
+        if index >= 0 and (item := self._tool_list.item(index)):
+            tool_id = item.data(Qt.ItemDataRole.UserRole)
+            self._current_tool = tool_id
+            self._settings_stack.setCurrentIndex(index)
 
     def _on_accept(self) -> None:
         """Handle dialog acceptance."""
@@ -1161,7 +1161,7 @@ class ToolCapabilitiesWidget(QFrame):
 
         for cap_id, cap_key in cap_mapping.items():
             if label := self._cap_labels.get(cap_id):
-                if capabilities.get(cap_key, False):
+                if capabilities.get(cap_key):
                     label.setText("\u25cf")
                     label.setStyleSheet("color: #4ec9b0;")
                 else:

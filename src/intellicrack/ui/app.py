@@ -7,6 +7,7 @@ all UI components and connects them to the orchestrator.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import importlib
 import json
 import os
@@ -287,7 +288,9 @@ class MainWindow(QMainWindow):
             menubar: The menu bar to add the menu to.
         """
         file_menu: QMenu | None = menubar.addMenu("&File")
-        assert file_menu is not None
+        if file_menu is None:
+            msg = "Failed to create File menu"
+            raise TypeError(msg)
 
         self._add_menu_action(file_menu, "Load Binary...", self._on_load_binary, "Ctrl+O")
         file_menu.addSeparator()
@@ -306,14 +309,18 @@ class MainWindow(QMainWindow):
             menubar: The menu bar to add the menu to.
         """
         tools_menu: QMenu | None = menubar.addMenu("&Tools")
-        assert tools_menu is not None
+        if tools_menu is None:
+            msg = "Failed to create Tools menu"
+            raise TypeError(msg)
 
         self._add_menu_action(tools_menu, "Tool Status...", self._on_tool_status)
         self._add_menu_action(tools_menu, "Configure Tools...", self._on_configure_tools)
         tools_menu.addSeparator()
 
         embedded_menu: QMenu | None = tools_menu.addMenu("&Embedded Tools")
-        assert embedded_menu is not None
+        if embedded_menu is None:
+            msg = "Failed to create Embedded Tools menu"
+            raise TypeError(msg)
 
         self._add_menu_action(embedded_menu, "Open x64dbg Debugger", self._on_open_x64dbg)
         self._add_menu_action(embedded_menu, "Open Cutter Analysis", self._on_open_cutter)
@@ -330,7 +337,9 @@ class MainWindow(QMainWindow):
             menubar: The menu bar to add the menu to.
         """
         providers_menu: QMenu | None = menubar.addMenu("&Providers")
-        assert providers_menu is not None
+        if providers_menu is None:
+            msg = "Failed to create Providers menu"
+            raise TypeError(msg)
 
         self._add_menu_action(providers_menu, "Configure Providers...", self._on_configure_providers)
         self._add_menu_action(providers_menu, "Refresh Models", self._on_refresh_models)
@@ -342,7 +351,9 @@ class MainWindow(QMainWindow):
             menubar: The menu bar to add the menu to.
         """
         sandbox_menu: QMenu | None = menubar.addMenu("&Sandbox")
-        assert sandbox_menu is not None
+        if sandbox_menu is None:
+            msg = "Failed to create Sandbox menu"
+            raise TypeError(msg)
 
         self._add_menu_action(sandbox_menu, "Configure Sandbox...", self._on_configure_sandbox)
         self._add_menu_action(sandbox_menu, "Open Sandbox", self._on_open_sandbox)
@@ -354,7 +365,9 @@ class MainWindow(QMainWindow):
             menubar: The menu bar to add the menu to.
         """
         settings_menu: QMenu | None = menubar.addMenu("&Settings")
-        assert settings_menu is not None
+        if settings_menu is None:
+            msg = "Failed to create Settings menu"
+            raise TypeError(msg)
 
         self._add_menu_action(settings_menu, "Preferences...", self._on_preferences)
 
@@ -365,14 +378,18 @@ class MainWindow(QMainWindow):
             menubar: The menu bar to add the menu to.
         """
         help_menu: QMenu | None = menubar.addMenu("&Help")
-        assert help_menu is not None
+        if help_menu is None:
+            msg = "Failed to create Help menu"
+            raise TypeError(msg)
 
         self._add_menu_action(help_menu, "About", self._on_about)
 
     def _setup_menus(self) -> None:
         """Set up the menu bar."""
         menubar: QMenuBar | None = self.menuBar()
-        assert menubar is not None
+        if menubar is None:
+            msg = "Failed to get menu bar"
+            raise TypeError(msg)
 
         self._setup_file_menu(menubar)
         self._setup_tools_menu(menubar)
@@ -545,10 +562,8 @@ class MainWindow(QMainWindow):
         def show_dialog() -> None:
             dialog = confirmation_module.ToolConfirmationDialog(call, self)
             dialog.exec()
-            try:
+            with contextlib.suppress(asyncio.InvalidStateError):
                 future.set_result(dialog.approved)
-            except asyncio.InvalidStateError:
-                pass
 
         QTimer.singleShot(0, show_dialog)
 

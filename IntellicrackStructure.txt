@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Fri, Feb 06, 2026 04:59:48 PM
+Generated: Sun, Feb 08, 2026 03:06:44 AM
 Directory: D:\Intellicrack\src
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -162,6 +162,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   ├── __pycache__/
 │   │   │   └── types.cpython-313.pyc
 │   │   ├── __init__.py
+│   │   ├── _subprocess.py
 │   │   ├── config.py
 │   │   ├── license_analyzer.py
 │   │   ├── logging.py
@@ -260,6 +261,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   └── tools.py
 │   ├── __init__.py
 │   ├── __main__.py
+│   ├── _metadata.py
 │   └── main.py
 └── Intellicrack.egg-info/
     ├── dependency_links.txt

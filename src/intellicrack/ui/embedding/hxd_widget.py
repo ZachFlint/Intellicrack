@@ -7,11 +7,11 @@ binary files within Intellicrack's interface.
 from __future__ import annotations
 
 import ctypes
-import subprocess
 import winreg
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, override
 
+from intellicrack.core._subprocess import Popen, TimeoutExpired
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.embedding.embedded_widget import EmbeddedToolWidget
 from intellicrack.ui.embedding.win32_helper import Win32WindowHelper
@@ -58,6 +58,7 @@ class HxDWidget(EmbeddedToolWidget):
         self._current_offset: int = 0
         super().__init__(parent)
 
+    @override
     def get_tool_display_name(self) -> str:
         """Get the display name for HxD.
 
@@ -262,7 +263,7 @@ class HxDIntegration:
     def __init__(self) -> None:
         """Initialize HxD integration."""
         self._exe_path: Path | None = None
-        self._standalone_processes: list[subprocess.Popen[bytes]] = []
+        self._standalone_processes: list[Popen[bytes]] = []
 
     def find_hxd(self) -> Path | None:
         """Find HxD installation.
@@ -293,7 +294,7 @@ class HxDIntegration:
             return False
 
         try:
-            proc = subprocess.Popen([str(exe), str(file_path)])
+            proc = Popen([str(exe), str(file_path)])
         except OSError:
             _logger.exception("hxd_launch_failed", extra={"path": str(file_path)})
             return False
@@ -344,7 +345,7 @@ class HxDIntegration:
                 try:
                     proc.terminate()
                     proc.wait(timeout=5.0)
-                except subprocess.TimeoutExpired:
+                except TimeoutExpired:
                     proc.kill()
                 except OSError:
                     _logger.debug("hxd_standalone_cleanup_error", extra={"pid": proc.pid})

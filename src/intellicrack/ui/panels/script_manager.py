@@ -575,7 +575,8 @@ class ScriptManagerPanel(QWidget):
             language = ScriptTypeInfo.get_language(script_type)
             self._editor.set_language(language)
 
-    def _build_script(self, name: str, script_type: str, content: str) -> Script:
+    @staticmethod
+    def _build_script(name: str, script_type: str, content: str) -> Script:
         """Build a Script object from panel data.
 
         Args:

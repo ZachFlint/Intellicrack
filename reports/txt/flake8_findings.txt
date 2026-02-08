@@ -380,142 +380,142 @@ src/intellicrack\ui\provider_config.py:1648:80: E501 line too long (114 > 79 cha
 
 67 findings in src/intellicrack\ui\app.py
 
-src/intellicrack\ui\app.py:52:5: F811 redefinition of unused 'Callable' from line 13
+src/intellicrack\ui\app.py:53:5: F811 redefinition of unused 'Callable' from line 14
 
-src/intellicrack\ui\app.py:292:80: E501 line too long (90 > 79 characters)
+src/intellicrack\ui\app.py:295:80: E501 line too long (90 > 79 characters)
 
-src/intellicrack\ui\app.py:294:80: E501 line too long (87 > 79 characters)
+src/intellicrack\ui\app.py:297:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\ui\app.py:295:80: E501 line too long (82 > 79 characters)
+src/intellicrack\ui\app.py:298:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\ui\app.py:296:80: E501 line too long (89 > 79 characters)
+src/intellicrack\ui\app.py:299:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\ui\app.py:298:80: E501 line too long (80 > 79 characters)
+src/intellicrack\ui\app.py:301:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\ui\app.py:311:80: E501 line too long (81 > 79 characters)
+src/intellicrack\ui\app.py:316:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\ui\app.py:312:80: E501 line too long (89 > 79 characters)
+src/intellicrack\ui\app.py:317:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\ui\app.py:318:80: E501 line too long (90 > 79 characters)
+src/intellicrack\ui\app.py:325:80: E501 line too long (90 > 79 characters)
 
-src/intellicrack\ui\app.py:319:80: E501 line too long (90 > 79 characters)
+src/intellicrack\ui\app.py:326:80: E501 line too long (90 > 79 characters)
 
-src/intellicrack\ui\app.py:320:80: E501 line too long (86 > 79 characters)
+src/intellicrack\ui\app.py:327:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\ui\app.py:322:80: E501 line too long (102 > 79 characters)
+src/intellicrack\ui\app.py:329:80: E501 line too long (102 > 79 characters)
 
-src/intellicrack\ui\app.py:323:80: E501 line too long (106 > 79 characters)
+src/intellicrack\ui\app.py:330:80: E501 line too long (106 > 79 characters)
 
-src/intellicrack\ui\app.py:324:80: E501 line too long (108 > 79 characters)
+src/intellicrack\ui\app.py:331:80: E501 line too long (108 > 79 characters)
 
-src/intellicrack\ui\app.py:335:80: E501 line too long (101 > 79 characters)
+src/intellicrack\ui\app.py:344:80: E501 line too long (101 > 79 characters)
 
-src/intellicrack\ui\app.py:336:80: E501 line too long (88 > 79 characters)
+src/intellicrack\ui\app.py:345:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\ui\app.py:347:80: E501 line too long (95 > 79 characters)
+src/intellicrack\ui\app.py:358:80: E501 line too long (95 > 79 characters)
 
-src/intellicrack\ui\app.py:348:80: E501 line too long (82 > 79 characters)
+src/intellicrack\ui\app.py:359:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\ui\app.py:359:80: E501 line too long (84 > 79 characters)
+src/intellicrack\ui\app.py:372:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\ui\app.py:407:80: E501 line too long (83 > 79 characters)
+src/intellicrack\ui\app.py:424:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\ui\app.py:480:80: E501 line too long (88 > 79 characters)
+src/intellicrack\ui\app.py:497:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\ui\app.py:528:80: E501 line too long (83 > 79 characters)
+src/intellicrack\ui\app.py:545:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\ui\app.py:530:80: E501 line too long (91 > 79 characters)
+src/intellicrack\ui\app.py:547:80: E501 line too long (91 > 79 characters)
 
-src/intellicrack\ui\app.py:532:80: E501 line too long (81 > 79 characters)
+src/intellicrack\ui\app.py:549:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\ui\app.py:541:80: E501 line too long (96 > 79 characters)
+src/intellicrack\ui\app.py:558:80: E501 line too long (96 > 79 characters)
 
-src/intellicrack\ui\app.py:587:80: E501 line too long (82 > 79 characters)
+src/intellicrack\ui\app.py:602:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\ui\app.py:597:80: E501 line too long (80 > 79 characters)
+src/intellicrack\ui\app.py:612:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\ui\app.py:689:80: E501 line too long (80 > 79 characters)
+src/intellicrack\ui\app.py:704:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\ui\app.py:692:80: E501 line too long (119 > 79 characters)
+src/intellicrack\ui\app.py:707:80: E501 line too long (119 > 79 characters)
 
-src/intellicrack\ui\app.py:762:80: E501 line too long (83 > 79 characters)
+src/intellicrack\ui\app.py:777:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\ui\app.py:770:80: E501 line too long (82 > 79 characters)
+src/intellicrack\ui\app.py:785:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\ui\app.py:788:80: E501 line too long (87 > 79 characters)
+src/intellicrack\ui\app.py:803:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\ui\app.py:791:80: E501 line too long (82 > 79 characters)
+src/intellicrack\ui\app.py:806:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\ui\app.py:796:80: E501 line too long (90 > 79 characters)
+src/intellicrack\ui\app.py:811:80: E501 line too long (90 > 79 characters)
 
-src/intellicrack\ui\app.py:805:80: E501 line too long (83 > 79 characters)
+src/intellicrack\ui\app.py:820:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\ui\app.py:808:80: E501 line too long (113 > 79 characters)
+src/intellicrack\ui\app.py:823:80: E501 line too long (113 > 79 characters)
 
-src/intellicrack\ui\app.py:835:80: E501 line too long (90 > 79 characters)
+src/intellicrack\ui\app.py:850:80: E501 line too long (90 > 79 characters)
 
-src/intellicrack\ui\app.py:836:80: E501 line too long (93 > 79 characters)
+src/intellicrack\ui\app.py:851:80: E501 line too long (93 > 79 characters)
 
-src/intellicrack\ui\app.py:839:80: E501 line too long (98 > 79 characters)
+src/intellicrack\ui\app.py:854:80: E501 line too long (98 > 79 characters)
 
-src/intellicrack\ui\app.py:869:80: E501 line too long (81 > 79 characters)
+src/intellicrack\ui\app.py:884:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\ui\app.py:899:80: E501 line too long (81 > 79 characters)
+src/intellicrack\ui\app.py:914:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\ui\app.py:919:80: E501 line too long (87 > 79 characters)
+src/intellicrack\ui\app.py:934:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\ui\app.py:930:80: E501 line too long (134 > 79 characters)
+src/intellicrack\ui\app.py:945:80: E501 line too long (134 > 79 characters)
 
-src/intellicrack\ui\app.py:938:80: E501 line too long (85 > 79 characters)
+src/intellicrack\ui\app.py:953:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\ui\app.py:943:80: E501 line too long (82 > 79 characters)
+src/intellicrack\ui\app.py:958:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\ui\app.py:946:80: E501 line too long (98 > 79 characters)
+src/intellicrack\ui\app.py:961:80: E501 line too long (98 > 79 characters)
 
-src/intellicrack\ui\app.py:954:80: E501 line too long (85 > 79 characters)
+src/intellicrack\ui\app.py:969:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\ui\app.py:959:80: E501 line too long (82 > 79 characters)
+src/intellicrack\ui\app.py:974:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\ui\app.py:962:80: E501 line too long (98 > 79 characters)
+src/intellicrack\ui\app.py:977:80: E501 line too long (98 > 79 characters)
 
-src/intellicrack\ui\app.py:978:80: E501 line too long (95 > 79 characters)
+src/intellicrack\ui\app.py:993:80: E501 line too long (95 > 79 characters)
 
-src/intellicrack\ui\app.py:986:80: E501 line too long (85 > 79 characters)
+src/intellicrack\ui\app.py:1001:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\ui\app.py:991:80: E501 line too long (101 > 79 characters)
+src/intellicrack\ui\app.py:1006:80: E501 line too long (101 > 79 characters)
 
-src/intellicrack\ui\app.py:994:80: E501 line too long (98 > 79 characters)
+src/intellicrack\ui\app.py:1009:80: E501 line too long (98 > 79 characters)
 
-src/intellicrack\ui\app.py:1002:80: E501 line too long (87 > 79 characters)
+src/intellicrack\ui\app.py:1017:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\ui\app.py:1007:80: E501 line too long (104 > 79 characters)
+src/intellicrack\ui\app.py:1022:80: E501 line too long (104 > 79 characters)
 
-src/intellicrack\ui\app.py:1010:80: E501 line too long (99 > 79 characters)
+src/intellicrack\ui\app.py:1025:80: E501 line too long (99 > 79 characters)
 
-src/intellicrack\ui\app.py:1011:80: E501 line too long (81 > 79 characters)
+src/intellicrack\ui\app.py:1026:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\ui\app.py:1025:80: E501 line too long (82 > 79 characters)
+src/intellicrack\ui\app.py:1040:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\ui\app.py:1033:80: E501 line too long (80 > 79 characters)
+src/intellicrack\ui\app.py:1048:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\ui\app.py:1043:80: E501 line too long (82 > 79 characters)
+src/intellicrack\ui\app.py:1058:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\ui\app.py:1078:80: E501 line too long (85 > 79 characters)
+src/intellicrack\ui\app.py:1093:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\ui\app.py:1107:80: E501 line too long (87 > 79 characters)
+src/intellicrack\ui\app.py:1122:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\ui\app.py:1126:80: E501 line too long (85 > 79 characters)
+src/intellicrack\ui\app.py:1141:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\ui\app.py:1129:80: E501 line too long (90 > 79 characters)
+src/intellicrack\ui\app.py:1144:80: E501 line too long (90 > 79 characters)
 
-src/intellicrack\ui\app.py:1130:80: E501 line too long (107 > 79 characters)
+src/intellicrack\ui\app.py:1145:80: E501 line too long (107 > 79 characters)
 
-src/intellicrack\ui\app.py:1132:80: E501 line too long (97 > 79 characters)
+src/intellicrack\ui\app.py:1147:80: E501 line too long (97 > 79 characters)
 
-src/intellicrack\ui\app.py:1133:80: E501 line too long (106 > 79 characters)
+src/intellicrack\ui\app.py:1148:80: E501 line too long (106 > 79 characters)
 
 
-65 findings in src/intellicrack\sandbox\qemu.py
+66 findings in src/intellicrack\sandbox\qemu.py
 
 src/intellicrack\sandbox\qemu.py:73:80: E501 line too long (90 > 79 characters)
 
@@ -551,353 +551,357 @@ src/intellicrack\sandbox\qemu.py:765:80: E501 line too long (82 > 79 characters)
 
 src/intellicrack\sandbox\qemu.py:780:80: E501 line too long (93 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:821:80: E501 line too long (94 > 79 characters)
+src/intellicrack\sandbox\qemu.py:820:80: E501 line too long (94 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:835:80: E501 line too long (82 > 79 characters)
+src/intellicrack\sandbox\qemu.py:825:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:882:80: E501 line too long (80 > 79 characters)
+src/intellicrack\sandbox\qemu.py:832:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1009:80: E501 line too long (95 > 79 characters)
+src/intellicrack\sandbox\qemu.py:879:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1013:80: E501 line too long (99 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1006:80: E501 line too long (95 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1014:80: E501 line too long (92 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1010:80: E501 line too long (99 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1016:80: E501 line too long (86 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1011:80: E501 line too long (92 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1026:80: E501 line too long (83 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1013:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1042:80: E501 line too long (85 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1023:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1064:80: E501 line too long (86 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1039:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1068:80: E501 line too long (87 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1061:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1072:80: E501 line too long (86 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1065:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1122:80: E501 line too long (93 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1069:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1135:80: E501 line too long (88 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1119:80: E501 line too long (93 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1138:80: E501 line too long (128 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1132:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1148:80: E501 line too long (85 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1135:80: E501 line too long (128 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1199:80: E501 line too long (81 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1145:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1248:80: E501 line too long (82 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1196:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1323:80: E501 line too long (86 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1245:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1359:80: E501 line too long (86 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1320:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1381:80: E501 line too long (101 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1356:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1386:80: E501 line too long (91 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1378:80: E501 line too long (101 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1391:80: E501 line too long (91 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1383:80: E501 line too long (91 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1446:80: E501 line too long (86 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1388:80: E501 line too long (91 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1475:80: E501 line too long (85 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1443:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1509:80: E501 line too long (81 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1472:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1510:80: E501 line too long (81 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1490:80: E501 line too long (94 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1512:80: E501 line too long (80 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1550:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1516:80: E501 line too long (88 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1551:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1621:80: E501 line too long (91 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1553:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1653:80: E501 line too long (91 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1662:80: E501 line too long (91 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1667:80: E501 line too long (81 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1694:80: E501 line too long (91 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1686:80: E501 line too long (91 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1708:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1696:80: E501 line too long (80 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1727:80: E501 line too long (91 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1697:80: E501 line too long (119 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1737:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1698:80: E501 line too long (83 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1738:80: E501 line too long (119 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1699:80: E501 line too long (123 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1739:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1706:80: E501 line too long (80 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1740:80: E501 line too long (123 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1725:80: E501 line too long (91 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1747:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1731:80: E501 line too long (112 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1766:80: E501 line too long (91 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1732:80: E501 line too long (114 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1772:80: E501 line too long (112 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1741:80: E501 line too long (80 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1773:80: E501 line too long (114 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1767:80: E501 line too long (96 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1782:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1788:80: E501 line too long (82 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1808:80: E501 line too long (96 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1795:80: E501 line too long (98 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1829:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1817:80: E501 line too long (82 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1836:80: E501 line too long (98 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1837:80: E501 line too long (83 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1858:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\sandbox\qemu.py:1878:80: E501 line too long (82 > 79 characters)
+src/intellicrack\sandbox\qemu.py:1878:80: E501 line too long (83 > 79 characters)
 
+src/intellicrack\sandbox\qemu.py:1919:80: E501 line too long (82 > 79 characters)
 
-64 findings in src/intellicrack\core\script_gen.py
 
-src/intellicrack\core\script_gen.py:128:80: E501 line too long (86 > 79 characters)
+65 findings in src/intellicrack\core\script_gen.py
 
-src/intellicrack\core\script_gen.py:137:80: E501 line too long (80 > 79 characters)
+src/intellicrack\core\script_gen.py:131:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\core\script_gen.py:158:80: E501 line too long (84 > 79 characters)
+src/intellicrack\core\script_gen.py:140:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\core\script_gen.py:163:80: E501 line too long (83 > 79 characters)
+src/intellicrack\core\script_gen.py:161:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\core\script_gen.py:169:80: E501 line too long (81 > 79 characters)
+src/intellicrack\core\script_gen.py:166:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\core\script_gen.py:198:80: E501 line too long (94 > 79 characters)
+src/intellicrack\core\script_gen.py:179:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\core\script_gen.py:200:80: E501 line too long (92 > 79 characters)
+src/intellicrack\core\script_gen.py:200:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\core\script_gen.py:204:80: E501 line too long (84 > 79 characters)
+src/intellicrack\core\script_gen.py:215:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\core\script_gen.py:207:80: E501 line too long (84 > 79 characters)
+src/intellicrack\core\script_gen.py:238:80: E501 line too long (90 > 79 characters)
 
-src/intellicrack\core\script_gen.py:222:80: E501 line too long (87 > 79 characters)
+src/intellicrack\core\script_gen.py:240:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\core\script_gen.py:236:80: E501 line too long (93 > 79 characters)
+src/intellicrack\core\script_gen.py:244:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\core\script_gen.py:266:80: E501 line too long (82 > 79 characters)
+src/intellicrack\core\script_gen.py:246:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\core\script_gen.py:285:80: E501 line too long (81 > 79 characters)
+src/intellicrack\core\script_gen.py:270:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\core\script_gen.py:287:80: E501 line too long (90 > 79 characters)
+src/intellicrack\core\script_gen.py:299:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\core\script_gen.py:335:80: E501 line too long (90 > 79 characters)
+src/intellicrack\core\script_gen.py:318:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\core\script_gen.py:345:80: E501 line too long (90 > 79 characters)
+src/intellicrack\core\script_gen.py:320:80: E501 line too long (90 > 79 characters)
 
-src/intellicrack\core\script_gen.py:355:80: E501 line too long (105 > 79 characters)
+src/intellicrack\core\script_gen.py:368:80: E501 line too long (90 > 79 characters)
 
-src/intellicrack\core\script_gen.py:365:80: E501 line too long (111 > 79 characters)
+src/intellicrack\core\script_gen.py:378:80: E501 line too long (90 > 79 characters)
 
-src/intellicrack\core\script_gen.py:370:80: E501 line too long (110 > 79 characters)
+src/intellicrack\core\script_gen.py:388:80: E501 line too long (105 > 79 characters)
 
-src/intellicrack\core\script_gen.py:372:80: E501 line too long (102 > 79 characters)
+src/intellicrack\core\script_gen.py:398:80: E501 line too long (111 > 79 characters)
 
-src/intellicrack\core\script_gen.py:385:80: E501 line too long (84 > 79 characters)
+src/intellicrack\core\script_gen.py:403:80: E501 line too long (110 > 79 characters)
 
-src/intellicrack\core\script_gen.py:389:80: E501 line too long (90 > 79 characters)
+src/intellicrack\core\script_gen.py:405:80: E501 line too long (102 > 79 characters)
 
-src/intellicrack\core\script_gen.py:394:80: E501 line too long (96 > 79 characters)
+src/intellicrack\core\script_gen.py:418:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\core\script_gen.py:415:80: E501 line too long (118 > 79 characters)
+src/intellicrack\core\script_gen.py:422:80: E501 line too long (90 > 79 characters)
 
-src/intellicrack\core\script_gen.py:418:80: E501 line too long (119 > 79 characters)
+src/intellicrack\core\script_gen.py:427:80: E501 line too long (96 > 79 characters)
 
-src/intellicrack\core\script_gen.py:421:80: E501 line too long (116 > 79 characters)
+src/intellicrack\core\script_gen.py:448:80: E501 line too long (118 > 79 characters)
 
-src/intellicrack\core\script_gen.py:457:80: E501 line too long (81 > 79 characters)
+src/intellicrack\core\script_gen.py:451:80: E501 line too long (119 > 79 characters)
 
-src/intellicrack\core\script_gen.py:501:80: E501 line too long (99 > 79 characters)
+src/intellicrack\core\script_gen.py:454:80: E501 line too long (116 > 79 characters)
 
-src/intellicrack\core\script_gen.py:521:80: E501 line too long (80 > 79 characters)
+src/intellicrack\core\script_gen.py:490:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\core\script_gen.py:525:80: E501 line too long (85 > 79 characters)
+src/intellicrack\core\script_gen.py:534:80: E501 line too long (99 > 79 characters)
 
-src/intellicrack\core\script_gen.py:543:80: E501 line too long (90 > 79 characters)
+src/intellicrack\core\script_gen.py:554:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\core\script_gen.py:576:80: E501 line too long (116 > 79 characters)
+src/intellicrack\core\script_gen.py:558:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\core\script_gen.py:588:80: E501 line too long (84 > 79 characters)
+src/intellicrack\core\script_gen.py:576:80: E501 line too long (90 > 79 characters)
 
-src/intellicrack\core\script_gen.py:613:80: E501 line too long (98 > 79 characters)
+src/intellicrack\core\script_gen.py:609:80: E501 line too long (116 > 79 characters)
 
-src/intellicrack\core\script_gen.py:618:80: E501 line too long (87 > 79 characters)
+src/intellicrack\core\script_gen.py:621:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\core\script_gen.py:630:80: E501 line too long (119 > 79 characters)
+src/intellicrack\core\script_gen.py:646:80: E501 line too long (98 > 79 characters)
 
-src/intellicrack\core\script_gen.py:631:80: E501 line too long (140 > 79 characters)
+src/intellicrack\core\script_gen.py:651:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\core\script_gen.py:633:80: E501 line too long (86 > 79 characters)
+src/intellicrack\core\script_gen.py:663:80: E501 line too long (119 > 79 characters)
 
-src/intellicrack\core\script_gen.py:634:80: E501 line too long (90 > 79 characters)
+src/intellicrack\core\script_gen.py:664:80: E501 line too long (140 > 79 characters)
 
-src/intellicrack\core\script_gen.py:637:80: E501 line too long (130 > 79 characters)
+src/intellicrack\core\script_gen.py:666:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\core\script_gen.py:639:80: E501 line too long (120 > 79 characters)
+src/intellicrack\core\script_gen.py:667:80: E501 line too long (90 > 79 characters)
 
-src/intellicrack\core\script_gen.py:640:80: E501 line too long (108 > 79 characters)
+src/intellicrack\core\script_gen.py:670:80: E501 line too long (130 > 79 characters)
 
-src/intellicrack\core\script_gen.py:651:80: E501 line too long (112 > 79 characters)
+src/intellicrack\core\script_gen.py:672:80: E501 line too long (120 > 79 characters)
 
-src/intellicrack\core\script_gen.py:652:80: E501 line too long (122 > 79 characters)
+src/intellicrack\core\script_gen.py:673:80: E501 line too long (108 > 79 characters)
 
-src/intellicrack\core\script_gen.py:653:80: E501 line too long (101 > 79 characters)
+src/intellicrack\core\script_gen.py:684:80: E501 line too long (112 > 79 characters)
 
-src/intellicrack\core\script_gen.py:654:80: E501 line too long (103 > 79 characters)
+src/intellicrack\core\script_gen.py:685:80: E501 line too long (122 > 79 characters)
 
-src/intellicrack\core\script_gen.py:655:80: E501 line too long (118 > 79 characters)
+src/intellicrack\core\script_gen.py:686:80: E501 line too long (101 > 79 characters)
 
-src/intellicrack\core\script_gen.py:666:80: E501 line too long (85 > 79 characters)
+src/intellicrack\core\script_gen.py:687:80: E501 line too long (103 > 79 characters)
 
-src/intellicrack\core\script_gen.py:668:80: E501 line too long (80 > 79 characters)
+src/intellicrack\core\script_gen.py:688:80: E501 line too long (118 > 79 characters)
 
-src/intellicrack\core\script_gen.py:669:80: E501 line too long (94 > 79 characters)
+src/intellicrack\core\script_gen.py:699:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\core\script_gen.py:682:80: E501 line too long (88 > 79 characters)
+src/intellicrack\core\script_gen.py:701:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\core\script_gen.py:684:80: E501 line too long (81 > 79 characters)
+src/intellicrack\core\script_gen.py:702:80: E501 line too long (94 > 79 characters)
 
-src/intellicrack\core\script_gen.py:685:80: E501 line too long (89 > 79 characters)
+src/intellicrack\core\script_gen.py:715:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\core\script_gen.py:716:80: E501 line too long (83 > 79 characters)
+src/intellicrack\core\script_gen.py:717:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\core\script_gen.py:738:80: E501 line too long (97 > 79 characters)
+src/intellicrack\core\script_gen.py:718:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\core\script_gen.py:745:80: E501 line too long (86 > 79 characters)
+src/intellicrack\core\script_gen.py:749:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\core\script_gen.py:769:80: E501 line too long (83 > 79 characters)
+src/intellicrack\core\script_gen.py:771:80: E501 line too long (97 > 79 characters)
 
-src/intellicrack\core\script_gen.py:797:80: E501 line too long (81 > 79 characters)
+src/intellicrack\core\script_gen.py:778:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\core\script_gen.py:800:80: E501 line too long (137 > 79 characters)
+src/intellicrack\core\script_gen.py:802:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\core\script_gen.py:812:80: E501 line too long (87 > 79 characters)
+src/intellicrack\core\script_gen.py:830:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\core\script_gen.py:829:80: E501 line too long (90 > 79 characters)
+src/intellicrack\core\script_gen.py:833:80: E501 line too long (137 > 79 characters)
 
-src/intellicrack\core\script_gen.py:841:80: E501 line too long (85 > 79 characters)
+src/intellicrack\core\script_gen.py:845:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\core\script_gen.py:843:80: E501 line too long (87 > 79 characters)
+src/intellicrack\core\script_gen.py:862:80: E501 line too long (90 > 79 characters)
 
-src/intellicrack\core\script_gen.py:1188:80: E501 line too long (121 > 79 characters)
+src/intellicrack\core\script_gen.py:874:80: E501 line too long (85 > 79 characters)
+
+src/intellicrack\core\script_gen.py:876:80: E501 line too long (87 > 79 characters)
+
+src/intellicrack\core\script_gen.py:1221:80: E501 line too long (121 > 79 characters)
 
 
 59 findings in src/intellicrack\sandbox\windows.py
 
-src/intellicrack\sandbox\windows.py:130:80: E501 line too long (108 > 79 characters)
+src/intellicrack\sandbox\windows.py:131:80: E501 line too long (108 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:144:80: E501 line too long (97 > 79 characters)
+src/intellicrack\sandbox\windows.py:145:80: E501 line too long (97 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:166:80: E501 line too long (83 > 79 characters)
+src/intellicrack\sandbox\windows.py:167:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:187:80: E501 line too long (96 > 79 characters)
+src/intellicrack\sandbox\windows.py:188:80: E501 line too long (96 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:215:80: E501 line too long (85 > 79 characters)
+src/intellicrack\sandbox\windows.py:216:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:292:80: E501 line too long (83 > 79 characters)
+src/intellicrack\sandbox\windows.py:293:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:320:80: E501 line too long (85 > 79 characters)
+src/intellicrack\sandbox\windows.py:321:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:326:80: E501 line too long (88 > 79 characters)
+src/intellicrack\sandbox\windows.py:327:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:343:80: E501 line too long (87 > 79 characters)
+src/intellicrack\sandbox\windows.py:344:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:351:80: E501 line too long (82 > 79 characters)
+src/intellicrack\sandbox\windows.py:352:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:360:80: E501 line too long (83 > 79 characters)
+src/intellicrack\sandbox\windows.py:361:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:384:80: E501 line too long (87 > 79 characters)
+src/intellicrack\sandbox\windows.py:385:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:395:80: E501 line too long (80 > 79 characters)
+src/intellicrack\sandbox\windows.py:396:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:408:80: E501 line too long (84 > 79 characters)
+src/intellicrack\sandbox\windows.py:409:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:411:80: E501 line too long (84 > 79 characters)
+src/intellicrack\sandbox\windows.py:412:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:419:80: E501 line too long (82 > 79 characters)
+src/intellicrack\sandbox\windows.py:420:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:423:80: E501 line too long (87 > 79 characters)
+src/intellicrack\sandbox\windows.py:424:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:427:80: E501 line too long (95 > 79 characters)
+src/intellicrack\sandbox\windows.py:428:80: E501 line too long (95 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:430:80: E501 line too long (95 > 79 characters)
+src/intellicrack\sandbox\windows.py:431:80: E501 line too long (95 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:431:80: E501 line too long (160 > 79 characters)
+src/intellicrack\sandbox\windows.py:432:80: E501 line too long (160 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:437:80: E501 line too long (80 > 79 characters)
+src/intellicrack\sandbox\windows.py:438:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:441:80: E501 line too long (87 > 79 characters)
+src/intellicrack\sandbox\windows.py:442:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:451:80: E501 line too long (128 > 79 characters)
+src/intellicrack\sandbox\windows.py:452:80: E501 line too long (128 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:452:80: E501 line too long (109 > 79 characters)
+src/intellicrack\sandbox\windows.py:453:80: E501 line too long (109 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:457:80: E501 line too long (82 > 79 characters)
+src/intellicrack\sandbox\windows.py:458:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:460:80: E501 line too long (87 > 79 characters)
+src/intellicrack\sandbox\windows.py:461:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:467:80: E501 line too long (80 > 79 characters)
+src/intellicrack\sandbox\windows.py:468:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:471:80: E501 line too long (95 > 79 characters)
+src/intellicrack\sandbox\windows.py:472:80: E501 line too long (95 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:472:80: E501 line too long (99 > 79 characters)
-
-src/intellicrack\sandbox\windows.py:473:80: E501 line too long (98 > 79 characters)
+src/intellicrack\sandbox\windows.py:473:80: E501 line too long (99 > 79 characters)
 
 src/intellicrack\sandbox\windows.py:474:80: E501 line too long (98 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:478:80: E501 line too long (94 > 79 characters)
+src/intellicrack\sandbox\windows.py:475:80: E501 line too long (98 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:513:80: E501 line too long (81 > 79 characters)
+src/intellicrack\sandbox\windows.py:479:80: E501 line too long (94 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:514:80: E501 line too long (82 > 79 characters)
+src/intellicrack\sandbox\windows.py:514:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:537:80: E501 line too long (81 > 79 characters)
+src/intellicrack\sandbox\windows.py:515:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:538:80: E501 line too long (98 > 79 characters)
+src/intellicrack\sandbox\windows.py:538:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:540:80: E501 line too long (80 > 79 characters)
+src/intellicrack\sandbox\windows.py:539:80: E501 line too long (98 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:593:80: E501 line too long (86 > 79 characters)
+src/intellicrack\sandbox\windows.py:541:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:649:80: E501 line too long (91 > 79 characters)
+src/intellicrack\sandbox\windows.py:594:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:655:80: E501 line too long (91 > 79 characters)
+src/intellicrack\sandbox\windows.py:650:80: E501 line too long (91 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:681:80: E501 line too long (91 > 79 characters)
+src/intellicrack\sandbox\windows.py:656:80: E501 line too long (91 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:688:80: E501 line too long (95 > 79 characters)
+src/intellicrack\sandbox\windows.py:682:80: E501 line too long (91 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:695:80: E501 line too long (81 > 79 characters)
+src/intellicrack\sandbox\windows.py:689:80: E501 line too long (95 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:714:80: E501 line too long (91 > 79 characters)
+src/intellicrack\sandbox\windows.py:696:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:717:80: E501 line too long (98 > 79 characters)
+src/intellicrack\sandbox\windows.py:715:80: E501 line too long (91 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:718:80: E501 line too long (100 > 79 characters)
+src/intellicrack\sandbox\windows.py:718:80: E501 line too long (98 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:724:80: E501 line too long (93 > 79 characters)
+src/intellicrack\sandbox\windows.py:719:80: E501 line too long (100 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:725:80: E501 line too long (110 > 79 characters)
+src/intellicrack\sandbox\windows.py:725:80: E501 line too long (93 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:726:80: E501 line too long (96 > 79 characters)
+src/intellicrack\sandbox\windows.py:726:80: E501 line too long (110 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:727:80: E501 line too long (113 > 79 characters)
+src/intellicrack\sandbox\windows.py:727:80: E501 line too long (96 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:734:80: E501 line too long (80 > 79 characters)
+src/intellicrack\sandbox\windows.py:728:80: E501 line too long (113 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:753:80: E501 line too long (91 > 79 characters)
+src/intellicrack\sandbox\windows.py:735:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:758:80: E501 line too long (117 > 79 characters)
+src/intellicrack\sandbox\windows.py:754:80: E501 line too long (91 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:760:80: E501 line too long (114 > 79 characters)
+src/intellicrack\sandbox\windows.py:759:80: E501 line too long (117 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:761:80: E501 line too long (128 > 79 characters)
+src/intellicrack\sandbox\windows.py:761:80: E501 line too long (114 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:763:80: E501 line too long (94 > 79 characters)
+src/intellicrack\sandbox\windows.py:762:80: E501 line too long (128 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:769:80: E501 line too long (80 > 79 characters)
+src/intellicrack\sandbox\windows.py:764:80: E501 line too long (94 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:794:80: E501 line too long (96 > 79 characters)
+src/intellicrack\sandbox\windows.py:770:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\sandbox\windows.py:820:80: E501 line too long (98 > 79 characters)
+src/intellicrack\sandbox\windows.py:795:80: E501 line too long (96 > 79 characters)
+
+src/intellicrack\sandbox\windows.py:821:80: E501 line too long (98 > 79 characters)
 
 
 55 findings in src/intellicrack\core\orchestrator.py
@@ -1015,73 +1019,73 @@ src/intellicrack\core\orchestrator.py:1307:80: E501 line too long (89 > 79 chara
 
 52 findings in src/intellicrack\ui\tool_config.py
 
-src/intellicrack\ui\tool_config.py:81:80: E501 line too long (93 > 79 characters)
+src/intellicrack\ui\tool_config.py:82:80: E501 line too long (93 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:89:80: E501 line too long (142 > 79 characters)
+src/intellicrack\ui\tool_config.py:90:80: E501 line too long (142 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:93:80: E501 line too long (111 > 79 characters)
+src/intellicrack\ui\tool_config.py:94:80: E501 line too long (111 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:97:80: E501 line too long (104 > 79 characters)
+src/intellicrack\ui\tool_config.py:98:80: E501 line too long (104 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:130:80: E501 line too long (85 > 79 characters)
+src/intellicrack\ui\tool_config.py:131:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:149:80: E501 line too long (87 > 79 characters)
+src/intellicrack\ui\tool_config.py:150:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:150:80: E501 line too long (81 > 79 characters)
+src/intellicrack\ui\tool_config.py:151:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:171:80: E501 line too long (111 > 79 characters)
+src/intellicrack\ui\tool_config.py:172:80: E501 line too long (111 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:175:80: E501 line too long (117 > 79 characters)
+src/intellicrack\ui\tool_config.py:176:80: E501 line too long (117 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:176:80: E501 line too long (89 > 79 characters)
+src/intellicrack\ui\tool_config.py:177:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:185:80: E501 line too long (113 > 79 characters)
+src/intellicrack\ui\tool_config.py:186:80: E501 line too long (113 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:186:80: E501 line too long (95 > 79 characters)
+src/intellicrack\ui\tool_config.py:187:80: E501 line too long (95 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:203:80: E501 line too long (83 > 79 characters)
+src/intellicrack\ui\tool_config.py:204:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:206:80: E501 line too long (113 > 79 characters)
+src/intellicrack\ui\tool_config.py:207:80: E501 line too long (113 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:226:80: E501 line too long (87 > 79 characters)
+src/intellicrack\ui\tool_config.py:227:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:233:80: E501 line too long (135 > 79 characters)
+src/intellicrack\ui\tool_config.py:234:80: E501 line too long (135 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:276:80: E501 line too long (83 > 79 characters)
+src/intellicrack\ui\tool_config.py:277:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:303:80: E501 line too long (80 > 79 characters)
+src/intellicrack\ui\tool_config.py:304:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:349:80: E501 line too long (87 > 79 characters)
+src/intellicrack\ui\tool_config.py:350:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:379:80: E501 line too long (87 > 79 characters)
+src/intellicrack\ui\tool_config.py:380:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:384:80: E501 line too long (127 > 79 characters)
+src/intellicrack\ui\tool_config.py:385:80: E501 line too long (127 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:385:80: E501 line too long (84 > 79 characters)
+src/intellicrack\ui\tool_config.py:386:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:386:80: E501 line too long (108 > 79 characters)
+src/intellicrack\ui\tool_config.py:387:80: E501 line too long (108 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:387:80: E501 line too long (83 > 79 characters)
+src/intellicrack\ui\tool_config.py:388:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:397:80: E501 line too long (118 > 79 characters)
+src/intellicrack\ui\tool_config.py:398:80: E501 line too long (118 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:415:80: E501 line too long (93 > 79 characters)
+src/intellicrack\ui\tool_config.py:416:80: E501 line too long (93 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:452:80: E501 line too long (98 > 79 characters)
+src/intellicrack\ui\tool_config.py:453:80: E501 line too long (98 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:477:80: E501 line too long (118 > 79 characters)
+src/intellicrack\ui\tool_config.py:478:80: E501 line too long (118 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:480:80: E501 line too long (133 > 79 characters)
+src/intellicrack\ui\tool_config.py:481:80: E501 line too long (133 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:484:80: E501 line too long (108 > 79 characters)
+src/intellicrack\ui\tool_config.py:485:80: E501 line too long (108 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:485:80: E501 line too long (80 > 79 characters)
+src/intellicrack\ui\tool_config.py:486:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:655:80: E501 line too long (80 > 79 characters)
+src/intellicrack\ui\tool_config.py:656:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:685:80: E501 line too long (127 > 79 characters)
+src/intellicrack\ui\tool_config.py:686:80: E501 line too long (127 > 79 characters)
 
-src/intellicrack\ui\tool_config.py:690:80: E501 line too long (84 > 79 characters)
+src/intellicrack\ui\tool_config.py:691:80: E501 line too long (84 > 79 characters)
 
 src/intellicrack\ui\tool_config.py:759:80: E501 line too long (128 > 79 characters)
 
@@ -1120,215 +1124,211 @@ src/intellicrack\ui\tool_config.py:1339:80: E501 line too long (82 > 79 characte
 src/intellicrack\ui\tool_config.py:1393:80: E501 line too long (95 > 79 characters)
 
 
-51 findings in src/intellicrack\bridges\ghidra.py
+49 findings in src/intellicrack\bridges\ghidra.py
 
-src/intellicrack\bridges\ghidra.py:100:80: E501 line too long (94 > 79 characters)
+src/intellicrack\bridges\ghidra.py:101:80: E501 line too long (94 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:122:80: E501 line too long (96 > 79 characters)
+src/intellicrack\bridges\ghidra.py:123:80: E501 line too long (96 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:150:80: E501 line too long (90 > 79 characters)
+src/intellicrack\bridges\ghidra.py:151:80: E501 line too long (90 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:182:80: E501 line too long (80 > 79 characters)
+src/intellicrack\bridges\ghidra.py:183:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:191:80: E501 line too long (82 > 79 characters)
+src/intellicrack\bridges\ghidra.py:192:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:235:80: E501 line too long (92 > 79 characters)
+src/intellicrack\bridges\ghidra.py:236:80: E501 line too long (92 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:353:80: E501 line too long (86 > 79 characters)
+src/intellicrack\bridges\ghidra.py:354:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:467:80: E501 line too long (82 > 79 characters)
+src/intellicrack\bridges\ghidra.py:468:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:483:80: E501 line too long (80 > 79 characters)
+src/intellicrack\bridges\ghidra.py:484:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:491:80: E501 line too long (86 > 79 characters)
+src/intellicrack\bridges\ghidra.py:492:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:552:80: E501 line too long (92 > 79 characters)
+src/intellicrack\bridges\ghidra.py:553:80: E501 line too long (92 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:554:80: E501 line too long (85 > 79 characters)
+src/intellicrack\bridges\ghidra.py:578:80: E501 line too long (95 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:577:80: E501 line too long (95 > 79 characters)
+src/intellicrack\bridges\ghidra.py:702:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:579:80: E501 line too long (91 > 79 characters)
+src/intellicrack\bridges\ghidra.py:715:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:701:80: E501 line too long (85 > 79 characters)
+src/intellicrack\bridges\ghidra.py:726:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:714:80: E501 line too long (83 > 79 characters)
+src/intellicrack\bridges\ghidra.py:777:39: E203 whitespace before ':'
 
-src/intellicrack\bridges\ghidra.py:725:80: E501 line too long (83 > 79 characters)
+src/intellicrack\bridges\ghidra.py:786:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:776:39: E203 whitespace before ':'
+src/intellicrack\bridges\ghidra.py:819:80: E501 line too long (94 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:785:80: E501 line too long (83 > 79 characters)
+src/intellicrack\bridges\ghidra.py:838:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:818:80: E501 line too long (94 > 79 characters)
+src/intellicrack\bridges\ghidra.py:874:80: E501 line too long (93 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:837:80: E501 line too long (80 > 79 characters)
+src/intellicrack\bridges\ghidra.py:919:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:873:80: E501 line too long (93 > 79 characters)
+src/intellicrack\bridges\ghidra.py:929:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:918:80: E501 line too long (88 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1005:80: E501 line too long (92 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:928:80: E501 line too long (87 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1020:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1004:80: E501 line too long (92 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1024:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1019:80: E501 line too long (80 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1031:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1023:80: E501 line too long (84 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1057:80: E501 line too long (93 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1030:80: E501 line too long (80 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1075:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1056:80: E501 line too long (93 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1080:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1074:80: E501 line too long (80 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1101:80: E501 line too long (95 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1079:80: E501 line too long (84 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1119:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1100:80: E501 line too long (95 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1124:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1118:80: E501 line too long (80 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1145:80: E501 line too long (95 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1123:80: E501 line too long (84 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1166:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1144:80: E501 line too long (95 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1191:80: E501 line too long (93 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1165:80: E501 line too long (80 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1196:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1190:80: E501 line too long (93 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1204:80: E501 line too long (116 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1195:80: E501 line too long (81 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1208:80: E501 line too long (130 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1203:80: E501 line too long (116 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1214:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1207:80: E501 line too long (130 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1250:80: E501 line too long (95 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1213:80: E501 line too long (86 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1308:80: E501 line too long (92 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1249:80: E501 line too long (95 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1318:80: E501 line too long (101 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1307:80: E501 line too long (92 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1326:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1317:80: E501 line too long (101 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1348:80: E501 line too long (92 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1325:80: E501 line too long (80 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1366:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1347:80: E501 line too long (92 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1390:80: E501 line too long (94 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1365:80: E501 line too long (80 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1416:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1389:80: E501 line too long (94 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1435:80: E501 line too long (121 > 79 characters)
 
-src/intellicrack\bridges\ghidra.py:1415:80: E501 line too long (82 > 79 characters)
-
-src/intellicrack\bridges\ghidra.py:1434:80: E501 line too long (121 > 79 characters)
-
-src/intellicrack\bridges\ghidra.py:1435:80: E501 line too long (112 > 79 characters)
+src/intellicrack\bridges\ghidra.py:1436:80: E501 line too long (112 > 79 characters)
 
 
 48 findings in src/intellicrack\bridges\x64dbg.py
 
-src/intellicrack\bridges\x64dbg.py:126:80: E501 line too long (83 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:127:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:139:80: E501 line too long (86 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:140:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:229:80: E501 line too long (137 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:230:80: E501 line too long (137 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:237:80: E501 line too long (113 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:238:80: E501 line too long (113 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:238:80: E501 line too long (89 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:239:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:269:80: E501 line too long (97 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:270:80: E501 line too long (97 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:283:80: E501 line too long (87 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:284:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:284:80: E501 line too long (97 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:285:80: E501 line too long (97 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:285:80: E501 line too long (88 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:286:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:291:80: E501 line too long (84 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:292:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:292:51: E203 whitespace before ':'
+src/intellicrack\bridges\x64dbg.py:293:51: E203 whitespace before ':'
 
-src/intellicrack\bridges\x64dbg.py:292:80: E501 line too long (86 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:293:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:301:80: E501 line too long (80 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:302:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:487:80: E501 line too long (96 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:488:80: E501 line too long (96 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:765:80: E501 line too long (83 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:766:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1008:80: E501 line too long (83 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1009:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1017:80: E501 line too long (84 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1018:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1022:26: E203 whitespace before ':'
+src/intellicrack\bridges\x64dbg.py:1023:26: E203 whitespace before ':'
 
-src/intellicrack\bridges\x64dbg.py:1025:52: E203 whitespace before ':'
+src/intellicrack\bridges\x64dbg.py:1026:52: E203 whitespace before ':'
 
-src/intellicrack\bridges\x64dbg.py:1149:80: E501 line too long (101 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1150:80: E501 line too long (101 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1216:80: E501 line too long (105 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1217:80: E501 line too long (105 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1341:80: E501 line too long (87 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1342:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1446:80: E501 line too long (105 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1447:80: E501 line too long (105 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1501:80: E501 line too long (91 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1502:80: E501 line too long (91 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1584:80: E501 line too long (85 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1585:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1620:80: E501 line too long (88 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1621:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1656:80: E501 line too long (83 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1657:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1768:80: E501 line too long (83 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1769:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1783:80: E501 line too long (85 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1784:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1793:80: E501 line too long (106 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1794:80: E501 line too long (106 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1801:59: E203 whitespace before ':'
+src/intellicrack\bridges\x64dbg.py:1802:59: E203 whitespace before ':'
 
-src/intellicrack\bridges\x64dbg.py:1802:60: E203 whitespace before ':'
+src/intellicrack\bridges\x64dbg.py:1803:60: E203 whitespace before ':'
 
-src/intellicrack\bridges\x64dbg.py:1802:80: E501 line too long (92 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1803:80: E501 line too long (92 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1831:80: E501 line too long (80 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1832:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1848:80: E501 line too long (83 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1849:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1881:80: E501 line too long (82 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1882:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1889:80: E501 line too long (82 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1890:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1910:80: E501 line too long (96 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1911:80: E501 line too long (96 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1916:80: E501 line too long (83 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1917:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1955:80: E501 line too long (107 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1956:80: E501 line too long (107 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1963:80: E501 line too long (82 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1964:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1977:80: E501 line too long (80 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1978:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1985:80: E501 line too long (96 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1986:80: E501 line too long (96 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:1995:80: E501 line too long (84 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:1996:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:2053:80: E501 line too long (82 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:2054:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:2059:80: E501 line too long (83 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:2060:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:2066:80: E501 line too long (81 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:2067:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\bridges\x64dbg.py:2086:80: E501 line too long (83 > 79 characters)
+src/intellicrack\bridges\x64dbg.py:2087:80: E501 line too long (83 > 79 characters)
 
 
-48 findings in src/intellicrack\ui\sandbox_config.py
+45 findings in src/intellicrack\ui\sandbox_config.py
+
+src/intellicrack\ui\sandbox_config.py:39:80: E501 line too long (104 > 79 characters)
 
 src/intellicrack\ui\sandbox_config.py:94:80: E501 line too long (85 > 79 characters)
-
-src/intellicrack\ui\sandbox_config.py:117:80: E501 line too long (108 > 79 characters)
 
 src/intellicrack\ui\sandbox_config.py:129:80: E501 line too long (81 > 79 characters)
 
@@ -1363,8 +1363,6 @@ src/intellicrack\ui\sandbox_config.py:379:80: E501 line too long (84 > 79 charac
 src/intellicrack\ui\sandbox_config.py:391:80: E501 line too long (99 > 79 characters)
 
 src/intellicrack\ui\sandbox_config.py:393:80: E501 line too long (81 > 79 characters)
-
-src/intellicrack\ui\sandbox_config.py:398:80: E501 line too long (106 > 79 characters)
 
 src/intellicrack\ui\sandbox_config.py:403:80: E501 line too long (100 > 79 characters)
 
@@ -1410,8 +1408,6 @@ src/intellicrack\ui\sandbox_config.py:780:80: E501 line too long (91 > 79 charac
 
 src/intellicrack\ui\sandbox_config.py:784:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\ui\sandbox_config.py:812:80: E501 line too long (114 > 79 characters)
-
 src/intellicrack\ui\sandbox_config.py:820:80: E501 line too long (91 > 79 characters)
 
 src/intellicrack\ui\sandbox_config.py:823:80: E501 line too long (87 > 79 characters)
@@ -1419,8 +1415,6 @@ src/intellicrack\ui\sandbox_config.py:823:80: E501 line too long (87 > 79 charac
 src/intellicrack\ui\sandbox_config.py:827:80: E501 line too long (92 > 79 characters)
 
 src/intellicrack\ui\sandbox_config.py:839:80: E501 line too long (84 > 79 characters)
-
-src/intellicrack\ui\sandbox_config.py:844:80: E501 line too long (106 > 79 characters)
 
 
 43 findings in src/intellicrack\ui\panels\binary_panel.py
@@ -1601,85 +1595,87 @@ src/intellicrack\ui\tools.py:1134:80: E501 line too long (104 > 79 characters)
 src/intellicrack\ui\tools.py:1135:80: E501 line too long (102 > 79 characters)
 
 
-39 findings in src/intellicrack\core\process_manager.py
+40 findings in src/intellicrack\core\process_manager.py
 
 src/intellicrack\core\process_manager.py:3:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\core\process_manager.py:99:80: E501 line too long (81 > 79 characters)
+src/intellicrack\core\process_manager.py:25:80: E501 line too long (107 > 79 characters)
 
-src/intellicrack\core\process_manager.py:113:80: E501 line too long (81 > 79 characters)
+src/intellicrack\core\process_manager.py:100:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\core\process_manager.py:114:80: E501 line too long (82 > 79 characters)
+src/intellicrack\core\process_manager.py:114:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\core\process_manager.py:203:80: E501 line too long (94 > 79 characters)
+src/intellicrack\core\process_manager.py:115:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\core\process_manager.py:239:80: E501 line too long (92 > 79 characters)
+src/intellicrack\core\process_manager.py:204:80: E501 line too long (94 > 79 characters)
 
-src/intellicrack\core\process_manager.py:244:80: E501 line too long (87 > 79 characters)
+src/intellicrack\core\process_manager.py:240:80: E501 line too long (92 > 79 characters)
 
-src/intellicrack\core\process_manager.py:273:80: E501 line too long (83 > 79 characters)
+src/intellicrack\core\process_manager.py:245:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\core\process_manager.py:294:80: E501 line too long (89 > 79 characters)
+src/intellicrack\core\process_manager.py:274:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\core\process_manager.py:298:80: E501 line too long (82 > 79 characters)
+src/intellicrack\core\process_manager.py:295:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\core\process_manager.py:343:80: E501 line too long (88 > 79 characters)
+src/intellicrack\core\process_manager.py:299:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\core\process_manager.py:394:80: E501 line too long (97 > 79 characters)
+src/intellicrack\core\process_manager.py:344:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\core\process_manager.py:399:80: E501 line too long (88 > 79 characters)
+src/intellicrack\core\process_manager.py:395:80: E501 line too long (97 > 79 characters)
 
-src/intellicrack\core\process_manager.py:407:80: E501 line too long (80 > 79 characters)
+src/intellicrack\core\process_manager.py:400:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\core\process_manager.py:436:80: E501 line too long (81 > 79 characters)
+src/intellicrack\core\process_manager.py:408:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\core\process_manager.py:505:80: E501 line too long (82 > 79 characters)
+src/intellicrack\core\process_manager.py:437:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\core\process_manager.py:520:80: E501 line too long (93 > 79 characters)
+src/intellicrack\core\process_manager.py:506:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\core\process_manager.py:530:80: E501 line too long (112 > 79 characters)
+src/intellicrack\core\process_manager.py:521:80: E501 line too long (93 > 79 characters)
 
-src/intellicrack\core\process_manager.py:535:80: E501 line too long (110 > 79 characters)
+src/intellicrack\core\process_manager.py:531:80: E501 line too long (112 > 79 characters)
 
-src/intellicrack\core\process_manager.py:537:80: E501 line too long (116 > 79 characters)
+src/intellicrack\core\process_manager.py:536:80: E501 line too long (110 > 79 characters)
 
-src/intellicrack\core\process_manager.py:572:80: E501 line too long (87 > 79 characters)
+src/intellicrack\core\process_manager.py:538:80: E501 line too long (116 > 79 characters)
 
-src/intellicrack\core\process_manager.py:605:80: E501 line too long (89 > 79 characters)
+src/intellicrack\core\process_manager.py:573:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\core\process_manager.py:610:80: E501 line too long (83 > 79 characters)
+src/intellicrack\core\process_manager.py:606:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\core\process_manager.py:639:80: E501 line too long (82 > 79 characters)
+src/intellicrack\core\process_manager.py:611:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\core\process_manager.py:641:80: E501 line too long (89 > 79 characters)
+src/intellicrack\core\process_manager.py:640:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\core\process_manager.py:645:80: E501 line too long (80 > 79 characters)
+src/intellicrack\core\process_manager.py:642:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\core\process_manager.py:646:80: E501 line too long (83 > 79 characters)
+src/intellicrack\core\process_manager.py:646:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\core\process_manager.py:648:80: E501 line too long (104 > 79 characters)
+src/intellicrack\core\process_manager.py:647:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\core\process_manager.py:694:80: E501 line too long (92 > 79 characters)
+src/intellicrack\core\process_manager.py:649:80: E501 line too long (104 > 79 characters)
 
-src/intellicrack\core\process_manager.py:726:80: E501 line too long (88 > 79 characters)
+src/intellicrack\core\process_manager.py:695:80: E501 line too long (92 > 79 characters)
 
-src/intellicrack\core\process_manager.py:756:80: E501 line too long (98 > 79 characters)
+src/intellicrack\core\process_manager.py:727:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\core\process_manager.py:759:80: E501 line too long (98 > 79 characters)
+src/intellicrack\core\process_manager.py:757:80: E501 line too long (98 > 79 characters)
 
-src/intellicrack\core\process_manager.py:764:80: E501 line too long (87 > 79 characters)
+src/intellicrack\core\process_manager.py:760:80: E501 line too long (98 > 79 characters)
 
-src/intellicrack\core\process_manager.py:845:80: E501 line too long (83 > 79 characters)
+src/intellicrack\core\process_manager.py:765:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\core\process_manager.py:870:80: E501 line too long (81 > 79 characters)
+src/intellicrack\core\process_manager.py:846:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\core\process_manager.py:885:80: E501 line too long (99 > 79 characters)
+src/intellicrack\core\process_manager.py:871:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\core\process_manager.py:931:80: E501 line too long (94 > 79 characters)
+src/intellicrack\core\process_manager.py:886:80: E501 line too long (99 > 79 characters)
 
-src/intellicrack\core\process_manager.py:946:80: E501 line too long (96 > 79 characters)
+src/intellicrack\core\process_manager.py:932:80: E501 line too long (94 > 79 characters)
 
-src/intellicrack\core\process_manager.py:950:80: E501 line too long (95 > 79 characters)
+src/intellicrack\core\process_manager.py:947:80: E501 line too long (96 > 79 characters)
+
+src/intellicrack\core\process_manager.py:951:80: E501 line too long (95 > 79 characters)
 
 
 38 findings in src/intellicrack\bridges\frida_bridge.py
@@ -1696,19 +1692,19 @@ src/intellicrack\bridges\frida_bridge.py:208:80: E501 line too long (82 > 79 cha
 
 src/intellicrack\bridges\frida_bridge.py:272:80: E501 line too long (91 > 79 characters)
 
-src/intellicrack\bridges\frida_bridge.py:398:80: E501 line too long (102 > 79 characters)
+src/intellicrack\bridges\frida_bridge.py:398:80: E501 line too long (89 > 79 characters)
 
 src/intellicrack\bridges\frida_bridge.py:410:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\bridges\frida_bridge.py:412:80: E501 line too long (111 > 79 characters)
+src/intellicrack\bridges\frida_bridge.py:412:80: E501 line too long (98 > 79 characters)
 
-src/intellicrack\bridges\frida_bridge.py:433:80: E501 line too long (85 > 79 characters)
+src/intellicrack\bridges\frida_bridge.py:434:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\bridges\frida_bridge.py:492:80: E501 line too long (98 > 79 characters)
+src/intellicrack\bridges\frida_bridge.py:493:80: E501 line too long (98 > 79 characters)
 
-src/intellicrack\bridges\frida_bridge.py:512:80: E501 line too long (96 > 79 characters)
+src/intellicrack\bridges\frida_bridge.py:513:80: E501 line too long (96 > 79 characters)
 
-src/intellicrack\bridges\frida_bridge.py:573:80: E501 line too long (90 > 79 characters)
+src/intellicrack\bridges\frida_bridge.py:574:80: E501 line too long (90 > 79 characters)
 
 src/intellicrack\bridges\frida_bridge.py:622:80: E501 line too long (91 > 79 characters)
 
@@ -1716,7 +1712,7 @@ src/intellicrack\bridges\frida_bridge.py:624:80: E501 line too long (81 > 79 cha
 
 src/intellicrack\bridges\frida_bridge.py:625:80: E501 line too long (92 > 79 characters)
 
-src/intellicrack\bridges\frida_bridge.py:627:80: E501 line too long (115 > 79 characters)
+src/intellicrack\bridges\frida_bridge.py:627:80: E501 line too long (102 > 79 characters)
 
 src/intellicrack\bridges\frida_bridge.py:706:80: E501 line too long (93 > 79 characters)
 
@@ -1758,7 +1754,7 @@ src/intellicrack\bridges\frida_bridge.py:1149:80: E501 line too long (83 > 79 ch
 
 src/intellicrack\bridges\frida_bridge.py:1156:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\bridges\frida_bridge.py:1180:80: E501 line too long (102 > 79 characters)
+src/intellicrack\bridges\frida_bridge.py:1180:80: E501 line too long (89 > 79 characters)
 
 
 37 findings in src/intellicrack\core\session.py
@@ -1933,57 +1929,130 @@ src/intellicrack\bridges\binary.py:285:80: E501 line too long (82 > 79 character
 
 src/intellicrack\bridges\binary.py:342:80: E501 line too long (101 > 79 characters)
 
-src/intellicrack\bridges\binary.py:429:80: E501 line too long (81 > 79 characters)
+src/intellicrack\bridges\binary.py:430:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\bridges\binary.py:443:80: E501 line too long (111 > 79 characters)
+src/intellicrack\bridges\binary.py:444:80: E501 line too long (111 > 79 characters)
 
-src/intellicrack\bridges\binary.py:547:80: E501 line too long (83 > 79 characters)
+src/intellicrack\bridges\binary.py:548:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\bridges\binary.py:559:80: E501 line too long (85 > 79 characters)
+src/intellicrack\bridges\binary.py:560:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\bridges\binary.py:575:80: E501 line too long (91 > 79 characters)
+src/intellicrack\bridges\binary.py:576:80: E501 line too long (91 > 79 characters)
 
-src/intellicrack\bridges\binary.py:579:80: E501 line too long (131 > 79 characters)
+src/intellicrack\bridges\binary.py:580:80: E501 line too long (131 > 79 characters)
 
-src/intellicrack\bridges\binary.py:626:80: E501 line too long (80 > 79 characters)
+src/intellicrack\bridges\binary.py:627:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\bridges\binary.py:630:80: E501 line too long (89 > 79 characters)
+src/intellicrack\bridges\binary.py:631:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\bridges\binary.py:640:80: E501 line too long (96 > 79 characters)
+src/intellicrack\bridges\binary.py:641:80: E501 line too long (96 > 79 characters)
 
-src/intellicrack\bridges\binary.py:643:80: E501 line too long (135 > 79 characters)
+src/intellicrack\bridges\binary.py:644:80: E501 line too long (135 > 79 characters)
 
-src/intellicrack\bridges\binary.py:663:80: E501 line too long (80 > 79 characters)
+src/intellicrack\bridges\binary.py:664:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\bridges\binary.py:665:80: E501 line too long (85 > 79 characters)
+src/intellicrack\bridges\binary.py:666:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\bridges\binary.py:674:80: E501 line too long (96 > 79 characters)
+src/intellicrack\bridges\binary.py:675:80: E501 line too long (96 > 79 characters)
 
-src/intellicrack\bridges\binary.py:678:80: E501 line too long (128 > 79 characters)
+src/intellicrack\bridges\binary.py:679:80: E501 line too long (128 > 79 characters)
 
-src/intellicrack\bridges\binary.py:734:80: E501 line too long (90 > 79 characters)
+src/intellicrack\bridges\binary.py:735:80: E501 line too long (90 > 79 characters)
 
-src/intellicrack\bridges\binary.py:812:80: E501 line too long (85 > 79 characters)
+src/intellicrack\bridges\binary.py:813:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\bridges\binary.py:815:80: E501 line too long (81 > 79 characters)
+src/intellicrack\bridges\binary.py:816:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\bridges\binary.py:904:34: E203 whitespace before ':'
+src/intellicrack\bridges\binary.py:905:34: E203 whitespace before ':'
 
-src/intellicrack\bridges\binary.py:904:80: E501 line too long (104 > 79 characters)
+src/intellicrack\bridges\binary.py:905:80: E501 line too long (104 > 79 characters)
 
-src/intellicrack\bridges\binary.py:904:88: E203 whitespace before ':'
+src/intellicrack\bridges\binary.py:905:88: E203 whitespace before ':'
 
-src/intellicrack\bridges\binary.py:953:39: E203 whitespace before ':'
+src/intellicrack\bridges\binary.py:954:39: E203 whitespace before ':'
 
-src/intellicrack\bridges\binary.py:962:80: E501 line too long (97 > 79 characters)
+src/intellicrack\bridges\binary.py:963:80: E501 line too long (97 > 79 characters)
 
-src/intellicrack\bridges\binary.py:1027:80: E501 line too long (105 > 79 characters)
+src/intellicrack\bridges\binary.py:1026:80: E501 line too long (105 > 79 characters)
 
-src/intellicrack\bridges\binary.py:1034:80: E501 line too long (92 > 79 characters)
+src/intellicrack\bridges\binary.py:1033:80: E501 line too long (92 > 79 characters)
 
-src/intellicrack\bridges\binary.py:1051:80: E501 line too long (88 > 79 characters)
+src/intellicrack\bridges\binary.py:1050:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\bridges\binary.py:1052:80: E501 line too long (105 > 79 characters)
+src/intellicrack\bridges\binary.py:1051:80: E501 line too long (105 > 79 characters)
+
+
+35 findings in src/intellicrack\bridges\sandbox_bridge.py
+
+src/intellicrack\bridges\sandbox_bridge.py:89:80: E501 line too long (82 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:90:80: E501 line too long (81 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:97:80: E501 line too long (87 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:98:80: E501 line too long (87 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:113:80: E501 line too long (86 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:127:80: E501 line too long (84 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:136:80: E501 line too long (81 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:141:80: E501 line too long (80 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:150:80: E501 line too long (87 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:151:80: E501 line too long (89 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:152:80: E501 line too long (86 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:153:80: E501 line too long (85 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:165:80: E501 line too long (80 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:185:80: E501 line too long (86 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:190:80: E501 line too long (82 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:194:80: E501 line too long (87 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:250:80: E501 line too long (91 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:275:80: E501 line too long (87 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:277:80: E501 line too long (87 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:287:80: E501 line too long (133 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:306:80: E501 line too long (87 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:409:80: E501 line too long (85 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:416:80: E501 line too long (96 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:446:80: E501 line too long (81 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:448:80: E501 line too long (106 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:485:80: E501 line too long (85 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:495:80: E501 line too long (136 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:540:80: E501 line too long (104 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:542:80: E501 line too long (108 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:586:80: E501 line too long (118 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:630:80: E501 line too long (120 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:632:80: E501 line too long (80 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:702:80: E501 line too long (131 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:704:80: E501 line too long (80 > 79 characters)
+
+src/intellicrack\bridges\sandbox_bridge.py:744:80: E501 line too long (109 > 79 characters)
 
 
 35 findings in src/intellicrack\core\tools.py
@@ -2061,75 +2130,75 @@ src/intellicrack\core\tools.py:474:80: E501 line too long (88 > 79 characters)
 
 35 findings in src/intellicrack\providers\xpu_utils.py
 
-src/intellicrack\providers\xpu_utils.py:28:80: E501 line too long (82 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:34:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:29:80: E501 line too long (87 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:35:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:75:80: E501 line too long (89 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:81:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:94:80: E501 line too long (92 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:101:80: E501 line too long (92 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:99:80: E501 line too long (92 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:106:80: E501 line too long (92 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:165:80: E501 line too long (118 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:173:80: E501 line too long (118 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:178:80: E501 line too long (107 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:186:80: E501 line too long (107 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:249:80: E501 line too long (98 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:257:80: E501 line too long (98 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:279:80: E501 line too long (104 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:287:80: E501 line too long (104 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:323:80: E501 line too long (85 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:331:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:326:80: E501 line too long (86 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:334:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:338:80: E501 line too long (86 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:346:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:342:80: E501 line too long (80 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:350:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:346:80: E501 line too long (103 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:354:80: E501 line too long (103 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:348:80: E501 line too long (80 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:356:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:376:80: E501 line too long (98 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:384:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:383:80: E501 line too long (96 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:392:80: E501 line too long (96 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:387:80: E501 line too long (84 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:396:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:397:80: E501 line too long (81 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:406:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:403:80: E501 line too long (84 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:412:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:405:80: E501 line too long (103 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:414:80: E501 line too long (103 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:445:80: E501 line too long (104 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:452:80: E501 line too long (104 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:460:80: E501 line too long (100 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:469:80: E501 line too long (100 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:479:80: E501 line too long (89 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:488:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:488:80: E501 line too long (80 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:497:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:490:80: E501 line too long (93 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:499:80: E501 line too long (93 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:491:80: E501 line too long (109 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:500:80: E501 line too long (109 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:521:80: E501 line too long (146 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:530:80: E501 line too long (146 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:530:80: E501 line too long (86 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:543:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:531:80: E501 line too long (111 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:544:80: E501 line too long (111 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:549:80: E501 line too long (179 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:559:80: E501 line too long (179 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:561:80: E501 line too long (106 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:575:80: E501 line too long (106 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:578:80: E501 line too long (102 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:589:80: E501 line too long (102 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:582:80: E501 line too long (100 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:593:80: E501 line too long (100 > 79 characters)
 
-src/intellicrack\providers\xpu_utils.py:607:80: E501 line too long (89 > 79 characters)
+src/intellicrack\providers\xpu_utils.py:620:80: E501 line too long (89 > 79 characters)
 
 
 34 findings in src/intellicrack\ui\session_manager.py
@@ -2203,197 +2272,6 @@ src/intellicrack\ui\session_manager.py:796:80: E501 line too long (88 > 79 chara
 src/intellicrack\ui\session_manager.py:805:80: E501 line too long (114 > 79 characters)
 
 
-33 findings in src/intellicrack\bridges\sandbox_bridge.py
-
-src/intellicrack\bridges\sandbox_bridge.py:76:80: E501 line too long (82 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:77:80: E501 line too long (81 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:84:80: E501 line too long (87 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:85:80: E501 line too long (87 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:100:80: E501 line too long (86 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:114:80: E501 line too long (84 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:123:80: E501 line too long (81 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:128:80: E501 line too long (80 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:137:80: E501 line too long (87 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:138:80: E501 line too long (89 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:139:80: E501 line too long (86 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:140:80: E501 line too long (85 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:152:80: E501 line too long (80 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:172:80: E501 line too long (86 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:177:80: E501 line too long (82 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:181:80: E501 line too long (87 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:237:80: E501 line too long (91 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:262:80: E501 line too long (87 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:264:80: E501 line too long (87 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:274:80: E501 line too long (133 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:293:80: E501 line too long (87 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:396:80: E501 line too long (85 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:403:80: E501 line too long (96 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:432:80: E501 line too long (81 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:436:80: E501 line too long (104 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:469:80: E501 line too long (85 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:479:80: E501 line too long (136 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:523:80: E501 line too long (104 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:532:80: E501 line too long (106 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:567:80: E501 line too long (118 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:610:80: E501 line too long (120 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:681:80: E501 line too long (131 > 79 characters)
-
-src/intellicrack\bridges\sandbox_bridge.py:722:80: E501 line too long (109 > 79 characters)
-
-
-29 findings in src/intellicrack\providers\local_transformers.py
-
-src/intellicrack\providers\local_transformers.py:53:5: F401 'torch' imported but unused
-
-src/intellicrack\providers\local_transformers.py:169:80: E501 line too long (91 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:178:80: E501 line too long (84 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:183:80: E501 line too long (92 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:237:80: E501 line too long (94 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:243:80: E501 line too long (83 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:246:80: E501 line too long (99 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:314:80: E501 line too long (84 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:328:80: E501 line too long (86 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:352:80: E501 line too long (101 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:391:80: E501 line too long (84 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:394:80: E501 line too long (86 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:401:80: E501 line too long (107 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:413:80: E501 line too long (86 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:447:80: E501 line too long (104 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:460:80: E501 line too long (108 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:486:9: F811 redefinition of unused 'torch' from line 53
-
-src/intellicrack\providers\local_transformers.py:509:54: E203 whitespace before ':'
-
-src/intellicrack\providers\local_transformers.py:510:80: E501 line too long (86 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:536:9: F811 redefinition of unused 'torch' from line 53
-
-src/intellicrack\providers\local_transformers.py:598:80: E501 line too long (82 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:698:80: E501 line too long (84 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:720:80: E501 line too long (97 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:778:80: E501 line too long (90 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:779:80: E501 line too long (99 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:863:80: E501 line too long (127 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:869:80: E501 line too long (90 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:966:80: E501 line too long (84 > 79 characters)
-
-src/intellicrack\providers\local_transformers.py:978:80: E501 line too long (87 > 79 characters)
-
-
-29 findings in src/intellicrack\providers\ollama.py
-
-src/intellicrack\providers\ollama.py:21:80: E501 line too long (82 > 79 characters)
-
-src/intellicrack\providers\ollama.py:101:80: E501 line too long (87 > 79 characters)
-
-src/intellicrack\providers\ollama.py:114:80: E501 line too long (137 > 79 characters)
-
-src/intellicrack\providers\ollama.py:122:80: E501 line too long (80 > 79 characters)
-
-src/intellicrack\providers\ollama.py:123:80: E501 line too long (82 > 79 characters)
-
-src/intellicrack\providers\ollama.py:126:80: E501 line too long (87 > 79 characters)
-
-src/intellicrack\providers\ollama.py:129:80: E501 line too long (83 > 79 characters)
-
-src/intellicrack\providers\ollama.py:144:80: E501 line too long (81 > 79 characters)
-
-src/intellicrack\providers\ollama.py:153:80: E501 line too long (87 > 79 characters)
-
-src/intellicrack\providers\ollama.py:159:80: E501 line too long (83 > 79 characters)
-
-src/intellicrack\providers\ollama.py:214:80: E501 line too long (82 > 79 characters)
-
-src/intellicrack\providers\ollama.py:227:80: E501 line too long (96 > 79 characters)
-
-src/intellicrack\providers\ollama.py:229:80: E501 line too long (82 > 79 characters)
-
-src/intellicrack\providers\ollama.py:236:80: E501 line too long (85 > 79 characters)
-
-src/intellicrack\providers\ollama.py:251:80: E501 line too long (81 > 79 characters)
-
-src/intellicrack\providers\ollama.py:264:80: E501 line too long (96 > 79 characters)
-
-src/intellicrack\providers\ollama.py:266:80: E501 line too long (82 > 79 characters)
-
-src/intellicrack\providers\ollama.py:273:80: E501 line too long (85 > 79 characters)
-
-src/intellicrack\providers\ollama.py:277:80: E501 line too long (86 > 79 characters)
-
-src/intellicrack\providers\ollama.py:306:80: E501 line too long (92 > 79 characters)
-
-src/intellicrack\providers\ollama.py:379:80: E501 line too long (81 > 79 characters)
-
-src/intellicrack\providers\ollama.py:419:80: E501 line too long (85 > 79 characters)
-
-src/intellicrack\providers\ollama.py:451:80: E501 line too long (95 > 79 characters)
-
-src/intellicrack\providers\ollama.py:499:80: E501 line too long (81 > 79 characters)
-
-src/intellicrack\providers\ollama.py:530:80: E501 line too long (85 > 79 characters)
-
-src/intellicrack\providers\ollama.py:544:80: E501 line too long (91 > 79 characters)
-
-src/intellicrack\providers\ollama.py:547:80: E501 line too long (102 > 79 characters)
-
-src/intellicrack\providers\ollama.py:603:80: E501 line too long (103 > 79 characters)
-
-src/intellicrack\providers\ollama.py:691:80: E501 line too long (83 > 79 characters)
-
-
 28 findings in src/intellicrack\credentials\oauth.py
 
 src/intellicrack\credentials\oauth.py:3:80: E501 line too long (80 > 79 characters)
@@ -2453,6 +2331,65 @@ src/intellicrack\credentials\oauth.py:864:80: E501 line too long (80 > 79 charac
 src/intellicrack\credentials\oauth.py:873:80: E501 line too long (83 > 79 characters)
 
 
+28 findings in src/intellicrack\providers\ollama.py
+
+src/intellicrack\providers\ollama.py:34:80: E501 line too long (131 > 79 characters)
+
+src/intellicrack\providers\ollama.py:109:80: E501 line too long (87 > 79 characters)
+
+src/intellicrack\providers\ollama.py:130:80: E501 line too long (80 > 79 characters)
+
+src/intellicrack\providers\ollama.py:131:80: E501 line too long (82 > 79 characters)
+
+src/intellicrack\providers\ollama.py:134:80: E501 line too long (87 > 79 characters)
+
+src/intellicrack\providers\ollama.py:137:80: E501 line too long (83 > 79 characters)
+
+src/intellicrack\providers\ollama.py:152:80: E501 line too long (81 > 79 characters)
+
+src/intellicrack\providers\ollama.py:161:80: E501 line too long (87 > 79 characters)
+
+src/intellicrack\providers\ollama.py:167:80: E501 line too long (83 > 79 characters)
+
+src/intellicrack\providers\ollama.py:222:80: E501 line too long (82 > 79 characters)
+
+src/intellicrack\providers\ollama.py:235:80: E501 line too long (96 > 79 characters)
+
+src/intellicrack\providers\ollama.py:237:80: E501 line too long (82 > 79 characters)
+
+src/intellicrack\providers\ollama.py:244:80: E501 line too long (85 > 79 characters)
+
+src/intellicrack\providers\ollama.py:259:80: E501 line too long (81 > 79 characters)
+
+src/intellicrack\providers\ollama.py:272:80: E501 line too long (96 > 79 characters)
+
+src/intellicrack\providers\ollama.py:274:80: E501 line too long (82 > 79 characters)
+
+src/intellicrack\providers\ollama.py:281:80: E501 line too long (85 > 79 characters)
+
+src/intellicrack\providers\ollama.py:285:80: E501 line too long (86 > 79 characters)
+
+src/intellicrack\providers\ollama.py:315:80: E501 line too long (86 > 79 characters)
+
+src/intellicrack\providers\ollama.py:390:80: E501 line too long (81 > 79 characters)
+
+src/intellicrack\providers\ollama.py:426:80: E501 line too long (81 > 79 characters)
+
+src/intellicrack\providers\ollama.py:490:80: E501 line too long (82 > 79 characters)
+
+src/intellicrack\providers\ollama.py:493:80: E501 line too long (81 > 79 characters)
+
+src/intellicrack\providers\ollama.py:536:80: E501 line too long (81 > 79 characters)
+
+src/intellicrack\providers\ollama.py:567:80: E501 line too long (85 > 79 characters)
+
+src/intellicrack\providers\ollama.py:581:80: E501 line too long (91 > 79 characters)
+
+src/intellicrack\providers\ollama.py:584:80: E501 line too long (102 > 79 characters)
+
+src/intellicrack\providers\ollama.py:641:80: E501 line too long (103 > 79 characters)
+
+
 28 findings in src/intellicrack\ui\highlighter.py
 
 src/intellicrack\ui\highlighter.py:177:80: E501 line too long (80 > 79 characters)
@@ -2469,47 +2406,47 @@ src/intellicrack\ui\highlighter.py:199:80: E501 line too long (82 > 79 character
 
 src/intellicrack\ui\highlighter.py:207:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\ui\highlighter.py:247:80: E501 line too long (86 > 79 characters)
+src/intellicrack\ui\highlighter.py:248:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\ui\highlighter.py:248:80: E501 line too long (85 > 79 characters)
+src/intellicrack\ui\highlighter.py:249:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\ui\highlighter.py:519:80: E501 line too long (85 > 79 characters)
+src/intellicrack\ui\highlighter.py:520:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\ui\highlighter.py:542:80: E501 line too long (84 > 79 characters)
+src/intellicrack\ui\highlighter.py:543:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\ui\highlighter.py:544:80: E501 line too long (89 > 79 characters)
+src/intellicrack\ui\highlighter.py:545:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\ui\highlighter.py:718:80: E501 line too long (85 > 79 characters)
+src/intellicrack\ui\highlighter.py:720:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\ui\highlighter.py:729:80: E501 line too long (95 > 79 characters)
+src/intellicrack\ui\highlighter.py:731:80: E501 line too long (95 > 79 characters)
 
-src/intellicrack\ui\highlighter.py:730:80: E501 line too long (97 > 79 characters)
+src/intellicrack\ui\highlighter.py:732:80: E501 line too long (97 > 79 characters)
 
-src/intellicrack\ui\highlighter.py:733:80: E501 line too long (83 > 79 characters)
+src/intellicrack\ui\highlighter.py:735:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\ui\highlighter.py:734:80: E501 line too long (83 > 79 characters)
+src/intellicrack\ui\highlighter.py:736:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\ui\highlighter.py:743:80: E501 line too long (87 > 79 characters)
+src/intellicrack\ui\highlighter.py:745:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\ui\highlighter.py:747:80: E501 line too long (87 > 79 characters)
+src/intellicrack\ui\highlighter.py:749:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\ui\highlighter.py:886:80: E501 line too long (89 > 79 characters)
+src/intellicrack\ui\highlighter.py:889:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\ui\highlighter.py:891:80: E501 line too long (87 > 79 characters)
+src/intellicrack\ui\highlighter.py:894:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\ui\highlighter.py:897:80: E501 line too long (96 > 79 characters)
+src/intellicrack\ui\highlighter.py:900:80: E501 line too long (96 > 79 characters)
 
-src/intellicrack\ui\highlighter.py:900:80: E501 line too long (83 > 79 characters)
+src/intellicrack\ui\highlighter.py:903:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\ui\highlighter.py:901:80: E501 line too long (83 > 79 characters)
+src/intellicrack\ui\highlighter.py:904:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\ui\highlighter.py:902:80: E501 line too long (83 > 79 characters)
+src/intellicrack\ui\highlighter.py:905:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\ui\highlighter.py:908:80: E501 line too long (91 > 79 characters)
+src/intellicrack\ui\highlighter.py:911:80: E501 line too long (91 > 79 characters)
 
-src/intellicrack\ui\highlighter.py:950:80: E501 line too long (86 > 79 characters)
+src/intellicrack\ui\highlighter.py:954:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\ui\highlighter.py:951:80: E501 line too long (85 > 79 characters)
+src/intellicrack\ui\highlighter.py:955:80: E501 line too long (85 > 79 characters)
 
 
 27 findings in src/intellicrack\bridges\process.py
@@ -2530,43 +2467,43 @@ src/intellicrack\bridges\process.py:377:80: E501 line too long (85 > 79 characte
 
 src/intellicrack\bridges\process.py:390:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\bridges\process.py:520:80: E501 line too long (82 > 79 characters)
+src/intellicrack\bridges\process.py:521:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\bridges\process.py:533:80: E501 line too long (87 > 79 characters)
+src/intellicrack\bridges\process.py:534:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\bridges\process.py:625:80: E501 line too long (83 > 79 characters)
+src/intellicrack\bridges\process.py:626:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\bridges\process.py:640:80: E501 line too long (88 > 79 characters)
+src/intellicrack\bridges\process.py:641:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\bridges\process.py:675:80: E501 line too long (98 > 79 characters)
+src/intellicrack\bridges\process.py:676:80: E501 line too long (98 > 79 characters)
 
-src/intellicrack\bridges\process.py:704:80: E501 line too long (96 > 79 characters)
+src/intellicrack\bridges\process.py:705:80: E501 line too long (96 > 79 characters)
 
-src/intellicrack\bridges\process.py:771:80: E501 line too long (109 > 79 characters)
+src/intellicrack\bridges\process.py:772:80: E501 line too long (109 > 79 characters)
 
-src/intellicrack\bridges\process.py:821:80: E501 line too long (113 > 79 characters)
+src/intellicrack\bridges\process.py:822:80: E501 line too long (113 > 79 characters)
 
-src/intellicrack\bridges\process.py:906:80: E501 line too long (134 > 79 characters)
+src/intellicrack\bridges\process.py:907:80: E501 line too long (134 > 79 characters)
 
-src/intellicrack\bridges\process.py:936:80: E501 line too long (104 > 79 characters)
+src/intellicrack\bridges\process.py:937:80: E501 line too long (104 > 79 characters)
 
-src/intellicrack\bridges\process.py:956:80: E501 line too long (81 > 79 characters)
+src/intellicrack\bridges\process.py:957:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\bridges\process.py:957:80: E501 line too long (88 > 79 characters)
+src/intellicrack\bridges\process.py:958:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\bridges\process.py:964:80: E501 line too long (86 > 79 characters)
+src/intellicrack\bridges\process.py:965:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\bridges\process.py:998:80: E501 line too long (85 > 79 characters)
+src/intellicrack\bridges\process.py:999:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\bridges\process.py:1018:80: E501 line too long (86 > 79 characters)
+src/intellicrack\bridges\process.py:1019:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\bridges\process.py:1127:80: E501 line too long (83 > 79 characters)
+src/intellicrack\bridges\process.py:1128:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\bridges\process.py:1137:80: E501 line too long (111 > 79 characters)
+src/intellicrack\bridges\process.py:1138:80: E501 line too long (111 > 79 characters)
 
-src/intellicrack\bridges\process.py:1142:80: E501 line too long (81 > 79 characters)
+src/intellicrack\bridges\process.py:1143:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\bridges\process.py:1209:80: E501 line too long (83 > 79 characters)
+src/intellicrack\bridges\process.py:1210:80: E501 line too long (83 > 79 characters)
 
 
 27 findings in src/intellicrack\credentials\store.py
@@ -2683,57 +2620,112 @@ src/intellicrack\providers\discovery.py:712:80: E501 line too long (86 > 79 char
 src/intellicrack\providers\discovery.py:730:80: E501 line too long (82 > 79 characters)
 
 
+26 findings in src/intellicrack\providers\local_transformers.py
+
+src/intellicrack\providers\local_transformers.py:178:80: E501 line too long (91 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:187:80: E501 line too long (84 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:192:80: E501 line too long (92 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:246:80: E501 line too long (94 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:252:80: E501 line too long (83 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:255:80: E501 line too long (99 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:323:80: E501 line too long (84 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:337:80: E501 line too long (86 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:358:80: E501 line too long (101 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:399:80: E501 line too long (84 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:402:80: E501 line too long (86 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:409:80: E501 line too long (107 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:421:80: E501 line too long (86 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:455:80: E501 line too long (104 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:468:80: E501 line too long (85 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:519:54: E203 whitespace before ':'
+
+src/intellicrack\providers\local_transformers.py:520:80: E501 line too long (86 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:610:80: E501 line too long (82 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:712:80: E501 line too long (84 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:734:80: E501 line too long (97 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:792:80: E501 line too long (90 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:793:80: E501 line too long (99 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:878:80: E501 line too long (127 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:884:80: E501 line too long (90 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:984:80: E501 line too long (84 > 79 characters)
+
+src/intellicrack\providers\local_transformers.py:996:80: E501 line too long (87 > 79 characters)
+
+
 25 findings in src/intellicrack\bridges\installer.py
 
-src/intellicrack\bridges\installer.py:130:80: E501 line too long (88 > 79 characters)
+src/intellicrack\bridges\installer.py:131:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\bridges\installer.py:168:80: E501 line too long (83 > 79 characters)
+src/intellicrack\bridges\installer.py:169:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\bridges\installer.py:258:80: E501 line too long (113 > 79 characters)
+src/intellicrack\bridges\installer.py:259:80: E501 line too long (113 > 79 characters)
 
-src/intellicrack\bridges\installer.py:265:80: E501 line too long (115 > 79 characters)
+src/intellicrack\bridges\installer.py:266:80: E501 line too long (115 > 79 characters)
 
-src/intellicrack\bridges\installer.py:273:80: E501 line too long (122 > 79 characters)
+src/intellicrack\bridges\installer.py:274:80: E501 line too long (122 > 79 characters)
 
-src/intellicrack\bridges\installer.py:281:80: E501 line too long (115 > 79 characters)
+src/intellicrack\bridges\installer.py:282:80: E501 line too long (115 > 79 characters)
 
-src/intellicrack\bridges\installer.py:301:80: E501 line too long (89 > 79 characters)
+src/intellicrack\bridges\installer.py:303:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\bridges\installer.py:307:80: E501 line too long (82 > 79 characters)
+src/intellicrack\bridges\installer.py:309:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\bridges\installer.py:349:80: E501 line too long (93 > 79 characters)
+src/intellicrack\bridges\installer.py:351:80: E501 line too long (93 > 79 characters)
 
-src/intellicrack\bridges\installer.py:403:80: E501 line too long (126 > 79 characters)
+src/intellicrack\bridges\installer.py:405:80: E501 line too long (126 > 79 characters)
 
-src/intellicrack\bridges\installer.py:432:80: E501 line too long (81 > 79 characters)
+src/intellicrack\bridges\installer.py:434:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\bridges\installer.py:436:80: E501 line too long (83 > 79 characters)
+src/intellicrack\bridges\installer.py:438:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\bridges\installer.py:442:80: E501 line too long (86 > 79 characters)
+src/intellicrack\bridges\installer.py:444:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\bridges\installer.py:457:80: E501 line too long (134 > 79 characters)
+src/intellicrack\bridges\installer.py:459:80: E501 line too long (134 > 79 characters)
 
-src/intellicrack\bridges\installer.py:466:80: E501 line too long (92 > 79 characters)
+src/intellicrack\bridges\installer.py:468:80: E501 line too long (92 > 79 characters)
 
-src/intellicrack\bridges\installer.py:492:80: E501 line too long (80 > 79 characters)
+src/intellicrack\bridges\installer.py:494:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\bridges\installer.py:523:80: E501 line too long (84 > 79 characters)
+src/intellicrack\bridges\installer.py:525:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\bridges\installer.py:529:80: E501 line too long (80 > 79 characters)
+src/intellicrack\bridges\installer.py:531:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\bridges\installer.py:540:80: E501 line too long (96 > 79 characters)
+src/intellicrack\bridges\installer.py:542:80: E501 line too long (96 > 79 characters)
 
-src/intellicrack\bridges\installer.py:547:80: E501 line too long (90 > 79 characters)
+src/intellicrack\bridges\installer.py:549:80: E501 line too long (90 > 79 characters)
 
-src/intellicrack\bridges\installer.py:584:80: E501 line too long (104 > 79 characters)
+src/intellicrack\bridges\installer.py:586:80: E501 line too long (104 > 79 characters)
 
-src/intellicrack\bridges\installer.py:586:80: E501 line too long (98 > 79 characters)
+src/intellicrack\bridges\installer.py:588:80: E501 line too long (98 > 79 characters)
 
-src/intellicrack\bridges\installer.py:594:80: E501 line too long (81 > 79 characters)
+src/intellicrack\bridges\installer.py:596:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\bridges\installer.py:656:80: E501 line too long (82 > 79 characters)
+src/intellicrack\bridges\installer.py:658:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\bridges\installer.py:664:80: E501 line too long (84 > 79 characters)
+src/intellicrack\bridges\installer.py:666:80: E501 line too long (84 > 79 characters)
 
 
 25 findings in src/intellicrack\ui\panels\process_panel.py
@@ -2789,106 +2781,55 @@ src/intellicrack\ui\panels\process_panel.py:548:80: E501 line too long (85 > 79 
 src/intellicrack\ui\panels\process_panel.py:552:80: E501 line too long (109 > 79 characters)
 
 
-24 findings in src/intellicrack\providers\model_loader.py
-
-src/intellicrack\providers\model_loader.py:1:80: E501 line too long (80 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:96:80: E501 line too long (82 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:127:80: E501 line too long (85 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:142:80: E501 line too long (94 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:153:80: E501 line too long (90 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:170:80: E501 line too long (82 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:171:80: E501 line too long (83 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:233:80: E501 line too long (101 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:241:80: E501 line too long (88 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:263:80: E501 line too long (94 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:467:80: E501 line too long (91 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:469:80: E501 line too long (97 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:472:80: E501 line too long (83 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:485:80: E501 line too long (118 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:519:80: E501 line too long (84 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:523:80: E501 line too long (84 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:532:80: E501 line too long (99 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:561:80: E501 line too long (92 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:585:80: E501 line too long (91 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:626:80: E501 line too long (84 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:630:80: E501 line too long (84 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:635:80: E501 line too long (99 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:664:80: E501 line too long (92 > 79 characters)
-
-src/intellicrack\providers\model_loader.py:783:80: E501 line too long (81 > 79 characters)
-
-
 24 findings in src/intellicrack\ui\embedding\embedded_widget.py
 
-src/intellicrack\ui\embedding\embedded_widget.py:62:80: E501 line too long (82 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:67:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:66:80: E501 line too long (81 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:71:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:67:80: E501 line too long (88 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:72:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:100:80: E501 line too long (80 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:108:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:131:80: E501 line too long (80 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:139:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:133:80: E501 line too long (83 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:141:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:153:80: E501 line too long (89 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:161:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:183:80: E501 line too long (87 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:191:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:189:80: E501 line too long (87 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:197:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:206:80: E501 line too long (95 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:214:80: E501 line too long (95 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:222:80: E501 line too long (81 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:230:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:233:80: E501 line too long (88 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:241:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:289:80: E501 line too long (98 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:297:80: E501 line too long (98 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:293:80: E501 line too long (83 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:301:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:302:80: E501 line too long (86 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:310:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:306:80: E501 line too long (88 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:314:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:309:80: E501 line too long (90 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:317:80: E501 line too long (90 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:310:80: E501 line too long (94 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:318:80: E501 line too long (94 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:330:80: E501 line too long (89 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:338:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:334:80: E501 line too long (86 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:342:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:343:80: E501 line too long (84 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:351:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:349:80: E501 line too long (87 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:357:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:365:80: E501 line too long (98 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:373:80: E501 line too long (98 > 79 characters)
 
-src/intellicrack\ui\embedding\embedded_widget.py:391:80: E501 line too long (90 > 79 characters)
+src/intellicrack\ui\embedding\embedded_widget.py:401:80: E501 line too long (90 > 79 characters)
 
 
 24 findings in src/intellicrack\ui\preferences.py
@@ -2991,6 +2932,55 @@ src/intellicrack\core\config.py:460:80: E501 line too long (94 > 79 characters)
 src/intellicrack\core\config.py:548:80: E501 line too long (90 > 79 characters)
 
 
+23 findings in src/intellicrack\providers\model_loader.py
+
+src/intellicrack\providers\model_loader.py:1:80: E501 line too long (80 > 79 characters)
+
+src/intellicrack\providers\model_loader.py:35:80: E501 line too long (93 > 79 characters)
+
+src/intellicrack\providers\model_loader.py:45:80: E501 line too long (80 > 79 characters)
+
+src/intellicrack\providers\model_loader.py:119:80: E501 line too long (82 > 79 characters)
+
+src/intellicrack\providers\model_loader.py:150:80: E501 line too long (85 > 79 characters)
+
+src/intellicrack\providers\model_loader.py:165:80: E501 line too long (94 > 79 characters)
+
+src/intellicrack\providers\model_loader.py:176:80: E501 line too long (90 > 79 characters)
+
+src/intellicrack\providers\model_loader.py:193:80: E501 line too long (82 > 79 characters)
+
+src/intellicrack\providers\model_loader.py:194:80: E501 line too long (83 > 79 characters)
+
+src/intellicrack\providers\model_loader.py:257:80: E501 line too long (101 > 79 characters)
+
+src/intellicrack\providers\model_loader.py:265:80: E501 line too long (88 > 79 characters)
+
+src/intellicrack\providers\model_loader.py:282:80: E501 line too long (88 > 79 characters)
+
+src/intellicrack\providers\model_loader.py:285:80: E501 line too long (94 > 79 characters)
+
+src/intellicrack\providers\model_loader.py:502:80: E501 line too long (118 > 79 characters)
+
+src/intellicrack\providers\model_loader.py:536:80: E501 line too long (84 > 79 characters)
+
+src/intellicrack\providers\model_loader.py:540:80: E501 line too long (84 > 79 characters)
+
+src/intellicrack\providers\model_loader.py:549:80: E501 line too long (99 > 79 characters)
+
+src/intellicrack\providers\model_loader.py:575:80: E501 line too long (82 > 79 characters)
+
+src/intellicrack\providers\model_loader.py:639:80: E501 line too long (84 > 79 characters)
+
+src/intellicrack\providers\model_loader.py:643:80: E501 line too long (84 > 79 characters)
+
+src/intellicrack\providers\model_loader.py:648:80: E501 line too long (99 > 79 characters)
+
+src/intellicrack\providers\model_loader.py:674:80: E501 line too long (82 > 79 characters)
+
+src/intellicrack\providers\model_loader.py:801:80: E501 line too long (81 > 79 characters)
+
+
 23 findings in src/intellicrack\ui\panels\frida_panel.py
 
 src/intellicrack\ui\panels\frida_panel.py:32:80: E501 line too long (82 > 79 characters)
@@ -3040,51 +3030,51 @@ src/intellicrack\ui\panels\frida_panel.py:424:80: E501 line too long (82 > 79 ch
 src/intellicrack\ui\panels\frida_panel.py:427:80: E501 line too long (122 > 79 characters)
 
 
-22 findings in src/intellicrack\providers\huggingface.py
+22 findings in src/intellicrack\ui\embedding\x64dbg_widget.py
 
-src/intellicrack\providers\huggingface.py:20:80: E501 line too long (82 > 79 characters)
+src/intellicrack\ui\embedding\x64dbg_widget.py:50:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\providers\huggingface.py:155:80: E501 line too long (87 > 79 characters)
+src/intellicrack\ui\embedding\x64dbg_widget.py:82:80: E501 line too long (98 > 79 characters)
 
-src/intellicrack\providers\huggingface.py:156:80: E501 line too long (80 > 79 characters)
+src/intellicrack\ui\embedding\x64dbg_widget.py:97:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\providers\huggingface.py:162:80: E501 line too long (80 > 79 characters)
+src/intellicrack\ui\embedding\x64dbg_widget.py:106:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\providers\huggingface.py:225:80: E501 line too long (86 > 79 characters)
+src/intellicrack\ui\embedding\x64dbg_widget.py:123:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\providers\huggingface.py:229:80: E501 line too long (80 > 79 characters)
+src/intellicrack\ui\embedding\x64dbg_widget.py:139:80: E501 line too long (97 > 79 characters)
 
-src/intellicrack\providers\huggingface.py:243:80: E501 line too long (110 > 79 characters)
+src/intellicrack\ui\embedding\x64dbg_widget.py:144:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\providers\huggingface.py:245:80: E501 line too long (89 > 79 characters)
+src/intellicrack\ui\embedding\x64dbg_widget.py:148:80: E501 line too long (91 > 79 characters)
 
-src/intellicrack\providers\huggingface.py:246:80: E501 line too long (87 > 79 characters)
+src/intellicrack\ui\embedding\x64dbg_widget.py:158:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\providers\huggingface.py:247:80: E501 line too long (90 > 79 characters)
+src/intellicrack\ui\embedding\x64dbg_widget.py:163:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\providers\huggingface.py:256:80: E501 line too long (96 > 79 characters)
+src/intellicrack\ui\embedding\x64dbg_widget.py:175:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\providers\huggingface.py:265:80: E501 line too long (81 > 79 characters)
+src/intellicrack\ui\embedding\x64dbg_widget.py:178:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\providers\huggingface.py:284:80: E501 line too long (88 > 79 characters)
+src/intellicrack\ui\embedding\x64dbg_widget.py:205:80: E501 line too long (91 > 79 characters)
 
-src/intellicrack\providers\huggingface.py:294:80: E501 line too long (86 > 79 characters)
+src/intellicrack\ui\embedding\x64dbg_widget.py:246:17: F841 local variable 'task' is assigned to but never used
 
-src/intellicrack\providers\huggingface.py:392:80: E501 line too long (81 > 79 characters)
+src/intellicrack\ui\embedding\x64dbg_widget.py:267:80: E501 line too long (111 > 79 characters)
 
-src/intellicrack\providers\huggingface.py:445:80: E501 line too long (109 > 79 characters)
+src/intellicrack\ui\embedding\x64dbg_widget.py:314:80: E501 line too long (95 > 79 characters)
 
-src/intellicrack\providers\huggingface.py:450:80: E501 line too long (91 > 79 characters)
+src/intellicrack\ui\embedding\x64dbg_widget.py:336:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\providers\huggingface.py:540:80: E501 line too long (85 > 79 characters)
+src/intellicrack\ui\embedding\x64dbg_widget.py:351:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\providers\huggingface.py:554:80: E501 line too long (83 > 79 characters)
+src/intellicrack\ui\embedding\x64dbg_widget.py:358:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\providers\huggingface.py:569:80: E501 line too long (102 > 79 characters)
+src/intellicrack\ui\embedding\x64dbg_widget.py:436:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\providers\huggingface.py:595:80: E501 line too long (90 > 79 characters)
+src/intellicrack\ui\embedding\x64dbg_widget.py:443:80: E501 line too long (107 > 79 characters)
 
-src/intellicrack\providers\huggingface.py:661:80: E501 line too long (103 > 79 characters)
+src/intellicrack\ui\embedding\x64dbg_widget.py:464:80: E501 line too long (83 > 79 characters)
 
 
 21 findings in src/intellicrack\ui\panels\sandbox_panel.py
@@ -3132,51 +3122,6 @@ src/intellicrack\ui\panels\sandbox_panel.py:430:80: E501 line too long (91 > 79 
 src/intellicrack\ui\panels\sandbox_panel.py:434:80: E501 line too long (85 > 79 characters)
 
 
-21 findings in src/intellicrack\ui\panels\script_manager.py
-
-src/intellicrack\ui\panels\script_manager.py:253:80: E501 line too long (91 > 79 characters)
-
-src/intellicrack\ui\panels\script_manager.py:555:80: E501 line too long (82 > 79 characters)
-
-src/intellicrack\ui\panels\script_manager.py:578:80: E501 line too long (81 > 79 characters)
-
-src/intellicrack\ui\panels\script_manager.py:598:80: E501 line too long (116 > 79 characters)
-
-src/intellicrack\ui\panels\script_manager.py:619:80: E501 line too long (115 > 79 characters)
-
-src/intellicrack\ui\panels\script_manager.py:651:80: E501 line too long (98 > 79 characters)
-
-src/intellicrack\ui\panels\script_manager.py:664:80: E501 line too long (115 > 79 characters)
-
-src/intellicrack\ui\panels\script_manager.py:679:80: E501 line too long (90 > 79 characters)
-
-src/intellicrack\ui\panels\script_manager.py:703:80: E501 line too long (93 > 79 characters)
-
-src/intellicrack\ui\panels\script_manager.py:745:80: E501 line too long (87 > 79 characters)
-
-src/intellicrack\ui\panels\script_manager.py:746:80: E501 line too long (99 > 79 characters)
-
-src/intellicrack\ui\panels\script_manager.py:770:80: E501 line too long (85 > 79 characters)
-
-src/intellicrack\ui\panels\script_manager.py:771:80: E501 line too long (86 > 79 characters)
-
-src/intellicrack\ui\panels\script_manager.py:775:80: E501 line too long (90 > 79 characters)
-
-src/intellicrack\ui\panels\script_manager.py:778:80: E501 line too long (80 > 79 characters)
-
-src/intellicrack\ui\panels\script_manager.py:779:80: E501 line too long (90 > 79 characters)
-
-src/intellicrack\ui\panels\script_manager.py:782:80: E501 line too long (86 > 79 characters)
-
-src/intellicrack\ui\panels\script_manager.py:796:80: E501 line too long (105 > 79 characters)
-
-src/intellicrack\ui\panels\script_manager.py:800:80: E501 line too long (100 > 79 characters)
-
-src/intellicrack\ui\panels\script_manager.py:812:80: E501 line too long (88 > 79 characters)
-
-src/intellicrack\ui\panels\script_manager.py:814:80: E501 line too long (108 > 79 characters)
-
-
 21 findings in tests\test_providers\test_huggingface_provider.py
 
 tests\test_providers\test_huggingface_provider.py:44:80: E501 line too long (82 > 79 characters)
@@ -3222,99 +3167,183 @@ tests\test_providers\test_huggingface_provider.py:295:80: E501 line too long (89
 tests\test_providers\test_huggingface_provider.py:296:80: E501 line too long (90 > 79 characters)
 
 
-20 findings in src/intellicrack\bridges\radare2.py
+20 findings in src/intellicrack\ui\embedding\cutter_widget.py
+
+src/intellicrack\ui\embedding\cutter_widget.py:98:80: E501 line too long (81 > 79 characters)
+
+src/intellicrack\ui\embedding\cutter_widget.py:141:80: E501 line too long (81 > 79 characters)
+
+src/intellicrack\ui\embedding\cutter_widget.py:143:80: E501 line too long (80 > 79 characters)
+
+src/intellicrack\ui\embedding\cutter_widget.py:170:80: E501 line too long (84 > 79 characters)
+
+src/intellicrack\ui\embedding\cutter_widget.py:180:80: E501 line too long (80 > 79 characters)
+
+src/intellicrack\ui\embedding\cutter_widget.py:215:80: E501 line too long (110 > 79 characters)
+
+src/intellicrack\ui\embedding\cutter_widget.py:236:80: E501 line too long (92 > 79 characters)
+
+src/intellicrack\ui\embedding\cutter_widget.py:238:80: E501 line too long (105 > 79 characters)
+
+src/intellicrack\ui\embedding\cutter_widget.py:241:80: E501 line too long (93 > 79 characters)
+
+src/intellicrack\ui\embedding\cutter_widget.py:255:80: E501 line too long (102 > 79 characters)
+
+src/intellicrack\ui\embedding\cutter_widget.py:257:80: E501 line too long (92 > 79 characters)
+
+src/intellicrack\ui\embedding\cutter_widget.py:262:80: E501 line too long (88 > 79 characters)
+
+src/intellicrack\ui\embedding\cutter_widget.py:275:80: E501 line too long (85 > 79 characters)
+
+src/intellicrack\ui\embedding\cutter_widget.py:294:80: E501 line too long (83 > 79 characters)
+
+src/intellicrack\ui\embedding\cutter_widget.py:313:80: E501 line too long (83 > 79 characters)
+
+src/intellicrack\ui\embedding\cutter_widget.py:332:80: E501 line too long (83 > 79 characters)
+
+src/intellicrack\ui\embedding\cutter_widget.py:352:80: E501 line too long (82 > 79 characters)
+
+src/intellicrack\ui\embedding\cutter_widget.py:357:80: E501 line too long (91 > 79 characters)
+
+src/intellicrack\ui\embedding\cutter_widget.py:373:80: E501 line too long (86 > 79 characters)
+
+src/intellicrack\ui\embedding\cutter_widget.py:379:80: E501 line too long (84 > 79 characters)
+
+
+20 findings in src/intellicrack\ui\panels\script_manager.py
+
+src/intellicrack\ui\panels\script_manager.py:253:80: E501 line too long (91 > 79 characters)
+
+src/intellicrack\ui\panels\script_manager.py:555:80: E501 line too long (82 > 79 characters)
+
+src/intellicrack\ui\panels\script_manager.py:599:80: E501 line too long (116 > 79 characters)
+
+src/intellicrack\ui\panels\script_manager.py:620:80: E501 line too long (115 > 79 characters)
+
+src/intellicrack\ui\panels\script_manager.py:652:80: E501 line too long (98 > 79 characters)
+
+src/intellicrack\ui\panels\script_manager.py:665:80: E501 line too long (115 > 79 characters)
+
+src/intellicrack\ui\panels\script_manager.py:680:80: E501 line too long (90 > 79 characters)
+
+src/intellicrack\ui\panels\script_manager.py:704:80: E501 line too long (93 > 79 characters)
+
+src/intellicrack\ui\panels\script_manager.py:746:80: E501 line too long (87 > 79 characters)
+
+src/intellicrack\ui\panels\script_manager.py:747:80: E501 line too long (99 > 79 characters)
+
+src/intellicrack\ui\panels\script_manager.py:771:80: E501 line too long (85 > 79 characters)
+
+src/intellicrack\ui\panels\script_manager.py:772:80: E501 line too long (86 > 79 characters)
+
+src/intellicrack\ui\panels\script_manager.py:776:80: E501 line too long (90 > 79 characters)
+
+src/intellicrack\ui\panels\script_manager.py:779:80: E501 line too long (80 > 79 characters)
+
+src/intellicrack\ui\panels\script_manager.py:780:80: E501 line too long (90 > 79 characters)
+
+src/intellicrack\ui\panels\script_manager.py:783:80: E501 line too long (86 > 79 characters)
+
+src/intellicrack\ui\panels\script_manager.py:797:80: E501 line too long (105 > 79 characters)
+
+src/intellicrack\ui\panels\script_manager.py:801:80: E501 line too long (100 > 79 characters)
+
+src/intellicrack\ui\panels\script_manager.py:813:80: E501 line too long (88 > 79 characters)
+
+src/intellicrack\ui\panels\script_manager.py:815:80: E501 line too long (108 > 79 characters)
+
+
+20 findings in tests\core\test_process_cleanup.py
+
+tests\core\test_process_cleanup.py:53:80: E501 line too long (86 > 79 characters)
+
+tests\core\test_process_cleanup.py:94:80: E501 line too long (86 > 79 characters)
+
+tests\core\test_process_cleanup.py:109:80: E501 line too long (81 > 79 characters)
+
+tests\core\test_process_cleanup.py:195:80: E501 line too long (132 > 79 characters)
+
+tests\core\test_process_cleanup.py:242:80: E501 line too long (80 > 79 characters)
+
+tests\core\test_process_cleanup.py:249:80: E501 line too long (81 > 79 characters)
+
+tests\core\test_process_cleanup.py:271:80: E501 line too long (90 > 79 characters)
+
+tests\core\test_process_cleanup.py:303:80: E501 line too long (90 > 79 characters)
+
+tests\core\test_process_cleanup.py:332:80: E501 line too long (90 > 79 characters)
+
+tests\core\test_process_cleanup.py:367:80: E501 line too long (90 > 79 characters)
+
+tests\core\test_process_cleanup.py:374:80: E501 line too long (94 > 79 characters)
+
+tests\core\test_process_cleanup.py:395:80: E501 line too long (101 > 79 characters)
+
+tests\core\test_process_cleanup.py:396:80: E501 line too long (94 > 79 characters)
+
+tests\core\test_process_cleanup.py:420:80: E501 line too long (85 > 79 characters)
+
+tests\core\test_process_cleanup.py:421:80: E501 line too long (95 > 79 characters)
+
+tests\core\test_process_cleanup.py:440:80: E501 line too long (92 > 79 characters)
+
+tests\core\test_process_cleanup.py:462:80: E501 line too long (80 > 79 characters)
+
+tests\core\test_process_cleanup.py:498:80: E501 line too long (90 > 79 characters)
+
+tests\core\test_process_cleanup.py:502:80: E501 line too long (81 > 79 characters)
+
+tests\core\test_process_cleanup.py:503:80: E501 line too long (112 > 79 characters)
+
+
+19 findings in src/intellicrack\bridges\radare2.py
 
 src/intellicrack\bridges\radare2.py:192:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\bridges\radare2.py:220:80: E501 line too long (100 > 79 characters)
+src/intellicrack\bridges\radare2.py:242:80: E501 line too long (88 > 79 characters)
 
-src/intellicrack\bridges\radare2.py:241:80: E501 line too long (88 > 79 characters)
+src/intellicrack\bridges\radare2.py:279:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\bridges\radare2.py:278:80: E501 line too long (82 > 79 characters)
+src/intellicrack\bridges\radare2.py:504:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\bridges\radare2.py:503:80: E501 line too long (80 > 79 characters)
+src/intellicrack\bridges\radare2.py:529:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\bridges\radare2.py:527:80: E501 line too long (87 > 79 characters)
+src/intellicrack\bridges\radare2.py:538:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\bridges\radare2.py:536:80: E501 line too long (84 > 79 characters)
+src/intellicrack\bridges\radare2.py:574:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\bridges\radare2.py:572:80: E501 line too long (80 > 79 characters)
+src/intellicrack\bridges\radare2.py:636:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\bridges\radare2.py:634:80: E501 line too long (80 > 79 characters)
+src/intellicrack\bridges\radare2.py:649:80: E501 line too long (120 > 79 characters)
 
-src/intellicrack\bridges\radare2.py:647:80: E501 line too long (120 > 79 characters)
+src/intellicrack\bridges\radare2.py:773:80: E501 line too long (126 > 79 characters)
 
-src/intellicrack\bridges\radare2.py:771:80: E501 line too long (126 > 79 characters)
+src/intellicrack\bridges\radare2.py:871:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\bridges\radare2.py:869:80: E501 line too long (82 > 79 characters)
+src/intellicrack\bridges\radare2.py:1066:80: E501 line too long (95 > 79 characters)
 
-src/intellicrack\bridges\radare2.py:1064:80: E501 line too long (95 > 79 characters)
+src/intellicrack\bridges\radare2.py:1090:80: E501 line too long (94 > 79 characters)
 
-src/intellicrack\bridges\radare2.py:1088:80: E501 line too long (94 > 79 characters)
+src/intellicrack\bridges\radare2.py:1112:80: E501 line too long (94 > 79 characters)
 
-src/intellicrack\bridges\radare2.py:1110:80: E501 line too long (94 > 79 characters)
+src/intellicrack\bridges\radare2.py:1162:80: E501 line too long (95 > 79 characters)
 
-src/intellicrack\bridges\radare2.py:1160:80: E501 line too long (95 > 79 characters)
+src/intellicrack\bridges\radare2.py:1210:80: E501 line too long (92 > 79 characters)
 
-src/intellicrack\bridges\radare2.py:1208:80: E501 line too long (92 > 79 characters)
+src/intellicrack\bridges\radare2.py:1261:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\bridges\radare2.py:1259:80: E501 line too long (82 > 79 characters)
+src/intellicrack\bridges\radare2.py:1277:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\bridges\radare2.py:1275:80: E501 line too long (87 > 79 characters)
-
-src/intellicrack\bridges\radare2.py:1322:80: E501 line too long (81 > 79 characters)
-
-
-20 findings in src/intellicrack\ui\embedding\cutter_widget.py
-
-src/intellicrack\ui\embedding\cutter_widget.py:96:80: E501 line too long (81 > 79 characters)
-
-src/intellicrack\ui\embedding\cutter_widget.py:139:80: E501 line too long (81 > 79 characters)
-
-src/intellicrack\ui\embedding\cutter_widget.py:141:80: E501 line too long (80 > 79 characters)
-
-src/intellicrack\ui\embedding\cutter_widget.py:168:80: E501 line too long (84 > 79 characters)
-
-src/intellicrack\ui\embedding\cutter_widget.py:178:80: E501 line too long (80 > 79 characters)
-
-src/intellicrack\ui\embedding\cutter_widget.py:213:80: E501 line too long (110 > 79 characters)
-
-src/intellicrack\ui\embedding\cutter_widget.py:234:80: E501 line too long (92 > 79 characters)
-
-src/intellicrack\ui\embedding\cutter_widget.py:236:80: E501 line too long (105 > 79 characters)
-
-src/intellicrack\ui\embedding\cutter_widget.py:239:80: E501 line too long (93 > 79 characters)
-
-src/intellicrack\ui\embedding\cutter_widget.py:253:80: E501 line too long (102 > 79 characters)
-
-src/intellicrack\ui\embedding\cutter_widget.py:255:80: E501 line too long (92 > 79 characters)
-
-src/intellicrack\ui\embedding\cutter_widget.py:260:80: E501 line too long (88 > 79 characters)
-
-src/intellicrack\ui\embedding\cutter_widget.py:273:80: E501 line too long (85 > 79 characters)
-
-src/intellicrack\ui\embedding\cutter_widget.py:292:80: E501 line too long (83 > 79 characters)
-
-src/intellicrack\ui\embedding\cutter_widget.py:311:80: E501 line too long (83 > 79 characters)
-
-src/intellicrack\ui\embedding\cutter_widget.py:330:80: E501 line too long (83 > 79 characters)
-
-src/intellicrack\ui\embedding\cutter_widget.py:350:80: E501 line too long (82 > 79 characters)
-
-src/intellicrack\ui\embedding\cutter_widget.py:355:80: E501 line too long (91 > 79 characters)
-
-src/intellicrack\ui\embedding\cutter_widget.py:371:80: E501 line too long (86 > 79 characters)
-
-src/intellicrack\ui\embedding\cutter_widget.py:377:80: E501 line too long (84 > 79 characters)
+src/intellicrack\bridges\radare2.py:1324:80: E501 line too long (81 > 79 characters)
 
 
 19 findings in src/intellicrack\providers\google.py
 
-src/intellicrack\providers\google.py:18:80: E501 line too long (82 > 79 characters)
+src/intellicrack\providers\google.py:17:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\providers\google.py:61:80: E501 line too long (86 > 79 characters)
+src/intellicrack\providers\google.py:60:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\providers\google.py:171:80: E501 line too long (80 > 79 characters)
+src/intellicrack\providers\google.py:170:80: E501 line too long (80 > 79 characters)
 
 src/intellicrack\providers\google.py:215:80: E501 line too long (88 > 79 characters)
 
@@ -3351,43 +3380,43 @@ src/intellicrack\providers\google.py:634:80: E501 line too long (89 > 79 charact
 
 19 findings in src/intellicrack\ui\embedding\hxd_widget.py
 
-src/intellicrack\ui\embedding\hxd_widget.py:89:80: E501 line too long (98 > 79 characters)
+src/intellicrack\ui\embedding\hxd_widget.py:90:80: E501 line too long (98 > 79 characters)
 
-src/intellicrack\ui\embedding\hxd_widget.py:92:80: E501 line too long (81 > 79 characters)
+src/intellicrack\ui\embedding\hxd_widget.py:93:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\ui\embedding\hxd_widget.py:98:80: E501 line too long (83 > 79 characters)
+src/intellicrack\ui\embedding\hxd_widget.py:99:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\ui\embedding\hxd_widget.py:103:80: E501 line too long (81 > 79 characters)
+src/intellicrack\ui\embedding\hxd_widget.py:104:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\ui\embedding\hxd_widget.py:123:80: E501 line too long (80 > 79 characters)
+src/intellicrack\ui\embedding\hxd_widget.py:124:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\ui\embedding\hxd_widget.py:154:80: E501 line too long (80 > 79 characters)
+src/intellicrack\ui\embedding\hxd_widget.py:155:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\ui\embedding\hxd_widget.py:158:80: E501 line too long (83 > 79 characters)
+src/intellicrack\ui\embedding\hxd_widget.py:159:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\ui\embedding\hxd_widget.py:161:80: E501 line too long (82 > 79 characters)
+src/intellicrack\ui\embedding\hxd_widget.py:162:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\ui\embedding\hxd_widget.py:185:80: E501 line too long (82 > 79 characters)
+src/intellicrack\ui\embedding\hxd_widget.py:186:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\ui\embedding\hxd_widget.py:198:80: E501 line too long (97 > 79 characters)
+src/intellicrack\ui\embedding\hxd_widget.py:199:80: E501 line too long (97 > 79 characters)
 
-src/intellicrack\ui\embedding\hxd_widget.py:199:80: E501 line too long (87 > 79 characters)
+src/intellicrack\ui\embedding\hxd_widget.py:200:80: E501 line too long (87 > 79 characters)
 
-src/intellicrack\ui\embedding\hxd_widget.py:211:80: E501 line too long (83 > 79 characters)
+src/intellicrack\ui\embedding\hxd_widget.py:212:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\ui\embedding\hxd_widget.py:224:80: E501 line too long (97 > 79 characters)
+src/intellicrack\ui\embedding\hxd_widget.py:225:80: E501 line too long (97 > 79 characters)
 
-src/intellicrack\ui\embedding\hxd_widget.py:230:80: E501 line too long (100 > 79 characters)
+src/intellicrack\ui\embedding\hxd_widget.py:231:80: E501 line too long (100 > 79 characters)
 
-src/intellicrack\ui\embedding\hxd_widget.py:251:80: E501 line too long (86 > 79 characters)
+src/intellicrack\ui\embedding\hxd_widget.py:252:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\ui\embedding\hxd_widget.py:298:80: E501 line too long (82 > 79 characters)
+src/intellicrack\ui\embedding\hxd_widget.py:299:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\ui\embedding\hxd_widget.py:323:80: E501 line too long (104 > 79 characters)
+src/intellicrack\ui\embedding\hxd_widget.py:324:80: E501 line too long (104 > 79 characters)
 
-src/intellicrack\ui\embedding\hxd_widget.py:343:80: E501 line too long (83 > 79 characters)
+src/intellicrack\ui\embedding\hxd_widget.py:344:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\ui\embedding\hxd_widget.py:350:80: E501 line too long (90 > 79 characters)
+src/intellicrack\ui\embedding\hxd_widget.py:351:80: E501 line too long (90 > 79 characters)
 
 
 19 findings in tests\test_core\test_license_analyzer.py
@@ -3431,45 +3460,6 @@ tests\test_core\test_license_analyzer.py:434:80: E501 line too long (117 > 79 ch
 tests\test_core\test_license_analyzer.py:436:80: E501 line too long (113 > 79 characters)
 
 
-18 findings in src/intellicrack\providers\openrouter.py
-
-src/intellicrack\providers\openrouter.py:17:80: E501 line too long (82 > 79 characters)
-
-src/intellicrack\providers\openrouter.py:105:80: E501 line too long (84 > 79 characters)
-
-src/intellicrack\providers\openrouter.py:108:80: E501 line too long (86 > 79 characters)
-
-src/intellicrack\providers\openrouter.py:118:80: E501 line too long (83 > 79 characters)
-
-src/intellicrack\providers\openrouter.py:159:80: E501 line too long (80 > 79 characters)
-
-src/intellicrack\providers\openrouter.py:177:80: E501 line too long (80 > 79 characters)
-
-src/intellicrack\providers\openrouter.py:252:80: E501 line too long (81 > 79 characters)
-
-src/intellicrack\providers\openrouter.py:283:80: E501 line too long (81 > 79 characters)
-
-src/intellicrack\providers\openrouter.py:334:80: E501 line too long (109 > 79 characters)
-
-src/intellicrack\providers\openrouter.py:339:80: E501 line too long (89 > 79 characters)
-
-src/intellicrack\providers\openrouter.py:406:80: E501 line too long (81 > 79 characters)
-
-src/intellicrack\providers\openrouter.py:431:80: E501 line too long (85 > 79 characters)
-
-src/intellicrack\providers\openrouter.py:443:80: E501 line too long (85 > 79 characters)
-
-src/intellicrack\providers\openrouter.py:458:80: E501 line too long (102 > 79 characters)
-
-src/intellicrack\providers\openrouter.py:470:80: E501 line too long (94 > 79 characters)
-
-src/intellicrack\providers\openrouter.py:477:80: E501 line too long (95 > 79 characters)
-
-src/intellicrack\providers\openrouter.py:529:80: E501 line too long (103 > 79 characters)
-
-src/intellicrack\providers\openrouter.py:612:80: E501 line too long (82 > 79 characters)
-
-
 18 findings in src/intellicrack\ui\embedding\win32_helper.py
 
 src/intellicrack\ui\embedding\win32_helper.py:53:80: E501 line too long (87 > 79 characters)
@@ -3511,7 +3501,7 @@ src/intellicrack\ui\embedding\win32_helper.py:687:80: E501 line too long (99 > 7
 
 17 findings in src/intellicrack\providers\anthropic.py
 
-src/intellicrack\providers\anthropic.py:24:80: E501 line too long (82 > 79 characters)
+src/intellicrack\providers\anthropic.py:23:80: E501 line too long (82 > 79 characters)
 
 src/intellicrack\providers\anthropic.py:67:80: E501 line too long (80 > 79 characters)
 
@@ -3620,6 +3610,76 @@ tests\test_ui\test_icon_manager.py:291:80: E501 line too long (80 > 79 character
 tests\test_ui\test_icon_manager.py:300:80: E501 line too long (82 > 79 characters)
 
 
+16 findings in src/intellicrack\providers\huggingface.py
+
+src/intellicrack\providers\huggingface.py:236:80: E501 line too long (86 > 79 characters)
+
+src/intellicrack\providers\huggingface.py:240:80: E501 line too long (80 > 79 characters)
+
+src/intellicrack\providers\huggingface.py:254:80: E501 line too long (110 > 79 characters)
+
+src/intellicrack\providers\huggingface.py:256:80: E501 line too long (89 > 79 characters)
+
+src/intellicrack\providers\huggingface.py:257:80: E501 line too long (87 > 79 characters)
+
+src/intellicrack\providers\huggingface.py:258:80: E501 line too long (90 > 79 characters)
+
+src/intellicrack\providers\huggingface.py:267:80: E501 line too long (96 > 79 characters)
+
+src/intellicrack\providers\huggingface.py:295:80: E501 line too long (88 > 79 characters)
+
+src/intellicrack\providers\huggingface.py:305:80: E501 line too long (86 > 79 characters)
+
+src/intellicrack\providers\huggingface.py:401:80: E501 line too long (81 > 79 characters)
+
+src/intellicrack\providers\huggingface.py:404:80: E501 line too long (83 > 79 characters)
+
+src/intellicrack\providers\huggingface.py:576:80: E501 line too long (85 > 79 characters)
+
+src/intellicrack\providers\huggingface.py:590:80: E501 line too long (83 > 79 characters)
+
+src/intellicrack\providers\huggingface.py:605:80: E501 line too long (102 > 79 characters)
+
+src/intellicrack\providers\huggingface.py:631:80: E501 line too long (90 > 79 characters)
+
+src/intellicrack\providers\huggingface.py:698:80: E501 line too long (103 > 79 characters)
+
+
+16 findings in src/intellicrack\providers\openrouter.py
+
+src/intellicrack\providers\openrouter.py:16:80: E501 line too long (82 > 79 characters)
+
+src/intellicrack\providers\openrouter.py:121:80: E501 line too long (86 > 79 characters)
+
+src/intellicrack\providers\openrouter.py:131:80: E501 line too long (83 > 79 characters)
+
+src/intellicrack\providers\openrouter.py:172:80: E501 line too long (80 > 79 characters)
+
+src/intellicrack\providers\openrouter.py:268:80: E501 line too long (81 > 79 characters)
+
+src/intellicrack\providers\openrouter.py:299:80: E501 line too long (81 > 79 characters)
+
+src/intellicrack\providers\openrouter.py:391:80: E501 line too long (105 > 79 characters)
+
+src/intellicrack\providers\openrouter.py:396:80: E501 line too long (85 > 79 characters)
+
+src/intellicrack\providers\openrouter.py:439:80: E501 line too long (81 > 79 characters)
+
+src/intellicrack\providers\openrouter.py:464:80: E501 line too long (85 > 79 characters)
+
+src/intellicrack\providers\openrouter.py:476:80: E501 line too long (85 > 79 characters)
+
+src/intellicrack\providers\openrouter.py:491:80: E501 line too long (102 > 79 characters)
+
+src/intellicrack\providers\openrouter.py:503:80: E501 line too long (94 > 79 characters)
+
+src/intellicrack\providers\openrouter.py:510:80: E501 line too long (95 > 79 characters)
+
+src/intellicrack\providers\openrouter.py:563:80: E501 line too long (103 > 79 characters)
+
+src/intellicrack\providers\openrouter.py:647:80: E501 line too long (82 > 79 characters)
+
+
 16 findings in tests\test_ui\test_theme_manager.py
 
 tests\test_ui\test_theme_manager.py:80:80: E501 line too long (84 > 79 characters)
@@ -3688,39 +3748,6 @@ src/intellicrack\credentials\env_loader.py:392:80: E501 line too long (82 > 79 c
 src/intellicrack\credentials\env_loader.py:464:80: E501 line too long (83 > 79 characters)
 
 
-15 findings in src/intellicrack\ui\embedding\x64dbg_widget.py
-
-src/intellicrack\ui\embedding\x64dbg_widget.py:49:80: E501 line too long (86 > 79 characters)
-
-src/intellicrack\ui\embedding\x64dbg_widget.py:106:80: E501 line too long (81 > 79 characters)
-
-src/intellicrack\ui\embedding\x64dbg_widget.py:139:80: E501 line too long (89 > 79 characters)
-
-src/intellicrack\ui\embedding\x64dbg_widget.py:153:80: E501 line too long (82 > 79 characters)
-
-src/intellicrack\ui\embedding\x64dbg_widget.py:156:80: E501 line too long (80 > 79 characters)
-
-src/intellicrack\ui\embedding\x64dbg_widget.py:183:80: E501 line too long (91 > 79 characters)
-
-src/intellicrack\ui\embedding\x64dbg_widget.py:223:17: F841 local variable 'task' is assigned to but never used
-
-src/intellicrack\ui\embedding\x64dbg_widget.py:244:80: E501 line too long (111 > 79 characters)
-
-src/intellicrack\ui\embedding\x64dbg_widget.py:291:80: E501 line too long (95 > 79 characters)
-
-src/intellicrack\ui\embedding\x64dbg_widget.py:313:80: E501 line too long (84 > 79 characters)
-
-src/intellicrack\ui\embedding\x64dbg_widget.py:328:80: E501 line too long (83 > 79 characters)
-
-src/intellicrack\ui\embedding\x64dbg_widget.py:335:80: E501 line too long (87 > 79 characters)
-
-src/intellicrack\ui\embedding\x64dbg_widget.py:413:80: E501 line too long (88 > 79 characters)
-
-src/intellicrack\ui\embedding\x64dbg_widget.py:420:80: E501 line too long (107 > 79 characters)
-
-src/intellicrack\ui\embedding\x64dbg_widget.py:441:80: E501 line too long (83 > 79 characters)
-
-
 15 findings in tests\test_providers\test_openrouter_provider.py
 
 tests\test_providers\test_openrouter_provider.py:44:80: E501 line too long (81 > 79 characters)
@@ -3787,64 +3814,64 @@ src/intellicrack\core\logging.py:398:80: E501 line too long (82 > 79 characters)
 
 14 findings in src/intellicrack\ui\panels\stack_viewer.py
 
-src/intellicrack\ui\panels\stack_viewer.py:120:80: E501 line too long (110 > 79 characters)
+src/intellicrack\ui\panels\stack_viewer.py:123:80: E501 line too long (110 > 79 characters)
 
-src/intellicrack\ui\panels\stack_viewer.py:193:80: E501 line too long (94 > 79 characters)
+src/intellicrack\ui\panels\stack_viewer.py:196:80: E501 line too long (94 > 79 characters)
 
-src/intellicrack\ui\panels\stack_viewer.py:261:80: E501 line too long (95 > 79 characters)
-
-src/intellicrack\ui\panels\stack_viewer.py:264:80: E501 line too long (83 > 79 characters)
-
-src/intellicrack\ui\panels\stack_viewer.py:265:80: E501 line too long (83 > 79 characters)
+src/intellicrack\ui\panels\stack_viewer.py:264:80: E501 line too long (95 > 79 characters)
 
 src/intellicrack\ui\panels\stack_viewer.py:267:80: E501 line too long (83 > 79 characters)
 
 src/intellicrack\ui\panels\stack_viewer.py:268:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\ui\panels\stack_viewer.py:322:80: E501 line too long (81 > 79 characters)
+src/intellicrack\ui\panels\stack_viewer.py:270:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\ui\panels\stack_viewer.py:409:80: E501 line too long (85 > 79 characters)
+src/intellicrack\ui\panels\stack_viewer.py:271:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\ui\panels\stack_viewer.py:506:80: E501 line too long (114 > 79 characters)
+src/intellicrack\ui\panels\stack_viewer.py:325:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\ui\panels\stack_viewer.py:522:80: E501 line too long (100 > 79 characters)
+src/intellicrack\ui\panels\stack_viewer.py:412:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\ui\panels\stack_viewer.py:533:80: E501 line too long (99 > 79 characters)
+src/intellicrack\ui\panels\stack_viewer.py:509:80: E501 line too long (114 > 79 characters)
 
-src/intellicrack\ui\panels\stack_viewer.py:535:80: E501 line too long (90 > 79 characters)
+src/intellicrack\ui\panels\stack_viewer.py:525:80: E501 line too long (100 > 79 characters)
 
-src/intellicrack\ui\panels\stack_viewer.py:543:80: E501 line too long (99 > 79 characters)
+src/intellicrack\ui\panels\stack_viewer.py:536:80: E501 line too long (99 > 79 characters)
+
+src/intellicrack\ui\panels\stack_viewer.py:538:80: E501 line too long (90 > 79 characters)
+
+src/intellicrack\ui\panels\stack_viewer.py:546:80: E501 line too long (99 > 79 characters)
 
 
 14 findings in src/intellicrack\ui\resources\font_manager.py
 
-src/intellicrack\ui\resources\font_manager.py:85:80: E501 line too long (103 > 79 characters)
+src/intellicrack\ui\resources\font_manager.py:88:80: E501 line too long (103 > 79 characters)
 
-src/intellicrack\ui\resources\font_manager.py:94:80: E501 line too long (92 > 79 characters)
+src/intellicrack\ui\resources\font_manager.py:97:80: E501 line too long (92 > 79 characters)
 
-src/intellicrack\ui\resources\font_manager.py:98:80: E501 line too long (86 > 79 characters)
+src/intellicrack\ui\resources\font_manager.py:101:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\ui\resources\font_manager.py:107:80: E501 line too long (96 > 79 characters)
+src/intellicrack\ui\resources\font_manager.py:110:80: E501 line too long (96 > 79 characters)
 
-src/intellicrack\ui\resources\font_manager.py:125:80: E501 line too long (92 > 79 characters)
+src/intellicrack\ui\resources\font_manager.py:128:80: E501 line too long (92 > 79 characters)
 
-src/intellicrack\ui\resources\font_manager.py:147:80: E501 line too long (103 > 79 characters)
+src/intellicrack\ui\resources\font_manager.py:150:80: E501 line too long (103 > 79 characters)
 
-src/intellicrack\ui\resources\font_manager.py:163:80: E501 line too long (90 > 79 characters)
+src/intellicrack\ui\resources\font_manager.py:166:80: E501 line too long (90 > 79 characters)
 
-src/intellicrack\ui\resources\font_manager.py:166:80: E501 line too long (86 > 79 characters)
+src/intellicrack\ui\resources\font_manager.py:169:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\ui\resources\font_manager.py:170:80: E501 line too long (86 > 79 characters)
+src/intellicrack\ui\resources\font_manager.py:173:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\ui\resources\font_manager.py:171:80: E501 line too long (82 > 79 characters)
+src/intellicrack\ui\resources\font_manager.py:174:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\ui\resources\font_manager.py:174:80: E501 line too long (89 > 79 characters)
+src/intellicrack\ui\resources\font_manager.py:177:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\ui\resources\font_manager.py:185:80: E501 line too long (86 > 79 characters)
+src/intellicrack\ui\resources\font_manager.py:188:80: E501 line too long (86 > 79 characters)
 
-src/intellicrack\ui\resources\font_manager.py:211:80: E501 line too long (94 > 79 characters)
+src/intellicrack\ui\resources\font_manager.py:214:80: E501 line too long (94 > 79 characters)
 
-src/intellicrack\ui\resources\font_manager.py:242:80: E501 line too long (90 > 79 characters)
+src/intellicrack\ui\resources\font_manager.py:245:80: E501 line too long (90 > 79 characters)
 
 
 14 findings in tests\test_providers\test_local_transformers_provider.py
@@ -3905,35 +3932,6 @@ src/intellicrack\main.py:392:80: E501 line too long (83 > 79 characters)
 src/intellicrack\main.py:408:80: E501 line too long (83 > 79 characters)
 
 src/intellicrack\main.py:451:80: E501 line too long (82 > 79 characters)
-
-
-13 findings in src/intellicrack\providers\openai.py
-
-src/intellicrack\providers\openai.py:30:80: E501 line too long (82 > 79 characters)
-
-src/intellicrack\providers\openai.py:116:80: E501 line too long (80 > 79 characters)
-
-src/intellicrack\providers\openai.py:213:80: E501 line too long (83 > 79 characters)
-
-src/intellicrack\providers\openai.py:243:80: E501 line too long (88 > 79 characters)
-
-src/intellicrack\providers\openai.py:275:80: E501 line too long (87 > 79 characters)
-
-src/intellicrack\providers\openai.py:286:80: E501 line too long (86 > 79 characters)
-
-src/intellicrack\providers\openai.py:288:80: E501 line too long (81 > 79 characters)
-
-src/intellicrack\providers\openai.py:314:80: E501 line too long (81 > 79 characters)
-
-src/intellicrack\providers\openai.py:325:80: E501 line too long (105 > 79 characters)
-
-src/intellicrack\providers\openai.py:403:80: E501 line too long (87 > 79 characters)
-
-src/intellicrack\providers\openai.py:405:80: E501 line too long (86 > 79 characters)
-
-src/intellicrack\providers\openai.py:408:80: E501 line too long (81 > 79 characters)
-
-src/intellicrack\providers\openai.py:509:80: E501 line too long (103 > 79 characters)
 
 
 13 findings in src/intellicrack\providers\registry.py
@@ -4079,31 +4077,6 @@ tests\test_bridges\test_x64dbg.py:366:80: E501 line too long (134 > 79 character
 tests\test_bridges\test_x64dbg.py:370:80: E501 line too long (81 > 79 characters)
 
 
-11 findings in src/intellicrack\providers\grok.py
-
-src/intellicrack\providers\grok.py:18:80: E501 line too long (82 > 79 characters)
-
-src/intellicrack\providers\grok.py:36:80: E501 line too long (85 > 79 characters)
-
-src/intellicrack\providers\grok.py:91:80: E501 line too long (82 > 79 characters)
-
-src/intellicrack\providers\grok.py:110:80: E501 line too long (81 > 79 characters)
-
-src/intellicrack\providers\grok.py:247:80: E501 line too long (89 > 79 characters)
-
-src/intellicrack\providers\grok.py:252:80: E501 line too long (84 > 79 characters)
-
-src/intellicrack\providers\grok.py:294:80: E501 line too long (87 > 79 characters)
-
-src/intellicrack\providers\grok.py:299:80: E501 line too long (90 > 79 characters)
-
-src/intellicrack\providers\grok.py:368:80: E501 line too long (89 > 79 characters)
-
-src/intellicrack\providers\grok.py:373:80: E501 line too long (84 > 79 characters)
-
-src/intellicrack\providers\grok.py:462:80: E501 line too long (103 > 79 characters)
-
-
 11 findings in src/intellicrack\sandbox\manager.py
 
 src/intellicrack\sandbox\manager.py:127:80: E501 line too long (87 > 79 characters)
@@ -4131,27 +4104,27 @@ src/intellicrack\sandbox\manager.py:378:80: E501 line too long (115 > 79 charact
 
 11 findings in src/intellicrack\ui\embedding\ghidra_widget.py
 
-src/intellicrack\ui\embedding\ghidra_widget.py:100:80: E501 line too long (81 > 79 characters)
+src/intellicrack\ui\embedding\ghidra_widget.py:121:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\ui\embedding\ghidra_widget.py:109:80: E501 line too long (81 > 79 characters)
+src/intellicrack\ui\embedding\ghidra_widget.py:130:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\ui\embedding\ghidra_widget.py:163:80: E501 line too long (80 > 79 characters)
+src/intellicrack\ui\embedding\ghidra_widget.py:193:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\ui\embedding\ghidra_widget.py:189:80: E501 line too long (89 > 79 characters)
+src/intellicrack\ui\embedding\ghidra_widget.py:219:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\ui\embedding\ghidra_widget.py:192:80: E501 line too long (80 > 79 characters)
+src/intellicrack\ui\embedding\ghidra_widget.py:222:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\ui\embedding\ghidra_widget.py:244:80: E501 line too long (99 > 79 characters)
+src/intellicrack\ui\embedding\ghidra_widget.py:274:80: E501 line too long (99 > 79 characters)
 
-src/intellicrack\ui\embedding\ghidra_widget.py:247:80: E501 line too long (91 > 79 characters)
+src/intellicrack\ui\embedding\ghidra_widget.py:277:80: E501 line too long (91 > 79 characters)
 
-src/intellicrack\ui\embedding\ghidra_widget.py:251:80: E501 line too long (93 > 79 characters)
+src/intellicrack\ui\embedding\ghidra_widget.py:281:80: E501 line too long (93 > 79 characters)
 
-src/intellicrack\ui\embedding\ghidra_widget.py:253:80: E501 line too long (92 > 79 characters)
+src/intellicrack\ui\embedding\ghidra_widget.py:283:80: E501 line too long (92 > 79 characters)
 
-src/intellicrack\ui\embedding\ghidra_widget.py:267:80: E501 line too long (92 > 79 characters)
+src/intellicrack\ui\embedding\ghidra_widget.py:297:80: E501 line too long (92 > 79 characters)
 
-src/intellicrack\ui\embedding\ghidra_widget.py:269:80: E501 line too long (101 > 79 characters)
+src/intellicrack\ui\embedding\ghidra_widget.py:299:80: E501 line too long (101 > 79 characters)
 
 
 11 findings in tests\test_providers\test_credential_loading.py
@@ -4392,6 +4365,48 @@ tests\test_providers\test_ollama_provider.py:108:80: E501 line too long (127 > 7
 tests\test_providers\test_ollama_provider.py:109:80: E501 line too long (136 > 79 characters)
 
 
+9 findings in src/intellicrack\providers\base.py
+
+src/intellicrack\providers\base.py:3:80: E501 line too long (80 > 79 characters)
+
+src/intellicrack\providers\base.py:318:80: E501 line too long (102 > 79 characters)
+
+src/intellicrack\providers\base.py:426:80: E501 line too long (113 > 79 characters)
+
+src/intellicrack\providers\base.py:449:80: E501 line too long (96 > 79 characters)
+
+src/intellicrack\providers\base.py:477:80: E501 line too long (95 > 79 characters)
+
+src/intellicrack\providers\base.py:492:80: E501 line too long (93 > 79 characters)
+
+src/intellicrack\providers\base.py:523:80: E501 line too long (92 > 79 characters)
+
+src/intellicrack\providers\base.py:538:80: E501 line too long (93 > 79 characters)
+
+src/intellicrack\providers\base.py:566:80: E501 line too long (115 > 79 characters)
+
+
+9 findings in src/intellicrack\providers\openai.py
+
+src/intellicrack\providers\openai.py:129:80: E501 line too long (80 > 79 characters)
+
+src/intellicrack\providers\openai.py:229:80: E501 line too long (83 > 79 characters)
+
+src/intellicrack\providers\openai.py:261:80: E501 line too long (88 > 79 characters)
+
+src/intellicrack\providers\openai.py:292:80: E501 line too long (87 > 79 characters)
+
+src/intellicrack\providers\openai.py:306:80: E501 line too long (96 > 79 characters)
+
+src/intellicrack\providers\openai.py:448:80: E501 line too long (87 > 79 characters)
+
+src/intellicrack\providers\openai.py:450:80: E501 line too long (86 > 79 characters)
+
+src/intellicrack\providers\openai.py:453:80: E501 line too long (81 > 79 characters)
+
+src/intellicrack\providers\openai.py:555:80: E501 line too long (103 > 79 characters)
+
+
 9 findings in src/intellicrack\ui\chat.py
 
 src/intellicrack\ui\chat.py:83:80: E501 line too long (95 > 79 characters)
@@ -4415,23 +4430,23 @@ src/intellicrack\ui\chat.py:484:13: F824 `nonlocal content_label` is unused: nam
 
 9 findings in src/intellicrack\ui\embedding\radare2_widget.py
 
-src/intellicrack\ui\embedding\radare2_widget.py:146:80: E501 line too long (94 > 79 characters)
+src/intellicrack\ui\embedding\radare2_widget.py:147:80: E501 line too long (94 > 79 characters)
 
-src/intellicrack\ui\embedding\radare2_widget.py:149:80: E501 line too long (80 > 79 characters)
+src/intellicrack\ui\embedding\radare2_widget.py:150:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\ui\embedding\radare2_widget.py:168:80: E501 line too long (80 > 79 characters)
+src/intellicrack\ui\embedding\radare2_widget.py:169:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\ui\embedding\radare2_widget.py:216:80: E501 line too long (89 > 79 characters)
+src/intellicrack\ui\embedding\radare2_widget.py:217:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\ui\embedding\radare2_widget.py:222:80: E501 line too long (90 > 79 characters)
+src/intellicrack\ui\embedding\radare2_widget.py:223:80: E501 line too long (90 > 79 characters)
 
-src/intellicrack\ui\embedding\radare2_widget.py:224:80: E501 line too long (81 > 79 characters)
+src/intellicrack\ui\embedding\radare2_widget.py:225:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\ui\embedding\radare2_widget.py:226:80: E501 line too long (100 > 79 characters)
+src/intellicrack\ui\embedding\radare2_widget.py:227:80: E501 line too long (100 > 79 characters)
 
-src/intellicrack\ui\embedding\radare2_widget.py:228:80: E501 line too long (83 > 79 characters)
+src/intellicrack\ui\embedding\radare2_widget.py:229:80: E501 line too long (83 > 79 characters)
 
-src/intellicrack\ui\embedding\radare2_widget.py:264:80: E501 line too long (84 > 79 characters)
+src/intellicrack\ui\embedding\radare2_widget.py:265:80: E501 line too long (84 > 79 characters)
 
 
 9 findings in tests\test_core\test_main.py
@@ -4476,23 +4491,23 @@ tests\test_providers\test_grok_provider.py:114:80: E501 line too long (127 > 79 
 tests\test_providers\test_grok_provider.py:115:80: E501 line too long (136 > 79 characters)
 
 
-8 findings in src/intellicrack\providers\base.py
+8 findings in src/intellicrack\providers\grok.py
 
-src/intellicrack\providers\base.py:3:80: E501 line too long (80 > 79 characters)
+src/intellicrack\providers\grok.py:46:80: E501 line too long (85 > 79 characters)
 
-src/intellicrack\providers\base.py:352:80: E501 line too long (113 > 79 characters)
+src/intellicrack\providers\grok.py:103:80: E501 line too long (82 > 79 characters)
 
-src/intellicrack\providers\base.py:375:80: E501 line too long (96 > 79 characters)
+src/intellicrack\providers\grok.py:122:80: E501 line too long (81 > 79 characters)
 
-src/intellicrack\providers\base.py:403:80: E501 line too long (95 > 79 characters)
+src/intellicrack\providers\grok.py:262:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\providers\base.py:418:80: E501 line too long (93 > 79 characters)
+src/intellicrack\providers\grok.py:267:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\providers\base.py:449:80: E501 line too long (92 > 79 characters)
+src/intellicrack\providers\grok.py:413:80: E501 line too long (89 > 79 characters)
 
-src/intellicrack\providers\base.py:464:80: E501 line too long (93 > 79 characters)
+src/intellicrack\providers\grok.py:418:80: E501 line too long (84 > 79 characters)
 
-src/intellicrack\providers\base.py:492:80: E501 line too long (115 > 79 characters)
+src/intellicrack\providers\grok.py:508:80: E501 line too long (103 > 79 characters)
 
 
 8 findings in src/intellicrack\ui\panels\_qt_compat.py
@@ -4550,6 +4565,21 @@ tests\test_ui\test_resource_helper.py:266:80: E501 line too long (80 > 79 charac
 tests\test_ui\test_resource_helper.py:267:80: E501 line too long (84 > 79 characters)
 
 
+6 findings in src/intellicrack\__init__.py
+
+src/intellicrack\__init__.py:3:80: E501 line too long (83 > 79 characters)
+
+src/intellicrack\__init__.py:8:80: E501 line too long (93 > 79 characters)
+
+src/intellicrack\__init__.py:9:80: E501 line too long (82 > 79 characters)
+
+src/intellicrack\__init__.py:63:80: E501 line too long (85 > 79 characters)
+
+src/intellicrack\__init__.py:65:80: E501 line too long (82 > 79 characters)
+
+src/intellicrack\__init__.py:69:80: E501 line too long (84 > 79 characters)
+
+
 6 findings in tests\conftest.py
 
 tests\conftest.py:3:80: E501 line too long (81 > 79 characters)
@@ -4595,11 +4625,11 @@ tests\test_providers\test_model_discovery.py:221:80: E501 line too long (81 > 79
 
 src/intellicrack\bridges\base.py:249:80: E501 line too long (95 > 79 characters)
 
-src/intellicrack\bridges\base.py:302:80: E501 line too long (93 > 79 characters)
+src/intellicrack\bridges\base.py:311:80: E501 line too long (93 > 79 characters)
 
-src/intellicrack\bridges\base.py:700:80: E501 line too long (80 > 79 characters)
+src/intellicrack\bridges\base.py:810:80: E501 line too long (80 > 79 characters)
 
-src/intellicrack\bridges\base.py:849:80: E501 line too long (81 > 79 characters)
+src/intellicrack\bridges\base.py:989:80: E501 line too long (81 > 79 characters)
 
 
 4 findings in src/intellicrack\bridges\schemas.py
@@ -4622,15 +4652,6 @@ tests\core\test_process_manager_leaks.py:83:80: E501 line too long (133 > 79 cha
 tests\core\test_process_manager_leaks.py:109:80: E501 line too long (85 > 79 characters)
 
 tests\core\test_process_manager_leaks.py:110:80: E501 line too long (83 > 79 characters)
-
-
-3 findings in src/intellicrack\__init__.py
-
-src/intellicrack\__init__.py:3:80: E501 line too long (83 > 79 characters)
-
-src/intellicrack\__init__.py:8:80: E501 line too long (93 > 79 characters)
-
-src/intellicrack\__init__.py:9:80: E501 line too long (82 > 79 characters)
 
 
 3 findings in src/intellicrack\ui\dialogs\splash_screen.py

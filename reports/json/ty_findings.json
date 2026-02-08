@@ -1,8 +1,8 @@
 {
   "tool": "ty",
-  "generated": "2026-02-06T13:35:04.515241",
-  "total_findings": 85,
-  "total_files": 28,
+  "generated": "2026-02-08T03:00:44.843317",
+  "total_findings": 83,
+  "total_files": 27,
   "files": [
     {
       "path": "src\\intellicrack\\ui\\session_manager.py",
@@ -168,46 +168,46 @@
           "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:575:52: error[invalid-argument-type] Argument to bound method `get_language` is incorrect: Expected `str`, found `~AlwaysFalsy`"
         },
         {
-          "line": 675,
+          "line": 676,
           "column": 48,
           "code": "invalid-argument-type",
           "message": "Argument to bound method `get_template` is incorrect: Expected `str`, found `~AlwaysFalsy`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:675:48: error[invalid-argument-type] Argument to bound method `get_template` is incorrect: Expected `str`, found `~AlwaysFalsy`"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:676:48: error[invalid-argument-type] Argument to bound method `get_template` is incorrect: Expected `str`, found `~AlwaysFalsy`"
         },
         {
-          "line": 692,
+          "line": 693,
           "column": 47,
           "code": "invalid-argument-type",
-          "message": "Argument to bound method `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:692:47: error[invalid-argument-type] Argument to bound method `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`"
+          "message": "Argument to function `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`",
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:693:47: error[invalid-argument-type] Argument to function `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`"
         },
         {
-          "line": 696,
+          "line": 697,
           "column": 62,
           "code": "invalid-argument-type",
           "message": "Argument to bound method `add_script` is incorrect: Expected `str`, found `~AlwaysFalsy`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:696:62: error[invalid-argument-type] Argument to bound method `add_script` is incorrect: Expected `str`, found `~AlwaysFalsy`"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:697:62: error[invalid-argument-type] Argument to bound method `add_script` is incorrect: Expected `str`, found `~AlwaysFalsy`"
         },
         {
-          "line": 732,
+          "line": 733,
           "column": 50,
           "code": "invalid-argument-type",
           "message": "Argument to bound method `get_extension` is incorrect: Expected `str`, found `~AlwaysFalsy`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:732:50: error[invalid-argument-type] Argument to bound method `get_extension` is incorrect: Expected `str`, found `~AlwaysFalsy`"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:733:50: error[invalid-argument-type] Argument to bound method `get_extension` is incorrect: Expected `str`, found `~AlwaysFalsy`"
         },
         {
-          "line": 764,
+          "line": 765,
           "column": 43,
           "code": "invalid-argument-type",
-          "message": "Argument to bound method `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:764:43: error[invalid-argument-type] Argument to bound method `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`"
+          "message": "Argument to function `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`",
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:765:43: error[invalid-argument-type] Argument to function `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`"
         },
         {
-          "line": 829,
+          "line": 830,
           "column": 16,
           "code": "invalid-return-type",
           "message": "Return type does not match returned value: expected `tuple[str, str, str] | None`, found `tuple[(Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy), ~AlwaysFalsy, (Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy)]`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:829:16: error[invalid-return-type] Return type does not match returned value: expected `tuple[str, str, str] | None`, found `tuple[(Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy), ~AlwaysFalsy, (Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy)]`"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:830:16: error[invalid-return-type] Return type does not match returned value: expected `tuple[str, str, str] | None`, found `tuple[(Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy), ~AlwaysFalsy, (Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy)]`"
         }
       ]
     },
@@ -315,43 +315,43 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\sandbox\\windows.py",
+      "path": "src\\intellicrack\\providers\\model_loader.py",
       "count": 5,
       "findings": [
         {
-          "line": 189,
+          "line": 22,
           "column": 13,
           "code": "invalid-assignment",
-          "message": "Object of type `Popen[bytes] | Popen[Any] | Popen[str]` is not assignable to attribute `_process` of type `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\sandbox\\windows.py:189:13: error[invalid-assignment] Object of type `Popen[bytes] | Popen[Any] | Popen[str]` is not assignable to attribute `_process` of type `Popen[bytes] | None`"
+          "message": "Object of type `None` is not assignable to `<module 'torch'>`",
+          "raw": "src\\intellicrack\\providers\\model_loader.py:22:13: error[invalid-assignment] Object of type `None` is not assignable to `<module 'torch'>`"
         },
         {
-          "line": 199,
-          "column": 17,
+          "line": 27,
+          "column": 28,
+          "code": "invalid-assignment",
+          "message": "Object of type `None` is not assignable to `<class 'AutoModelForCausalLM'>`",
+          "raw": "src\\intellicrack\\providers\\model_loader.py:27:28: error[invalid-assignment] Object of type `None` is not assignable to `<class 'AutoModelForCausalLM'>`"
+        },
+        {
+          "line": 28,
+          "column": 21,
+          "code": "invalid-assignment",
+          "message": "Object of type `None` is not assignable to `<class 'AutoTokenizer'>`",
+          "raw": "src\\intellicrack\\providers\\model_loader.py:28:21: error[invalid-assignment] Object of type `None` is not assignable to `<class 'AutoTokenizer'>`"
+        },
+        {
+          "line": 33,
+          "column": 26,
+          "code": "invalid-assignment",
+          "message": "Object of type `None` is not assignable to `<class 'BitsAndBytesConfig'>`",
+          "raw": "src\\intellicrack\\providers\\model_loader.py:33:26: error[invalid-assignment] Object of type `None` is not assignable to `<class 'BitsAndBytesConfig'>`"
+        },
+        {
+          "line": 543,
+          "column": 30,
           "code": "invalid-argument-type",
-          "message": "Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\sandbox\\windows.py:199:17: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`"
-        },
-        {
-          "line": 208,
-          "column": 16,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `poll` may be missing on object of type `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\sandbox\\windows.py:208:16: warning[possibly-missing-attribute] Attribute `poll` may be missing on object of type `Popen[bytes] | None`"
-        },
-        {
-          "line": 213,
-          "column": 31,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\sandbox\\windows.py:213:31: warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`"
-        },
-        {
-          "line": 215,
-          "column": 67,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\sandbox\\windows.py:215:67: warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`"
+          "message": "Argument to bound method `__call__` is incorrect: Expected `PreTrainedModel`, found `device`",
+          "raw": "src\\intellicrack\\providers\\model_loader.py:543:30: error[invalid-argument-type] Argument to bound method `__call__` is incorrect: Expected `PreTrainedModel`, found `device`"
         }
       ]
     },
@@ -360,32 +360,66 @@
       "count": 4,
       "findings": [
         {
-          "line": 627,
+          "line": 628,
           "column": 26,
           "code": "not-iterable",
           "message": "Object of type `object` is not iterable",
-          "raw": "src\\intellicrack\\bridges\\binary.py:627:26: error[not-iterable] Object of type `object` is not iterable"
+          "raw": "src\\intellicrack\\bridges\\binary.py:628:26: error[not-iterable] Object of type `object` is not iterable"
         },
         {
-          "line": 664,
+          "line": 665,
           "column": 24,
           "code": "unresolved-attribute",
           "message": "Object of type `object` has no attribute `symbols`",
-          "raw": "src\\intellicrack\\bridges\\binary.py:664:24: error[unresolved-attribute] Object of type `object` has no attribute `symbols`"
+          "raw": "src\\intellicrack\\bridges\\binary.py:665:24: error[unresolved-attribute] Object of type `object` has no attribute `symbols`"
         },
         {
-          "line": 958,
+          "line": 959,
           "column": 50,
           "code": "missing-argument",
           "message": "No argument provided for required parameter `offset` of function `disasm`",
-          "raw": "src\\intellicrack\\bridges\\binary.py:958:50: error[missing-argument] No argument provided for required parameter `offset` of function `disasm`"
+          "raw": "src\\intellicrack\\bridges\\binary.py:959:50: error[missing-argument] No argument provided for required parameter `offset` of function `disasm`"
         },
         {
-          "line": 958,
+          "line": 959,
           "column": 60,
           "code": "invalid-argument-type",
           "message": "Argument to function `disasm` is incorrect: Expected `Cs`, found `bytes`",
-          "raw": "src\\intellicrack\\bridges\\binary.py:958:60: error[invalid-argument-type] Argument to function `disasm` is incorrect: Expected `Cs`, found `bytes`"
+          "raw": "src\\intellicrack\\bridges\\binary.py:959:60: error[invalid-argument-type] Argument to function `disasm` is incorrect: Expected `Cs`, found `bytes`"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\local_transformers.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": 53,
+          "column": 13,
+          "code": "invalid-assignment",
+          "message": "Object of type `None` is not assignable to `<module 'torch'>`",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:53:13: error[invalid-assignment] Object of type `None` is not assignable to `<module 'torch'>`"
+        },
+        {
+          "line": 509,
+          "column": 23,
+          "code": "call-non-callable",
+          "message": "Object of type `Tensor` is not callable",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:509:23: error[call-non-callable] Object of type `Tensor` is not callable"
+        },
+        {
+          "line": 590,
+          "column": 22,
+          "code": "not-subscriptable",
+          "message": "Cannot subscript object of type `None` with no `__getitem__` method",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:590:22: error[not-subscriptable] Cannot subscript object of type `None` with no `__getitem__` method"
+        },
+        {
+          "line": 736,
+          "column": 47,
+          "code": "invalid-assignment",
+          "message": "Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:736:47: error[invalid-assignment] Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`"
         }
       ]
     },
@@ -394,59 +428,32 @@
       "count": 4,
       "findings": [
         {
-          "line": 209,
+          "line": 210,
           "column": 9,
           "code": "invalid-method-override",
           "message": "Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:209:9: error[invalid-method-override] Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
+          "raw": "src\\intellicrack\\ui\\highlighter.py:210:9: error[invalid-method-override] Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
         },
         {
-          "line": 551,
+          "line": 553,
           "column": 9,
           "code": "invalid-method-override",
           "message": "Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:551:9: error[invalid-method-override] Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
+          "raw": "src\\intellicrack\\ui\\highlighter.py:553:9: error[invalid-method-override] Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
         },
         {
-          "line": 753,
+          "line": 756,
           "column": 9,
           "code": "invalid-method-override",
           "message": "Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:753:9: error[invalid-method-override] Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
+          "raw": "src\\intellicrack\\ui\\highlighter.py:756:9: error[invalid-method-override] Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
         },
         {
-          "line": 912,
+          "line": 916,
           "column": 9,
           "code": "invalid-method-override",
           "message": "Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:912:9: error[invalid-method-override] Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\local_transformers.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 499,
-          "column": 23,
-          "code": "call-non-callable",
-          "message": "Object of type `Tensor` is not callable",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:499:23: error[call-non-callable] Object of type `Tensor` is not callable"
-        },
-        {
-          "line": 578,
-          "column": 22,
-          "code": "not-subscriptable",
-          "message": "Cannot subscript object of type `None` with no `__getitem__` method",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:578:22: error[not-subscriptable] Cannot subscript object of type `None` with no `__getitem__` method"
-        },
-        {
-          "line": 722,
-          "column": 47,
-          "code": "invalid-assignment",
-          "message": "Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:722:47: error[invalid-assignment] Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`"
+          "raw": "src\\intellicrack\\ui\\highlighter.py:916:9: error[invalid-method-override] Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
         }
       ]
     },
@@ -455,25 +462,25 @@
       "count": 3,
       "findings": [
         {
-          "line": 375,
-          "column": 9,
-          "code": "invalid-method-override",
-          "message": "Invalid override of method `resizeEvent`: Definition is incompatible with `QWidget.resizeEvent`",
-          "raw": "src\\intellicrack\\ui\\embedding\\embedded_widget.py:375:9: error[invalid-method-override] Invalid override of method `resizeEvent`: Definition is incompatible with `QWidget.resizeEvent`"
-        },
-        {
           "line": 384,
           "column": 9,
           "code": "invalid-method-override",
-          "message": "Invalid override of method `focusInEvent`: Definition is incompatible with `QWidget.focusInEvent`",
-          "raw": "src\\intellicrack\\ui\\embedding\\embedded_widget.py:384:9: error[invalid-method-override] Invalid override of method `focusInEvent`: Definition is incompatible with `QWidget.focusInEvent`"
+          "message": "Invalid override of method `resizeEvent`: Definition is incompatible with `QWidget.resizeEvent`",
+          "raw": "src\\intellicrack\\ui\\embedding\\embedded_widget.py:384:9: error[invalid-method-override] Invalid override of method `resizeEvent`: Definition is incompatible with `QWidget.resizeEvent`"
         },
         {
           "line": 394,
           "column": 9,
           "code": "invalid-method-override",
+          "message": "Invalid override of method `focusInEvent`: Definition is incompatible with `QWidget.focusInEvent`",
+          "raw": "src\\intellicrack\\ui\\embedding\\embedded_widget.py:394:9: error[invalid-method-override] Invalid override of method `focusInEvent`: Definition is incompatible with `QWidget.focusInEvent`"
+        },
+        {
+          "line": 405,
+          "column": 9,
+          "code": "invalid-method-override",
           "message": "Invalid override of method `closeEvent`: Definition is incompatible with `QWidget.closeEvent`",
-          "raw": "src\\intellicrack\\ui\\embedding\\embedded_widget.py:394:9: error[invalid-method-override] Invalid override of method `closeEvent`: Definition is incompatible with `QWidget.closeEvent`"
+          "raw": "src\\intellicrack\\ui\\embedding\\embedded_widget.py:405:9: error[invalid-method-override] Invalid override of method `closeEvent`: Definition is incompatible with `QWidget.closeEvent`"
         }
       ]
     },
@@ -509,58 +516,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 442,
+          "line": 457,
           "column": 15,
           "code": "invalid-type-form",
           "message": "Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in type expression",
-          "raw": "src\\intellicrack\\bridges\\sandbox_bridge.py:442:15: error[invalid-type-form] Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in type expression"
+          "raw": "src\\intellicrack\\bridges\\sandbox_bridge.py:457:15: error[invalid-type-form] Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in type expression"
         },
         {
-          "line": 632,
+          "line": 652,
           "column": 29,
           "code": "invalid-type-form",
           "message": "Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in type expression",
-          "raw": "src\\intellicrack\\bridges\\sandbox_bridge.py:632:29: error[invalid-type-form] Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in type expression"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\bridges\\x64dbg.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 833,
-          "column": 9,
-          "code": "invalid-assignment",
-          "message": "Object of type `Popen[bytes] | Popen[Any] | Popen[str]` is not assignable to attribute `_process` of type `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:833:9: error[invalid-assignment] Object of type `Popen[bytes] | Popen[Any] | Popen[str]` is not assignable to attribute `_process` of type `Popen[bytes] | None`"
-        },
-        {
-          "line": 843,
-          "column": 13,
-          "code": "invalid-argument-type",
-          "message": "Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:843:13: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\core\\process_manager.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 135,
-          "column": 16,
-          "code": "invalid-return-type",
-          "message": "Return type does not match returned value: expected `ProcessManager`, found `ProcessManager | None | Unknown`",
-          "raw": "src\\intellicrack\\core\\process_manager.py:135:16: error[invalid-return-type] Return type does not match returned value: expected `ProcessManager`, found `ProcessManager | None | Unknown`"
-        },
-        {
-          "line": 535,
-          "column": 56,
-          "code": "invalid-argument-type",
-          "message": "Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`",
-          "raw": "src\\intellicrack\\core\\process_manager.py:535:56: error[invalid-argument-type] Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`"
+          "raw": "src\\intellicrack\\bridges\\sandbox_bridge.py:652:29: error[invalid-type-form] Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in type expression"
         }
       ]
     },
@@ -638,6 +605,19 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\core\\process_manager.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 136,
+          "column": 16,
+          "code": "invalid-return-type",
+          "message": "Return type does not match returned value: expected `ProcessManager`, found `ProcessManager | None | Unknown`",
+          "raw": "src\\intellicrack\\core\\process_manager.py:136:16: error[invalid-return-type] Return type does not match returned value: expected `ProcessManager`, found `ProcessManager | None | Unknown`"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\main.py",
       "count": 1,
       "findings": [
@@ -651,15 +631,15 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\providers\\model_loader.py",
+      "path": "src\\intellicrack\\providers\\xpu_utils.py",
       "count": 1,
       "findings": [
         {
-          "line": 526,
-          "column": 30,
-          "code": "invalid-argument-type",
-          "message": "Argument to bound method `__call__` is incorrect: Expected `PreTrainedModel`, found `device`",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:526:30: error[invalid-argument-type] Argument to bound method `__call__` is incorrect: Expected `PreTrainedModel`, found `device`"
+          "line": 24,
+          "column": 21,
+          "code": "invalid-assignment",
+          "message": "Object of type `None` is not assignable to `<module 'torch'>`",
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:24:21: error[invalid-assignment] Object of type `None` is not assignable to `<module 'torch'>`"
         }
       ]
     },
@@ -668,11 +648,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 168,
+          "line": 169,
           "column": 9,
           "code": "invalid-assignment",
           "message": "Object of type `bound method Self@__init__.close_event_handler(a0: QCloseEvent | None) -> None` is not assignable to attribute `closeEvent` of type `def closeEvent(self, a0: QCloseEvent | None) -> None`",
-          "raw": "src\\intellicrack\\ui\\app.py:168:9: error[invalid-assignment] Object of type `bound method Self@__init__.close_event_handler(a0: QCloseEvent | None) -> None` is not assignable to attribute `closeEvent` of type `def closeEvent(self, a0: QCloseEvent | None) -> None`"
+          "raw": "src\\intellicrack\\ui\\app.py:169:9: error[invalid-assignment] Object of type `bound method Self@__init__.close_event_handler(a0: QCloseEvent | None) -> None` is not assignable to attribute `closeEvent` of type `def closeEvent(self, a0: QCloseEvent | None) -> None`"
         }
       ]
     },
@@ -707,11 +687,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 273,
+          "line": 276,
           "column": 9,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:273:9: warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`"
+          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:276:9: warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`"
         }
       ]
     },
@@ -733,11 +713,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 55,
+          "line": 56,
           "column": 5,
           "code": "conflicting-declarations",
           "message": "Conflicting declared types for `_winreg_module`: `ModuleType | None` and `<module 'winreg'>`",
-          "raw": "src\\intellicrack\\ui\\tool_config.py:55:5: error[conflicting-declarations] Conflicting declared types for `_winreg_module`: `ModuleType | None` and `<module 'winreg'>`"
+          "raw": "src\\intellicrack\\ui\\tool_config.py:56:5: error[conflicting-declarations] Conflicting declared types for `_winreg_module`: `ModuleType | None` and `<module 'winreg'>`"
         }
       ]
     },

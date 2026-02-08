@@ -1,8 +1,8 @@
 {
   "tool": "psscriptanalyzer",
-  "generated": "2026-02-06T13:36:54.835134",
-  "total_findings": 229,
-  "total_files": 23,
+  "generated": "2026-02-08T03:04:45.414998",
+  "total_findings": 238,
+  "total_files": 24,
   "files": [
     {
       "path": "D:\\Intellicrack\\tools\\AdobeInjector\\Source\\Rebranded\\build.ps1",
@@ -847,14 +847,6 @@
           "raw": "D:\\Intellicrack\\tools\\AdobeInjector\\Source\\GenP.v3.7.1\\v3.7.1-Source\\build.ps1:449:1: [Warning] File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
         },
         {
-          "line": 76,
-          "column": 10,
-          "severity": "Warning",
-          "rule": "PSUseApprovedVerbs",
-          "message": "The cmdlet 'Download-File' uses an unapproved verb.",
-          "raw": "D:\\Intellicrack\\tools\\AdobeInjector\\Source\\GenP.v3.7.1\\v3.7.1-Source\\build.ps1:76:10: [Warning] The cmdlet 'Download-File' uses an unapproved verb. (PSUseApprovedVerbs)"
-        },
-        {
           "line": 215,
           "column": 1,
           "severity": "Information",
@@ -957,6 +949,14 @@
           "rule": "PSAvoidTrailingWhitespace",
           "message": "Line has trailing whitespace",
           "raw": "D:\\Intellicrack\\tools\\AdobeInjector\\Source\\GenP.v3.7.1\\v3.7.1-Source\\build.ps1:364:1: [Information] Line has trailing whitespace (PSAvoidTrailingWhitespace)"
+        },
+        {
+          "line": 76,
+          "column": 10,
+          "severity": "Warning",
+          "rule": "PSUseApprovedVerbs",
+          "message": "The cmdlet 'Download-File' uses an unapproved verb.",
+          "raw": "D:\\Intellicrack\\tools\\AdobeInjector\\Source\\GenP.v3.7.1\\v3.7.1-Source\\build.ps1:76:10: [Warning] The cmdlet 'Download-File' uses an unapproved verb. (PSUseApprovedVerbs)"
         }
       ]
     },
@@ -1559,6 +1559,84 @@
           "rule": "PSUseSingularNouns",
           "message": "The cmdlet 'Compute-Lldb-PipInstall-Args' uses a plural noun. A singular noun should be used instead.",
           "raw": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-agent-lldb\\data\\support\\lldbsetuputils.ps1:110:10: [Warning] The cmdlet 'Compute-Lldb-PipInstall-Args' uses a plural noun. A singular noun should be used instead. (PSUseSingularNouns)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\scripts\\test_semgrep.ps1",
+      "count": 9,
+      "findings": [
+        {
+          "line": 5,
+          "column": 1,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingWriteHost",
+          "message": "File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
+          "raw": "D:\\Intellicrack\\scripts\\test_semgrep.ps1:5:1: [Warning] File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
+        },
+        {
+          "line": 7,
+          "column": 1,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingWriteHost",
+          "message": "File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
+          "raw": "D:\\Intellicrack\\scripts\\test_semgrep.ps1:7:1: [Warning] File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
+        },
+        {
+          "line": 11,
+          "column": 5,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingWriteHost",
+          "message": "File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
+          "raw": "D:\\Intellicrack\\scripts\\test_semgrep.ps1:11:5: [Warning] File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
+        },
+        {
+          "line": 13,
+          "column": 5,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingWriteHost",
+          "message": "File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
+          "raw": "D:\\Intellicrack\\scripts\\test_semgrep.ps1:13:5: [Warning] File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
+        },
+        {
+          "line": 17,
+          "column": 1,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingWriteHost",
+          "message": "File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
+          "raw": "D:\\Intellicrack\\scripts\\test_semgrep.ps1:17:1: [Warning] File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
+        },
+        {
+          "line": 20,
+          "column": 5,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingWriteHost",
+          "message": "File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
+          "raw": "D:\\Intellicrack\\scripts\\test_semgrep.ps1:20:5: [Warning] File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
+        },
+        {
+          "line": 22,
+          "column": 5,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingWriteHost",
+          "message": "File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
+          "raw": "D:\\Intellicrack\\scripts\\test_semgrep.ps1:22:5: [Warning] File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
+        },
+        {
+          "line": 27,
+          "column": 1,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingWriteHost",
+          "message": "File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
+          "raw": "D:\\Intellicrack\\scripts\\test_semgrep.ps1:27:1: [Warning] File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
+        },
+        {
+          "line": 29,
+          "column": 5,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingWriteHost",
+          "message": "File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
+          "raw": "D:\\Intellicrack\\scripts\\test_semgrep.ps1:29:5: [Warning] File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
         }
       ]
     },

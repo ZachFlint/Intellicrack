@@ -12,7 +12,7 @@ import json
 import re
 import time
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast, override
 
 from ..core.logging import get_logger
 from ..core.types import (
@@ -47,10 +47,14 @@ from .xpu_utils import (
 )
 
 
+try:
+    import torch
+except ImportError:
+    torch = None
+
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    import torch
     from transformers import PreTrainedModel
     from transformers.modeling_outputs import CausalLMOutputWithPast
 
@@ -59,6 +63,11 @@ _logger = get_logger("providers.local_transformers")
 
 _MSG_NOT_CONNECTED = "Provider not connected"
 _MSG_NO_MODEL_LOADED = "No model loaded"
+_MSG_TORCH_REQUIRED = "torch is required for local model inference"
+_ERR_LOAD_BOTH_FAILED = "Failed to load model on both XPU and CPU: %s"
+_ERR_LOAD_FAILED = "Failed to load model: %s"
+_ERR_INFERENCE_FAILED = "Local inference failed: %s"
+_ERR_STREAMING_FAILED = "Local streaming failed: %s"
 
 _DEFAULT_MODEL = "microsoft/Phi-3-mini-4k-instruct"
 _DEFAULT_MAX_NEW_TOKENS = 2048
@@ -345,12 +354,11 @@ class LocalTransformersProvider(LLMProviderBase):
                     "has_tool_calls": tool_calls is not None,
                 },
             )
-
-            return message, tool_calls
-
         except Exception as exc:
             self._logger.exception("local_chat_failed", extra={"model": model_id, "error": str(exc)})
-            raise ProviderError(f"Local inference failed: {exc}") from exc
+            raise ProviderError(_ERR_INFERENCE_FAILED % exc) from exc
+        else:
+            return message, tool_calls
 
     async def chat_stream(
         self,
@@ -399,7 +407,7 @@ class LocalTransformersProvider(LLMProviderBase):
         except Exception as exc:
             if not self._cancel_requested:
                 self._logger.exception("local_stream_failed", extra={"model": model_id, "error": str(exc)})
-                raise ProviderError(f"Local streaming failed: {exc}") from exc
+                raise ProviderError(_ERR_STREAMING_FAILED % exc) from exc
 
     async def _ensure_model_loaded(self, model_id: str) -> None:
         """Ensure the specified model is loaded.
@@ -457,9 +465,9 @@ class LocalTransformersProvider(LLMProviderBase):
                         self._model_cache,
                     )
                 except Exception as cpu_exc:
-                    raise ProviderError(f"Failed to load model on both XPU and CPU: {cpu_exc}") from cpu_exc
+                    raise ProviderError(_ERR_LOAD_BOTH_FAILED % cpu_exc) from cpu_exc
             else:
-                raise ProviderError(f"Failed to load model: {exc}") from exc
+                raise ProviderError(_ERR_LOAD_FAILED % exc) from exc
 
     def _generate_sync(
         self,
@@ -479,11 +487,13 @@ class LocalTransformersProvider(LLMProviderBase):
 
         Raises:
             RuntimeError: If no model is currently loaded.
+            ImportError: If torch is not installed.
         """
         if self._loaded_model is None:
             raise RuntimeError(_MSG_NO_MODEL_LOADED)
 
-        import torch
+        if torch is None:
+            raise ImportError(_MSG_TORCH_REQUIRED)
 
         model = self._loaded_model.model
         tokenizer = self._loaded_model.tokenizer
@@ -529,11 +539,13 @@ class LocalTransformersProvider(LLMProviderBase):
 
         Raises:
             RuntimeError: If no model is currently loaded.
+            ImportError: If torch is not installed.
         """
         if self._loaded_model is None:
             raise RuntimeError(_MSG_NO_MODEL_LOADED)
 
-        import torch
+        if torch is None:
+            raise ImportError(_MSG_TORCH_REQUIRED)
 
         model = self._loaded_model.model
         tokenizer = self._loaded_model.tokenizer
@@ -599,6 +611,7 @@ class LocalTransformersProvider(LLMProviderBase):
             if token_text:
                 yield token_text
 
+    @override
     def _convert_messages_to_provider_format(
         self,
         messages: list[Message],
@@ -645,6 +658,7 @@ class LocalTransformersProvider(LLMProviderBase):
 
         return result
 
+    @override
     def _convert_tools_to_provider_format(
         self,
         tools: list[ToolDefinition],
@@ -812,7 +826,8 @@ class LocalTransformersProvider(LLMProviderBase):
         parts.append("<|im_start|>assistant\n")
         return "".join(parts)
 
-    def _parse_tool_calls(self, response: str) -> list[ToolCall] | None:
+    @staticmethod
+    def _parse_tool_calls(response: str) -> list[ToolCall] | None:
         """Parse tool calls from response.
 
         Args:
@@ -876,7 +891,8 @@ class LocalTransformersProvider(LLMProviderBase):
 
         return None
 
-    def _extract_text_before_tool_call(self, response: str) -> str:
+    @staticmethod
+    def _extract_text_before_tool_call(response: str) -> str:
         """Extract text before tool call JSON.
 
         Args:
@@ -889,7 +905,8 @@ class LocalTransformersProvider(LLMProviderBase):
             return response[: match.start()].strip()
         return response
 
-    def _model_supports_tools(self, model_id: str) -> bool:
+    @staticmethod
+    def _model_supports_tools(model_id: str) -> bool:
         """Check if a model supports tool calling.
 
         Args:
@@ -909,7 +926,8 @@ class LocalTransformersProvider(LLMProviderBase):
         ]
         return any(cap in model_lower for cap in tool_capable)
 
-    def _estimate_context_window(self, model_id: str) -> int:
+    @staticmethod
+    def _estimate_context_window(model_id: str) -> int:
         """Estimate context window for a model.
 
         Args:

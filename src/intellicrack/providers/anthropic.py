@@ -7,7 +7,6 @@ chat completion and tool/function calling.
 from __future__ import annotations
 
 import json
-import logging
 import time
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, ClassVar, cast, override
@@ -37,6 +36,7 @@ from .base import LLMProviderBase, create_anthropic_tool_schema
 
 
 if TYPE_CHECKING:
+    import logging
     from asyncio import Task
     from collections.abc import AsyncIterator
 
@@ -185,11 +185,11 @@ class AnthropicProvider(LLMProviderBase):
             return models
 
     @staticmethod
-    def _get_context_window(model_id: str) -> int:
+    def _get_context_window(_model_id: str) -> int:
         """Get context window size for a model.
 
         Args:
-            model_id: The model identifier.
+            _model_id: The model identifier.
 
         Returns:
             Context window size in tokens.

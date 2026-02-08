@@ -8,12 +8,13 @@ from __future__ import annotations
 
 import asyncio
 import shutil
-import subprocess
 import tempfile
 import time
 import xml.etree.ElementTree as ET  # noqa: S405
 from datetime import datetime
 from pathlib import Path
+
+from intellicrack.core._subprocess import CREATE_NEW_CONSOLE, PIPE, Popen
 
 from ..core.logging import get_logger
 from ..core.process_manager import ProcessManager, ProcessType
@@ -99,7 +100,7 @@ class WindowsSandbox(SandboxBase):
             config: Optional sandbox configuration.
         """
         super().__init__(config)
-        self._process: subprocess.Popen[bytes] | None = None
+        self._process: Popen[bytes] | None = None
         self._wsb_path: Path | None = None
         self._shared_folder: Path | None = None
         self._monitor_folder: Path | None = None
@@ -187,11 +188,11 @@ class WindowsSandbox(SandboxBase):
             _logger.info("windows_sandbox_starting", extra={"config_path": str(self._wsb_path)})
 
             self._process = await asyncio.to_thread(
-                subprocess.Popen,
+                Popen,
                 [self.SANDBOX_EXE, str(self._wsb_path)],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                creationflags=subprocess.CREATE_NEW_CONSOLE,
+                stdout=PIPE,
+                stderr=PIPE,
+                creationflags=CREATE_NEW_CONSOLE,
             )
 
             process_manager = ProcessManager.get_instance()
@@ -477,7 +478,7 @@ start /min powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File "%~dp0pr
 
         _logger.debug("monitoring_scripts_created", extra={"path": str(self._monitor_folder)})
 
-    async def execute(
+    async def run_command(
         self,
         command: str,
         timeout: int | None = None,
@@ -583,7 +584,7 @@ call "{sandbox_script_path}"
             for log_file in logs_folder.glob("*.log"):
                 log_file.unlink()
 
-            await self.execute(
+            await self.run_command(
                 f'"{self.SANDBOX_SHARED_PATH}\\monitor\\start_monitors.cmd"',
                 timeout=_MONITOR_START_TIMEOUT,
             )
@@ -595,7 +596,7 @@ call "{sandbox_script_path}"
 
         result: ExecutionResult
         try:
-            exit_code, stdout, stderr = await self.execute(
+            exit_code, stdout, stderr = await self.run_command(
                 command,
                 timeout=effective_timeout,
             )

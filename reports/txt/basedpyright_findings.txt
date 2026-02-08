@@ -1,18 +1,1027 @@
-6 findings in d:\Intellicrack\src\intellicrack\core\process_manager.py
+61 findings in d:\Intellicrack\src\intellicrack\core\process_manager.py
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:281:9: [error] Type of "seen_pids" is partially unknown
-  Type of "seen_pids" is "set[Unknown]"
+d:\Intellicrack\src\intellicrack\core\process_manager.py:55:14: [error] Variable not allowed in type expression
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:285:17: [error] Type of "add" is partially unknown
-  Type of "add" is "(element: Unknown, /) -> None"
+d:\Intellicrack\src\intellicrack\core\process_manager.py:69:16: [error] Type of "process" is partially unknown
+  Type of "process" is "Unknown | Process"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:286:17: [error] Type of "append" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:69:16: [error] Type of "pid" is partially unknown
+  Type of "pid" is "Unknown | int"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:69:16: [error] Return type, "Unknown | int", is partially unknown
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:78:23: [error] Type of "process" is partially unknown
+  Type of "process" is "Unknown | Process"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:79:20: [error] Type of "process" is partially unknown
+  Type of "process" is "Unknown | Process"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:79:20: [error] Type of "poll" is unknown
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:79:33: [error] Cannot access attribute "poll" for class "Process"
+  Attribute "poll" is unknown
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:80:16: [error] Type of "process" is partially unknown
+  Type of "process" is "Unknown | Process"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:80:16: [error] Type of "returncode" is partially unknown
+  Type of "returncode" is "Unknown | int | None"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:92:23: [error] Type of "process" is partially unknown
+  Type of "process" is "Unknown | Process"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:93:20: [error] Type of "process" is partially unknown
+  Type of "process" is "Unknown | Process"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:93:20: [error] Type of "poll" is unknown
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:93:33: [error] Cannot access attribute "poll" for class "Process"
+  Attribute "poll" is unknown
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:94:16: [error] Type of "process" is partially unknown
+  Type of "process" is "Unknown | Process"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:94:16: [error] Type of "returncode" is partially unknown
+  Type of "returncode" is "Unknown | int | None"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:314:9: [error] Type of parameter "process" is partially unknown
+  Parameter type is "Unknown | Process"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:314:18: [error] Variable not allowed in type expression
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:322:13: [error] Type of "pid" is partially unknown
+  Type of "pid" is "Unknown | int"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:322:13: [error] Argument type is partially unknown
+  Argument corresponds to parameter "pid" in function "_terminate_tree_with_psutil"
+  Argument type is "Unknown | int"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:380:9: [error] Type of parameter "process" is partially unknown
+  Parameter type is "Unknown | Process"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:380:18: [error] Variable not allowed in type expression
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:393:17: [error] Type of "wait" is partially unknown
+  Type of "wait" is "Unknown | (() -> CoroutineType[Any, Any, int])"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:393:30: [error] No parameter named "timeout"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:396:17: [error] Type of "kill" is partially unknown
+  Type of "kill" is "Unknown | (() -> None)"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:398:21: [error] Type of "wait" is partially unknown
+  Type of "wait" is "Unknown | (() -> CoroutineType[Any, Any, int])"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:398:34: [error] No parameter named "timeout"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:404:9: [error] Type of parameter "process" is partially unknown
+  Parameter type is "Unknown | Process"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:404:18: [error] Variable not allowed in type expression
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:422:9: [error] Type of "pid" is partially unknown
+  Type of "pid" is "Unknown | int"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:422:15: [error] Type of "pid" is partially unknown
+  Type of "pid" is "Unknown | int"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:437:19: [error] Argument type is partially unknown
+  Argument corresponds to parameter "extra" in function "debug"
+  Argument type is "dict[str, str | Unknown | int]"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:440:16: [error] Return type, "Unknown | int", is partially unknown
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:533:9: [error] Type of "process" is partially unknown
+  Type of "process" is "Unknown | Process"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:533:19: [error] Type of "process" is partially unknown
+  Type of "process" is "Unknown | Process"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:536:19: [error] Type of "_terminate_subprocess" is partially unknown
+  Type of "_terminate_subprocess" is "(process: Unknown, name: str, graceful_timeout: float, force_timeout: float) -> CoroutineType[Any, Any, None]"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:538:62: [error] Argument type is partially unknown
+  Argument corresponds to parameter "process" in function "_terminate_async_subprocess"
+  Argument type is "Unknown | Process"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:545:9: [error] Type of parameter "process" is unknown
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:545:18: [error] Variable not allowed in type expression
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:562:13: [error] Type of "pid" is unknown
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:562:13: [error] Argument type is unknown
+  Argument corresponds to parameter "pid"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:568:12: [error] Type of "poll" is unknown
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:570:41: [error] Type of "wait" is unknown
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:570:41: [error] Argument type is unknown
+  Argument corresponds to parameter "func" in function "to_thread"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:574:17: [error] Type of "kill" is unknown
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:575:41: [error] Type of "wait" is unknown
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:575:41: [error] Argument type is unknown
+  Argument corresponds to parameter "func" in function "to_thread"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:697:9: [error] Return type is unknown
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:709:10: [error] Variable not allowed in type expression
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:746:15: [error] Type of "register" is partially unknown
+  Type of "register" is "(process: Unknown | Process, name: str, process_type: ProcessType = ProcessType.SUBPROCESS, metadata: dict[str, Any] | None = None, cleanup_callback: (() -> Coroutine[Any, Any, None]) | None = None) -> int"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:774:17: [error] Variable not allowed in type expression
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:781:22: [error] Type of "returncode" is unknown
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:783:17: [error] Type of "returncode" is unknown
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:785:24: [error] Type of "stdout" is unknown
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:786:24: [error] Type of "stderr" is unknown
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:789:16: [error] Return type is unknown
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:791:15: [error] Return type is unknown
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:803:10: [error] Variable not allowed in type expression
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:824:16: [error] Return type is unknown
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:825:13: [error] Type of "run_tracked" is partially unknown
+  Type of "run_tracked" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> Unknown"
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:825:13: [error] Argument type is partially unknown
+  Argument corresponds to parameter "func" in function "to_thread"
+  Argument type is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> Unknown"
+
+
+47 findings in d:\Intellicrack\src\intellicrack\ui\sandbox_config.py
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:89:24: [error] Variable not allowed in type expression
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:121:13: [error] Type of "register" is partially unknown
+  Type of "register" is "(process: Unknown | Process, name: str, process_type: ProcessType = ProcessType.SUBPROCESS, metadata: dict[str, Any] | None = None, cleanup_callback: (() -> Coroutine[Any, Any, None]) | None = None) -> int"
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:122:17: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:132:17: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:132:17: [error] Type of "wait" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:132:31: [error] "wait" is not a known attribute of "None"
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:133:20: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:133:20: [error] Type of "returncode" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:133:34: [error] "returncode" is not a known attribute of "None"
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:134:21: [error] Type of "stderr_output" is partially unknown
+  Type of "stderr_output" is "Unknown | Literal['']"
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:134:37: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:134:37: [error] Type of "stderr" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:134:37: [error] Type of "read" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:134:37: [error] Type of "decode" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:134:51: [error] "stderr" is not a known attribute of "None"
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:134:102: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:134:102: [error] Type of "stderr" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:134:116: [error] "stderr" is not a known attribute of "None"
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:173:16: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:173:46: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:173:46: [error] Type of "poll" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:174:17: [error] Type of "pid" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:174:23: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:174:23: [error] Type of "pid" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:176:51: [error] Argument type is unknown
+  Argument corresponds to parameter "pid" in function "terminate_tree"
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:180:31: [error] Argument type is partially unknown
+  Argument corresponds to parameter "extra" in function "debug"
+  Argument type is "dict[str, Unknown]"
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:182:58: [error] Argument type is unknown
+  Argument corresponds to parameter "pid" in function "unregister"
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:225:12: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:226:13: [error] Type of "pid" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:226:19: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:226:19: [error] Type of "pid" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:230:17: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:230:17: [error] Type of "terminate" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:231:17: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:231:17: [error] Type of "wait" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:234:21: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:234:21: [error] Type of "kill" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:235:21: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:235:21: [error] Type of "wait" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:237:40: [error] Argument type is unknown
+  Argument corresponds to parameter "pid" in function "unregister"
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:399:13: [error] Type of "result" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:399:22: [error] Type of "run_tracked" is partially unknown
+  Type of "run_tracked" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> Unknown"
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:410:29: [error] Type of "stdout" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:813:21: [error] Type of "run_tracked" is partially unknown
+  Type of "run_tracked" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> Unknown"
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:845:13: [error] Type of "result" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:845:22: [error] Type of "run_tracked" is partially unknown
+  Type of "run_tracked" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> Unknown"
+
+d:\Intellicrack\src\intellicrack\ui\sandbox_config.py:852:16: [error] Type of "returncode" is unknown
+
+
+40 findings in d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:58:24: [error] Variable not allowed in type expression
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:148:29: [error] Type of "_launch_process" is partially unknown
+  Type of "_launch_process" is "(args: list[str]) -> Unknown"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:152:23: [error] Argument type is partially unknown
+  Argument corresponds to parameter "extra" in function "info"
+  Argument type is "dict[str, str | Unknown]"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:152:60: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:152:60: [error] Type of "pid" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:152:74: [error] "pid" is not a known attribute of "None"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:167:9: [error] Return type is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:167:51: [error] Variable not allowed in type expression
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:186:9: [error] Type of "register" is partially unknown
+  Type of "register" is "(process: Unknown | Process, name: str, process_type: ProcessType = ProcessType.SUBPROCESS, metadata: dict[str, Any] | None = None, cleanup_callback: (() -> Coroutine[Any, Any, None]) | None = None) -> int"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:196:16: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:196:33: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:196:33: [error] Type of "poll" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:203:13: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:203:13: [error] Type of "pid" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:203:13: [error] Argument type is unknown
+  Argument corresponds to parameter "pid" in function "find_window_by_pid"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:323:12: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:323:30: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:323:30: [error] Type of "poll" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:324:13: [error] Type of "pid" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:324:19: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:324:19: [error] Type of "pid" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:325:61: [error] Argument type is partially unknown
+  Argument corresponds to parameter "extra" in function "debug"
+  Argument type is "dict[str, Unknown]"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:327:47: [error] Argument type is unknown
+  Argument corresponds to parameter "pid" in function "terminate_tree"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:328:64: [error] Argument type is partially unknown
+  Argument corresponds to parameter "extra" in function "debug"
+  Argument type is "dict[str, Unknown]"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:332:27: [error] Argument type is partially unknown
+  Argument corresponds to parameter "extra" in function "warning"
+  Argument type is "dict[str, Unknown | str]"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:334:54: [error] Argument type is unknown
+  Argument corresponds to parameter "pid" in function "unregister"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:346:12: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:346:30: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:346:30: [error] Type of "poll" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:347:13: [error] Type of "pid" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:347:19: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:347:19: [error] Type of "pid" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:348:64: [error] Argument type is partially unknown
+  Argument corresponds to parameter "extra" in function "debug"
+  Argument type is "dict[str, Unknown]"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:350:47: [error] Argument type is unknown
+  Argument corresponds to parameter "pid" in function "terminate_tree"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:351:72: [error] Argument type is partially unknown
+  Argument corresponds to parameter "extra" in function "debug"
+  Argument type is "dict[str, Unknown]"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:353:66: [error] Argument type is partially unknown
+  Argument corresponds to parameter "extra" in function "debug"
+  Argument type is "dict[str, Unknown]"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:354:54: [error] Argument type is unknown
+  Argument corresponds to parameter "pid" in function "unregister"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:365:16: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:365:46: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\embedded_widget.py:365:46: [error] Type of "poll" is unknown
+
+
+37 findings in d:\Intellicrack\src\intellicrack\sandbox\windows.py
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:103:24: [error] Variable not allowed in type expression
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:118:13: [error] Type of "result" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:118:28: [error] Type of "run_tracked_async" is partially unknown
+  Type of "run_tracked_async" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> CoroutineType[Any, Any, Unknown]"
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:123:16: [error] Type of "returncode" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:127:13: [error] Type of "features_result" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:127:37: [error] Type of "run_tracked_async" is partially unknown
+  Type of "run_tracked_async" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> CoroutineType[Any, Any, Unknown]"
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:137:29: [error] Type of "stdout" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:199:13: [error] Type of "register" is partially unknown
+  Type of "register" is "(process: Unknown | Process, name: str, process_type: ProcessType = ProcessType.SUBPROCESS, metadata: dict[str, Any] | None = None, cleanup_callback: (() -> Coroutine[Any, Any, None]) | None = None) -> int"
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:200:17: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:209:16: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:209:16: [error] Type of "poll" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:209:30: [error] "poll" is not a known attribute of "None"
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:214:31: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:214:31: [error] Type of "pid" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:214:45: [error] "pid" is not a known attribute of "None"
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:216:59: [error] Argument type is partially unknown
+  Argument corresponds to parameter "extra" in function "info"
+  Argument type is "dict[str, Unknown]"
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:216:67: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:216:67: [error] Type of "pid" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:216:81: [error] "pid" is not a known attribute of "None"
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:239:16: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:240:17: [error] Type of "pid" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:240:23: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:240:23: [error] Type of "pid" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:244:27: [error] Type of "run_tracked_async" is partially unknown
+  Type of "run_tracked_async" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> CoroutineType[Any, Any, Unknown]"
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:245:56: [error] Argument type is unknown
+  Argument corresponds to parameter "object" in function "__new__"
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:252:31: [error] Argument type is partially unknown
+  Argument corresponds to parameter "extra" in function "warning"
+  Argument type is "dict[str, Unknown]"
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:254:27: [error] Type of "run_tracked_async" is partially unknown
+  Type of "run_tracked_async" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> CoroutineType[Any, Any, Unknown]"
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:262:25: [error] Argument type is partially unknown
+  Argument corresponds to parameter "fut" in function "wait_for"
+  Argument type is "CoroutineType[Any, Any, Unknown]"
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:262:43: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:262:43: [error] Type of "wait" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:262:43: [error] Argument type is unknown
+  Argument corresponds to parameter "func" in function "to_thread"
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:266:21: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:266:21: [error] Type of "kill" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:267:45: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:267:45: [error] Type of "wait" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:267:45: [error] Argument type is unknown
+  Argument corresponds to parameter "func" in function "to_thread"
+
+d:\Intellicrack\src\intellicrack\sandbox\windows.py:269:44: [error] Argument type is unknown
+  Argument corresponds to parameter "pid" in function "unregister"
+
+
+24 findings in d:\Intellicrack\src\intellicrack\bridges\installer.py
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:297:13: [error] Type of "result" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:297:28: [error] Type of "run_tracked_async" is partially unknown
+  Type of "run_tracked_async" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> CoroutineType[Any, Any, Unknown]"
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:302:16: [error] Type of "returncode" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:303:55: [error] Argument type is partially unknown
+  Argument corresponds to parameter "extra" in function "info"
+  Argument type is "dict[str, Unknown]"
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:303:67: [error] Type of "stdout" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:303:67: [error] Type of "strip" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:328:17: [error] Type of "result" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:328:32: [error] Type of "run_tracked_async" is partially unknown
+  Type of "run_tracked_async" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> CoroutineType[Any, Any, Unknown]"
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:339:17: [error] Type of "result" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:339:32: [error] Type of "run_tracked_async" is partially unknown
+  Type of "run_tracked_async" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> CoroutineType[Any, Any, Unknown]"
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:346:16: [error] Type of "returncode" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:347:17: [error] Type of "version_str" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:347:31: [error] Type of "stdout" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:347:31: [error] Type of "strip" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:348:44: [error] Argument type is unknown
+  Argument corresponds to parameter "version_str" in function "_parse_version"
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:481:13: [error] Type of "result" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:481:28: [error] Type of "run_tracked_async" is partially unknown
+  Type of "run_tracked_async" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> CoroutineType[Any, Any, Unknown]"
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:487:16: [error] Type of "returncode" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:488:17: [error] Type of "version_result" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:488:40: [error] Type of "run_tracked_async" is partially unknown
+  Type of "run_tracked_async" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> CoroutineType[Any, Any, Unknown]"
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:493:47: [error] Type of "stdout" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:493:47: [error] Type of "strip" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:493:47: [error] Argument type is unknown
+  Argument corresponds to parameter "version_str" in function "_parse_version"
+
+d:\Intellicrack\src\intellicrack\bridges\installer.py:503:46: [error] Type of "stderr" is unknown
+
+
+23 findings in d:\Intellicrack\src\intellicrack\providers\local_transformers.py
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:500:9: [error] Type of "device" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:500:18: [error] Type of "device" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:503:44: [error] Argument type is unknown
+  Argument corresponds to parameter "device" in function "to"
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:506:48: [error] Argument type is unknown
+  Argument corresponds to parameter "device" in function "to"
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:552:9: [error] Type of "device" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:552:18: [error] Type of "device" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:555:44: [error] Argument type is unknown
+  Argument corresponds to parameter "device" in function "to"
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:558:48: [error] Argument type is unknown
+  Argument corresponds to parameter "device" in function "to"
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:569:17: [error] Type of parameter "_gen_ids" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:569:27: [error] Variable not allowed in type expression
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:569:27: [error] Type of "Tensor" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:570:17: [error] Type of parameter "_attn_mask" is partially unknown
+  Parameter type is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:570:29: [error] Variable not allowed in type expression
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:570:29: [error] Type of "Tensor" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:571:17: [error] Type of parameter "_past_kv" is partially unknown
+  Parameter type is "tuple[tuple[Unknown, ...], ...] | None"
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:571:39: [error] Variable not allowed in type expression
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:571:39: [error] Type of "Tensor" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:573:17: [error] Type of "use_ids" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:575:31: [error] Argument type is unknown
+  Argument corresponds to parameter "input_ids" in function "__call__"
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:576:36: [error] Argument type is partially unknown
+  Argument corresponds to parameter "attention_mask" in function "__call__"
+  Argument type is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:577:37: [error] Argument type is partially unknown
+  Argument corresponds to parameter "past_key_values" in function "__call__"
+  Argument type is "tuple[tuple[Unknown, ...], ...] | None"
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:583:21: [error] Argument type is partially unknown
+  Argument corresponds to parameter "func" in function "to_thread"
+  Argument type is "(_model: PreTrainedModel, _gen_ids: Unknown, _attn_mask: Unknown | None, _past_kv: tuple[tuple[Unknown, ...], ...] | None) -> CausalLMOutputWithPast"
+
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py:606:64: [error] Argument type is unknown
+  Argument corresponds to parameter "device" in function "ones"
+
+
+22 findings in d:\Intellicrack\src\intellicrack\bridges\ghidra.py
+
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py:92:24: [error] Variable not allowed in type expression
+
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py:381:12: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py:382:13: [error] Type of "pid" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py:382:19: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py:382:19: [error] Type of "pid" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py:385:13: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py:385:13: [error] Type of "terminate" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py:388:21: [error] Argument type is partially unknown
+  Argument corresponds to parameter "fut" in function "wait_for"
+  Argument type is "CoroutineType[Any, Any, Unknown]"
+
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py:388:39: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py:388:39: [error] Type of "wait" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py:388:39: [error] Argument type is unknown
+  Argument corresponds to parameter "func" in function "to_thread"
+
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py:392:17: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py:392:17: [error] Type of "kill" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py:393:41: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py:393:41: [error] Type of "wait" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py:393:41: [error] Argument type is unknown
+  Argument corresponds to parameter "func" in function "to_thread"
+
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py:395:40: [error] Argument type is unknown
+  Argument corresponds to parameter "pid" in function "unregister"
+
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py:470:13: [error] Return type is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py:470:33: [error] Variable not allowed in type expression
+
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py:477:49: [error] Argument type is partially unknown
+  Argument corresponds to parameter "func" in function "to_thread"
+  Argument type is "() -> Unknown"
+
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py:480:9: [error] Type of "register" is partially unknown
+  Type of "register" is "(process: Unknown | Process, name: str, process_type: ProcessType = ProcessType.SUBPROCESS, metadata: dict[str, Any] | None = None, cleanup_callback: (() -> Coroutine[Any, Any, None]) | None = None) -> int"
+
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py:481:13: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+
+22 findings in d:\Intellicrack\src\intellicrack\bridges\x64dbg.py
+
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:325:24: [error] Variable not allowed in type expression
+
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:772:12: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:773:13: [error] Type of "pid" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:773:19: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:773:19: [error] Type of "pid" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:776:13: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:776:13: [error] Type of "terminate" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:779:21: [error] Argument type is partially unknown
+  Argument corresponds to parameter "fut" in function "wait_for"
+  Argument type is "CoroutineType[Any, Any, Unknown]"
+
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:779:39: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:779:39: [error] Type of "wait" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:779:39: [error] Argument type is unknown
+  Argument corresponds to parameter "func" in function "to_thread"
+
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:783:17: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:783:17: [error] Type of "kill" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:784:41: [error] Type of "_process" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:784:41: [error] Type of "wait" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:784:41: [error] Argument type is unknown
+  Argument corresponds to parameter "func" in function "to_thread"
+
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:786:40: [error] Argument type is unknown
+  Argument corresponds to parameter "pid" in function "unregister"
+
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:843:9: [error] Type of "register" is partially unknown
+  Type of "register" is "(process: Unknown | Process, name: str, process_type: ProcessType = ProcessType.SUBPROCESS, metadata: dict[str, Any] | None = None, cleanup_callback: (() -> Coroutine[Any, Any, None]) | None = None) -> int"
+
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:844:13: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:950:12: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:980:12: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:1036:12: [error] Type of "_process" is partially unknown
+  Type of "_process" is "Unknown | None"
+
+
+22 findings in d:\Intellicrack\src\intellicrack\providers\xpu_utils.py
+
+d:\Intellicrack\src\intellicrack\providers\xpu_utils.py:169:9: [error] Type of "result" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\xpu_utils.py:169:18: [error] Type of "run_tracked" is partially unknown
+  Type of "run_tracked" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> Unknown"
+
+d:\Intellicrack\src\intellicrack\providers\xpu_utils.py:179:12: [error] Type of "returncode" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\xpu_utils.py:179:39: [error] Type of "stdout" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\xpu_utils.py:179:39: [error] Type of "strip" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\xpu_utils.py:180:38: [error] Type of "stdout" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\xpu_utils.py:180:38: [error] Argument type is unknown
+  Argument corresponds to parameter "s" in function "loads"
+
+d:\Intellicrack\src\intellicrack\providers\xpu_utils.py:526:9: [error] Type of "result" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\xpu_utils.py:526:18: [error] Type of "run_tracked" is partially unknown
+  Type of "run_tracked" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> Unknown"
+
+d:\Intellicrack\src\intellicrack\providers\xpu_utils.py:540:12: [error] Type of "returncode" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\xpu_utils.py:540:39: [error] Type of "stdout" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\xpu_utils.py:540:39: [error] Type of "strip" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\xpu_utils.py:543:53: [error] Argument type is partially unknown
+  Argument corresponds to parameter "extra" in function "debug"
+  Argument type is "dict[str, Unknown | int]"
+
+d:\Intellicrack\src\intellicrack\providers\xpu_utils.py:543:68: [error] Type of "returncode" is partially unknown
+  Type of "returncode" is "Unknown | Literal[0]"
+
+d:\Intellicrack\src\intellicrack\providers\xpu_utils.py:555:9: [error] Type of "result" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\xpu_utils.py:555:18: [error] Type of "run_tracked" is partially unknown
+  Type of "run_tracked" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> Unknown"
+
+d:\Intellicrack\src\intellicrack\providers\xpu_utils.py:569:12: [error] Type of "returncode" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\xpu_utils.py:570:13: [error] Type of "count" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\xpu_utils.py:570:21: [error] Type of "stdout" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\xpu_utils.py:570:21: [error] Type of "strip" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\xpu_utils.py:571:30: [error] Argument type is unknown
+  Argument corresponds to parameter "x" in function "__new__"
+
+d:\Intellicrack\src\intellicrack\providers\xpu_utils.py:572:58: [error] Argument type is partially unknown
+  Argument corresponds to parameter "extra" in function "debug"
+  Argument type is "dict[str, Unknown]"
+
+
+21 findings in d:\Intellicrack\src\intellicrack\ui\embedding\hxd_widget.py
+
+d:\Intellicrack\src\intellicrack\ui\embedding\hxd_widget.py:62:9: [error] Method "get_tool_display_name" overrides class "EmbeddedToolWidget" in an incompatible manner
+  Base method is declared as a staticmethod but override is not
+  Positional parameter count mismatch; base method has 0, but override has 1
+
+d:\Intellicrack\src\intellicrack\ui\embedding\hxd_widget.py:70:9: [error] Method "get_executable_path" overrides class "EmbeddedToolWidget" in an incompatible manner
+  Base method is declared as a staticmethod but override is not
+  Positional parameter count mismatch; base method has 0, but override has 1
+
+d:\Intellicrack\src\intellicrack\ui\embedding\hxd_widget.py:116:9: [error] Method "get_window_search_params" overrides class "EmbeddedToolWidget" in an incompatible manner
+  Base method is declared as a staticmethod but override is not
+  Positional parameter count mismatch; base method has 0, but override has 1
+
+d:\Intellicrack\src\intellicrack\ui\embedding\hxd_widget.py:266:42: [error] Variable not allowed in type expression
+
+d:\Intellicrack\src\intellicrack\ui\embedding\hxd_widget.py:302:13: [error] Type of "_standalone_processes" is partially unknown
+  Type of "_standalone_processes" is "list[Unknown]"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\hxd_widget.py:302:13: [error] Type of "append" is partially unknown
   Type of "append" is "(object: Unknown, /) -> None"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:289:13: [error] Type of "p" is unknown
+d:\Intellicrack\src\intellicrack\ui\embedding\hxd_widget.py:334:17: [error] Type of "pid" is unknown
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:291:17: [error] Type of "terminate" is unknown
+d:\Intellicrack\src\intellicrack\ui\embedding\hxd_widget.py:334:27: [error] Type of "p" is unknown
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:294:38: [error] Argument type is partially unknown
-  Argument corresponds to parameter "procs" in function "wait_procs"
-  Argument type is "list[Unknown]"
+d:\Intellicrack\src\intellicrack\ui\embedding\hxd_widget.py:334:32: [error] Type of "_standalone_processes" is partially unknown
+  Type of "_standalone_processes" is "list[Unknown]"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\hxd_widget.py:334:62: [error] Type of "poll" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\hxd_widget.py:342:13: [error] Type of "proc" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\hxd_widget.py:342:21: [error] Type of "_standalone_processes" is partially unknown
+  Type of "_standalone_processes" is "list[Unknown]"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\hxd_widget.py:343:16: [error] Type of "poll" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\hxd_widget.py:344:66: [error] Argument type is partially unknown
+  Argument corresponds to parameter "extra" in function "info"
+  Argument type is "dict[str, Unknown]"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\hxd_widget.py:344:74: [error] Type of "pid" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\hxd_widget.py:346:21: [error] Type of "terminate" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\hxd_widget.py:347:21: [error] Type of "wait" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\hxd_widget.py:349:21: [error] Type of "kill" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\hxd_widget.py:351:73: [error] Argument type is partially unknown
+  Argument corresponds to parameter "extra" in function "debug"
+  Argument type is "dict[str, Unknown]"
+
+d:\Intellicrack\src\intellicrack\ui\embedding\hxd_widget.py:351:81: [error] Type of "pid" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\embedding\hxd_widget.py:352:9: [error] Type of "_standalone_processes" is partially unknown
+  Type of "_standalone_processes" is "list[Unknown]"
+
+
+18 findings in d:\Intellicrack\src\intellicrack\sandbox\qemu.py
+
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:656:13: [error] Type of "result" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:656:28: [error] Type of "run_tracked_async" is partially unknown
+  Type of "run_tracked_async" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> CoroutineType[Any, Any, Unknown]"
+
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:661:13: [error] Type of "output" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:661:22: [error] Type of "stdout" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:661:38: [error] Type of "stderr" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:663:26: [error] Type of "lower" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:664:17: [error] Type of "whpx_test" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:664:35: [error] Type of "run_tracked_async" is partially unknown
+  Type of "run_tracked_async" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> CoroutineType[Any, Any, Unknown]"
+
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:682:17: [error] Type of "stderr_bytes" is partially unknown
+  Type of "stderr_bytes" is "bytes | Unknown"
+
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:682:63: [error] Type of "stderr" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:682:93: [error] Type of "stderr" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:682:93: [error] Type of "encode" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:683:20: [error] Type of "returncode" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:683:82: [error] Type of "lower" is partially unknown
+  Type of "lower" is "(() -> bytes) | Unknown"
+
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:687:25: [error] Type of "lower" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:688:17: [error] Type of "kvm_test" is unknown
+
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:688:34: [error] Type of "run_tracked_async" is partially unknown
+  Type of "run_tracked_async" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> CoroutineType[Any, Any, Unknown]"
+
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:706:20: [error] Type of "returncode" is unknown
+
+
+16 findings in d:\Intellicrack\src\intellicrack\providers\model_loader.py
+
+d:\Intellicrack\src\intellicrack\providers\model_loader.py:79:13: [error] Variable not allowed in type expression
+
+d:\Intellicrack\src\intellicrack\providers\model_loader.py:79:13: [error] Type of "device" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\model_loader.py:175:9: [error] Type of "device_type" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\model_loader.py:175:23: [error] Type of "device" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\model_loader.py:175:23: [error] Type of "type" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\model_loader.py:176:79: [error] Argument type is unknown
+  Argument corresponds to parameter "device_type" in function "_make_key"
+
+d:\Intellicrack\src\intellicrack\providers\model_loader.py:504:5: [error] Type of "torch_dtype" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\model_loader.py:610:5: [error] Type of "torch_dtype" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\model_loader.py:679:5: [error] Return type is unknown
+
+d:\Intellicrack\src\intellicrack\providers\model_loader.py:679:41: [error] Variable not allowed in type expression
+
+d:\Intellicrack\src\intellicrack\providers\model_loader.py:679:41: [error] Type of "dtype" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\model_loader.py:694:5: [error] Type of "dtype_map" is partially unknown
+  Type of "dtype_map" is "dict[str, Unknown]"
+
+d:\Intellicrack\src\intellicrack\providers\model_loader.py:694:26: [error] Variable not allowed in type expression
+
+d:\Intellicrack\src\intellicrack\providers\model_loader.py:694:26: [error] Type of "dtype" is unknown
+
+d:\Intellicrack\src\intellicrack\providers\model_loader.py:700:12: [error] Type of "get" is partially unknown
+  Type of "get" is "Overload[(key: str, default: None = None, /) -> (Unknown | None), (key: str, default: Unknown, /) -> Unknown, (key: str, default: _T@get, /) -> (Unknown | _T@get)]"
+
+d:\Intellicrack\src\intellicrack\providers\model_loader.py:700:12: [error] Return type is unknown
+
+
+11 findings in d:\Intellicrack\src\intellicrack\ui\tool_config.py
+
+d:\Intellicrack\src\intellicrack\ui\tool_config.py:220:9: [error] Type of "result" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\tool_config.py:220:18: [error] Type of "run_tracked" is partially unknown
+  Type of "run_tracked" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> Unknown"
+
+d:\Intellicrack\src\intellicrack\ui\tool_config.py:226:12: [error] Type of "returncode" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\tool_config.py:227:65: [error] Type of "stderr" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\tool_config.py:227:65: [error] Type of "strip" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\tool_config.py:426:9: [error] Type of "result" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\tool_config.py:426:18: [error] Type of "run_tracked" is partially unknown
+  Type of "run_tracked" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> Unknown"
+
+d:\Intellicrack\src\intellicrack\ui\tool_config.py:432:12: [error] Type of "returncode" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\tool_config.py:607:13: [error] Type of "result" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\tool_config.py:607:22: [error] Type of "run_tracked" is partially unknown
+  Type of "run_tracked" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> Unknown"
+
+d:\Intellicrack\src\intellicrack\ui\tool_config.py:613:16: [error] Type of "returncode" is unknown
+
+
+8 findings in d:\Intellicrack\src\intellicrack\core\script_gen.py
+
+d:\Intellicrack\src\intellicrack\core\script_gen.py:383:13: [error] Type of "result" is unknown
+
+d:\Intellicrack\src\intellicrack\core\script_gen.py:383:22: [error] Type of "run_tracked" is partially unknown
+  Type of "run_tracked" is "(args: list[str], name: str, *, capture_output: bool = True, text: bool = True, timeout: float | None = None, cwd: str | None = None, env: dict[str, str] | None = None, check: bool = False, creationflags: int = 0) -> Unknown"
+
+d:\Intellicrack\src\intellicrack\core\script_gen.py:388:57: [error] Argument type is partially unknown
+  Argument corresponds to parameter "extra" in function "debug"
+  Argument type is "dict[str, list[str] | Unknown]"
+
+d:\Intellicrack\src\intellicrack\core\script_gen.py:388:87: [error] Type of "returncode" is unknown
+
+d:\Intellicrack\src\intellicrack\core\script_gen.py:393:16: [error] Type of "returncode" is unknown
+
+d:\Intellicrack\src\intellicrack\core\script_gen.py:395:20: [error] Return type, "tuple[Literal[False], Unknown]", is partially unknown
+
+d:\Intellicrack\src\intellicrack\core\script_gen.py:395:27: [error] Type of "stderr" is unknown
+
+d:\Intellicrack\src\intellicrack\core\script_gen.py:395:27: [error] Type of "strip" is unknown
+
+
+3 findings in d:\Intellicrack\src\intellicrack\ui\embedding\cutter_widget.py
+
+d:\Intellicrack\src\intellicrack\ui\embedding\cutter_widget.py:65:9: [error] Method "get_tool_display_name" overrides class "EmbeddedToolWidget" in an incompatible manner
+  Base method is declared as a staticmethod but override is not
+  Positional parameter count mismatch; base method has 0, but override has 1
+
+d:\Intellicrack\src\intellicrack\ui\embedding\cutter_widget.py:73:9: [error] Method "get_executable_path" overrides class "EmbeddedToolWidget" in an incompatible manner
+  Base method is declared as a staticmethod but override is not
+  Positional parameter count mismatch; base method has 0, but override has 1
+
+d:\Intellicrack\src\intellicrack\ui\embedding\cutter_widget.py:135:9: [error] Method "get_window_search_params" overrides class "EmbeddedToolWidget" in an incompatible manner
+  Base method is declared as a staticmethod but override is not
+  Positional parameter count mismatch; base method has 0, but override has 1
+
+
+3 findings in d:\Intellicrack\src\intellicrack\ui\embedding\ghidra_widget.py
+
+d:\Intellicrack\src\intellicrack\ui\embedding\ghidra_widget.py:66:9: [error] Method "get_tool_display_name" overrides class "EmbeddedToolWidget" in an incompatible manner
+  Base method is declared as a staticmethod but override is not
+  Positional parameter count mismatch; base method has 0, but override has 1
+
+d:\Intellicrack\src\intellicrack\ui\embedding\ghidra_widget.py:74:9: [error] Method "get_executable_path" overrides class "EmbeddedToolWidget" in an incompatible manner
+  Base method is declared as a staticmethod but override is not
+  Positional parameter count mismatch; base method has 0, but override has 1
+
+d:\Intellicrack\src\intellicrack\ui\embedding\ghidra_widget.py:182:9: [error] Method "get_window_search_params" overrides class "EmbeddedToolWidget" in an incompatible manner
+  Base method is declared as a staticmethod but override is not
+  Positional parameter count mismatch; base method has 0, but override has 1
+
+
+3 findings in d:\Intellicrack\src\intellicrack\ui\embedding\radare2_widget.py
+
+d:\Intellicrack\src\intellicrack\ui\embedding\radare2_widget.py:62:9: [error] Method "get_tool_display_name" overrides class "EmbeddedToolWidget" in an incompatible manner
+  Base method is declared as a staticmethod but override is not
+  Positional parameter count mismatch; base method has 0, but override has 1
+
+d:\Intellicrack\src\intellicrack\ui\embedding\radare2_widget.py:70:9: [error] Method "get_executable_path" overrides class "EmbeddedToolWidget" in an incompatible manner
+  Base method is declared as a staticmethod but override is not
+  Positional parameter count mismatch; base method has 0, but override has 1
+
+d:\Intellicrack\src\intellicrack\ui\embedding\radare2_widget.py:141:9: [error] Method "get_window_search_params" overrides class "EmbeddedToolWidget" in an incompatible manner
+  Base method is declared as a staticmethod but override is not
+  Positional parameter count mismatch; base method has 0, but override has 1
+
+
+3 findings in d:\Intellicrack\src\intellicrack\ui\embedding\x64dbg_widget.py
+
+d:\Intellicrack\src\intellicrack\ui\embedding\x64dbg_widget.py:64:9: [error] Method "get_tool_display_name" overrides class "EmbeddedToolWidget" in an incompatible manner
+  Base method is declared as a staticmethod but override is not
+  Positional parameter count mismatch; base method has 0, but override has 1
+
+d:\Intellicrack\src\intellicrack\ui\embedding\x64dbg_widget.py:72:9: [error] Method "get_executable_path" overrides class "EmbeddedToolWidget" in an incompatible manner
+  Base method is declared as a staticmethod but override is not
+  Positional parameter count mismatch; base method has 0, but override has 1
+
+d:\Intellicrack\src\intellicrack\ui\embedding\x64dbg_widget.py:169:9: [error] Method "get_window_search_params" overrides class "EmbeddedToolWidget" in an incompatible manner
+  Base method is declared as a staticmethod but override is not
+  Positional parameter count mismatch; base method has 0, but override has 1

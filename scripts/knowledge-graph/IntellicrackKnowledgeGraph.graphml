@@ -154,12 +154,19 @@
     <node id="intellicrack.ui.dialogs" />
     <node id="intellicrack.ui.resources.icon_manager" />
     <node id="intellicrack.ui.resources.theme_manager" />
+    <node id="src.intellicrack._metadata">
+      <data key="d0">module</data>
+      <data key="d1">python</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack\_metadata.py</data>
+      <data key="d3">src.intellicrack._metadata</data>
+    </node>
     <node id="src.intellicrack.__init__">
       <data key="d0">module</data>
       <data key="d1">python</data>
       <data key="d2">D:\Intellicrack\src\intellicrack\__init__.py</data>
       <data key="d3">src.intellicrack.__init__</data>
     </node>
+    <node id="intellicrack._metadata" />
     <node id="src.intellicrack.__init__.__getattr__">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -1026,8 +1033,8 @@
     </node>
     <node id="importlib.util" />
     <node id="json" />
-    <node id="subprocess" />
     <node id="tempfile" />
+    <node id="intellicrack.core._subprocess" />
     <node id="src.intellicrack.bridges.ghidra.GhidraBridge">
       <data key="d0">class</data>
       <data key="d1">python</data>
@@ -1277,7 +1284,7 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_find_frida</data>
-      <data key="d4">['self']</data>
+      <data key="d4">[]</data>
     </node>
     <node id="src.intellicrack.bridges.installer.get_version">
       <data key="d0">function</data>
@@ -2027,7 +2034,7 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_report_to_dict</data>
-      <data key="d4">['self', 'report', 'instance_id']</data>
+      <data key="d4">['report', 'instance_id']</data>
     </node>
     <node id="src.intellicrack.bridges.schemas">
       <data key="d0">module</data>
@@ -4073,6 +4080,18 @@
       <data key="d3">to_prompt_context</data>
       <data key="d4">['self', 'language']</data>
     </node>
+    <node id="src.intellicrack.core.script_gen._format_target_functions">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_format_target_functions</data>
+      <data key="d4">['self', 'lines']</data>
+    </node>
+    <node id="src.intellicrack.core.script_gen._format_api_reference">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_format_api_reference</data>
+      <data key="d4">['self', 'language', 'lines']</data>
+    </node>
     <node id="src.intellicrack.core.script_gen.add_execution_result">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -4930,6 +4949,12 @@
       <data key="d3">__init__</data>
       <data key="d4">['self', 'message', 'config_key', 'expected_type', 'actual_value', 'error_code', 'details']</data>
     </node>
+    <node id="src.intellicrack.core._subprocess">
+      <data key="d0">module</data>
+      <data key="d1">python</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack\core\_subprocess.py</data>
+      <data key="d3">src.intellicrack.core._subprocess</data>
+    </node>
     <node id="src.intellicrack.core.__init__">
       <data key="d0">module</data>
       <data key="d1">python</data>
@@ -5534,7 +5559,7 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_get_context_window</data>
-      <data key="d4">['model_id']</data>
+      <data key="d4">['_model_id']</data>
     </node>
     <node id="src.intellicrack.providers.anthropic._supports_tools">
       <data key="d0">function</data>
@@ -5728,6 +5753,18 @@
       <data key="d1">python</data>
       <data key="d3">_convert_messages_to_provider_format</data>
       <data key="d4">['self', 'messages']</data>
+    </node>
+    <node id="src.intellicrack.providers.base._build_chat_response">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_build_chat_response</data>
+      <data key="d4">[]</data>
+    </node>
+    <node id="src.intellicrack.providers.base._parse_tool_call_common">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_parse_tool_call_common</data>
+      <data key="d4">[]</data>
     </node>
     <node id="src.intellicrack.providers.discovery">
       <data key="d0">module</data>
@@ -6043,6 +6080,8 @@
       <data key="d3">GrokProvider</data>
     </node>
     <node id="openai.types.chat" />
+    <node id="openai.types.chat.chat_completion" />
+    <node id="openai.types.chat.chat_completion_message" />
     <node id="src.intellicrack.providers.grok.__init__">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -6077,31 +6116,43 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_is_grok_model</data>
-      <data key="d4">['self', 'model_id']</data>
+      <data key="d4">['model_id']</data>
     </node>
     <node id="src.intellicrack.providers.grok._get_context_window">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_get_context_window</data>
-      <data key="d4">['self', 'model_id']</data>
+      <data key="d4">['model_id']</data>
     </node>
     <node id="src.intellicrack.providers.grok._supports_tools">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_supports_tools</data>
-      <data key="d4">['self', 'model_id']</data>
+      <data key="d4">['model_id']</data>
     </node>
     <node id="src.intellicrack.providers.grok._supports_vision">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_supports_vision</data>
-      <data key="d4">['self', 'model_id']</data>
+      <data key="d4">['model_id']</data>
     </node>
     <node id="src.intellicrack.providers.grok.chat">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">chat</data>
       <data key="d4">['self', 'messages', 'model', 'tools', 'temperature', 'max_tokens']</data>
+    </node>
+    <node id="src.intellicrack.providers.grok._make_grok_api_call">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_make_grok_api_call</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.providers.grok._parse_grok_tool_calls">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_parse_grok_tool_calls</data>
+      <data key="d4">['self', 'response_message']</data>
     </node>
     <node id="src.intellicrack.providers.grok.chat_stream">
       <data key="d0">function</data>
@@ -6178,19 +6229,31 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_estimate_tool_support</data>
-      <data key="d4">['self', 'model_id']</data>
+      <data key="d4">['model_id']</data>
     </node>
     <node id="src.intellicrack.providers.huggingface._estimate_vision_support">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_estimate_vision_support</data>
-      <data key="d4">['self', 'model_id']</data>
+      <data key="d4">['model_id']</data>
     </node>
     <node id="src.intellicrack.providers.huggingface.chat">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">chat</data>
       <data key="d4">['self', 'messages', 'model', 'tools', 'temperature', 'max_tokens']</data>
+    </node>
+    <node id="src.intellicrack.providers.huggingface._make_hf_api_call">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_make_hf_api_call</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.providers.huggingface._parse_hf_tool_calls">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_parse_hf_tool_calls</data>
+      <data key="d4">['self', 'response_message']</data>
     </node>
     <node id="src.intellicrack.providers.huggingface.chat_stream">
       <data key="d0">function</data>
@@ -6367,25 +6430,25 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_parse_tool_calls</data>
-      <data key="d4">['self', 'response']</data>
+      <data key="d4">['response']</data>
     </node>
     <node id="src.intellicrack.providers.local_transformers._extract_text_before_tool_call">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_extract_text_before_tool_call</data>
-      <data key="d4">['self', 'response']</data>
+      <data key="d4">['response']</data>
     </node>
     <node id="src.intellicrack.providers.local_transformers._model_supports_tools">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_model_supports_tools</data>
-      <data key="d4">['self', 'model_id']</data>
+      <data key="d4">['model_id']</data>
     </node>
     <node id="src.intellicrack.providers.local_transformers._estimate_context_window">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_estimate_context_window</data>
-      <data key="d4">['self', 'model_id']</data>
+      <data key="d4">['model_id']</data>
     </node>
     <node id="src.intellicrack.providers.local_transformers.get_device_info">
       <data key="d0">function</data>
@@ -6538,7 +6601,7 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_make_key</data>
-      <data key="d4">['self', 'model_id', 'dtype', 'device_type']</data>
+      <data key="d4">['model_id', 'dtype', 'device_type']</data>
     </node>
     <node id="src.intellicrack.providers.model_loader._evict_to_fit">
       <data key="d0">function</data>
@@ -6634,25 +6697,37 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_estimate_context_window</data>
-      <data key="d4">['self', 'model_name', '_details']</data>
+      <data key="d4">['model_name', '_details']</data>
     </node>
     <node id="src.intellicrack.providers.ollama._estimate_tool_support">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_estimate_tool_support</data>
-      <data key="d4">['self', 'model_name']</data>
+      <data key="d4">['model_name']</data>
     </node>
     <node id="src.intellicrack.providers.ollama._estimate_vision_support">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_estimate_vision_support</data>
-      <data key="d4">['self', 'model_name']</data>
+      <data key="d4">['model_name']</data>
     </node>
     <node id="src.intellicrack.providers.ollama.chat">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">chat</data>
       <data key="d4">['self', 'messages', 'model', 'tools', 'temperature', 'max_tokens']</data>
+    </node>
+    <node id="src.intellicrack.providers.ollama._make_ollama_api_call">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_make_ollama_api_call</data>
+      <data key="d4">[]</data>
+    </node>
+    <node id="src.intellicrack.providers.ollama._parse_ollama_tool_calls">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_parse_ollama_tool_calls</data>
+      <data key="d4">['self', 'data']</data>
     </node>
     <node id="src.intellicrack.providers.ollama.chat_stream">
       <data key="d0">function</data>
@@ -6740,31 +6815,43 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_is_chat_model</data>
-      <data key="d4">['self', 'model_id']</data>
+      <data key="d4">['model_id']</data>
     </node>
     <node id="src.intellicrack.providers.openai._get_context_window">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_get_context_window</data>
-      <data key="d4">['self', 'model_id']</data>
+      <data key="d4">['model_id']</data>
     </node>
     <node id="src.intellicrack.providers.openai._supports_tools">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_supports_tools</data>
-      <data key="d4">['self', 'model_id']</data>
+      <data key="d4">['model_id']</data>
     </node>
     <node id="src.intellicrack.providers.openai._supports_vision">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_supports_vision</data>
-      <data key="d4">['self', 'model_id']</data>
+      <data key="d4">['model_id']</data>
     </node>
     <node id="src.intellicrack.providers.openai.chat">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">chat</data>
       <data key="d4">['self', 'messages', 'model', 'tools', 'temperature', 'max_tokens']</data>
+    </node>
+    <node id="src.intellicrack.providers.openai._make_openai_api_call">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_make_openai_api_call</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.providers.openai._parse_openai_tool_calls">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_parse_openai_tool_calls</data>
+      <data key="d4">['self', 'response_message']</data>
     </node>
     <node id="src.intellicrack.providers.openai.chat_stream">
       <data key="d0">function</data>
@@ -6835,19 +6922,25 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_estimate_tool_support</data>
-      <data key="d4">['self', 'model_id']</data>
+      <data key="d4">['model_id']</data>
     </node>
     <node id="src.intellicrack.providers.openrouter._estimate_vision_support">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_estimate_vision_support</data>
-      <data key="d4">['self', 'model_id']</data>
+      <data key="d4">['model_id']</data>
     </node>
     <node id="src.intellicrack.providers.openrouter.chat">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">chat</data>
       <data key="d4">['self', 'messages', 'model', 'tools', 'temperature', 'max_tokens']</data>
+    </node>
+    <node id="src.intellicrack.providers.openrouter._parse_tool_calls_from_response">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_parse_tool_calls_from_response</data>
+      <data key="d4">['self', 'response_message']</data>
     </node>
     <node id="src.intellicrack.providers.openrouter.chat_stream">
       <data key="d0">function</data>
@@ -7246,10 +7339,10 @@
       <data key="d3">restart</data>
       <data key="d4">['self']</data>
     </node>
-    <node id="src.intellicrack.sandbox.base.execute">
+    <node id="src.intellicrack.sandbox.base.run_command">
       <data key="d0">function</data>
       <data key="d1">python</data>
-      <data key="d3">execute</data>
+      <data key="d3">run_command</data>
       <data key="d4">['self', 'command', 'timeout', 'working_directory']</data>
     </node>
     <node id="src.intellicrack.sandbox.base.run_binary">
@@ -7603,11 +7696,23 @@
       <data key="d3">_create_guest_agent_script</data>
       <data key="d4">['self']</data>
     </node>
-    <node id="src.intellicrack.sandbox.qemu.execute">
+    <node id="src.intellicrack.sandbox.qemu.run_command">
       <data key="d0">function</data>
       <data key="d1">python</data>
-      <data key="d3">execute</data>
+      <data key="d3">run_command</data>
       <data key="d4">['self', 'command', 'timeout', 'working_directory']</data>
+    </node>
+    <node id="src.intellicrack.sandbox.qemu._generate_execution_script">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_generate_execution_script</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.sandbox.qemu._poll_for_result">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_poll_for_result</data>
+      <data key="d4">[]</data>
     </node>
     <node id="src.intellicrack.sandbox.qemu.run_binary">
       <data key="d0">function</data>
@@ -7723,10 +7828,10 @@
       <data key="d3">_create_monitor_scripts</data>
       <data key="d4">['self']</data>
     </node>
-    <node id="src.intellicrack.sandbox.windows.execute">
+    <node id="src.intellicrack.sandbox.windows.run_command">
       <data key="d0">function</data>
       <data key="d1">python</data>
-      <data key="d3">execute</data>
+      <data key="d3">run_command</data>
       <data key="d4">['self', 'command', 'timeout', 'working_directory']</data>
     </node>
     <node id="src.intellicrack.sandbox.windows.run_binary">
@@ -10302,19 +10407,19 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">get_executable_path</data>
-      <data key="d4">['self']</data>
+      <data key="d4">[]</data>
     </node>
     <node id="src.intellicrack.ui.embedding.embedded_widget.get_window_search_params">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">get_window_search_params</data>
-      <data key="d4">['self']</data>
+      <data key="d4">[]</data>
     </node>
     <node id="src.intellicrack.ui.embedding.embedded_widget.get_tool_display_name">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">get_tool_display_name</data>
-      <data key="d4">['self']</data>
+      <data key="d4">[]</data>
     </node>
     <node id="src.intellicrack.ui.embedding.embedded_widget.prepare_launch_args">
       <data key="d0">function</data>
@@ -10446,6 +10551,24 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">get_executable_path</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.ghidra_widget._search_registry_for_ghidra">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_search_registry_for_ghidra</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.ghidra_widget._search_common_paths_for_ghidra">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_search_common_paths_for_ghidra</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.ghidra_widget._search_project_tools_for_ghidra">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_search_project_tools_for_ghidra</data>
       <data key="d4">['self']</data>
     </node>
     <node id="src.intellicrack.ui.embedding.ghidra_widget.get_window_search_params">
@@ -10888,6 +11011,24 @@
       <data key="d3">get_executable_path</data>
       <data key="d4">['self']</data>
     </node>
+    <node id="src.intellicrack.ui.embedding.x64dbg_widget._build_x64dbg_candidates">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_build_x64dbg_candidates</data>
+      <data key="d4">['base', 'arch_dir', 'exe_name']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.x64dbg_widget._search_registry_for_x64dbg">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_search_registry_for_x64dbg</data>
+      <data key="d4">['self', 'arch_dir', 'exe_name']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.x64dbg_widget._search_common_paths_for_x64dbg">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_search_common_paths_for_x64dbg</data>
+      <data key="d4">['self', 'arch_dir', 'exe_name']</data>
+    </node>
     <node id="src.intellicrack.ui.embedding.x64dbg_widget.get_window_search_params">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -10928,7 +11069,7 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_run_bridge_async</data>
-      <data key="d4">['self', 'coro']</data>
+      <data key="d4">['coro']</data>
     </node>
     <node id="src.intellicrack.ui.embedding.x64dbg_widget.debug_file">
       <data key="d0">function</data>
@@ -11776,7 +11917,7 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_build_script</data>
-      <data key="d4">['self', 'name', 'script_type', 'content']</data>
+      <data key="d4">['name', 'script_type', 'content']</data>
     </node>
     <node id="src.intellicrack.ui.panels.script_manager._on_script_selected">
       <data key="d0">function</data>
@@ -12592,6 +12733,9 @@
     <edge source="src.intellicrack.main" target="intellicrack.ui.resources.theme_manager">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack._metadata" target="__future__">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.__init__" target="__future__">
       <data key="d5">imports</data>
     </edge>
@@ -12602,6 +12746,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.__init__" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.__init__" target="intellicrack._metadata">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.__init__" target="src.intellicrack.__init__.__getattr__">
@@ -13501,9 +13648,6 @@
     <edge source="src.intellicrack.core.process_manager" target="signal">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.core.process_manager" target="subprocess">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.core.process_manager" target="sys">
       <data key="d5">imports</data>
     </edge>
@@ -13529,6 +13673,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.core.process_manager" target="psutil">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.process_manager" target="intellicrack.core._subprocess">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.core.process_manager" target="src.intellicrack.core.logging">
@@ -13681,9 +13828,6 @@
     <edge source="src.intellicrack.bridges.ghidra" target="re">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.bridges.ghidra" target="subprocess">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.bridges.ghidra" target="tempfile">
       <data key="d5">imports</data>
     </edge>
@@ -13694,6 +13838,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.bridges.ghidra" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.ghidra" target="intellicrack.core._subprocess">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.bridges.ghidra" target="src.intellicrack.core.logging">
@@ -13816,9 +13963,6 @@
     <edge source="src.intellicrack.bridges.installer" target="shutil">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.bridges.installer" target="subprocess">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.bridges.installer" target="tempfile">
       <data key="d5">imports</data>
     </edge>
@@ -13835,6 +13979,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.bridges.installer" target="httpx">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.installer" target="intellicrack.core._subprocess">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.bridges.installer" target="src.intellicrack.core.logging">
@@ -14488,9 +14635,6 @@
     <edge source="src.intellicrack.bridges.x64dbg" target="asyncio">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.bridges.x64dbg" target="subprocess">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.bridges.x64dbg" target="sys">
       <data key="d5">imports</data>
     </edge>
@@ -14498,6 +14642,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.bridges.x64dbg" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.x64dbg" target="intellicrack.core._subprocess">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.core.logging">
@@ -15319,10 +15466,16 @@
     <edge source="src.intellicrack.providers.base" target="__future__">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.providers.base" target="json">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.providers.base" target="abc">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.base" target="dataclasses">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.providers.base" target="datetime">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.base" target="typing">
@@ -15419,6 +15572,12 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.providers.base" target="src.intellicrack.providers.base._convert_messages_to_provider_format">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.base" target="src.intellicrack.providers.base._build_chat_response">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.base" target="src.intellicrack.providers.base._parse_tool_call_common">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.providers.registry" target="__future__">
@@ -15814,6 +15973,9 @@
     <edge source="src.intellicrack.core.script_gen" target="abc">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.core.script_gen" target="collections.abc">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.core.script_gen" target="dataclasses">
       <data key="d5">imports</data>
     </edge>
@@ -15929,6 +16091,12 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.to_prompt_context">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._format_target_functions">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._format_api_reference">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.add_execution_result">
@@ -16074,6 +16242,12 @@
     </edge>
     <edge source="src.intellicrack.core.types.ConfigurationError" target="IntellicrackError">
       <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.core._subprocess" target="__future__">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core._subprocess" target="typing">
+      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.core.__init__" target="__future__">
       <data key="d5">imports</data>
@@ -16540,9 +16714,6 @@
     <edge source="src.intellicrack.providers.anthropic" target="json">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.providers.anthropic" target="logging">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.providers.anthropic" target="time">
       <data key="d5">imports</data>
     </edge>
@@ -16569,6 +16740,9 @@
     </edge>
     <edge source="src.intellicrack.providers.anthropic" target="src.intellicrack.providers.anthropic.AnthropicProvider">
       <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.anthropic" target="logging">
+      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.anthropic" target="asyncio">
       <data key="d5">imports</data>
@@ -16771,9 +16945,6 @@
     <edge source="src.intellicrack.providers.google" target="time">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.providers.google" target="collections.abc">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.providers.google" target="datetime">
       <data key="d5">imports</data>
     </edge>
@@ -16797,6 +16968,9 @@
     </edge>
     <edge source="src.intellicrack.providers.google" target="src.intellicrack.providers.google.GoogleProvider">
       <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.google" target="collections.abc">
+      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.google" target="google.genai.types">
       <data key="d5">imports</data>
@@ -16864,16 +17038,10 @@
     <edge source="src.intellicrack.providers.grok" target="__future__">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.providers.grok" target="asyncio">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.providers.grok" target="json">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.grok" target="time">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.providers.grok" target="datetime">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.grok" target="typing">
@@ -16900,10 +17068,19 @@
     <edge source="src.intellicrack.providers.grok" target="src.intellicrack.providers.grok.GrokProvider">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.providers.grok" target="asyncio">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.providers.grok" target="collections.abc">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.grok" target="openai.types.chat">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.providers.grok" target="openai.types.chat.chat_completion">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.providers.grok" target="openai.types.chat.chat_completion_message">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.grok" target="src.intellicrack.providers.grok.__init__">
@@ -16936,6 +17113,12 @@
     <edge source="src.intellicrack.providers.grok" target="src.intellicrack.providers.grok.chat">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.providers.grok" target="src.intellicrack.providers.grok._make_grok_api_call">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.grok" target="src.intellicrack.providers.grok._parse_grok_tool_calls">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.providers.grok" target="src.intellicrack.providers.grok.chat_stream">
       <data key="d5">defines</data>
     </edge>
@@ -16964,9 +17147,6 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.huggingface" target="time">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.providers.huggingface" target="datetime">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.huggingface" target="typing">
@@ -17015,6 +17195,12 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.providers.huggingface" target="src.intellicrack.providers.huggingface.chat">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.huggingface" target="src.intellicrack.providers.huggingface._make_hf_api_call">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.huggingface" target="src.intellicrack.providers.huggingface._parse_hf_tool_calls">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.providers.huggingface" target="src.intellicrack.providers.huggingface.chat_stream">
@@ -17077,10 +17263,10 @@
     <edge source="src.intellicrack.providers.local_transformers" target="src.intellicrack.providers.local_transformers.LocalTransformersProvider">
       <data key="d5">defines</data>
     </edge>
-    <edge source="src.intellicrack.providers.local_transformers" target="collections.abc">
+    <edge source="src.intellicrack.providers.local_transformers" target="torch">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.providers.local_transformers" target="torch">
+    <edge source="src.intellicrack.providers.local_transformers" target="collections.abc">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.local_transformers" target="transformers">
@@ -17194,6 +17380,9 @@
     <edge source="src.intellicrack.providers.model_loader" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.providers.model_loader" target="src.intellicrack.providers.xpu_utils">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.providers.model_loader" target="src.intellicrack.providers.model_loader.LoadedModel">
       <data key="d5">defines</data>
     </edge>
@@ -17269,9 +17458,6 @@
     <edge source="src.intellicrack.providers.model_loader" target="src.intellicrack.providers.model_loader._evict_to_fit">
       <data key="d5">defines</data>
     </edge>
-    <edge source="src.intellicrack.providers.model_loader" target="src.intellicrack.providers.xpu_utils">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.providers.xpu_utils" target="__future__">
       <data key="d5">imports</data>
     </edge>
@@ -17285,9 +17471,6 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.xpu_utils" target="sys">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.providers.xpu_utils" target="types">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.xpu_utils" target="dataclasses">
@@ -17362,6 +17545,9 @@
     <edge source="src.intellicrack.providers.xpu_utils" target="torch">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.providers.xpu_utils" target="types">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.providers.local_transformers.LocalTransformersProvider" target="src.intellicrack.providers.base.LLMProviderBase">
       <data key="d5">inherits</data>
     </edge>
@@ -17372,9 +17558,6 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.ollama" target="time">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.providers.ollama" target="datetime">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.ollama" target="http">
@@ -17449,6 +17632,12 @@
     <edge source="src.intellicrack.providers.ollama" target="src.intellicrack.providers.ollama.chat">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.providers.ollama" target="src.intellicrack.providers.ollama._make_ollama_api_call">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.ollama" target="src.intellicrack.providers.ollama._parse_ollama_tool_calls">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.providers.ollama" target="src.intellicrack.providers.ollama.chat_stream">
       <data key="d5">defines</data>
     </edge>
@@ -17470,19 +17659,10 @@
     <edge source="src.intellicrack.providers.openai" target="__future__">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.providers.openai" target="asyncio">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.providers.openai" target="json">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.openai" target="time">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.providers.openai" target="collections.abc">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.providers.openai" target="datetime">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.openai" target="typing">
@@ -17512,7 +17692,19 @@
     <edge source="src.intellicrack.providers.openai" target="src.intellicrack.providers.openai.OpenAIProvider">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.providers.openai" target="asyncio">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.providers.openai" target="collections.abc">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.providers.openai" target="openai.types.chat">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.providers.openai" target="openai.types.chat.chat_completion">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.providers.openai" target="openai.types.chat.chat_completion_message">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.openai" target="src.intellicrack.providers.openai.__init__">
@@ -17545,6 +17737,12 @@
     <edge source="src.intellicrack.providers.openai" target="src.intellicrack.providers.openai.chat">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.providers.openai" target="src.intellicrack.providers.openai._make_openai_api_call">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.openai" target="src.intellicrack.providers.openai._parse_openai_tool_calls">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.providers.openai" target="src.intellicrack.providers.openai.chat_stream">
       <data key="d5">defines</data>
     </edge>
@@ -17575,9 +17773,6 @@
     <edge source="src.intellicrack.providers.openrouter" target="time">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.providers.openrouter" target="collections.abc">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.providers.openrouter" target="datetime">
       <data key="d5">imports</data>
     </edge>
@@ -17598,6 +17793,9 @@
     </edge>
     <edge source="src.intellicrack.providers.openrouter" target="src.intellicrack.providers.openrouter.OpenRouterProvider">
       <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.openrouter" target="collections.abc">
+      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.openrouter" target="src.intellicrack.providers.openrouter.__init__">
       <data key="d5">defines</data>
@@ -17621,6 +17819,9 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.providers.openrouter" target="src.intellicrack.providers.openrouter.chat">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.openrouter" target="src.intellicrack.providers.openrouter._parse_tool_calls_from_response">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.providers.openrouter" target="src.intellicrack.providers.openrouter.chat_stream">
@@ -17758,7 +17959,7 @@
     <edge source="src.intellicrack.sandbox.base" target="src.intellicrack.sandbox.base.restart">
       <data key="d5">defines</data>
     </edge>
-    <edge source="src.intellicrack.sandbox.base" target="src.intellicrack.sandbox.base.execute">
+    <edge source="src.intellicrack.sandbox.base" target="src.intellicrack.sandbox.base.run_command">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.sandbox.base" target="src.intellicrack.sandbox.base.run_binary">
@@ -18034,7 +18235,13 @@
     <edge source="src.intellicrack.sandbox.qemu" target="src.intellicrack.sandbox.qemu._create_guest_agent_script">
       <data key="d5">defines</data>
     </edge>
-    <edge source="src.intellicrack.sandbox.qemu" target="src.intellicrack.sandbox.qemu.execute">
+    <edge source="src.intellicrack.sandbox.qemu" target="src.intellicrack.sandbox.qemu.run_command">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.sandbox.qemu" target="src.intellicrack.sandbox.qemu._generate_execution_script">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.sandbox.qemu" target="src.intellicrack.sandbox.qemu._poll_for_result">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.sandbox.qemu" target="src.intellicrack.sandbox.qemu.run_binary">
@@ -18079,9 +18286,6 @@
     <edge source="src.intellicrack.sandbox.windows" target="shutil">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.sandbox.windows" target="subprocess">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.sandbox.windows" target="tempfile">
       <data key="d5">imports</data>
     </edge>
@@ -18095,6 +18299,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.sandbox.windows" target="pathlib">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.sandbox.windows" target="intellicrack.core._subprocess">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.sandbox.windows" target="src.intellicrack.core.logging">
@@ -18130,7 +18337,7 @@
     <edge source="src.intellicrack.sandbox.windows" target="src.intellicrack.sandbox.windows._create_monitor_scripts">
       <data key="d5">defines</data>
     </edge>
-    <edge source="src.intellicrack.sandbox.windows" target="src.intellicrack.sandbox.windows.execute">
+    <edge source="src.intellicrack.sandbox.windows" target="src.intellicrack.sandbox.windows.run_command">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.sandbox.windows" target="src.intellicrack.sandbox.windows.run_binary">
@@ -18185,6 +18392,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.app" target="asyncio">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.app" target="contextlib">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.app" target="importlib">
@@ -18853,9 +19063,6 @@
     <edge source="src.intellicrack.ui.sandbox_config" target="os">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.sandbox_config" target="subprocess">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.sandbox_config" target="sys">
       <data key="d5">imports</data>
     </edge>
@@ -18872,6 +19079,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.sandbox_config" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.sandbox_config" target="intellicrack.core._subprocess">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.sandbox_config" target="intellicrack.core.logging">
@@ -19099,9 +19309,6 @@
     <edge source="src.intellicrack.ui.tool_config" target="os">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.tool_config" target="subprocess">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.tool_config" target="sys">
       <data key="d5">imports</data>
     </edge>
@@ -19124,6 +19331,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.tool_config" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tool_config" target="intellicrack.core._subprocess">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.tool_config" target="src.intellicrack.core.logging">
@@ -20059,9 +20269,6 @@
     <edge source="src.intellicrack.ui.embedding.cutter_widget" target="winreg">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.embedding.cutter_widget" target="collections.abc">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.embedding.cutter_widget" target="pathlib">
       <data key="d5">imports</data>
     </edge>
@@ -20079,6 +20286,9 @@
     </edge>
     <edge source="src.intellicrack.ui.embedding.cutter_widget" target="src.intellicrack.ui.embedding.cutter_widget.CutterWidget">
       <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.cutter_widget" target="collections.abc">
+      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.cutter_widget" target="PyQt6.QtWidgets">
       <data key="d5">imports</data>
@@ -20149,12 +20359,6 @@
     <edge source="src.intellicrack.ui.embedding.embedded_widget" target="__future__">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.embedding.embedded_widget" target="subprocess">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.embedding.embedded_widget" target="pathlib">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.embedding.embedded_widget" target="typing">
       <data key="d5">imports</data>
     </edge>
@@ -20162,6 +20366,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.embedded_widget" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.embedded_widget" target="intellicrack.core._subprocess">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.embedded_widget" target="intellicrack.core.logging">
@@ -20175,6 +20382,9 @@
     </edge>
     <edge source="src.intellicrack.ui.embedding.embedded_widget" target="src.intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget">
       <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.embedded_widget" target="pathlib">
+      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.embedded_widget" target="PyQt6.QtGui">
       <data key="d5">imports</data>
@@ -20260,9 +20470,6 @@
     <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="winreg">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="collections.abc">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="pathlib">
       <data key="d5">imports</data>
     </edge>
@@ -20281,6 +20488,9 @@
     <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="src.intellicrack.ui.embedding.ghidra_widget.GhidraWidget">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="collections.abc">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="PyQt6.QtWidgets">
       <data key="d5">imports</data>
     </edge>
@@ -20294,6 +20504,15 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="src.intellicrack.ui.embedding.ghidra_widget.get_executable_path">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="src.intellicrack.ui.embedding.ghidra_widget._search_registry_for_ghidra">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="src.intellicrack.ui.embedding.ghidra_widget._search_common_paths_for_ghidra">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="src.intellicrack.ui.embedding.ghidra_widget._search_project_tools_for_ghidra">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.ghidra_widget" target="src.intellicrack.ui.embedding.ghidra_widget.get_window_search_params">
@@ -20329,9 +20548,6 @@
     <edge source="src.intellicrack.ui.embedding.hxd_widget" target="ctypes">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.embedding.hxd_widget" target="subprocess">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.embedding.hxd_widget" target="winreg">
       <data key="d5">imports</data>
     </edge>
@@ -20339,6 +20555,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.hxd_widget" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.hxd_widget" target="intellicrack.core._subprocess">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.hxd_widget" target="intellicrack.core.logging">
@@ -20419,9 +20638,6 @@
     <edge source="src.intellicrack.ui.embedding.radare2_widget" target="os">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="collections.abc">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.embedding.radare2_widget" target="pathlib">
       <data key="d5">imports</data>
     </edge>
@@ -20439,6 +20655,9 @@
     </edge>
     <edge source="src.intellicrack.ui.embedding.radare2_widget" target="src.intellicrack.ui.embedding.radare2_widget.Radare2Widget">
       <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.radare2_widget" target="collections.abc">
+      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.radare2_widget" target="PyQt6.QtWidgets">
       <data key="d5">imports</data>
@@ -20605,9 +20824,6 @@
     <edge source="src.intellicrack.ui.embedding.x64dbg_widget" target="winreg">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.embedding.x64dbg_widget" target="collections.abc">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.embedding.x64dbg_widget" target="pathlib">
       <data key="d5">imports</data>
     </edge>
@@ -20626,6 +20842,9 @@
     <edge source="src.intellicrack.ui.embedding.x64dbg_widget" target="src.intellicrack.ui.embedding.x64dbg_widget.X64DbgWidget">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.embedding.x64dbg_widget" target="collections.abc">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.embedding.x64dbg_widget" target="PyQt6.QtWidgets">
       <data key="d5">imports</data>
     </edge>
@@ -20639,6 +20858,15 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.x64dbg_widget" target="src.intellicrack.ui.embedding.x64dbg_widget.get_executable_path">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.x64dbg_widget" target="src.intellicrack.ui.embedding.x64dbg_widget._build_x64dbg_candidates">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.x64dbg_widget" target="src.intellicrack.ui.embedding.x64dbg_widget._search_registry_for_x64dbg">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.x64dbg_widget" target="src.intellicrack.ui.embedding.x64dbg_widget._search_common_paths_for_x64dbg">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.x64dbg_widget" target="src.intellicrack.ui.embedding.x64dbg_widget.get_window_search_params">
@@ -21460,9 +21688,6 @@
     <edge source="src.intellicrack.ui.resources.font_manager" target="json">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.resources.font_manager" target="pathlib">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.resources.font_manager" target="typing">
       <data key="d5">imports</data>
     </edge>
@@ -21477,6 +21702,9 @@
     </edge>
     <edge source="src.intellicrack.ui.resources.font_manager" target="src.intellicrack.ui.resources.font_manager.FontManager">
       <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.resources.font_manager" target="pathlib">
+      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.resources.font_manager" target="src.intellicrack.ui.resources.font_manager.__init__">
       <data key="d5">defines</data>

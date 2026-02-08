@@ -61,7 +61,7 @@ def get_assets_path() -> Path:
         Path to the assets directory.
 
     Raises:
-        FileNotFoundError: If the assets directory cannot be found.
+        AssetNotFoundError: If the assets directory cannot be found.
     """
     package_root = _get_package_root()
     assets_path = package_root / _ASSETS_DIR_NAME

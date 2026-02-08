@@ -107,7 +107,7 @@ class NamedPipeClient:
             )
             _logger.info("pipe_connected", extra={"pipe_name": pipe_name})
         except TimeoutError as exc:
-            _logger.error(
+            _logger.warning(
                 "pipe_connection_failed",
                 extra={"pipe_name": pipe_name, "error": "connection timeout"},
             )
@@ -227,7 +227,7 @@ class NamedPipeClient:
             )
         except TimeoutError as exc:
             self._cancel_io()
-            _logger.error(
+            _logger.warning(
                 "pipe_error",
                 extra={"operation": "read", "error": "read timeout"},
             )
@@ -250,7 +250,7 @@ class NamedPipeClient:
             )
         except TimeoutError as exc:
             self._cancel_io()
-            _logger.error(
+            _logger.warning(
                 "pipe_error",
                 extra={"operation": "write", "error": "write timeout"},
             )

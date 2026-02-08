@@ -1,8 +1,8 @@
 2 findings in src/intellicrack\bridges\base.py
 
-src/intellicrack\bridges\base.py:799: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')
+src/intellicrack\bridges\base.py:927: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')
 
-src/intellicrack\bridges\base.py:850: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')
+src/intellicrack\bridges\base.py:990: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')
 
 
 2 findings in src/intellicrack\bridges\frida_bridge.py
@@ -14,12 +14,12 @@ src/intellicrack\bridges\frida_bridge.py:1068: D401: in public method `intercept
 
 1 findings in src/intellicrack\core\process_manager.py
 
-src/intellicrack\core\process_manager.py:259: D401: in private method `_sync_cleanup`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')
+src/intellicrack\core\process_manager.py:260: D401: in private method `_sync_cleanup`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')
 
 
 1 findings in src/intellicrack\core\script_gen.py
 
-src/intellicrack\core\script_gen.py:377: D401: in public method `validate_java`: - First line should be in imperative mood; try rephrasing (found 'Basic')
+src/intellicrack\core\script_gen.py:410: D401: in public method `validate_java`: - First line should be in imperative mood; try rephrasing (found 'Basic')
 
 
 1 findings in src/intellicrack\credentials\oauth.py
@@ -29,7 +29,7 @@ src/intellicrack\credentials\oauth.py:902: D401: in public function `authorize_g
 
 1 findings in src/intellicrack\providers\local_transformers.py
 
-src/intellicrack\providers\local_transformers.py:470: D401: in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')
+src/intellicrack\providers\local_transformers.py:478: D401: in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')
 
 
 1 findings in src/intellicrack\ui\panels\_async_bridge.py
