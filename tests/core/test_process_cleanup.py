@@ -15,12 +15,43 @@ import subprocess
 import sys
 import threading
 import time
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import psutil
 import pytest
 
+import intellicrack.bridges.radare2 as r2_module
+import intellicrack.sandbox.qemu as qemu_module
+from intellicrack.bridges.ghidra import GhidraBridge
+from intellicrack.bridges.radare2 import Radare2Bridge
 from intellicrack.core.process_manager import ProcessManager, ProcessType
+from intellicrack.core.types import ToolError
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+
+_GRACEFUL_TIMEOUT = 5.0
+_FORCE_TIMEOUT = 3.0
+_GRACEFUL_TIMEOUT_SHORT = 3.0
+_FORCE_TIMEOUT_SHORT = 2.0
+_R2_TEST_TIMEOUT = 0.5
+_ELAPSED_UPPER_BOUND = 5.0
+_EXPECTED_PID_IMMEDIATE = 99999
+_EXPECTED_PID_DELAYED = 54321
+_EXPECTED_PID_CORRUPT = 77777
+_PIDFILE_RETRY_DELAY_SHORT = 0.1
+_PIDFILE_RETRY_DELAY_MINIMAL = 0.01
+_PIDFILE_MAX_RETRIES_SHORT = 5
+_PIDFILE_MAX_RETRIES_MINIMAL = 3
+_SLEEP_DELAY_HALF = 0.5
+_SLEEP_DELAY_PIDFILE_WRITE = 0.15
+_SLEEP_DELAY_FIRST_RETRY = 0.01
+_MIN_RETRIES = 2
+_MIN_RETRY_DELAY = 1.0
+_MIN_TOTAL_WAIT = 4.0
+_BLOCKING_WAIT_TIMEOUT = 30
 
 
 # ─── 1. Process termination (sandbox_config.py finally-block pattern) ────────
@@ -46,10 +77,10 @@ async def test_terminate_tree_kills_running_process() -> None:
 
     assert psutil.pid_exists(pid), "Process should be running before cleanup"
 
-    ProcessManager.terminate_tree(pid, graceful_timeout=5.0, force_timeout=3.0)
+    ProcessManager.terminate_tree(pid, graceful_timeout=_GRACEFUL_TIMEOUT, force_timeout=_FORCE_TIMEOUT)
     _ = pm.unregister(pid)
 
-    await asyncio.sleep(0.5)
+    await asyncio.sleep(_SLEEP_DELAY_HALF)
     assert not psutil.pid_exists(pid), "terminate_tree should have killed the process"
 
 
@@ -79,7 +110,7 @@ time.sleep(60)
 
     assert process.stdout is not None
     try:
-        line = await asyncio.wait_for(process.stdout.readline(), timeout=5.0)
+        line = await asyncio.wait_for(process.stdout.readline(), timeout=_GRACEFUL_TIMEOUT)
         child_pid = int(line.strip())
     except (TimeoutError, ValueError):
         process.kill()
@@ -91,10 +122,10 @@ time.sleep(60)
     pm = ProcessManager.get_instance()
     _ = pm.register(process, "sandbox-test-tree", ProcessType.SANDBOX)
 
-    ProcessManager.terminate_tree(parent_pid, graceful_timeout=5.0, force_timeout=3.0)
+    ProcessManager.terminate_tree(parent_pid, graceful_timeout=_GRACEFUL_TIMEOUT, force_timeout=_FORCE_TIMEOUT)
     _ = pm.unregister(parent_pid)
 
-    await asyncio.sleep(0.5)
+    await asyncio.sleep(_SLEEP_DELAY_HALF)
     assert not psutil.pid_exists(parent_pid), "Parent process leaked"
     assert not psutil.pid_exists(child_pid), "Child process leaked"
 
@@ -133,7 +164,7 @@ class _BlockingR2:
         Returns:
             A string that should never be reached in timeout tests.
         """
-        _ = self._stop.wait(30)
+        _ = self._stop.wait(_BLOCKING_WAIT_TIMEOUT)
         return "never_returned"
 
     def release(self) -> None:
@@ -144,7 +175,8 @@ class _BlockingR2:
 class _FastR2:
     """Callable that returns immediately."""
 
-    def cmd(self, command: str) -> str:
+    @staticmethod
+    def cmd(command: str) -> str:
         """Return formatted result immediately.
 
         Args:
@@ -159,7 +191,8 @@ class _FastR2:
 class _NoneR2:
     """Callable that returns None (r2pipe does this for some commands)."""
 
-    def cmd(self, _command: str) -> None:
+    @staticmethod
+    def cmd(_command: str) -> None:
         """Return None as r2pipe sometimes does.
 
         Args:
@@ -175,16 +208,12 @@ async def test_r2_cmd_timeout_raises_tool_error() -> None:
     This test would HANG INDEFINITELY if the asyncio.wait_for wrapper
     were removed.
     """
-    import intellicrack.bridges.radare2 as r2_module
-    from intellicrack.bridges.radare2 import Radare2Bridge
-    from intellicrack.core.types import ToolError
-
     bridge = Radare2Bridge()
     blocker = _BlockingR2()
-    setattr(bridge, "_r2", blocker)
+    bridge._r2 = blocker
 
     original_timeout: float = r2_module._R2_COMMAND_TIMEOUT
-    r2_module._R2_COMMAND_TIMEOUT = 0.5
+    r2_module._R2_COMMAND_TIMEOUT = _R2_TEST_TIMEOUT
 
     try:
         start = time.monotonic()
@@ -192,7 +221,8 @@ async def test_r2_cmd_timeout_raises_tool_error() -> None:
             _ = await bridge._r2_cmd("aaa")
         elapsed = time.monotonic() - start
 
-        assert elapsed < 5.0, f"Timeout should fire in ~0.5s, but took {elapsed:.1f}s. The asyncio.wait_for wrapper may be missing."
+        msg = f"Timeout should fire in ~0.5s, but took {elapsed:.1f}s. The asyncio.wait_for wrapper may be missing."
+        assert elapsed < _ELAPSED_UPPER_BOUND, msg
     finally:
         blocker.release()
         r2_module._R2_COMMAND_TIMEOUT = original_timeout
@@ -201,10 +231,8 @@ async def test_r2_cmd_timeout_raises_tool_error() -> None:
 @pytest.mark.asyncio
 async def test_r2_cmd_returns_result_within_timeout() -> None:
     """_r2_cmd returns normally when the command completes before timeout."""
-    from intellicrack.bridges.radare2 import Radare2Bridge
-
     bridge = Radare2Bridge()
-    setattr(bridge, "_r2", _FastR2())
+    bridge._r2 = _FastR2()
 
     result = await bridge._r2_cmd("pd 10")
     assert result == "result:pd 10"
@@ -213,10 +241,8 @@ async def test_r2_cmd_returns_result_within_timeout() -> None:
 @pytest.mark.asyncio
 async def test_r2_cmd_converts_none_to_empty_string() -> None:
     """_r2_cmd converts None return from r2pipe to empty string."""
-    from intellicrack.bridges.radare2 import Radare2Bridge
-
     bridge = Radare2Bridge()
-    setattr(bridge, "_r2", _NoneR2())
+    bridge._r2 = _NoneR2()
 
     result = await bridge._r2_cmd("?")
     assert not result, "None r2 result should become empty string"
@@ -225,9 +251,6 @@ async def test_r2_cmd_converts_none_to_empty_string() -> None:
 @pytest.mark.asyncio
 async def test_r2_cmd_no_binary_raises_tool_error() -> None:
     """_r2_cmd raises ToolError when no binary is loaded (r2 is None)."""
-    from intellicrack.bridges.radare2 import Radare2Bridge
-    from intellicrack.core.types import ToolError
-
     bridge = Radare2Bridge()
     assert bridge._r2 is None
 
@@ -240,15 +263,13 @@ async def test_r2_cmd_no_binary_raises_tool_error() -> None:
 
 def test_qemu_pidfile_retry_constants_are_reasonable() -> None:
     """Verify pidfile retry constants allow sufficient time for QEMU startup."""
-    from intellicrack.sandbox.qemu import (
-        _PIDFILE_MAX_RETRIES,
-        _PIDFILE_RETRY_DELAY,
-    )
+    max_retries = qemu_module._PIDFILE_MAX_RETRIES
+    retry_delay = qemu_module._PIDFILE_RETRY_DELAY
 
-    assert _PIDFILE_MAX_RETRIES >= 2, "Need at least 2 retries for reliability"
-    assert _PIDFILE_RETRY_DELAY >= 1.0, "Retry delay should be at least 1 second"
-    total_wait = _PIDFILE_MAX_RETRIES * _PIDFILE_RETRY_DELAY
-    assert total_wait >= 4.0, "Total retry window should be at least 4 seconds"
+    assert max_retries >= _MIN_RETRIES, "Need at least 2 retries for reliability"
+    assert retry_delay >= _MIN_RETRY_DELAY, "Retry delay should be at least 1 second"
+    total_wait = max_retries * retry_delay
+    assert total_wait >= _MIN_TOTAL_WAIT, "Total retry window should be at least 4 seconds"
 
 
 @pytest.mark.asyncio
@@ -257,15 +278,12 @@ async def test_qemu_pidfile_retry_reads_immediate_file(tmp_path: Path) -> None:
 
     Replicates the exact retry loop from QemuSandbox.start().
     """
-    from intellicrack.sandbox.qemu import _PIDFILE_MAX_RETRIES
-
     pidfile = tmp_path / "qemu.pid"
-    expected_pid = 99999
-    _ = pidfile.write_text(str(expected_pid))
+    _ = pidfile.write_text(str(_EXPECTED_PID_IMMEDIATE))
 
     qemu_pid: int | None = None
-    for _attempt in range(_PIDFILE_MAX_RETRIES):
-        await asyncio.sleep(0.01)
+    for _attempt in range(qemu_module._PIDFILE_MAX_RETRIES):
+        await asyncio.sleep(_SLEEP_DELAY_FIRST_RETRY)
         if pidfile.exists():
             try:
                 pid_content = await asyncio.to_thread(pidfile.read_text, encoding="utf-8")
@@ -274,7 +292,7 @@ async def test_qemu_pidfile_retry_reads_immediate_file(tmp_path: Path) -> None:
             except (ValueError, OSError):
                 pass
 
-    assert qemu_pid == expected_pid, "Should read pidfile on first attempt"
+    assert qemu_pid == _EXPECTED_PID_IMMEDIATE, "Should read pidfile on first attempt"
 
 
 @pytest.mark.asyncio
@@ -285,19 +303,16 @@ async def test_qemu_pidfile_retry_reads_delayed_file(tmp_path: Path) -> None:
     pidfiles written at unpredictable times. The retry loop handles this.
     """
     pidfile = tmp_path / "qemu.pid"
-    expected_pid = 54321
 
     async def write_pidfile_after_delay() -> None:
-        await asyncio.sleep(0.15)
-        _ = pidfile.write_text(str(expected_pid))
+        await asyncio.sleep(_SLEEP_DELAY_PIDFILE_WRITE)
+        _ = pidfile.write_text(str(_EXPECTED_PID_DELAYED))
 
     writer = asyncio.create_task(write_pidfile_after_delay())
 
-    retry_delay = 0.1
-    max_retries = 5
     qemu_pid: int | None = None
-    for _attempt in range(max_retries):
-        await asyncio.sleep(retry_delay)
+    for _attempt in range(_PIDFILE_MAX_RETRIES_SHORT):
+        await asyncio.sleep(_PIDFILE_RETRY_DELAY_SHORT)
         if pidfile.exists():
             try:
                 pid_content = await asyncio.to_thread(pidfile.read_text, encoding="utf-8")
@@ -307,7 +322,7 @@ async def test_qemu_pidfile_retry_reads_delayed_file(tmp_path: Path) -> None:
                 pass
 
     await writer
-    assert qemu_pid == expected_pid, "Retry loop should catch delayed pidfile"
+    assert qemu_pid == _EXPECTED_PID_DELAYED, "Retry loop should catch delayed pidfile"
 
 
 @pytest.mark.asyncio
@@ -322,11 +337,9 @@ async def test_qemu_pidfile_retry_exhausted_returns_none(
     """
     pidfile = tmp_path / "nonexistent_qemu.pid"
 
-    retry_delay = 0.01
-    max_retries = 3
     qemu_pid: int | None = None
-    for _attempt in range(max_retries):
-        await asyncio.sleep(retry_delay)
+    for _attempt in range(_PIDFILE_MAX_RETRIES_MINIMAL):
+        await asyncio.sleep(_PIDFILE_RETRY_DELAY_MINIMAL)
         if pidfile.exists():
             try:
                 pid_content = await asyncio.to_thread(pidfile.read_text, encoding="utf-8")
@@ -347,21 +360,18 @@ async def test_qemu_pidfile_retry_handles_corrupt_content(
     Simulates QEMU partially writing the pidfile (race condition).
     """
     pidfile = tmp_path / "qemu.pid"
-    expected_pid = 77777
 
     _ = pidfile.write_text("not_a_number\n")
 
     async def fix_pidfile_after_delay() -> None:
-        await asyncio.sleep(0.15)
-        _ = pidfile.write_text(str(expected_pid))
+        await asyncio.sleep(_SLEEP_DELAY_PIDFILE_WRITE)
+        _ = pidfile.write_text(str(_EXPECTED_PID_CORRUPT))
 
     fixer = asyncio.create_task(fix_pidfile_after_delay())
 
-    retry_delay = 0.1
-    max_retries = 5
     qemu_pid: int | None = None
-    for _attempt in range(max_retries):
-        await asyncio.sleep(retry_delay)
+    for _attempt in range(_PIDFILE_MAX_RETRIES_SHORT):
+        await asyncio.sleep(_PIDFILE_RETRY_DELAY_SHORT)
         if pidfile.exists():
             try:
                 pid_content = await asyncio.to_thread(pidfile.read_text, encoding="utf-8")
@@ -371,7 +381,7 @@ async def test_qemu_pidfile_retry_handles_corrupt_content(
                 pass
 
     await fixer
-    assert qemu_pid == expected_pid, "Retry should recover after corrupt content is corrected"
+    assert qemu_pid == _EXPECTED_PID_CORRUPT, "Retry should recover after corrupt content is corrected"
 
 
 # ─── 4. Ghidra bridge script cleanup (ghidra.py) ────────────────────────────
@@ -383,8 +393,6 @@ def test_ghidra_create_bridge_script_writes_real_file() -> None:
     Verifies the file is created with correct content and the path is
     tracked in _bridge_script_path for later cleanup.
     """
-    from intellicrack.bridges.ghidra import GhidraBridge
-
     bridge = GhidraBridge()
     script_path = bridge._create_bridge_script()
 
@@ -409,8 +417,6 @@ async def test_ghidra_shutdown_deletes_bridge_script() -> None:
     Before the fix, the script in tempdir/intellicrack_ghidra/ was never
     cleaned up. Now shutdown() calls unlink() on it.
     """
-    from intellicrack.bridges.ghidra import GhidraBridge
-
     bridge = GhidraBridge()
     script_path = bridge._create_bridge_script()
     assert script_path.exists(), "Script should exist before shutdown"
@@ -428,8 +434,6 @@ async def test_ghidra_shutdown_removes_empty_parent_directory() -> None:
     After deleting the script file, if the parent directory is empty,
     shutdown() should also remove it.
     """
-    from intellicrack.bridges.ghidra import GhidraBridge
-
     bridge = GhidraBridge()
     script_path = bridge._create_bridge_script()
     parent_dir = script_path.parent
@@ -447,8 +451,6 @@ async def test_ghidra_shutdown_preserves_nonempty_parent_directory() -> None:
     If another process/session left files in intellicrack_ghidra/,
     shutdown should only delete its own script, not the directory.
     """
-    from intellicrack.bridges.ghidra import GhidraBridge
-
     bridge = GhidraBridge()
     script_path = bridge._create_bridge_script()
     parent_dir = script_path.parent
@@ -495,9 +497,9 @@ async def test_pid_based_kill_targets_specific_process() -> None:
         assert psutil.pid_exists(proc_a.pid)
         assert psutil.pid_exists(proc_b.pid)
 
-        ProcessManager.terminate_tree(proc_a.pid, graceful_timeout=3.0, force_timeout=2.0)
+        ProcessManager.terminate_tree(proc_a.pid, graceful_timeout=_GRACEFUL_TIMEOUT_SHORT, force_timeout=_FORCE_TIMEOUT_SHORT)
 
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(_SLEEP_DELAY_HALF)
 
         assert not psutil.pid_exists(proc_a.pid), "Target process should be dead"
         assert psutil.pid_exists(proc_b.pid), "Other process with same executable should survive PID-based kill"
@@ -524,7 +526,7 @@ def test_process_manager_unregister_after_terminate() -> None:
     pm = ProcessManager.get_instance()
     _ = pm.register(process, "test-unregister", ProcessType.SANDBOX)
 
-    ProcessManager.terminate_tree(pid, graceful_timeout=3.0, force_timeout=2.0)
+    ProcessManager.terminate_tree(pid, graceful_timeout=_GRACEFUL_TIMEOUT_SHORT, force_timeout=_FORCE_TIMEOUT_SHORT)
     result = pm.unregister(pid)
 
     assert result is not None, "unregister should return the tracked process"

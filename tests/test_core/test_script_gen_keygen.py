@@ -27,18 +27,41 @@ from intellicrack.core.types import (
 
 ChecksumPosition = Literal["prefix", "suffix", "embedded"]
 
+DEFAULT_KEY_LENGTH = 32
+DEFAULT_GROUP_SIZE = 4
+RSA_TEST_MODULUS = 17 * 19
+RSA_PUBLIC_EXPONENT = 65537
+MAGIC_CONST_DEADBEEF = 0xDEADBEEF
+MAGIC_CONST_CAFEBABE = 0xCAFEBABE
+MAGIC_CONST_ADDRESS_BASE = 0x1000
+MAGIC_CONST_BIT_WIDTH = 32
+RSA_CONST_ADDRESS = 0x5000
+RSA_EXP_ADDRESS = 0x5008
+TEST_CONFIDENCE = 0.8
+MD5_HEX_KEY_LENGTH = 32
+SHA1_HEX_KEY_LENGTH = 40
+CRC32_KEY_LENGTH = 8
+XOR_KEY_LENGTH = 16
+DASHED_KEY_LENGTH_16 = 16
+KEY_LENGTH_25 = 25
+GROUP_SIZE_5 = 5
+CHECKSUM_EXTRA_LENGTH = 8
+KEY_WITH_CHECKSUM_LENGTH = 40
+MIN_SCRIPT_LENGTH = 100
+EXPECTED_DASHED_GROUP_COUNT = 4
+
 
 def create_test_analysis(
     algorithm: AlgorithmType = AlgorithmType.MD5,
     key_format: KeyFormat = KeyFormat.SERIAL_DASHED,
-    key_length: int = 32,
-    group_size: int = 4,
+    key_length: int = DEFAULT_KEY_LENGTH,
+    group_size: int = DEFAULT_GROUP_SIZE,
     checksum_algorithm: str | None = None,
     checksum_position: ChecksumPosition | None = None,
     feature_flags: dict[str, int] | None = None,
     magic_constants: list[int] | None = None,
     rsa_modulus: int = 0,
-    rsa_exponent: int = 65537,
+    rsa_exponent: int = RSA_PUBLIC_EXPONENT,
 ) -> LicensingAnalysis:
     """Create a test LicensingAnalysis instance.
 
@@ -62,9 +85,9 @@ def create_test_analysis(
         constants.extend(
             MagicConstant(
                 value=val,
-                address=0x1000 + i * 4,
+                address=MAGIC_CONST_ADDRESS_BASE + i * DEFAULT_GROUP_SIZE,
                 usage_context="test",
-                bit_width=32,
+                bit_width=MAGIC_CONST_BIT_WIDTH,
             )
             for i, val in enumerate(magic_constants)
         )
@@ -72,13 +95,13 @@ def create_test_analysis(
         constants.extend((
             MagicConstant(
                 value=rsa_modulus,
-                address=0x5000,
+                address=RSA_CONST_ADDRESS,
                 usage_context="rsa_modulus",
                 bit_width=rsa_modulus.bit_length(),
             ),
             MagicConstant(
                 value=rsa_exponent,
-                address=0x5008,
+                address=RSA_EXP_ADDRESS,
                 usage_context="rsa_public_exponent",
                 bit_width=rsa_exponent.bit_length(),
             ),
@@ -101,7 +124,7 @@ def create_test_analysis(
         feature_flags=feature_flags or {},
         blacklist_present=False,
         online_validation=False,
-        confidence_score=0.8,
+        confidence_score=TEST_CONFIDENCE,
         analysis_notes=[],
     )
 
@@ -109,7 +132,8 @@ def create_test_analysis(
 class TestScriptGeneratorInitialization:
     """Test ScriptGenerator construction."""
 
-    def test_default_initialization(self) -> None:
+    @staticmethod
+    def test_default_initialization() -> None:
         """Verify default ScriptGenerator creation."""
         generator = ScriptGenerator()
         assert generator is not None
@@ -118,7 +142,8 @@ class TestScriptGeneratorInitialization:
 class TestKeygenFromAnalysis:
     """Test generate_keygen_from_analysis routing."""
 
-    def test_routes_to_md5_generator(self) -> None:
+    @staticmethod
+    def test_routes_to_md5_generator() -> None:
         """Verify MD5 algorithm routes to MD5 generator."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(algorithm=AlgorithmType.MD5)
@@ -126,7 +151,8 @@ class TestKeygenFromAnalysis:
         assert isinstance(result, GeneratedScript)
         assert "MD5" in result.content or "md5" in result.content.lower()
 
-    def test_routes_to_sha1_generator(self) -> None:
+    @staticmethod
+    def test_routes_to_sha1_generator() -> None:
         """Verify SHA1 algorithm routes to SHA1 generator."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(algorithm=AlgorithmType.SHA1)
@@ -134,7 +160,8 @@ class TestKeygenFromAnalysis:
         assert isinstance(result, GeneratedScript)
         assert "SHA1" in result.content or "sha1" in result.content.lower()
 
-    def test_routes_to_crc32_generator(self) -> None:
+    @staticmethod
+    def test_routes_to_crc32_generator() -> None:
         """Verify CRC32 algorithm routes to CRC32 generator."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(algorithm=AlgorithmType.CRC32)
@@ -142,7 +169,8 @@ class TestKeygenFromAnalysis:
         assert isinstance(result, GeneratedScript)
         assert "CRC32" in result.content or "crc32" in result.content.lower()
 
-    def test_routes_to_xor_generator(self) -> None:
+    @staticmethod
+    def test_routes_to_xor_generator() -> None:
         """Verify XOR algorithm routes to XOR generator."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(algorithm=AlgorithmType.XOR)
@@ -150,7 +178,8 @@ class TestKeygenFromAnalysis:
         assert isinstance(result, GeneratedScript)
         assert "XOR" in result.content or "xor" in result.content.lower()
 
-    def test_routes_to_hwid_generator(self) -> None:
+    @staticmethod
+    def test_routes_to_hwid_generator() -> None:
         """Verify HWID_BASED algorithm routes to HWID generator."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(algorithm=AlgorithmType.HWID_BASED)
@@ -158,7 +187,8 @@ class TestKeygenFromAnalysis:
         assert isinstance(result, GeneratedScript)
         assert "HWID" in result.content or "hardware" in result.content.lower()
 
-    def test_routes_to_time_based_generator(self) -> None:
+    @staticmethod
+    def test_routes_to_time_based_generator() -> None:
         """Verify TIME_BASED algorithm routes to time generator."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(algorithm=AlgorithmType.TIME_BASED)
@@ -166,7 +196,8 @@ class TestKeygenFromAnalysis:
         assert isinstance(result, GeneratedScript)
         assert "TIME" in result.content or "expir" in result.content.lower()
 
-    def test_routes_to_feature_flag_generator(self) -> None:
+    @staticmethod
+    def test_routes_to_feature_flag_generator() -> None:
         """Verify FEATURE_FLAG algorithm routes to feature generator."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(
@@ -181,7 +212,8 @@ class TestKeygenFromAnalysis:
 class TestGeneratedScriptSyntax:
     """Test that generated scripts are syntactically valid Python."""
 
-    def test_md5_keygen_is_valid_python(self) -> None:
+    @staticmethod
+    def test_md5_keygen_is_valid_python() -> None:
         """Verify MD5 keygen produces valid Python syntax."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(algorithm=AlgorithmType.MD5)
@@ -191,7 +223,8 @@ class TestGeneratedScriptSyntax:
         except SyntaxError as e:
             pytest.fail(f"Generated MD5 keygen has syntax error: {e}")
 
-    def test_sha1_keygen_is_valid_python(self) -> None:
+    @staticmethod
+    def test_sha1_keygen_is_valid_python() -> None:
         """Verify SHA1 keygen produces valid Python syntax."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(algorithm=AlgorithmType.SHA1)
@@ -201,7 +234,8 @@ class TestGeneratedScriptSyntax:
         except SyntaxError as e:
             pytest.fail(f"Generated SHA1 keygen has syntax error: {e}")
 
-    def test_crc32_keygen_is_valid_python(self) -> None:
+    @staticmethod
+    def test_crc32_keygen_is_valid_python() -> None:
         """Verify CRC32 keygen produces valid Python syntax."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(algorithm=AlgorithmType.CRC32)
@@ -211,7 +245,8 @@ class TestGeneratedScriptSyntax:
         except SyntaxError as e:
             pytest.fail(f"Generated CRC32 keygen has syntax error: {e}")
 
-    def test_xor_keygen_is_valid_python(self) -> None:
+    @staticmethod
+    def test_xor_keygen_is_valid_python() -> None:
         """Verify XOR keygen produces valid Python syntax."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(algorithm=AlgorithmType.XOR)
@@ -221,7 +256,8 @@ class TestGeneratedScriptSyntax:
         except SyntaxError as e:
             pytest.fail(f"Generated XOR keygen has syntax error: {e}")
 
-    def test_hwid_keygen_is_valid_python(self) -> None:
+    @staticmethod
+    def test_hwid_keygen_is_valid_python() -> None:
         """Verify HWID keygen produces valid Python syntax."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(algorithm=AlgorithmType.HWID_BASED)
@@ -231,7 +267,8 @@ class TestGeneratedScriptSyntax:
         except SyntaxError as e:
             pytest.fail(f"Generated HWID keygen has syntax error: {e}")
 
-    def test_time_keygen_is_valid_python(self) -> None:
+    @staticmethod
+    def test_time_keygen_is_valid_python() -> None:
         """Verify time-based keygen produces valid Python syntax."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(algorithm=AlgorithmType.TIME_BASED)
@@ -241,7 +278,8 @@ class TestGeneratedScriptSyntax:
         except SyntaxError as e:
             pytest.fail(f"Generated time keygen has syntax error: {e}")
 
-    def test_feature_keygen_is_valid_python(self) -> None:
+    @staticmethod
+    def test_feature_keygen_is_valid_python() -> None:
         """Verify feature flag keygen produces valid Python syntax."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(
@@ -254,13 +292,14 @@ class TestGeneratedScriptSyntax:
         except SyntaxError as e:
             pytest.fail(f"Generated feature keygen has syntax error: {e}")
 
-    def test_rsa_keygen_is_valid_python(self) -> None:
+    @staticmethod
+    def test_rsa_keygen_is_valid_python() -> None:
         """Verify RSA keygen produces valid Python syntax."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(
             algorithm=AlgorithmType.RSA,
-            rsa_modulus=17 * 19,
-            rsa_exponent=65537,
+            rsa_modulus=RSA_TEST_MODULUS,
+            rsa_exponent=RSA_PUBLIC_EXPONENT,
         )
         result = generator.generate_keygen_from_analysis(analysis)
         try:
@@ -268,7 +307,8 @@ class TestGeneratedScriptSyntax:
         except SyntaxError as e:
             pytest.fail(f"Generated RSA keygen has syntax error: {e}")
 
-    def test_custom_hash_keygen_is_valid_python(self) -> None:
+    @staticmethod
+    def test_custom_hash_keygen_is_valid_python() -> None:
         """Verify custom hash keygen produces valid Python syntax."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(algorithm=AlgorithmType.CUSTOM_HASH)
@@ -282,59 +322,67 @@ class TestGeneratedScriptSyntax:
 class TestGeneratedScriptContent:
     """Test that generated scripts contain required elements."""
 
-    def test_includes_shebang(self) -> None:
+    @staticmethod
+    def test_includes_shebang() -> None:
         """Verify generated script includes shebang line."""
         generator = ScriptGenerator()
         analysis = create_test_analysis()
         result = generator.generate_keygen_from_analysis(analysis)
         assert result.content.startswith("#!/usr/bin/env python3")
 
-    def test_includes_future_annotations(self) -> None:
+    @staticmethod
+    def test_includes_future_annotations() -> None:
         """Verify generated script includes future annotations import."""
         generator = ScriptGenerator()
         analysis = create_test_analysis()
         result = generator.generate_keygen_from_analysis(analysis)
         assert "from __future__ import annotations" in result.content
 
-    def test_includes_keygen_class(self) -> None:
+    @staticmethod
+    def test_includes_keygen_class() -> None:
         """Verify generated script includes Keygen class."""
         generator = ScriptGenerator()
         analysis = create_test_analysis()
         result = generator.generate_keygen_from_analysis(analysis)
         assert "class Keygen:" in result.content
 
-    def test_includes_generate_method(self) -> None:
+    @staticmethod
+    def test_includes_generate_method() -> None:
         """Verify generated script includes generate method."""
         generator = ScriptGenerator()
         analysis = create_test_analysis()
         result = generator.generate_keygen_from_analysis(analysis)
         assert "def generate(" in result.content
 
-    def test_includes_validate_method(self) -> None:
+    @staticmethod
+    def test_includes_validate_method() -> None:
         """Verify generated script includes validate method."""
         generator = ScriptGenerator()
         analysis = create_test_analysis()
         result = generator.generate_keygen_from_analysis(analysis)
         assert "def validate(" in result.content
 
-    def test_includes_key_format_constant(self) -> None:
+    @staticmethod
+    def test_includes_key_format_constant() -> None:
         """Verify generated script includes KEY_FORMAT constant."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(key_format=KeyFormat.SERIAL_DASHED)
         result = generator.generate_keygen_from_analysis(analysis)
         assert "KEY_FORMAT = " in result.content
 
-    def test_includes_key_length_constant(self) -> None:
+    @staticmethod
+    def test_includes_key_length_constant() -> None:
         """Verify generated script includes KEY_LENGTH constant."""
         generator = ScriptGenerator()
-        analysis = create_test_analysis(key_length=25)
+        analysis = create_test_analysis(key_length=KEY_LENGTH_25)
         result = generator.generate_keygen_from_analysis(analysis)
         assert "KEY_LENGTH = " in result.content
 
-    def test_includes_group_size_constant(self) -> None:
+    @staticmethod
+    def test_includes_group_size_constant() -> None:
         """Verify generated script includes GROUP_SIZE constant."""
         generator = ScriptGenerator()
-        analysis = create_test_analysis(group_size=5)
+        analysis = create_test_analysis(group_size=GROUP_SIZE_5)
         result = generator.generate_keygen_from_analysis(analysis)
         assert "GROUP_SIZE = " in result.content
 
@@ -342,19 +390,21 @@ class TestGeneratedScriptContent:
 class TestKeyFormatting:
     """Test key formatting functions in generated scripts."""
 
-    def test_dashed_format_output(self) -> None:
+    @staticmethod
+    def test_dashed_format_output() -> None:
         """Verify dashed format produces correct grouping."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(
             key_format=KeyFormat.SERIAL_DASHED,
-            group_size=4,
-            key_length=16,
+            group_size=DEFAULT_GROUP_SIZE,
+            key_length=DASHED_KEY_LENGTH_16,
         )
         result = generator.generate_keygen_from_analysis(analysis)
         assert "serial_dashed" in result.content
         assert "GROUP_SEPARATOR = '-'" in result.content
 
-    def test_checksum_suffix_inclusion(self) -> None:
+    @staticmethod
+    def test_checksum_suffix_inclusion() -> None:
         """Verify checksum suffix configuration."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(
@@ -365,7 +415,8 @@ class TestKeyFormatting:
         assert "CHECKSUM_ALGORITHM = 'crc32'" in result.content
         assert "CHECKSUM_POSITION = 'suffix'" in result.content
 
-    def test_checksum_prefix_inclusion(self) -> None:
+    @staticmethod
+    def test_checksum_prefix_inclusion() -> None:
         """Verify checksum prefix configuration."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(
@@ -379,11 +430,12 @@ class TestKeyFormatting:
 class TestMagicConstantsInclusion:
     """Test that magic constants are included in generated scripts."""
 
-    def test_includes_magic_constants_list(self) -> None:
+    @staticmethod
+    def test_includes_magic_constants_list() -> None:
         """Verify magic constants are included."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(
-            magic_constants=[0xDEADBEEF, 0xCAFEBABE],
+            magic_constants=[MAGIC_CONST_DEADBEEF, MAGIC_CONST_CAFEBABE],
         )
         result = generator.generate_keygen_from_analysis(analysis)
         assert "MAGIC_CONSTANTS" in result.content
@@ -393,7 +445,8 @@ class TestMagicConstantsInclusion:
 class TestFeatureFlagsInclusion:
     """Test that feature flags are included in generated scripts."""
 
-    def test_includes_feature_flags_dict(self) -> None:
+    @staticmethod
+    def test_includes_feature_flags_dict() -> None:
         """Verify feature flags dictionary is included."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(
@@ -407,36 +460,38 @@ class TestFeatureFlagsInclusion:
 class TestRSAKeygenSpecifics:
     """Test RSA-specific keygen generation."""
 
-    def test_includes_rsa_modulus(self) -> None:
+    @staticmethod
+    def test_includes_rsa_modulus() -> None:
         """Verify RSA modulus is included."""
         generator = ScriptGenerator()
-        test_modulus = 17 * 19
         analysis = create_test_analysis(
             algorithm=AlgorithmType.RSA,
-            rsa_modulus=test_modulus,
+            rsa_modulus=RSA_TEST_MODULUS,
         )
         result = generator.generate_keygen_from_analysis(analysis)
         assert "RSA_MODULUS" in result.content
-        assert str(test_modulus) in result.content
+        assert str(RSA_TEST_MODULUS) in result.content
 
-    def test_includes_rsa_exponent(self) -> None:
+    @staticmethod
+    def test_includes_rsa_exponent() -> None:
         """Verify RSA public exponent is included."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(
             algorithm=AlgorithmType.RSA,
-            rsa_modulus=17 * 19,
-            rsa_exponent=65537,
+            rsa_modulus=RSA_TEST_MODULUS,
+            rsa_exponent=RSA_PUBLIC_EXPONENT,
         )
         result = generator.generate_keygen_from_analysis(analysis)
         assert "RSA_PUBLIC_EXPONENT" in result.content
-        assert "65537" in result.content
+        assert str(RSA_PUBLIC_EXPONENT) in result.content
 
-    def test_includes_rsa_helpers(self) -> None:
+    @staticmethod
+    def test_includes_rsa_helpers() -> None:
         """Verify RSA helper functions are included."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(
             algorithm=AlgorithmType.RSA,
-            rsa_modulus=17 * 19,
+            rsa_modulus=RSA_TEST_MODULUS,
         )
         result = generator.generate_keygen_from_analysis(analysis)
         assert "_modinv" in result.content
@@ -448,13 +503,14 @@ class TestRSAKeygenSpecifics:
 class TestGeneratedScriptExecution:
     """Test that generated scripts can be executed."""
 
-    def test_md5_keygen_executes(self) -> None:
+    @staticmethod
+    def test_md5_keygen_executes() -> None:
         """Verify MD5 keygen script executes without error."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(
             algorithm=AlgorithmType.MD5,
             key_format=KeyFormat.SERIAL_PLAIN,
-            key_length=32,
+            key_length=MD5_HEX_KEY_LENGTH,
         )
         result = generator.generate_keygen_from_analysis(analysis)
         exec_globals: dict[str, Any] = {}
@@ -466,13 +522,14 @@ class TestGeneratedScriptExecution:
         assert isinstance(key, str)
         assert len(key) > 0
 
-    def test_crc32_keygen_executes(self) -> None:
+    @staticmethod
+    def test_crc32_keygen_executes() -> None:
         """Verify CRC32 keygen script executes without error."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(
             algorithm=AlgorithmType.CRC32,
             key_format=KeyFormat.SERIAL_PLAIN,
-            key_length=8,
+            key_length=CRC32_KEY_LENGTH,
         )
         result = generator.generate_keygen_from_analysis(analysis)
         exec_globals: dict[str, Any] = {}
@@ -483,13 +540,14 @@ class TestGeneratedScriptExecution:
         key = keygen.generate("TestUser")
         assert isinstance(key, str)
 
-    def test_sha1_keygen_executes(self) -> None:
+    @staticmethod
+    def test_sha1_keygen_executes() -> None:
         """Verify SHA1 keygen script executes without error."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(
             algorithm=AlgorithmType.SHA1,
             key_format=KeyFormat.SERIAL_PLAIN,
-            key_length=40,
+            key_length=SHA1_HEX_KEY_LENGTH,
         )
         result = generator.generate_keygen_from_analysis(analysis)
         exec_globals: dict[str, Any] = {}
@@ -499,15 +557,16 @@ class TestGeneratedScriptExecution:
         keygen = keygen_class()
         key = keygen.generate("TestUser")
         assert isinstance(key, str)
-        assert len(key) == 40
+        assert len(key) == SHA1_HEX_KEY_LENGTH
 
-    def test_xor_keygen_executes(self) -> None:
+    @staticmethod
+    def test_xor_keygen_executes() -> None:
         """Verify XOR keygen script executes without error."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(
             algorithm=AlgorithmType.XOR,
             key_format=KeyFormat.HEX_STRING,
-            key_length=16,
+            key_length=XOR_KEY_LENGTH,
         )
         result = generator.generate_keygen_from_analysis(analysis)
         exec_globals: dict[str, Any] = {}
@@ -518,13 +577,14 @@ class TestGeneratedScriptExecution:
         key = keygen.generate("TestUser")
         assert isinstance(key, str)
 
-    def test_generated_key_validates(self) -> None:
+    @staticmethod
+    def test_generated_key_validates() -> None:
         """Verify generated keys validate correctly."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(
             algorithm=AlgorithmType.MD5,
             key_format=KeyFormat.SERIAL_PLAIN,
-            key_length=32,
+            key_length=MD5_HEX_KEY_LENGTH,
         )
         result = generator.generate_keygen_from_analysis(analysis)
         exec_globals: dict[str, Any] = {}
@@ -536,13 +596,14 @@ class TestGeneratedScriptExecution:
         is_valid = keygen.validate("TestUser", key)
         assert is_valid is True
 
-    def test_invalid_key_fails_validation(self) -> None:
+    @staticmethod
+    def test_invalid_key_fails_validation() -> None:
         """Verify invalid keys fail validation."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(
             algorithm=AlgorithmType.MD5,
             key_format=KeyFormat.SERIAL_PLAIN,
-            key_length=32,
+            key_length=MD5_HEX_KEY_LENGTH,
         )
         result = generator.generate_keygen_from_analysis(analysis)
         exec_globals: dict[str, Any] = {}
@@ -557,14 +618,15 @@ class TestGeneratedScriptExecution:
 class TestDashedKeyFormatExecution:
     """Test dashed key format in executed scripts."""
 
-    def test_dashed_key_has_separators(self) -> None:
+    @staticmethod
+    def test_dashed_key_has_separators() -> None:
         """Verify dashed keys contain separators."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(
             algorithm=AlgorithmType.MD5,
             key_format=KeyFormat.SERIAL_DASHED,
-            key_length=32,
-            group_size=4,
+            key_length=MD5_HEX_KEY_LENGTH,
+            group_size=DEFAULT_GROUP_SIZE,
         )
         result = generator.generate_keygen_from_analysis(analysis)
         exec_globals: dict[str, Any] = {}
@@ -575,14 +637,15 @@ class TestDashedKeyFormatExecution:
         key = keygen.generate("TestUser")
         assert "-" in key
 
-    def test_dashed_key_group_count(self) -> None:
+    @staticmethod
+    def test_dashed_key_group_count() -> None:
         """Verify dashed keys have correct group count."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(
             algorithm=AlgorithmType.MD5,
             key_format=KeyFormat.SERIAL_DASHED,
-            key_length=16,
-            group_size=4,
+            key_length=DASHED_KEY_LENGTH_16,
+            group_size=DEFAULT_GROUP_SIZE,
         )
         result = generator.generate_keygen_from_analysis(analysis)
         exec_globals: dict[str, Any] = {}
@@ -592,19 +655,20 @@ class TestDashedKeyFormatExecution:
         keygen = keygen_class()
         key = keygen.generate("TestUser")
         groups = key.split("-")
-        assert len(groups) == 4
+        assert len(groups) == EXPECTED_DASHED_GROUP_COUNT
 
 
 class TestChecksumComputation:
     """Test checksum computation in generated scripts."""
 
-    def test_crc32_checksum_appended(self) -> None:
+    @staticmethod
+    def test_crc32_checksum_appended() -> None:
         """Verify CRC32 checksum is appended to key."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(
             algorithm=AlgorithmType.MD5,
             key_format=KeyFormat.SERIAL_PLAIN,
-            key_length=32,
+            key_length=MD5_HEX_KEY_LENGTH,
             checksum_algorithm="crc32",
             checksum_position="suffix",
         )
@@ -615,13 +679,14 @@ class TestChecksumComputation:
         assert keygen_class is not None
         keygen = keygen_class()
         key = keygen.generate("TestUser")
-        assert len(key) == 32 + 8
+        assert len(key) == KEY_WITH_CHECKSUM_LENGTH
 
 
 class TestGeneratedScriptMetadata:
     """Test GeneratedScript metadata fields."""
 
-    def test_script_has_name(self) -> None:
+    @staticmethod
+    def test_script_has_name() -> None:
         """Verify generated script has a name."""
         generator = ScriptGenerator()
         analysis = create_test_analysis()
@@ -629,7 +694,8 @@ class TestGeneratedScriptMetadata:
         assert result.name is not None
         assert len(result.name) > 0
 
-    def test_script_has_description(self) -> None:
+    @staticmethod
+    def test_script_has_description() -> None:
         """Verify generated script has a description."""
         generator = ScriptGenerator()
         analysis = create_test_analysis()
@@ -637,19 +703,21 @@ class TestGeneratedScriptMetadata:
         assert result.description is not None
         assert len(result.description) > 0
 
-    def test_script_has_content(self) -> None:
+    @staticmethod
+    def test_script_has_content() -> None:
         """Verify generated script has content."""
         generator = ScriptGenerator()
         analysis = create_test_analysis()
         result = generator.generate_keygen_from_analysis(analysis)
         assert result.content is not None
-        assert len(result.content) > 100
+        assert len(result.content) > MIN_SCRIPT_LENGTH
 
 
 class TestUnknownAlgorithmHandling:
     """Test handling of unknown algorithm types."""
 
-    def test_unknown_algorithm_uses_fallback(self) -> None:
+    @staticmethod
+    def test_unknown_algorithm_uses_fallback() -> None:
         """Verify unknown algorithm uses fallback generator."""
         generator = ScriptGenerator()
         analysis = create_test_analysis(algorithm=AlgorithmType.UNKNOWN)

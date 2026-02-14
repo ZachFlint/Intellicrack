@@ -1,384 +1,12 @@
 {
   "tool": "vulture",
-  "generated": "2026-02-08T03:00:29.448196",
-  "total_findings": 440,
-  "total_files": 70,
+  "generated": "2026-02-08T21:18:52.999397",
+  "total_findings": 355,
+  "total_files": 69,
   "files": [
     {
-      "path": "src\\intellicrack\\bridges\\base.py",
-      "count": 42,
-      "findings": [
-        {
-          "line": 70,
-          "column": null,
-          "message": "unused variable 'bytes_str' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:70: unused variable 'bytes_str' (60% confidence)"
-        },
-        {
-          "line": 88,
-          "column": null,
-          "message": "unused variable 'matched_bytes' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:88: unused variable 'matched_bytes' (60% confidence)"
-        },
-        {
-          "line": 110,
-          "column": null,
-          "message": "unused variable 'frame_pointer' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:110: unused variable 'frame_pointer' (60% confidence)"
-        },
-        {
-          "line": 111,
-          "column": null,
-          "message": "unused variable 'stack_pointer' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:111: unused variable 'stack_pointer' (60% confidence)"
-        },
-        {
-          "line": 153,
-          "column": null,
-          "message": "unused variable 'supports_static_analysis' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:153: unused variable 'supports_static_analysis' (60% confidence)"
-        },
-        {
-          "line": 154,
-          "column": null,
-          "message": "unused variable 'supports_dynamic_analysis' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:154: unused variable 'supports_dynamic_analysis' (60% confidence)"
-        },
-        {
-          "line": 155,
-          "column": null,
-          "message": "unused variable 'supports_decompilation' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:155: unused variable 'supports_decompilation' (60% confidence)"
-        },
-        {
-          "line": 156,
-          "column": null,
-          "message": "unused variable 'supports_debugging' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:156: unused variable 'supports_debugging' (60% confidence)"
-        },
-        {
-          "line": 157,
-          "column": null,
-          "message": "unused variable 'supports_patching' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:157: unused variable 'supports_patching' (60% confidence)"
-        },
-        {
-          "line": 158,
-          "column": null,
-          "message": "unused variable 'supports_scripting' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:158: unused variable 'supports_scripting' (60% confidence)"
-        },
-        {
-          "line": 159,
-          "column": null,
-          "message": "unused variable 'supports_memory_access' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:159: unused variable 'supports_memory_access' (60% confidence)"
-        },
-        {
-          "line": 163,
-          "column": null,
-          "message": "unused method 'has_capability' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:163: unused method 'has_capability' (60% confidence)"
-        },
-        {
-          "line": 174,
-          "column": null,
-          "message": "unused method 'supports_arch' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:174: unused method 'supports_arch' (60% confidence)"
-        },
-        {
-          "line": 185,
-          "column": null,
-          "message": "unused method 'supports_format' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:185: unused method 'supports_format' (60% confidence)"
-        },
-        {
-          "line": 213,
-          "column": null,
-          "message": "unused variable 'binary_loaded' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:213: unused variable 'binary_loaded' (60% confidence)"
-        },
-        {
-          "line": 219,
-          "column": null,
-          "message": "unused method 'is_ready' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:219: unused method 'is_ready' (60% confidence)"
-        },
-        {
-          "line": 227,
-          "column": null,
-          "message": "unused method 'clear_error' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:227: unused method 'clear_error' (60% confidence)"
-        },
-        {
-          "line": 386,
-          "column": null,
-          "message": "unused method 'get_function' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:386: unused method 'get_function' (60% confidence)"
-        },
-        {
-          "line": 401,
-          "column": null,
-          "message": "unused method 'decompile' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:401: unused method 'decompile' (60% confidence)"
-        },
-        {
-          "line": 416,
-          "column": null,
-          "message": "unused method 'disassemble' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:416: unused method 'disassemble' (60% confidence)"
-        },
-        {
-          "line": 436,
-          "column": null,
-          "message": "unused method 'get_xrefs_to' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:436: unused method 'get_xrefs_to' (60% confidence)"
-        },
-        {
-          "line": 451,
-          "column": null,
-          "message": "unused method 'get_xrefs_from' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:451: unused method 'get_xrefs_from' (60% confidence)"
-        },
-        {
-          "line": 481,
-          "column": null,
-          "message": "unused method 'search_bytes' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:481: unused method 'search_bytes' (60% confidence)"
-        },
-        {
-          "line": 520,
-          "column": null,
-          "message": "unused method 'rename_function' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:520: unused method 'rename_function' (60% confidence)"
-        },
-        {
-          "line": 536,
-          "column": null,
-          "message": "unused method 'add_comment' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:536: unused method 'add_comment' (60% confidence)"
-        },
-        {
-          "line": 662,
-          "column": null,
-          "message": "unused method 'scan_memory' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:662: unused method 'scan_memory' (60% confidence)"
-        },
-        {
-          "line": 688,
-          "column": null,
-          "message": "unused attribute 'supports_debugging' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:688: unused attribute 'supports_debugging' (60% confidence)"
-        },
-        {
-          "line": 741,
-          "column": null,
-          "message": "unused method 'step_out' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:741: unused method 'step_out' (60% confidence)"
-        },
-        {
-          "line": 790,
-          "column": null,
-          "message": "unused method 'get_breakpoints' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:790: unused method 'get_breakpoints' (60% confidence)"
-        },
-        {
-          "line": 814,
-          "column": null,
-          "message": "unused method 'set_register' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:814: unused method 'set_register' (60% confidence)"
-        },
-        {
-          "line": 842,
-          "column": null,
-          "message": "unused method 'disassemble_at' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:842: unused method 'disassemble_at' (60% confidence)"
-        },
-        {
-          "line": 862,
-          "column": null,
-          "message": "unused method 'assemble_at' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:862: unused method 'assemble_at' (60% confidence)"
-        },
-        {
-          "line": 889,
-          "column": null,
-          "message": "unused attribute 'supports_scripting' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:889: unused attribute 'supports_scripting' (60% confidence)"
-        },
-        {
-          "line": 891,
-          "column": null,
-          "message": "unused method 'enumerate_modules' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:891: unused method 'enumerate_modules' (60% confidence)"
-        },
-        {
-          "line": 904,
-          "column": null,
-          "message": "unused method 'enumerate_exports' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:904: unused method 'enumerate_exports' (60% confidence)"
-        },
-        {
-          "line": 959,
-          "column": null,
-          "message": "unused method 'get_hooks' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:959: unused method 'get_hooks' (60% confidence)"
-        },
-        {
-          "line": 988,
-          "column": null,
-          "message": "unused method 'intercept_return' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:988: unused method 'intercept_return' (60% confidence)"
-        },
-        {
-          "line": 1005,
-          "column": null,
-          "message": "unused method 'call_function' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:1005: unused method 'call_function' (60% confidence)"
-        },
-        {
-          "line": 1090,
-          "column": null,
-          "message": "unused method 'apply_patch' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:1090: unused method 'apply_patch' (60% confidence)"
-        },
-        {
-          "line": 1106,
-          "column": null,
-          "message": "unused method 'revert_patch' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:1106: unused method 'revert_patch' (60% confidence)"
-        },
-        {
-          "line": 1138,
-          "column": null,
-          "message": "unused method 'search_pattern' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:1138: unused method 'search_pattern' (60% confidence)"
-        },
-        {
-          "line": 1161,
-          "column": null,
-          "message": "unused method 'calculate_checksum' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\base.py:1161: unused method 'calculate_checksum' (60% confidence)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\bridges\\x64dbg.py",
-      "count": 18,
-      "findings": [
-        {
-          "line": 72,
-          "column": null,
-          "message": "unused function 'get_capstone' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:72: unused function 'get_capstone' (60% confidence)"
-        },
-        {
-          "line": 81,
-          "column": null,
-          "message": "unused function 'get_keystone' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:81: unused function 'get_keystone' (60% confidence)"
-        },
-        {
-          "line": 398,
-          "column": null,
-          "message": "unused property 'breakpoints' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:398: unused property 'breakpoints' (60% confidence)"
-        },
-        {
-          "line": 425,
-          "column": null,
-          "message": "unused property 'watchpoints' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:425: unused property 'watchpoints' (60% confidence)"
-        },
-        {
-          "line": 991,
-          "column": null,
-          "message": "unused attribute 'binary_loaded' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:991: unused attribute 'binary_loaded' (60% confidence)"
-        },
-        {
-          "line": 1103,
-          "column": null,
-          "message": "unused method 'step_out' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1103: unused method 'step_out' (60% confidence)"
-        },
-        {
-          "line": 1170,
-          "column": null,
-          "message": "unused method 'get_breakpoints' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1170: unused method 'get_breakpoints' (60% confidence)"
-        },
-        {
-          "line": 1178,
-          "column": null,
-          "message": "unused method 'set_watchpoint' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1178: unused method 'set_watchpoint' (60% confidence)"
-        },
-        {
-          "line": 1220,
-          "column": null,
-          "message": "unused method 'remove_watchpoint' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1220: unused method 'remove_watchpoint' (60% confidence)"
-        },
-        {
-          "line": 1242,
-          "column": null,
-          "message": "unused method 'get_watchpoints' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1242: unused method 'get_watchpoints' (60% confidence)"
-        },
-        {
-          "line": 1306,
-          "column": null,
-          "message": "unused method '_get_register_value' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1306: unused method '_get_register_value' (60% confidence)"
-        },
-        {
-          "line": 1328,
-          "column": null,
-          "message": "unused method 'set_register' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1328: unused method 'set_register' (60% confidence)"
-        },
-        {
-          "line": 1453,
-          "column": null,
-          "message": "unused method 'allocate_memory' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1453: unused method 'allocate_memory' (60% confidence)"
-        },
-        {
-          "line": 1508,
-          "column": null,
-          "message": "unused method 'free_memory' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1508: unused method 'free_memory' (60% confidence)"
-        },
-        {
-          "line": 1636,
-          "column": null,
-          "message": "unused method 'disassemble_at' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1636: unused method 'disassemble_at' (60% confidence)"
-        },
-        {
-          "line": 1681,
-          "column": null,
-          "message": "unused method 'assemble_at' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1681: unused method 'assemble_at' (60% confidence)"
-        },
-        {
-          "line": 1774,
-          "column": null,
-          "message": "unused method 'scan_memory' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1774: unused method 'scan_memory' (60% confidence)"
-        },
-        {
-          "line": 1989,
-          "column": null,
-          "message": "unused method '_get_process_info' (60% confidence)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1989: unused method '_get_process_info' (60% confidence)"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\providers\\base.py",
-      "count": 18,
+      "count": 17,
       "findings": [
         {
           "line": 58,
@@ -409,12 +37,6 @@
           "column": null,
           "message": "unused class 'ProviderCapabilities' (60% confidence)",
           "raw": "src\\intellicrack\\providers\\base.py:327: unused class 'ProviderCapabilities' (60% confidence)"
-        },
-        {
-          "line": 342,
-          "column": null,
-          "message": "unused variable 'supports_json_mode' (60% confidence)",
-          "raw": "src\\intellicrack\\providers\\base.py:342: unused variable 'supports_json_mode' (60% confidence)"
         },
         {
           "line": 343,
@@ -599,92 +221,104 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\core\\types.py",
-      "count": 14,
+      "path": "src\\intellicrack\\bridges\\x64dbg.py",
+      "count": 16,
       "findings": [
         {
-          "line": 122,
+          "line": 72,
           "column": null,
-          "message": "unused property 'is_hash' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\types.py:122: unused property 'is_hash' (60% confidence)"
+          "message": "unused function 'get_capstone' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:72: unused function 'get_capstone' (60% confidence)"
         },
         {
-          "line": 152,
+          "line": 81,
           "column": null,
-          "message": "unused property 'requires_hardware_id' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\types.py:152: unused property 'requires_hardware_id' (60% confidence)"
+          "message": "unused function 'get_keystone' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:81: unused function 'get_keystone' (60% confidence)"
         },
         {
-          "line": 161,
+          "line": 991,
           "column": null,
-          "message": "unused property 'is_text_based' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\types.py:161: unused property 'is_text_based' (60% confidence)"
+          "message": "unused attribute 'binary_loaded' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:991: unused attribute 'binary_loaded' (60% confidence)"
         },
         {
-          "line": 252,
+          "line": 1103,
           "column": null,
-          "message": "unused property 'is_executable' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\types.py:252: unused property 'is_executable' (60% confidence)"
+          "message": "unused method 'step_out' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1103: unused method 'step_out' (60% confidence)"
         },
         {
-          "line": 261,
+          "line": 1170,
           "column": null,
-          "message": "unused property 'is_readable' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\types.py:261: unused property 'is_readable' (60% confidence)"
+          "message": "unused method 'get_breakpoints' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1170: unused method 'get_breakpoints' (60% confidence)"
         },
         {
-          "line": 270,
+          "line": 1178,
           "column": null,
-          "message": "unused property 'is_writable' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\types.py:270: unused property 'is_writable' (60% confidence)"
+          "message": "unused method 'set_watchpoint' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1178: unused method 'set_watchpoint' (60% confidence)"
         },
         {
-          "line": 403,
+          "line": 1220,
           "column": null,
-          "message": "unused property 'display_type' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\types.py:403: unused property 'display_type' (60% confidence)"
+          "message": "unused method 'remove_watchpoint' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1220: unused method 'remove_watchpoint' (60% confidence)"
         },
         {
-          "line": 443,
+          "line": 1242,
           "column": null,
-          "message": "unused property 'has_code' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\types.py:443: unused property 'has_code' (60% confidence)"
+          "message": "unused method 'get_watchpoints' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1242: unused method 'get_watchpoints' (60% confidence)"
         },
         {
-          "line": 452,
+          "line": 1306,
           "column": null,
-          "message": "unused property 'summary' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\types.py:452: unused property 'summary' (60% confidence)"
+          "message": "unused method '_get_register_value' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1306: unused method '_get_register_value' (60% confidence)"
         },
         {
-          "line": 506,
+          "line": 1328,
           "column": null,
-          "message": "unused property 'summary' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\types.py:506: unused property 'summary' (60% confidence)"
+          "message": "unused method 'set_register' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1328: unused method 'set_register' (60% confidence)"
         },
         {
-          "line": 683,
+          "line": 1453,
           "column": null,
-          "message": "unused variable 'rflags' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\types.py:683: unused variable 'rflags' (60% confidence)"
+          "message": "unused method 'allocate_memory' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1453: unused method 'allocate_memory' (60% confidence)"
         },
         {
-          "line": 709,
+          "line": 1508,
           "column": null,
-          "message": "unused method 'get_gpr_dict' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\types.py:709: unused method 'get_gpr_dict' (60% confidence)"
+          "message": "unused method 'free_memory' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1508: unused method 'free_memory' (60% confidence)"
         },
         {
-          "line": 734,
+          "line": 1636,
           "column": null,
-          "message": "unused method 'get_segment_registers' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\types.py:734: unused method 'get_segment_registers' (60% confidence)"
+          "message": "unused method 'disassemble_at' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1636: unused method 'disassemble_at' (60% confidence)"
         },
         {
-          "line": 1005,
+          "line": 1681,
           "column": null,
-          "message": "unused property 'signature' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\types.py:1005: unused property 'signature' (60% confidence)"
+          "message": "unused method 'assemble_at' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1681: unused method 'assemble_at' (60% confidence)"
+        },
+        {
+          "line": 1774,
+          "column": null,
+          "message": "unused method 'scan_memory' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1774: unused method 'scan_memory' (60% confidence)"
+        },
+        {
+          "line": 1989,
+          "column": null,
+          "message": "unused method '_get_process_info' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1989: unused method '_get_process_info' (60% confidence)"
         }
       ]
     },
@@ -763,84 +397,6 @@
           "column": null,
           "message": "unused method 'set_data_type' (60% confidence)",
           "raw": "src\\intellicrack\\bridges\\ghidra.py:1443: unused method 'set_data_type' (60% confidence)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\credentials\\oauth.py",
-      "count": 12,
-      "findings": [
-        {
-          "line": 48,
-          "column": null,
-          "message": "unused class 'OAuthAuthorizationError' (60% confidence)",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:48: unused class 'OAuthAuthorizationError' (60% confidence)"
-        },
-        {
-          "line": 66,
-          "column": null,
-          "message": "unused class 'OAuthFlowType' (60% confidence)",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:66: unused class 'OAuthFlowType' (60% confidence)"
-        },
-        {
-          "line": 69,
-          "column": null,
-          "message": "unused variable 'AUTHORIZATION_CODE' (60% confidence)",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:69: unused variable 'AUTHORIZATION_CODE' (60% confidence)"
-        },
-        {
-          "line": 70,
-          "column": null,
-          "message": "unused variable 'CLIENT_CREDENTIALS' (60% confidence)",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:70: unused variable 'CLIENT_CREDENTIALS' (60% confidence)"
-        },
-        {
-          "line": 71,
-          "column": null,
-          "message": "unused variable 'DEVICE_CODE' (60% confidence)",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:71: unused variable 'DEVICE_CODE' (60% confidence)"
-        },
-        {
-          "line": 139,
-          "column": null,
-          "message": "unused property 'needs_refresh' (60% confidence)",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:139: unused property 'needs_refresh' (60% confidence)"
-        },
-        {
-          "line": 246,
-          "column": null,
-          "message": "unused method 'do_GET' (60% confidence)",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:246: unused method 'do_GET' (60% confidence)"
-        },
-        {
-          "line": 298,
-          "column": null,
-          "message": "unused method 'log_message' (60% confidence)",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:298: unused method 'log_message' (60% confidence)"
-        },
-        {
-          "line": 391,
-          "column": null,
-          "message": "unused variable 'TOKEN_KEYRING_PREFIX' (60% confidence)",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:391: unused variable 'TOKEN_KEYRING_PREFIX' (60% confidence)"
-        },
-        {
-          "line": 783,
-          "column": null,
-          "message": "unused method 'revoke_token' (60% confidence)",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:783: unused method 'revoke_token' (60% confidence)"
-        },
-        {
-          "line": 819,
-          "column": null,
-          "message": "unused method 'to_provider_credentials' (60% confidence)",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:819: unused method 'to_provider_credentials' (60% confidence)"
-        },
-        {
-          "line": 897,
-          "column": null,
-          "message": "unused function 'authorize_google' (60% confidence)",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:897: unused function 'authorize_google' (60% confidence)"
         }
       ]
     },
@@ -1001,84 +557,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\embedding\\win32_helper.py",
-      "count": 12,
-      "findings": [
-        {
-          "line": 48,
-          "column": null,
-          "message": "unused variable 'WM_SETFOCUS' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py:48: unused variable 'WM_SETFOCUS' (60% confidence)"
-        },
-        {
-          "line": 49,
-          "column": null,
-          "message": "unused variable 'WM_KILLFOCUS' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py:49: unused variable 'WM_KILLFOCUS' (60% confidence)"
-        },
-        {
-          "line": 50,
-          "column": null,
-          "message": "unused variable 'WM_SIZE' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py:50: unused variable 'WM_SIZE' (60% confidence)"
-        },
-        {
-          "line": 190,
-          "column": null,
-          "message": "unused method 'find_window' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py:190: unused method 'find_window' (60% confidence)"
-        },
-        {
-          "line": 279,
-          "column": null,
-          "message": "unused method 'find_child_window' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py:279: unused method 'find_child_window' (60% confidence)"
-        },
-        {
-          "line": 488,
-          "column": null,
-          "message": "unused method 'is_window_visible' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py:488: unused method 'is_window_visible' (60% confidence)"
-        },
-        {
-          "line": 545,
-          "column": null,
-          "message": "unused method 'send_message' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py:545: unused method 'send_message' (60% confidence)"
-        },
-        {
-          "line": 577,
-          "column": null,
-          "message": "unused method 'get_window_rect' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py:577: unused method 'get_window_rect' (60% confidence)"
-        },
-        {
-          "line": 591,
-          "column": null,
-          "message": "unused method 'get_client_rect' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py:591: unused method 'get_client_rect' (60% confidence)"
-        },
-        {
-          "line": 605,
-          "column": null,
-          "message": "unused method 'get_window_text' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py:605: unused method 'get_window_text' (60% confidence)"
-        },
-        {
-          "line": 622,
-          "column": null,
-          "message": "unused method 'get_class_name' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py:622: unused method 'get_class_name' (60% confidence)"
-        },
-        {
-          "line": 636,
-          "column": null,
-          "message": "unused method 'get_process_id' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py:636: unused method 'get_process_id' (60% confidence)"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\bridges\\radare2.py",
       "count": 11,
       "findings": [
@@ -1223,78 +701,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\stack_viewer.py",
-      "count": 11,
-      "findings": [
-        {
-          "line": 53,
-          "column": null,
-          "message": "unused variable 'frame_pointer' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:53: unused variable 'frame_pointer' (60% confidence)"
-        },
-        {
-          "line": 54,
-          "column": null,
-          "message": "unused variable 'stack_pointer' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:54: unused variable 'stack_pointer' (60% confidence)"
-        },
-        {
-          "line": 57,
-          "column": null,
-          "message": "unused class 'StackDataSource' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:57: unused class 'StackDataSource' (60% confidence)"
-        },
-        {
-          "line": 83,
-          "column": null,
-          "message": "unused method 'get_source_name' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:83: unused method 'get_source_name' (60% confidence)"
-        },
-        {
-          "line": 155,
-          "column": null,
-          "message": "unused method 'get_source_name' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:155: unused method 'get_source_name' (60% confidence)"
-        },
-        {
-          "line": 236,
-          "column": null,
-          "message": "unused method 'get_source_name' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:236: unused method 'get_source_name' (60% confidence)"
-        },
-        {
-          "line": 369,
-          "column": null,
-          "message": "unused attribute '_auto_refresh' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:369: unused attribute '_auto_refresh' (60% confidence)"
-        },
-        {
-          "line": 457,
-          "column": null,
-          "message": "unused attribute '_auto_refresh' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:457: unused attribute '_auto_refresh' (60% confidence)"
-        },
-        {
-          "line": 516,
-          "column": null,
-          "message": "unused method 'set_x64dbg_bridge' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:516: unused method 'set_x64dbg_bridge' (60% confidence)"
-        },
-        {
-          "line": 527,
-          "column": null,
-          "message": "unused method 'set_frida_bridge' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:527: unused method 'set_frida_bridge' (60% confidence)"
-        },
-        {
-          "line": 538,
-          "column": null,
-          "message": "unused method 'add_source' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:538: unused method 'add_source' (60% confidence)"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\bridges\\binary.py",
       "count": 10,
       "findings": [
@@ -1361,134 +767,68 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\core\\process_manager.py",
+      "path": "src\\intellicrack\\credentials\\oauth.py",
       "count": 10,
       "findings": [
         {
-          "line": 45,
+          "line": 48,
           "column": null,
-          "message": "unused variable 'ASYNC_SUBPROCESS' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\process_manager.py:45: unused variable 'ASYNC_SUBPROCESS' (60% confidence)"
+          "message": "unused class 'OAuthAuthorizationError' (60% confidence)",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:48: unused class 'OAuthAuthorizationError' (60% confidence)"
         },
         {
-          "line": 58,
+          "line": 66,
           "column": null,
-          "message": "unused variable 'registered_at' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\process_manager.py:58: unused variable 'registered_at' (60% confidence)"
+          "message": "unused class 'OAuthFlowType' (60% confidence)",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:66: unused class 'OAuthFlowType' (60% confidence)"
         },
         {
-          "line": 162,
+          "line": 69,
           "column": null,
-          "message": "unused method 'reset_instance' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\process_manager.py:162: unused method 'reset_instance' (60% confidence)"
+          "message": "unused variable 'AUTHORIZATION_CODE' (60% confidence)",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:69: unused variable 'AUTHORIZATION_CODE' (60% confidence)"
         },
         {
-          "line": 312,
+          "line": 70,
           "column": null,
-          "message": "unused method '_terminate_process_sync' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\process_manager.py:312: unused method '_terminate_process_sync' (60% confidence)"
+          "message": "unused variable 'CLIENT_CREDENTIALS' (60% confidence)",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:70: unused variable 'CLIENT_CREDENTIALS' (60% confidence)"
         },
         {
-          "line": 378,
+          "line": 71,
           "column": null,
-          "message": "unused method '_wait_or_kill_sync' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\process_manager.py:378: unused method '_wait_or_kill_sync' (60% confidence)"
-        },
-        {
-          "line": 474,
-          "column": null,
-          "message": "unused method 'get_all_tracked' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\process_manager.py:474: unused method 'get_all_tracked' (60% confidence)"
-        },
-        {
-          "line": 483,
-          "column": null,
-          "message": "unused method 'get_running_processes' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\process_manager.py:483: unused method 'get_running_processes' (60% confidence)"
-        },
-        {
-          "line": 657,
-          "column": null,
-          "message": "unused method 'is_shutdown_requested' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\process_manager.py:657: unused method 'is_shutdown_requested' (60% confidence)"
-        },
-        {
-          "line": 665,
-          "column": null,
-          "message": "unused method 'clear_shutdown_request' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\process_manager.py:665: unused method 'clear_shutdown_request' (60% confidence)"
-        },
-        {
-          "line": 932,
-          "column": null,
-          "message": "unused method '_terminate_windows_process' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\process_manager.py:932: unused method '_terminate_windows_process' (60% confidence)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\resources\\font_manager.py",
-      "count": 10,
-      "findings": [
-        {
-          "line": 24,
-          "column": null,
-          "message": "unused variable 'DEFAULT_CODE_FONT' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\font_manager.py:24: unused variable 'DEFAULT_CODE_FONT' (60% confidence)"
-        },
-        {
-          "line": 25,
-          "column": null,
-          "message": "unused variable 'DEFAULT_UI_FONT' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\font_manager.py:25: unused variable 'DEFAULT_UI_FONT' (60% confidence)"
-        },
-        {
-          "line": 76,
-          "column": null,
-          "message": "unused method 'reset_instance' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\font_manager.py:76: unused method 'reset_instance' (60% confidence)"
-        },
-        {
-          "line": 220,
-          "column": null,
-          "message": "unused method 'get_code_font_bold' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\font_manager.py:220: unused method 'get_code_font_bold' (60% confidence)"
-        },
-        {
-          "line": 250,
-          "column": null,
-          "message": "unused method 'get_ui_font_bold' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\font_manager.py:250: unused method 'get_ui_font_bold' (60% confidence)"
-        },
-        {
-          "line": 263,
-          "column": null,
-          "message": "unused method 'get_heading_font' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\font_manager.py:263: unused method 'get_heading_font' (60% confidence)"
-        },
-        {
-          "line": 276,
-          "column": null,
-          "message": "unused property 'code_font_family' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\font_manager.py:276: unused property 'code_font_family' (60% confidence)"
-        },
-        {
-          "line": 287,
-          "column": null,
-          "message": "unused property 'ui_font_family' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\font_manager.py:287: unused property 'ui_font_family' (60% confidence)"
+          "message": "unused variable 'DEVICE_CODE' (60% confidence)",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:71: unused variable 'DEVICE_CODE' (60% confidence)"
         },
         {
           "line": 298,
           "column": null,
-          "message": "unused property 'loaded_families' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\font_manager.py:298: unused property 'loaded_families' (60% confidence)"
+          "message": "unused method 'log_message' (60% confidence)",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:298: unused method 'log_message' (60% confidence)"
         },
         {
-          "line": 315,
+          "line": 391,
           "column": null,
-          "message": "unused method 'get_font_info' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\font_manager.py:315: unused method 'get_font_info' (60% confidence)"
+          "message": "unused variable 'TOKEN_KEYRING_PREFIX' (60% confidence)",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:391: unused variable 'TOKEN_KEYRING_PREFIX' (60% confidence)"
+        },
+        {
+          "line": 783,
+          "column": null,
+          "message": "unused method 'revoke_token' (60% confidence)",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:783: unused method 'revoke_token' (60% confidence)"
+        },
+        {
+          "line": 819,
+          "column": null,
+          "message": "unused method 'to_provider_credentials' (60% confidence)",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:819: unused method 'to_provider_credentials' (60% confidence)"
+        },
+        {
+          "line": 897,
+          "column": null,
+          "message": "unused function 'authorize_google' (60% confidence)",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:897: unused function 'authorize_google' (60% confidence)"
         }
       ]
     },
@@ -1613,6 +953,114 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\bridges\\base.py",
+      "count": 8,
+      "findings": [
+        {
+          "line": 70,
+          "column": null,
+          "message": "unused variable 'bytes_str' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\base.py:70: unused variable 'bytes_str' (60% confidence)"
+        },
+        {
+          "line": 88,
+          "column": null,
+          "message": "unused variable 'matched_bytes' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\base.py:88: unused variable 'matched_bytes' (60% confidence)"
+        },
+        {
+          "line": 110,
+          "column": null,
+          "message": "unused variable 'frame_pointer' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\base.py:110: unused variable 'frame_pointer' (60% confidence)"
+        },
+        {
+          "line": 111,
+          "column": null,
+          "message": "unused variable 'stack_pointer' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\base.py:111: unused variable 'stack_pointer' (60% confidence)"
+        },
+        {
+          "line": 163,
+          "column": null,
+          "message": "unused method 'has_capability' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\base.py:163: unused method 'has_capability' (60% confidence)"
+        },
+        {
+          "line": 213,
+          "column": null,
+          "message": "unused variable 'binary_loaded' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\base.py:213: unused variable 'binary_loaded' (60% confidence)"
+        },
+        {
+          "line": 219,
+          "column": null,
+          "message": "unused method 'is_ready' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\base.py:219: unused method 'is_ready' (60% confidence)"
+        },
+        {
+          "line": 227,
+          "column": null,
+          "message": "unused method 'clear_error' (60% confidence)",
+          "raw": "src\\intellicrack\\bridges\\base.py:227: unused method 'clear_error' (60% confidence)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\process_manager.py",
+      "count": 8,
+      "findings": [
+        {
+          "line": 45,
+          "column": null,
+          "message": "unused variable 'ASYNC_SUBPROCESS' (60% confidence)",
+          "raw": "src\\intellicrack\\core\\process_manager.py:45: unused variable 'ASYNC_SUBPROCESS' (60% confidence)"
+        },
+        {
+          "line": 58,
+          "column": null,
+          "message": "unused variable 'registered_at' (60% confidence)",
+          "raw": "src\\intellicrack\\core\\process_manager.py:58: unused variable 'registered_at' (60% confidence)"
+        },
+        {
+          "line": 378,
+          "column": null,
+          "message": "unused method '_wait_or_kill_sync' (60% confidence)",
+          "raw": "src\\intellicrack\\core\\process_manager.py:378: unused method '_wait_or_kill_sync' (60% confidence)"
+        },
+        {
+          "line": 474,
+          "column": null,
+          "message": "unused method 'get_all_tracked' (60% confidence)",
+          "raw": "src\\intellicrack\\core\\process_manager.py:474: unused method 'get_all_tracked' (60% confidence)"
+        },
+        {
+          "line": 483,
+          "column": null,
+          "message": "unused method 'get_running_processes' (60% confidence)",
+          "raw": "src\\intellicrack\\core\\process_manager.py:483: unused method 'get_running_processes' (60% confidence)"
+        },
+        {
+          "line": 657,
+          "column": null,
+          "message": "unused method 'is_shutdown_requested' (60% confidence)",
+          "raw": "src\\intellicrack\\core\\process_manager.py:657: unused method 'is_shutdown_requested' (60% confidence)"
+        },
+        {
+          "line": 665,
+          "column": null,
+          "message": "unused method 'clear_shutdown_request' (60% confidence)",
+          "raw": "src\\intellicrack\\core\\process_manager.py:665: unused method 'clear_shutdown_request' (60% confidence)"
+        },
+        {
+          "line": 932,
+          "column": null,
+          "message": "unused method '_terminate_windows_process' (60% confidence)",
+          "raw": "src\\intellicrack\\core\\process_manager.py:932: unused method '_terminate_windows_process' (60% confidence)"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\core\\tools.py",
       "count": 8,
       "findings": [
@@ -1663,60 +1111,6 @@
           "column": null,
           "message": "unused method 'ensure_tool_ready' (60% confidence)",
           "raw": "src\\intellicrack\\core\\tools.py:453: unused method 'ensure_tool_ready' (60% confidence)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\local_transformers.py",
-      "count": 8,
-      "findings": [
-        {
-          "line": 77,
-          "column": null,
-          "message": "unused class 'LocalTransformersProvider' (60% confidence)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:77: unused class 'LocalTransformersProvider' (60% confidence)"
-        },
-        {
-          "line": 130,
-          "column": null,
-          "message": "unused property 'xpu_available' (60% confidence)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:130: unused property 'xpu_available' (60% confidence)"
-        },
-        {
-          "line": 139,
-          "column": null,
-          "message": "unused property 'is_b580_detected' (60% confidence)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:139: unused property 'is_b580_detected' (60% confidence)"
-        },
-        {
-          "line": 148,
-          "column": null,
-          "message": "unused property 'current_model_id' (60% confidence)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:148: unused property 'current_model_id' (60% confidence)"
-        },
-        {
-          "line": 166,
-          "column": null,
-          "message": "unused attribute '_credentials' (60% confidence)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:166: unused attribute '_credentials' (60% confidence)"
-        },
-        {
-          "line": 968,
-          "column": null,
-          "message": "unused method 'get_device_info' (60% confidence)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:968: unused method 'get_device_info' (60% confidence)"
-        },
-        {
-          "line": 1000,
-          "column": null,
-          "message": "unused method 'unload_model' (60% confidence)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:1000: unused method 'unload_model' (60% confidence)"
-        },
-        {
-          "line": 1013,
-          "column": null,
-          "message": "unused method 'clear_cache' (60% confidence)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:1013: unused method 'clear_cache' (60% confidence)"
         }
       ]
     },
@@ -1775,6 +1169,60 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\panels\\stack_viewer.py",
+      "count": 8,
+      "findings": [
+        {
+          "line": 53,
+          "column": null,
+          "message": "unused variable 'frame_pointer' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:53: unused variable 'frame_pointer' (60% confidence)"
+        },
+        {
+          "line": 54,
+          "column": null,
+          "message": "unused variable 'stack_pointer' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:54: unused variable 'stack_pointer' (60% confidence)"
+        },
+        {
+          "line": 57,
+          "column": null,
+          "message": "unused class 'StackDataSource' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:57: unused class 'StackDataSource' (60% confidence)"
+        },
+        {
+          "line": 369,
+          "column": null,
+          "message": "unused attribute '_auto_refresh' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:369: unused attribute '_auto_refresh' (60% confidence)"
+        },
+        {
+          "line": 457,
+          "column": null,
+          "message": "unused attribute '_auto_refresh' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:457: unused attribute '_auto_refresh' (60% confidence)"
+        },
+        {
+          "line": 516,
+          "column": null,
+          "message": "unused method 'set_x64dbg_bridge' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:516: unused method 'set_x64dbg_bridge' (60% confidence)"
+        },
+        {
+          "line": 527,
+          "column": null,
+          "message": "unused method 'set_frida_bridge' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:527: unused method 'set_frida_bridge' (60% confidence)"
+        },
+        {
+          "line": 538,
+          "column": null,
+          "message": "unused method 'add_source' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:538: unused method 'add_source' (60% confidence)"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\providers\\registry.py",
       "count": 7,
       "findings": [
@@ -1819,54 +1267,6 @@
           "column": null,
           "message": "unused function 'get_active_provider' (60% confidence)",
           "raw": "src\\intellicrack\\providers\\registry.py:328: unused function 'get_active_provider' (60% confidence)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\resources\\icon_manager.py",
-      "count": 7,
-      "findings": [
-        {
-          "line": 202,
-          "column": null,
-          "message": "unused method 'reset_instance' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\icon_manager.py:202: unused method 'reset_instance' (60% confidence)"
-        },
-        {
-          "line": 374,
-          "column": null,
-          "message": "unused method 'get_status_icon' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\icon_manager.py:374: unused method 'get_status_icon' (60% confidence)"
-        },
-        {
-          "line": 386,
-          "column": null,
-          "message": "unused method 'get_status_pixmap' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\icon_manager.py:386: unused method 'get_status_pixmap' (60% confidence)"
-        },
-        {
-          "line": 399,
-          "column": null,
-          "message": "unused method 'clear_cache' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\icon_manager.py:399: unused method 'clear_cache' (60% confidence)"
-        },
-        {
-          "line": 410,
-          "column": null,
-          "message": "unused method 'preload_icons' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\icon_manager.py:410: unused method 'preload_icons' (60% confidence)"
-        },
-        {
-          "line": 432,
-          "column": null,
-          "message": "unused method 'list_available_icons' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\icon_manager.py:432: unused method 'list_available_icons' (60% confidence)"
-        },
-        {
-          "line": 441,
-          "column": null,
-          "message": "unused method 'icon_exists' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\icon_manager.py:441: unused method 'icon_exists' (60% confidence)"
         }
       ]
     },
@@ -1993,48 +1393,6 @@
           "column": null,
           "message": "unused method 'activate_binary_by_name' (60% confidence)",
           "raw": "src\\intellicrack\\core\\orchestrator.py:1265: unused method 'activate_binary_by_name' (60% confidence)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\core\\script_gen.py",
-      "count": 6,
-      "findings": [
-        {
-          "line": 301,
-          "column": null,
-          "message": "unused method 'add_execution_result' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\script_gen.py:301: unused method 'add_execution_result' (60% confidence)"
-        },
-        {
-          "line": 612,
-          "column": null,
-          "message": "unused method 'ensure_script_saved' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\script_gen.py:612: unused method 'ensure_script_saved' (60% confidence)"
-        },
-        {
-          "line": 623,
-          "column": null,
-          "message": "unused method 'reload_script' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\script_gen.py:623: unused method 'reload_script' (60% confidence)"
-        },
-        {
-          "line": 738,
-          "column": null,
-          "message": "unused class 'ScriptGenerator' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\script_gen.py:738: unused class 'ScriptGenerator' (60% confidence)"
-        },
-        {
-          "line": 748,
-          "column": null,
-          "message": "unused method 'prepare_ai_prompt' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\script_gen.py:748: unused method 'prepare_ai_prompt' (60% confidence)"
-        },
-        {
-          "line": 777,
-          "column": null,
-          "message": "unused method 'generate_keygen_from_analysis' (60% confidence)",
-          "raw": "src\\intellicrack\\core\\script_gen.py:777: unused method 'generate_keygen_from_analysis' (60% confidence)"
         }
       ]
     },
@@ -2249,86 +1607,80 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\highlighter.py",
+      "path": "src\\intellicrack\\ui\\resources\\font_manager.py",
       "count": 6,
       "findings": [
         {
-          "line": 209,
+          "line": 24,
           "column": null,
-          "message": "unused method 'highlightBlock' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:209: unused method 'highlightBlock' (60% confidence)"
+          "message": "unused variable 'DEFAULT_CODE_FONT' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\resources\\font_manager.py:24: unused variable 'DEFAULT_CODE_FONT' (60% confidence)"
         },
         {
-          "line": 552,
+          "line": 25,
           "column": null,
-          "message": "unused method 'highlightBlock' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:552: unused method 'highlightBlock' (60% confidence)"
+          "message": "unused variable 'DEFAULT_UI_FONT' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\resources\\font_manager.py:25: unused variable 'DEFAULT_UI_FONT' (60% confidence)"
         },
         {
-          "line": 691,
+          "line": 220,
           "column": null,
-          "message": "unused attribute '_triple_quote_format' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:691: unused attribute '_triple_quote_format' (60% confidence)"
+          "message": "unused method 'get_code_font_bold' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\resources\\font_manager.py:220: unused method 'get_code_font_bold' (60% confidence)"
         },
         {
-          "line": 737,
+          "line": 250,
           "column": null,
-          "message": "unused attribute '_triple_quote_format' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:737: unused attribute '_triple_quote_format' (60% confidence)"
+          "message": "unused method 'get_ui_font_bold' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\resources\\font_manager.py:250: unused method 'get_ui_font_bold' (60% confidence)"
         },
         {
-          "line": 755,
+          "line": 263,
           "column": null,
-          "message": "unused method 'highlightBlock' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:755: unused method 'highlightBlock' (60% confidence)"
+          "message": "unused method 'get_heading_font' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\resources\\font_manager.py:263: unused method 'get_heading_font' (60% confidence)"
         },
         {
-          "line": 915,
+          "line": 315,
           "column": null,
-          "message": "unused method 'highlightBlock' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:915: unused method 'highlightBlock' (60% confidence)"
+          "message": "unused method 'get_font_info' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\resources\\font_manager.py:315: unused method 'get_font_info' (60% confidence)"
         }
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\resources\\theme_manager.py",
-      "count": 6,
+      "path": "src\\intellicrack\\providers\\local_transformers.py",
+      "count": 5,
       "findings": [
         {
-          "line": 1015,
+          "line": 78,
           "column": null,
-          "message": "unused method 'reset_instance' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\theme_manager.py:1015: unused method 'reset_instance' (60% confidence)"
+          "message": "unused class 'LocalTransformersProvider' (60% confidence)",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:78: unused class 'LocalTransformersProvider' (60% confidence)"
         },
         {
-          "line": 1108,
+          "line": 167,
           "column": null,
-          "message": "unused method 'toggle_theme' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\theme_manager.py:1108: unused method 'toggle_theme' (60% confidence)"
+          "message": "unused attribute '_credentials' (60% confidence)",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:167: unused attribute '_credentials' (60% confidence)"
         },
         {
-          "line": 1120,
+          "line": 969,
           "column": null,
-          "message": "unused property 'current_theme' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\theme_manager.py:1120: unused property 'current_theme' (60% confidence)"
+          "message": "unused method 'get_device_info' (60% confidence)",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:969: unused method 'get_device_info' (60% confidence)"
         },
         {
-          "line": 1129,
+          "line": 1001,
           "column": null,
-          "message": "unused method 'is_dark_theme' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\theme_manager.py:1129: unused method 'is_dark_theme' (60% confidence)"
+          "message": "unused method 'unload_model' (60% confidence)",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:1001: unused method 'unload_model' (60% confidence)"
         },
         {
-          "line": 1137,
+          "line": 1014,
           "column": null,
           "message": "unused method 'clear_cache' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\theme_manager.py:1137: unused method 'clear_cache' (60% confidence)"
-        },
-        {
-          "line": 1143,
-          "column": null,
-          "message": "unused method 'get_available_themes' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\resources\\theme_manager.py:1143: unused method 'get_available_themes' (60% confidence)"
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:1014: unused method 'clear_cache' (60% confidence)"
         }
       ]
     },
@@ -2337,34 +1689,34 @@
       "count": 5,
       "findings": [
         {
-          "line": 105,
-          "column": null,
-          "message": "unused variable 'use_flash_attention' (60% confidence)",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:105: unused variable 'use_flash_attention' (60% confidence)"
-        },
-        {
           "line": 106,
           "column": null,
-          "message": "unused variable 'quantization_config' (60% confidence)",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:106: unused variable 'quantization_config' (60% confidence)"
+          "message": "unused variable 'use_flash_attention' (60% confidence)",
+          "raw": "src\\intellicrack\\providers\\model_loader.py:106: unused variable 'use_flash_attention' (60% confidence)"
         },
         {
-          "line": 198,
+          "line": 107,
+          "column": null,
+          "message": "unused variable 'quantization_config' (60% confidence)",
+          "raw": "src\\intellicrack\\providers\\model_loader.py:107: unused variable 'quantization_config' (60% confidence)"
+        },
+        {
+          "line": 199,
           "column": null,
           "message": "unused method 'remove' (60% confidence)",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:198: unused method 'remove' (60% confidence)"
+          "raw": "src\\intellicrack\\providers\\model_loader.py:199: unused method 'remove' (60% confidence)"
         },
         {
-          "line": 228,
+          "line": 229,
           "column": null,
           "message": "unused method 'get_memory_usage' (60% confidence)",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:228: unused method 'get_memory_usage' (60% confidence)"
+          "raw": "src\\intellicrack\\providers\\model_loader.py:229: unused method 'get_memory_usage' (60% confidence)"
         },
         {
-          "line": 770,
+          "line": 771,
           "column": null,
           "message": "unused function 'set_global_cache_size' (60% confidence)",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:770: unused function 'set_global_cache_size' (60% confidence)"
+          "raw": "src\\intellicrack\\providers\\model_loader.py:771: unused function 'set_global_cache_size' (60% confidence)"
         }
       ]
     },
@@ -2401,6 +1753,42 @@
           "column": null,
           "message": "unused method 'get_current_script' (60% confidence)",
           "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:817: unused method 'get_current_script' (60% confidence)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\resources\\icon_manager.py",
+      "count": 5,
+      "findings": [
+        {
+          "line": 374,
+          "column": null,
+          "message": "unused method 'get_status_icon' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\resources\\icon_manager.py:374: unused method 'get_status_icon' (60% confidence)"
+        },
+        {
+          "line": 386,
+          "column": null,
+          "message": "unused method 'get_status_pixmap' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\resources\\icon_manager.py:386: unused method 'get_status_pixmap' (60% confidence)"
+        },
+        {
+          "line": 399,
+          "column": null,
+          "message": "unused method 'clear_cache' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\resources\\icon_manager.py:399: unused method 'clear_cache' (60% confidence)"
+        },
+        {
+          "line": 410,
+          "column": null,
+          "message": "unused method 'preload_icons' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\resources\\icon_manager.py:410: unused method 'preload_icons' (60% confidence)"
+        },
+        {
+          "line": 441,
+          "column": null,
+          "message": "unused method 'icon_exists' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\resources\\icon_manager.py:441: unused method 'icon_exists' (60% confidence)"
         }
       ]
     },
@@ -2461,6 +1849,36 @@
           "column": null,
           "message": "unused function 'validate_and_convert' (60% confidence)",
           "raw": "src\\intellicrack\\bridges\\schemas.py:624: unused function 'validate_and_convert' (60% confidence)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\script_gen.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": 301,
+          "column": null,
+          "message": "unused method 'add_execution_result' (60% confidence)",
+          "raw": "src\\intellicrack\\core\\script_gen.py:301: unused method 'add_execution_result' (60% confidence)"
+        },
+        {
+          "line": 612,
+          "column": null,
+          "message": "unused method 'ensure_script_saved' (60% confidence)",
+          "raw": "src\\intellicrack\\core\\script_gen.py:612: unused method 'ensure_script_saved' (60% confidence)"
+        },
+        {
+          "line": 623,
+          "column": null,
+          "message": "unused method 'reload_script' (60% confidence)",
+          "raw": "src\\intellicrack\\core\\script_gen.py:623: unused method 'reload_script' (60% confidence)"
+        },
+        {
+          "line": 738,
+          "column": null,
+          "message": "unused class 'ScriptGenerator' (60% confidence)",
+          "raw": "src\\intellicrack\\core\\script_gen.py:738: unused class 'ScriptGenerator' (60% confidence)"
         }
       ]
     },
@@ -2555,36 +1973,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\providers\\ollama.py",
-      "count": 4,
-      "findings": [
-        {
-          "line": 84,
-          "column": null,
-          "message": "unused property 'local_available' (60% confidence)",
-          "raw": "src\\intellicrack\\providers\\ollama.py:84: unused property 'local_available' (60% confidence)"
-        },
-        {
-          "line": 93,
-          "column": null,
-          "message": "unused property 'cloud_available' (60% confidence)",
-          "raw": "src\\intellicrack\\providers\\ollama.py:93: unused property 'cloud_available' (60% confidence)"
-        },
-        {
-          "line": 124,
-          "column": null,
-          "message": "unused attribute '_credentials' (60% confidence)",
-          "raw": "src\\intellicrack\\providers\\ollama.py:124: unused attribute '_credentials' (60% confidence)"
-        },
-        {
-          "line": 695,
-          "column": null,
-          "message": "unused method 'pull_model' (60% confidence)",
-          "raw": "src\\intellicrack\\providers\\ollama.py:695: unused method 'pull_model' (60% confidence)"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\panels\\process_panel.py",
       "count": 4,
       "findings": [
@@ -2639,6 +2027,30 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\core\\types.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 683,
+          "column": null,
+          "message": "unused variable 'rflags' (60% confidence)",
+          "raw": "src\\intellicrack\\core\\types.py:683: unused variable 'rflags' (60% confidence)"
+        },
+        {
+          "line": 709,
+          "column": null,
+          "message": "unused method 'get_gpr_dict' (60% confidence)",
+          "raw": "src\\intellicrack\\core\\types.py:709: unused method 'get_gpr_dict' (60% confidence)"
+        },
+        {
+          "line": 734,
+          "column": null,
+          "message": "unused method 'get_segment_registers' (60% confidence)",
+          "raw": "src\\intellicrack\\core\\types.py:734: unused method 'get_segment_registers' (60% confidence)"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\providers\\openai.py",
       "count": 3,
       "findings": [
@@ -2667,22 +2079,22 @@
       "count": 3,
       "findings": [
         {
-          "line": 178,
+          "line": 183,
           "column": null,
           "message": "unused attribute 'dwFlags' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\embedding\\embedded_widget.py:178: unused attribute 'dwFlags' (60% confidence)"
+          "raw": "src\\intellicrack\\ui\\embedding\\embedded_widget.py:183: unused attribute 'dwFlags' (60% confidence)"
         },
         {
-          "line": 179,
+          "line": 184,
           "column": null,
           "message": "unused attribute 'wShowWindow' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\embedding\\embedded_widget.py:179: unused attribute 'wShowWindow' (60% confidence)"
+          "raw": "src\\intellicrack\\ui\\embedding\\embedded_widget.py:184: unused attribute 'wShowWindow' (60% confidence)"
         },
         {
-          "line": 375,
+          "line": 380,
           "column": null,
           "message": "unused method 'get_loaded_file' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\embedding\\embedded_widget.py:375: unused method 'get_loaded_file' (60% confidence)"
+          "raw": "src\\intellicrack\\ui\\embedding\\embedded_widget.py:380: unused method 'get_loaded_file' (60% confidence)"
         }
       ]
     },
@@ -2707,6 +2119,30 @@
           "column": null,
           "message": "unused method 'set_executable_path' (60% confidence)",
           "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py:254: unused method 'set_executable_path' (60% confidence)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\embedding\\win32_helper.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 48,
+          "column": null,
+          "message": "unused variable 'WM_SETFOCUS' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py:48: unused variable 'WM_SETFOCUS' (60% confidence)"
+        },
+        {
+          "line": 49,
+          "column": null,
+          "message": "unused variable 'WM_KILLFOCUS' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py:49: unused variable 'WM_KILLFOCUS' (60% confidence)"
+        },
+        {
+          "line": 50,
+          "column": null,
+          "message": "unused variable 'WM_SIZE' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py:50: unused variable 'WM_SIZE' (60% confidence)"
         }
       ]
     },
@@ -2783,6 +2219,30 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\resources\\theme_manager.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 1108,
+          "column": null,
+          "message": "unused method 'toggle_theme' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\resources\\theme_manager.py:1108: unused method 'toggle_theme' (60% confidence)"
+        },
+        {
+          "line": 1129,
+          "column": null,
+          "message": "unused method 'is_dark_theme' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\resources\\theme_manager.py:1129: unused method 'is_dark_theme' (60% confidence)"
+        },
+        {
+          "line": 1137,
+          "column": null,
+          "message": "unused method 'clear_cache' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\resources\\theme_manager.py:1137: unused method 'clear_cache' (60% confidence)"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\providers\\google.py",
       "count": 2,
       "findings": [
@@ -2801,6 +2261,24 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\providers\\ollama.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 124,
+          "column": null,
+          "message": "unused attribute '_credentials' (60% confidence)",
+          "raw": "src\\intellicrack\\providers\\ollama.py:124: unused attribute '_credentials' (60% confidence)"
+        },
+        {
+          "line": 695,
+          "column": null,
+          "message": "unused method 'pull_model' (60% confidence)",
+          "raw": "src\\intellicrack\\providers\\ollama.py:695: unused method 'pull_model' (60% confidence)"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\providers\\openrouter.py",
       "count": 2,
       "findings": [
@@ -2815,6 +2293,24 @@
           "column": null,
           "message": "unused method 'get_generation' (60% confidence)",
           "raw": "src\\intellicrack\\providers\\openrouter.py:621: unused method 'get_generation' (60% confidence)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\highlighter.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 691,
+          "column": null,
+          "message": "unused attribute '_triple_quote_format' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\highlighter.py:691: unused attribute '_triple_quote_format' (60% confidence)"
+        },
+        {
+          "line": 737,
+          "column": null,
+          "message": "unused attribute '_triple_quote_format' (60% confidence)",
+          "raw": "src\\intellicrack\\ui\\highlighter.py:737: unused attribute '_triple_quote_format' (60% confidence)"
         }
       ]
     },
@@ -3013,18 +2509,6 @@
           "column": null,
           "message": "unused method 'set_focus_input' (60% confidence)",
           "raw": "src\\intellicrack\\ui\\chat.py:526: unused method 'set_focus_input' (60% confidence)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\confirmation_dialog.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 74,
-          "column": null,
-          "message": "unused property 'remember_similar' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\confirmation_dialog.py:74: unused property 'remember_similar' (60% confidence)"
         }
       ]
     },

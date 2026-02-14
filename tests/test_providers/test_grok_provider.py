@@ -29,8 +29,8 @@ class TestGrokModelListing:
     """
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_list_models_returns_non_empty_list(
-        self,
         grok_provider: GrokProvider,
     ) -> None:
         """Test list_models returns at least one model.
@@ -44,8 +44,8 @@ class TestGrokModelListing:
         assert len(models) > 0, "Expected at least one model from Grok API"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_list_models_returns_model_info_instances(
-        self,
         grok_provider: GrokProvider,
     ) -> None:
         """Test all returned items are ModelInfo instances."""
@@ -55,8 +55,8 @@ class TestGrokModelListing:
             assert isinstance(model, ModelInfo), f"Expected ModelInfo, got {type(model)}"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_model_info_has_valid_id(
-        self,
         grok_provider: GrokProvider,
     ) -> None:
         """Test all models have non-empty string IDs."""
@@ -67,8 +67,8 @@ class TestGrokModelListing:
             assert len(model.id) > 0, "Model ID should not be empty"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_model_info_has_valid_name(
-        self,
         grok_provider: GrokProvider,
     ) -> None:
         """Test all models have non-empty string names."""
@@ -79,8 +79,8 @@ class TestGrokModelListing:
             assert len(model.name) > 0, "Model name should not be empty"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_model_info_has_correct_provider(
-        self,
         grok_provider: GrokProvider,
     ) -> None:
         """Test all models report GROK as provider."""
@@ -90,8 +90,8 @@ class TestGrokModelListing:
             assert model.provider == ProviderName.GROK, f"Expected GROK provider, got {model.provider}"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_model_info_has_positive_context_window(
-        self,
         grok_provider: GrokProvider,
     ) -> None:
         """Test all models have positive context window size."""
@@ -102,8 +102,8 @@ class TestGrokModelListing:
             assert model.context_window > 0, f"Model {model.id} has invalid context_window: {model.context_window}"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_model_info_has_boolean_capabilities(
-        self,
         grok_provider: GrokProvider,
     ) -> None:
         """Test all models have boolean capability flags."""
@@ -115,8 +115,8 @@ class TestGrokModelListing:
             assert isinstance(model.supports_streaming, bool), f"Expected bool supports_streaming, got {type(model.supports_streaming)}"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_multiple_calls_return_consistent_results(
-        self,
         grok_provider: GrokProvider,
     ) -> None:
         """Test list_models returns consistent results across calls."""
@@ -134,23 +134,24 @@ class TestGrokConnection:
     """Tests for Grok provider connection handling."""
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_is_connected_after_connect(
-        self,
         grok_provider: GrokProvider,
     ) -> None:
         """Test provider reports connected after successful connection."""
         assert grok_provider.is_connected is True
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_provider_name_is_grok(
-        self,
         grok_provider: GrokProvider,
     ) -> None:
         """Test provider name property returns GROK."""
         assert grok_provider.name == ProviderName.GROK
 
     @pytest.mark.asyncio
-    async def test_connection_with_invalid_key_raises_error(self) -> None:
+    @staticmethod
+    async def test_connection_with_invalid_key_raises_error() -> None:
         """Test connection with invalid API key raises AuthenticationError."""
         provider = GrokProvider()
         invalid_creds = ProviderCredentials(api_key="xai-invalid-key-12345")
@@ -159,7 +160,8 @@ class TestGrokConnection:
             await provider.connect(invalid_creds)
 
     @pytest.mark.asyncio
-    async def test_connection_with_empty_key_raises_error(self) -> None:
+    @staticmethod
+    async def test_connection_with_empty_key_raises_error() -> None:
         """Test connection with empty API key raises AuthenticationError."""
         provider = GrokProvider()
         empty_creds = ProviderCredentials(api_key="")
@@ -168,7 +170,8 @@ class TestGrokConnection:
             await provider.connect(empty_creds)
 
     @pytest.mark.asyncio
-    async def test_connection_with_none_key_raises_error(self) -> None:
+    @staticmethod
+    async def test_connection_with_none_key_raises_error() -> None:
         """Test connection with None API key raises AuthenticationError."""
         provider = GrokProvider()
         none_creds = ProviderCredentials(api_key=None)
@@ -177,7 +180,8 @@ class TestGrokConnection:
             await provider.connect(none_creds)
 
     @pytest.mark.asyncio
-    async def test_list_models_without_connection_raises_error(self) -> None:
+    @staticmethod
+    async def test_list_models_without_connection_raises_error() -> None:
         """Test list_models raises error when not connected."""
         provider = GrokProvider()
 
@@ -185,8 +189,8 @@ class TestGrokConnection:
             await provider.list_models()
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_disconnect_clears_connection_state(
-        self,
         credential_loader,
         has_grok_key: bool,
     ) -> None:

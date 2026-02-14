@@ -211,6 +211,8 @@ D:\Intellicrack\tools\AdobeInjector\Source\GenP.v3.7.1\v3.7.1-Source\build.ps1:4
 
 D:\Intellicrack\tools\AdobeInjector\Source\GenP.v3.7.1\v3.7.1-Source\build.ps1:449:1: [Warning] File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
 
+D:\Intellicrack\tools\AdobeInjector\Source\GenP.v3.7.1\v3.7.1-Source\build.ps1:76:10: [Warning] The cmdlet 'Download-File' uses an unapproved verb. (PSUseApprovedVerbs)
+
 D:\Intellicrack\tools\AdobeInjector\Source\GenP.v3.7.1\v3.7.1-Source\build.ps1:215:1: [Information] Line has trailing whitespace (PSAvoidTrailingWhitespace)
 
 D:\Intellicrack\tools\AdobeInjector\Source\GenP.v3.7.1\v3.7.1-Source\build.ps1:229:1: [Information] Line has trailing whitespace (PSAvoidTrailingWhitespace)
@@ -236,8 +238,6 @@ D:\Intellicrack\tools\AdobeInjector\Source\GenP.v3.7.1\v3.7.1-Source\build.ps1:3
 D:\Intellicrack\tools\AdobeInjector\Source\GenP.v3.7.1\v3.7.1-Source\build.ps1:359:1: [Information] Line has trailing whitespace (PSAvoidTrailingWhitespace)
 
 D:\Intellicrack\tools\AdobeInjector\Source\GenP.v3.7.1\v3.7.1-Source\build.ps1:364:1: [Information] Line has trailing whitespace (PSAvoidTrailingWhitespace)
-
-D:\Intellicrack\tools\AdobeInjector\Source\GenP.v3.7.1\v3.7.1-Source\build.ps1:76:10: [Warning] The cmdlet 'Download-File' uses an unapproved verb. (PSUseApprovedVerbs)
 
 
 48 findings in D:\Intellicrack\CLI Coding\UpdateTools.ps1
@@ -378,8 +378,6 @@ D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbs
 
 D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1:110:10: [Warning] The cmdlet 'Compute-Lldb-PipInstall-Args' uses an unapproved verb. (PSUseApprovedVerbs)
 
-D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1:64:13: [Warning] The parameter 'ArgList' has been declared but not used. (PSReviewUnusedParameter)
-
 D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1:18:10: [Warning] The cmdlet 'Add-Lldb-Init-Args' uses a plural noun. A singular noun should be used instead. (PSUseSingularNouns)
 
 D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1:29:10: [Warning] The cmdlet 'Add-Lldb-Image-And-Args' uses a plural noun. A singular noun should be used instead. (PSUseSingularNouns)
@@ -393,6 +391,8 @@ D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbs
 D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1:96:10: [Warning] The cmdlet 'Compute-Lldb-Remote-Args' uses a plural noun. A singular noun should be used instead. (PSUseSingularNouns)
 
 D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1:110:10: [Warning] The cmdlet 'Compute-Lldb-PipInstall-Args' uses a plural noun. A singular noun should be used instead. (PSUseSingularNouns)
+
+D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1:64:13: [Warning] The parameter 'ArgList' has been declared but not used. (PSReviewUnusedParameter)
 
 
 9 findings in D:\Intellicrack\scripts\test_semgrep.ps1

@@ -17,25 +17,26 @@ from ..core.logging import get_logger
 
 
 try:
-    import torch
+    import torch as _torch
 except ImportError:
-    torch = None
+    _torch = None
 
 try:
     from transformers import AutoModelForCausalLM, AutoTokenizer
-except ImportError:
+except (ImportError, ValueError):
     AutoModelForCausalLM = None
     AutoTokenizer = None
 
 try:
     from transformers import BitsAndBytesConfig
-except ImportError:
+except (ImportError, ValueError):
     BitsAndBytesConfig = None
 
 from .xpu_utils import clear_xpu_cache, get_xpu_memory_info, initialize_xpu, is_xpu_available
 
 
 if TYPE_CHECKING:
+    import torch
     from transformers import PreTrainedModel, PreTrainedTokenizerBase
 
 
@@ -279,8 +280,8 @@ def _unload_model(loaded_model: LoadedModel) -> None:
         gc.collect()
 
         try:
-            if torch is not None and hasattr(torch, "xpu") and torch.xpu.is_available():
-                torch.xpu.empty_cache()
+            if _torch is not None and hasattr(_torch, "xpu") and _torch.xpu.is_available():
+                _torch.xpu.empty_cache()
         except Exception as inner_exc:
             _logger.debug("xpu_cache_clear_on_unload_failed", extra={"error": str(inner_exc)})
     except Exception as exc:
@@ -482,7 +483,7 @@ def load_model_for_xpu(
         RuntimeError: If model loading fails.
         ImportError: If required packages are not installed.
     """
-    if torch is None or AutoModelForCausalLM is None or AutoTokenizer is None:
+    if _torch is None or AutoModelForCausalLM is None or AutoTokenizer is None:
         raise ImportError(_ERR_MISSING_DEPS)
 
     if not is_xpu_available():
@@ -594,7 +595,7 @@ def load_model_for_cpu(
         RuntimeError: If model loading fails.
         ImportError: If required packages are not installed.
     """
-    if torch is None or AutoModelForCausalLM is None or AutoTokenizer is None:
+    if _torch is None or AutoModelForCausalLM is None or AutoTokenizer is None:
         raise ImportError(_ERR_MISSING_DEPS)
 
     dtype_str = config.dtype
@@ -608,7 +609,7 @@ def load_model_for_cpu(
     dtype_str = "float32" if config.dtype == "auto" else config.dtype
 
     torch_dtype = _get_torch_dtype(dtype_str)
-    device = torch.device("cpu")
+    device = _torch.device("cpu")
 
     start_time = time.perf_counter()
 
@@ -688,16 +689,16 @@ def _get_torch_dtype(dtype_str: str) -> torch.dtype:
     Raises:
         ImportError: If torch is not installed.
     """
-    if torch is None:
+    if _torch is None:
         raise ImportError(_ERR_MISSING_DEPS)
 
     dtype_map: dict[str, torch.dtype] = {
-        "float32": torch.float32,
-        "float16": torch.float16,
-        "bfloat16": torch.bfloat16,
-        "auto": torch.float16,
+        "float32": _torch.float32,
+        "float16": _torch.float16,
+        "bfloat16": _torch.bfloat16,
+        "auto": _torch.float16,
     }
-    return dtype_map.get(dtype_str, torch.float32)
+    return dtype_map.get(dtype_str, _torch.float32)
 
 
 def _get_quantization_config(dtype_str: str) -> object:
@@ -739,12 +740,12 @@ def _get_quantization_config(dtype_str: str) -> object:
         return BitsAndBytesConfig(load_in_8bit=True)
 
     if dtype_str == "int4":
-        if torch is None:
+        if _torch is None:
             raise ImportError(_ERR_MISSING_DEPS)
 
         return BitsAndBytesConfig(
             load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.float16,
+            bnb_4bit_compute_dtype=_torch.float16,
             bnb_4bit_use_double_quant=True,
         )
 

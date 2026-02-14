@@ -7,8 +7,10 @@ code coverage and usage analysis requirements.
 
 from __future__ import annotations
 
+import ctypes
 import os
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -16,7 +18,12 @@ from intellicrack.bridges.x64dbg import X64DbgBridge
 from intellicrack.core.types import BreakpointInfo, ToolError
 
 
-# Mark all tests as requiring Windows if they use ctypes features
+_ADDR_BREAKPOINT = 0x1234
+_ADDR_WATCHPOINT = 0x5678
+_WATCHPOINT_SIZE = 4
+_REG_VALUE = 0x100
+_ALLOC_SIZE = 4096
+
 pytestmark = pytest.mark.asyncio
 
 
@@ -55,24 +62,28 @@ async def test_breakpoint_management(bridge: X64DbgBridge) -> None:
     # If command fails, we check if it handled it gracefully or if we catch it.
 
     with pytest.raises(ToolError, match="pipe"):
-        await bridge.set_breakpoint(0x1234, "software")
+        await bridge.set_breakpoint(_ADDR_BREAKPOINT, "software")
 
-    # Manually add a BP to test remove
-    bridge._breakpoints[0x1234] = BreakpointInfo(id=1, address=0x1234, bp_type="software", enabled=True, hit_count=0)
+    bridge._breakpoints[_ADDR_BREAKPOINT] = BreakpointInfo(
+        id=1,
+        address=_ADDR_BREAKPOINT,
+        bp_type="software",
+        enabled=True,
+        hit_count=0,
+    )
 
     with pytest.raises(ToolError, match="pipe"):
-        await bridge.remove_breakpoint(0x1234)
+        await bridge.remove_breakpoint(_ADDR_BREAKPOINT)
 
-    # get_breakpoints should work locally
     bps = await bridge.get_breakpoints()
     assert len(bps) == 1
-    assert bps[0].address == 0x1234
+    assert bps[0].address == _ADDR_BREAKPOINT
 
 
 async def test_watchpoint_management(bridge: X64DbgBridge) -> None:
     """Verify watchpoint methods."""
     with pytest.raises(ToolError, match="pipe"):
-        await bridge.set_watchpoint(0x5678, 4, "read")
+        await bridge.set_watchpoint(_ADDR_WATCHPOINT, _WATCHPOINT_SIZE, "read")
 
     # get_watchpoints should work locally
     wps = await bridge.get_watchpoints()
@@ -82,7 +93,7 @@ async def test_watchpoint_management(bridge: X64DbgBridge) -> None:
 async def test_register_management(bridge: X64DbgBridge) -> None:
     """Verify register methods."""
     with pytest.raises(ToolError, match="pipe"):
-        await bridge.set_register("rax", 0x100)
+        await bridge.set_register("rax", _REG_VALUE)
 
     with pytest.raises(ToolError, match="pipe"):
         await bridge.get_registers()
@@ -104,12 +115,8 @@ async def test_memory_allocation_real(bridge: X64DbgBridge) -> None:
     """Verify allocate_memory and free_memory on current process."""
     bridge.attached_pid = os.getpid()
 
-    size = 4096
-    addr = await bridge.allocate_memory(size)
+    addr = await bridge.allocate_memory(_ALLOC_SIZE)
     assert addr != 0
-
-    # Write something to verify
-    import ctypes
 
     data = b"ALLOC_TEST"
     ctypes.memmove(addr, data, len(data))
@@ -125,9 +132,6 @@ async def test_memory_allocation_real(bridge: X64DbgBridge) -> None:
 async def test_process_info_real(bridge: X64DbgBridge) -> None:
     """Verify process info gathering on current process."""
     bridge.attached_pid = os.getpid()
-    # Need to set binary_path for get_process_info
-    from pathlib import Path
-
     bridge.binary_path = Path(sys.executable)
 
     info = await bridge._get_process_info()

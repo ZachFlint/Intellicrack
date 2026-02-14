@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import time
-from datetime import datetime
 from typing import TYPE_CHECKING, Any, ClassVar, cast, override
 
 import anthropic
@@ -20,7 +19,7 @@ from anthropic.types import (
     ToolUseBlock,
 )
 
-from ..core.logging import get_logger, log_provider_request, log_provider_response
+from ..core.logging import get_logger, log_provider_request
 from ..core.types import (
     AuthenticationError,
     Message,
@@ -146,43 +145,65 @@ class AnthropicProvider(LLMProviderBase):
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         try:
-            models: list[ModelInfo] = []
-            after_id: str | None = None
-
-            while True:
-                if after_id:
-                    response = await self._client.models.list(after_id=after_id)
-                else:
-                    response = await self._client.models.list()
-
-                for model_data in response.data:
-                    model_id = model_data.id
-                    display_name_attr: object = getattr(model_data, "display_name", model_id)
-                    display_name: str = str(display_name_attr) if display_name_attr else model_id
-
-                    models.append(
-                        ModelInfo(
-                            id=model_id,
-                            name=display_name,
-                            provider=ProviderName.ANTHROPIC,
-                            context_window=self._get_context_window(model_id),
-                            supports_tools=self._supports_tools(model_id),
-                            supports_vision=self._supports_vision(model_id),
-                            supports_streaming=True,
-                            input_cost_per_1m_tokens=None,
-                            output_cost_per_1m_tokens=None,
-                        )
-                    )
-
-                if not response.has_more:
-                    break
-                after_id = response.last_id
+            models = await self._fetch_all_models()
         except Exception as e:
             self._logger.warning("anthropic_list_models_failed", extra={"error": str(e)})
             raise ProviderError(_MSG_REQUEST_FAILED) from e
         else:
             self._logger.info("anthropic_models_listed", extra={"count": len(models)})
             return models
+
+    async def _fetch_all_models(self) -> list[ModelInfo]:
+        """Paginate through the models endpoint and collect all results.
+
+        Returns:
+            Complete list of ModelInfo objects from all pages.
+        """
+        client = self._client
+        if client is None:
+            return []
+
+        models: list[ModelInfo] = []
+        after_id: str | None = None
+
+        while True:
+            page = (
+                await client.models.list(after_id=after_id)
+                if after_id
+                else await client.models.list()
+            )
+            models.extend(
+                self._build_model_info(m.id, getattr(m, "display_name", m.id))
+                for m in page.data
+            )
+            if not page.has_more:
+                break
+            after_id = page.last_id
+
+        return models
+
+    def _build_model_info(self, model_id: str, display_name_raw: object) -> ModelInfo:
+        """Construct a ModelInfo from API model data.
+
+        Args:
+            model_id: The model identifier string.
+            display_name_raw: Raw display name attribute from the API.
+
+        Returns:
+            Populated ModelInfo instance.
+        """
+        display_name: str = str(display_name_raw) if display_name_raw else model_id
+        return ModelInfo(
+            id=model_id,
+            name=display_name,
+            provider=ProviderName.ANTHROPIC,
+            context_window=self._get_context_window(model_id),
+            supports_tools=self._supports_tools(model_id),
+            supports_vision=self._supports_vision(model_id),
+            supports_streaming=True,
+            input_cost_per_1m_tokens=None,
+            output_cost_per_1m_tokens=None,
+        )
 
     @staticmethod
     def _get_context_window(_model_id: str) -> int:
@@ -219,6 +240,76 @@ class AnthropicProvider(LLMProviderBase):
             True if model supports vision.
         """
         return "claude-3" in model_id or "claude-sonnet" in model_id or "claude-opus" in model_id
+
+    @staticmethod
+    def _build_api_kwargs(
+        *,
+        model: str,
+        max_tokens: int,
+        temperature: float,
+        messages: list[MessageParam],
+        system_prompt: str | None,
+        tools: list[dict[str, object]] | None,
+    ) -> dict[str, Any]:
+        """Build keyword arguments for the Anthropic messages API.
+
+        Args:
+            model: Model ID to use.
+            max_tokens: Maximum tokens in response.
+            temperature: Sampling temperature.
+            messages: Formatted message list.
+            system_prompt: Optional system prompt text.
+            tools: Optional formatted tools list.
+
+        Returns:
+            Keyword arguments dict for messages.create or messages.stream.
+        """
+        kwargs: dict[str, Any] = {
+            "model": model,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "messages": messages,
+        }
+        if system_prompt is not None:
+            kwargs["system"] = system_prompt
+        if tools:
+            kwargs["tools"] = cast("list[ToolParam]", tools)
+        return kwargs
+
+    def _parse_response_blocks(
+        self,
+        response: AnthropicMessage,
+    ) -> tuple[str, list[ToolCall]]:
+        """Extract text content and tool calls from response content blocks.
+
+        Args:
+            response: The Anthropic API response message.
+
+        Returns:
+            Tuple of (concatenated text content, list of parsed tool calls).
+        """
+        content = ""
+        tool_calls: list[ToolCall] = []
+
+        for block in response.content:
+            if isinstance(block, TextBlock):
+                content += block.text
+            elif isinstance(block, ToolUseBlock):
+                tool_call = self._parse_tool_call_common(
+                    call_id=block.id,
+                    function_name=block.name,
+                    raw_arguments=cast("dict[str, object]", block.input),
+                )
+                tool_calls.append(tool_call)
+                self._logger.debug(
+                    "tool_call_parsed",
+                    extra={
+                        "tool_name": tool_call.tool_name,
+                        "arguments_count": len(tool_call.arguments),
+                    },
+                )
+
+        return content, tool_calls
 
     async def chat(
         self,
@@ -264,90 +355,30 @@ class AnthropicProvider(LLMProviderBase):
         )
 
         start_time = time.perf_counter()
+        api_kwargs = self._build_api_kwargs(
+            model=model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            messages=typed_messages,
+            system_prompt=system_prompt,
+            tools=anthropic_tools,
+        )
 
         try:
-            response: AnthropicMessage
-            if system_prompt is not None and anthropic_tools:
-                response = await self._client.messages.create(
-                    model=model,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
-                    system=system_prompt,
-                    messages=typed_messages,
-                    tools=cast("list[ToolParam]", anthropic_tools),
-                )
-            elif system_prompt is not None:
-                response = await self._client.messages.create(
-                    model=model,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
-                    system=system_prompt,
-                    messages=typed_messages,
-                )
-            elif anthropic_tools:
-                response = await self._client.messages.create(
-                    model=model,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
-                    messages=typed_messages,
-                    tools=cast("list[ToolParam]", anthropic_tools),
-                )
-            else:
-                response = await self._client.messages.create(
-                    model=model,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
-                    messages=typed_messages,
-                )
-
+            response: AnthropicMessage = await self._client.messages.create(**api_kwargs)
             duration_ms = (time.perf_counter() - start_time) * 1000
-
-            content = ""
-            tool_calls: list[ToolCall] = []
-
-            for block in response.content:
-                if isinstance(block, TextBlock):
-                    content += block.text
-                elif isinstance(block, ToolUseBlock):
-                    block_input = block.input
-                    arguments: dict[str, Any] = dict(block_input)
-                    tool_call = ToolCall(
-                        id=block.id,
-                        tool_name=block.name.split(".")[0] if "." in block.name else block.name,
-                        function_name=block.name,
-                        arguments=arguments,
-                    )
-                    tool_calls.append(tool_call)
-                    self._logger.debug(
-                        "tool_call_parsed",
-                        extra={
-                            "tool_name": tool_call.tool_name,
-                            "arguments_count": len(tool_call.arguments),
-                        },
-                    )
-
-            message = Message(
-                role="assistant",
-                content=content,
-                tool_calls=tool_calls or None,
-                timestamp=datetime.now(),
-            )
-
-            log_provider_response(
+            content, tool_calls = self._parse_response_blocks(response)
+            return self._build_chat_response(
                 provider="anthropic",
                 model=model,
-                tool_calls_count=len(tool_calls),
+                content=content,
+                tool_calls=tool_calls,
                 duration_ms=duration_ms,
             )
-
         except anthropic.RateLimitError as e:
             raise RateLimitError(_MSG_RATE_LIMITED) from e
-        except anthropic.APIError as e:
-            raise ProviderError(_MSG_REQUEST_FAILED) from e
         except Exception as e:
             raise ProviderError(_MSG_REQUEST_FAILED) from e
-        else:
-            return message, tool_calls or None
 
     async def chat_stream(
         self,
@@ -385,50 +416,24 @@ class AnthropicProvider(LLMProviderBase):
         if tools:
             anthropic_tools = self._convert_tools_to_provider_format(tools)
 
-        try:
-            if system_prompt is not None and anthropic_tools:
-                stream_context = self._client.messages.stream(
-                    model=model,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
-                    system=system_prompt,
-                    messages=typed_messages,
-                    tools=cast("list[ToolParam]", anthropic_tools),
-                )
-            elif system_prompt is not None:
-                stream_context = self._client.messages.stream(
-                    model=model,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
-                    system=system_prompt,
-                    messages=typed_messages,
-                )
-            elif anthropic_tools:
-                stream_context = self._client.messages.stream(
-                    model=model,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
-                    messages=typed_messages,
-                    tools=cast("list[ToolParam]", anthropic_tools),
-                )
-            else:
-                stream_context = self._client.messages.stream(
-                    model=model,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
-                    messages=typed_messages,
-                )
+        api_kwargs = self._build_api_kwargs(
+            model=model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            messages=typed_messages,
+            system_prompt=system_prompt,
+            tools=anthropic_tools,
+        )
 
+        try:
+            stream_context = self._client.messages.stream(**api_kwargs)
             async with stream_context as stream:
                 async for text in stream.text_stream:
                     if self._cancel_requested:
                         break
                     yield text
-
         except anthropic.RateLimitError as e:
             raise RateLimitError(_MSG_RATE_LIMITED) from e
-        except anthropic.APIError as e:
-            raise ProviderError(_MSG_REQUEST_FAILED) from e
         except Exception as e:
             if not self._cancel_requested:
                 raise ProviderError(_MSG_STREAM_FAILED) from e
@@ -455,56 +460,91 @@ class AnthropicProvider(LLMProviderBase):
         Returns:
             List of messages in Anthropic's format.
         """
-        anthropic_messages: list[dict[str, object]] = []
-
+        result: list[dict[str, object]] = []
         for msg in messages:
-            if msg.role == "system":
-                continue
+            converted = self._convert_single_message(msg)
+            if converted is not None:
+                result.append(converted)
+        return result
 
-            if msg.role == "user":
-                anthropic_messages.append({
-                    "role": "user",
-                    "content": msg.content,
-                })
-            elif msg.role == "assistant":
-                content: list[dict[str, object]] = []
+    def _convert_single_message(self, msg: Message) -> dict[str, object] | None:
+        """Route a single message to its role-specific formatter.
 
-                if msg.content:
-                    content.append({"type": "text", "text": msg.content})
+        Args:
+            msg: The message to convert.
 
-                if msg.tool_calls:
-                    content.extend([
-                        {
-                            "type": "tool_use",
-                            "id": tc.id,
-                            "name": tc.function_name,
-                            "input": tc.arguments,
-                        }
-                        for tc in msg.tool_calls
-                    ])
+        Returns:
+            Formatted message dict, or None if the role should be skipped.
+        """
+        if msg.role == "system":
+            return None
+        if msg.role == "user":
+            return self._format_user_message(msg)
+        if msg.role == "assistant":
+            return self._format_assistant_message(msg)
+        if msg.role == "tool":
+            return self._format_tool_message(msg)
+        return None
 
-                anthropic_messages.append({
-                    "role": "assistant",
-                    "content": content or msg.content,
-                })
-            elif msg.role == "tool" and msg.tool_results:
-                tool_results: list[dict[str, object]] = []
-                for tr in msg.tool_results:
-                    result_content = tr.result if isinstance(tr.result, str) else json.dumps(tr.result)
+    @staticmethod
+    def _format_user_message(msg: Message) -> dict[str, object]:
+        """Format a user message for the Anthropic API.
 
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": tr.call_id,
-                        "content": result_content,
-                        "is_error": not tr.success,
-                    })
+        Args:
+            msg: The user message.
 
-                anthropic_messages.append({
-                    "role": "user",
-                    "content": tool_results,
-                })
+        Returns:
+            Anthropic-formatted user message dict.
+        """
+        return {"role": "user", "content": msg.content}
 
-        return anthropic_messages
+    @staticmethod
+    def _format_assistant_message(msg: Message) -> dict[str, object]:
+        """Format an assistant message for the Anthropic API.
+
+        Args:
+            msg: The assistant message.
+
+        Returns:
+            Anthropic-formatted assistant message dict.
+        """
+        content: list[dict[str, object]] = []
+        if msg.content:
+            content.append({"type": "text", "text": msg.content})
+        if msg.tool_calls:
+            content.extend(
+                {
+                    "type": "tool_use",
+                    "id": tc.id,
+                    "name": tc.function_name,
+                    "input": tc.arguments,
+                }
+                for tc in msg.tool_calls
+            )
+        return {"role": "assistant", "content": content or msg.content}
+
+    @staticmethod
+    def _format_tool_message(msg: Message) -> dict[str, object] | None:
+        """Format a tool result message for the Anthropic API.
+
+        Args:
+            msg: The tool result message.
+
+        Returns:
+            Anthropic-formatted tool result dict, or None if no results.
+        """
+        if not msg.tool_results:
+            return None
+        tool_results: list[dict[str, object]] = [
+            {
+                "type": "tool_result",
+                "tool_use_id": tr.call_id,
+                "content": tr.result if isinstance(tr.result, str) else json.dumps(tr.result),
+                "is_error": not tr.success,
+            }
+            for tr in msg.tool_results
+        ]
+        return {"role": "user", "content": tool_results}
 
     @override
     def _convert_tools_to_provider_format(

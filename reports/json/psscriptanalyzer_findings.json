@@ -1,6 +1,6 @@
 {
   "tool": "psscriptanalyzer",
-  "generated": "2026-02-08T03:04:45.414998",
+  "generated": "2026-02-08T21:23:42.949812",
   "total_findings": 238,
   "total_files": 24,
   "files": [
@@ -847,6 +847,14 @@
           "raw": "D:\\Intellicrack\\tools\\AdobeInjector\\Source\\GenP.v3.7.1\\v3.7.1-Source\\build.ps1:449:1: [Warning] File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
         },
         {
+          "line": 76,
+          "column": 10,
+          "severity": "Warning",
+          "rule": "PSUseApprovedVerbs",
+          "message": "The cmdlet 'Download-File' uses an unapproved verb.",
+          "raw": "D:\\Intellicrack\\tools\\AdobeInjector\\Source\\GenP.v3.7.1\\v3.7.1-Source\\build.ps1:76:10: [Warning] The cmdlet 'Download-File' uses an unapproved verb. (PSUseApprovedVerbs)"
+        },
+        {
           "line": 215,
           "column": 1,
           "severity": "Information",
@@ -949,14 +957,6 @@
           "rule": "PSAvoidTrailingWhitespace",
           "message": "Line has trailing whitespace",
           "raw": "D:\\Intellicrack\\tools\\AdobeInjector\\Source\\GenP.v3.7.1\\v3.7.1-Source\\build.ps1:364:1: [Information] Line has trailing whitespace (PSAvoidTrailingWhitespace)"
-        },
-        {
-          "line": 76,
-          "column": 10,
-          "severity": "Warning",
-          "rule": "PSUseApprovedVerbs",
-          "message": "The cmdlet 'Download-File' uses an unapproved verb.",
-          "raw": "D:\\Intellicrack\\tools\\AdobeInjector\\Source\\GenP.v3.7.1\\v3.7.1-Source\\build.ps1:76:10: [Warning] The cmdlet 'Download-File' uses an unapproved verb. (PSUseApprovedVerbs)"
         }
       ]
     },
@@ -1497,14 +1497,6 @@
           "raw": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-agent-lldb\\data\\support\\lldbsetuputils.ps1:110:10: [Warning] The cmdlet 'Compute-Lldb-PipInstall-Args' uses an unapproved verb. (PSUseApprovedVerbs)"
         },
         {
-          "line": 64,
-          "column": 13,
-          "severity": "Warning",
-          "rule": "PSReviewUnusedParameter",
-          "message": "The parameter 'ArgList' has been declared but not used.",
-          "raw": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-agent-lldb\\data\\support\\lldbsetuputils.ps1:64:13: [Warning] The parameter 'ArgList' has been declared but not used. (PSReviewUnusedParameter)"
-        },
-        {
           "line": 18,
           "column": 10,
           "severity": "Warning",
@@ -1559,6 +1551,14 @@
           "rule": "PSUseSingularNouns",
           "message": "The cmdlet 'Compute-Lldb-PipInstall-Args' uses a plural noun. A singular noun should be used instead.",
           "raw": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-agent-lldb\\data\\support\\lldbsetuputils.ps1:110:10: [Warning] The cmdlet 'Compute-Lldb-PipInstall-Args' uses a plural noun. A singular noun should be used instead. (PSUseSingularNouns)"
+        },
+        {
+          "line": 64,
+          "column": 13,
+          "severity": "Warning",
+          "rule": "PSReviewUnusedParameter",
+          "message": "The parameter 'ArgList' has been declared but not used.",
+          "raw": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-agent-lldb\\data\\support\\lldbsetuputils.ps1:64:13: [Warning] The parameter 'ArgList' has been declared but not used. (PSReviewUnusedParameter)"
         }
       ]
     },

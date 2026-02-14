@@ -19,10 +19,16 @@ from intellicrack.core.session import Session, SessionManager, SessionStore
 from intellicrack.core.types import ProviderName
 
 
+DEFAULT_SAVE_INTERVAL = 300
+CUSTOM_SAVE_INTERVAL = 60
+EXPECTED_MIN_SESSION_COUNT = 2
+
+
 class TestSessionStoreInitialization:
     """Test SessionStore initialization with database paths."""
 
-    def test_session_store_creates_database_file(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_session_store_creates_database_file(tmp_path: Path) -> None:
         """Verify SessionStore creates the database file on init."""
         db_path = tmp_path / "sessions.db"
         assert not db_path.exists()
@@ -32,7 +38,8 @@ class TestSessionStoreInitialization:
         assert db_path.exists()
         assert store._db_path == db_path
 
-    def test_session_store_creates_parent_directories(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_session_store_creates_parent_directories(tmp_path: Path) -> None:
         """Verify SessionStore creates parent directories if missing."""
         db_path = tmp_path / "data" / "subdir" / "sessions.db"
         assert not db_path.parent.exists()
@@ -42,7 +49,8 @@ class TestSessionStoreInitialization:
         assert db_path.parent.exists()
         assert db_path.exists()
 
-    def test_session_store_initializes_schema(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_session_store_initializes_schema(tmp_path: Path) -> None:
         """Verify SessionStore creates required database tables."""
         db_path = tmp_path / "sessions.db"
         store = SessionStore(db_path)
@@ -58,7 +66,8 @@ class TestSessionStoreInitialization:
 class TestSessionManagerInitialization:
     """Test SessionManager initialization with SessionStore."""
 
-    def test_session_manager_requires_session_store(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_session_manager_requires_session_store(tmp_path: Path) -> None:
         """Verify SessionManager is initialized with SessionStore instance."""
         db_path = tmp_path / "sessions.db"
         store = SessionStore(db_path)
@@ -68,7 +77,8 @@ class TestSessionManagerInitialization:
         assert manager._store is store
         assert manager.current is None
 
-    def test_session_manager_requires_session_store_type(self) -> None:
+    @staticmethod
+    def test_session_manager_requires_session_store_type() -> None:
         """Verify SessionManager requires SessionStore instance.
 
         This tests that the correct initialization pattern is enforced.
@@ -83,46 +93,52 @@ class TestSessionManagerInitialization:
             assert hasattr(manager._store, "load")
             assert hasattr(manager._store, "list_all")
 
-    def test_session_manager_auto_save_default(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_session_manager_auto_save_default(tmp_path: Path) -> None:
         """Verify SessionManager has auto_save enabled by default."""
         store = SessionStore(tmp_path / "sessions.db")
         manager = SessionManager(store)
 
         assert manager._auto_save is True
 
-    def test_session_manager_auto_save_can_be_disabled(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_session_manager_auto_save_can_be_disabled(tmp_path: Path) -> None:
         """Verify SessionManager auto_save can be disabled."""
         store = SessionStore(tmp_path / "sessions.db")
         manager = SessionManager(store, auto_save=False)
 
         assert manager._auto_save is False
 
-    def test_session_manager_save_interval_default(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_session_manager_save_interval_default(tmp_path: Path) -> None:
         """Verify SessionManager has default save interval of 300 seconds."""
         store = SessionStore(tmp_path / "sessions.db")
         manager = SessionManager(store)
 
-        assert manager._save_interval == 300
+        assert manager._save_interval == DEFAULT_SAVE_INTERVAL
 
-    def test_session_manager_save_interval_configurable(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_session_manager_save_interval_configurable(tmp_path: Path) -> None:
         """Verify SessionManager save interval is configurable."""
         store = SessionStore(tmp_path / "sessions.db")
-        manager = SessionManager(store, save_interval=60)
+        manager = SessionManager(store, save_interval=CUSTOM_SAVE_INTERVAL)
 
-        assert manager._save_interval == 60
+        assert manager._save_interval == CUSTOM_SAVE_INTERVAL
 
 
 class TestSessionManagerOperations:
     """Test SessionManager CRUD operations."""
 
+    @staticmethod
     @pytest.fixture
-    def manager(self, tmp_path: Path) -> SessionManager:
+    def manager(tmp_path: Path) -> SessionManager:
         """Create a SessionManager with temporary database."""
         store = SessionStore(tmp_path / "sessions.db")
         return SessionManager(store)
 
+    @staticmethod
     @pytest.mark.asyncio
-    async def test_create_session(self, manager: SessionManager) -> None:
+    async def test_create_session(manager: SessionManager) -> None:
         """Verify SessionManager can create a new session."""
         session = await manager.create(
             provider=ProviderName.ANTHROPIC,
@@ -135,8 +151,9 @@ class TestSessionManagerOperations:
         assert session.model == "claude-3-opus-20240229"
         assert manager.current is session
 
+    @staticmethod
     @pytest.mark.asyncio
-    async def test_save_and_load_session(self, manager: SessionManager) -> None:
+    async def test_save_and_load_session(manager: SessionManager) -> None:
         """Verify SessionManager can save and load sessions."""
         session = await manager.create(
             provider=ProviderName.OPENAI,
@@ -156,8 +173,9 @@ class TestSessionManagerOperations:
         assert loaded.name == "Persistent Session"
         assert loaded.provider == ProviderName.OPENAI
 
+    @staticmethod
     @pytest.mark.asyncio
-    async def test_list_sessions(self, manager: SessionManager) -> None:
+    async def test_list_sessions(manager: SessionManager) -> None:
         """Verify SessionManager can list all sessions."""
         await manager.create(
             provider=ProviderName.ANTHROPIC,
@@ -175,7 +193,7 @@ class TestSessionManagerOperations:
 
         sessions = manager.list_sessions()
 
-        assert len(sessions) >= 2
+        assert len(sessions) >= EXPECTED_MIN_SESSION_COUNT
         names = {s.name for s in sessions}
         assert "Session 1" in names
         assert "Session 2" in names
@@ -184,12 +202,14 @@ class TestSessionManagerOperations:
 class TestSessionDataIntegrity:
     """Test session data persistence integrity."""
 
+    @staticmethod
     @pytest.fixture
-    def store(self, tmp_path: Path) -> SessionStore:
+    def store(tmp_path: Path) -> SessionStore:
         """Create a SessionStore with temporary database."""
         return SessionStore(tmp_path / "sessions.db")
 
-    def test_session_roundtrip(self, store: SessionStore) -> None:
+    @staticmethod
+    def test_session_roundtrip(store: SessionStore) -> None:
         """Verify session data survives save/load cycle."""
         session = Session.create(
             provider=ProviderName.GOOGLE,
@@ -210,12 +230,14 @@ class TestSessionDataIntegrity:
         assert loaded.notes == session.notes
         assert set(loaded.tags) == set(session.tags)
 
-    def test_session_not_found_returns_none(self, store: SessionStore) -> None:
+    @staticmethod
+    def test_session_not_found_returns_none(store: SessionStore) -> None:
         """Verify loading non-existent session returns None."""
         result = store.load("nonexistent-session-id")
         assert result is None
 
-    def test_session_delete(self, store: SessionStore) -> None:
+    @staticmethod
+    def test_session_delete(store: SessionStore) -> None:
         """Verify session can be deleted."""
         session = Session.create(
             provider=ProviderName.OLLAMA,
@@ -231,7 +253,8 @@ class TestSessionDataIntegrity:
         assert deleted is True
         assert store.load(session.id) is None
 
-    def test_delete_nonexistent_session_returns_false(self, store: SessionStore) -> None:
+    @staticmethod
+    def test_delete_nonexistent_session_returns_false(store: SessionStore) -> None:
         """Verify deleting non-existent session returns False."""
         result = store.delete("nonexistent-session-id")
         assert result is False

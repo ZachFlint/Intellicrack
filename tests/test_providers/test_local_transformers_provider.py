@@ -6,9 +6,21 @@ including XPU detection, model loading, inference, and fallback mechanisms.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
 import pytest
 
-from intellicrack.core.types import Message, ProviderName
+from intellicrack.core.types import Message, ProviderError, ProviderName
+
+
+if TYPE_CHECKING:
+    import torch
+else:
+    try:
+        import torch
+    except ImportError:
+        torch: Any = None
+
 from intellicrack.providers.local_transformers import LocalTransformersProvider
 from intellicrack.providers.model_loader import (
     ModelCache,
@@ -19,37 +31,56 @@ from intellicrack.providers.model_loader import (
 from intellicrack.providers.xpu_utils import (
     get_xpu_device_count,
     get_xpu_device_info,
+    get_xpu_memory_info,
     is_arc_b580,
     is_xpu_available,
 )
 
 
+_5_GIB = 5 * 1024 * 1024 * 1024
+_1_GIB = 1 * 1024 * 1024 * 1024
+_3_GIB = 3 * 1024 * 1024 * 1024
+_10_GIB = 10 * 1024 * 1024 * 1024
+_15_GIB = 15 * 1024 * 1024 * 1024
+_CTX_4096 = 4096
+_CTX_32768 = 32768
+_CTX_128000 = 128000
+_TENSOR_SIZE = 100
+_MATRIX_SIZE = 100
+_INVALID_DEVICE_INDEX = 999
+
+
 class TestXPUDetection:
     """Tests for XPU detection utilities."""
 
-    def test_is_xpu_available_returns_bool(self) -> None:
+    @staticmethod
+    def test_is_xpu_available_returns_bool() -> None:
         """XPU availability check should return a boolean."""
         result = is_xpu_available()
         assert isinstance(result, bool)
 
-    def test_get_xpu_device_count_returns_int(self) -> None:
+    @staticmethod
+    def test_get_xpu_device_count_returns_int() -> None:
         """Device count should return a non-negative integer."""
         count = get_xpu_device_count()
         assert isinstance(count, int)
         assert count >= 0
 
-    def test_get_xpu_device_info_returns_none_for_invalid_index(self) -> None:
+    @staticmethod
+    def test_get_xpu_device_info_returns_none_for_invalid_index() -> None:
         """Device info should return None for invalid index."""
-        info = get_xpu_device_info(999)
+        info = get_xpu_device_info(_INVALID_DEVICE_INDEX)
         assert info is None
 
-    def test_is_arc_b580_returns_bool(self) -> None:
+    @staticmethod
+    def test_is_arc_b580_returns_bool() -> None:
         """B580 detection should return a boolean."""
         result = is_arc_b580()
         assert isinstance(result, bool)
 
     @pytest.mark.skipif(not is_xpu_available(), reason="No XPU available")
-    def test_xpu_device_info_has_required_fields(self) -> None:
+    @staticmethod
+    def test_xpu_device_info_has_required_fields() -> None:
         """Device info should have all required fields when XPU available."""
         info = get_xpu_device_info(0)
         assert info is not None
@@ -63,33 +94,38 @@ class TestXPUDetection:
 class TestModelMemoryEstimation:
     """Tests for model memory estimation."""
 
-    def test_estimate_memory_small_model(self) -> None:
+    @staticmethod
+    def test_estimate_memory_small_model() -> None:
         """Small model memory estimate should be reasonable."""
         memory = estimate_model_memory("TinyLlama/TinyLlama-1.1B-Chat-v1.0", "float16")
         assert memory > 0
-        assert memory < 5 * 1024 * 1024 * 1024
+        assert memory < _5_GIB
 
-    def test_estimate_memory_medium_model(self) -> None:
+    @staticmethod
+    def test_estimate_memory_medium_model() -> None:
         """Medium model memory estimate should be reasonable."""
         memory = estimate_model_memory("microsoft/Phi-3-mini-4k-instruct", "float16")
-        assert memory > 1 * 1024 * 1024 * 1024
-        assert memory < 15 * 1024 * 1024 * 1024
+        assert memory > _1_GIB
+        assert memory < _15_GIB
 
-    def test_estimate_memory_int8_smaller_than_fp16(self) -> None:
+    @staticmethod
+    def test_estimate_memory_int8_smaller_than_fp16() -> None:
         """INT8 should require less memory than FP16."""
         fp16_memory = estimate_model_memory("mistralai/Mistral-7B-Instruct-v0.3", "float16")
         int8_memory = estimate_model_memory("mistralai/Mistral-7B-Instruct-v0.3", "int8")
         assert int8_memory < fp16_memory
 
-    def test_estimate_memory_int4_smallest(self) -> None:
+    @staticmethod
+    def test_estimate_memory_int4_smallest() -> None:
         """INT4 should require least memory."""
         fp16_memory = estimate_model_memory("mistralai/Mistral-7B-Instruct-v0.3", "float16")
         int4_memory = estimate_model_memory("mistralai/Mistral-7B-Instruct-v0.3", "int4")
         assert int4_memory < fp16_memory / 2
 
-    def test_select_dtype_for_memory_chooses_fitting_dtype(self) -> None:
+    @staticmethod
+    def test_select_dtype_for_memory_chooses_fitting_dtype() -> None:
         """Should select dtype that fits in available memory."""
-        available_memory = 3 * 1024 * 1024 * 1024
+        available_memory = _3_GIB
         dtype = select_dtype_for_memory(
             "microsoft/Phi-3-mini-4k-instruct",
             available_memory,
@@ -102,25 +138,29 @@ class TestModelMemoryEstimation:
 class TestModelCache:
     """Tests for model caching."""
 
-    def test_cache_initialization(self) -> None:
+    @staticmethod
+    def test_cache_initialization() -> None:
         """Cache should initialize with correct defaults."""
         cache = ModelCache()
-        assert cache.max_memory_bytes == 10 * 1024 * 1024 * 1024
+        assert cache.max_memory_bytes == _10_GIB
         assert cache.get_memory_usage() == 0
 
-    def test_cache_custom_size(self) -> None:
+    @staticmethod
+    def test_cache_custom_size() -> None:
         """Cache should accept custom size."""
-        custom_size = 5 * 1024 * 1024 * 1024
+        custom_size = _5_GIB
         cache = ModelCache(max_memory_bytes=custom_size)
         assert cache.max_memory_bytes == custom_size
 
-    def test_cache_get_returns_none_for_missing(self) -> None:
+    @staticmethod
+    def test_cache_get_returns_none_for_missing() -> None:
         """Get should return None for missing model."""
         cache = ModelCache()
         result = cache.get("nonexistent/model", "float16", "cpu")
         assert result is None
 
-    def test_cache_clear(self) -> None:
+    @staticmethod
+    def test_cache_clear() -> None:
         """Clear should reset cache."""
         cache = ModelCache()
         cache.clear()
@@ -130,7 +170,8 @@ class TestModelCache:
 class TestModelConfig:
     """Tests for ModelConfig dataclass."""
 
-    def test_model_config_defaults(self) -> None:
+    @staticmethod
+    def test_model_config_defaults() -> None:
         """ModelConfig should have correct defaults."""
         config = ModelConfig(model_id="test/model")
         assert config.model_id == "test/model"
@@ -138,7 +179,8 @@ class TestModelConfig:
         assert config.device == "auto"
         assert config.trust_remote_code is False
 
-    def test_model_config_custom_values(self) -> None:
+    @staticmethod
+    def test_model_config_custom_values() -> None:
         """ModelConfig should accept custom values."""
         config = ModelConfig(
             model_id="test/model",
@@ -154,22 +196,26 @@ class TestModelConfig:
 class TestLocalTransformersProviderInitialization:
     """Tests for provider initialization."""
 
-    def test_provider_name(self) -> None:
+    @staticmethod
+    def test_provider_name() -> None:
         """Provider should have correct name."""
         provider = LocalTransformersProvider()
         assert provider.name == ProviderName.LOCAL_TRANSFORMERS
 
-    def test_provider_not_connected_initially(self) -> None:
+    @staticmethod
+    def test_provider_not_connected_initially() -> None:
         """Provider should not be connected initially."""
         provider = LocalTransformersProvider()
         assert not provider.is_connected
 
-    def test_provider_default_device_cpu(self) -> None:
+    @staticmethod
+    def test_provider_default_device_cpu() -> None:
         """Provider should default to CPU device."""
         provider = LocalTransformersProvider()
         assert provider.device_type == "cpu"
 
-    def test_provider_no_model_loaded_initially(self) -> None:
+    @staticmethod
+    def test_provider_no_model_loaded_initially() -> None:
         """Provider should have no model loaded initially."""
         provider = LocalTransformersProvider()
         assert provider.current_model_id is None
@@ -179,7 +225,8 @@ class TestLocalTransformersProviderConnection:
     """Tests for provider connection."""
 
     @pytest.mark.asyncio
-    async def test_connect_without_credentials(self) -> None:
+    @staticmethod
+    async def test_connect_without_credentials() -> None:
         """Provider should connect without credentials for local inference."""
         provider = LocalTransformersProvider()
         await provider.connect(None)
@@ -187,7 +234,8 @@ class TestLocalTransformersProviderConnection:
         await provider.disconnect()
 
     @pytest.mark.asyncio
-    async def test_disconnect_cleans_up(self) -> None:
+    @staticmethod
+    async def test_disconnect_cleans_up() -> None:
         """Disconnect should clean up state."""
         provider = LocalTransformersProvider()
         await provider.connect(None)
@@ -195,7 +243,8 @@ class TestLocalTransformersProviderConnection:
         assert not provider.is_connected
 
     @pytest.mark.asyncio
-    async def test_connect_detects_xpu_availability(self) -> None:
+    @staticmethod
+    async def test_connect_detects_xpu_availability() -> None:
         """Connect should detect XPU availability."""
         provider = LocalTransformersProvider()
         await provider.connect(None)
@@ -203,10 +252,14 @@ class TestLocalTransformersProviderConnection:
         await provider.disconnect()
 
 
+_EXPECTED_MESSAGE_COUNT = 3
+
+
 class TestMessageConversion:
     """Tests for message format conversion."""
 
-    def test_convert_user_message(self) -> None:
+    @staticmethod
+    def test_convert_user_message() -> None:
         """Should convert user message correctly."""
         provider = LocalTransformersProvider()
         messages = [Message(role="user", content="Hello")]
@@ -215,7 +268,8 @@ class TestMessageConversion:
         assert converted[0]["role"] == "user"
         assert converted[0]["content"] == "Hello"
 
-    def test_convert_system_message(self) -> None:
+    @staticmethod
+    def test_convert_system_message() -> None:
         """Should convert system message correctly."""
         provider = LocalTransformersProvider()
         messages = [Message(role="system", content="You are helpful")]
@@ -223,7 +277,8 @@ class TestMessageConversion:
         assert len(converted) == 1
         assert converted[0]["role"] == "system"
 
-    def test_convert_multiple_messages(self) -> None:
+    @staticmethod
+    def test_convert_multiple_messages() -> None:
         """Should convert multiple messages correctly."""
         provider = LocalTransformersProvider()
         messages = [
@@ -232,13 +287,14 @@ class TestMessageConversion:
             Message(role="assistant", content="Assistant"),
         ]
         converted = provider._convert_messages_to_provider_format(messages)
-        assert len(converted) == 3
+        assert len(converted) == _EXPECTED_MESSAGE_COUNT
 
 
 class TestToolConversion:
     """Tests for tool format conversion."""
 
-    def test_convert_empty_tools(self) -> None:
+    @staticmethod
+    def test_convert_empty_tools() -> None:
         """Should handle empty tools list."""
         provider = LocalTransformersProvider()
         converted = provider._convert_tools_to_provider_format([])
@@ -249,7 +305,8 @@ class TestProviderDeviceInfo:
     """Tests for device info retrieval."""
 
     @pytest.mark.asyncio
-    async def test_get_device_info_cpu(self) -> None:
+    @staticmethod
+    async def test_get_device_info_cpu() -> None:
         """Should return device info for CPU."""
         provider = LocalTransformersProvider(prefer_xpu=False)
         await provider.connect(None)
@@ -265,7 +322,8 @@ class TestXPUTests:
     @pytest.mark.skipif(not is_xpu_available(), reason="No XPU available")
     @pytest.mark.xpu
     @pytest.mark.asyncio
-    async def test_xpu_provider_initialization(self) -> None:
+    @staticmethod
+    async def test_xpu_provider_initialization() -> None:
         """Provider should initialize with XPU when available."""
         provider = LocalTransformersProvider(prefer_xpu=True)
         await provider.connect(None)
@@ -275,7 +333,8 @@ class TestXPUTests:
 
     @pytest.mark.skipif(not is_xpu_available(), reason="No XPU available")
     @pytest.mark.xpu
-    def test_xpu_device_info_available(self) -> None:
+    @staticmethod
+    def test_xpu_device_info_available() -> None:
         """Should get device info when XPU available."""
         info = get_xpu_device_info(0)
         assert info is not None
@@ -291,22 +350,20 @@ class TestB580SpecificTests:
 
     @pytest.mark.skipif(not is_arc_b580(), reason="No Arc B580 detected")
     @pytest.mark.b580
-    def test_b580_xpu_tensor_creation(self) -> None:
+    @staticmethod
+    def test_b580_xpu_tensor_creation() -> None:
         """XPU tensor creation must work on B580."""
-        import torch
-
-        tensor = torch.zeros(100, device="xpu")
+        tensor = torch.zeros(_TENSOR_SIZE, device="xpu")
         assert tensor.device.type == "xpu"
         del tensor
         torch.xpu.empty_cache()
 
     @pytest.mark.skipif(not is_arc_b580(), reason="No Arc B580 detected")
     @pytest.mark.b580
-    def test_b580_fp16_operations(self) -> None:
+    @staticmethod
+    def test_b580_fp16_operations() -> None:
         """FP16 operations must work on B580."""
-        import torch
-
-        tensor = torch.randn(100, 100, dtype=torch.float16, device="xpu")
+        tensor = torch.randn(_MATRIX_SIZE, _MATRIX_SIZE, dtype=torch.float16, device="xpu")
         result = tensor @ tensor.T
         assert result.dtype == torch.float16
         assert result.device.type == "xpu"
@@ -315,11 +372,10 @@ class TestB580SpecificTests:
 
     @pytest.mark.skipif(not is_arc_b580(), reason="No Arc B580 detected")
     @pytest.mark.b580
-    def test_b580_bf16_operations(self) -> None:
+    @staticmethod
+    def test_b580_bf16_operations() -> None:
         """BF16 operations must work on B580."""
-        import torch
-
-        tensor = torch.randn(100, 100, dtype=torch.bfloat16, device="xpu")
+        tensor = torch.randn(_MATRIX_SIZE, _MATRIX_SIZE, dtype=torch.bfloat16, device="xpu")
         result = tensor @ tensor.T
         assert result.dtype == torch.bfloat16
         assert result.device.type == "xpu"
@@ -328,18 +384,18 @@ class TestB580SpecificTests:
 
     @pytest.mark.skipif(not is_arc_b580(), reason="No Arc B580 detected")
     @pytest.mark.b580
-    def test_b580_memory_info(self) -> None:
+    @staticmethod
+    def test_b580_memory_info() -> None:
         """Memory info must be available for B580."""
-        from intellicrack.providers.xpu_utils import get_xpu_memory_info
-
         allocated, total = get_xpu_memory_info(0)
         assert isinstance(allocated, int)
         assert isinstance(total, int)
-        assert total > 10 * 1024 * 1024 * 1024
+        assert total > _10_GIB
 
     @pytest.mark.skipif(not is_arc_b580(), reason="No Arc B580 detected")
     @pytest.mark.b580
-    def test_b580_device_detection(self) -> None:
+    @staticmethod
+    def test_b580_device_detection() -> None:
         """B580 must be properly detected."""
         info = get_xpu_device_info(0)
         assert info is not None
@@ -348,7 +404,8 @@ class TestB580SpecificTests:
     @pytest.mark.skipif(not is_arc_b580(), reason="No Arc B580 detected")
     @pytest.mark.b580
     @pytest.mark.asyncio
-    async def test_b580_provider_uses_xpu(self) -> None:
+    @staticmethod
+    async def test_b580_provider_uses_xpu() -> None:
         """Provider must use XPU on B580."""
         provider = LocalTransformersProvider(prefer_xpu=True)
         await provider.connect(None)
@@ -361,7 +418,8 @@ class TestCPUFallback:
     """Tests for CPU fallback functionality."""
 
     @pytest.mark.asyncio
-    async def test_cpu_fallback_when_xpu_disabled(self) -> None:
+    @staticmethod
+    async def test_cpu_fallback_when_xpu_disabled() -> None:
         """Should use CPU when XPU preference disabled."""
         provider = LocalTransformersProvider(prefer_xpu=False)
         await provider.connect(None)
@@ -369,7 +427,8 @@ class TestCPUFallback:
         await provider.disconnect()
 
     @pytest.mark.asyncio
-    async def test_cpu_device_info(self) -> None:
+    @staticmethod
+    async def test_cpu_device_info() -> None:
         """Should provide device info for CPU."""
         provider = LocalTransformersProvider(prefer_xpu=False)
         await provider.connect(None)
@@ -382,7 +441,8 @@ class TestProviderListModels:
     """Tests for model listing."""
 
     @pytest.mark.asyncio
-    async def test_list_models_returns_list(self) -> None:
+    @staticmethod
+    async def test_list_models_returns_list() -> None:
         """List models should return a list."""
         provider = LocalTransformersProvider()
         await provider.connect(None)
@@ -391,7 +451,8 @@ class TestProviderListModels:
         await provider.disconnect()
 
     @pytest.mark.asyncio
-    async def test_list_models_has_recommended_models(self) -> None:
+    @staticmethod
+    async def test_list_models_has_recommended_models() -> None:
         """List models should include recommended models."""
         provider = LocalTransformersProvider()
         await provider.connect(None)
@@ -402,7 +463,8 @@ class TestProviderListModels:
         await provider.disconnect()
 
     @pytest.mark.asyncio
-    async def test_list_models_model_info_complete(self) -> None:
+    @staticmethod
+    async def test_list_models_model_info_complete() -> None:
         """Model info should have all required fields."""
         provider = LocalTransformersProvider()
         await provider.connect(None)
@@ -418,10 +480,9 @@ class TestProviderListModels:
         await provider.disconnect()
 
     @pytest.mark.asyncio
-    async def test_list_models_requires_connection(self) -> None:
+    @staticmethod
+    async def test_list_models_requires_connection() -> None:
         """List models should raise when not connected."""
-        from intellicrack.core.types import ProviderError
-
         provider = LocalTransformersProvider()
         with pytest.raises(ProviderError):
             await provider.list_models()
@@ -430,7 +491,8 @@ class TestProviderListModels:
 class TestPromptFormatting:
     """Tests for prompt formatting."""
 
-    def test_format_prompt_simple(self) -> None:
+    @staticmethod
+    def test_format_prompt_simple() -> None:
         """Should format simple prompt."""
         provider = LocalTransformersProvider()
         messages = [{"role": "user", "content": "Hello"}]
@@ -439,7 +501,8 @@ class TestPromptFormatting:
         assert "Hello" in prompt
         assert "<|im_start|>assistant" in prompt
 
-    def test_format_prompt_with_system(self) -> None:
+    @staticmethod
+    def test_format_prompt_with_system() -> None:
         """Should include system message."""
         provider = LocalTransformersProvider()
         messages = [
@@ -454,13 +517,15 @@ class TestPromptFormatting:
 class TestToolCallParsing:
     """Tests for tool call parsing."""
 
-    def test_parse_no_tool_calls(self) -> None:
+    @staticmethod
+    def test_parse_no_tool_calls() -> None:
         """Should return None for text without tool calls."""
         provider = LocalTransformersProvider()
         result = provider._parse_tool_calls("Just a regular response")
         assert result is None
 
-    def test_parse_valid_tool_call(self) -> None:
+    @staticmethod
+    def test_parse_valid_tool_call() -> None:
         """Should parse valid tool call JSON."""
         provider = LocalTransformersProvider()
         response = 'Here is the result: {"tool_call": {"name": "test_func", "arguments": {"arg1": "value1"}}}'
@@ -474,45 +539,52 @@ class TestToolCallParsing:
 class TestContextWindowEstimation:
     """Tests for context window estimation."""
 
-    def test_estimate_phi3_mini_4k(self) -> None:
+    @staticmethod
+    def test_estimate_phi3_mini_4k() -> None:
         """Should estimate Phi-3-mini-4k context."""
         provider = LocalTransformersProvider()
         window = provider._estimate_context_window("microsoft/Phi-3-mini-4k-instruct")
-        assert window == 4096
+        assert window == _CTX_4096
 
-    def test_estimate_phi3_128k(self) -> None:
+    @staticmethod
+    def test_estimate_phi3_128k() -> None:
         """Should estimate Phi-3-128k context."""
         provider = LocalTransformersProvider()
         window = provider._estimate_context_window("microsoft/Phi-3-mini-128k-instruct")
-        assert window == 128000
+        assert window == _CTX_128000
 
-    def test_estimate_qwen25(self) -> None:
+    @staticmethod
+    def test_estimate_qwen25() -> None:
         """Should estimate Qwen2.5 context."""
         provider = LocalTransformersProvider()
         window = provider._estimate_context_window("Qwen/Qwen2.5-1.5B-Instruct")
-        assert window == 32768
+        assert window == _CTX_32768
 
-    def test_estimate_default(self) -> None:
+    @staticmethod
+    def test_estimate_default() -> None:
         """Should return default for unknown model."""
         provider = LocalTransformersProvider()
         window = provider._estimate_context_window("unknown/model")
-        assert window == 4096
+        assert window == _CTX_4096
 
 
 class TestToolSupport:
     """Tests for tool support detection."""
 
-    def test_phi3_supports_tools(self) -> None:
+    @staticmethod
+    def test_phi3_supports_tools() -> None:
         """Phi-3 should support tools."""
         provider = LocalTransformersProvider()
         assert provider._model_supports_tools("microsoft/Phi-3-mini-4k-instruct")
 
-    def test_qwen_supports_tools(self) -> None:
+    @staticmethod
+    def test_qwen_supports_tools() -> None:
         """Qwen should support tools."""
         provider = LocalTransformersProvider()
         assert provider._model_supports_tools("Qwen/Qwen2.5-1.5B-Instruct")
 
-    def test_llama3_supports_tools(self) -> None:
+    @staticmethod
+    def test_llama3_supports_tools() -> None:
         """Llama-3 should support tools."""
         provider = LocalTransformersProvider()
         assert provider._model_supports_tools("meta-llama/Llama-3.2-1B-Instruct")
@@ -522,7 +594,8 @@ class TestCacheClear:
     """Tests for cache clearing."""
 
     @pytest.mark.asyncio
-    async def test_clear_cache(self) -> None:
+    @staticmethod
+    async def test_clear_cache() -> None:
         """Should clear cache without error."""
         provider = LocalTransformersProvider()
         await provider.connect(None)
@@ -530,7 +603,8 @@ class TestCacheClear:
         await provider.disconnect()
 
     @pytest.mark.asyncio
-    async def test_unload_model(self) -> None:
+    @staticmethod
+    async def test_unload_model() -> None:
         """Should unload model without error."""
         provider = LocalTransformersProvider()
         await provider.connect(None)

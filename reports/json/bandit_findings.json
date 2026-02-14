@@ -1,6 +1,6 @@
 {
   "tool": "bandit",
-  "generated": "2026-02-08T03:00:54.044371",
+  "generated": "2026-02-08T21:19:17.794949",
   "total_findings": 9,
   "total_files": 6,
   "files": [
@@ -9,40 +9,40 @@
       "count": 4,
       "findings": [
         {
-          "line": 521,
+          "line": 522,
           "column": null,
           "severity": "Medium",
           "confidence": "High",
           "code": "B615:huggingface_unsafe_download",
           "message": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()",
-          "raw": "src/intellicrack/providers\\model_loader.py:521: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+          "raw": "src/intellicrack/providers\\model_loader.py:522: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
         },
         {
-          "line": 540,
+          "line": 541,
           "column": null,
           "severity": "Medium",
           "confidence": "High",
           "code": "B615:huggingface_unsafe_download",
           "message": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()",
-          "raw": "src/intellicrack/providers\\model_loader.py:540: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+          "raw": "src/intellicrack/providers\\model_loader.py:541: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
         },
         {
-          "line": 624,
+          "line": 625,
           "column": null,
           "severity": "Medium",
           "confidence": "High",
           "code": "B615:huggingface_unsafe_download",
           "message": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()",
-          "raw": "src/intellicrack/providers\\model_loader.py:624: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+          "raw": "src/intellicrack/providers\\model_loader.py:625: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
         },
         {
-          "line": 643,
+          "line": 644,
           "column": null,
           "severity": "Medium",
           "confidence": "High",
           "code": "B615:huggingface_unsafe_download",
           "message": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()",
-          "raw": "src/intellicrack/providers\\model_loader.py:643: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+          "raw": "src/intellicrack/providers\\model_loader.py:644: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
         }
       ]
     },
@@ -51,13 +51,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 15,
+          "line": 14,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B404:blacklist",
           "message": "Consider possible security implications associated with the subprocess module.",
-          "raw": "src/intellicrack/core\\_subprocess.py:15: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
+          "raw": "src/intellicrack/core\\_subprocess.py:14: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
         }
       ]
     },

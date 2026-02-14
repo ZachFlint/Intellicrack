@@ -29,24 +29,9 @@ src/intellicrack\credentials\oauth.py:902: D401: in public function `authorize_g
 
 1 findings in src/intellicrack\providers\local_transformers.py
 
-src/intellicrack\providers\local_transformers.py:478: D401: in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')
+src/intellicrack\providers\local_transformers.py:479: D401: in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')
 
 
 1 findings in src/intellicrack\ui\panels\_async_bridge.py
 
 src/intellicrack\ui\panels\_async_bridge.py:22: D103: in public function `run_bridge_coroutine`: - Missing docstring in public function
-
-
-1 findings in tests\__init__.py
-
-tests\__init__.py:1: D104: at module level: - Missing docstring in public package
-
-
-1 findings in tests\test_bridges\__init__.py
-
-tests\test_bridges\__init__.py:1: D104: at module level: - Missing docstring in public package
-
-
-1 findings in tests\test_core\__init__.py
-
-tests\test_core\__init__.py:1: D104: at module level: - Missing docstring in public package

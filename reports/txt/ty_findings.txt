@@ -1,3 +1,32 @@
+13 findings in src\intellicrack\providers\model_loader.py
+
+src\intellicrack\providers\model_loader.py:22:14: error[invalid-assignment] Object of type `None` is not assignable to `<module 'torch'>`
+
+src\intellicrack\providers\model_loader.py:27:28: error[invalid-assignment] Object of type `None` is not assignable to `<class 'AutoModelForCausalLM'>`
+
+src\intellicrack\providers\model_loader.py:28:21: error[invalid-assignment] Object of type `None` is not assignable to `<class 'AutoTokenizer'>`
+
+src\intellicrack\providers\model_loader.py:33:26: error[invalid-assignment] Object of type `None` is not assignable to `<class 'BitsAndBytesConfig'>`
+
+src\intellicrack\providers\model_loader.py:527:12: warning[possibly-missing-attribute] Attribute `pad_token` may be missing on object of type `TokenizersBackend | None | SentencePieceBackend`
+
+src\intellicrack\providers\model_loader.py:528:13: error[invalid-assignment] Object of type `Unknown` is not assignable to attribute `pad_token` on type `TokenizersBackend | None | SentencePieceBackend`
+
+src\intellicrack\providers\model_loader.py:528:35: warning[possibly-missing-attribute] Attribute `eos_token` may be missing on object of type `TokenizersBackend | None | SentencePieceBackend`
+
+src\intellicrack\providers\model_loader.py:544:30: error[invalid-argument-type] Argument to bound method `__call__` is incorrect: Expected `PreTrainedModel`, found `device`
+
+src\intellicrack\providers\model_loader.py:554:13: error[invalid-argument-type] Argument is incorrect: Expected `PreTrainedTokenizerBase`, found `TokenizersBackend | None | SentencePieceBackend`
+
+src\intellicrack\providers\model_loader.py:630:12: warning[possibly-missing-attribute] Attribute `pad_token` may be missing on object of type `TokenizersBackend | None | SentencePieceBackend`
+
+src\intellicrack\providers\model_loader.py:631:13: error[invalid-assignment] Object of type `Unknown` is not assignable to attribute `pad_token` on type `TokenizersBackend | None | SentencePieceBackend`
+
+src\intellicrack\providers\model_loader.py:631:35: warning[possibly-missing-attribute] Attribute `eos_token` may be missing on object of type `TokenizersBackend | None | SentencePieceBackend`
+
+src\intellicrack\providers\model_loader.py:653:13: error[invalid-argument-type] Argument is incorrect: Expected `PreTrainedTokenizerBase`, found `TokenizersBackend | None | SentencePieceBackend`
+
+
 11 findings in src\intellicrack\ui\session_manager.py
 
 src\intellicrack\ui\session_manager.py:125:9: warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`
@@ -65,17 +94,17 @@ src\intellicrack\ui\panels\script_manager.py:830:16: error[invalid-return-type] 
 
 tests\test_ui\test_app_embedded_tools.py:228:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `add_x64dbg_tab` on type `Unknown | ToolOutputPanel`
 
-tests\test_ui\test_app_embedded_tools.py:251:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `add_x64dbg_tab` on type `Unknown | ToolOutputPanel`
+tests\test_ui\test_app_embedded_tools.py:250:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `add_x64dbg_tab` on type `Unknown | ToolOutputPanel`
 
-tests\test_ui\test_app_embedded_tools.py:279:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `add_cutter_tab` on type `Unknown | ToolOutputPanel`
+tests\test_ui\test_app_embedded_tools.py:277:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `add_cutter_tab` on type `Unknown | ToolOutputPanel`
 
-tests\test_ui\test_app_embedded_tools.py:305:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `add_hxd_tab` on type `Unknown | ToolOutputPanel`
+tests\test_ui\test_app_embedded_tools.py:302:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `add_hxd_tab` on type `Unknown | ToolOutputPanel`
 
-tests\test_ui\test_app_embedded_tools.py:398:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `open_in_x64dbg` on type `Unknown | ToolOutputPanel`
+tests\test_ui\test_app_embedded_tools.py:391:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `open_in_x64dbg` on type `Unknown | ToolOutputPanel`
 
-tests\test_ui\test_app_embedded_tools.py:423:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `open_in_cutter` on type `Unknown | ToolOutputPanel`
+tests\test_ui\test_app_embedded_tools.py:415:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `open_in_cutter` on type `Unknown | ToolOutputPanel`
 
-tests\test_ui\test_app_embedded_tools.py:448:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `open_in_hxd` on type `Unknown | ToolOutputPanel`
+tests\test_ui\test_app_embedded_tools.py:439:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `open_in_hxd` on type `Unknown | ToolOutputPanel`
 
 
 6 findings in src\intellicrack\ui\panels\binary_panel.py
@@ -93,17 +122,17 @@ src\intellicrack\ui\panels\binary_panel.py:193:9: warning[possibly-missing-attri
 src\intellicrack\ui\panels\binary_panel.py:200:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`
 
 
-5 findings in src\intellicrack\providers\model_loader.py
+5 findings in src\intellicrack\sandbox\windows.py
 
-src\intellicrack\providers\model_loader.py:22:13: error[invalid-assignment] Object of type `None` is not assignable to `<module 'torch'>`
+src\intellicrack\sandbox\windows.py:190:13: error[invalid-assignment] Object of type `Popen[Any] | Popen[str] | Popen[bytes]` is not assignable to attribute `_process` of type `Popen[bytes] | None`
 
-src\intellicrack\providers\model_loader.py:27:28: error[invalid-assignment] Object of type `None` is not assignable to `<class 'AutoModelForCausalLM'>`
+src\intellicrack\sandbox\windows.py:200:17: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`
 
-src\intellicrack\providers\model_loader.py:28:21: error[invalid-assignment] Object of type `None` is not assignable to `<class 'AutoTokenizer'>`
+src\intellicrack\sandbox\windows.py:209:16: warning[possibly-missing-attribute] Attribute `poll` may be missing on object of type `Popen[bytes] | None`
 
-src\intellicrack\providers\model_loader.py:33:26: error[invalid-assignment] Object of type `None` is not assignable to `<class 'BitsAndBytesConfig'>`
+src\intellicrack\sandbox\windows.py:214:31: warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`
 
-src\intellicrack\providers\model_loader.py:543:30: error[invalid-argument-type] Argument to bound method `__call__` is incorrect: Expected `PreTrainedModel`, found `device`
+src\intellicrack\sandbox\windows.py:216:67: warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`
 
 
 4 findings in src\intellicrack\bridges\binary.py
@@ -119,13 +148,13 @@ src\intellicrack\bridges\binary.py:959:60: error[invalid-argument-type] Argument
 
 4 findings in src\intellicrack\providers\local_transformers.py
 
-src\intellicrack\providers\local_transformers.py:53:13: error[invalid-assignment] Object of type `None` is not assignable to `<module 'torch'>`
+src\intellicrack\providers\local_transformers.py:53:14: error[invalid-assignment] Object of type `None` is not assignable to `<module 'torch'>`
 
-src\intellicrack\providers\local_transformers.py:509:23: error[call-non-callable] Object of type `Tensor` is not callable
+src\intellicrack\providers\local_transformers.py:510:23: error[call-non-callable] Object of type `Tensor` is not callable
 
-src\intellicrack\providers\local_transformers.py:590:22: error[not-subscriptable] Cannot subscript object of type `None` with no `__getitem__` method
+src\intellicrack\providers\local_transformers.py:591:22: error[not-subscriptable] Cannot subscript object of type `None` with no `__getitem__` method
 
-src\intellicrack\providers\local_transformers.py:736:47: error[invalid-assignment] Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`
+src\intellicrack\providers\local_transformers.py:737:47: error[invalid-assignment] Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`
 
 
 4 findings in src\intellicrack\ui\highlighter.py
@@ -141,11 +170,11 @@ src\intellicrack\ui\highlighter.py:916:9: error[invalid-method-override] Invalid
 
 3 findings in src\intellicrack\ui\embedding\embedded_widget.py
 
-src\intellicrack\ui\embedding\embedded_widget.py:384:9: error[invalid-method-override] Invalid override of method `resizeEvent`: Definition is incompatible with `QWidget.resizeEvent`
+src\intellicrack\ui\embedding\embedded_widget.py:389:9: error[invalid-method-override] Invalid override of method `resizeEvent`: Definition is incompatible with `QWidget.resizeEvent`
 
-src\intellicrack\ui\embedding\embedded_widget.py:394:9: error[invalid-method-override] Invalid override of method `focusInEvent`: Definition is incompatible with `QWidget.focusInEvent`
+src\intellicrack\ui\embedding\embedded_widget.py:399:9: error[invalid-method-override] Invalid override of method `focusInEvent`: Definition is incompatible with `QWidget.focusInEvent`
 
-src\intellicrack\ui\embedding\embedded_widget.py:405:9: error[invalid-method-override] Invalid override of method `closeEvent`: Definition is incompatible with `QWidget.closeEvent`
+src\intellicrack\ui\embedding\embedded_widget.py:410:9: error[invalid-method-override] Invalid override of method `closeEvent`: Definition is incompatible with `QWidget.closeEvent`
 
 
 3 findings in src\intellicrack\ui\panels\licensing_panel.py
@@ -157,11 +186,34 @@ src\intellicrack\ui\panels\licensing_panel.py:296:9: warning[possibly-missing-at
 src\intellicrack\ui\panels\licensing_panel.py:373:9: warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`
 
 
+3 findings in tests\core\test_process_cleanup.py
+
+tests\core\test_process_cleanup.py:213:5: error[invalid-assignment] Object of type `_BlockingR2` is not assignable to attribute `_r2` of type `open | None`
+
+tests\core\test_process_cleanup.py:235:5: error[invalid-assignment] Object of type `_FastR2` is not assignable to attribute `_r2` of type `open | None`
+
+tests\core\test_process_cleanup.py:245:5: error[invalid-assignment] Object of type `_NoneR2` is not assignable to attribute `_r2` of type `open | None`
+
+
 2 findings in src\intellicrack\bridges\sandbox_bridge.py
 
 src\intellicrack\bridges\sandbox_bridge.py:457:15: error[invalid-type-form] Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in type expression
 
 src\intellicrack\bridges\sandbox_bridge.py:652:29: error[invalid-type-form] Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in type expression
+
+
+2 findings in src\intellicrack\bridges\x64dbg.py
+
+src\intellicrack\bridges\x64dbg.py:834:9: error[invalid-assignment] Object of type `Popen[Any] | Popen[str] | Popen[bytes]` is not assignable to attribute `_process` of type `Popen[bytes] | None`
+
+src\intellicrack\bridges\x64dbg.py:844:13: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`
+
+
+2 findings in src\intellicrack\core\process_manager.py
+
+src\intellicrack\core\process_manager.py:136:16: error[invalid-return-type] Return type does not match returned value: expected `ProcessManager`, found `ProcessManager | None | Unknown`
+
+src\intellicrack\core\process_manager.py:536:56: error[invalid-argument-type] Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`
 
 
 2 findings in src\intellicrack\ui\chat.py
@@ -188,11 +240,6 @@ tests\test_bridges\test_x64dbg.py:175:12: error[not-subscriptable] Cannot subscr
 1 findings in src\intellicrack\core\logging.py
 
 src\intellicrack\core\logging.py:468:25: warning[redundant-cast] Value is already of type `tuple[object, ...]`
-
-
-1 findings in src\intellicrack\core\process_manager.py
-
-src\intellicrack\core\process_manager.py:136:16: error[invalid-return-type] Return type does not match returned value: expected `ProcessManager`, found `ProcessManager | None | Unknown`
 
 
 1 findings in src\intellicrack\main.py
@@ -242,4 +289,4 @@ src\intellicrack\ui\tools.py:338:17: warning[possibly-missing-attribute] Attribu
 
 1 findings in tests\test_ui\test_tools_logic.py
 
-tests\test_ui\test_tools_logic.py:23:12: error[invalid-return-type] Return type does not match returned value: expected `QApplication`, found `QCoreApplication`
+tests\test_ui\test_tools_logic.py:32:12: error[invalid-return-type] Return type does not match returned value: expected `QApplication`, found `QCoreApplication`

@@ -7,18 +7,16 @@ checks, XPU hardware detection, and common test utilities used across all test m
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import httpx
 import pytest
 
-from intellicrack.core.types import ProviderName
+from intellicrack.core.types import ProviderCredentials, ProviderName
 from intellicrack.credentials.env_loader import CredentialLoader
 from intellicrack.providers.xpu_utils import is_arc_b580, is_xpu_available
 
 
-if TYPE_CHECKING:
-    from intellicrack.core.types import ProviderCredentials
+_HTTP_OK = 200
 
 
 @pytest.fixture(scope="session")
@@ -163,7 +161,7 @@ def has_ollama_available() -> bool:
     except Exception:
         return False
     else:
-        return response.status_code == 200
+        return response.status_code == _HTTP_OK
 
 
 @pytest.fixture(scope="session")
@@ -267,8 +265,6 @@ def ollama_credentials(
     Returns:
         ProviderCredentials for Ollama (may have empty api_key for local).
     """
-    from intellicrack.core.types import ProviderCredentials
-
     creds = credential_loader.get_credentials(ProviderName.OLLAMA)
     if creds is None:
         return ProviderCredentials(

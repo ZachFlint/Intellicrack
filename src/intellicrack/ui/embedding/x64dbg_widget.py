@@ -34,17 +34,23 @@ class X64DbgWidget(EmbeddedToolWidget):
     integration for programmatic control.
     """
 
-    _X64DBG_CLASS: ClassVar[str] = "x64dbg"
-    _X32DBG_CLASS: ClassVar[str] = "x32dbg"
     _COMMON_PATHS: ClassVar[list[Path]] = [
         Path(r"C:\Program Files\x64dbg"),
         Path(r"C:\Program Files (x86)\x64dbg"),
-        Path(r"D:\Tools\x64dbg"),
         Path(r"C:\x64dbg"),
+        Path(r"D:\x64dbg"),
+        Path(r"C:\Tools\x64dbg"),
+        Path(r"D:\Tools\x64dbg"),
+        Path(r"C:\Reversing\x64dbg"),
+        Path(r"D:\Reversing\x64dbg"),
     ]
     _REGISTRY_PATHS: ClassVar[list[tuple[int, str]]] = [
         (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\x64dbg"),
         (winreg.HKEY_CURRENT_USER, r"SOFTWARE\x64dbg"),
+    ]
+    _SHELL_EXT_KEYS: ClassVar[list[str]] = [
+        r"SOFTWARE\Classes\x64dbg\shell\open\command",
+        r"SOFTWARE\Classes\x32dbg\shell\open\command",
     ]
 
     def __init__(self, parent: QWidget | None = None, use_64bit: bool = True) -> None:
@@ -123,6 +129,10 @@ class X64DbgWidget(EmbeddedToolWidget):
     def _search_registry_for_x64dbg(self, arch_dir: str, exe_name: str) -> Path | None:
         """Search Windows registry for x64dbg installation path.
 
+        Checks both dedicated registry keys with InstallPath values
+        and shell extension command entries that contain the executable
+        path.
+
         Args:
             arch_dir: Architecture subdirectory ('x64' or 'x32').
             exe_name: Executable filename.
@@ -143,6 +153,47 @@ class X64DbgWidget(EmbeddedToolWidget):
             except OSError:
                 _logger.debug("registry_key_not_found", extra={"subkey": subkey})
                 continue
+
+        for shell_key in self._SHELL_EXT_KEYS:
+            try:
+                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, shell_key) as key:
+                    command_value, _ = winreg.QueryValueEx(key, "")
+                    if command_value:
+                        cmd_path = self._extract_path_from_command(command_value)
+                        if cmd_path and cmd_path.exists():
+                            base = cmd_path.parent.parent.parent
+                            for candidate in self._build_x64dbg_candidates(base, arch_dir, exe_name):
+                                if candidate.exists():
+                                    self._install_dir = base
+                                    return candidate
+            except OSError:
+                _logger.debug("registry_shell_ext_not_found", extra={"key": shell_key})
+                continue
+
+        return None
+
+    @staticmethod
+    def _extract_path_from_command(command: str) -> Path | None:
+        r"""Extract the executable path from a shell command string.
+
+        Handles both quoted ('"C:\path\exe.exe" "%1"') and unquoted
+        ('C:\path\exe.exe %1') command formats.
+
+        Args:
+            command: Shell command string from registry.
+
+        Returns:
+            Path to executable if parseable, None otherwise.
+        """
+        command = command.strip()
+        if command.startswith('"'):
+            end_quote = command.find('"', 1)
+            if end_quote > 1:
+                return Path(command[1:end_quote])
+        else:
+            parts = command.split()
+            if parts:
+                return Path(parts[0])
         return None
 
     def _search_common_paths_for_x64dbg(self, arch_dir: str, exe_name: str) -> Path | None:
@@ -169,11 +220,16 @@ class X64DbgWidget(EmbeddedToolWidget):
     def get_window_search_params(self) -> dict[str, str | None]:
         """Get window search parameters for x64dbg.
 
+        x64dbg uses Qt for its GUI, so the window class name is a
+        Qt-generated name (e.g. Qt5QWindowIcon) rather than 'x64dbg'.
+        Title matching is used instead since the window title always
+        contains the debugger name.
+
         Returns:
-            Dictionary with class name based on bitness.
+            Dictionary with title filter based on bitness.
         """
-        class_name = self._X64DBG_CLASS if self._use_64bit else self._X32DBG_CLASS
-        return {"class_name": class_name, "title_contains": None}
+        title = "x64dbg" if self._use_64bit else "x32dbg"
+        return {"class_name": None, "title_contains": title}
 
     def prepare_launch_args(self, binary_path: Path | None = None) -> list[str]:
         """Prepare x64dbg launch arguments.

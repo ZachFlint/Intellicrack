@@ -1,6 +1,6 @@
 {
   "tool": "xenon",
-  "generated": "2026-02-08T03:03:35.528795",
+  "generated": "2026-02-08T21:22:34.947826",
   "total_findings": 74,
   "total_files": 37,
   "files": [
@@ -471,22 +471,22 @@
       "count": 2,
       "findings": [
         {
-          "line": 830,
+          "line": 831,
           "column": null,
           "name": "_parse_tool_calls",
           "rank": "C",
           "complexity": 20,
           "message": "'_parse_tool_calls' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:830: '_parse_tool_calls' has rank C"
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:831: '_parse_tool_calls' has rank C"
         },
         {
-          "line": 930,
+          "line": 931,
           "column": null,
           "name": "_estimate_context_window",
           "rank": "C",
           "complexity": 20,
           "message": "'_estimate_context_window' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:930: '_estimate_context_window' has rank C"
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:931: '_estimate_context_window' has rank C"
         }
       ]
     },
@@ -495,22 +495,22 @@
       "count": 2,
       "findings": [
         {
-          "line": 468,
+          "line": 469,
           "column": null,
           "name": "load_model_for_xpu",
           "rank": "C",
           "complexity": 20,
           "message": "'load_model_for_xpu' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:468: 'load_model_for_xpu' has rank C"
+          "raw": "src\\intellicrack\\providers\\model_loader.py:469: 'load_model_for_xpu' has rank C"
         },
         {
-          "line": 580,
+          "line": 581,
           "column": null,
           "name": "load_model_for_cpu",
           "rank": "C",
           "complexity": 20,
           "message": "'load_model_for_cpu' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:580: 'load_model_for_cpu' has rank C"
+          "raw": "src\\intellicrack\\providers\\model_loader.py:581: 'load_model_for_cpu' has rank C"
         }
       ]
     },
@@ -615,22 +615,22 @@
       "count": 2,
       "findings": [
         {
-          "line": 586,
+          "line": 693,
           "column": null,
           "name": "TestLicensingAnalysisDataclass",
           "rank": "C",
           "complexity": 20,
           "message": "'TestLicensingAnalysisDataclass' has rank C (complexity > threshold)",
-          "raw": "tests\\test_core\\test_license_analyzer.py:586: 'TestLicensingAnalysisDataclass' has rank C"
+          "raw": "tests\\test_core\\test_license_analyzer.py:693: 'TestLicensingAnalysisDataclass' has rank C"
         },
         {
-          "line": 589,
+          "line": 700,
           "column": null,
           "name": "test_licensing_analysis_fields",
           "rank": "C",
           "complexity": 20,
           "message": "'test_licensing_analysis_fields' has rank C (complexity > threshold)",
-          "raw": "tests\\test_core\\test_license_analyzer.py:589: 'test_licensing_analysis_fields' has rank C"
+          "raw": "tests\\test_core\\test_license_analyzer.py:700: 'test_licensing_analysis_fields' has rank C"
         }
       ]
     },
@@ -639,22 +639,22 @@
       "count": 2,
       "findings": [
         {
-          "line": 138,
+          "line": 107,
           "column": null,
           "name": "TestAllProvidersModelCount",
           "rank": "C",
           "complexity": 20,
           "message": "'TestAllProvidersModelCount' has rank C (complexity > threshold)",
-          "raw": "tests\\test_providers\\test_model_discovery.py:138: 'TestAllProvidersModelCount' has rank C"
+          "raw": "tests\\test_providers\\test_model_discovery.py:107: 'TestAllProvidersModelCount' has rank C"
         },
         {
-          "line": 142,
+          "line": 112,
           "column": null,
           "name": "test_summary_all_providers",
           "rank": "C",
           "complexity": 20,
           "message": "'test_summary_all_providers' has rank C (complexity > threshold)",
-          "raw": "tests\\test_providers\\test_model_discovery.py:142: 'test_summary_all_providers' has rank C"
+          "raw": "tests\\test_providers\\test_model_discovery.py:112: 'test_summary_all_providers' has rank C"
         }
       ]
     },
@@ -663,22 +663,22 @@
       "count": 2,
       "findings": [
         {
-          "line": 109,
+          "line": 114,
           "column": null,
           "name": "test_embedded_tools_menu_actions_count",
           "rank": "C",
           "complexity": 20,
           "message": "'test_embedded_tools_menu_actions_count' has rank C (complexity > threshold)",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:109: 'test_embedded_tools_menu_actions_count' has rank C"
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:114: 'test_embedded_tools_menu_actions_count' has rank C"
         },
         {
-          "line": 78,
+          "line": 83,
           "column": null,
           "name": "TestEmbeddedToolsMenuIntegration",
           "rank": "C",
           "complexity": 20,
           "message": "'TestEmbeddedToolsMenuIntegration' has rank C (complexity > threshold)",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:78: 'TestEmbeddedToolsMenuIntegration' has rank C"
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:83: 'TestEmbeddedToolsMenuIntegration' has rank C"
         }
       ]
     },

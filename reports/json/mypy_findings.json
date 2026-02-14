@@ -1,8 +1,8 @@
 {
   "tool": "mypy",
-  "generated": "2026-02-08T03:06:40.200029",
-  "total_findings": 273,
-  "total_files": 41,
+  "generated": "2026-02-08T21:25:24.874568",
+  "total_findings": 176,
+  "total_files": 35,
   "files": [
     {
       "path": "src\\intellicrack\\bridges\\radare2.py",
@@ -263,756 +263,6 @@
           "code": "unreachable",
           "message": "Statement is unreachable",
           "raw": "src\\intellicrack\\bridges\\radare2.py:1264: error: Statement is unreachable  [unreachable]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\embedding\\hxd_widget.py",
-      "count": 18,
-      "findings": [
-        {
-          "line": 62,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Signature of \"get_tool_display_name\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py:62: error: Signature of \"get_tool_display_name\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"  [override]"
-        },
-        {
-          "line": 62,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Superclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py:62: note:      Superclass:"
-        },
-        {
-          "line": 62,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "@staticmethod",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py:62: note:          @staticmethod"
-        },
-        {
-          "line": 62,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def get_tool_display_name() -> str",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py:62: note:          def get_tool_display_name() -> str"
-        },
-        {
-          "line": 62,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Subclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py:62: note:      Subclass:"
-        },
-        {
-          "line": 62,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def get_tool_display_name(self) -> str",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py:62: note:          def get_tool_display_name(self) -> str"
-        },
-        {
-          "line": 70,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Signature of \"get_executable_path\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py:70: error: Signature of \"get_executable_path\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"  [override]"
-        },
-        {
-          "line": 70,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Superclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py:70: note:      Superclass:"
-        },
-        {
-          "line": 70,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "@staticmethod",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py:70: note:          @staticmethod"
-        },
-        {
-          "line": 70,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def get_executable_path() -> Path | None",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py:70: note:          def get_executable_path() -> Path | None"
-        },
-        {
-          "line": 70,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Subclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py:70: note:      Subclass:"
-        },
-        {
-          "line": 70,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def get_executable_path(self) -> Path | None",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py:70: note:          def get_executable_path(self) -> Path | None"
-        },
-        {
-          "line": 116,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Signature of \"get_window_search_params\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py:116: error: Signature of \"get_window_search_params\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"  [override]"
-        },
-        {
-          "line": 116,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Superclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py:116: note:      Superclass:"
-        },
-        {
-          "line": 116,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "@staticmethod",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py:116: note:          @staticmethod"
-        },
-        {
-          "line": 116,
-          "column": null,
-          "severity": "note",
-          "code": "str, str | None",
-          "message": "def get_window_search_params() -> dict",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py:116: note:          def get_window_search_params() -> dict[str, str | None]"
-        },
-        {
-          "line": 116,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Subclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py:116: note:      Subclass:"
-        },
-        {
-          "line": 116,
-          "column": null,
-          "severity": "note",
-          "code": "str, str | None",
-          "message": "def get_window_search_params(self) -> dict",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py:116: note:          def get_window_search_params(self) -> dict[str, str | None]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py",
-      "count": 18,
-      "findings": [
-        {
-          "line": 64,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Signature of \"get_tool_display_name\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py:64: error: Signature of \"get_tool_display_name\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"  [override]"
-        },
-        {
-          "line": 64,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Superclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py:64: note:      Superclass:"
-        },
-        {
-          "line": 64,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "@staticmethod",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py:64: note:          @staticmethod"
-        },
-        {
-          "line": 64,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def get_tool_display_name() -> str",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py:64: note:          def get_tool_display_name() -> str"
-        },
-        {
-          "line": 64,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Subclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py:64: note:      Subclass:"
-        },
-        {
-          "line": 64,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def get_tool_display_name(self) -> str",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py:64: note:          def get_tool_display_name(self) -> str"
-        },
-        {
-          "line": 72,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Signature of \"get_executable_path\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py:72: error: Signature of \"get_executable_path\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"  [override]"
-        },
-        {
-          "line": 72,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Superclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py:72: note:      Superclass:"
-        },
-        {
-          "line": 72,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "@staticmethod",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py:72: note:          @staticmethod"
-        },
-        {
-          "line": 72,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def get_executable_path() -> Path | None",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py:72: note:          def get_executable_path() -> Path | None"
-        },
-        {
-          "line": 72,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Subclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py:72: note:      Subclass:"
-        },
-        {
-          "line": 72,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def get_executable_path(self) -> Path | None",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py:72: note:          def get_executable_path(self) -> Path | None"
-        },
-        {
-          "line": 169,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Signature of \"get_window_search_params\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py:169: error: Signature of \"get_window_search_params\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"  [override]"
-        },
-        {
-          "line": 169,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Superclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py:169: note:      Superclass:"
-        },
-        {
-          "line": 169,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "@staticmethod",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py:169: note:          @staticmethod"
-        },
-        {
-          "line": 169,
-          "column": null,
-          "severity": "note",
-          "code": "str, str | None",
-          "message": "def get_window_search_params() -> dict",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py:169: note:          def get_window_search_params() -> dict[str, str | None]"
-        },
-        {
-          "line": 169,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Subclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py:169: note:      Subclass:"
-        },
-        {
-          "line": 169,
-          "column": null,
-          "severity": "note",
-          "code": "str, str | None",
-          "message": "def get_window_search_params(self) -> dict",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py:169: note:          def get_window_search_params(self) -> dict[str, str | None]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\embedding\\radare2_widget.py",
-      "count": 18,
-      "findings": [
-        {
-          "line": 62,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Signature of \"get_tool_display_name\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"",
-          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py:62: error: Signature of \"get_tool_display_name\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"  [override]"
-        },
-        {
-          "line": 62,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Superclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py:62: note:      Superclass:"
-        },
-        {
-          "line": 62,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "@staticmethod",
-          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py:62: note:          @staticmethod"
-        },
-        {
-          "line": 62,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def get_tool_display_name() -> str",
-          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py:62: note:          def get_tool_display_name() -> str"
-        },
-        {
-          "line": 62,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Subclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py:62: note:      Subclass:"
-        },
-        {
-          "line": 62,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def get_tool_display_name(self) -> str",
-          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py:62: note:          def get_tool_display_name(self) -> str"
-        },
-        {
-          "line": 70,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Signature of \"get_executable_path\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"",
-          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py:70: error: Signature of \"get_executable_path\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"  [override]"
-        },
-        {
-          "line": 70,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Superclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py:70: note:      Superclass:"
-        },
-        {
-          "line": 70,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "@staticmethod",
-          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py:70: note:          @staticmethod"
-        },
-        {
-          "line": 70,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def get_executable_path() -> Path | None",
-          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py:70: note:          def get_executable_path() -> Path | None"
-        },
-        {
-          "line": 70,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Subclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py:70: note:      Subclass:"
-        },
-        {
-          "line": 70,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def get_executable_path(self) -> Path | None",
-          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py:70: note:          def get_executable_path(self) -> Path | None"
-        },
-        {
-          "line": 141,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Signature of \"get_window_search_params\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"",
-          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py:141: error: Signature of \"get_window_search_params\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"  [override]"
-        },
-        {
-          "line": 141,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Superclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py:141: note:      Superclass:"
-        },
-        {
-          "line": 141,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "@staticmethod",
-          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py:141: note:          @staticmethod"
-        },
-        {
-          "line": 141,
-          "column": null,
-          "severity": "note",
-          "code": "str, str | None",
-          "message": "def get_window_search_params() -> dict",
-          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py:141: note:          def get_window_search_params() -> dict[str, str | None]"
-        },
-        {
-          "line": 141,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Subclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py:141: note:      Subclass:"
-        },
-        {
-          "line": 141,
-          "column": null,
-          "severity": "note",
-          "code": "str, str | None",
-          "message": "def get_window_search_params(self) -> dict",
-          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py:141: note:          def get_window_search_params(self) -> dict[str, str | None]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\embedding\\cutter_widget.py",
-      "count": 18,
-      "findings": [
-        {
-          "line": 65,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Signature of \"get_tool_display_name\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:65: error: Signature of \"get_tool_display_name\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"  [override]"
-        },
-        {
-          "line": 65,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Superclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:65: note:      Superclass:"
-        },
-        {
-          "line": 65,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "@staticmethod",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:65: note:          @staticmethod"
-        },
-        {
-          "line": 65,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def get_tool_display_name() -> str",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:65: note:          def get_tool_display_name() -> str"
-        },
-        {
-          "line": 65,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Subclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:65: note:      Subclass:"
-        },
-        {
-          "line": 65,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def get_tool_display_name(self) -> str",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:65: note:          def get_tool_display_name(self) -> str"
-        },
-        {
-          "line": 73,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Signature of \"get_executable_path\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:73: error: Signature of \"get_executable_path\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"  [override]"
-        },
-        {
-          "line": 73,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Superclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:73: note:      Superclass:"
-        },
-        {
-          "line": 73,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "@staticmethod",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:73: note:          @staticmethod"
-        },
-        {
-          "line": 73,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def get_executable_path() -> Path | None",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:73: note:          def get_executable_path() -> Path | None"
-        },
-        {
-          "line": 73,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Subclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:73: note:      Subclass:"
-        },
-        {
-          "line": 73,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def get_executable_path(self) -> Path | None",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:73: note:          def get_executable_path(self) -> Path | None"
-        },
-        {
-          "line": 135,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Signature of \"get_window_search_params\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:135: error: Signature of \"get_window_search_params\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"  [override]"
-        },
-        {
-          "line": 135,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Superclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:135: note:      Superclass:"
-        },
-        {
-          "line": 135,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "@staticmethod",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:135: note:          @staticmethod"
-        },
-        {
-          "line": 135,
-          "column": null,
-          "severity": "note",
-          "code": "str, str | None",
-          "message": "def get_window_search_params() -> dict",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:135: note:          def get_window_search_params() -> dict[str, str | None]"
-        },
-        {
-          "line": 135,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Subclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:135: note:      Subclass:"
-        },
-        {
-          "line": 135,
-          "column": null,
-          "severity": "note",
-          "code": "str, str | None",
-          "message": "def get_window_search_params(self) -> dict",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:135: note:          def get_window_search_params(self) -> dict[str, str | None]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py",
-      "count": 18,
-      "findings": [
-        {
-          "line": 66,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Signature of \"get_tool_display_name\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"",
-          "raw": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py:66: error: Signature of \"get_tool_display_name\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"  [override]"
-        },
-        {
-          "line": 66,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Superclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py:66: note:      Superclass:"
-        },
-        {
-          "line": 66,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "@staticmethod",
-          "raw": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py:66: note:          @staticmethod"
-        },
-        {
-          "line": 66,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def get_tool_display_name() -> str",
-          "raw": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py:66: note:          def get_tool_display_name() -> str"
-        },
-        {
-          "line": 66,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Subclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py:66: note:      Subclass:"
-        },
-        {
-          "line": 66,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def get_tool_display_name(self) -> str",
-          "raw": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py:66: note:          def get_tool_display_name(self) -> str"
-        },
-        {
-          "line": 74,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Signature of \"get_executable_path\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"",
-          "raw": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py:74: error: Signature of \"get_executable_path\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"  [override]"
-        },
-        {
-          "line": 74,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Superclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py:74: note:      Superclass:"
-        },
-        {
-          "line": 74,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "@staticmethod",
-          "raw": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py:74: note:          @staticmethod"
-        },
-        {
-          "line": 74,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def get_executable_path() -> Path | None",
-          "raw": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py:74: note:          def get_executable_path() -> Path | None"
-        },
-        {
-          "line": 74,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Subclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py:74: note:      Subclass:"
-        },
-        {
-          "line": 74,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def get_executable_path(self) -> Path | None",
-          "raw": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py:74: note:          def get_executable_path(self) -> Path | None"
-        },
-        {
-          "line": 182,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Signature of \"get_window_search_params\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"",
-          "raw": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py:182: error: Signature of \"get_window_search_params\" incompatible with supertype \"intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget\"  [override]"
-        },
-        {
-          "line": 182,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Superclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py:182: note:      Superclass:"
-        },
-        {
-          "line": 182,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "@staticmethod",
-          "raw": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py:182: note:          @staticmethod"
-        },
-        {
-          "line": 182,
-          "column": null,
-          "severity": "note",
-          "code": "str, str | None",
-          "message": "def get_window_search_params() -> dict",
-          "raw": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py:182: note:          def get_window_search_params() -> dict[str, str | None]"
-        },
-        {
-          "line": 182,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Subclass:",
-          "raw": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py:182: note:      Subclass:"
-        },
-        {
-          "line": 182,
-          "column": null,
-          "severity": "note",
-          "code": "str, str | None",
-          "message": "def get_window_search_params(self) -> dict",
-          "raw": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py:182: note:          def get_window_search_params(self) -> dict[str, str | None]"
         }
       ]
     },
@@ -1765,52 +1015,52 @@
           "raw": "tests\\test_ui\\test_app_embedded_tools.py:228: error: \"object\" has no attribute \"add_x64dbg_tab\"  [attr-defined]"
         },
         {
-          "line": 251,
+          "line": 250,
           "column": null,
           "severity": "error",
           "code": "attr-defined",
           "message": "\"object\" has no attribute \"add_x64dbg_tab\"",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:251: error: \"object\" has no attribute \"add_x64dbg_tab\"  [attr-defined]"
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:250: error: \"object\" has no attribute \"add_x64dbg_tab\"  [attr-defined]"
         },
         {
-          "line": 279,
+          "line": 277,
           "column": null,
           "severity": "error",
           "code": "attr-defined",
           "message": "\"object\" has no attribute \"add_cutter_tab\"",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:279: error: \"object\" has no attribute \"add_cutter_tab\"  [attr-defined]"
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:277: error: \"object\" has no attribute \"add_cutter_tab\"  [attr-defined]"
         },
         {
-          "line": 305,
+          "line": 302,
           "column": null,
           "severity": "error",
           "code": "attr-defined",
           "message": "\"object\" has no attribute \"add_hxd_tab\"",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:305: error: \"object\" has no attribute \"add_hxd_tab\"  [attr-defined]"
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:302: error: \"object\" has no attribute \"add_hxd_tab\"  [attr-defined]"
         },
         {
-          "line": 398,
+          "line": 391,
           "column": null,
           "severity": "error",
           "code": "attr-defined",
           "message": "\"object\" has no attribute \"open_in_x64dbg\"",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:398: error: \"object\" has no attribute \"open_in_x64dbg\"  [attr-defined]"
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:391: error: \"object\" has no attribute \"open_in_x64dbg\"  [attr-defined]"
         },
         {
-          "line": 423,
+          "line": 415,
           "column": null,
           "severity": "error",
           "code": "attr-defined",
           "message": "\"object\" has no attribute \"open_in_cutter\"",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:423: error: \"object\" has no attribute \"open_in_cutter\"  [attr-defined]"
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:415: error: \"object\" has no attribute \"open_in_cutter\"  [attr-defined]"
         },
         {
-          "line": 448,
+          "line": 439,
           "column": null,
           "severity": "error",
           "code": "attr-defined",
           "message": "\"object\" has no attribute \"open_in_hxd\"",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:448: error: \"object\" has no attribute \"open_in_hxd\"  [attr-defined]"
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:439: error: \"object\" has no attribute \"open_in_hxd\"  [attr-defined]"
         }
       ]
     },
@@ -1961,52 +1211,6 @@
       ]
     },
     {
-      "path": "tests\\test_providers\\test_model_discovery.py",
-      "count": 5,
-      "findings": [
-        {
-          "line": 142,
-          "column": null,
-          "severity": "error",
-          "code": "no-untyped-def",
-          "message": "Function is missing a type annotation for one or more arguments",
-          "raw": "tests\\test_providers\\test_model_discovery.py:142: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
-        },
-        {
-          "line": 169,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"GoogleProvider\", variable has type \"OpenAIProvider\")",
-          "raw": "tests\\test_providers\\test_model_discovery.py:169: error: Incompatible types in assignment (expression has type \"GoogleProvider\", variable has type \"OpenAIProvider\")  [assignment]"
-        },
-        {
-          "line": 179,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"OpenRouterProvider\", variable has type \"OpenAIProvider\")",
-          "raw": "tests\\test_providers\\test_model_discovery.py:179: error: Incompatible types in assignment (expression has type \"OpenRouterProvider\", variable has type \"OpenAIProvider\")  [assignment]"
-        },
-        {
-          "line": 189,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"AnthropicProvider\", variable has type \"OpenAIProvider\")",
-          "raw": "tests\\test_providers\\test_model_discovery.py:189: error: Incompatible types in assignment (expression has type \"AnthropicProvider\", variable has type \"OpenAIProvider\")  [assignment]"
-        },
-        {
-          "line": 199,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"OllamaProvider\", variable has type \"OpenAIProvider\")",
-          "raw": "tests\\test_providers\\test_model_discovery.py:199: error: Incompatible types in assignment (expression has type \"OllamaProvider\", variable has type \"OpenAIProvider\")  [assignment]"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\app.py",
       "count": 5,
       "findings": [
@@ -2121,58 +1325,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\sandbox\\windows.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 209,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"Any | None\" has no attribute \"poll\"",
-          "raw": "src\\intellicrack\\sandbox\\windows.py:209: error: Item \"None\" of \"Any | None\" has no attribute \"poll\"  [union-attr]"
-        },
-        {
-          "line": 214,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"Any | None\" has no attribute \"pid\"",
-          "raw": "src\\intellicrack\\sandbox\\windows.py:214: error: Item \"None\" of \"Any | None\" has no attribute \"pid\"  [union-attr]"
-        },
-        {
-          "line": 216,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"Any | None\" has no attribute \"pid\"",
-          "raw": "src\\intellicrack\\sandbox\\windows.py:216: error: Item \"None\" of \"Any | None\" has no attribute \"pid\"  [union-attr]"
-        }
-      ]
-    },
-    {
-      "path": "tests\\test_ui\\test_font_manager.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 113,
-          "column": null,
-          "severity": "error",
-          "code": "comparison-overlap",
-          "message": "Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")",
-          "raw": "tests\\test_ui\\test_font_manager.py:113: error: Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")  [comparison-overlap]"
-        },
-        {
-          "line": 148,
-          "column": null,
-          "severity": "error",
-          "code": "comparison-overlap",
-          "message": "Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")",
-          "raw": "tests\\test_ui\\test_font_manager.py:148: error: Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")  [comparison-overlap]"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py",
       "count": 2,
       "findings": [
@@ -2191,6 +1343,28 @@
           "code": "arg-type",
           "message": "Argument 1 to \"setAlignment\" of \"QLabel\" has incompatible type \"int\"; expected \"AlignmentFlag\"",
           "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:144: error: Argument 1 to \"setAlignment\" of \"QLabel\" has incompatible type \"int\"; expected \"AlignmentFlag\"  [arg-type]"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_ui\\test_font_manager.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 139,
+          "column": null,
+          "severity": "error",
+          "code": "comparison-overlap",
+          "message": "Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")",
+          "raw": "tests\\test_ui\\test_font_manager.py:139: error: Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")  [comparison-overlap]"
+        },
+        {
+          "line": 180,
+          "column": null,
+          "severity": "error",
+          "code": "comparison-overlap",
+          "message": "Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")",
+          "raw": "tests\\test_ui\\test_font_manager.py:180: error: Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")  [comparison-overlap]"
         }
       ]
     },
@@ -2221,20 +1395,20 @@
       "count": 2,
       "findings": [
         {
-          "line": 437,
+          "line": 499,
           "column": null,
           "severity": "error",
           "code": "arg-type",
           "message": "Argument 1 to \"_format_prompt\" of \"LocalTransformersProvider\" has incompatible type \"list[dict[str, str]]\"; expected \"list[dict[str, object]]\"",
-          "raw": "tests\\test_providers\\test_local_transformers_provider.py:437: error: Argument 1 to \"_format_prompt\" of \"LocalTransformersProvider\" has incompatible type \"list[dict[str, str]]\"; expected \"list[dict[str, object]]\"  [arg-type]"
+          "raw": "tests\\test_providers\\test_local_transformers_provider.py:499: error: Argument 1 to \"_format_prompt\" of \"LocalTransformersProvider\" has incompatible type \"list[dict[str, str]]\"; expected \"list[dict[str, object]]\"  [arg-type]"
         },
         {
-          "line": 449,
+          "line": 512,
           "column": null,
           "severity": "error",
           "code": "arg-type",
           "message": "Argument 1 to \"_format_prompt\" of \"LocalTransformersProvider\" has incompatible type \"list[dict[str, str]]\"; expected \"list[dict[str, object]]\"",
-          "raw": "tests\\test_providers\\test_local_transformers_provider.py:449: error: Argument 1 to \"_format_prompt\" of \"LocalTransformersProvider\" has incompatible type \"list[dict[str, str]]\"; expected \"list[dict[str, object]]\"  [arg-type]"
+          "raw": "tests\\test_providers\\test_local_transformers_provider.py:512: error: Argument 1 to \"_format_prompt\" of \"LocalTransformersProvider\" has incompatible type \"list[dict[str, str]]\"; expected \"list[dict[str, object]]\"  [arg-type]"
         }
       ]
     },
@@ -2267,6 +1441,34 @@
       ]
     },
     {
+      "path": "tests\\test_providers\\test_openrouter_provider.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 217,
+          "column": null,
+          "severity": "error",
+          "code": "no-untyped-def",
+          "message": "Function is missing a type annotation for one or more arguments",
+          "raw": "tests\\test_providers\\test_openrouter_provider.py:217: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_providers\\test_huggingface_provider.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 206,
+          "column": null,
+          "severity": "error",
+          "code": "no-untyped-def",
+          "message": "Function is missing a type annotation for one or more arguments",
+          "raw": "tests\\test_providers\\test_huggingface_provider.py:206: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\sandbox\\qemu.py",
       "count": 1,
       "findings": [
@@ -2277,34 +1479,6 @@
           "code": "union-attr",
           "message": "Item \"None\" of \"StreamReader | None\" has no attribute \"readline\"",
           "raw": "src\\intellicrack\\sandbox\\qemu.py:200: error: Item \"None\" of \"StreamReader | None\" has no attribute \"readline\"  [union-attr]"
-        }
-      ]
-    },
-    {
-      "path": "tests\\test_providers\\test_openrouter_provider.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 209,
-          "column": null,
-          "severity": "error",
-          "code": "no-untyped-def",
-          "message": "Function is missing a type annotation for one or more arguments",
-          "raw": "tests\\test_providers\\test_openrouter_provider.py:209: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
-        }
-      ]
-    },
-    {
-      "path": "tests\\test_providers\\test_huggingface_provider.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 215,
-          "column": null,
-          "severity": "error",
-          "code": "no-untyped-def",
-          "message": "Function is missing a type annotation for one or more arguments",
-          "raw": "tests\\test_providers\\test_huggingface_provider.py:215: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
         }
       ]
     },
@@ -2327,12 +1501,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 192,
+          "line": 196,
           "column": null,
           "severity": "error",
           "code": "no-untyped-def",
           "message": "Function is missing a type annotation for one or more arguments",
-          "raw": "tests\\test_providers\\test_openai_provider.py:192: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
+          "raw": "tests\\test_providers\\test_openai_provider.py:196: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
         }
       ]
     },
@@ -2341,12 +1515,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 188,
+          "line": 193,
           "column": null,
           "severity": "error",
           "code": "no-untyped-def",
           "message": "Function is missing a type annotation for one or more arguments",
-          "raw": "tests\\test_providers\\test_grok_provider.py:188: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
+          "raw": "tests\\test_providers\\test_grok_provider.py:193: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
         }
       ]
     },
@@ -2355,12 +1529,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 188,
+          "line": 193,
           "column": null,
           "severity": "error",
           "code": "no-untyped-def",
           "message": "Function is missing a type annotation for one or more arguments",
-          "raw": "tests\\test_providers\\test_anthropic_provider.py:188: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
+          "raw": "tests\\test_providers\\test_anthropic_provider.py:193: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
         }
       ]
     },
@@ -2393,16 +1567,30 @@
       ]
     },
     {
-      "path": "tests\\test_providers\\test_google_provider.py",
+      "path": "tests\\test_providers\\test_model_discovery.py",
       "count": 1,
       "findings": [
         {
-          "line": 190,
+          "line": 112,
           "column": null,
           "severity": "error",
           "code": "no-untyped-def",
           "message": "Function is missing a type annotation for one or more arguments",
-          "raw": "tests\\test_providers\\test_google_provider.py:190: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
+          "raw": "tests\\test_providers\\test_model_discovery.py:112: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_providers\\test_google_provider.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 194,
+          "column": null,
+          "severity": "error",
+          "code": "no-untyped-def",
+          "message": "Function is missing a type annotation for one or more arguments",
+          "raw": "tests\\test_providers\\test_google_provider.py:194: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
         }
       ]
     },
@@ -2425,12 +1613,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 23,
+          "line": 32,
           "column": null,
           "severity": "error",
           "code": "no-any-return",
           "message": "Returning Any from function declared to return \"QApplication\"",
-          "raw": "tests\\test_ui\\test_tools_logic.py:23: error: Returning Any from function declared to return \"QApplication\"  [no-any-return]"
+          "raw": "tests\\test_ui\\test_tools_logic.py:32: error: Returning Any from function declared to return \"QApplication\"  [no-any-return]"
         }
       ]
     }

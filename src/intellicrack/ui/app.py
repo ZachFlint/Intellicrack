@@ -286,6 +286,9 @@ class MainWindow(QMainWindow):
 
         Args:
             menubar: The menu bar to add the menu to.
+
+        Raises:
+            TypeError: If the menu could not be created.
         """
         file_menu: QMenu | None = menubar.addMenu("&File")
         if file_menu is None:
@@ -307,6 +310,9 @@ class MainWindow(QMainWindow):
 
         Args:
             menubar: The menu bar to add the menu to.
+
+        Raises:
+            TypeError: If the menu or submenu could not be created.
         """
         tools_menu: QMenu | None = menubar.addMenu("&Tools")
         if tools_menu is None:
@@ -335,6 +341,9 @@ class MainWindow(QMainWindow):
 
         Args:
             menubar: The menu bar to add the menu to.
+
+        Raises:
+            TypeError: If the menu could not be created.
         """
         providers_menu: QMenu | None = menubar.addMenu("&Providers")
         if providers_menu is None:
@@ -349,6 +358,9 @@ class MainWindow(QMainWindow):
 
         Args:
             menubar: The menu bar to add the menu to.
+
+        Raises:
+            TypeError: If the menu could not be created.
         """
         sandbox_menu: QMenu | None = menubar.addMenu("&Sandbox")
         if sandbox_menu is None:
@@ -363,6 +375,9 @@ class MainWindow(QMainWindow):
 
         Args:
             menubar: The menu bar to add the menu to.
+
+        Raises:
+            TypeError: If the menu could not be created.
         """
         settings_menu: QMenu | None = menubar.addMenu("&Settings")
         if settings_menu is None:
@@ -376,6 +391,9 @@ class MainWindow(QMainWindow):
 
         Args:
             menubar: The menu bar to add the menu to.
+
+        Raises:
+            TypeError: If the menu could not be created.
         """
         help_menu: QMenu | None = menubar.addMenu("&Help")
         if help_menu is None:
@@ -385,7 +403,11 @@ class MainWindow(QMainWindow):
         self._add_menu_action(help_menu, "About", self._on_about)
 
     def _setup_menus(self) -> None:
-        """Set up the menu bar."""
+        """Set up the menu bar.
+
+        Raises:
+            TypeError: If the menu bar could not be retrieved.
+        """
         menubar: QMenuBar | None = self.menuBar()
         if menubar is None:
             msg = "Failed to get menu bar"

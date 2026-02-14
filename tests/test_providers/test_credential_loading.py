@@ -6,7 +6,7 @@ from the .env file and validate their format.
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -14,24 +14,29 @@ from intellicrack.core.types import ProviderCredentials, ProviderName
 from intellicrack.credentials.env_loader import CredentialLoader
 
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
+
 class TestCredentialLoaderInitialization:
     """Tests for CredentialLoader initialization."""
 
+    @staticmethod
     def test_loader_initializes_with_env_path(
-        self,
         env_file_path: Path,
     ) -> None:
         """Test CredentialLoader can be initialized with explicit path."""
         loader = CredentialLoader(env_path=env_file_path)
         assert loader.env_path == env_file_path
 
-    def test_loader_initializes_without_path(self) -> None:
+    @staticmethod
+    def test_loader_initializes_without_path() -> None:
         """Test CredentialLoader can be initialized without explicit path."""
         loader = CredentialLoader()
         assert loader.env_path is not None
 
+    @staticmethod
     def test_loader_finds_env_file(
-        self,
         env_file_path: Path,
     ) -> None:
         """Test loader finds .env file when it exists."""
@@ -39,23 +44,26 @@ class TestCredentialLoaderInitialization:
         assert loader.env_path.exists()
 
 
+_EXPECTED_TUPLE_LENGTH = 2
+
+
 class TestCredentialValidation:
     """Tests for credential validation methods."""
 
+    @staticmethod
     def test_validate_credentials_returns_tuple(
-        self,
         credential_loader: CredentialLoader,
     ) -> None:
         """Test validate_credentials returns (bool, str|None) tuple."""
         for provider in ProviderName:
             result = credential_loader.validate_credentials(provider)
             assert isinstance(result, tuple), f"Expected tuple for {provider}"
-            assert len(result) == 2, f"Expected 2-tuple for {provider}"
+            assert len(result) == _EXPECTED_TUPLE_LENGTH, f"Expected 2-tuple for {provider}"
             assert isinstance(result[0], bool), f"Expected bool first element for {provider}"
             assert result[1] is None or isinstance(result[1], str), f"Expected None or str second element for {provider}"
 
+    @staticmethod
     def test_get_credentials_returns_credentials_or_none(
-        self,
         credential_loader: CredentialLoader,
     ) -> None:
         """Test get_credentials returns ProviderCredentials or None."""
@@ -68,8 +76,8 @@ class TestCredentialValidation:
 class TestProviderListing:
     """Tests for provider listing methods."""
 
+    @staticmethod
     def test_list_configured_providers_returns_list(
-        self,
         credential_loader: CredentialLoader,
     ) -> None:
         """Test list_configured_providers returns list of ProviderName."""
@@ -78,8 +86,8 @@ class TestProviderListing:
         for provider in configured:
             assert isinstance(provider, ProviderName), f"Expected ProviderName, got {type(provider)}"
 
+    @staticmethod
     def test_list_missing_providers_returns_list(
-        self,
         credential_loader: CredentialLoader,
     ) -> None:
         """Test list_missing_providers returns list of ProviderName."""
@@ -88,8 +96,8 @@ class TestProviderListing:
         for provider in missing:
             assert isinstance(provider, ProviderName), f"Expected ProviderName, got {type(provider)}"
 
+    @staticmethod
     def test_configured_and_missing_cover_all_providers(
-        self,
         credential_loader: CredentialLoader,
     ) -> None:
         """Test configured + missing covers all providers."""
@@ -107,8 +115,8 @@ class TestProviderListing:
 class TestApiKeyFormatValidation:
     """Tests for API key format validation."""
 
+    @staticmethod
     def test_anthropic_key_format_validation(
-        self,
         credential_loader: CredentialLoader,
         has_anthropic_key: bool,
     ) -> None:
@@ -121,8 +129,8 @@ class TestApiKeyFormatValidation:
         assert creds.api_key is not None, "Expected api_key to be set"
         assert creds.api_key.startswith("sk-ant-"), f"Anthropic key should start with 'sk-ant-', got prefix: {creds.api_key[:10]}..."
 
+    @staticmethod
     def test_openai_key_format_validation(
-        self,
         credential_loader: CredentialLoader,
         has_openai_key: bool,
     ) -> None:
@@ -135,8 +143,8 @@ class TestApiKeyFormatValidation:
         assert creds.api_key is not None, "Expected api_key to be set"
         assert creds.api_key.startswith("sk-"), f"OpenAI key should start with 'sk-', got prefix: {creds.api_key[:10]}..."
 
+    @staticmethod
     def test_openrouter_key_format_validation(
-        self,
         credential_loader: CredentialLoader,
         has_openrouter_key: bool,
     ) -> None:
@@ -149,8 +157,8 @@ class TestApiKeyFormatValidation:
         assert creds.api_key is not None, "Expected api_key to be set"
         assert creds.api_key.startswith("sk-or-"), f"OpenRouter key should start with 'sk-or-', got prefix: {creds.api_key[:10]}..."
 
+    @staticmethod
     def test_google_key_exists_when_configured(
-        self,
         credential_loader: CredentialLoader,
         has_google_key: bool,
     ) -> None:
@@ -167,24 +175,24 @@ class TestApiKeyFormatValidation:
 class TestEnvironmentVariableAccess:
     """Tests for environment variable access methods."""
 
+    @staticmethod
     def test_get_env_var_returns_value_or_default(
-        self,
         credential_loader: CredentialLoader,
     ) -> None:
         """Test get_env_var returns value if set, default otherwise."""
         result = credential_loader.get_env_var("NONEXISTENT_VAR", "default_value")
         assert result == "default_value"
 
+    @staticmethod
     def test_get_env_var_returns_none_without_default(
-        self,
         credential_loader: CredentialLoader,
     ) -> None:
         """Test get_env_var returns None if not set and no default."""
         result = credential_loader.get_env_var("NONEXISTENT_VAR")
         assert result is None
 
+    @staticmethod
     def test_set_env_var_updates_value(
-        self,
         credential_loader: CredentialLoader,
     ) -> None:
         """Test set_env_var updates the environment variable."""
@@ -200,8 +208,8 @@ class TestEnvironmentVariableAccess:
 class TestReload:
     """Tests for credential reload functionality."""
 
+    @staticmethod
     def test_reload_maintains_configured_providers(
-        self,
         credential_loader: CredentialLoader,
     ) -> None:
         """Test reload() maintains the same configured providers."""

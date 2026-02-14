@@ -35,39 +35,9 @@ classifiers = [
     "Environment :: X11 Applications :: Qt",
 ]
 dependencies = [
-    "networkx>=3.6.1,<4",
-    "markdown-it-py>=3.0,<4",
-    "anthropic",
-    "openai",
-    "google-genai",
-    "ollama",
-    "httpx",
-    "PyQt6",
-    "qdarkstyle",
-    "pygments",
-    "pefile",
-    "lief",
-    "capstone",
-    "keystone-engine",
-    "frida",
-    "frida-tools",
-    "r2pipe",
-    "ghidra-bridge",
-    "python-dotenv",
-    "tomli",
-    "tomli-w",
-    "aiofiles",
-    "aiosqlite",
-    "pydantic",
-    "psutil",
-    "mcp>=1.26.0",
-    "pyannotate>=1.2.0,<2",
-    "structlog>=24.1.0",
-    "transformers>=5.0.0",
-    "accelerate>=0.30.0",
-    "bitsandbytes>=0.43.0",
-    "sentencepiece",
-    "safetensors",
+    "networkx",
+    "markdown-it-py",
+    "psutil", "flake8-pyproject", "pytest", "build", "pyclean", "black", "pylint", "autopep8", "flake8", "ruff", "isort", "pycodestyle", "bandit", "blinter", "vulture", "pyupgrade", "pydocstyle", "sourcery", "wemake-python-styleguide", "darglint", "pyroma", "mypy-extensions", "dead", "uncalled", "deadcode", "pygount", "pytest-deadfixtures", "basedpyright", "monkeytype", "ty", "mccabe", "xenon", "safety", "yamllint", "jsonlint", "pytest-cov", "pytest-mock", "pytest-asyncio", "pytest-xdist", "pytest-timeout", "pytest-qt", "pytest-benchmark", "pytest-html", "pytest-randomly", "pytest-sugar", "pytest-env", "pytest-instafail", "hypothesis", "tox", "nox", "coverage", "freezegun", "responses", "faker", "radon", "sphinx", "sphinx-rtd-theme", "sphinx-autodoc-typehints", "sphinx-copybutton", "sphinx-tabs", "sphinxcontrib-mermaid", "sphinx-autobuild", "pdoc3", "mkdocs-material", "pymdown-extensions", "myst-parser", "ipdb", "line-profiler", "memory-profiler", "py-spy", "snakeviz", "pyinstrument", "scalene", "pre-commit", "commitizen", "bumpversion", "pipdeptree", "rope", "astor", "yapf", "pip-audit", "nodeenv", "twine", "setuptools-scm", "poetry", "pycallgraph2", "pre-commit-hooks", "detect-secrets",
 ]
 
 [project.optional-dependencies]
@@ -78,6 +48,7 @@ dev = [
     "pylint",
     "autopep8",
     "flake8",
+    "flake8-pyproject",
     "ruff",
     "isort",
     "pycodestyle",
@@ -183,142 +154,142 @@ preview = ["pixi-build"]
 
 [tool.pixi.dependencies]
 python = "3.13.*"
-git = "*"
-pip = "*"
-wheel = "*"
-setuptools = "*"
-just = "*"
+git = ">=2.52.0,<3"
+pip = ">=26.0.1,<27"
+wheel = ">=0.46.3,<0.47"
+setuptools = ">=81.0.0,<82"
+just = ">=1.46.0,<2"
 networkx = ">=3.6.1,<4"
-shellcheck = "*"
-nodejs = "*"
-yarn = "*"
-markdownlint-cli = "*"
-pixi-pycharm = "*"
-anyio = "*"
-types-requests = "*"
-types-pyyaml = "*"
-pytest = "*"
-rich = "*"
-mypy = "*"
-markdown-it-py = ">=3.0,<4"
+shellcheck = ">=0.10.0,<0.11"
+nodejs = ">=24.12.0,<24.13"
+yarn = ">=4.12.0,<5"
+markdownlint-cli = ">=0.47.0,<0.48"
+pixi-pycharm = ">=0.0.10,<0.0.11"
+anyio = ">=4.12.1,<5"
+types-requests = ">=2.32.4.20260107,<3"
+types-pyyaml = ">=6.0.12.20250915,<7"
+pytest = ">=9.0.2,<10"
+rich = ">=14.3.2,<15"
+mypy = ">=1.19.1,<2"
+markdown-it-py = ">=4.0.0,<5"
 
 [tool.pixi.pypi-dependencies]
 intellicrack = { path = ".", editable = true }
-anthropic = "*"
-openai = "*"
-google-genai = "*"
-ollama = "*"
-httpx = "*"
-PyQt6 = "*"
-qdarkstyle = "*"
+anthropic = ">=0.79.0, <0.80"
+openai = ">=2.17.0, <3"
+google-genai = ">=1.62.0, <2"
+ollama = ">=0.6.1, <0.7"
+httpx = ">=0.28.1, <0.29"
+PyQt6 = ">=6.10.2, <7"
+qdarkstyle = ">=3.2.3, <4"
 pygments = "*"
-pefile = "*"
-lief = "*"
-capstone = "*"
-keystone-engine = "*"
-frida = "*"
-frida-tools = "*"
-r2pipe = "*"
-ghidra-bridge = "*"
-python-dotenv = "*"
+pefile = ">=2024.8.26, <2025"
+lief = ">=0.17.3, <0.18"
+capstone = ">=5.0.6, <6"
+keystone-engine = ">=0.9.2, <0.10"
+frida = ">=17.6.2, <18"
+frida-tools = ">=14.5.2, <15"
+r2pipe = ">=1.9.6, <2"
+ghidra-bridge = ">=1.0.0, <2"
+python-dotenv = ">=1.2.1, <2"
 tomli = "*"
-tomli-w = "*"
-aiofiles = "*"
-aiosqlite = "*"
-pydantic = "*"
-build = "*"
-pyclean = "*"
-black = "*"
-pylint = "*"
-autopep8 = "*"
-flake8 = "*"
-ruff = "*"
-isort = "*"
-pycodestyle = "*"
-bandit = "*"
-blinter = "*"
-vulture = "*"
-pyupgrade = "*"
-pydocstyle = "*"
-sourcery = "*"
-wemake-python-styleguide = "*"
-darglint = "*"
-pyroma = "*"
+tomli-w = ">=1.2.0, <2"
+aiofiles = ">=25.1.0, <26"
+aiosqlite = ">=0.22.1, <0.23"
+pydantic = ">=2.12.5, <3"
+build = ">=1.4.0, <2"
+pyclean = ">=3.5.0, <4"
+black = ">=26.1.0, <27"
+pylint = ">=4.0.4, <5"
+autopep8 = ">=2.3.2, <3"
+flake8 = ">=7.3.0, <8"
+ruff = ">=0.15.0, <0.16"
+isort = ">=7.0.0, <8"
+pycodestyle = ">=2.14.0, <3"
+bandit = ">=1.9.3, <2"
+blinter = ">=1.0.112, <2"
+vulture = ">=2.14, <3"
+pyupgrade = ">=3.21.2, <4"
+pydocstyle = ">=6.3.0, <7"
+sourcery = ">=1.43.0, <2"
+wemake-python-styleguide = ">=1.5.0, <2"
+darglint = ">=1.8.1, <2"
+pyroma = ">=5.0.1, <6"
 mypy-extensions = "*"
-dead = "*"
-uncalled = "*"
-deadcode = "*"
-pygount = "*"
-pytest-deadfixtures = "*"
-basedpyright = "*"
-monkeytype = "*"
-ty = "*"
-mccabe = "*"
-xenon = "*"
-safety = "*"
-yamllint = "*"
-jsonlint = "*"
-pytest-cov = "*"
-pytest-mock = "*"
-pytest-asyncio = "*"
-pytest-xdist = "*"
-pytest-timeout = "*"
-pytest-qt = "*"
-pytest-benchmark = "*"
-pytest-html = "*"
-pytest-randomly = "*"
-pytest-sugar = "*"
-pytest-env = "*"
-pytest-instafail = "*"
-hypothesis = "*"
-tox = "*"
-nox = "*"
-coverage = "*"
-freezegun = "*"
-responses = "*"
-faker = "*"
-radon = "*"
-sphinx = "*"
-sphinx-rtd-theme = "*"
-sphinx-autodoc-typehints = "*"
-sphinx-copybutton = "*"
-sphinx-tabs = "*"
-sphinxcontrib-mermaid = "*"
-sphinx-autobuild = "*"
-pdoc3 = "*"
-mkdocs-material = "*"
-pymdown-extensions = "*"
-myst-parser = "*"
-ipdb = "*"
-line-profiler = "*"
-memory-profiler = "*"
-py-spy = "*"
-snakeviz = "*"
-pyinstrument = "*"
-scalene = "*"
-pre-commit = "*"
-commitizen = "*"
-bumpversion = "*"
-pipdeptree = "*"
-rope = "*"
-astor = "*"
-yapf = "*"
-pip-audit = "*"
-nodeenv = "*"
-twine = "*"
-setuptools-scm = "*"
-poetry = "*"
-pycallgraph2 = "*"
-pre-commit-hooks = "*"
-detect-secrets = "*"
-mcp = ">=1.26.0"
-pyannotate = ">=1.2.0,<2"
-structlog = ">=24.1.0"
-transformers = ">=5.0.0"
-accelerate = ">=0.30.0"
-bitsandbytes = ">=0.43.0"
-sentencepiece = "*"
-safetensors = "*"
+dead = ">=2.1.0, <3"
+uncalled = ">=0.1.8, <0.2"
+deadcode = ">=2.4.1, <3"
+pygount = ">=3.1.0, <4"
+pytest-deadfixtures = ">=3.1.0, <4"
+basedpyright = ">=1.37.4, <2"
+monkeytype = ">=23.3.0, <24"
+ty = ">=0.0.15, <0.0.16"
+mccabe = ">=0.7.0, <0.8"
+xenon = ">=0.9.3, <0.10"
+safety = ">=3.7.0, <4"
+yamllint = ">=1.38.0, <2"
+jsonlint = ">=0.1, <0.2"
+pytest-cov = ">=7.0.0, <8"
+pytest-mock = ">=3.15.1, <4"
+pytest-asyncio = ">=1.3.0, <2"
+pytest-xdist = ">=3.8.0, <4"
+pytest-timeout = ">=2.4.0, <3"
+pytest-qt = ">=4.5.0, <5"
+pytest-benchmark = ">=5.2.3, <6"
+pytest-html = ">=4.2.0, <5"
+pytest-randomly = ">=4.0.1, <5"
+pytest-sugar = ">=1.1.1, <2"
+pytest-env = ">=1.2.0, <2"
+pytest-instafail = ">=0.5.0, <0.6"
+hypothesis = ">=6.151.5, <7"
+tox = ">=4.34.1, <5"
+nox = ">=2025.11.12, <2026"
+coverage = ">=7.13.3, <8"
+freezegun = ">=1.5.5, <2"
+responses = ">=0.25.8, <0.26"
+faker = ">=40.4.0, <41"
+radon = ">=6.0.1, <7"
+sphinx = ">=9.1.0, <10"
+sphinx-rtd-theme = ">=3.1.0, <4"
+sphinx-autodoc-typehints = ">=3.6.2, <4"
+sphinx-copybutton = ">=0.5.2, <0.6"
+sphinx-tabs = ">=3.4.7, <4"
+sphinxcontrib-mermaid = ">=2.0.0, <3"
+sphinx-autobuild = ">=2025.8.25, <2026"
+pdoc3 = ">=0.11.6, <0.12"
+mkdocs-material = ">=9.7.1, <10"
+pymdown-extensions = ">=10.20.1, <11"
+myst-parser = ">=5.0.0, <6"
+ipdb = ">=0.13.13, <0.14"
+line-profiler = ">=5.0.1, <6"
+memory-profiler = ">=0.61.0, <0.62"
+py-spy = ">=0.4.1, <0.5"
+snakeviz = ">=2.2.2, <3"
+pyinstrument = ">=5.1.2, <6"
+scalene = ">=2.1.3, <3"
+pre-commit = ">=4.5.1, <5"
+commitizen = ">=4.13.6, <5"
+bumpversion = ">=0.6.0, <0.7"
+pipdeptree = ">=2.30.0, <3"
+rope = ">=1.14.0, <2"
+astor = ">=0.8.1, <0.9"
+yapf = ">=0.43.0, <0.44"
+pip-audit = ">=2.10.0, <3"
+nodeenv = ">=1.10.0, <2"
+twine = ">=6.2.0, <7"
+setuptools-scm = ">=9.2.2, <10"
+poetry = ">=2.3.2, <3"
+pycallgraph2 = ">=1.1.3, <2"
+pre-commit-hooks = ">=6.0.0, <7"
+detect-secrets = ">=1.5.0, <2"
+mcp = ">=1.26.0, <2"
+pyannotate = ">=1.2.0, <2"
+structlog = ">=25.5.0, <26"
+transformers = ">=5.1.0, <6"
+accelerate = ">=1.12.0, <2"
+bitsandbytes = ">=0.49.1, <0.50"
+sentencepiece = ">=0.2.1, <0.3"
+safetensors = ">=0.7.0, <0.8"
 
 [tool.pixi.pypi-options]
 extra-index-urls = ["https://download.pytorch.org/whl/xpu"]
@@ -598,6 +569,32 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 docstring-code-format = true
 
+[tool.flake8]
+max-line-length = 140
+exclude = [
+    ".git",
+    ".github",
+    ".pixi",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".vscode",
+    ".idea",
+    ".claude",
+    ".serena",
+    "build",
+    "dist",
+    "tools",
+    "docs",
+    "node_modules",
+    "CLI Coding",
+    "Screenshots",
+    "typings",
+    "stubs",
+]
+extend-ignore = ["E203", "W503"]
+per-file-ignores = ["tests/*:S101,S102,S404"]
+
 [tool.bandit]
 exclude_dirs = ["tests", "docs", "tools", ".git", ".github", ".pixi", "node_modules", "CLI Coding", "Screenshots"]
 skips = ["B101", "B601"]
@@ -625,3 +622,82 @@ exclude_lines = [
 [tool.coverage.html]
 directory = "coverage_html_report"
 title = "Intellicrack Coverage Report"
+
+[tool.vulture]
+min_confidence = 80
+ignore_decorators = [
+    "@abstractmethod",
+    "@abc.abstractmethod",
+    "@property",
+    "@*.setter",
+    "@staticmethod",
+    "@classmethod",
+    "@override",
+]
+ignore_names = [
+    "argtypes",
+    "restype",
+    "supports_*",
+    "visit_*",
+    "do_*",
+    "test_*",
+    "setUp",
+    "tearDown",
+    "setUpClass",
+    "tearDownClass",
+]
+exclude = [
+    ".git/",
+    ".github/",
+    ".pixi/",
+    "build/",
+    "dist/",
+    "tools/",
+    "docs/",
+    "node_modules/",
+    "CLI Coding/",
+    "Screenshots/",
+    "typings/",
+    "stubs/",
+]
+
+[tool.deadcode]
+exclude = ["tests", "tools", "docs", ".git", ".pixi", "node_modules", "CLI Coding", "Screenshots"]
+ignore-names = [
+    "argtypes",
+    "restype",
+    "supports_*",
+    "test_*",
+    "setUp",
+    "tearDown",
+    "setUpClass",
+    "tearDownClass",
+]
+ignore-definitions-if-decorated-with = [
+    "abstractmethod",
+    "abc.abstractmethod",
+    "property",
+    "staticmethod",
+    "classmethod",
+    "override",
+]
+ignore-definitions-if-inherits-from = [
+    "ToolBridgeBase",
+    "StaticAnalysisBridge",
+    "DynamicAnalysisBridge",
+    "BinaryOperationsBridge",
+    "LLMProviderBase",
+    "SandboxBase",
+    "ABC",
+    "abc.ABC",
+]
+ignore-names-if-inherits-from = [
+    "ToolBridgeBase",
+    "StaticAnalysisBridge",
+    "DynamicAnalysisBridge",
+    "BinaryOperationsBridge",
+    "LLMProviderBase",
+    "SandboxBase",
+    "ABC",
+    "abc.ABC",
+]

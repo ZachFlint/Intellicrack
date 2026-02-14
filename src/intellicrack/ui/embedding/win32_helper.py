@@ -49,8 +49,27 @@ WM_SETFOCUS = 0x0007
 WM_KILLFOCUS = 0x0008
 WM_SIZE = 0x0005
 GW_OWNER = 4
+_TH32CS_SNAPPROCESS = 0x00000002
+_INVALID_HANDLE_VALUE = ctypes.c_void_p(-1).value or -1
 
 _ENUM_CALLBACK_TYPE = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+
+
+class _PROCESSENTRY32W(ctypes.Structure):
+    """Win32 PROCESSENTRY32W structure for process enumeration."""
+
+    _fields_ = [
+        ("dwSize", wintypes.DWORD),
+        ("cntUsage", wintypes.DWORD),
+        ("th32ProcessID", wintypes.DWORD),
+        ("th32DefaultHeapID", ctypes.c_size_t),
+        ("th32ModuleID", wintypes.DWORD),
+        ("cntThreads", wintypes.DWORD),
+        ("th32ParentProcessID", wintypes.DWORD),
+        ("pcPriClassBase", wintypes.LONG),
+        ("dwFlags", wintypes.DWORD),
+        ("szExeFile", ctypes.c_wchar * 260),
+    ]
 
 
 def _configure_api_signatures() -> None:
@@ -176,6 +195,18 @@ def _configure_api_signatures() -> None:
     _user32.GetClientRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
     _user32.GetClientRect.restype = wintypes.BOOL
 
+    _kernel32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+    _kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+
+    _kernel32.Process32FirstW.argtypes = [wintypes.HANDLE, ctypes.POINTER(_PROCESSENTRY32W)]
+    _kernel32.Process32FirstW.restype = wintypes.BOOL
+
+    _kernel32.Process32NextW.argtypes = [wintypes.HANDLE, ctypes.POINTER(_PROCESSENTRY32W)]
+    _kernel32.Process32NextW.restype = wintypes.BOOL
+
+    _kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    _kernel32.CloseHandle.restype = wintypes.BOOL
+
 
 _configure_api_signatures()
 
@@ -215,14 +246,24 @@ class Win32WindowHelper:
         timeout: float = 10.0,
         class_name: str | None = None,
         title_contains: str | None = None,
+        include_hidden: bool = False,
     ) -> int:
         """Find a window belonging to a specific process.
 
+        Uses EnumWindows to scan all top-level windows, filtering by
+        process ID, optional class name, and optional title substring.
+        When timeout is 0 or negative, performs a single non-blocking
+        enumeration pass suitable for use with external retry loops.
+
         Args:
             pid: Process ID to search for.
-            timeout: Maximum time to wait for window appearance.
-            class_name: Optional class name filter.
-            title_contains: Optional title substring filter.
+            timeout: Maximum time to wait for window appearance. Use 0
+                for a single non-blocking enumeration pass.
+            class_name: Optional window class name filter (exact match).
+            title_contains: Optional title substring filter (case-insensitive).
+            include_hidden: If True, include non-visible windows in search
+                results. Useful when the target process was launched with
+                SW_HIDE or has not yet shown its window.
 
         Returns:
             Window handle (HWND) if found, 0 otherwise.
@@ -236,7 +277,7 @@ class Win32WindowHelper:
             if proc_id.value != pid:
                 return True
 
-            if not _user32.IsWindowVisible(hwnd):
+            if not include_hidden and not _user32.IsWindowVisible(hwnd):
                 return True
 
             owner = _user32.GetWindow(hwnd, GW_OWNER)
@@ -263,18 +304,88 @@ class Win32WindowHelper:
 
         _logger.debug(
             "find_window_by_pid_started",
-            extra={"pid": pid, "timeout": timeout, "class_name": class_name, "title_contains": title_contains},
+            extra={
+                "pid": pid,
+                "timeout": timeout,
+                "class_name": class_name,
+                "title_contains": title_contains,
+                "include_hidden": include_hidden,
+            },
         )
-        while time.monotonic() < deadline:
+        while True:
             found_hwnd.clear()
             _user32.EnumWindows(callback, 0)
             if found_hwnd:
                 _logger.debug("find_window_by_pid_found", extra={"pid": pid, "hwnd": hex(found_hwnd[0])})
                 return found_hwnd[0]
+            if time.monotonic() >= deadline:
+                break
             time.sleep(0.1)
 
         _logger.debug("find_window_by_pid_timeout", extra={"pid": pid})
         return 0
+
+    @staticmethod
+    def get_descendant_pids(root_pid: int) -> list[int]:
+        """Get all descendant process IDs of a root process.
+
+        Uses CreateToolhelp32Snapshot to enumerate all running processes
+        and traverses the parent-child relationship tree from root_pid
+        downward. This is essential for finding windows belonging to
+        child processes when the launched process is a script or launcher
+        (e.g. .bat files that spawn separate executables).
+
+        Args:
+            root_pid: Root process ID to find descendants of.
+
+        Returns:
+            List of descendant PIDs (not including root_pid itself).
+        """
+        snapshot_handle = _kernel32.CreateToolhelp32Snapshot(_TH32CS_SNAPPROCESS, 0)
+        if snapshot_handle == _INVALID_HANDLE_VALUE:
+            _logger.debug("toolhelp_snapshot_failed", extra={"root_pid": root_pid})
+            return []
+
+        parent_to_children: dict[int, list[int]] = {}
+        try:
+            entry = _PROCESSENTRY32W()
+            entry.dwSize = ctypes.sizeof(_PROCESSENTRY32W)
+
+            if not _kernel32.Process32FirstW(snapshot_handle, ctypes.byref(entry)):
+                return []
+
+            while True:
+                child_pid = entry.th32ProcessID
+                parent_pid = entry.th32ParentProcessID
+                if parent_pid not in parent_to_children:
+                    parent_to_children[parent_pid] = []
+                parent_to_children[parent_pid].append(child_pid)
+
+                entry.dwSize = ctypes.sizeof(_PROCESSENTRY32W)
+                if not _kernel32.Process32NextW(snapshot_handle, ctypes.byref(entry)):
+                    break
+        finally:
+            _kernel32.CloseHandle(snapshot_handle)
+
+        descendants: list[int] = []
+        queue = list(parent_to_children.get(root_pid, []))
+        visited: set[int] = {root_pid}
+
+        while queue:
+            pid = queue.pop(0)
+            if pid in visited:
+                continue
+            visited.add(pid)
+            descendants.append(pid)
+            queue.extend(parent_to_children.get(pid, []))
+
+        if descendants:
+            _logger.debug(
+                "descendant_pids_found",
+                extra={"root_pid": root_pid, "descendant_count": len(descendants)},
+            )
+
+        return descendants
 
     @staticmethod
     def find_child_window(

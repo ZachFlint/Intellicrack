@@ -1,1 +1,1 @@
-
+"""Intellicrack test suite."""

@@ -28,8 +28,8 @@ class TestOllamaModelListing:
     """
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_list_models_returns_list(
-        self,
         ollama_provider: OllamaProvider,
     ) -> None:
         """Test list_models returns a list (may be empty if no models installed)."""
@@ -38,8 +38,8 @@ class TestOllamaModelListing:
         assert isinstance(models, list), f"Expected list, got {type(models)}"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_list_models_returns_model_info_instances(
-        self,
         ollama_provider: OllamaProvider,
     ) -> None:
         """Test all returned items are ModelInfo instances."""
@@ -49,8 +49,8 @@ class TestOllamaModelListing:
             assert isinstance(model, ModelInfo), f"Expected ModelInfo, got {type(model)}"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_model_info_has_valid_id_when_present(
-        self,
         ollama_provider: OllamaProvider,
     ) -> None:
         """Test all models have non-empty string IDs."""
@@ -61,8 +61,8 @@ class TestOllamaModelListing:
             assert len(model.id) > 0, "Model ID should not be empty"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_model_info_has_valid_name_when_present(
-        self,
         ollama_provider: OllamaProvider,
     ) -> None:
         """Test all models have non-empty string names."""
@@ -73,8 +73,8 @@ class TestOllamaModelListing:
             assert len(model.name) > 0, "Model name should not be empty"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_model_info_has_correct_provider(
-        self,
         ollama_provider: OllamaProvider,
     ) -> None:
         """Test all models report OLLAMA as provider."""
@@ -84,8 +84,8 @@ class TestOllamaModelListing:
             assert model.provider == ProviderName.OLLAMA, f"Expected OLLAMA provider, got {model.provider}"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_model_info_has_positive_context_window(
-        self,
         ollama_provider: OllamaProvider,
     ) -> None:
         """Test all models have positive context window size."""
@@ -96,8 +96,8 @@ class TestOllamaModelListing:
             assert model.context_window > 0, f"Model {model.id} has invalid context_window: {model.context_window}"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_model_info_has_boolean_capabilities(
-        self,
         ollama_provider: OllamaProvider,
     ) -> None:
         """Test all models have boolean capability flags."""
@@ -109,8 +109,8 @@ class TestOllamaModelListing:
             assert isinstance(model.supports_streaming, bool), f"Expected bool supports_streaming, got {type(model.supports_streaming)}"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_multiple_calls_return_consistent_results(
-        self,
         ollama_provider: OllamaProvider,
     ) -> None:
         """Test list_models returns consistent results across calls."""
@@ -128,24 +128,24 @@ class TestOllamaConnection:
     """Tests for Ollama provider connection handling."""
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_is_connected_after_connect(
-        self,
         ollama_provider: OllamaProvider,
     ) -> None:
         """Test provider reports connected after successful connection."""
         assert ollama_provider.is_connected is True
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_provider_name_is_ollama(
-        self,
         ollama_provider: OllamaProvider,
     ) -> None:
         """Test provider name property returns OLLAMA."""
         assert ollama_provider.name == ProviderName.OLLAMA
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_connection_with_custom_base_url(
-        self,
         has_ollama_available: bool,
     ) -> None:
         """Test connection with custom base URL."""
@@ -163,7 +163,8 @@ class TestOllamaConnection:
         await provider.disconnect()
 
     @pytest.mark.asyncio
-    async def test_connection_with_invalid_url_raises_error(self) -> None:
+    @staticmethod
+    async def test_connection_with_invalid_url_raises_error() -> None:
         """Test connection with unreachable URL raises ProviderError."""
         provider = OllamaProvider()
         invalid_creds = ProviderCredentials(
@@ -175,7 +176,8 @@ class TestOllamaConnection:
             await provider.connect(invalid_creds)
 
     @pytest.mark.asyncio
-    async def test_list_models_without_connection_raises_error(self) -> None:
+    @staticmethod
+    async def test_list_models_without_connection_raises_error() -> None:
         """Test list_models raises error when not connected."""
         provider = OllamaProvider()
 
@@ -183,8 +185,8 @@ class TestOllamaConnection:
             await provider.list_models()
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_disconnect_clears_connection_state(
-        self,
         has_ollama_available: bool,
     ) -> None:
         """Test disconnect properly clears connection state."""

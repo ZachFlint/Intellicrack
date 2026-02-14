@@ -7,7 +7,6 @@ skip conditions, and cleanup automatically.
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING
 
 import pytest
@@ -24,6 +23,8 @@ from intellicrack.providers.openrouter import OpenRouterProvider
 
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
     from intellicrack.credentials.env_loader import CredentialLoader
 
 

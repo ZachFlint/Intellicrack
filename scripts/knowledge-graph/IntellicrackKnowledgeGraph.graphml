@@ -5555,6 +5555,18 @@
       <data key="d3">list_models</data>
       <data key="d4">['self']</data>
     </node>
+    <node id="src.intellicrack.providers.anthropic._fetch_all_models">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_fetch_all_models</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.providers.anthropic._build_model_info">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_build_model_info</data>
+      <data key="d4">['self', 'model_id', 'display_name_raw']</data>
+    </node>
     <node id="src.intellicrack.providers.anthropic._get_context_window">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -5572,6 +5584,18 @@
       <data key="d1">python</data>
       <data key="d3">_supports_vision</data>
       <data key="d4">['model_id']</data>
+    </node>
+    <node id="src.intellicrack.providers.anthropic._build_api_kwargs">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_build_api_kwargs</data>
+      <data key="d4">[]</data>
+    </node>
+    <node id="src.intellicrack.providers.anthropic._parse_response_blocks">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_parse_response_blocks</data>
+      <data key="d4">['self', 'response']</data>
     </node>
     <node id="src.intellicrack.providers.anthropic.chat">
       <data key="d0">function</data>
@@ -5596,6 +5620,30 @@
       <data key="d1">python</data>
       <data key="d3">_convert_messages_to_provider_format</data>
       <data key="d4">['self', 'messages']</data>
+    </node>
+    <node id="src.intellicrack.providers.anthropic._convert_single_message">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_convert_single_message</data>
+      <data key="d4">['self', 'msg']</data>
+    </node>
+    <node id="src.intellicrack.providers.anthropic._format_user_message">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_format_user_message</data>
+      <data key="d4">['msg']</data>
+    </node>
+    <node id="src.intellicrack.providers.anthropic._format_assistant_message">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_format_assistant_message</data>
+      <data key="d4">['msg']</data>
+    </node>
+    <node id="src.intellicrack.providers.anthropic._format_tool_message">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_format_tool_message</data>
+      <data key="d4">['msg']</data>
     </node>
     <node id="src.intellicrack.providers.anthropic._convert_tools_to_provider_format">
       <data key="d0">function</data>
@@ -10407,19 +10455,19 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">get_executable_path</data>
-      <data key="d4">[]</data>
+      <data key="d4">['self']</data>
     </node>
     <node id="src.intellicrack.ui.embedding.embedded_widget.get_window_search_params">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">get_window_search_params</data>
-      <data key="d4">[]</data>
+      <data key="d4">['self']</data>
     </node>
     <node id="src.intellicrack.ui.embedding.embedded_widget.get_tool_display_name">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">get_tool_display_name</data>
-      <data key="d4">[]</data>
+      <data key="d4">['self']</data>
     </node>
     <node id="src.intellicrack.ui.embedding.embedded_widget.prepare_launch_args">
       <data key="d0">function</data>
@@ -10814,6 +10862,11 @@
       <data key="d2">D:\Intellicrack\src\intellicrack\ui\embedding\win32_helper.py</data>
       <data key="d3">src.intellicrack.ui.embedding.win32_helper</data>
     </node>
+    <node id="src.intellicrack.ui.embedding.win32_helper._PROCESSENTRY32W">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">_PROCESSENTRY32W</data>
+    </node>
     <node id="src.intellicrack.ui.embedding.win32_helper._configure_api_signatures">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -10835,7 +10888,13 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">find_window_by_pid</data>
-      <data key="d4">['pid', 'timeout', 'class_name', 'title_contains']</data>
+      <data key="d4">['pid', 'timeout', 'class_name', 'title_contains', 'include_hidden']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.win32_helper.get_descendant_pids">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_descendant_pids</data>
+      <data key="d4">['root_pid']</data>
     </node>
     <node id="src.intellicrack.ui.embedding.win32_helper.find_child_window">
       <data key="d0">function</data>
@@ -11022,6 +11081,12 @@
       <data key="d1">python</data>
       <data key="d3">_search_registry_for_x64dbg</data>
       <data key="d4">['self', 'arch_dir', 'exe_name']</data>
+    </node>
+    <node id="src.intellicrack.ui.embedding.x64dbg_widget._extract_path_from_command">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_extract_path_from_command</data>
+      <data key="d4">['command']</data>
     </node>
     <node id="src.intellicrack.ui.embedding.x64dbg_widget._search_common_paths_for_x64dbg">
       <data key="d0">function</data>
@@ -16246,9 +16311,6 @@
     <edge source="src.intellicrack.core._subprocess" target="__future__">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.core._subprocess" target="typing">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.core.__init__" target="__future__">
       <data key="d5">imports</data>
     </edge>
@@ -16717,9 +16779,6 @@
     <edge source="src.intellicrack.providers.anthropic" target="time">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.providers.anthropic" target="datetime">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.providers.anthropic" target="typing">
       <data key="d5">imports</data>
     </edge>
@@ -16765,6 +16824,12 @@
     <edge source="src.intellicrack.providers.anthropic" target="src.intellicrack.providers.anthropic.list_models">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.providers.anthropic" target="src.intellicrack.providers.anthropic._fetch_all_models">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.anthropic" target="src.intellicrack.providers.anthropic._build_model_info">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.providers.anthropic" target="src.intellicrack.providers.anthropic._get_context_window">
       <data key="d5">defines</data>
     </edge>
@@ -16772,6 +16837,12 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.providers.anthropic" target="src.intellicrack.providers.anthropic._supports_vision">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.anthropic" target="src.intellicrack.providers.anthropic._build_api_kwargs">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.anthropic" target="src.intellicrack.providers.anthropic._parse_response_blocks">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.providers.anthropic" target="src.intellicrack.providers.anthropic.chat">
@@ -16784,6 +16855,18 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.providers.anthropic" target="src.intellicrack.providers.anthropic._convert_messages_to_provider_format">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.anthropic" target="src.intellicrack.providers.anthropic._convert_single_message">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.anthropic" target="src.intellicrack.providers.anthropic._format_user_message">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.anthropic" target="src.intellicrack.providers.anthropic._format_assistant_message">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.anthropic" target="src.intellicrack.providers.anthropic._format_tool_message">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.providers.anthropic" target="src.intellicrack.providers.anthropic._convert_tools_to_provider_format">
@@ -20725,6 +20808,9 @@
     <edge source="src.intellicrack.ui.embedding.win32_helper" target="intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.ui.embedding.win32_helper" target="src.intellicrack.ui.embedding.win32_helper._PROCESSENTRY32W">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.embedding.win32_helper" target="src.intellicrack.ui.embedding.win32_helper._configure_api_signatures">
       <data key="d5">defines</data>
     </edge>
@@ -20738,6 +20824,9 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.win32_helper" target="src.intellicrack.ui.embedding.win32_helper.find_window_by_pid">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.win32_helper" target="src.intellicrack.ui.embedding.win32_helper.get_descendant_pids">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.win32_helper" target="src.intellicrack.ui.embedding.win32_helper.find_child_window">
@@ -20864,6 +20953,9 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.x64dbg_widget" target="src.intellicrack.ui.embedding.x64dbg_widget._search_registry_for_x64dbg">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.embedding.x64dbg_widget" target="src.intellicrack.ui.embedding.x64dbg_widget._extract_path_from_command">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.embedding.x64dbg_widget" target="src.intellicrack.ui.embedding.x64dbg_widget._search_common_paths_for_x64dbg">

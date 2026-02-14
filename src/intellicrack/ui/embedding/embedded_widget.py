@@ -6,7 +6,7 @@ Cutter, etc.) within Qt container widgets using Win32 window parenting.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, ClassVar, override
 
 from PyQt6.QtCore import QTimer, pyqtSignal
 from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget
@@ -33,6 +33,10 @@ _logger = get_logger("ui.embedding.base")
 _SW_SHOW = 5
 _SW_HIDE = 0
 
+_EMBEDDING_RETRY_INTERVAL_MS = 250
+_EMBEDDING_INITIAL_DELAY_MS = 500
+_EMBEDDING_LOG_INTERVAL = 20
+
 
 class EmbeddedToolWidget(QWidget):
     """Base widget for embedding external tool windows.
@@ -48,6 +52,12 @@ class EmbeddedToolWidget(QWidget):
     tool_closed = pyqtSignal()
     tool_error = pyqtSignal(str)
 
+    _tool_display_name: str = "External Tool"
+    _default_executable_path: Path | None = None
+    _window_search_class_name: str | None = None
+    _window_search_title_contains: str | None = None
+    _MAX_EMBEDDING_ATTEMPTS: ClassVar[int] = 120
+
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the embedded tool widget.
 
@@ -61,6 +71,7 @@ class EmbeddedToolWidget(QWidget):
         self._container_hwnd: int = 0
         self._poll_timer: QTimer | None = None
         self._loaded_file: Path | None = None
+        self._embedding_attempts: int = 0
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -72,8 +83,7 @@ class EmbeddedToolWidget(QWidget):
         self._status_label.setStyleSheet("color: #888; font-size: 14px; padding: 20px;")
         self._layout.addWidget(self._status_label)
 
-    @staticmethod
-    def get_executable_path() -> Path | None:
+    def get_executable_path(self) -> Path | None:
         """Get the path to the tool executable.
 
         Subclasses must override this method to return the actual tool path.
@@ -81,10 +91,9 @@ class EmbeddedToolWidget(QWidget):
         Returns:
             Path to the executable, or None if not configured.
         """
-        return None
+        return self._default_executable_path
 
-    @staticmethod
-    def get_window_search_params() -> dict[str, str | None]:
+    def get_window_search_params(self) -> dict[str, str | None]:
         """Get parameters for finding the tool's main window.
 
         Subclasses should override to provide tool-specific search criteria.
@@ -92,10 +101,12 @@ class EmbeddedToolWidget(QWidget):
         Returns:
             Dictionary with 'class_name' and/or 'title_contains' keys.
         """
-        return {"class_name": None, "title_contains": None}
+        return {
+            "class_name": self._window_search_class_name,
+            "title_contains": self._window_search_title_contains,
+        }
 
-    @staticmethod
-    def get_tool_display_name() -> str:
+    def get_tool_display_name(self) -> str:
         """Get the display name of the tool.
 
         Subclasses should override to provide the actual tool name.
@@ -103,7 +114,7 @@ class EmbeddedToolWidget(QWidget):
         Returns:
             Human-readable tool name.
         """
-        return "External Tool"
+        return self._tool_display_name
 
     def prepare_launch_args(self, binary_path: Path | None = None) -> list[str]:
         """Prepare command-line arguments for launching the tool.
@@ -161,7 +172,8 @@ class EmbeddedToolWidget(QWidget):
             self._status_label.setText(f"Failed to start {self.get_tool_display_name()}")
             return False
 
-        QTimer.singleShot(500, self._attempt_embedding)
+        self._embedding_attempts = 0
+        QTimer.singleShot(_EMBEDDING_INITIAL_DELAY_MS, self._attempt_embedding)
         return True
 
     def _launch_process(self, args: list[str]) -> Popen[bytes]:
@@ -192,29 +204,100 @@ class EmbeddedToolWidget(QWidget):
         return proc
 
     def _attempt_embedding(self) -> None:
-        """Attempt to find and embed the tool window."""
+        """Attempt to find and embed the tool window.
+
+        Performs a non-blocking multi-tier window search to avoid
+        freezing the Qt event loop:
+
+        1. Visible windows owned by the direct process PID.
+        2. Hidden windows owned by the direct PID (SW_HIDE fallback).
+        3. Visible windows owned by any descendant process (handles
+           launcher scripts like .bat files that spawn child processes).
+        4. Hidden windows owned by descendant processes.
+
+        Each tier uses a single-pass enumeration (timeout=0). Retries
+        via QTimer up to _MAX_EMBEDDING_ATTEMPTS times before reporting
+        failure.
+        """
         if not self._process or self._process.poll() is not None:
             self._status_label.setText(f"{self.get_tool_display_name()} process ended")
             self.tool_closed.emit()
             return
 
+        self._embedding_attempts += 1
+
+        if self._embedding_attempts > self._MAX_EMBEDDING_ATTEMPTS:
+            tool_name = self.get_tool_display_name()
+            error_msg = f"Could not find {tool_name} window after {self._MAX_EMBEDDING_ATTEMPTS} attempts"
+            _logger.error(
+                "embedding_max_attempts_exceeded",
+                extra={"tool": tool_name, "attempts": self._MAX_EMBEDDING_ATTEMPTS},
+            )
+            self.tool_error.emit(error_msg)
+            self._status_label.setText(f"{tool_name} window not found")
+            return
+
         search_params = self.get_window_search_params()
+        class_filter = search_params.get("class_name")
+        title_filter = search_params.get("title_contains")
+
         hwnd = Win32WindowHelper.find_window_by_pid(
             self._process.pid,
-            timeout=8.0,
-            class_name=search_params.get("class_name"),
-            title_contains=search_params.get("title_contains"),
+            timeout=0,
+            class_name=class_filter,
+            title_contains=title_filter,
         )
 
         if not hwnd:
-            _logger.warning(
-                "window_not_found",
-                extra={"tool": self.get_tool_display_name()},
+            hwnd = Win32WindowHelper.find_window_by_pid(
+                self._process.pid,
+                timeout=0,
+                class_name=class_filter,
+                title_contains=title_filter,
+                include_hidden=True,
             )
+
+        if not hwnd:
+            for child_pid in Win32WindowHelper.get_descendant_pids(self._process.pid):
+                hwnd = Win32WindowHelper.find_window_by_pid(
+                    child_pid,
+                    timeout=0,
+                    class_name=class_filter,
+                    title_contains=title_filter,
+                )
+                if not hwnd:
+                    hwnd = Win32WindowHelper.find_window_by_pid(
+                        child_pid,
+                        timeout=0,
+                        class_name=class_filter,
+                        title_contains=title_filter,
+                        include_hidden=True,
+                    )
+                if hwnd:
+                    break
+
+        if not hwnd:
+            if self._embedding_attempts % _EMBEDDING_LOG_INTERVAL == 0:
+                _logger.debug(
+                    "window_search_in_progress",
+                    extra={
+                        "tool": self.get_tool_display_name(),
+                        "attempts": self._embedding_attempts,
+                        "pid": self._process.pid,
+                    },
+                )
             self._status_label.setText(f"Waiting for {self.get_tool_display_name()} window...")
-            QTimer.singleShot(1000, self._attempt_embedding)
+            QTimer.singleShot(_EMBEDDING_RETRY_INTERVAL_MS, self._attempt_embedding)
             return
 
+        _logger.info(
+            "window_found",
+            extra={
+                "tool": self.get_tool_display_name(),
+                "hwnd": hex(hwnd),
+                "attempts": self._embedding_attempts,
+            },
+        )
         self._embed_window(hwnd)
 
     def _embed_window(self, hwnd: int) -> bool:

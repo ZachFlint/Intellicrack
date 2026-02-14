@@ -48,13 +48,14 @@ from .xpu_utils import (
 
 
 try:
-    import torch
+    import torch as _torch
 except ImportError:
-    torch = None
+    _torch = None
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    import torch
     from transformers import PreTrainedModel
     from transformers.modeling_outputs import CausalLMOutputWithPast
 
@@ -492,7 +493,7 @@ class LocalTransformersProvider(LLMProviderBase):
         if self._loaded_model is None:
             raise RuntimeError(_MSG_NO_MODEL_LOADED)
 
-        if torch is None:
+        if _torch is None:
             raise ImportError(_MSG_TORCH_REQUIRED)
 
         model = self._loaded_model.model
@@ -505,7 +506,7 @@ class LocalTransformersProvider(LLMProviderBase):
         if attention_mask is not None:
             attention_mask = attention_mask.to(device)
 
-        with torch.no_grad():
+        with _torch.no_grad():
             outputs = model.generate(
                 input_ids,
                 attention_mask=attention_mask,
@@ -544,7 +545,7 @@ class LocalTransformersProvider(LLMProviderBase):
         if self._loaded_model is None:
             raise RuntimeError(_MSG_NO_MODEL_LOADED)
 
-        if torch is None:
+        if _torch is None:
             raise ImportError(_MSG_TORCH_REQUIRED)
 
         model = self._loaded_model.model
@@ -578,7 +579,7 @@ class LocalTransformersProvider(LLMProviderBase):
                     use_cache=True,
                 )
 
-            with torch.no_grad():
+            with _torch.no_grad():
                 outputs = await asyncio.to_thread(
                     _forward_pass,
                     model,
@@ -591,19 +592,19 @@ class LocalTransformersProvider(LLMProviderBase):
             past_key_values = outputs.past_key_values
 
             if temperature > 0:
-                probs = torch.softmax(logits / temperature, dim=-1)
-                next_token = torch.multinomial(probs, num_samples=1)
+                probs = _torch.softmax(logits / temperature, dim=-1)
+                next_token = _torch.multinomial(probs, num_samples=1)
             else:
                 next_token = logits.argmax(dim=-1, keepdim=True)
 
             if next_token.item() == tokenizer.eos_token_id:
                 break
 
-            generated_ids = torch.cat([generated_ids, next_token], dim=-1)
+            generated_ids = _torch.cat([generated_ids, next_token], dim=-1)
 
             if attention_mask is not None:
-                attention_mask = torch.cat(
-                    [attention_mask, torch.ones((1, 1), device=device)],
+                attention_mask = _torch.cat(
+                    [attention_mask, _torch.ones((1, 1), device=device)],
                     dim=-1,
                 )
 

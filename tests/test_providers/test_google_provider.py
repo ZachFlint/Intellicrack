@@ -29,8 +29,8 @@ class TestGoogleModelListing:
     """
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_list_models_returns_non_empty_list(
-        self,
         google_provider: GoogleProvider,
     ) -> None:
         """Test list_models returns at least one model.
@@ -44,8 +44,8 @@ class TestGoogleModelListing:
         assert len(models) > 0, "Expected at least one model from Google AI API"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_list_models_returns_model_info_instances(
-        self,
         google_provider: GoogleProvider,
     ) -> None:
         """Test all returned items are ModelInfo instances."""
@@ -55,8 +55,8 @@ class TestGoogleModelListing:
             assert isinstance(model, ModelInfo), f"Expected ModelInfo, got {type(model)}"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_model_info_has_valid_id(
-        self,
         google_provider: GoogleProvider,
     ) -> None:
         """Test all models have non-empty string IDs."""
@@ -67,8 +67,8 @@ class TestGoogleModelListing:
             assert len(model.id) > 0, "Model ID should not be empty"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_model_info_has_valid_name(
-        self,
         google_provider: GoogleProvider,
     ) -> None:
         """Test all models have non-empty string names."""
@@ -79,8 +79,8 @@ class TestGoogleModelListing:
             assert len(model.name) > 0, "Model name should not be empty"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_model_info_has_correct_provider(
-        self,
         google_provider: GoogleProvider,
     ) -> None:
         """Test all models report GOOGLE as provider."""
@@ -90,8 +90,8 @@ class TestGoogleModelListing:
             assert model.provider == ProviderName.GOOGLE, f"Expected GOOGLE provider, got {model.provider}"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_model_info_has_positive_context_window(
-        self,
         google_provider: GoogleProvider,
     ) -> None:
         """Test all models have positive context window size."""
@@ -102,8 +102,8 @@ class TestGoogleModelListing:
             assert model.context_window > 0, f"Model {model.id} has invalid context_window: {model.context_window}"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_model_info_has_boolean_capabilities(
-        self,
         google_provider: GoogleProvider,
     ) -> None:
         """Test all models have boolean capability flags."""
@@ -115,8 +115,8 @@ class TestGoogleModelListing:
             assert isinstance(model.supports_streaming, bool), f"Expected bool supports_streaming, got {type(model.supports_streaming)}"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_models_are_gemini_models(
-        self,
         google_provider: GoogleProvider,
     ) -> None:
         """Test that returned models are Gemini generative models."""
@@ -126,8 +126,8 @@ class TestGoogleModelListing:
             assert "gemini" in model.id.lower(), f"Model {model.id} doesn't appear to be a Gemini model"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_multiple_calls_return_consistent_results(
-        self,
         google_provider: GoogleProvider,
     ) -> None:
         """Test list_models returns consistent results across calls."""
@@ -145,23 +145,24 @@ class TestGoogleConnection:
     """Tests for Google provider connection handling."""
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_is_connected_after_connect(
-        self,
         google_provider: GoogleProvider,
     ) -> None:
         """Test provider reports connected after successful connection."""
         assert google_provider.is_connected is True
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_provider_name_is_google(
-        self,
         google_provider: GoogleProvider,
     ) -> None:
         """Test provider name property returns GOOGLE."""
         assert google_provider.name == ProviderName.GOOGLE
 
     @pytest.mark.asyncio
-    async def test_connection_with_invalid_key_raises_error(self) -> None:
+    @staticmethod
+    async def test_connection_with_invalid_key_raises_error() -> None:
         """Test connection with invalid API key raises AuthenticationError."""
         provider = GoogleProvider()
         invalid_creds = ProviderCredentials(api_key="invalid-google-key-12345")
@@ -170,7 +171,8 @@ class TestGoogleConnection:
             await provider.connect(invalid_creds)
 
     @pytest.mark.asyncio
-    async def test_connection_with_empty_key_raises_error(self) -> None:
+    @staticmethod
+    async def test_connection_with_empty_key_raises_error() -> None:
         """Test connection with empty API key raises AuthenticationError."""
         provider = GoogleProvider()
         empty_creds = ProviderCredentials(api_key="")
@@ -179,7 +181,8 @@ class TestGoogleConnection:
             await provider.connect(empty_creds)
 
     @pytest.mark.asyncio
-    async def test_list_models_without_connection_raises_error(self) -> None:
+    @staticmethod
+    async def test_list_models_without_connection_raises_error() -> None:
         """Test list_models raises error when not connected."""
         provider = GoogleProvider()
 
@@ -187,8 +190,8 @@ class TestGoogleConnection:
             await provider.list_models()
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_disconnect_clears_connection_state(
-        self,
         credential_loader,
         has_google_key: bool,
     ) -> None:

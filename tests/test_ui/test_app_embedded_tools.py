@@ -13,18 +13,25 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from PyQt6.QtWidgets import QApplication, QMessageBox, QPushButton
 
+from intellicrack.ui.app import MainWindow
+
 
 if TYPE_CHECKING:
     from collections.abc import Generator
 
     from intellicrack.core.config import Config
     from intellicrack.core.orchestrator import Orchestrator
-    from intellicrack.ui.app import MainWindow
+
+_EXPECTED_MENU_ACTION_COUNT: int = 6
 
 
 @pytest.fixture(scope="module")
 def qapp() -> Generator[QApplication]:
-    """Provide QApplication for tests."""
+    """Provide QApplication for tests.
+
+    Yields:
+        QApplication instance for widget testing.
+    """
     existing = QApplication.instance()
     if existing is not None and isinstance(existing, QApplication):
         yield existing
@@ -55,37 +62,34 @@ def mock_config() -> MagicMock:
 
 
 def _create_window(
-    mock_config: MagicMock,
-    mock_orchestrator: MagicMock,
+    config: MagicMock,
+    orchestrator: MagicMock,
 ) -> MainWindow:
     """Create a MainWindow instance with mock dependencies.
 
     Args:
-        mock_config: Mock configuration object.
-        mock_orchestrator: Mock orchestrator object.
+        config: Mock configuration object.
+        orchestrator: Mock orchestrator object.
 
     Returns:
         A new MainWindow instance.
     """
-    from intellicrack.ui.app import MainWindow as _MainWindow
-
-    return _MainWindow(
-        cast("Config", mock_config),
-        cast("Orchestrator", mock_orchestrator),
+    return MainWindow(
+        cast("Config", config),
+        cast("Orchestrator", orchestrator),
     )
 
 
 class TestEmbeddedToolsMenuIntegration:
     """Tests for embedded tools menu items in MainWindow."""
 
+    @staticmethod
     def test_embedded_tools_menu_exists(
-        self,
-        qapp: QApplication,
+        _qapp: QApplication,
         mock_config: MagicMock,
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify Embedded Tools submenu is created in Tools menu."""
-        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
@@ -106,14 +110,13 @@ class TestEmbeddedToolsMenuIntegration:
             finally:
                 window.close()
 
+    @staticmethod
     def test_embedded_tools_menu_actions_count(
-        self,
-        qapp: QApplication,
+        _qapp: QApplication,
         mock_config: MagicMock,
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify all 6 menu actions exist in Embedded Tools submenu."""
-        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
@@ -152,14 +155,13 @@ class TestEmbeddedToolsMenuIntegration:
 class TestToolbarButtonsIntegration:
     """Tests for embedded tools toolbar buttons."""
 
+    @staticmethod
     def test_toolbar_has_tool_buttons(
-        self,
-        qapp: QApplication,
+        _qapp: QApplication,
         mock_config: MagicMock,
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify x64dbg, Cutter, and HxD buttons exist in toolbar."""
-        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
@@ -181,14 +183,13 @@ class TestToolbarButtonsIntegration:
             finally:
                 window.close()
 
+    @staticmethod
     def test_toolbar_button_tooltips(
-        self,
-        qapp: QApplication,
+        _qapp: QApplication,
         mock_config: MagicMock,
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify toolbar buttons have correct tooltips."""
-        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
@@ -210,14 +211,13 @@ class TestToolbarButtonsIntegration:
 class TestEmbeddedToolHandlers:
     """Tests for embedded tool handler methods."""
 
+    @staticmethod
     def test_on_open_x64dbg_creates_widget(
-        self,
-        qapp: QApplication,
+        _qapp: QApplication,
         mock_config: MagicMock,
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify _on_open_x64dbg calls add_x64dbg_tab."""
-        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
@@ -236,14 +236,13 @@ class TestEmbeddedToolHandlers:
             finally:
                 window.close()
 
+    @staticmethod
     def test_on_open_x64dbg_handles_none_widget(
-        self,
-        qapp: QApplication,
+        _qapp: QApplication,
         mock_config: MagicMock,
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify _on_open_x64dbg shows error when widget creation fails."""
-        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
@@ -261,14 +260,13 @@ class TestEmbeddedToolHandlers:
             finally:
                 window.close()
 
+    @staticmethod
     def test_on_open_cutter_creates_widget(
-        self,
-        qapp: QApplication,
+        _qapp: QApplication,
         mock_config: MagicMock,
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify _on_open_cutter calls add_cutter_tab."""
-        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
@@ -287,14 +285,13 @@ class TestEmbeddedToolHandlers:
             finally:
                 window.close()
 
+    @staticmethod
     def test_on_open_hxd_creates_widget(
-        self,
-        qapp: QApplication,
+        _qapp: QApplication,
         mock_config: MagicMock,
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify _on_open_hxd calls add_hxd_tab."""
-        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
@@ -317,14 +314,13 @@ class TestEmbeddedToolHandlers:
 class TestCurrentBinaryHandlers:
     """Tests for current binary operation handlers."""
 
+    @staticmethod
     def test_debug_current_binary_without_binary_shows_warning(
-        self,
-        qapp: QApplication,
+        _qapp: QApplication,
         mock_config: MagicMock,
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify warning shown when no binary is loaded for debug."""
-        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
@@ -338,14 +334,13 @@ class TestCurrentBinaryHandlers:
             finally:
                 window.close()
 
+    @staticmethod
     def test_analyze_current_binary_without_binary_shows_warning(
-        self,
-        qapp: QApplication,
+        _qapp: QApplication,
         mock_config: MagicMock,
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify warning shown when no binary is loaded for analysis."""
-        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
@@ -359,14 +354,13 @@ class TestCurrentBinaryHandlers:
             finally:
                 window.close()
 
+    @staticmethod
     def test_hex_edit_current_binary_without_binary_shows_warning(
-        self,
-        qapp: QApplication,
+        _qapp: QApplication,
         mock_config: MagicMock,
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify warning shown when no binary is loaded for hex edit."""
-        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
@@ -380,14 +374,13 @@ class TestCurrentBinaryHandlers:
             finally:
                 window.close()
 
+    @staticmethod
     def test_debug_current_binary_with_binary_calls_open_in_x64dbg(
-        self,
-        qapp: QApplication,
+        _qapp: QApplication,
         mock_config: MagicMock,
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify binary is passed to x64dbg when loaded."""
-        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
@@ -405,14 +398,13 @@ class TestCurrentBinaryHandlers:
             finally:
                 window.close()
 
+    @staticmethod
     def test_analyze_current_binary_with_binary_calls_open_in_cutter(
-        self,
-        qapp: QApplication,
+        _qapp: QApplication,
         mock_config: MagicMock,
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify binary is passed to Cutter when loaded."""
-        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
@@ -430,14 +422,13 @@ class TestCurrentBinaryHandlers:
             finally:
                 window.close()
 
+    @staticmethod
     def test_hex_edit_current_binary_with_binary_calls_open_in_hxd(
-        self,
-        qapp: QApplication,
+        _qapp: QApplication,
         mock_config: MagicMock,
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify binary is passed to HxD when loaded."""
-        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
@@ -459,14 +450,13 @@ class TestCurrentBinaryHandlers:
 class TestCurrentBinaryTracking:
     """Tests for current binary tracking in MainWindow."""
 
+    @staticmethod
     def test_current_binary_initialized_to_none(
-        self,
-        qapp: QApplication,
+        _qapp: QApplication,
         mock_config: MagicMock,
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify _current_binary starts as None."""
-        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
@@ -475,14 +465,13 @@ class TestCurrentBinaryTracking:
             finally:
                 window.close()
 
+    @staticmethod
     def test_load_binary_sets_current_binary(
-        self,
-        qapp: QApplication,
+        _qapp: QApplication,
         mock_config: MagicMock,
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify _load_binary updates _current_binary."""
-        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
@@ -502,14 +491,13 @@ class TestCurrentBinaryTracking:
 class TestErrorDialogs:
     """Tests for error and warning dialog display."""
 
+    @staticmethod
     def test_show_tool_error_displays_warning(
-        self,
-        qapp: QApplication,
+        _qapp: QApplication,
         mock_config: MagicMock,
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify _show_tool_error displays QMessageBox warning."""
-        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:
@@ -526,14 +514,13 @@ class TestErrorDialogs:
             finally:
                 window.close()
 
+    @staticmethod
     def test_show_no_binary_warning_displays_info(
-        self,
-        qapp: QApplication,
+        _qapp: QApplication,
         mock_config: MagicMock,
         mock_orchestrator: MagicMock,
     ) -> None:
         """Verify _show_no_binary_warning displays QMessageBox information."""
-        del qapp
         with patch("intellicrack.ui.app.SandboxManager"):
             window = _create_window(mock_config, mock_orchestrator)
             try:

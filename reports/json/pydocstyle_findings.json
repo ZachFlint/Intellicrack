@@ -1,8 +1,8 @@
 {
   "tool": "pydocstyle",
-  "generated": "2026-02-08T03:04:57.351451",
-  "total_findings": 12,
-  "total_files": 10,
+  "generated": "2026-02-08T21:23:54.314260",
+  "total_findings": 9,
+  "total_files": 7,
   "files": [
     {
       "path": "src/intellicrack\\bridges\\base.py",
@@ -95,12 +95,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 478,
+          "line": 479,
           "column": null,
           "code": "D401",
           "context": "in private method `_generate_sync`:",
           "message": "in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')",
-          "raw": "src/intellicrack\\providers\\local_transformers.py:478: D401: in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')"
+          "raw": "src/intellicrack\\providers\\local_transformers.py:479: D401: in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')"
         }
       ]
     },
@@ -115,48 +115,6 @@
           "context": "in public function `run_bridge_coroutine`:",
           "message": "in public function `run_bridge_coroutine`: - Missing docstring in public function",
           "raw": "src/intellicrack\\ui\\panels\\_async_bridge.py:22: D103: in public function `run_bridge_coroutine`: - Missing docstring in public function"
-        }
-      ]
-    },
-    {
-      "path": "tests\\__init__.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 1,
-          "column": null,
-          "code": "D104",
-          "context": "at module level:",
-          "message": "at module level: - Missing docstring in public package",
-          "raw": "tests\\__init__.py:1: D104: at module level: - Missing docstring in public package"
-        }
-      ]
-    },
-    {
-      "path": "tests\\test_bridges\\__init__.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 1,
-          "column": null,
-          "code": "D104",
-          "context": "at module level:",
-          "message": "at module level: - Missing docstring in public package",
-          "raw": "tests\\test_bridges\\__init__.py:1: D104: at module level: - Missing docstring in public package"
-        }
-      ]
-    },
-    {
-      "path": "tests\\test_core\\__init__.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 1,
-          "column": null,
-          "code": "D104",
-          "context": "at module level:",
-          "message": "at module level: - Missing docstring in public package",
-          "raw": "tests\\test_core\\__init__.py:1: D104: at module level: - Missing docstring in public package"
         }
       ]
     }

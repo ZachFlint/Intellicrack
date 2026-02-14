@@ -29,8 +29,8 @@ class TestOpenAIModelListing:
     """
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_list_models_returns_non_empty_list(
-        self,
         openai_provider: OpenAIProvider,
     ) -> None:
         """Test list_models returns at least one model.
@@ -44,8 +44,8 @@ class TestOpenAIModelListing:
         assert len(models) > 0, "Expected at least one model from OpenAI API"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_list_models_returns_model_info_instances(
-        self,
         openai_provider: OpenAIProvider,
     ) -> None:
         """Test all returned items are ModelInfo instances."""
@@ -55,8 +55,8 @@ class TestOpenAIModelListing:
             assert isinstance(model, ModelInfo), f"Expected ModelInfo, got {type(model)}"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_model_info_has_valid_id(
-        self,
         openai_provider: OpenAIProvider,
     ) -> None:
         """Test all models have non-empty string IDs."""
@@ -67,8 +67,8 @@ class TestOpenAIModelListing:
             assert len(model.id) > 0, "Model ID should not be empty"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_model_info_has_valid_name(
-        self,
         openai_provider: OpenAIProvider,
     ) -> None:
         """Test all models have non-empty string names."""
@@ -79,8 +79,8 @@ class TestOpenAIModelListing:
             assert len(model.name) > 0, "Model name should not be empty"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_model_info_has_correct_provider(
-        self,
         openai_provider: OpenAIProvider,
     ) -> None:
         """Test all models report OPENAI as provider."""
@@ -90,8 +90,8 @@ class TestOpenAIModelListing:
             assert model.provider == ProviderName.OPENAI, f"Expected OPENAI provider, got {model.provider}"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_model_info_has_positive_context_window(
-        self,
         openai_provider: OpenAIProvider,
     ) -> None:
         """Test all models have positive context window size."""
@@ -102,8 +102,8 @@ class TestOpenAIModelListing:
             assert model.context_window > 0, f"Model {model.id} has invalid context_window: {model.context_window}"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_model_info_has_boolean_capabilities(
-        self,
         openai_provider: OpenAIProvider,
     ) -> None:
         """Test all models have boolean capability flags."""
@@ -115,8 +115,8 @@ class TestOpenAIModelListing:
             assert isinstance(model.supports_streaming, bool), f"Expected bool supports_streaming, got {type(model.supports_streaming)}"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_models_are_chat_models(
-        self,
         openai_provider: OpenAIProvider,
     ) -> None:
         """Test that returned models are chat-capable models."""
@@ -128,8 +128,8 @@ class TestOpenAIModelListing:
             assert has_chat_prefix, f"Model {model.id} doesn't appear to be a chat model"
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_multiple_calls_return_consistent_results(
-        self,
         openai_provider: OpenAIProvider,
     ) -> None:
         """Test list_models returns consistent results across calls."""
@@ -147,23 +147,24 @@ class TestOpenAIConnection:
     """Tests for OpenAI provider connection handling."""
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_is_connected_after_connect(
-        self,
         openai_provider: OpenAIProvider,
     ) -> None:
         """Test provider reports connected after successful connection."""
         assert openai_provider.is_connected is True
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_provider_name_is_openai(
-        self,
         openai_provider: OpenAIProvider,
     ) -> None:
         """Test provider name property returns OPENAI."""
         assert openai_provider.name == ProviderName.OPENAI
 
     @pytest.mark.asyncio
-    async def test_connection_with_invalid_key_raises_error(self) -> None:
+    @staticmethod
+    async def test_connection_with_invalid_key_raises_error() -> None:
         """Test connection with invalid API key raises AuthenticationError."""
         provider = OpenAIProvider()
         invalid_creds = ProviderCredentials(api_key="sk-invalid-key-12345")
@@ -172,7 +173,8 @@ class TestOpenAIConnection:
             await provider.connect(invalid_creds)
 
     @pytest.mark.asyncio
-    async def test_connection_with_empty_key_raises_error(self) -> None:
+    @staticmethod
+    async def test_connection_with_empty_key_raises_error() -> None:
         """Test connection with empty API key raises AuthenticationError."""
         provider = OpenAIProvider()
         empty_creds = ProviderCredentials(api_key="")
@@ -181,7 +183,8 @@ class TestOpenAIConnection:
             await provider.connect(empty_creds)
 
     @pytest.mark.asyncio
-    async def test_list_models_without_connection_raises_error(self) -> None:
+    @staticmethod
+    async def test_list_models_without_connection_raises_error() -> None:
         """Test list_models raises error when not connected."""
         provider = OpenAIProvider()
 
@@ -189,8 +192,8 @@ class TestOpenAIConnection:
             await provider.list_models()
 
     @pytest.mark.asyncio
+    @staticmethod
     async def test_disconnect_clears_connection_state(
-        self,
         credential_loader,
         has_openai_key: bool,
     ) -> None:

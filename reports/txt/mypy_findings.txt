@@ -65,201 +65,6 @@ src\intellicrack\bridges\radare2.py:1228: error: Statement is unreachable  [unre
 src\intellicrack\bridges\radare2.py:1264: error: Statement is unreachable  [unreachable]
 
 
-18 findings in src\intellicrack\ui\embedding\hxd_widget.py
-
-src\intellicrack\ui\embedding\hxd_widget.py:62: error: Signature of "get_tool_display_name" incompatible with supertype "intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget"  [override]
-
-src\intellicrack\ui\embedding\hxd_widget.py:62: note:      Superclass:
-
-src\intellicrack\ui\embedding\hxd_widget.py:62: note:          @staticmethod
-
-src\intellicrack\ui\embedding\hxd_widget.py:62: note:          def get_tool_display_name() -> str
-
-src\intellicrack\ui\embedding\hxd_widget.py:62: note:      Subclass:
-
-src\intellicrack\ui\embedding\hxd_widget.py:62: note:          def get_tool_display_name(self) -> str
-
-src\intellicrack\ui\embedding\hxd_widget.py:70: error: Signature of "get_executable_path" incompatible with supertype "intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget"  [override]
-
-src\intellicrack\ui\embedding\hxd_widget.py:70: note:      Superclass:
-
-src\intellicrack\ui\embedding\hxd_widget.py:70: note:          @staticmethod
-
-src\intellicrack\ui\embedding\hxd_widget.py:70: note:          def get_executable_path() -> Path | None
-
-src\intellicrack\ui\embedding\hxd_widget.py:70: note:      Subclass:
-
-src\intellicrack\ui\embedding\hxd_widget.py:70: note:          def get_executable_path(self) -> Path | None
-
-src\intellicrack\ui\embedding\hxd_widget.py:116: error: Signature of "get_window_search_params" incompatible with supertype "intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget"  [override]
-
-src\intellicrack\ui\embedding\hxd_widget.py:116: note:      Superclass:
-
-src\intellicrack\ui\embedding\hxd_widget.py:116: note:          @staticmethod
-
-src\intellicrack\ui\embedding\hxd_widget.py:116: note:          def get_window_search_params() -> dict[str, str | None]
-
-src\intellicrack\ui\embedding\hxd_widget.py:116: note:      Subclass:
-
-src\intellicrack\ui\embedding\hxd_widget.py:116: note:          def get_window_search_params(self) -> dict[str, str | None]
-
-
-18 findings in src\intellicrack\ui\embedding\x64dbg_widget.py
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:64: error: Signature of "get_tool_display_name" incompatible with supertype "intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget"  [override]
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:64: note:      Superclass:
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:64: note:          @staticmethod
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:64: note:          def get_tool_display_name() -> str
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:64: note:      Subclass:
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:64: note:          def get_tool_display_name(self) -> str
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:72: error: Signature of "get_executable_path" incompatible with supertype "intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget"  [override]
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:72: note:      Superclass:
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:72: note:          @staticmethod
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:72: note:          def get_executable_path() -> Path | None
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:72: note:      Subclass:
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:72: note:          def get_executable_path(self) -> Path | None
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:169: error: Signature of "get_window_search_params" incompatible with supertype "intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget"  [override]
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:169: note:      Superclass:
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:169: note:          @staticmethod
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:169: note:          def get_window_search_params() -> dict[str, str | None]
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:169: note:      Subclass:
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:169: note:          def get_window_search_params(self) -> dict[str, str | None]
-
-
-18 findings in src\intellicrack\ui\embedding\radare2_widget.py
-
-src\intellicrack\ui\embedding\radare2_widget.py:62: error: Signature of "get_tool_display_name" incompatible with supertype "intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget"  [override]
-
-src\intellicrack\ui\embedding\radare2_widget.py:62: note:      Superclass:
-
-src\intellicrack\ui\embedding\radare2_widget.py:62: note:          @staticmethod
-
-src\intellicrack\ui\embedding\radare2_widget.py:62: note:          def get_tool_display_name() -> str
-
-src\intellicrack\ui\embedding\radare2_widget.py:62: note:      Subclass:
-
-src\intellicrack\ui\embedding\radare2_widget.py:62: note:          def get_tool_display_name(self) -> str
-
-src\intellicrack\ui\embedding\radare2_widget.py:70: error: Signature of "get_executable_path" incompatible with supertype "intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget"  [override]
-
-src\intellicrack\ui\embedding\radare2_widget.py:70: note:      Superclass:
-
-src\intellicrack\ui\embedding\radare2_widget.py:70: note:          @staticmethod
-
-src\intellicrack\ui\embedding\radare2_widget.py:70: note:          def get_executable_path() -> Path | None
-
-src\intellicrack\ui\embedding\radare2_widget.py:70: note:      Subclass:
-
-src\intellicrack\ui\embedding\radare2_widget.py:70: note:          def get_executable_path(self) -> Path | None
-
-src\intellicrack\ui\embedding\radare2_widget.py:141: error: Signature of "get_window_search_params" incompatible with supertype "intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget"  [override]
-
-src\intellicrack\ui\embedding\radare2_widget.py:141: note:      Superclass:
-
-src\intellicrack\ui\embedding\radare2_widget.py:141: note:          @staticmethod
-
-src\intellicrack\ui\embedding\radare2_widget.py:141: note:          def get_window_search_params() -> dict[str, str | None]
-
-src\intellicrack\ui\embedding\radare2_widget.py:141: note:      Subclass:
-
-src\intellicrack\ui\embedding\radare2_widget.py:141: note:          def get_window_search_params(self) -> dict[str, str | None]
-
-
-18 findings in src\intellicrack\ui\embedding\cutter_widget.py
-
-src\intellicrack\ui\embedding\cutter_widget.py:65: error: Signature of "get_tool_display_name" incompatible with supertype "intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget"  [override]
-
-src\intellicrack\ui\embedding\cutter_widget.py:65: note:      Superclass:
-
-src\intellicrack\ui\embedding\cutter_widget.py:65: note:          @staticmethod
-
-src\intellicrack\ui\embedding\cutter_widget.py:65: note:          def get_tool_display_name() -> str
-
-src\intellicrack\ui\embedding\cutter_widget.py:65: note:      Subclass:
-
-src\intellicrack\ui\embedding\cutter_widget.py:65: note:          def get_tool_display_name(self) -> str
-
-src\intellicrack\ui\embedding\cutter_widget.py:73: error: Signature of "get_executable_path" incompatible with supertype "intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget"  [override]
-
-src\intellicrack\ui\embedding\cutter_widget.py:73: note:      Superclass:
-
-src\intellicrack\ui\embedding\cutter_widget.py:73: note:          @staticmethod
-
-src\intellicrack\ui\embedding\cutter_widget.py:73: note:          def get_executable_path() -> Path | None
-
-src\intellicrack\ui\embedding\cutter_widget.py:73: note:      Subclass:
-
-src\intellicrack\ui\embedding\cutter_widget.py:73: note:          def get_executable_path(self) -> Path | None
-
-src\intellicrack\ui\embedding\cutter_widget.py:135: error: Signature of "get_window_search_params" incompatible with supertype "intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget"  [override]
-
-src\intellicrack\ui\embedding\cutter_widget.py:135: note:      Superclass:
-
-src\intellicrack\ui\embedding\cutter_widget.py:135: note:          @staticmethod
-
-src\intellicrack\ui\embedding\cutter_widget.py:135: note:          def get_window_search_params() -> dict[str, str | None]
-
-src\intellicrack\ui\embedding\cutter_widget.py:135: note:      Subclass:
-
-src\intellicrack\ui\embedding\cutter_widget.py:135: note:          def get_window_search_params(self) -> dict[str, str | None]
-
-
-18 findings in src\intellicrack\ui\embedding\ghidra_widget.py
-
-src\intellicrack\ui\embedding\ghidra_widget.py:66: error: Signature of "get_tool_display_name" incompatible with supertype "intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget"  [override]
-
-src\intellicrack\ui\embedding\ghidra_widget.py:66: note:      Superclass:
-
-src\intellicrack\ui\embedding\ghidra_widget.py:66: note:          @staticmethod
-
-src\intellicrack\ui\embedding\ghidra_widget.py:66: note:          def get_tool_display_name() -> str
-
-src\intellicrack\ui\embedding\ghidra_widget.py:66: note:      Subclass:
-
-src\intellicrack\ui\embedding\ghidra_widget.py:66: note:          def get_tool_display_name(self) -> str
-
-src\intellicrack\ui\embedding\ghidra_widget.py:74: error: Signature of "get_executable_path" incompatible with supertype "intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget"  [override]
-
-src\intellicrack\ui\embedding\ghidra_widget.py:74: note:      Superclass:
-
-src\intellicrack\ui\embedding\ghidra_widget.py:74: note:          @staticmethod
-
-src\intellicrack\ui\embedding\ghidra_widget.py:74: note:          def get_executable_path() -> Path | None
-
-src\intellicrack\ui\embedding\ghidra_widget.py:74: note:      Subclass:
-
-src\intellicrack\ui\embedding\ghidra_widget.py:74: note:          def get_executable_path(self) -> Path | None
-
-src\intellicrack\ui\embedding\ghidra_widget.py:182: error: Signature of "get_window_search_params" incompatible with supertype "intellicrack.ui.embedding.embedded_widget.EmbeddedToolWidget"  [override]
-
-src\intellicrack\ui\embedding\ghidra_widget.py:182: note:      Superclass:
-
-src\intellicrack\ui\embedding\ghidra_widget.py:182: note:          @staticmethod
-
-src\intellicrack\ui\embedding\ghidra_widget.py:182: note:          def get_window_search_params() -> dict[str, str | None]
-
-src\intellicrack\ui\embedding\ghidra_widget.py:182: note:      Subclass:
-
-src\intellicrack\ui\embedding\ghidra_widget.py:182: note:          def get_window_search_params(self) -> dict[str, str | None]
-
-
 16 findings in src\intellicrack\ui\session_manager.py
 
 src\intellicrack\ui\session_manager.py:96: error: No overload variant of "QSplitter" matches argument type "int"  [call-overload]
@@ -460,17 +265,17 @@ src\intellicrack\ui\panels\licensing_panel.py:564: note:     def QSplitter(self,
 
 tests\test_ui\test_app_embedded_tools.py:228: error: "object" has no attribute "add_x64dbg_tab"  [attr-defined]
 
-tests\test_ui\test_app_embedded_tools.py:251: error: "object" has no attribute "add_x64dbg_tab"  [attr-defined]
+tests\test_ui\test_app_embedded_tools.py:250: error: "object" has no attribute "add_x64dbg_tab"  [attr-defined]
 
-tests\test_ui\test_app_embedded_tools.py:279: error: "object" has no attribute "add_cutter_tab"  [attr-defined]
+tests\test_ui\test_app_embedded_tools.py:277: error: "object" has no attribute "add_cutter_tab"  [attr-defined]
 
-tests\test_ui\test_app_embedded_tools.py:305: error: "object" has no attribute "add_hxd_tab"  [attr-defined]
+tests\test_ui\test_app_embedded_tools.py:302: error: "object" has no attribute "add_hxd_tab"  [attr-defined]
 
-tests\test_ui\test_app_embedded_tools.py:398: error: "object" has no attribute "open_in_x64dbg"  [attr-defined]
+tests\test_ui\test_app_embedded_tools.py:391: error: "object" has no attribute "open_in_x64dbg"  [attr-defined]
 
-tests\test_ui\test_app_embedded_tools.py:423: error: "object" has no attribute "open_in_cutter"  [attr-defined]
+tests\test_ui\test_app_embedded_tools.py:415: error: "object" has no attribute "open_in_cutter"  [attr-defined]
 
-tests\test_ui\test_app_embedded_tools.py:448: error: "object" has no attribute "open_in_hxd"  [attr-defined]
+tests\test_ui\test_app_embedded_tools.py:439: error: "object" has no attribute "open_in_hxd"  [attr-defined]
 
 
 6 findings in src\intellicrack\ui\panels\process_panel.py
@@ -514,19 +319,6 @@ src\intellicrack\providers\xpu_utils.py:148: error: Returning Any from function 
 src\intellicrack\providers\xpu_utils.py:393: error: Returning Any from function declared to return "device"  [no-any-return]
 
 
-5 findings in tests\test_providers\test_model_discovery.py
-
-tests\test_providers\test_model_discovery.py:142: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
-
-tests\test_providers\test_model_discovery.py:169: error: Incompatible types in assignment (expression has type "GoogleProvider", variable has type "OpenAIProvider")  [assignment]
-
-tests\test_providers\test_model_discovery.py:179: error: Incompatible types in assignment (expression has type "OpenRouterProvider", variable has type "OpenAIProvider")  [assignment]
-
-tests\test_providers\test_model_discovery.py:189: error: Incompatible types in assignment (expression has type "AnthropicProvider", variable has type "OpenAIProvider")  [assignment]
-
-tests\test_providers\test_model_discovery.py:199: error: Incompatible types in assignment (expression has type "OllamaProvider", variable has type "OpenAIProvider")  [assignment]
-
-
 5 findings in src\intellicrack\ui\app.py
 
 src\intellicrack\ui\app.py:169: error: Cannot assign to a method  [method-assign]
@@ -560,27 +352,18 @@ src\intellicrack\ui\chat.py:516: error: Item "None" of "QScrollBar | None" has n
 src\intellicrack\ui\chat.py:516: error: Item "None" of "QScrollBar | None" has no attribute "maximum"  [union-attr]
 
 
-3 findings in src\intellicrack\sandbox\windows.py
-
-src\intellicrack\sandbox\windows.py:209: error: Item "None" of "Any | None" has no attribute "poll"  [union-attr]
-
-src\intellicrack\sandbox\windows.py:214: error: Item "None" of "Any | None" has no attribute "pid"  [union-attr]
-
-src\intellicrack\sandbox\windows.py:216: error: Item "None" of "Any | None" has no attribute "pid"  [union-attr]
-
-
-2 findings in tests\test_ui\test_font_manager.py
-
-tests\test_ui\test_font_manager.py:113: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
-
-tests\test_ui\test_font_manager.py:148: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
-
-
 2 findings in src\intellicrack\ui\dialogs\splash_screen.py
 
 src\intellicrack\ui\dialogs\splash_screen.py:58: error: Cannot assign to a method  [method-assign]
 
 src\intellicrack\ui\dialogs\splash_screen.py:144: error: Argument 1 to "setAlignment" of "QLabel" has incompatible type "int"; expected "AlignmentFlag"  [arg-type]
+
+
+2 findings in tests\test_ui\test_font_manager.py
+
+tests\test_ui\test_font_manager.py:139: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
+
+tests\test_ui\test_font_manager.py:180: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
 
 
 2 findings in tests\test_bridges\test_x64dbg.py
@@ -592,9 +375,9 @@ tests\test_bridges\test_x64dbg.py:175: error: Value of type "WatchpointInfo" is 
 
 2 findings in tests\test_providers\test_local_transformers_provider.py
 
-tests\test_providers\test_local_transformers_provider.py:437: error: Argument 1 to "_format_prompt" of "LocalTransformersProvider" has incompatible type "list[dict[str, str]]"; expected "list[dict[str, object]]"  [arg-type]
+tests\test_providers\test_local_transformers_provider.py:499: error: Argument 1 to "_format_prompt" of "LocalTransformersProvider" has incompatible type "list[dict[str, str]]"; expected "list[dict[str, object]]"  [arg-type]
 
-tests\test_providers\test_local_transformers_provider.py:449: error: Argument 1 to "_format_prompt" of "LocalTransformersProvider" has incompatible type "list[dict[str, str]]"; expected "list[dict[str, object]]"  [arg-type]
+tests\test_providers\test_local_transformers_provider.py:512: error: Argument 1 to "_format_prompt" of "LocalTransformersProvider" has incompatible type "list[dict[str, str]]"; expected "list[dict[str, object]]"  [arg-type]
 
 
 1 findings in src\intellicrack\ui\panels\stack_viewer.py
@@ -607,19 +390,19 @@ src\intellicrack\ui\panels\stack_viewer.py:276: error: Item "None" of "QHeaderVi
 src\intellicrack\providers\huggingface.py:488: error: Returning Any from function declared to return "dict[str, Any]"  [no-any-return]
 
 
-1 findings in src\intellicrack\sandbox\qemu.py
-
-src\intellicrack\sandbox\qemu.py:200: error: Item "None" of "StreamReader | None" has no attribute "readline"  [union-attr]
-
-
 1 findings in tests\test_providers\test_openrouter_provider.py
 
-tests\test_providers\test_openrouter_provider.py:209: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
+tests\test_providers\test_openrouter_provider.py:217: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
 
 
 1 findings in tests\test_providers\test_huggingface_provider.py
 
-tests\test_providers\test_huggingface_provider.py:215: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
+tests\test_providers\test_huggingface_provider.py:206: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
+
+
+1 findings in src\intellicrack\sandbox\qemu.py
+
+src\intellicrack\sandbox\qemu.py:200: error: Item "None" of "StreamReader | None" has no attribute "readline"  [union-attr]
 
 
 1 findings in src\intellicrack\providers\model_loader.py
@@ -629,17 +412,17 @@ src\intellicrack\providers\model_loader.py:22: error: Incompatible types in assi
 
 1 findings in tests\test_providers\test_openai_provider.py
 
-tests\test_providers\test_openai_provider.py:192: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
+tests\test_providers\test_openai_provider.py:196: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
 
 
 1 findings in tests\test_providers\test_grok_provider.py
 
-tests\test_providers\test_grok_provider.py:188: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
+tests\test_providers\test_grok_provider.py:193: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
 
 
 1 findings in tests\test_providers\test_anthropic_provider.py
 
-tests\test_providers\test_anthropic_provider.py:188: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
+tests\test_providers\test_anthropic_provider.py:193: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
 
 
 1 findings in src\intellicrack\ui\sandbox_config.py
@@ -652,9 +435,14 @@ src\intellicrack\ui\sandbox_config.py:569: error: Argument 1 to "setWindowModali
 src\intellicrack\providers\local_transformers.py:53: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
 
 
+1 findings in tests\test_providers\test_model_discovery.py
+
+tests\test_providers\test_model_discovery.py:112: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
+
+
 1 findings in tests\test_providers\test_google_provider.py
 
-tests\test_providers\test_google_provider.py:190: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
+tests\test_providers\test_google_provider.py:194: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
 
 
 1 findings in src\intellicrack\core\orchestrator.py
@@ -664,4 +452,4 @@ src\intellicrack\core\orchestrator.py:627: error: Incompatible types in assignme
 
 1 findings in tests\test_ui\test_tools_logic.py
 
-tests\test_ui\test_tools_logic.py:23: error: Returning Any from function declared to return "QApplication"  [no-any-return]
+tests\test_ui\test_tools_logic.py:32: error: Returning Any from function declared to return "QApplication"  [no-any-return]

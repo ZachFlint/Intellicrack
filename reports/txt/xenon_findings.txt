@@ -126,16 +126,16 @@ src\intellicrack\providers\grok.py:460: '_convert_messages_to_provider_format' h
 
 2 findings in src\intellicrack\providers\local_transformers.py
 
-src\intellicrack\providers\local_transformers.py:830: '_parse_tool_calls' has rank C
+src\intellicrack\providers\local_transformers.py:831: '_parse_tool_calls' has rank C
 
-src\intellicrack\providers\local_transformers.py:930: '_estimate_context_window' has rank C
+src\intellicrack\providers\local_transformers.py:931: '_estimate_context_window' has rank C
 
 
 2 findings in src\intellicrack\providers\model_loader.py
 
-src\intellicrack\providers\model_loader.py:468: 'load_model_for_xpu' has rank C
+src\intellicrack\providers\model_loader.py:469: 'load_model_for_xpu' has rank C
 
-src\intellicrack\providers\model_loader.py:580: 'load_model_for_cpu' has rank C
+src\intellicrack\providers\model_loader.py:581: 'load_model_for_cpu' has rank C
 
 
 2 findings in src\intellicrack\providers\ollama.py
@@ -168,23 +168,23 @@ src\intellicrack\sandbox\windows.py:547: 'run_binary' has rank C
 
 2 findings in tests\test_core\test_license_analyzer.py
 
-tests\test_core\test_license_analyzer.py:586: 'TestLicensingAnalysisDataclass' has rank C
+tests\test_core\test_license_analyzer.py:693: 'TestLicensingAnalysisDataclass' has rank C
 
-tests\test_core\test_license_analyzer.py:589: 'test_licensing_analysis_fields' has rank C
+tests\test_core\test_license_analyzer.py:700: 'test_licensing_analysis_fields' has rank C
 
 
 2 findings in tests\test_providers\test_model_discovery.py
 
-tests\test_providers\test_model_discovery.py:138: 'TestAllProvidersModelCount' has rank C
+tests\test_providers\test_model_discovery.py:107: 'TestAllProvidersModelCount' has rank C
 
-tests\test_providers\test_model_discovery.py:142: 'test_summary_all_providers' has rank C
+tests\test_providers\test_model_discovery.py:112: 'test_summary_all_providers' has rank C
 
 
 2 findings in tests\test_ui\test_app_embedded_tools.py
 
-tests\test_ui\test_app_embedded_tools.py:109: 'test_embedded_tools_menu_actions_count' has rank C
+tests\test_ui\test_app_embedded_tools.py:114: 'test_embedded_tools_menu_actions_count' has rank C
 
-tests\test_ui\test_app_embedded_tools.py:78: 'TestEmbeddedToolsMenuIntegration' has rank C
+tests\test_ui\test_app_embedded_tools.py:83: 'TestEmbeddedToolsMenuIntegration' has rank C
 
 
 1 findings in src\intellicrack\bridges\frida_bridge.py

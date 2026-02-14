@@ -1,17 +1,17 @@
 4 findings in src/intellicrack/providers\model_loader.py
 
-src/intellicrack/providers\model_loader.py:521: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()
+src/intellicrack/providers\model_loader.py:522: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()
 
-src/intellicrack/providers\model_loader.py:540: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()
+src/intellicrack/providers\model_loader.py:541: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()
 
-src/intellicrack/providers\model_loader.py:624: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()
+src/intellicrack/providers\model_loader.py:625: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()
 
-src/intellicrack/providers\model_loader.py:643: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()
+src/intellicrack/providers\model_loader.py:644: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()
 
 
 1 findings in src/intellicrack/core\_subprocess.py
 
-src/intellicrack/core\_subprocess.py:15: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
+src/intellicrack/core\_subprocess.py:14: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
 
 
 1 findings in src/intellicrack/core\script_gen.py
