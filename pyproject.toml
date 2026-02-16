@@ -1,134 +1,221 @@
 [build-system]
-requires = ["setuptools>=80.10.2", "wheel"]
+requires = [ "setuptools>=80.10.2", "wheel" ]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "Intellicrack"
 version = "1.0.0"
-authors = [{ name = "Zachary Flint", email = "zach.flint2@gmail.com" }]
+authors = [ { name = "Zachary Flint", email = "zach.flint2@gmail.com" } ]
 description = "Intellicrack: AI-powered reverse engineering orchestration platform"
 readme = "README.md"
 license = "GPL-3.0-or-later"
 requires-python = ">=3.13"
 keywords = [
-    "reverse-engineering",
-    "binary-analysis",
-    "ai-orchestration",
-    "security-research",
-    "frida",
-    "ghidra",
-    "radare2",
-    "x64dbg",
+  "reverse-engineering",
+  "binary-analysis",
+  "ai-orchestration",
+  "security-research",
+  "frida",
+  "ghidra",
+  "radare2",
+  "x64dbg",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "Intended Audience :: Science/Research",
-    "Intended Audience :: Information Technology",
-    "Topic :: Security",
-    "Topic :: Software Development :: Disassemblers",
-    "Topic :: Software Development :: Debuggers",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.13",
-    "Operating System :: Microsoft :: Windows",
-    "Environment :: Console",
-    "Environment :: X11 Applications :: Qt",
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: Information Technology",
+  "Topic :: Security",
+  "Topic :: Software Development :: Disassemblers",
+  "Topic :: Software Development :: Debuggers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.13",
+  "Operating System :: Microsoft :: Windows",
+  "Environment :: Console",
+  "Environment :: X11 Applications :: Qt",
 ]
 dependencies = [
-    "networkx",
-    "markdown-it-py",
-    "psutil", "flake8-pyproject", "pytest", "build", "pyclean", "black", "pylint", "autopep8", "flake8", "ruff", "isort", "pycodestyle", "bandit", "blinter", "vulture", "pyupgrade", "pydocstyle", "sourcery", "wemake-python-styleguide", "darglint", "pyroma", "mypy-extensions", "dead", "uncalled", "deadcode", "pygount", "pytest-deadfixtures", "basedpyright", "monkeytype", "ty", "mccabe", "xenon", "safety", "yamllint", "jsonlint", "pytest-cov", "pytest-mock", "pytest-asyncio", "pytest-xdist", "pytest-timeout", "pytest-qt", "pytest-benchmark", "pytest-html", "pytest-randomly", "pytest-sugar", "pytest-env", "pytest-instafail", "hypothesis", "tox", "nox", "coverage", "freezegun", "responses", "faker", "radon", "sphinx", "sphinx-rtd-theme", "sphinx-autodoc-typehints", "sphinx-copybutton", "sphinx-tabs", "sphinxcontrib-mermaid", "sphinx-autobuild", "pdoc3", "mkdocs-material", "pymdown-extensions", "myst-parser", "ipdb", "line-profiler", "memory-profiler", "py-spy", "snakeviz", "pyinstrument", "scalene", "pre-commit", "commitizen", "bumpversion", "pipdeptree", "rope", "astor", "yapf", "pip-audit", "nodeenv", "twine", "setuptools-scm", "poetry", "pycallgraph2", "pre-commit-hooks", "detect-secrets",
+  "networkx",
+  "markdown-it-py",
+  "psutil",
+  "flake8-pyproject",
+  "pytest",
+  "build",
+  "pyclean",
+  "black",
+  "pylint",
+  "autopep8",
+  "flake8",
+  "ruff",
+  "isort",
+  "pycodestyle",
+  "bandit",
+  "blinter",
+  "vulture",
+  "pyupgrade",
+  "pydocstyle",
+  "sourcery",
+  "wemake-python-styleguide",
+  "darglint",
+  "pyroma",
+  "mypy-extensions",
+  "dead",
+  "uncalled",
+  "deadcode",
+  "pygount",
+  "pytest-deadfixtures",
+  "basedpyright",
+  "monkeytype",
+  "ty",
+  "mccabe",
+  "xenon",
+  "safety",
+  "yamllint",
+  "jsonlint",
+  "pytest-cov",
+  "pytest-mock",
+  "pytest-asyncio",
+  "pytest-xdist",
+  "pytest-timeout",
+  "pytest-qt",
+  "pytest-benchmark",
+  "pytest-html",
+  "pytest-randomly",
+  "pytest-sugar",
+  "pytest-env",
+  "pytest-instafail",
+  "hypothesis",
+  "tox",
+  "nox",
+  "coverage",
+  "freezegun",
+  "responses",
+  "faker",
+  "radon",
+  "sphinx",
+  "sphinx-rtd-theme",
+  "sphinx-autodoc-typehints",
+  "sphinx-copybutton",
+  "sphinx-tabs",
+  "sphinxcontrib-mermaid",
+  "sphinx-autobuild",
+  "pdoc3",
+  "mkdocs-material",
+  "pymdown-extensions",
+  "myst-parser",
+  "ipdb",
+  "line-profiler",
+  "memory-profiler",
+  "py-spy",
+  "snakeviz",
+  "pyinstrument",
+  "scalene",
+  "pre-commit",
+  "commitizen",
+  "bumpversion",
+  "pipdeptree",
+  "rope",
+  "astor",
+  "yapf",
+  "pip-audit",
+  "nodeenv",
+  "twine",
+  "setuptools-scm",
+  "poetry",
+  "pycallgraph2",
+  "pre-commit-hooks",
+  "detect-secrets",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "build",
-    "pyclean",
-    "black",
-    "pylint",
-    "autopep8",
-    "flake8",
-    "flake8-pyproject",
-    "ruff",
-    "isort",
-    "pycodestyle",
-    "bandit",
-    "blinter",
-    "vulture",
-    "pyupgrade",
-    "pydocstyle",
-    "sourcery",
-    "wemake-python-styleguide",
-    "darglint",
-    "pyroma",
-    "mypy-extensions",
-    "dead",
-    "uncalled",
-    "deadcode",
-    "pygount",
-    "pytest-deadfixtures",
-    "basedpyright",
-    "monkeytype",
-    "ty",
-    "mccabe",
-    "xenon",
-    "safety",
-    "yamllint",
-    "jsonlint",
-    "pytest",
-    "pytest-cov",
-    "pytest-mock",
-    "pytest-asyncio",
-    "pytest-xdist",
-    "pytest-timeout",
-    "pytest-qt",
-    "pytest-benchmark",
-    "pytest-html",
-    "pytest-randomly",
-    "pytest-sugar",
-    "pytest-env",
-    "pytest-instafail",
-    "hypothesis",
-    "tox",
-    "nox",
-    "coverage",
-    "freezegun",
-    "responses",
-    "faker",
-    "radon",
-    "sphinx",
-    "sphinx-rtd-theme",
-    "sphinx-autodoc-typehints",
-    "sphinx-copybutton",
-    "sphinx-tabs",
-    "sphinxcontrib-mermaid",
-    "sphinx-autobuild",
-    "pdoc3",
-    "mkdocs-material",
-    "pymdown-extensions",
-    "myst-parser",
-    "ipdb",
-    "line-profiler",
-    "memory-profiler",
-    "py-spy",
-    "snakeviz",
-    "pyinstrument",
-    "scalene",
-    "pre-commit",
-    "commitizen",
-    "bumpversion",
-    "pipdeptree",
-    "rope",
-    "astor",
-    "yapf",
-    "pip-audit",
-    "nodeenv",
-    "twine",
-    "setuptools-scm",
-    "poetry",
-    "pycallgraph2",
-    "pre-commit-hooks",
-    "detect-secrets",
+  "build",
+  "pyclean",
+  "black",
+  "pylint",
+  "autopep8",
+  "flake8",
+  "flake8-pyproject",
+  "ruff",
+  "isort",
+  "pycodestyle",
+  "bandit",
+  "blinter",
+  "vulture",
+  "pyupgrade",
+  "pydocstyle",
+  "sourcery",
+  "wemake-python-styleguide",
+  "darglint",
+  "pyroma",
+  "mypy-extensions",
+  "dead",
+  "uncalled",
+  "deadcode",
+  "pygount",
+  "pytest-deadfixtures",
+  "basedpyright",
+  "monkeytype",
+  "ty",
+  "mccabe",
+  "xenon",
+  "safety",
+  "yamllint",
+  "jsonlint",
+  "pytest",
+  "pytest-cov",
+  "pytest-mock",
+  "pytest-asyncio",
+  "pytest-xdist",
+  "pytest-timeout",
+  "pytest-qt",
+  "pytest-benchmark",
+  "pytest-html",
+  "pytest-randomly",
+  "pytest-sugar",
+  "pytest-env",
+  "pytest-instafail",
+  "hypothesis",
+  "tox",
+  "nox",
+  "coverage",
+  "freezegun",
+  "responses",
+  "faker",
+  "radon",
+  "sphinx",
+  "sphinx-rtd-theme",
+  "sphinx-autodoc-typehints",
+  "sphinx-copybutton",
+  "sphinx-tabs",
+  "sphinxcontrib-mermaid",
+  "sphinx-autobuild",
+  "pdoc3",
+  "mkdocs-material",
+  "pymdown-extensions",
+  "myst-parser",
+  "ipdb",
+  "line-profiler",
+  "memory-profiler",
+  "py-spy",
+  "snakeviz",
+  "pyinstrument",
+  "scalene",
+  "pre-commit",
+  "commitizen",
+  "bumpversion",
+  "pipdeptree",
+  "rope",
+  "astor",
+  "yapf",
+  "pip-audit",
+  "nodeenv",
+  "twine",
+  "setuptools-scm",
+  "poetry",
+  "pycallgraph2",
+  "pre-commit-hooks",
+  "detect-secrets",
 ]
 
 [project.urls]
@@ -147,10 +234,10 @@ intellicrack-gui = "intellicrack.main:main"
 name = "Intellicrack"
 version = "1.0.0"
 description = "Intellicrack: AI-powered reverse engineering orchestration platform"
-authors = ["Zachary Flint <zach.flint2@gmail.com>"]
-channels = ["conda-forge"]
-platforms = ["win-64"]
-preview = ["pixi-build"]
+authors = [ "Zachary Flint <zach.flint2@gmail.com>" ]
+channels = [ "conda-forge" ]
+platforms = [ "win-64" ]
+preview = [ "pixi-build" ]
 
 [tool.pixi.dependencies]
 python = "3.13.*"
@@ -164,6 +251,8 @@ shellcheck = ">=0.10.0,<0.11"
 nodejs = ">=24.12.0,<24.13"
 yarn = ">=4.12.0,<5"
 markdownlint-cli = ">=0.47.0,<0.48"
+taplo = ">=0.10.0,<0.11"
+yamlfmt = ">=0.21.0,<0.22"
 pixi-pycharm = ">=0.0.10,<0.0.11"
 anyio = ">=4.12.1,<5"
 types-requests = ">=2.32.4.20260107,<3"
@@ -292,7 +381,7 @@ sentencepiece = ">=0.2.1, <0.3"
 safetensors = ">=0.7.0, <0.8"
 
 [tool.pixi.pypi-options]
-extra-index-urls = ["https://download.pytorch.org/whl/xpu"]
+extra-index-urls = [ "https://download.pytorch.org/whl/xpu" ]
 index-strategy = "unsafe-best-match"
 
 [tool.pixi.tasks]
@@ -305,31 +394,31 @@ typecheck = "just basedpyright"
 pyright = "basedpyright"
 
 [tool.setuptools]
-package-dir = {"" = "src"}
+package-dir = { "" = "src" }
 include-package-data = true
 
 [tool.setuptools.packages.find]
-where = ["src"]
-include = ["intellicrack", "intellicrack.*"]
+where = [ "src" ]
+include = [ "intellicrack", "intellicrack.*" ]
 
 [tool.pytest.ini_options]
 minversion = "8.0"
-testpaths = ["tests"]
-addopts = ["-ra", "--strict-markers"]
-python_files = ["test_*.py", "*_test.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
+testpaths = [ "tests" ]
+addopts = [ "-ra", "--strict-markers" ]
+python_files = [ "test_*.py", "*_test.py" ]
+python_classes = [ "Test*" ]
+python_functions = [ "test_*" ]
 markers = [
-    "slow: Slow running tests",
-    "integration: Integration tests",
-    "unit: Unit tests",
-    "xpu: Tests requiring Intel XPU hardware",
-    "b580: Tests specific to Intel Arc B580 GPU",
+  "slow: Slow running tests",
+  "integration: Integration tests",
+  "unit: Unit tests",
+  "xpu: Tests requiring Intel XPU hardware",
+  "b580: Tests specific to Intel Arc B580 GPU",
 ]
 
 [tool.black]
 line-length = 100
-target-version = ['py313']
+target-version = [ 'py313' ]
 include = '\.pyi?$'
 extend-exclude = '''
 /(
@@ -364,7 +453,7 @@ ensure_newline_before_comments = true
 
 [tool.mypy]
 python_version = "3.13"
-mypy_path = [".", "stubs"]
+mypy_path = [ ".", "stubs" ]
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -382,67 +471,65 @@ follow_imports = "silent"
 show_error_codes = true
 strict = true
 exclude = [
-    "^tools/",
-    "^build/",
-    "^dist/",
-    "^\\.git/",
-    "^\\.github/",
-    "^\\.pixi/",
-    "^docs/",
-    "^\\.mypy_cache/",
-    "^\\.pytest_cache/",
-    "^\\.ruff_cache/",
-    "^\\.claude/",
-    "^\\.serena/",
-    "^\\.idea/",
-    "^\\.vscode/",
-    "^node_modules/",
-    "^CLI Coding/",
-    "^Screenshots/",
+  "^tools/",
+  "^build/",
+  "^dist/",
+  "^\\.git/",
+  "^\\.github/",
+  "^\\.pixi/",
+  "^docs/",
+  "^\\.mypy_cache/",
+  "^\\.pytest_cache/",
+  "^\\.ruff_cache/",
+  "^\\.claude/",
+  "^\\.serena/",
+  "^\\.idea/",
+  "^\\.vscode/",
+  "^node_modules/",
+  "^CLI Coding/",
+  "^Screenshots/",
 ]
 
 [[tool.mypy.overrides]]
 module = [
-    "frida.*",
-    "r2pipe.*",
-    "ghidra_bridge.*",
-    "pefile.*",
-    "lief.*",
-    "transformers.*",
-    "accelerate.*",
-    "bitsandbytes.*",
-    "PyQt6.*",
+  "frida.*",
+  "r2pipe.*",
+  "ghidra_bridge.*",
+  "pefile.*",
+  "lief.*",
+  "transformers.*",
+  "accelerate.*",
+  "bitsandbytes.*",
+  "PyQt6.*",
 ]
 follow_imports = "skip"
 
 [[tool.mypy.overrides]]
-module = [
-    "intellicrack.ui.*",
-]
-disable_error_code = ["attr-defined", "misc", "no-any-return", "redundant-cast", "unused-ignore"]
+module = [ "intellicrack.ui.*" ]
+disable_error_code = [ "attr-defined", "misc", "no-any-return", "redundant-cast", "unused-ignore" ]
 
 [tool.basedpyright]
-include = ["src/intellicrack"]
+include = [ "src/intellicrack" ]
 exclude = [
-    "**/__pycache__",
-    "**/node_modules",
-    "**/.venv",
-    "**/build",
-    "**/dist",
-    "**/.git",
-    "**/.github",
-    "**/.pytest_cache",
-    "**/.mypy_cache",
-    "**/.ruff_cache",
-    "**/.claude",
-    "**/.serena",
-    "**/.idea",
-    "**/.vscode",
-    "tools",
-    "docs",
-    ".pixi",
-    "CLI Coding",
-    "Screenshots",
+  "**/__pycache__",
+  "**/node_modules",
+  "**/.venv",
+  "**/build",
+  "**/dist",
+  "**/.git",
+  "**/.github",
+  "**/.pytest_cache",
+  "**/.mypy_cache",
+  "**/.ruff_cache",
+  "**/.claude",
+  "**/.serena",
+  "**/.idea",
+  "**/.vscode",
+  "tools",
+  "docs",
+  ".pixi",
+  "CLI Coding",
+  "Screenshots",
 ]
 typeCheckingMode = "strict"
 pythonVersion = "3.13"
@@ -458,91 +545,86 @@ reportMissingTypeStubs = false
 reportMissingModuleSource = "warning"
 reportUndefinedVariable = "error"
 reportGeneralTypeIssues = "error"
-extraPaths = ["d:/intellicrack/src"]
+extraPaths = [ "d:/intellicrack/src" ]
 
 [tool.ruff]
 line-length = 140
 target-version = "py313"
 preview = true
-src = ["."]
+src = [ "." ]
 exclude = [
-    "tests/",
-    ".git/",
-    ".github/",
-    ".venv/",
-    ".pixi/",
-    "build/",
-    "dist/",
-    "*.egg-info/",
-    "__pycache__/",
-    ".vscode/",
-    ".idea/",
-    "docs/",
-    "tools/",
-    ".ruff_cache/",
-    ".mypy_cache/",
-    ".pytest_cache/",
-    ".claude/",
-    ".serena/",
-    "node_modules/",
-    "CLI Coding/",
-    "Screenshots/",
-    "typings/",
-    "stubs/",
+  "tests/",
+  ".git/",
+  ".github/",
+  ".venv/",
+  ".pixi/",
+  "build/",
+  "dist/",
+  "*.egg-info/",
+  "__pycache__/",
+  ".vscode/",
+  ".idea/",
+  "docs/",
+  "tools/",
+  ".ruff_cache/",
+  ".mypy_cache/",
+  ".pytest_cache/",
+  ".claude/",
+  ".serena/",
+  "node_modules/",
+  "CLI Coding/",
+  "Screenshots/",
+  "typings/",
+  "stubs/",
 ]
 
 [tool.ruff.lint]
 select = [
-    "E",    # pycodestyle errors
-    "W",    # pycodestyle warnings
-    "F",    # pyflakes
-    "I",    # isort
-    "C9",   # mccabe complexity
-    "N",    # pep8-naming
-    "A",    # flake8-builtins
-    "C4",   # flake8-comprehensions
-    "B",    # flake8-bugbear
-    "SIM",  # flake8-simplify
-    "UP",   # pyupgrade
-    "ICN",  # flake8-import-conventions
-    "T20",  # flake8-print
-    "ARG",  # flake8-unused-arguments
-    "G",    # flake8-logging-format
-    "TC",   # flake8-type-checking
-    "RET",  # flake8-return
-    "PL",   # pylint
-    "TRY",  # tryceratops
-    "RUF",  # ruff-specific
-    "PERF", # perflint
-    "D",    # pydocstyle
-    "S",    # bandit security
+  "E",    # pycodestyle errors
+  "W",    # pycodestyle warnings
+  "F",    # pyflakes
+  "I",    # isort
+  "C9",   # mccabe complexity
+  "N",    # pep8-naming
+  "A",    # flake8-builtins
+  "C4",   # flake8-comprehensions
+  "B",    # flake8-bugbear
+  "SIM",  # flake8-simplify
+  "UP",   # pyupgrade
+  "ICN",  # flake8-import-conventions
+  "T20",  # flake8-print
+  "ARG",  # flake8-unused-arguments
+  "G",    # flake8-logging-format
+  "TC",   # flake8-type-checking
+  "RET",  # flake8-return
+  "PL",   # pylint
+  "TRY",  # tryceratops
+  "RUF",  # ruff-specific
+  "PERF", # perflint
+  "D",    # pydocstyle
+  "S",    # bandit security
 ]
 
-unfixable = [
-    "TRY400",
-    "RUF013",
-    "RUF022",
-    "RET503",
-]
+unfixable = [ "TRY400", "RUF013", "RUF022", "RET503" ]
 
 ignore = [
-    "E501",    # line-too-long
-    "D203",    # incorrect-blank-line-before-class
-    "D213",    # multi-line-summary-second-line
-    "S603",    # subprocess-without-shell-equals-true
-    "S607",    # partial-path
-    "PLR0911", # too-many-return-statements
-    "PLR0912", # too-many-branches
-    "PLR0913", # too-many-arguments
-    "PLR0915", # too-many-statements
-    "PLR1702", # too-many-nested-blocks
+  "E501",    # line-too-long
+  "D203",    # incorrect-blank-line-before-class
+  "D213",    # multi-line-summary-second-line
+  "S603",    # subprocess-without-shell-equals-true
+  "S607",    # partial-path
+  "PLR0911", # too-many-return-statements
+  "PLR0912", # too-many-branches
+  "PLR0913", # too-many-arguments
+  "PLR0915", # too-many-statements
+  "PLR1702", # too-many-nested-blocks
 ]
 
-fixable = ["ALL"]
+fixable = [ "ALL" ]
 dummy-variable-rgx = "^(_+|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "S102", "S404"]
+"tests/**" = [ "S101", "S102", "S404" ]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 30
@@ -560,7 +642,7 @@ max-public-methods = 50
 lines-after-imports = 2
 force-wrap-aliases = true
 combine-as-imports = true
-known-first-party = ["intellicrack"]
+known-first-party = [ "intellicrack" ]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -572,36 +654,56 @@ docstring-code-format = true
 [tool.flake8]
 max-line-length = 140
 exclude = [
-    ".git",
-    ".github",
-    ".pixi",
-    ".mypy_cache",
-    ".pytest_cache",
-    ".ruff_cache",
-    ".vscode",
-    ".idea",
-    ".claude",
-    ".serena",
-    "build",
-    "dist",
-    "tools",
-    "docs",
-    "node_modules",
-    "CLI Coding",
-    "Screenshots",
-    "typings",
-    "stubs",
+  ".git",
+  ".github",
+  ".pixi",
+  ".mypy_cache",
+  ".pytest_cache",
+  ".ruff_cache",
+  ".vscode",
+  ".idea",
+  ".claude",
+  ".serena",
+  "build",
+  "dist",
+  "tools",
+  "docs",
+  "node_modules",
+  "CLI Coding",
+  "Screenshots",
+  "typings",
+  "stubs",
 ]
-extend-ignore = ["E203", "W503"]
-per-file-ignores = ["tests/*:S101,S102,S404"]
+extend-ignore = [ "E203", "W503" ]
+per-file-ignores = [ "tests/*:S101,S102,S404" ]
 
 [tool.bandit]
-exclude_dirs = ["tests", "docs", "tools", ".git", ".github", ".pixi", "node_modules", "CLI Coding", "Screenshots"]
-skips = ["B101", "B601"]
+exclude_dirs = [
+  "tests",
+  "docs",
+  "tools",
+  ".git",
+  ".github",
+  ".pixi",
+  "node_modules",
+  "CLI Coding",
+  "Screenshots",
+]
+skips = [ "B101", "B601" ]
 
 [tool.coverage.run]
-source = ["src/intellicrack"]
-omit = ["*/.git/*", "*/.pixi/*", "*/tests/*", "*/docs/*", "*/__pycache__/*", "*/tools/*", "*/node_modules/*", "*/CLI Coding/*", "*/Screenshots/*"]
+source = [ "src/intellicrack" ]
+omit = [
+  "*/.git/*",
+  "*/.pixi/*",
+  "*/tests/*",
+  "*/docs/*",
+  "*/__pycache__/*",
+  "*/tools/*",
+  "*/node_modules/*",
+  "*/CLI Coding/*",
+  "*/Screenshots/*",
+]
 branch = true
 
 [tool.coverage.report]
@@ -611,12 +713,12 @@ show_missing = true
 skip_covered = false
 sort = "Cover"
 exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "raise AssertionError",
-    "raise NotImplementedError",
-    "if __name__ == .__main__.:",
-    "@(abc\\.)?abstractmethod",
+  "pragma: no cover",
+  "def __repr__",
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "if __name__ == .__main__.:",
+  "@(abc\\.)?abstractmethod",
 ]
 
 [tool.coverage.html]
@@ -626,78 +728,78 @@ title = "Intellicrack Coverage Report"
 [tool.vulture]
 min_confidence = 80
 ignore_decorators = [
-    "@abstractmethod",
-    "@abc.abstractmethod",
-    "@property",
-    "@*.setter",
-    "@staticmethod",
-    "@classmethod",
-    "@override",
+  "@abstractmethod",
+  "@abc.abstractmethod",
+  "@property",
+  "@*.setter",
+  "@staticmethod",
+  "@classmethod",
+  "@override",
 ]
 ignore_names = [
-    "argtypes",
-    "restype",
-    "supports_*",
-    "visit_*",
-    "do_*",
-    "test_*",
-    "setUp",
-    "tearDown",
-    "setUpClass",
-    "tearDownClass",
+  "argtypes",
+  "restype",
+  "supports_*",
+  "visit_*",
+  "do_*",
+  "test_*",
+  "setUp",
+  "tearDown",
+  "setUpClass",
+  "tearDownClass",
 ]
 exclude = [
-    ".git/",
-    ".github/",
-    ".pixi/",
-    "build/",
-    "dist/",
-    "tools/",
-    "docs/",
-    "node_modules/",
-    "CLI Coding/",
-    "Screenshots/",
-    "typings/",
-    "stubs/",
+  ".git/",
+  ".github/",
+  ".pixi/",
+  "build/",
+  "dist/",
+  "tools/",
+  "docs/",
+  "node_modules/",
+  "CLI Coding/",
+  "Screenshots/",
+  "typings/",
+  "stubs/",
 ]
 
 [tool.deadcode]
-exclude = ["tests", "tools", "docs", ".git", ".pixi", "node_modules", "CLI Coding", "Screenshots"]
+exclude = [ "tests", "tools", "docs", ".git", ".pixi", "node_modules", "CLI Coding", "Screenshots" ]
 ignore-names = [
-    "argtypes",
-    "restype",
-    "supports_*",
-    "test_*",
-    "setUp",
-    "tearDown",
-    "setUpClass",
-    "tearDownClass",
+  "argtypes",
+  "restype",
+  "supports_*",
+  "test_*",
+  "setUp",
+  "tearDown",
+  "setUpClass",
+  "tearDownClass",
 ]
 ignore-definitions-if-decorated-with = [
-    "abstractmethod",
-    "abc.abstractmethod",
-    "property",
-    "staticmethod",
-    "classmethod",
-    "override",
+  "abstractmethod",
+  "abc.abstractmethod",
+  "property",
+  "staticmethod",
+  "classmethod",
+  "override",
 ]
 ignore-definitions-if-inherits-from = [
-    "ToolBridgeBase",
-    "StaticAnalysisBridge",
-    "DynamicAnalysisBridge",
-    "BinaryOperationsBridge",
-    "LLMProviderBase",
-    "SandboxBase",
-    "ABC",
-    "abc.ABC",
+  "ToolBridgeBase",
+  "StaticAnalysisBridge",
+  "DynamicAnalysisBridge",
+  "BinaryOperationsBridge",
+  "LLMProviderBase",
+  "SandboxBase",
+  "ABC",
+  "abc.ABC",
 ]
 ignore-names-if-inherits-from = [
-    "ToolBridgeBase",
-    "StaticAnalysisBridge",
-    "DynamicAnalysisBridge",
-    "BinaryOperationsBridge",
-    "LLMProviderBase",
-    "SandboxBase",
-    "ABC",
-    "abc.ABC",
+  "ToolBridgeBase",
+  "StaticAnalysisBridge",
+  "DynamicAnalysisBridge",
+  "BinaryOperationsBridge",
+  "LLMProviderBase",
+  "SandboxBase",
+  "ABC",
+  "abc.ABC",
 ]

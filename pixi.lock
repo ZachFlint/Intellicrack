@@ -53,6 +53,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/rich-14.3.2-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/setuptools-81.0.0-pyh332efcf_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/shellcheck-0.10.0-h57928b3_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/taplo-0.10.0-h63977a8_1.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/tk-8.6.13-h6ed50ae_3.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.4.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/types-pyyaml-6.0.12.20250915-pyhd8ed1ab_1.conda
@@ -66,6 +67,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/vcomp14-14.44.35208-h818238b_34.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.46.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/win_inet_pton-1.1.0-pyh7428d3b_8.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/yamlfmt-0.21.0-h11686cb_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/yarn-4.12.0-h6579d2d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
       - pypi: https://files.pythonhosted.org/packages/9f/d2/c581486aa6c4fbd7394c23c47b83fa1a919d34194e16944241daf9e762dd/accelerate-1.12.0-py3-none-any.whl
@@ -1801,7 +1803,7 @@ packages:
 - pypi: ./
   name: intellicrack
   version: 1.0.0
-  sha256: 9129bdadaf8b5af563c501454dc552d3c6894fd3a68466e62bc802cedd287048
+  sha256: 6be48847b2c07c4ed5c2d6ec163ac0e47eca2bd8a00ad11845752f9b0ff014b2
   requires_dist:
   - networkx
   - markdown-it-py
@@ -4494,6 +4496,21 @@ packages:
   - pytest>=7.1.0 ; extra == 'dev'
   - hypothesis>=6.70.0 ; extra == 'dev'
   requires_python: '>=3.9'
+- conda: https://conda.anaconda.org/conda-forge/win-64/taplo-0.10.0-h63977a8_1.conda
+  sha256: b38dd1dd1fe52d26f739d144a85fd277103320bd8e037b66a299457d5a827a04
+  md5: 5fc2fa2f444b00e0f5b1f60a23f2c2f8
+  depends:
+  - vc >=14.2,<15
+  - vc14_runtime >=14.29.30139
+  - ucrt >=10.0.20348.0
+  - vc >=14.2,<15
+  - vc14_runtime >=14.29.30139
+  - ucrt >=10.0.20348.0
+  license: MIT
+  license_family: MIT
+  purls: []
+  size: 4441127
+  timestamp: 1748302918824
 - pypi: https://files.pythonhosted.org/packages/19/e7/8a3ae90c12186033dfd38a7292b2caef3ed10813162ab4713149191d70ef/tbb-2022.3.0-py3-none-win_amd64.whl
   name: tbb
   version: 2022.3.0
@@ -5236,6 +5253,14 @@ packages:
   - radon>=4,<7
   - requests>=2.0,<3.0
   - pyyaml>=5.0,<7.0
+- conda: https://conda.anaconda.org/conda-forge/win-64/yamlfmt-0.21.0-h11686cb_0.conda
+  sha256: 7363a8624cb10799d45e41ff80a30f562b7964edc83c9a7dd72380aaa02c2df5
+  md5: 6459ee548fa77890df43f7f238047f88
+  license: Apache-2.0
+  license_family: APACHE
+  purls: []
+  size: 1821445
+  timestamp: 1767643175556
 - pypi: https://files.pythonhosted.org/packages/05/92/aed08e68de6e6a3d7c2328ce7388072cd6affc26e2917197430b646aed02/yamllint-1.38.0-py3-none-any.whl
   name: yamllint
   version: 1.38.0

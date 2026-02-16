@@ -1,0 +1,10 @@
+doublestar: true
+include:
+  - "**/*.yml"
+  - "**/*.yaml"
+exclude:
+  - ".pixi/**"
+  - "build/**"
+  - "dist/**"
+  - "node_modules/**"
+  - ".git/**"
