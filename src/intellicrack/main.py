@@ -33,7 +33,10 @@ if TYPE_CHECKING:
     from intellicrack.ui.resources.icon_manager import IconManager
     from intellicrack.ui.resources.theme_manager import ThemeManager
 
-_APP_VERSION = "2.0.0"
+from intellicrack._metadata import __version__
+
+
+_APP_VERSION: str = __version__
 _VALID_LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 
 
@@ -295,8 +298,8 @@ def _setup_qt_and_splash(
     icon_manager = icon_mgr_cls.get_instance()
     qt_app_cls.setWindowIcon(icon_manager.get_app_icon())
 
-    splash = splash_cls()
-    splash.show()
+    splash = splash_cls(version=_APP_VERSION)
+    splash.show_animated()
     app.processEvents()
 
     return app, splash
@@ -483,8 +486,7 @@ def _run_application(
 
     splash.set_progress(100, "Ready")
     app.processEvents()
-    splash.finish(window)
-    window.show()
+    splash.finish_animated(window)
 
     logger.info("ui_started")
     exit_code = app.exec()

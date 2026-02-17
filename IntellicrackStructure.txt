@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Sun, Feb 15, 2026 05:58:32 PM
+Generated: Mon, Feb 16, 2026 09:42:26 PM
 Directory: D:\Intellicrack\src
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -217,15 +217,6 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   ├── dialogs/
 │   │   │   ├── __init__.py
 │   │   │   └── splash_screen.py
-│   │   ├── embedding/
-│   │   │   ├── __init__.py
-│   │   │   ├── cutter_widget.py
-│   │   │   ├── embedded_widget.py
-│   │   │   ├── ghidra_widget.py
-│   │   │   ├── hxd_widget.py
-│   │   │   ├── radare2_widget.py
-│   │   │   ├── win32_helper.py
-│   │   │   └── x64dbg_widget.py
 │   │   ├── panels/
 │   │   │   ├── __init__.py
 │   │   │   ├── _async_bridge.py
@@ -234,11 +225,14 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   │   ├── _qt_compat.pyi
 │   │   │   ├── binary_panel.py
 │   │   │   ├── frida_panel.py
+│   │   │   ├── ghidra_panel.py
 │   │   │   ├── licensing_panel.py
 │   │   │   ├── process_panel.py
+│   │   │   ├── radare2_panel.py
 │   │   │   ├── sandbox_panel.py
 │   │   │   ├── script_manager.py
-│   │   │   └── stack_viewer.py
+│   │   │   ├── stack_viewer.py
+│   │   │   └── x64dbg_panel.py
 │   │   ├── resources/
 │   │   │   ├── icons/
 │   │   │   ├── styles/

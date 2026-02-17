@@ -2,8 +2,8 @@
 
 This module provides the tool output display panel showing
 decompiled code, disassembly, and analysis results from tools,
-as well as embedded external tools (HxD, x64dbg, Cutter) and
-specialized analysis panels (Licensing, Scripts, Stack).
+as well as native analysis panels (Ghidra, x64dbg, radare2,
+Frida, Binary) and specialized panels (Licensing, Scripts, Stack).
 """
 
 from __future__ import annotations
@@ -97,6 +97,14 @@ class HxDWidgetProtocol(ToolWidget, Protocol):
 class X64DbgWidgetProtocol(ToolWidget, Protocol):
     """Protocol for x64dbg debugger widget integration."""
 
+    def set_bridge(self, bridge: Any) -> None:
+        """Set the X64DbgBridge instance.
+
+        Args:
+            bridge: X64DbgBridge instance for debugging.
+        """
+        _ = (self, bridge)
+
     def debug_file(self, file_path: Path) -> bool:
         """Launch a file in the debugger.
 
@@ -113,6 +121,14 @@ class X64DbgWidgetProtocol(ToolWidget, Protocol):
 @runtime_checkable
 class CutterWidgetProtocol(ToolWidget, Protocol):
     """Protocol for Cutter reverse engineering widget integration."""
+
+    def set_bridge(self, bridge: Any) -> None:
+        """Set the Radare2Bridge instance.
+
+        Args:
+            bridge: Radare2Bridge instance for analysis.
+        """
+        _ = (self, bridge)
 
     def analyze_binary(self, file_path: Path) -> bool:
         """Open a binary for analysis in Cutter.
@@ -131,6 +147,14 @@ class CutterWidgetProtocol(ToolWidget, Protocol):
 class GhidraWidgetProtocol(ToolWidget, Protocol):
     """Protocol for Ghidra reverse engineering widget integration."""
 
+    def set_bridge(self, bridge: Any) -> None:
+        """Set the GhidraBridge instance.
+
+        Args:
+            bridge: GhidraBridge instance for analysis.
+        """
+        _ = (self, bridge)
+
     def load_binary(self, binary_path: Path) -> bool:
         """Load a binary into Ghidra for analysis.
 
@@ -147,6 +171,14 @@ class GhidraWidgetProtocol(ToolWidget, Protocol):
 @runtime_checkable
 class Radare2WidgetProtocol(ToolWidget, Protocol):
     """Protocol for radare2/iaito GUI widget integration."""
+
+    def set_bridge(self, bridge: Any) -> None:
+        """Set the Radare2Bridge instance.
+
+        Args:
+            bridge: Radare2Bridge instance for analysis.
+        """
+        _ = (self, bridge)
 
     def analyze_binary(self, binary_path: Path) -> bool:
         """Load and analyze a binary in the radare2 GUI.
@@ -914,22 +946,22 @@ class ToolOutputPanel(QFrame):
         return panel
 
     def add_hxd_tab(self) -> HxDWidgetProtocol | None:
-        """Add the HxD hex editor as an embedded tab.
+        """Add a hex editor panel as a tab (redirects to BinaryPanel).
 
         Returns:
-            The created HxDWidget or None if creation failed.
+            The created BinaryPanel cast as HxDWidgetProtocol, or None on failure.
         """
         if self._hxd_widget is not None:
             return self._hxd_widget
 
         try:
-            widget_module = importlib.import_module(".embedding.hxd_widget", "intellicrack.ui")
-            raw_widget = widget_module.HxDWidget()
+            panel_module = importlib.import_module(".panels.binary_panel", "intellicrack.ui")
+            raw_widget = panel_module.BinaryPanel()
             self._hxd_widget = cast("HxDWidgetProtocol", raw_widget)
             qwidget = cast("QWidget", raw_widget)
             self._hxd_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("hxd"))
             self._hxd_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("hxd"))
-            self._tab_widget.addTab(qwidget, "HxD")
+            self._tab_widget.addTab(qwidget, "Hex Editor")
             self._embedded_tools["hxd"] = qwidget
             _logger.info("hxd_tab_added")
         except Exception as e:
@@ -939,20 +971,20 @@ class ToolOutputPanel(QFrame):
             return self._hxd_widget
 
     def add_x64dbg_tab(self, is_64bit: bool = True) -> X64DbgWidgetProtocol | None:
-        """Add the x64dbg/x32dbg debugger as an embedded tab.
+        """Add the x64dbg debugger as a native panel tab.
 
         Args:
-            is_64bit: Whether to use x64dbg (True) or x32dbg (False).
+            is_64bit: Whether to use 64-bit mode (True) or 32-bit (False).
 
         Returns:
-            The created X64DbgWidget or None if creation failed.
+            The created X64DbgPanel or None if creation failed.
         """
         if self._x64dbg_widget is not None:
             return self._x64dbg_widget
 
         try:
-            widget_module = importlib.import_module(".embedding.x64dbg_widget", "intellicrack.ui")
-            raw_widget = widget_module.X64DbgWidget(use_64bit=is_64bit)
+            panel_module = importlib.import_module(".panels.x64dbg_panel", "intellicrack.ui")
+            raw_widget = panel_module.X64DbgPanel()
             self._x64dbg_widget = cast("X64DbgWidgetProtocol", raw_widget)
             qwidget = cast("QWidget", raw_widget)
             self._x64dbg_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("x64dbg"))
@@ -968,47 +1000,39 @@ class ToolOutputPanel(QFrame):
             return self._x64dbg_widget
 
     def add_cutter_tab(self) -> CutterWidgetProtocol | None:
-        """Add the Cutter reverse engineering tool as an embedded tab.
+        """Add Cutter analysis (redirects to radare2 panel).
 
         Returns:
-            The created CutterWidget or None if creation failed.
+            The radare2 panel cast as CutterWidgetProtocol, or None on failure.
         """
         if self._cutter_widget is not None:
             return self._cutter_widget
 
-        try:
-            widget_module = importlib.import_module(".embedding.cutter_widget", "intellicrack.ui")
-            raw_widget = widget_module.CutterWidget()
-            self._cutter_widget = cast("CutterWidgetProtocol", raw_widget)
-            qwidget = cast("QWidget", raw_widget)
-            self._cutter_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("cutter"))
-            self._cutter_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("cutter"))
-            self._tab_widget.addTab(qwidget, "Cutter")
-            self._embedded_tools["cutter"] = qwidget
-            _logger.info("cutter_tab_added")
-        except Exception as e:
-            _logger.warning("cutter_tab_add_failed", extra={"error": str(e)})
+        radare2 = self.add_radare2_tab()
+        if radare2 is None:
             return None
-        else:
-            return self._cutter_widget
+
+        self._cutter_widget = cast("CutterWidgetProtocol", radare2)
+        _logger.info("cutter_tab_redirected_to_radare2")
+        return self._cutter_widget
 
     def add_ghidra_tab(self) -> GhidraWidgetProtocol | None:
-        """Add the Ghidra reverse engineering tool as an embedded tab.
+        """Add the Ghidra analysis panel as a native tab.
 
         Returns:
-            The created GhidraWidget or None if creation failed.
+            The created GhidraPanel or None if creation failed.
         """
         if self._ghidra_widget is not None:
             return self._ghidra_widget
 
         try:
-            widget_module = importlib.import_module(".embedding.ghidra_widget", "intellicrack.ui")
-            raw_widget = widget_module.GhidraWidget()
+            panel_module = importlib.import_module(".panels.ghidra_panel", "intellicrack.ui")
+            raw_widget = panel_module.GhidraPanel()
             self._ghidra_widget = cast("GhidraWidgetProtocol", raw_widget)
             qwidget = cast("QWidget", raw_widget)
             self._ghidra_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("ghidra"))
             self._ghidra_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("ghidra"))
-            self._tab_widget.addTab(qwidget, "Ghidra (Embed)")
+            self._tab_widget.addTab(qwidget, "Ghidra")
             self._embedded_tools["ghidra"] = qwidget
             _logger.info("ghidra_tab_added")
         except Exception as e:
@@ -1018,23 +1042,23 @@ class ToolOutputPanel(QFrame):
             return self._ghidra_widget
 
     def add_radare2_tab(self) -> Radare2WidgetProtocol | None:
-        """Add the radare2/iaito GUI as an embedded tab.
+        """Add the radare2 analysis panel as a native tab.
 
         Returns:
-            The created Radare2Widget or None if creation failed.
+            The created Radare2Panel or None if creation failed.
         """
         if self._radare2_widget is not None:
             return self._radare2_widget
 
         try:
-            widget_module = importlib.import_module(".embedding.radare2_widget", "intellicrack.ui")
-            raw_widget = widget_module.Radare2Widget()
+            panel_module = importlib.import_module(".panels.radare2_panel", "intellicrack.ui")
+            raw_widget = panel_module.Radare2Panel()
             self._radare2_widget = cast("Radare2WidgetProtocol", raw_widget)
             qwidget = cast("QWidget", raw_widget)
             self._radare2_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("radare2"))
             self._radare2_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("radare2"))
             self._tab_widget.addTab(qwidget, "radare2")
-            self._embedded_tools["radare2_gui"] = qwidget
+            self._embedded_tools["radare2"] = qwidget
             _logger.info("radare2_tab_added")
         except Exception as e:
             _logger.warning("radare2_tab_add_failed", extra={"error": str(e)})

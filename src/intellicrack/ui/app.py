@@ -968,84 +968,64 @@ class MainWindow(QMainWindow):
         )
 
     def _on_open_x64dbg(self) -> None:
-        """Open x64dbg debugger in embedded tab."""
+        """Open x64dbg debugger panel."""
         try:
             widget = self._tool_panel.add_x64dbg_tab(is_64bit=True)
             if widget is None:
-                self._show_tool_error("x64dbg", "Failed to initialize x64dbg widget")
+                self._show_tool_error("x64dbg", "Failed to initialize x64dbg panel")
                 return
-            if not widget.start_tool():
-                self._show_tool_error(
-                    "x64dbg",
-                    "x64dbg executable not found. Check tools/x64dbg/ directory.",
-                )
+            widget.start_tool()
         except Exception as e:
-            _logger.exception("tool_embed_failed", extra={"tool_name": "x64dbg", "error": str(e)})
-            self._show_tool_error("x64dbg", f"Exception embedding x64dbg: {e}")
+            _logger.exception("tool_open_failed", extra={"tool_name": "x64dbg", "error": str(e)})
+            self._show_tool_error("x64dbg", f"Failed to open x64dbg panel: {e}")
 
     def _on_open_cutter(self) -> None:
-        """Open Cutter analysis tool in embedded tab."""
+        """Open Cutter analysis (redirects to radare2 panel)."""
         try:
             widget = self._tool_panel.add_cutter_tab()
             if widget is None:
-                self._show_tool_error("Cutter", "Failed to initialize Cutter widget")
+                self._show_tool_error("Cutter", "Failed to initialize radare2 panel")
                 return
-            if not widget.start_tool():
-                self._show_tool_error(
-                    "Cutter",
-                    "Cutter executable not found. Check tools/cutter/ directory.",
-                )
+            widget.start_tool()
         except Exception as e:
-            _logger.exception("tool_embed_failed", extra={"tool_name": "Cutter", "error": str(e)})
-            self._show_tool_error("Cutter", f"Exception embedding Cutter: {e}")
+            _logger.exception("tool_open_failed", extra={"tool_name": "Cutter", "error": str(e)})
+            self._show_tool_error("Cutter", f"Failed to open Cutter panel: {e}")
 
     def _on_open_hxd(self) -> None:
-        """Open HxD hex editor in embedded tab."""
+        """Open hex editor panel."""
         try:
             widget = self._tool_panel.add_hxd_tab()
             if widget is None:
-                self._show_tool_error("HxD", "Failed to initialize HxD widget")
+                self._show_tool_error("Hex Editor", "Failed to initialize hex editor panel")
                 return
-            if not widget.start_tool():
-                self._show_tool_error(
-                    "HxD",
-                    "HxD executable not found. Check tools/hxd/ directory.",
-                )
+            widget.start_tool()
         except Exception as e:
-            _logger.exception("tool_embed_failed", extra={"tool_name": "HxD", "error": str(e)})
-            self._show_tool_error("HxD", f"Exception embedding HxD: {e}")
+            _logger.exception("tool_open_failed", extra={"tool_name": "HxD", "error": str(e)})
+            self._show_tool_error("Hex Editor", f"Failed to open hex editor panel: {e}")
 
     def _on_open_ghidra(self) -> None:
-        """Open Ghidra in embedded tab."""
+        """Open Ghidra analysis panel."""
         try:
             widget = self._tool_panel.add_ghidra_tab()
             if widget is None:
-                self._show_tool_error("Ghidra", "Failed to initialize Ghidra widget")
+                self._show_tool_error("Ghidra", "Failed to initialize Ghidra panel")
                 return
-            if not widget.start_tool():
-                self._show_tool_error(
-                    "Ghidra",
-                    "Ghidra executable not found. Set GHIDRA_HOME or check tools/ghidra/ directory.",
-                )
+            widget.start_tool()
         except Exception as e:
-            _logger.exception("tool_embed_failed", extra={"tool_name": "Ghidra", "error": str(e)})
-            self._show_tool_error("Ghidra", f"Exception embedding Ghidra: {e}")
+            _logger.exception("tool_open_failed", extra={"tool_name": "Ghidra", "error": str(e)})
+            self._show_tool_error("Ghidra", f"Failed to open Ghidra panel: {e}")
 
     def _on_open_radare2(self) -> None:
-        """Open radare2/iaito GUI in embedded tab."""
+        """Open radare2 analysis panel."""
         try:
             widget = self._tool_panel.add_radare2_tab()
             if widget is None:
-                self._show_tool_error("radare2", "Failed to initialize radare2 widget")
+                self._show_tool_error("radare2", "Failed to initialize radare2 panel")
                 return
-            if not widget.start_tool():
-                self._show_tool_error(
-                    "radare2",
-                    "iaito/Cutter executable not found. Check tools/iaito/ or tools/cutter/ directory.",
-                )
+            widget.start_tool()
         except Exception as e:
-            _logger.exception("tool_embed_failed", extra={"tool_name": "radare2", "error": str(e)})
-            self._show_tool_error("radare2", f"Exception embedding radare2: {e}")
+            _logger.exception("tool_open_failed", extra={"tool_name": "radare2", "error": str(e)})
+            self._show_tool_error("radare2", f"Failed to open radare2 panel: {e}")
 
     def _on_open_frida(self) -> None:
         """Open Frida instrumentation panel."""

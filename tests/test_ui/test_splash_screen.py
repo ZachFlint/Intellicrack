@@ -1,6 +1,7 @@
 """Tests for SplashScreen module.
 
-Validates splash screen creation, progress tracking, and asset loading
+Validates splash screen creation, progress tracking, asset loading,
+fade animations, version display, DPI scaling, and animated progress
 using real splash image assets.
 """
 
@@ -9,13 +10,17 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from PyQt6.QtCore import QPropertyAnimation
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QLabel, QProgressBar
+from PyQt6.QtWidgets import QLabel, QProgressBar, QWidget
 
 from intellicrack.ui.dialogs.splash_screen import (
+    DEFAULT_DPI_SCALE,
+    FADE_DURATION_MS,
     FALLBACK_ACCENT_COLOR,
     FALLBACK_BG_COLOR,
     FALLBACK_TEXT_COLOR,
+    PROGRESS_ANIM_DURATION_MS,
     SPLASH_HEIGHT,
     SPLASH_WIDTH,
     SplashScreen,
@@ -68,12 +73,31 @@ def splash_screen(
     splash.close()
 
 
+@pytest.fixture
+def splash_with_version(
+    qapp: QApplication,
+) -> Generator[SplashScreen]:
+    """Provide a SplashScreen instance with version for testing.
+
+    Args:
+        qapp: Qt application fixture.
+
+    Yields:
+        A SplashScreen instance with version "1.2.3".
+    """
+    del qapp
+    splash = SplashScreen(version="1.2.3")
+    yield splash
+    splash.close()
+
+
 class TestSplashScreenCreation:
     """Tests for splash screen creation."""
 
     @staticmethod
-    def test_creates_splash_screen(_qapp: QApplication) -> None:
+    def test_creates_splash_screen(qapp: QApplication) -> None:
         """SplashScreen can be instantiated."""
+        del qapp
         splash = SplashScreen()
         assert splash is not None
         splash.close()
@@ -165,9 +189,10 @@ class TestProgressTracking:
 
     @staticmethod
     def test_progress_updates_progress_bar(splash_screen: SplashScreen) -> None:
-        """Progress update affects the progress bar widget."""
+        """Progress update creates animation targeting correct value."""
         splash_screen.set_progress(_PROGRESS_75)
-        assert splash_screen._progress_bar.value() == _PROGRESS_75
+        assert splash_screen._progress_animation is not None
+        assert splash_screen._progress_animation.endValue() == _PROGRESS_75
 
 
 class TestStatusMessage:
@@ -261,19 +286,19 @@ class TestSplashPixmapLoading:
     @staticmethod
     def test_load_splash_pixmap_returns_qpixmap() -> None:
         """_load_splash_pixmap returns QPixmap."""
-        pixmap = SplashScreen._load_splash_pixmap()
+        pixmap = SplashScreen._load_splash_pixmap(SPLASH_WIDTH, SPLASH_HEIGHT, DEFAULT_DPI_SCALE)
         assert isinstance(pixmap, QPixmap)
 
     @staticmethod
     def test_loaded_pixmap_not_null() -> None:
         """Loaded pixmap is not null."""
-        pixmap = SplashScreen._load_splash_pixmap()
+        pixmap = SplashScreen._load_splash_pixmap(SPLASH_WIDTH, SPLASH_HEIGHT, DEFAULT_DPI_SCALE)
         assert not pixmap.isNull()
 
     @staticmethod
     def test_pixmap_has_correct_dimensions() -> None:
         """Loaded pixmap has correct dimensions."""
-        pixmap = SplashScreen._load_splash_pixmap()
+        pixmap = SplashScreen._load_splash_pixmap(SPLASH_WIDTH, SPLASH_HEIGHT, DEFAULT_DPI_SCALE)
         assert pixmap.width() <= SPLASH_WIDTH
         assert pixmap.height() <= SPLASH_HEIGHT
 
@@ -284,19 +309,19 @@ class TestFallbackPixmap:
     @staticmethod
     def test_create_fallback_pixmap_returns_qpixmap() -> None:
         """_create_fallback_pixmap returns QPixmap."""
-        pixmap = SplashScreen._create_fallback_pixmap()
+        pixmap = SplashScreen._create_fallback_pixmap(SPLASH_WIDTH, SPLASH_HEIGHT, DEFAULT_DPI_SCALE)
         assert isinstance(pixmap, QPixmap)
 
     @staticmethod
     def test_fallback_pixmap_not_null() -> None:
         """Fallback pixmap is not null."""
-        pixmap = SplashScreen._create_fallback_pixmap()
+        pixmap = SplashScreen._create_fallback_pixmap(SPLASH_WIDTH, SPLASH_HEIGHT, DEFAULT_DPI_SCALE)
         assert not pixmap.isNull()
 
     @staticmethod
     def test_fallback_pixmap_has_correct_dimensions() -> None:
         """Fallback pixmap has correct dimensions."""
-        pixmap = SplashScreen._create_fallback_pixmap()
+        pixmap = SplashScreen._create_fallback_pixmap(SPLASH_WIDTH, SPLASH_HEIGHT, DEFAULT_DPI_SCALE)
         assert pixmap.width() == SPLASH_WIDTH
         assert pixmap.height() == SPLASH_HEIGHT
 
@@ -344,8 +369,9 @@ class TestSplashScreenIntegration:
     """Integration tests for splash screen functionality."""
 
     @staticmethod
-    def test_splash_screen_show_and_hide(_qapp: QApplication) -> None:
+    def test_splash_screen_show_and_hide(qapp: QApplication) -> None:
         """Splash screen can be shown and hidden."""
+        del qapp
         splash = SplashScreen()
         splash.show()
         assert splash.isVisible()
@@ -354,8 +380,9 @@ class TestSplashScreenIntegration:
         splash.close()
 
     @staticmethod
-    def test_splash_screen_progress_workflow(_qapp: QApplication) -> None:
+    def test_splash_screen_progress_workflow(qapp: QApplication) -> None:
         """Splash screen handles typical progress workflow."""
+        del qapp
         splash = SplashScreen()
         splash.show()
 
@@ -377,8 +404,9 @@ class TestSplashScreenIntegration:
         splash.close()
 
     @staticmethod
-    def test_splash_screen_no_exceptions_on_operations(_qapp: QApplication) -> None:
+    def test_splash_screen_no_exceptions_on_operations(qapp: QApplication) -> None:
         """Splash screen operations don't raise exceptions."""
+        del qapp
         try:
             splash = SplashScreen()
             splash.show()
@@ -389,3 +417,133 @@ class TestSplashScreenIntegration:
             splash.close()
         except Exception as e:
             pytest.fail(f"Splash screen operations raised exception: {e}")
+
+
+class TestFadeAnimation:
+    """Tests for fade-in and fade-out animations."""
+
+    @staticmethod
+    def test_show_animated_creates_animation(splash_screen: SplashScreen) -> None:
+        """show_animated creates a fade-in animation."""
+        splash_screen.show_animated()
+        assert splash_screen._fade_animation is not None
+        assert isinstance(splash_screen._fade_animation, QPropertyAnimation)
+
+    @staticmethod
+    def test_show_animated_targets_full_opacity(splash_screen: SplashScreen) -> None:
+        """show_animated targets opacity 1.0."""
+        splash_screen.show_animated()
+        assert splash_screen._fade_animation is not None
+        assert splash_screen._fade_animation.endValue() == 1.0
+
+    @staticmethod
+    def test_show_animated_correct_duration(splash_screen: SplashScreen) -> None:
+        """show_animated uses correct fade duration."""
+        splash_screen.show_animated()
+        assert splash_screen._fade_animation is not None
+        assert splash_screen._fade_animation.duration() == FADE_DURATION_MS
+
+    @staticmethod
+    def test_finish_animated_creates_fadeout(splash_screen: SplashScreen) -> None:
+        """finish_animated creates a fade-out animation."""
+        splash_screen.show()
+        target = QWidget()
+        splash_screen.finish_animated(target)
+        assert splash_screen._fade_animation is not None
+        assert isinstance(splash_screen._fade_animation, QPropertyAnimation)
+        target.close()
+
+    @staticmethod
+    def test_finish_animated_targets_zero_opacity(splash_screen: SplashScreen) -> None:
+        """finish_animated targets opacity 0.0."""
+        splash_screen.show()
+        target = QWidget()
+        splash_screen.finish_animated(target)
+        assert splash_screen._fade_animation is not None
+        assert splash_screen._fade_animation.endValue() == 0.0
+        target.close()
+
+
+class TestVersionLabel:
+    """Tests for version display."""
+
+    @staticmethod
+    def test_version_stored(splash_with_version: SplashScreen) -> None:
+        """Version string is stored and accessible via property."""
+        assert splash_with_version.version == "1.2.3"
+
+    @staticmethod
+    def test_version_label_created(splash_with_version: SplashScreen) -> None:
+        """Version label is created with correct text."""
+        assert splash_with_version._version_label is not None
+        assert isinstance(splash_with_version._version_label, QLabel)
+        assert splash_with_version._version_label.text() == "v1.2.3"
+
+    @staticmethod
+    def test_no_version_label_when_empty(splash_screen: SplashScreen) -> None:
+        """No version label when version is empty string."""
+        assert splash_screen._version_label is None
+
+    @staticmethod
+    def test_default_version_is_empty(splash_screen: SplashScreen) -> None:
+        """Default version is empty string."""
+        assert not splash_screen.version
+
+
+class TestProgressAnimation:
+    """Tests for animated progress bar."""
+
+    @staticmethod
+    def test_set_progress_creates_animation(splash_screen: SplashScreen) -> None:
+        """set_progress creates a QPropertyAnimation."""
+        splash_screen.set_progress(_PROGRESS_50)
+        assert splash_screen._progress_animation is not None
+        assert isinstance(splash_screen._progress_animation, QPropertyAnimation)
+
+    @staticmethod
+    def test_progress_value_set_immediately(splash_screen: SplashScreen) -> None:
+        """Internal _progress_value is set immediately."""
+        splash_screen.set_progress(_PROGRESS_75)
+        assert splash_screen._progress_value == _PROGRESS_75
+
+    @staticmethod
+    def test_rapid_progress_calls_no_error(splash_screen: SplashScreen) -> None:
+        """Rapid successive set_progress calls don't raise."""
+        for i in range(0, _PROGRESS_100 + 1, 5):
+            splash_screen.set_progress(i)
+
+    @staticmethod
+    def test_progress_animation_correct_duration(
+        splash_screen: SplashScreen,
+    ) -> None:
+        """Progress animation has correct duration."""
+        splash_screen.set_progress(_PROGRESS_50)
+        assert splash_screen._progress_animation is not None
+        assert splash_screen._progress_animation.duration() == PROGRESS_ANIM_DURATION_MS
+
+
+class TestDpiScaling:
+    """Tests for DPI scaling support."""
+
+    @staticmethod
+    def test_dpi_scale_is_positive(splash_screen: SplashScreen) -> None:
+        """dpi_scale property returns a positive float."""
+        assert splash_screen.dpi_scale > 0.0
+        assert isinstance(splash_screen.dpi_scale, float)
+
+    @staticmethod
+    def test_scaled_dimensions_positive(splash_screen: SplashScreen) -> None:
+        """Scaled dimensions are positive integers."""
+        assert splash_screen._scaled_width > 0
+        assert splash_screen._scaled_height > 0
+
+    @staticmethod
+    def test_compute_dpi_scale_returns_positive() -> None:
+        """_compute_dpi_scale returns a positive value."""
+        scale = SplashScreen._compute_dpi_scale()
+        assert scale > 0.0
+
+    @staticmethod
+    def test_default_dpi_scale_constant() -> None:
+        """DEFAULT_DPI_SCALE constant is 1.0."""
+        assert DEFAULT_DPI_SCALE == 1.0

@@ -1300,7 +1300,7 @@ class Radare2Bridge(StaticAnalysisBridge):
         return next((f.address for f in funcs if f.name == name), None)
 
     async def list_functions(self) -> list[tuple[str, int]]:
-        """List functions for compatibility with CutterWidget.
+        """List functions for compatibility with Radare2Panel.
 
         Returns:
             List of (name, address) tuples.
@@ -1308,7 +1308,7 @@ class Radare2Bridge(StaticAnalysisBridge):
         return [(f.name, f.address) for f in await self.get_functions()]
 
     async def list_strings(self) -> list[tuple[int, str]]:
-        """List strings for compatibility with CutterWidget.
+        """List strings for compatibility with Radare2Panel.
 
         Returns:
             List of (address, value) tuples.
@@ -1316,7 +1316,7 @@ class Radare2Bridge(StaticAnalysisBridge):
         return [(s.address, s.value) for s in await self.search_strings("")]
 
     async def list_imports(self) -> list[tuple[str, str, int]]:
-        """List imports for compatibility with CutterWidget.
+        """List imports for compatibility with Radare2Panel.
 
         Returns:
             List of (dll, function, address) tuples.
@@ -1324,7 +1324,7 @@ class Radare2Bridge(StaticAnalysisBridge):
         return [(i.dll, i.function, i.address) for i in await self.get_imports()]
 
     async def list_exports(self) -> list[tuple[str, int]]:
-        """List exports for compatibility with CutterWidget.
+        """List exports for compatibility with Radare2Panel.
 
         Returns:
             List of (name, address) tuples.
