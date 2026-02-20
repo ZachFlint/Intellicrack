@@ -1,47 +1,9 @@
 {
   "tool": "complexipy",
-  "generated": "2026-02-11T19:23:58.935496",
-  "total_findings": 59,
-  "total_files": 30,
+  "generated": "2026-02-20T14:08:06.242703",
+  "total_findings": 51,
+  "total_files": 25,
   "files": [
-    {
-      "path": "src\\intellicrack\\providers\\anthropic.py",
-      "count": 4,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "AnthropicProvider::chat",
-          "complexity": 19,
-          "message": "AnthropicProvider::chat - cognitive complexity 19 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\anthropic.py: AnthropicProvider::chat - cognitive complexity 19 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "AnthropicProvider::list_models",
-          "complexity": 19,
-          "message": "AnthropicProvider::list_models - cognitive complexity 19 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\anthropic.py: AnthropicProvider::list_models - cognitive complexity 19 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "AnthropicProvider::_convert_messages_to_provider_format",
-          "complexity": 21,
-          "message": "AnthropicProvider::_convert_messages_to_provider_format - cognitive complexity 21 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\anthropic.py: AnthropicProvider::_convert_messages_to_provider_format - cognitive complexity 21 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "AnthropicProvider::chat_stream",
-          "complexity": 21,
-          "message": "AnthropicProvider::chat_stream - cognitive complexity 21 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\anthropic.py: AnthropicProvider::chat_stream - cognitive complexity 21 (exceeds threshold)"
-        }
-      ]
-    },
     {
       "path": "src\\intellicrack\\bridges\\installer.py",
       "count": 3,
@@ -559,76 +521,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\embedding\\cutter_widget.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "CutterWidget::get_executable_path",
-          "complexity": 39,
-          "message": "CutterWidget::get_executable_path - cognitive complexity 39 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py: CutterWidget::get_executable_path - cognitive complexity 39 (exceeds threshold)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\embedding\\hxd_widget.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "HxDWidget::get_executable_path",
-          "complexity": 18,
-          "message": "HxDWidget::get_executable_path - cognitive complexity 18 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py: HxDWidget::get_executable_path - cognitive complexity 18 (exceeds threshold)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\embedding\\radare2_widget.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "Radare2Widget::get_executable_path",
-          "complexity": 37,
-          "message": "Radare2Widget::get_executable_path - cognitive complexity 37 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py: Radare2Widget::get_executable_path - cognitive complexity 37 (exceeds threshold)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\embedding\\win32_helper.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "Win32WindowHelper::find_window_by_pid",
-          "complexity": 21,
-          "message": "Win32WindowHelper::find_window_by_pid - cognitive complexity 21 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py: Win32WindowHelper::find_window_by_pid - cognitive complexity 21 (exceeds threshold)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "X64DbgWidget::_search_registry_for_x64dbg",
-          "complexity": 17,
-          "message": "X64DbgWidget::_search_registry_for_x64dbg - cognitive complexity 17 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py: X64DbgWidget::_search_registry_for_x64dbg - cognitive complexity 17 (exceeds threshold)"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\sandbox_config.py",
       "count": 1,
       "findings": [
@@ -653,6 +545,20 @@
           "complexity": 22,
           "message": "ToolInstallWorker::_install_tool - cognitive complexity 22 (exceeds threshold)",
           "raw": "src\\intellicrack\\ui\\tool_config.py: ToolInstallWorker::_install_tool - cognitive complexity 22 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\tools.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "ToolOutputPanel::_on_tab_close_requested",
+          "complexity": 39,
+          "message": "ToolOutputPanel::_on_tab_close_requested - cognitive complexity 39 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\tools.py: ToolOutputPanel::_on_tab_close_requested - cognitive complexity 39 (exceeds threshold)"
         }
       ]
     }

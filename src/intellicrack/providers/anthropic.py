@@ -167,15 +167,8 @@ class AnthropicProvider(LLMProviderBase):
         after_id: str | None = None
 
         while True:
-            page = (
-                await client.models.list(after_id=after_id)
-                if after_id
-                else await client.models.list()
-            )
-            models.extend(
-                self._build_model_info(m.id, getattr(m, "display_name", m.id))
-                for m in page.data
-            )
+            page = await client.models.list(after_id=after_id) if after_id else await client.models.list()
+            models.extend(self._build_model_info(m.id, getattr(m, "display_name", m.id)) for m in page.data)
             if not page.has_more:
                 break
             after_id = page.last_id

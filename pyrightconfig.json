@@ -1,0 +1,45 @@
+{
+  "include": [
+    "src/intellicrack"
+  ],
+  "exclude": [
+    "**/__pycache__",
+    "**/node_modules",
+    "**/.venv",
+    "**/build",
+    "**/dist",
+    "**/.git",
+    "**/.github",
+    "**/.pytest_cache",
+    "**/.mypy_cache",
+    "**/.ruff_cache",
+    "**/.claude",
+    "**/.serena",
+    "**/.idea",
+    "**/.vscode",
+    "tools",
+    "docs",
+    ".pixi",
+    "CLI Coding",
+    "Screenshots"
+  ],
+  "typeCheckingMode": "strict",
+  "pythonVersion": "3.13",
+  "pythonPlatform": "Windows",
+  "venvPath": ".pixi/envs",
+  "venv": "default",
+  "useLibraryCodeForTypes": false,
+  "analyzeUnannotatedFunctions": true,
+  "enableTypeIgnoreComments": true,
+  "strictListInference": true,
+  "strictDictionaryInference": true,
+  "strictSetInference": true,
+  "reportMissingImports": "warning",
+  "reportMissingTypeStubs": false,
+  "reportMissingModuleSource": "warning",
+  "reportUndefinedVariable": "error",
+  "reportGeneralTypeIssues": "error",
+  "extraPaths": [
+    "d:/intellicrack/src"
+  ]
+}

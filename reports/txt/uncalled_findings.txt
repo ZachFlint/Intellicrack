@@ -1,32 +1,3 @@
-13 findings in src\intellicrack\ui\tools.py
-
-src\intellicrack\ui\tools.py: Unused function activate_licensing_tab
-
-src\intellicrack\ui\tools.py: Unused function activate_scripts_tab
-
-src\intellicrack\ui\tools.py: Unused function activate_stack_tab
-
-src\intellicrack\ui\tools.py: Unused function activate_tab
-
-src\intellicrack\ui\tools.py: Unused function clear_tab
-
-src\intellicrack\ui\tools.py: Unused function get_embedded_tool
-
-src\intellicrack\ui\tools.py: Unused function get_highlighter
-
-src\intellicrack\ui\tools.py: Unused function get_panel
-
-src\intellicrack\ui\tools.py: Unused function get_selected_pid
-
-src\intellicrack\ui\tools.py: Unused function log_message
-
-src\intellicrack\ui\tools.py: Unused function open_in_ghidra
-
-src\intellicrack\ui\tools.py: Unused function open_in_radare2
-
-src\intellicrack\ui\tools.py: Unused function update_licensing_analysis
-
-
 12 findings in src\intellicrack\core\types.py
 
 src\intellicrack\core\types.py: Unused function display_type
@@ -54,21 +25,31 @@ src\intellicrack\core\types.py: Unused function signature
 src\intellicrack\core\types.py: Unused function summary
 
 
-7 findings in src\intellicrack\ui\embedding\win32_helper.py
+12 findings in src\intellicrack\ui\tools.py
 
-src\intellicrack\ui\embedding\win32_helper.py: Unused function find_child_window
+src\intellicrack\ui\tools.py: Unused function activate_licensing_tab
 
-src\intellicrack\ui\embedding\win32_helper.py: Unused function get_class_name
+src\intellicrack\ui\tools.py: Unused function activate_scripts_tab
 
-src\intellicrack\ui\embedding\win32_helper.py: Unused function get_client_rect
+src\intellicrack\ui\tools.py: Unused function activate_stack_tab
 
-src\intellicrack\ui\embedding\win32_helper.py: Unused function get_process_id
+src\intellicrack\ui\tools.py: Unused function activate_tab
 
-src\intellicrack\ui\embedding\win32_helper.py: Unused function get_window_rect
+src\intellicrack\ui\tools.py: Unused function clear_tab
 
-src\intellicrack\ui\embedding\win32_helper.py: Unused function get_window_text
+src\intellicrack\ui\tools.py: Unused function get_embedded_tool
 
-src\intellicrack\ui\embedding\win32_helper.py: Unused function is_window_visible
+src\intellicrack\ui\tools.py: Unused function get_highlighter
+
+src\intellicrack\ui\tools.py: Unused function get_panel
+
+src\intellicrack\ui\tools.py: Unused function get_selected_pid
+
+src\intellicrack\ui\tools.py: Unused function log_message
+
+src\intellicrack\ui\tools.py: Unused function open_in_ghidra
+
+src\intellicrack\ui\tools.py: Unused function open_in_radare2
 
 
 7 findings in src\intellicrack\ui\resources\font_manager.py
@@ -150,21 +131,6 @@ src\intellicrack\credentials\env_loader.py: Unused function list_missing_provide
 src\intellicrack\credentials\env_loader.py: Unused function reload
 
 
-6 findings in src\intellicrack\ui\embedding\cutter_widget.py
-
-src\intellicrack\ui\embedding\cutter_widget.py: Unused function get_project_path
-
-src\intellicrack\ui\embedding\cutter_widget.py: Unused function get_radare2_bridge
-
-src\intellicrack\ui\embedding\cutter_widget.py: Unused function goto_function
-
-src\intellicrack\ui\embedding\cutter_widget.py: Unused function load_project
-
-src\intellicrack\ui\embedding\cutter_widget.py: Unused function save_project
-
-src\intellicrack\ui\embedding\cutter_widget.py: Unused function sync_with_radare2_bridge
-
-
 6 findings in src\intellicrack\ui\resources\theme_manager.py
 
 src\intellicrack\ui\resources\theme_manager.py: Unused function clear_cache
@@ -178,19 +144,6 @@ src\intellicrack\ui\resources\theme_manager.py: Unused function is_dark_theme
 src\intellicrack\ui\resources\theme_manager.py: Unused function reset_instance
 
 src\intellicrack\ui\resources\theme_manager.py: Unused function toggle_theme
-
-
-5 findings in src\intellicrack\bridges\base.py
-
-src\intellicrack\bridges\base.py: Unused function clear_error
-
-src\intellicrack\bridges\base.py: Unused function has_capability
-
-src\intellicrack\bridges\base.py: Unused function is_ready
-
-src\intellicrack\bridges\base.py: Unused function supports_arch
-
-src\intellicrack\bridges\base.py: Unused function supports_format
 
 
 5 findings in src\intellicrack\core\process_manager.py
@@ -219,17 +172,15 @@ src\intellicrack\core\script_gen.py: Unused function prepare_ai_prompt
 src\intellicrack\core\script_gen.py: Unused function reload_script
 
 
-5 findings in src\intellicrack\ui\embedding\hxd_widget.py
+4 findings in src\intellicrack\bridges\base.py
 
-src\intellicrack\ui\embedding\hxd_widget.py: Unused function cleanup_standalone
+src\intellicrack\bridges\base.py: Unused function clear_error
 
-src\intellicrack\ui\embedding\hxd_widget.py: Unused function get_current_offset
+src\intellicrack\bridges\base.py: Unused function has_capability
 
-src\intellicrack\ui\embedding\hxd_widget.py: Unused function get_standalone_pids
+src\intellicrack\bridges\base.py: Unused function supports_arch
 
-src\intellicrack\ui\embedding\hxd_widget.py: Unused function open_at_offset
-
-src\intellicrack\ui\embedding\hxd_widget.py: Unused function select_range
+src\intellicrack\bridges\base.py: Unused function supports_format
 
 
 4 findings in src\intellicrack\providers\local_transformers.py
@@ -241,17 +192,6 @@ src\intellicrack\providers\local_transformers.py: Unused function current_model_
 src\intellicrack\providers\local_transformers.py: Unused function get_device_info
 
 src\intellicrack\providers\local_transformers.py: Unused function is_b580_detected
-
-
-4 findings in src\intellicrack\ui\embedding\x64dbg_widget.py
-
-src\intellicrack\ui\embedding\x64dbg_widget.py: Unused function attach_to_bridge
-
-src\intellicrack\ui\embedding\x64dbg_widget.py: Unused function attach_to_process
-
-src\intellicrack\ui\embedding\x64dbg_widget.py: Unused function get_attached_pid
-
-src\intellicrack\ui\embedding\x64dbg_widget.py: Unused function get_bridge
 
 
 3 findings in src\intellicrack\bridges\schemas.py
@@ -347,25 +287,25 @@ src\intellicrack\providers\ollama.py: Unused function cloud_available
 src\intellicrack\providers\ollama.py: Unused function local_available
 
 
-2 findings in src\intellicrack\ui\embedding\ghidra_widget.py
-
-src\intellicrack\ui\embedding\ghidra_widget.py: Unused function attach_to_bridge
-
-src\intellicrack\ui\embedding\ghidra_widget.py: Unused function get_bridge
-
-
-2 findings in src\intellicrack\ui\embedding\radare2_widget.py
-
-src\intellicrack\ui\embedding\radare2_widget.py: Unused function get_bridge
-
-src\intellicrack\ui\embedding\radare2_widget.py: Unused function sync_with_bridge
-
-
 2 findings in src\intellicrack\ui\panels\binary_panel.py
 
 src\intellicrack\ui\panels\binary_panel.py: Unused function get_file_data
 
 src\intellicrack\ui\panels\binary_panel.py: Unused function get_patches
+
+
+2 findings in src\intellicrack\ui\panels\ghidra_panel.py
+
+src\intellicrack\ui\panels\ghidra_panel.py: Unused function get_bridge
+
+src\intellicrack\ui\panels\ghidra_panel.py: Unused function show_xrefs
+
+
+2 findings in src\intellicrack\ui\panels\radare2_panel.py
+
+src\intellicrack\ui\panels\radare2_panel.py: Unused function get_bridge
+
+src\intellicrack\ui\panels\radare2_panel.py: Unused function show_xrefs
 
 
 2 findings in src\intellicrack\ui\panels\sandbox_panel.py
@@ -404,11 +344,6 @@ src\intellicrack\ui\confirmation_dialog.py: Unused function remember_similar
 src\intellicrack\ui\dialogs\splash_screen.py: Unused function show_loading_step
 
 
-1 findings in src\intellicrack\ui\embedding\embedded_widget.py
-
-src\intellicrack\ui\embedding\embedded_widget.py: Unused function get_loaded_file
-
-
 1 findings in src\intellicrack\ui\highlighter.py
 
 src\intellicrack\ui\highlighter.py: Unused function highlightBlock
@@ -422,6 +357,11 @@ src\intellicrack\ui\panels\licensing_panel.py: Unused function get_current_analy
 1 findings in src\intellicrack\ui\panels\process_panel.py
 
 src\intellicrack\ui\panels\process_panel.py: Unused function get_selected_pid
+
+
+1 findings in src\intellicrack\ui\panels\x64dbg_panel.py
+
+src\intellicrack\ui\panels\x64dbg_panel.py: Unused function get_bridge
 
 
 1 findings in src\intellicrack\ui\provider_config.py

@@ -90,6 +90,23 @@ src\intellicrack\ui\panels\script_manager.py:765:43: error[invalid-argument-type
 src\intellicrack\ui\panels\script_manager.py:830:16: error[invalid-return-type] Return type does not match returned value: expected `tuple[str, str, str] | None`, found `tuple[(Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy), ~AlwaysFalsy, (Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy)]`
 
 
+7 findings in src\intellicrack\ui\panels\radare2_panel.py
+
+src\intellicrack\ui\panels\radare2_panel.py:195:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`
+
+src\intellicrack\ui\panels\radare2_panel.py:202:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`
+
+src\intellicrack\ui\panels\radare2_panel.py:209:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`
+
+src\intellicrack\ui\panels\radare2_panel.py:216:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`
+
+src\intellicrack\ui\panels\radare2_panel.py:257:29: error[invalid-argument-type] Argument to function `set_sorting_enabled` is incorrect: Expected `QTableWidget`, found `QTreeWidget`
+
+src\intellicrack\ui\panels\radare2_panel.py:379:29: error[invalid-argument-type] Argument to function `set_sorting_enabled` is incorrect: Expected `QTableWidget`, found `Unknown | QTreeWidget`
+
+src\intellicrack\ui\panels\radare2_panel.py:391:29: error[invalid-argument-type] Argument to function `set_sorting_enabled` is incorrect: Expected `QTableWidget`, found `Unknown | QTreeWidget`
+
+
 7 findings in tests\test_ui\test_app_embedded_tools.py
 
 tests\test_ui\test_app_embedded_tools.py:228:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `add_x64dbg_tab` on type `Unknown | ToolOutputPanel`
@@ -122,9 +139,24 @@ src\intellicrack\ui\panels\binary_panel.py:193:9: warning[possibly-missing-attri
 src\intellicrack\ui\panels\binary_panel.py:200:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`
 
 
+6 findings in src\intellicrack\ui\panels\ghidra_panel.py
+
+src\intellicrack\ui\panels\ghidra_panel.py:174:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`
+
+src\intellicrack\ui\panels\ghidra_panel.py:181:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`
+
+src\intellicrack\ui\panels\ghidra_panel.py:188:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`
+
+src\intellicrack\ui\panels\ghidra_panel.py:229:29: error[invalid-argument-type] Argument to function `set_sorting_enabled` is incorrect: Expected `QTableWidget`, found `QTreeWidget`
+
+src\intellicrack\ui\panels\ghidra_panel.py:383:29: error[invalid-argument-type] Argument to function `set_sorting_enabled` is incorrect: Expected `QTableWidget`, found `Unknown | QTreeWidget`
+
+src\intellicrack\ui\panels\ghidra_panel.py:395:29: error[invalid-argument-type] Argument to function `set_sorting_enabled` is incorrect: Expected `QTableWidget`, found `Unknown | QTreeWidget`
+
+
 5 findings in src\intellicrack\sandbox\windows.py
 
-src\intellicrack\sandbox\windows.py:190:13: error[invalid-assignment] Object of type `Popen[Any] | Popen[str] | Popen[bytes]` is not assignable to attribute `_process` of type `Popen[bytes] | None`
+src\intellicrack\sandbox\windows.py:190:13: error[invalid-assignment] Object of type `Popen[bytes] | Popen[Any] | Popen[str]` is not assignable to attribute `_process` of type `Popen[bytes] | None`
 
 src\intellicrack\sandbox\windows.py:200:17: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`
 
@@ -133,6 +165,19 @@ src\intellicrack\sandbox\windows.py:209:16: warning[possibly-missing-attribute] 
 src\intellicrack\sandbox\windows.py:214:31: warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`
 
 src\intellicrack\sandbox\windows.py:216:67: warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`
+
+
+5 findings in src\intellicrack\ui\panels\x64dbg_panel.py
+
+src\intellicrack\ui\panels\x64dbg_panel.py:234:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`
+
+src\intellicrack\ui\panels\x64dbg_panel.py:242:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`
+
+src\intellicrack\ui\panels\x64dbg_panel.py:249:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`
+
+src\intellicrack\ui\panels\x64dbg_panel.py:256:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`
+
+src\intellicrack\ui\panels\x64dbg_panel.py:302:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`
 
 
 4 findings in src\intellicrack\bridges\binary.py
@@ -168,15 +213,6 @@ src\intellicrack\ui\highlighter.py:756:9: error[invalid-method-override] Invalid
 src\intellicrack\ui\highlighter.py:916:9: error[invalid-method-override] Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`
 
 
-3 findings in src\intellicrack\ui\embedding\embedded_widget.py
-
-src\intellicrack\ui\embedding\embedded_widget.py:389:9: error[invalid-method-override] Invalid override of method `resizeEvent`: Definition is incompatible with `QWidget.resizeEvent`
-
-src\intellicrack\ui\embedding\embedded_widget.py:399:9: error[invalid-method-override] Invalid override of method `focusInEvent`: Definition is incompatible with `QWidget.focusInEvent`
-
-src\intellicrack\ui\embedding\embedded_widget.py:410:9: error[invalid-method-override] Invalid override of method `closeEvent`: Definition is incompatible with `QWidget.closeEvent`
-
-
 3 findings in src\intellicrack\ui\panels\licensing_panel.py
 
 src\intellicrack\ui\panels\licensing_panel.py:209:9: warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`
@@ -204,7 +240,7 @@ src\intellicrack\bridges\sandbox_bridge.py:652:29: error[invalid-type-form] Inva
 
 2 findings in src\intellicrack\bridges\x64dbg.py
 
-src\intellicrack\bridges\x64dbg.py:834:9: error[invalid-assignment] Object of type `Popen[Any] | Popen[str] | Popen[bytes]` is not assignable to attribute `_process` of type `Popen[bytes] | None`
+src\intellicrack\bridges\x64dbg.py:834:9: error[invalid-assignment] Object of type `Popen[bytes] | Popen[Any] | Popen[str]` is not assignable to attribute `_process` of type `Popen[bytes] | None`
 
 src\intellicrack\bridges\x64dbg.py:844:13: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`
 
@@ -223,11 +259,18 @@ src\intellicrack\ui\chat.py:516:9: warning[possibly-missing-attribute] Attribute
 src\intellicrack\ui\chat.py:516:28: warning[possibly-missing-attribute] Attribute `maximum` may be missing on object of type `Unknown | QScrollBar | None`
 
 
+2 findings in src\intellicrack\ui\dialogs\splash_screen.py
+
+src\intellicrack\ui\dialogs\splash_screen.py:91:9: error[invalid-assignment] Object of type `bound method Self@__init__.resize_event_handler(a0: QResizeEvent | None) -> None` is not assignable to attribute `resizeEvent` of type `def resizeEvent(self, a0: QResizeEvent | None) -> None`
+
+src\intellicrack\ui\dialogs\splash_screen.py:103:18: error[unresolved-attribute] Object of type `QCoreApplication` has no attribute `primaryScreen`
+
+
 2 findings in src\intellicrack\ui\panels\process_panel.py
 
-src\intellicrack\ui\panels\process_panel.py:361:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`
+src\intellicrack\ui\panels\process_panel.py:414:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`
 
-src\intellicrack\ui\panels\process_panel.py:377:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`
+src\intellicrack\ui\panels\process_panel.py:430:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`
 
 
 2 findings in tests\test_bridges\test_x64dbg.py
@@ -244,7 +287,12 @@ src\intellicrack\core\logging.py:468:25: warning[redundant-cast] Value is alread
 
 1 findings in src\intellicrack\main.py
 
-src\intellicrack\main.py:188:12: warning[redundant-cast] Value is already of type `<class 'SplashScreen'>`
+src\intellicrack\main.py:191:12: warning[redundant-cast] Value is already of type `<class 'SplashScreen'>`
+
+
+1 findings in src\intellicrack\providers\anthropic.py
+
+src\intellicrack\providers\anthropic.py:294:35: warning[redundant-cast] Value is already of type `dict[str, object]`
 
 
 1 findings in src\intellicrack\providers\xpu_utils.py
@@ -254,17 +302,12 @@ src\intellicrack\providers\xpu_utils.py:24:21: error[invalid-assignment] Object 
 
 1 findings in src\intellicrack\ui\app.py
 
-src\intellicrack\ui\app.py:169:9: error[invalid-assignment] Object of type `bound method Self@__init__.close_event_handler(a0: QCloseEvent | None) -> None` is not assignable to attribute `closeEvent` of type `def closeEvent(self, a0: QCloseEvent | None) -> None`
-
-
-1 findings in src\intellicrack\ui\dialogs\splash_screen.py
-
-src\intellicrack\ui\dialogs\splash_screen.py:58:9: error[invalid-assignment] Object of type `bound method Self@__init__.resize_event_handler(a0: QResizeEvent | None) -> None` is not assignable to attribute `resizeEvent` of type `def resizeEvent(self, a0: QResizeEvent | None) -> None`
+src\intellicrack\ui\app.py:170:9: error[invalid-assignment] Object of type `bound method Self@__init__.close_event_handler(a0: QCloseEvent | None) -> None` is not assignable to attribute `closeEvent` of type `def closeEvent(self, a0: QCloseEvent | None) -> None`
 
 
 1 findings in src\intellicrack\ui\panels\frida_panel.py
 
-src\intellicrack\ui\panels\frida_panel.py:237:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`
+src\intellicrack\ui\panels\frida_panel.py:236:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`
 
 
 1 findings in src\intellicrack\ui\panels\stack_viewer.py
@@ -284,9 +327,4 @@ src\intellicrack\ui\tool_config.py:56:5: error[conflicting-declarations] Conflic
 
 1 findings in src\intellicrack\ui\tools.py
 
-src\intellicrack\ui\tools.py:338:17: warning[possibly-missing-attribute] Attribute `findBlockByLineNumber` may be missing on object of type `QTextDocument | None`
-
-
-1 findings in tests\test_ui\test_tools_logic.py
-
-tests\test_ui\test_tools_logic.py:32:12: error[invalid-return-type] Return type does not match returned value: expected `QApplication`, found `QCoreApplication`
+src\intellicrack\ui\tools.py:370:17: warning[possibly-missing-attribute] Attribute `findBlockByLineNumber` may be missing on object of type `QTextDocument | None`

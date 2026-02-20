@@ -1,8 +1,8 @@
 {
   "tool": "xenon",
-  "generated": "2026-02-08T21:22:34.947826",
-  "total_findings": 74,
-  "total_files": 37,
+  "generated": "2026-02-20T14:07:58.879474",
+  "total_findings": 70,
+  "total_files": 34,
   "files": [
     {
       "path": "src\\intellicrack\\core\\license_analyzer.py",
@@ -178,39 +178,6 @@
           "complexity": 20,
           "message": "'_prepare_export_data' has rank C (complexity > threshold)",
           "raw": "src\\intellicrack\\ui\\session_manager.py:609: '_prepare_export_data' has rank C"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\anthropic.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 223,
-          "column": null,
-          "name": "chat",
-          "rank": "C",
-          "complexity": 20,
-          "message": "'chat' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:223: 'chat' has rank C"
-        },
-        {
-          "line": 352,
-          "column": null,
-          "name": "chat_stream",
-          "rank": "C",
-          "complexity": 20,
-          "message": "'chat_stream' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:352: 'chat_stream' has rank C"
-        },
-        {
-          "line": 446,
-          "column": null,
-          "name": "_convert_messages_to_provider_format",
-          "rank": "C",
-          "complexity": 20,
-          "message": "'_convert_messages_to_provider_format' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:446: '_convert_messages_to_provider_format' has rank C"
         }
       ]
     },
@@ -611,6 +578,30 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\tools.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 1410,
+          "column": null,
+          "name": "_on_tab_close_requested",
+          "rank": "D",
+          "complexity": 30,
+          "message": "'_on_tab_close_requested' has rank D (complexity > threshold)",
+          "raw": "src\\intellicrack\\ui\\tools.py:1410: '_on_tab_close_requested' has rank D"
+        },
+        {
+          "line": 1482,
+          "column": null,
+          "name": "close_embedded_tools",
+          "rank": "C",
+          "complexity": 20,
+          "message": "'close_embedded_tools' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\ui\\tools.py:1482: 'close_embedded_tools' has rank C"
+        }
+      ]
+    },
+    {
       "path": "tests\\test_core\\test_license_analyzer.py",
       "count": 2,
       "findings": [
@@ -799,51 +790,6 @@
           "complexity": 20,
           "message": "'_update_radare2_path' has rank C (complexity > threshold)",
           "raw": "src\\intellicrack\\ui\\tool_config.py:356: '_update_radare2_path' has rank C"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\embedding\\cutter_widget.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 73,
-          "column": null,
-          "name": "get_executable_path",
-          "rank": "C",
-          "complexity": 20,
-          "message": "'get_executable_path' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py:73: 'get_executable_path' has rank C"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\embedding\\hxd_widget.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 70,
-          "column": null,
-          "name": "get_executable_path",
-          "rank": "C",
-          "complexity": 20,
-          "message": "'get_executable_path' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py:70: 'get_executable_path' has rank C"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\embedding\\radare2_widget.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 70,
-          "column": null,
-          "name": "get_executable_path",
-          "rank": "D",
-          "complexity": 30,
-          "message": "'get_executable_path' has rank D (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py:70: 'get_executable_path' has rank D"
         }
       ]
     },

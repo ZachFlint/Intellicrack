@@ -39,13 +39,6 @@ src/intellicrack\core\license_analyzer.py:1897:5: C901 'LicenseAnalyzer._detect_
 src/intellicrack\core\license_analyzer.py:1957:5: C901 'LicenseAnalyzer._detect_key_format' is too complex (12)
 
 
-2 findings in src/intellicrack\providers\anthropic.py
-
-src/intellicrack\providers\anthropic.py:223:5: C901 'AnthropicProvider.chat' is too complex (13)
-
-src/intellicrack\providers\anthropic.py:352:5: C901 'AnthropicProvider.chat_stream' is too complex (13)
-
-
 2 findings in src/intellicrack\sandbox\qemu.py
 
 src/intellicrack\sandbox\qemu.py:768:5: C901 'QEMUSandbox._build_qemu_command' is too complex (11)
@@ -58,6 +51,13 @@ src/intellicrack\sandbox\qemu.py:862:5: C901 'QEMUSandbox.start' is too complex 
 src/intellicrack\ui\provider_config.py:444:5: C901 'ModelRefreshWorker._fetch_models' is too complex (11)
 
 src/intellicrack\ui\provider_config.py:477:5: C901 'ModelRefreshWorker._fetch_anthropic_models' is too complex (11)
+
+
+2 findings in src/intellicrack\ui\tools.py
+
+src/intellicrack\ui\tools.py:1410:5: C901 'ToolOutputPanel._on_tab_close_requested' is too complex (16)
+
+src/intellicrack\ui\tools.py:1482:5: C901 'ToolOutputPanel.close_embedded_tools' is too complex (15)
 
 
 1 findings in src/intellicrack\bridges\binary.py
@@ -110,24 +110,9 @@ src/intellicrack\providers\openrouter.py:411:5: C901 'OpenRouterProvider.chat_st
 src/intellicrack\providers\xpu_utils.py:217:1: C901 'get_xpu_device_info' is too complex (18)
 
 
-1 findings in src/intellicrack\ui\embedding\cutter_widget.py
+1 findings in src/intellicrack\ui\app.py
 
-src/intellicrack\ui\embedding\cutter_widget.py:73:5: C901 'CutterWidget.get_executable_path' is too complex (19)
-
-
-1 findings in src/intellicrack\ui\embedding\hxd_widget.py
-
-src/intellicrack\ui\embedding\hxd_widget.py:70:5: C901 'HxDWidget.get_executable_path' is too complex (11)
-
-
-1 findings in src/intellicrack\ui\embedding\radare2_widget.py
-
-src/intellicrack\ui\embedding\radare2_widget.py:70:5: C901 'Radare2Widget.get_executable_path' is too complex (20)
-
-
-1 findings in src/intellicrack\ui\embedding\win32_helper.py
-
-src/intellicrack\ui\embedding\win32_helper.py:213:5: C901 'Win32WindowHelper.find_window_by_pid' is too complex (11)
+src/intellicrack\ui\app.py:880:5: C901 'MainWindow._apply_provider_settings' is too complex (11)
 
 
 1 findings in src/intellicrack\ui\panels\binary_panel.py

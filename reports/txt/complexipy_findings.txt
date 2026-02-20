@@ -1,14 +1,3 @@
-4 findings in src\intellicrack\providers\anthropic.py
-
-src\intellicrack\providers\anthropic.py: AnthropicProvider::chat - cognitive complexity 19 (exceeds threshold)
-
-src\intellicrack\providers\anthropic.py: AnthropicProvider::list_models - cognitive complexity 19 (exceeds threshold)
-
-src\intellicrack\providers\anthropic.py: AnthropicProvider::_convert_messages_to_provider_format - cognitive complexity 21 (exceeds threshold)
-
-src\intellicrack\providers\anthropic.py: AnthropicProvider::chat_stream - cognitive complexity 21 (exceeds threshold)
-
-
 3 findings in src\intellicrack\bridges\installer.py
 
 src\intellicrack\bridges\installer.py: ToolInstaller::_download_file - cognitive complexity 16 (exceeds threshold)
@@ -171,31 +160,6 @@ src\intellicrack\providers\model_loader.py: load_model_for_xpu - cognitive compl
 src\intellicrack\sandbox\manager.py: SandboxManager::create - cognitive complexity 16 (exceeds threshold)
 
 
-1 findings in src\intellicrack\ui\embedding\cutter_widget.py
-
-src\intellicrack\ui\embedding\cutter_widget.py: CutterWidget::get_executable_path - cognitive complexity 39 (exceeds threshold)
-
-
-1 findings in src\intellicrack\ui\embedding\hxd_widget.py
-
-src\intellicrack\ui\embedding\hxd_widget.py: HxDWidget::get_executable_path - cognitive complexity 18 (exceeds threshold)
-
-
-1 findings in src\intellicrack\ui\embedding\radare2_widget.py
-
-src\intellicrack\ui\embedding\radare2_widget.py: Radare2Widget::get_executable_path - cognitive complexity 37 (exceeds threshold)
-
-
-1 findings in src\intellicrack\ui\embedding\win32_helper.py
-
-src\intellicrack\ui\embedding\win32_helper.py: Win32WindowHelper::find_window_by_pid - cognitive complexity 21 (exceeds threshold)
-
-
-1 findings in src\intellicrack\ui\embedding\x64dbg_widget.py
-
-src\intellicrack\ui\embedding\x64dbg_widget.py: X64DbgWidget::_search_registry_for_x64dbg - cognitive complexity 17 (exceeds threshold)
-
-
 1 findings in src\intellicrack\ui\sandbox_config.py
 
 src\intellicrack\ui\sandbox_config.py: SandboxTestWorker::run - cognitive complexity 20 (exceeds threshold)
@@ -204,3 +168,8 @@ src\intellicrack\ui\sandbox_config.py: SandboxTestWorker::run - cognitive comple
 1 findings in src\intellicrack\ui\tool_config.py
 
 src\intellicrack\ui\tool_config.py: ToolInstallWorker::_install_tool - cognitive complexity 22 (exceeds threshold)
+
+
+1 findings in src\intellicrack\ui\tools.py
+
+src\intellicrack\ui\tools.py: ToolOutputPanel::_on_tab_close_requested - cognitive complexity 39 (exceeds threshold)

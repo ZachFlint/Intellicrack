@@ -6,7 +6,6 @@ for interacting with Frida dynamic instrumentation framework.
 
 from __future__ import annotations
 
-import contextlib
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt, pyqtSignal
@@ -441,9 +440,11 @@ class FridaPanel(QWidget):
         Returns:
             True if cleanup succeeded.
         """
-        if self._bridge is not None:
-            with contextlib.suppress(Exception):
+        if self._bridge is not None and self._bridge.state.process_attached:
+            try:
                 run_bridge_coroutine(self._bridge.detach())
+            except Exception:
+                _logger.debug("frida_detach_skipped")
         self._attached_pid = None
         self.tool_closed.emit()
         return True

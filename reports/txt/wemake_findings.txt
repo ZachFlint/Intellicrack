@@ -1526,6 +1526,311 @@ src/intellicrack\sandbox\qemu.py:1892:9: WPS110 Found wrong variable name: resul
 src/intellicrack\sandbox\qemu.py:1917:9: WPS110 Found wrong variable name: result
 
 
+151 findings in src/intellicrack\ui\tools.py
+
+src/intellicrack\ui\tools.py:0:1: WPS202 Found too many module members: 16 > 7
+
+src/intellicrack\ui\tools.py:17:1: WPS235 Found too many imported names from a module: 12 > 8
+
+src/intellicrack\ui\tools.py:32:1: WPS300 Found local folder import
+
+src/intellicrack\ui\tools.py:33:1: WPS300 Found local folder import
+
+src/intellicrack\ui\tools.py:43:5: WPS324 Found inconsistent `return` statement
+
+src/intellicrack\ui\tools.py:49:9: WPS324 Found inconsistent `return` statement
+
+src/intellicrack\ui\tools.py:52:5: WPS324 Found inconsistent `return` statement
+
+src/intellicrack\ui\tools.py:58:9: WPS324 Found inconsistent `return` statement
+
+src/intellicrack\ui\tools.py:66:9: WPS122 Found all unused variables definition: _
+
+src/intellicrack\ui\tools.py:75:9: WPS122 Found all unused variables definition: _
+
+src/intellicrack\ui\tools.py:92:9: WPS122 Found all unused variables definition: _
+
+src/intellicrack\ui\tools.py:106:9: WPS122 Found all unused variables definition: _
+
+src/intellicrack\ui\tools.py:117:9: WPS122 Found all unused variables definition: _
+
+src/intellicrack\ui\tools.py:131:9: WPS122 Found all unused variables definition: _
+
+src/intellicrack\ui\tools.py:142:9: WPS122 Found all unused variables definition: _
+
+src/intellicrack\ui\tools.py:156:9: WPS122 Found all unused variables definition: _
+
+src/intellicrack\ui\tools.py:167:9: WPS122 Found all unused variables definition: _
+
+src/intellicrack\ui\tools.py:181:9: WPS122 Found all unused variables definition: _
+
+src/intellicrack\ui\tools.py:192:9: WPS122 Found all unused variables definition: _
+
+src/intellicrack\ui\tools.py:206:9: WPS122 Found all unused variables definition: _
+
+src/intellicrack\ui\tools.py:214:9: WPS122 Found all unused variables definition: _
+
+src/intellicrack\ui\tools.py:221:5: WPS324 Found inconsistent `return` statement
+
+src/intellicrack\ui\tools.py:227:9: WPS122 Found all unused variables definition: _
+
+src/intellicrack\ui\tools.py:228:9: WPS324 Found inconsistent `return` statement
+
+src/intellicrack\ui\tools.py:244:9: WPS122 Found all unused variables definition: _
+
+src/intellicrack\ui\tools.py:258:9: WPS122 Found all unused variables definition: _
+
+src/intellicrack\ui\tools.py:274:5: WPS300 Found local folder import
+
+src/intellicrack\ui\tools.py:275:5: WPS300 Found local folder import
+
+src/intellicrack\ui\tools.py:281:5: WPS226 Found string literal over-use: ghidra > 3
+
+src/intellicrack\ui\tools.py:282:5: WPS226 Found string literal over-use: frida > 3
+
+src/intellicrack\ui\tools.py:283:5: WPS226 Found string literal over-use: radare2 > 3
+
+src/intellicrack\ui\tools.py:284:5: WPS226 Found string literal over-use: x64dbg > 3
+
+src/intellicrack\ui\tools.py:285:5: WPS226 Found string literal over-use: log > 3
+
+src/intellicrack\ui\tools.py:289:5: WPS226 Found string literal over-use: hxd > 3
+
+src/intellicrack\ui\tools.py:291:5: WPS226 Found string literal over-use: process > 3
+
+src/intellicrack\ui\tools.py:292:5: WPS226 Found string literal over-use: binary > 3
+
+src/intellicrack\ui\tools.py:293:5: WPS226 Found string literal over-use: sandbox > 3
+
+src/intellicrack\ui\tools.py:297:1: WPS338 Found incorrect order of methods in a class
+
+src/intellicrack\ui\tools.py:323:28: WPS226 Found string literal over-use: JetBrains Mono > 3
+
+src/intellicrack\ui\tools.py:327:5: WPS615 Found unpythonic getter or setter: set_language
+
+src/intellicrack\ui\tools.py:339:5: WPS615 Found unpythonic getter or setter: get_highlighter
+
+src/intellicrack\ui\tools.py:347:27: WPS110 Found wrong variable name: content
+
+src/intellicrack\ui\tools.py:356:30: WPS110 Found wrong variable name: content
+
+src/intellicrack\ui\tools.py:377:1: WPS338 Found incorrect order of methods in a class
+
+src/intellicrack\ui\tools.py:402:5: WPS213 Found too many expressions: 21 > 9
+
+src/intellicrack\ui\tools.py:404:28: WPS237 Found a too complex `f` string
+
+src/intellicrack\ui\tools.py:415:43: WPS432 Found magic number: 150
+
+src/intellicrack\ui\tools.py:423:41: WPS226 Found string literal over-use: Segoe UI > 3
+
+src/intellicrack\ui\tools.py:424:41: WPS226 Found string literal over-use: panel_title > 3
+
+src/intellicrack\ui\tools.py:440:27: WPS110 Found wrong variable name: content
+
+src/intellicrack\ui\tools.py:448:37: WPS110 Found wrong variable name: content
+
+src/intellicrack\ui\tools.py:458:5: WPS615 Found unpythonic getter or setter: set_language
+
+src/intellicrack\ui\tools.py:474:30: WPS110 Found wrong variable name: content
+
+src/intellicrack\ui\tools.py:483:1: WPS338 Found incorrect order of methods in a class
+
+src/intellicrack\ui\tools.py:501:5: WPS213 Found too many expressions: 18 > 9
+
+src/intellicrack\ui\tools.py:508:31: WPS432 Found magic number: 32
+
+src/intellicrack\ui\tools.py:533:39: WPS110 Found wrong variable name: item
+
+src/intellicrack\ui\tools.py:540:9: WPS229 Found too long ``try`` body length: 3 > 1
+
+src/intellicrack\ui\tools.py:541:40: WPS432 Found magic number: 16
+
+src/intellicrack\ui\tools.py:547:5: WPS615 Found unpythonic getter or setter: set_functions
+
+src/intellicrack\ui\tools.py:560:5: WPS615 Found unpythonic getter or setter: get_functions
+
+src/intellicrack\ui\tools.py:569:1: WPS338 Found incorrect order of methods in a class
+
+src/intellicrack\ui\tools.py:586:5: WPS213 Found too many expressions: 17 > 9
+
+src/intellicrack\ui\tools.py:593:31: WPS432 Found magic number: 32
+
+src/intellicrack\ui\tools.py:615:32: WPS110 Found wrong variable name: item
+
+src/intellicrack\ui\tools.py:622:9: WPS420 Found wrong keyword: del
+
+src/intellicrack\ui\tools.py:625:13: WPS229 Found too long ``try`` body length: 2 > 1
+
+src/intellicrack\ui\tools.py:626:44: WPS432 Found magic number: 16
+
+src/intellicrack\ui\tools.py:629:17: WPS420 Found wrong keyword: pass
+
+src/intellicrack\ui\tools.py:657:1: WPS214 Found too many methods: 42 > 7
+
+src/intellicrack\ui\tools.py:657:1: WPS338 Found incorrect order of methods in a class
+
+src/intellicrack\ui\tools.py:687:5: WPS210 Found too many local variables: 8 > 5
+
+src/intellicrack\ui\tools.py:687:5: WPS213 Found too many expressions: 32 > 9
+
+src/intellicrack\ui\tools.py:694:31: WPS432 Found magic number: 40
+
+src/intellicrack\ui\tools.py:697:42: WPS432 Found magic number: 12
+
+src/intellicrack\ui\tools.py:697:49: WPS432 Found magic number: 12
+
+src/intellicrack\ui\tools.py:700:41: WPS432 Found magic number: 11
+
+src/intellicrack\ui\tools.py:728:37: WPS432 Found magic number: 250
+
+src/intellicrack\ui\tools.py:755:9: WPS420 Found wrong keyword: del
+
+src/intellicrack\ui\tools.py:766:53: WPS110 Found wrong variable name: content
+
+src/intellicrack\ui\tools.py:773:12: WPS332 Found walrus operator outside a comprehension
+
+src/intellicrack\ui\tools.py:776:63: WPS110 Found wrong variable name: content
+
+src/intellicrack\ui\tools.py:784:12: WPS332 Found walrus operator outside a comprehension
+
+src/intellicrack\ui\tools.py:787:56: WPS110 Found wrong variable name: content
+
+src/intellicrack\ui\tools.py:794:12: WPS332 Found walrus operator outside a comprehension
+
+src/intellicrack\ui\tools.py:832:12: WPS332 Found walrus operator outside a comprehension
+
+src/intellicrack\ui\tools.py:836:9: WPS221 Found line with high Jones Complexity: 18 > 14
+
+src/intellicrack\ui\tools.py:836:14: WPS332 Found walrus operator outside a comprehension
+
+src/intellicrack\ui\tools.py:859:12: WPS332 Found walrus operator outside a comprehension
+
+src/intellicrack\ui\tools.py:899:75: WPS226 Found string literal over-use: intellicrack.ui > 3
+
+src/intellicrack\ui\tools.py:917:22: WPS226 Found string literal over-use: QWidget > 3
+
+src/intellicrack\ui\tools.py:950:9: WPS229 Found too long ``try`` body length: 9 > 1
+
+src/intellicrack\ui\tools.py:954:23: WPS204 Found overused expression: cast('QWidget', raw_widget); used 8 > 7
+
+src/intellicrack\ui\tools.py:960:9: WPS111 Found too short name: e < 2
+
+src/intellicrack\ui\tools.py:961:57: WPS204 Found overused expression: {'error': str(e)}; used 8 > 7
+
+src/intellicrack\ui\tools.py:961:58: WPS226 Found string literal over-use: error > 3
+
+src/intellicrack\ui\tools.py:961:67: WPS204 Found overused expression: str(e); used 8 > 7
+
+src/intellicrack\ui\tools.py:966:5: WPS210 Found too many local variables: 6 > 5
+
+src/intellicrack\ui\tools.py:966:5: WPS231 Found function with too much cognitive complexity: 25 > 12
+
+src/intellicrack\ui\tools.py:966:30: WPS114 Found underscored number name pattern: is_64bit
+
+src/intellicrack\ui\tools.py:978:9: WPS229 Found too long ``try`` body length: 11 > 1
+
+src/intellicrack\ui\tools.py:989:13: WPS505 Found nested `try` block
+
+src/intellicrack\ui\tools.py:989:13: WPS229 Found too long ``try`` body length: 5 > 1
+
+src/intellicrack\ui\tools.py:999:9: WPS111 Found too short name: e < 2
+
+src/intellicrack\ui\tools.py:1022:5: WPS231 Found function with too much cognitive complexity: 22 > 12
+
+src/intellicrack\ui\tools.py:1031:9: WPS229 Found too long ``try`` body length: 10 > 1
+
+src/intellicrack\ui\tools.py:1041:13: WPS505 Found nested `try` block
+
+src/intellicrack\ui\tools.py:1041:13: WPS229 Found too long ``try`` body length: 5 > 1
+
+src/intellicrack\ui\tools.py:1051:9: WPS111 Found too short name: e < 2
+
+src/intellicrack\ui\tools.py:1057:5: WPS231 Found function with too much cognitive complexity: 22 > 12
+
+src/intellicrack\ui\tools.py:1066:9: WPS229 Found too long ``try`` body length: 10 > 1
+
+src/intellicrack\ui\tools.py:1076:13: WPS505 Found nested `try` block
+
+src/intellicrack\ui\tools.py:1076:13: WPS229 Found too long ``try`` body length: 5 > 1
+
+src/intellicrack\ui\tools.py:1086:9: WPS111 Found too short name: e < 2
+
+src/intellicrack\ui\tools.py:1092:5: WPS231 Found function with too much cognitive complexity: 22 > 12
+
+src/intellicrack\ui\tools.py:1101:9: WPS229 Found too long ``try`` body length: 10 > 1
+
+src/intellicrack\ui\tools.py:1111:13: WPS505 Found nested `try` block
+
+src/intellicrack\ui\tools.py:1111:13: WPS229 Found too long ``try`` body length: 5 > 1
+
+src/intellicrack\ui\tools.py:1121:9: WPS111 Found too short name: e < 2
+
+src/intellicrack\ui\tools.py:1136:9: WPS229 Found too long ``try`` body length: 9 > 1
+
+src/intellicrack\ui\tools.py:1146:9: WPS111 Found too short name: e < 2
+
+src/intellicrack\ui\tools.py:1161:9: WPS229 Found too long ``try`` body length: 9 > 1
+
+src/intellicrack\ui\tools.py:1171:9: WPS111 Found too short name: e < 2
+
+src/intellicrack\ui\tools.py:1186:9: WPS229 Found too long ``try`` body length: 9 > 1
+
+src/intellicrack\ui\tools.py:1196:9: WPS111 Found too short name: e < 2
+
+src/intellicrack\ui\tools.py:1296:9: WPS114 Found underscored number name pattern: is_64bit
+
+src/intellicrack\ui\tools.py:1410:5: C901 'ToolOutputPanel._on_tab_close_requested' is too complex (16)
+
+src/intellicrack\ui\tools.py:1410:5: WPS210 Found too many local variables: 14 > 5
+
+src/intellicrack\ui\tools.py:1410:5: WPS213 Found too many expressions: 10 > 9
+
+src/intellicrack\ui\tools.py:1410:5: WPS231 Found function with too much cognitive complexity: 47 > 12
+
+src/intellicrack\ui\tools.py:1456:25: WPS220 Found too deep nesting: 24 > 20
+
+src/intellicrack\ui\tools.py:1457:29: WPS220 Found too deep nesting: 28 > 20
+
+src/intellicrack\ui\tools.py:1458:33: WPS220 Found too deep nesting: 32 > 20
+
+src/intellicrack\ui\tools.py:1459:37: WPS220 Found too deep nesting: 36 > 20
+
+src/intellicrack\ui\tools.py:1460:33: WPS220 Found too deep nesting: 32 > 20
+
+src/intellicrack\ui\tools.py:1461:37: WPS220 Found too deep nesting: 36 > 20
+
+src/intellicrack\ui\tools.py:1465:25: WPS220 Found too deep nesting: 24 > 20
+
+src/intellicrack\ui\tools.py:1470:17: WPS221 Found line with high Jones Complexity: 15 > 14
+
+src/intellicrack\ui\tools.py:1470:41: WPS111 Found too short name: k < 2
+
+src/intellicrack\ui\tools.py:1470:44: WPS111 Found too short name: v < 2
+
+src/intellicrack\ui\tools.py:1471:21: WPS111 Found too short name: k < 2
+
+src/intellicrack\ui\tools.py:1472:21: WPS420 Found wrong keyword: del
+
+src/intellicrack\ui\tools.py:1474:13: WPS221 Found line with high Jones Complexity: 16 > 14
+
+src/intellicrack\ui\tools.py:1474:31: WPS441 Found control variable used after block: k
+
+src/intellicrack\ui\tools.py:1474:37: WPS111 Found too short name: k < 2
+
+src/intellicrack\ui\tools.py:1474:40: WPS111 Found too short name: v < 2
+
+src/intellicrack\ui\tools.py:1475:17: WPS111 Found too short name: k < 2
+
+src/intellicrack\ui\tools.py:1476:17: WPS420 Found wrong keyword: del
+
+src/intellicrack\ui\tools.py:1482:5: C901 'ToolOutputPanel.close_embedded_tools' is too complex (15)
+
+src/intellicrack\ui\tools.py:1482:5: WPS213 Found too many expressions: 16 > 9
+
+src/intellicrack\ui\tools.py:1482:5: WPS231 Found function with too much cognitive complexity: 15 > 12
+
+
 150 findings in src/intellicrack\ui\tool_config.py
 
 src/intellicrack\ui\tool_config.py:0:1: WPS201 Found module with too many imports: 21 > 12
@@ -2622,233 +2927,233 @@ tests\test_core\test_license_analyzer.py:700:5: WPS218 Found too many `assert` s
 tests\test_core\test_license_analyzer.py:700:5: WPS602 Found using `@staticmethod`
 
 
-113 findings in src/intellicrack\ui\tools.py
+113 findings in src/intellicrack\ui\app.py
 
-src/intellicrack\ui\tools.py:0:1: WPS202 Found too many module members: 16 > 7
+src/intellicrack\ui\app.py:0:1: WPS201 Found module with too many imports: 28 > 12
 
-src/intellicrack\ui\tools.py:17:1: WPS235 Found too many imported names from a module: 12 > 8
+src/intellicrack\ui\app.py:0:1: WPS203 Found module with too many imported names: 55 > 50
 
-src/intellicrack\ui\tools.py:32:1: WPS300 Found local folder import
+src/intellicrack\ui\app.py:20:1: WPS235 Found too many imported names from a module: 15 > 8
 
-src/intellicrack\ui\tools.py:33:1: WPS300 Found local folder import
+src/intellicrack\ui\app.py:38:1: WPS300 Found local folder import
 
-src/intellicrack\ui\tools.py:43:5: WPS324 Found inconsistent `return` statement
+src/intellicrack\ui\app.py:39:1: WPS300 Found local folder import
 
-src/intellicrack\ui\tools.py:49:9: WPS324 Found inconsistent `return` statement
+src/intellicrack\ui\app.py:40:1: WPS300 Found local folder import
 
-src/intellicrack\ui\tools.py:52:5: WPS324 Found inconsistent `return` statement
+src/intellicrack\ui\app.py:41:1: WPS300 Found local folder import
 
-src/intellicrack\ui\tools.py:58:9: WPS324 Found inconsistent `return` statement
+src/intellicrack\ui\app.py:42:1: WPS300 Found local folder import
 
-src/intellicrack\ui\tools.py:66:9: WPS122 Found all unused variables definition: _
+src/intellicrack\ui\app.py:43:1: WPS300 Found local folder import
 
-src/intellicrack\ui\tools.py:75:9: WPS122 Found all unused variables definition: _
+src/intellicrack\ui\app.py:44:1: WPS300 Found local folder import
 
-src/intellicrack\ui\tools.py:92:9: WPS122 Found all unused variables definition: _
+src/intellicrack\ui\app.py:45:1: WPS300 Found local folder import
 
-src/intellicrack\ui\tools.py:109:9: WPS122 Found all unused variables definition: _
+src/intellicrack\ui\app.py:46:1: WPS300 Found local folder import
 
-src/intellicrack\ui\tools.py:126:9: WPS122 Found all unused variables definition: _
+src/intellicrack\ui\app.py:47:1: WPS300 Found local folder import
 
-src/intellicrack\ui\tools.py:143:9: WPS122 Found all unused variables definition: _
+src/intellicrack\ui\app.py:48:1: WPS300 Found local folder import
 
-src/intellicrack\ui\tools.py:160:9: WPS122 Found all unused variables definition: _
+src/intellicrack\ui\app.py:49:1: WPS300 Found local folder import
 
-src/intellicrack\ui\tools.py:174:9: WPS122 Found all unused variables definition: _
+src/intellicrack\ui\app.py:53:5: WPS474 Found import object collision: Callable
 
-src/intellicrack\ui\tools.py:182:9: WPS122 Found all unused variables definition: _
+src/intellicrack\ui\app.py:57:5: WPS300 Found local folder import
 
-src/intellicrack\ui\tools.py:189:5: WPS324 Found inconsistent `return` statement
+src/intellicrack\ui\app.py:58:5: WPS300 Found local folder import
 
-src/intellicrack\ui\tools.py:195:9: WPS122 Found all unused variables definition: _
+src/intellicrack\ui\app.py:93:9: WPS229 Found too long ``try`` body length: 4 > 1
 
-src/intellicrack\ui\tools.py:196:9: WPS324 Found inconsistent `return` statement
+src/intellicrack\ui\app.py:96:13: WPS110 Found wrong variable name: result
 
-src/intellicrack\ui\tools.py:212:9: WPS122 Found all unused variables definition: _
+src/intellicrack\ui\app.py:98:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\tools.py:226:9: WPS122 Found all unused variables definition: _
+src/intellicrack\ui\app.py:105:1: WPS214 Found too many methods: 67 > 7
 
-src/intellicrack\ui\tools.py:242:5: WPS300 Found local folder import
+src/intellicrack\ui\app.py:105:1: WPS338 Found incorrect order of methods in a class
 
-src/intellicrack\ui\tools.py:243:5: WPS300 Found local folder import
+src/intellicrack\ui\app.py:119:5: WPS213 Found too many expressions: 22 > 9
 
-src/intellicrack\ui\tools.py:249:5: WPS226 Found string literal over-use: ghidra > 3
+src/intellicrack\ui\app.py:172:5: WPS210 Found too many local variables: 14 > 5
 
-src/intellicrack\ui\tools.py:250:5: WPS226 Found string literal over-use: frida > 3
+src/intellicrack\ui\app.py:172:5: WPS231 Found function with too much cognitive complexity: 13 > 12
 
-src/intellicrack\ui\tools.py:251:5: WPS226 Found string literal over-use: radare2 > 3
+src/intellicrack\ui\app.py:184:9: WPS229 Found too long ``try`` body length: 9 > 1
 
-src/intellicrack\ui\tools.py:252:5: WPS226 Found string literal over-use: x64dbg > 3
+src/intellicrack\ui\app.py:209:5: WPS213 Found too many expressions: 11 > 9
 
-src/intellicrack\ui\tools.py:257:5: WPS226 Found string literal over-use: hxd > 3
+src/intellicrack\ui\app.py:221:42: WPS432 Found magic number: 400
 
-src/intellicrack\ui\tools.py:258:5: WPS226 Found string literal over-use: cutter > 3
+src/intellicrack\ui\app.py:225:42: WPS432 Found magic number: 500
 
-src/intellicrack\ui\tools.py:259:5: WPS226 Found string literal over-use: process > 3
+src/intellicrack\ui\app.py:232:27: WPS462 Wrong multiline string usage
 
-src/intellicrack\ui\tools.py:260:5: WPS226 Found string literal over-use: binary > 3
+src/intellicrack\ui\app.py:268:9: WPS110 Found wrong variable name: handler
 
-src/intellicrack\ui\tools.py:261:5: WPS226 Found string literal over-use: sandbox > 3
+src/intellicrack\ui\app.py:285:5: WPS213 Found too many expressions: 10 > 9
 
-src/intellicrack\ui\tools.py:265:1: WPS338 Found incorrect order of methods in a class
+src/intellicrack\ui\app.py:297:19: WPS204 Found overused expression: TypeError(msg); used 8 > 7
 
-src/intellicrack\ui\tools.py:291:28: WPS226 Found string literal over-use: JetBrains Mono > 3
+src/intellicrack\ui\app.py:309:5: WPS213 Found too many expressions: 11 > 9
 
-src/intellicrack\ui\tools.py:295:5: WPS615 Found unpythonic getter or setter: set_language
+src/intellicrack\ui\app.py:424:5: WPS210 Found too many local variables: 8 > 5
 
-src/intellicrack\ui\tools.py:307:5: WPS615 Found unpythonic getter or setter: get_highlighter
+src/intellicrack\ui\app.py:424:5: WPS213 Found too many expressions: 72 > 9
 
-src/intellicrack\ui\tools.py:315:27: WPS110 Found wrong variable name: content
+src/intellicrack\ui\app.py:428:32: WPS432 Found magic number: 40
 
-src/intellicrack\ui\tools.py:324:30: WPS110 Found wrong variable name: content
+src/intellicrack\ui\app.py:443:46: WPS432 Found magic number: 120
 
-src/intellicrack\ui\tools.py:345:1: WPS338 Found incorrect order of methods in a class
+src/intellicrack\ui\app.py:455:43: WPS432 Found magic number: 200
 
-src/intellicrack\ui\tools.py:370:5: WPS213 Found too many expressions: 21 > 9
+src/intellicrack\ui\app.py:465:40: WPS226 Found string literal over-use: x64dbg > 3
 
-src/intellicrack\ui\tools.py:372:28: WPS237 Found a too complex `f` string
+src/intellicrack\ui\app.py:466:40: WPS226 Found string literal over-use: tool_button > 3
 
-src/intellicrack\ui\tools.py:383:43: WPS432 Found magic number: 150
+src/intellicrack\ui\app.py:471:40: WPS226 Found string literal over-use: Cutter > 3
 
-src/intellicrack\ui\tools.py:391:41: WPS226 Found string literal over-use: Segoe UI > 3
+src/intellicrack\ui\app.py:483:40: WPS226 Found string literal over-use: Ghidra > 3
 
-src/intellicrack\ui\tools.py:392:41: WPS226 Found string literal over-use: panel_title > 3
+src/intellicrack\ui\app.py:489:41: WPS226 Found string literal over-use: radare2 > 3
 
-src/intellicrack\ui\tools.py:408:27: WPS110 Found wrong variable name: content
+src/intellicrack\ui\app.py:599:9: WPS430 Found nested function: show_dialog
 
-src/intellicrack\ui\tools.py:416:37: WPS110 Found wrong variable name: content
+src/intellicrack\ui\app.py:619:9: WPS430 Found nested function: process
 
-src/intellicrack\ui\tools.py:426:5: WPS615 Found unpythonic getter or setter: set_language
+src/intellicrack\ui\app.py:642:31: WPS110 Found wrong variable name: result
 
-src/intellicrack\ui\tools.py:442:30: WPS110 Found wrong variable name: content
+src/intellicrack\ui\app.py:654:30: WPS237 Found a too complex `f` string
 
-src/intellicrack\ui\tools.py:451:1: WPS338 Found incorrect order of methods in a class
+src/intellicrack\ui\app.py:671:34: WPS110 Found wrong variable name: result
 
-src/intellicrack\ui\tools.py:469:5: WPS213 Found too many expressions: 18 > 9
+src/intellicrack\ui\app.py:677:9: WPS420 Found wrong keyword: del
 
-src/intellicrack\ui\tools.py:476:31: WPS432 Found magic number: 32
+src/intellicrack\ui\app.py:729:9: WPS430 Found nested function: load
 
-src/intellicrack\ui\tools.py:501:39: WPS110 Found wrong variable name: item
+src/intellicrack\ui\app.py:746:9: WPS430 Found nested function: create_session
 
-src/intellicrack\ui\tools.py:508:9: WPS229 Found too long ``try`` body length: 3 > 1
+src/intellicrack\ui\app.py:761:17: WPS430 Found nested function: load_session
 
-src/intellicrack\ui\tools.py:509:40: WPS432 Found magic number: 16
+src/intellicrack\ui\app.py:772:9: WPS430 Found nested function: save_session
 
-src/intellicrack\ui\tools.py:515:5: WPS615 Found unpythonic getter or setter: set_functions
+src/intellicrack\ui\app.py:792:55: WPS111 Found too short name: f < 2
 
-src/intellicrack\ui\tools.py:528:5: WPS615 Found unpythonic getter or setter: get_functions
+src/intellicrack\ui\app.py:795:29: WPS237 Found a too complex `f` string
 
-src/intellicrack\ui\tools.py:537:1: WPS338 Found incorrect order of methods in a class
+src/intellicrack\ui\app.py:814:5: WPS210 Found too many local variables: 7 > 5
 
-src/intellicrack\ui\tools.py:554:5: WPS213 Found too many expressions: 17 > 9
+src/intellicrack\ui\app.py:814:5: WPS231 Found function with too much cognitive complexity: 17 > 12
 
-src/intellicrack\ui\tools.py:561:31: WPS432 Found magic number: 32
+src/intellicrack\ui\app.py:833:13: WPS430 Found nested function: _reinit_tools
 
-src/intellicrack\ui\tools.py:583:32: WPS110 Found wrong variable name: item
+src/intellicrack\ui\app.py:835:21: WPS229 Found too long ``try`` body length: 2 > 1
 
-src/intellicrack\ui\tools.py:590:9: WPS420 Found wrong keyword: del
+src/intellicrack\ui\app.py:836:25: WPS476 Found `await` in `for` loop
 
-src/intellicrack\ui\tools.py:593:13: WPS229 Found too long ``try`` body length: 2 > 1
+src/intellicrack\ui\app.py:836:25: WPS220 Found too deep nesting: 24 > 20
 
-src/intellicrack\ui\tools.py:594:44: WPS432 Found magic number: 16
+src/intellicrack\ui\app.py:837:25: WPS220 Found too deep nesting: 24 > 20
 
-src/intellicrack\ui\tools.py:597:17: WPS420 Found wrong keyword: pass
+src/intellicrack\ui\app.py:838:21: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\tools.py:625:1: WPS214 Found too many methods: 41 > 7
+src/intellicrack\ui\app.py:839:25: WPS220 Found too deep nesting: 24 > 20
 
-src/intellicrack\ui\tools.py:625:1: WPS338 Found incorrect order of methods in a class
+src/intellicrack\ui\app.py:839:86: WPS226 Found string literal over-use: error > 3
 
-src/intellicrack\ui\tools.py:655:5: WPS210 Found too many local variables: 13 > 5
+src/intellicrack\ui\app.py:839:95: WPS204 Found overused expression: str(e); used 8 > 7
 
-src/intellicrack\ui\tools.py:655:5: WPS213 Found too many expressions: 35 > 9
+src/intellicrack\ui\app.py:849:40: WPS110 Found wrong variable name: result
 
-src/intellicrack\ui\tools.py:662:31: WPS432 Found magic number: 40
+src/intellicrack\ui\app.py:855:9: WPS420 Found wrong keyword: del
 
-src/intellicrack\ui\tools.py:665:42: WPS432 Found magic number: 12
+src/intellicrack\ui\app.py:880:5: C901 'MainWindow._apply_provider_settings' is too complex (11)
 
-src/intellicrack\ui\tools.py:665:49: WPS432 Found magic number: 12
+src/intellicrack\ui\app.py:880:5: WPS210 Found too many local variables: 13 > 5
 
-src/intellicrack\ui\tools.py:668:41: WPS432 Found magic number: 11
+src/intellicrack\ui\app.py:880:5: WPS213 Found too many expressions: 10 > 9
 
-src/intellicrack\ui\tools.py:714:37: WPS432 Found magic number: 250
+src/intellicrack\ui\app.py:880:5: WPS231 Found function with too much cognitive complexity: 29 > 12
 
-src/intellicrack\ui\tools.py:741:9: WPS420 Found wrong keyword: del
+src/intellicrack\ui\app.py:917:13: WPS430 Found nested function: _reconnect_providers
 
-src/intellicrack\ui\tools.py:752:53: WPS110 Found wrong variable name: content
+src/intellicrack\ui\app.py:919:21: WPS229 Found too long ``try`` body length: 2 > 1
 
-src/intellicrack\ui\tools.py:759:12: WPS332 Found walrus operator outside a comprehension
+src/intellicrack\ui\app.py:920:25: WPS476 Found `await` in `for` loop
 
-src/intellicrack\ui\tools.py:762:63: WPS110 Found wrong variable name: content
+src/intellicrack\ui\app.py:920:25: WPS220 Found too deep nesting: 24 > 20
 
-src/intellicrack\ui\tools.py:770:12: WPS332 Found walrus operator outside a comprehension
+src/intellicrack\ui\app.py:921:25: WPS220 Found too deep nesting: 24 > 20
 
-src/intellicrack\ui\tools.py:773:56: WPS110 Found wrong variable name: content
+src/intellicrack\ui\app.py:922:21: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\tools.py:780:12: WPS332 Found walrus operator outside a comprehension
+src/intellicrack\ui\app.py:923:25: WPS220 Found too deep nesting: 24 > 20
 
-src/intellicrack\ui\tools.py:818:12: WPS332 Found walrus operator outside a comprehension
+src/intellicrack\ui\app.py:936:47: WPS110 Found wrong variable name: result
 
-src/intellicrack\ui\tools.py:822:9: WPS221 Found line with high Jones Complexity: 18 > 14
+src/intellicrack\ui\app.py:942:9: WPS420 Found wrong keyword: del
 
-src/intellicrack\ui\tools.py:822:14: WPS332 Found walrus operator outside a comprehension
+src/intellicrack\ui\app.py:954:5: WPS210 Found too many local variables: 9 > 5
 
-src/intellicrack\ui\tools.py:839:12: WPS332 Found walrus operator outside a comprehension
+src/intellicrack\ui\app.py:971:38: WPS529 Found implicit `.get()` dict usage
 
-src/intellicrack\ui\tools.py:874:75: WPS226 Found string literal over-use: intellicrack.ui > 3
+src/intellicrack\ui\app.py:976:61: WPS111 Found too short name: f < 2
 
-src/intellicrack\ui\tools.py:892:22: WPS226 Found string literal over-use: QWidget > 3
+src/intellicrack\ui\app.py:979:24: WPS332 Found walrus operator outside a comprehension
 
-src/intellicrack\ui\tools.py:925:9: WPS229 Found too long ``try`` body length: 9 > 1
+src/intellicrack\ui\app.py:980:25: WPS220 Found too deep nesting: 24 > 20
 
-src/intellicrack\ui\tools.py:929:23: WPS204 Found overused expression: cast('QWidget', raw_widget); used 9 > 7
+src/intellicrack\ui\app.py:982:17: WPS420 Found wrong keyword: pass
 
-src/intellicrack\ui\tools.py:935:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\app.py:1029:9: WPS420 Found wrong keyword: del
 
-src/intellicrack\ui\tools.py:936:57: WPS204 Found overused expression: {'error': str(e)}; used 9 > 7
+src/intellicrack\ui\app.py:1032:5: WPS213 Found too many expressions: 10 > 9
 
-src/intellicrack\ui\tools.py:936:58: WPS226 Found string literal over-use: error > 3
+src/intellicrack\ui\app.py:1035:9: WPS430 Found nested function: open_sandbox
 
-src/intellicrack\ui\tools.py:936:67: WPS204 Found overused expression: str(e); used 9 > 7
+src/intellicrack\ui\app.py:1046:9: WPS430 Found nested function: on_sandbox_opened
 
-src/intellicrack\ui\tools.py:941:5: WPS231 Found function with too much cognitive complexity: 14 > 12
+src/intellicrack\ui\app.py:1046:31: WPS110 Found wrong variable name: result
 
-src/intellicrack\ui\tools.py:941:30: WPS114 Found underscored number name pattern: is_64bit
+src/intellicrack\ui\app.py:1060:9: WPS430 Found nested function: on_sandbox_error
 
-src/intellicrack\ui\tools.py:953:9: WPS229 Found too long ``try`` body length: 10 > 1
+src/intellicrack\ui\app.py:1060:30: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\tools.py:964:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\app.py:1088:9: WPS229 Found too long ``try`` body length: 3 > 1
 
-src/intellicrack\ui\tools.py:979:9: WPS229 Found too long ``try`` body length: 9 > 1
+src/intellicrack\ui\app.py:1094:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\tools.py:989:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\app.py:1095:31: WPS226 Found string literal over-use: tool_open_failed > 3
 
-src/intellicrack\ui\tools.py:1004:9: WPS229 Found too long ``try`` body length: 9 > 1
+src/intellicrack\ui\app.py:1095:58: WPS226 Found string literal over-use: tool_name > 3
 
-src/intellicrack\ui\tools.py:1014:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\app.py:1100:9: WPS229 Found too long ``try`` body length: 3 > 1
 
-src/intellicrack\ui\tools.py:1029:9: WPS229 Found too long ``try`` body length: 9 > 1
+src/intellicrack\ui\app.py:1106:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\tools.py:1039:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\app.py:1112:9: WPS229 Found too long ``try`` body length: 3 > 1
 
-src/intellicrack\ui\tools.py:1054:9: WPS229 Found too long ``try`` body length: 9 > 1
+src/intellicrack\ui\app.py:1118:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\tools.py:1064:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\app.py:1124:9: WPS229 Found too long ``try`` body length: 3 > 1
 
-src/intellicrack\ui\tools.py:1079:9: WPS229 Found too long ``try`` body length: 9 > 1
+src/intellicrack\ui\app.py:1130:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\tools.py:1089:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\app.py:1136:9: WPS229 Found too long ``try`` body length: 3 > 1
 
-src/intellicrack\ui\tools.py:1104:9: WPS229 Found too long ``try`` body length: 9 > 1
+src/intellicrack\ui\app.py:1142:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\tools.py:1114:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\app.py:1238:9: WPS420 Found wrong keyword: del
 
-src/intellicrack\ui\tools.py:1129:9: WPS229 Found too long ``try`` body length: 9 > 1
+src/intellicrack\ui\app.py:1249:35: WPS237 Found a too complex `f` string
 
-src/intellicrack\ui\tools.py:1139:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\app.py:1259:40: WPS237 Found a too complex `f` string
 
-src/intellicrack\ui\tools.py:1239:9: WPS114 Found underscored number name pattern: is_64bit
+src/intellicrack\ui\app.py:1271:9: WPS430 Found nested function: cancel
 
-src/intellicrack\ui\tools.py:1353:5: WPS213 Found too many expressions: 11 > 9
+src/intellicrack\ui\app.py:1285:9: WPS430 Found nested function: shutdown
 
 
 111 findings in src/intellicrack\ui\session_manager.py
@@ -3904,189 +4209,199 @@ src/intellicrack\bridges\radare2.py:1324:52: WPS111 Found too short name: i < 2
 src/intellicrack\bridges\radare2.py:1332:41: WPS111 Found too short name: e < 2
 
 
-91 findings in src/intellicrack\ui\app.py
+96 findings in src/intellicrack\ui\panels\x64dbg_panel.py
 
-src/intellicrack\ui\app.py:0:1: WPS201 Found module with too many imports: 28 > 12
+src/intellicrack\ui\panels\x64dbg_panel.py:15:1: WPS235 Found too many imported names from a module: 15 > 8
 
-src/intellicrack\ui\app.py:0:1: WPS203 Found module with too many imported names: 54 > 50
+src/intellicrack\ui\panels\x64dbg_panel.py:43:1: WPS407 Found mutable module constant
 
-src/intellicrack\ui\app.py:20:1: WPS235 Found too many imported names from a module: 15 > 8
+src/intellicrack\ui\panels\x64dbg_panel.py:44:1: WPS407 Found mutable module constant
 
-src/intellicrack\ui\app.py:38:1: WPS300 Found local folder import
+src/intellicrack\ui\panels\x64dbg_panel.py:45:1: WPS407 Found mutable module constant
 
-src/intellicrack\ui\app.py:39:1: WPS300 Found local folder import
+src/intellicrack\ui\panels\x64dbg_panel.py:46:1: WPS407 Found mutable module constant
 
-src/intellicrack\ui\app.py:40:1: WPS300 Found local folder import
+src/intellicrack\ui\panels\x64dbg_panel.py:47:1: WPS407 Found mutable module constant
 
-src/intellicrack\ui\app.py:41:1: WPS300 Found local folder import
+src/intellicrack\ui\panels\x64dbg_panel.py:52:1: WPS114 Found underscored number name pattern: _GENERAL_REGS_64
 
-src/intellicrack\ui\app.py:42:1: WPS300 Found local folder import
+src/intellicrack\ui\panels\x64dbg_panel.py:72:1: WPS407 Found mutable module constant
 
-src/intellicrack\ui\app.py:43:1: WPS300 Found local folder import
+src/intellicrack\ui\panels\x64dbg_panel.py:75:1: WPS214 Found too many methods: 31 > 7
 
-src/intellicrack\ui\app.py:44:1: WPS300 Found local folder import
+src/intellicrack\ui\panels\x64dbg_panel.py:75:1: WPS338 Found incorrect order of methods in a class
 
-src/intellicrack\ui\app.py:45:1: WPS300 Found local folder import
+src/intellicrack\ui\panels\x64dbg_panel.py:94:9: WPS114 Found underscored number name pattern: _is_64bit
 
-src/intellicrack\ui\app.py:46:1: WPS300 Found local folder import
+src/intellicrack\ui\panels\x64dbg_panel.py:97:5: WPS213 Found too many expressions: 11 > 9
 
-src/intellicrack\ui\app.py:47:1: WPS300 Found local folder import
+src/intellicrack\ui\panels\x64dbg_panel.py:118:5: WPS213 Found too many expressions: 42 > 9
 
-src/intellicrack\ui\app.py:48:1: WPS300 Found local folder import
+src/intellicrack\ui\panels\x64dbg_panel.py:126:32: WPS432 Found magic number: 32
 
-src/intellicrack\ui\app.py:49:1: WPS300 Found local folder import
+src/intellicrack\ui\panels\x64dbg_panel.py:129:38: WPS226 Found string literal over-use: tool_button > 3
 
-src/intellicrack\ui\app.py:53:5: WPS474 Found import object collision: Callable
+src/intellicrack\ui\panels\x64dbg_panel.py:140:41: WPS432 Found magic number: 80
 
-src/intellicrack\ui\app.py:57:5: WPS300 Found local folder import
+src/intellicrack\ui\panels\x64dbg_panel.py:141:45: WPS336 Found explicit string concatenation
 
-src/intellicrack\ui\app.py:58:5: WPS300 Found local folder import
+src/intellicrack\ui\panels\x64dbg_panel.py:141:45: WPS226 Found string literal over-use: set > 3
 
-src/intellicrack\ui\app.py:93:9: WPS229 Found too long ``try`` body length: 4 > 1
+src/intellicrack\ui\panels\x64dbg_panel.py:141:53: WPS226 Found string literal over-use: Place > 3
 
-src/intellicrack\ui\app.py:96:13: WPS110 Found wrong variable name: result
+src/intellicrack\ui\panels\x64dbg_panel.py:141:63: WPS336 Found explicit string concatenation
 
-src/intellicrack\ui\app.py:98:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\panels\x64dbg_panel.py:141:63: WPS226 Found string literal over-use: holderText > 3
 
-src/intellicrack\ui\app.py:105:1: WPS214 Found too many methods: 62 > 7
+src/intellicrack\ui\panels\x64dbg_panel.py:211:29: WPS226 Found string literal over-use: Segoe UI > 3
 
-src/intellicrack\ui\app.py:105:1: WPS338 Found incorrect order of methods in a class
+src/intellicrack\ui\panels\x64dbg_panel.py:215:41: WPS226 Found string literal over-use: JetBrains Mono > 3
 
-src/intellicrack\ui\app.py:118:5: WPS213 Found too many expressions: 22 > 9
+src/intellicrack\ui\panels\x64dbg_panel.py:217:48: WPS432 Found magic number: 50000
 
-src/intellicrack\ui\app.py:171:5: WPS210 Found too many local variables: 14 > 5
+src/intellicrack\ui\panels\x64dbg_panel.py:222:5: WPS213 Found too many expressions: 22 > 9
 
-src/intellicrack\ui\app.py:171:5: WPS231 Found function with too much cognitive complexity: 13 > 12
+src/intellicrack\ui\panels\x64dbg_panel.py:261:5: WPS210 Found too many local variables: 15 > 5
 
-src/intellicrack\ui\app.py:183:9: WPS229 Found too long ``try`` body length: 9 > 1
+src/intellicrack\ui\panels\x64dbg_panel.py:261:5: WPS213 Found too many expressions: 55 > 9
 
-src/intellicrack\ui\app.py:208:5: WPS213 Found too many expressions: 11 > 9
+src/intellicrack\ui\panels\x64dbg_panel.py:280:45: WPS432 Found magic number: 160
 
-src/intellicrack\ui\app.py:220:42: WPS432 Found magic number: 400
+src/intellicrack\ui\panels\x64dbg_panel.py:281:52: WPS336 Found explicit string concatenation
 
-src/intellicrack\ui\app.py:224:42: WPS432 Found magic number: 500
+src/intellicrack\ui\panels\x64dbg_panel.py:281:70: WPS336 Found explicit string concatenation
 
-src/intellicrack\ui\app.py:231:27: WPS462 Wrong multiline string usage
+src/intellicrack\ui\panels\x64dbg_panel.py:317:46: WPS432 Found magic number: 160
 
-src/intellicrack\ui\app.py:267:9: WPS110 Found wrong variable name: handler
+src/intellicrack\ui\panels\x64dbg_panel.py:318:54: WPS336 Found explicit string concatenation
 
-src/intellicrack\ui\app.py:284:5: WPS213 Found too many expressions: 10 > 9
+src/intellicrack\ui\panels\x64dbg_panel.py:318:72: WPS336 Found explicit string concatenation
 
-src/intellicrack\ui\app.py:293:19: WPS204 Found overused expression: TypeError(msg); used 8 > 7
+src/intellicrack\ui\panels\x64dbg_panel.py:327:46: WPS432 Found magic number: 80
 
-src/intellicrack\ui\app.py:305:5: WPS213 Found too many expressions: 11 > 9
+src/intellicrack\ui\panels\x64dbg_panel.py:342:45: WPS432 Found magic number: 10000
 
-src/intellicrack\ui\app.py:401:5: WPS210 Found too many local variables: 8 > 5
+src/intellicrack\ui\panels\x64dbg_panel.py:354:51: WPS432 Found magic number: 10000
 
-src/intellicrack\ui\app.py:401:5: WPS213 Found too many expressions: 72 > 9
+src/intellicrack\ui\panels\x64dbg_panel.py:359:53: WPS336 Found explicit string concatenation
 
-src/intellicrack\ui\app.py:405:32: WPS432 Found magic number: 40
+src/intellicrack\ui\panels\x64dbg_panel.py:359:71: WPS336 Found explicit string concatenation
 
-src/intellicrack\ui\app.py:420:46: WPS432 Found magic number: 120
+src/intellicrack\ui\panels\x64dbg_panel.py:367:5: WPS615 Found unpythonic getter or setter: set_bridge
 
-src/intellicrack\ui\app.py:432:43: WPS432 Found magic number: 200
+src/intellicrack\ui\panels\x64dbg_panel.py:376:5: WPS615 Found unpythonic getter or setter: get_bridge
 
-src/intellicrack\ui\app.py:442:40: WPS226 Found string literal over-use: x64dbg > 3
+src/intellicrack\ui\panels\x64dbg_panel.py:393:12: WPS204 Found overused expression: self._bridge is None; used 17 > 7
 
-src/intellicrack\ui\app.py:443:40: WPS226 Found string literal over-use: tool_button > 3
+src/intellicrack\ui\panels\x64dbg_panel.py:397:9: WPS229 Found too long ``try`` body length: 3 > 1
 
-src/intellicrack\ui\app.py:448:40: WPS226 Found string literal over-use: Cutter > 3
+src/intellicrack\ui\panels\x64dbg_panel.py:401:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\app.py:454:37: WPS226 Found string literal over-use: HxD > 3
+src/intellicrack\ui\panels\x64dbg_panel.py:403:59: WPS204 Found overused expression: {'error': str(e)}; used 12 > 7
 
-src/intellicrack\ui\app.py:460:40: WPS226 Found string literal over-use: Ghidra > 3
+src/intellicrack\ui\panels\x64dbg_panel.py:403:60: WPS226 Found string literal over-use: error > 3
 
-src/intellicrack\ui\app.py:466:41: WPS226 Found string literal over-use: radare2 > 3
+src/intellicrack\ui\panels\x64dbg_panel.py:403:69: WPS204 Found overused expression: str(e); used 13 > 7
 
-src/intellicrack\ui\app.py:562:9: WPS430 Found nested function: show_dialog
+src/intellicrack\ui\panels\x64dbg_panel.py:445:5: WPS213 Found too many expressions: 11 > 9
 
-src/intellicrack\ui\app.py:582:9: WPS430 Found nested function: process
+src/intellicrack\ui\panels\x64dbg_panel.py:448:50: WPS226 Found string literal over-use: [!] No bridge configured > 3
 
-src/intellicrack\ui\app.py:605:31: WPS110 Found wrong variable name: result
+src/intellicrack\ui\panels\x64dbg_panel.py:462:9: WPS229 Found too long ``try`` body length: 4 > 1
 
-src/intellicrack\ui\app.py:617:30: WPS237 Found a too complex `f` string
+src/intellicrack\ui\panels\x64dbg_panel.py:467:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\app.py:634:34: WPS110 Found wrong variable name: result
+src/intellicrack\ui\panels\x64dbg_panel.py:479:9: WPS229 Found too long ``try`` body length: 3 > 1
 
-src/intellicrack\ui\app.py:640:9: WPS420 Found wrong keyword: del
+src/intellicrack\ui\panels\x64dbg_panel.py:483:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\app.py:692:9: WPS430 Found nested function: load
+src/intellicrack\ui\panels\x64dbg_panel.py:492:9: WPS229 Found too long ``try`` body length: 3 > 1
 
-src/intellicrack\ui\app.py:709:9: WPS430 Found nested function: create_session
+src/intellicrack\ui\panels\x64dbg_panel.py:496:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\app.py:724:17: WPS430 Found nested function: load_session
+src/intellicrack\ui\panels\x64dbg_panel.py:507:9: WPS229 Found too long ``try`` body length: 3 > 1
 
-src/intellicrack\ui\app.py:735:9: WPS430 Found nested function: save_session
+src/intellicrack\ui\panels\x64dbg_panel.py:511:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\app.py:755:55: WPS111 Found too short name: f < 2
+src/intellicrack\ui\panels\x64dbg_panel.py:520:9: WPS229 Found too long ``try`` body length: 2 > 1
 
-src/intellicrack\ui\app.py:758:29: WPS237 Found a too complex `f` string
+src/intellicrack\ui\panels\x64dbg_panel.py:524:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\app.py:787:9: WPS420 Found wrong keyword: del
+src/intellicrack\ui\panels\x64dbg_panel.py:535:9: WPS229 Found too long ``try`` body length: 2 > 1
 
-src/intellicrack\ui\app.py:813:9: WPS420 Found wrong keyword: del
+src/intellicrack\ui\panels\x64dbg_panel.py:539:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\app.py:816:5: WPS210 Found too many local variables: 9 > 5
+src/intellicrack\ui\panels\x64dbg_panel.py:550:9: WPS229 Found too long ``try`` body length: 2 > 1
 
-src/intellicrack\ui\app.py:833:38: WPS529 Found implicit `.get()` dict usage
+src/intellicrack\ui\panels\x64dbg_panel.py:554:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\app.py:838:61: WPS111 Found too short name: f < 2
+src/intellicrack\ui\panels\x64dbg_panel.py:560:5: WPS114 Found underscored number name pattern: _on_toggle_64bit
 
-src/intellicrack\ui\app.py:841:24: WPS332 Found walrus operator outside a comprehension
+src/intellicrack\ui\panels\x64dbg_panel.py:566:9: WPS114 Found underscored number name pattern: _is_64bit
 
-src/intellicrack\ui\app.py:842:25: WPS220 Found too deep nesting: 24 > 20
+src/intellicrack\ui\panels\x64dbg_panel.py:579:13: WPS221 Found line with high Jones Complexity: 15 > 14
 
-src/intellicrack\ui\app.py:844:17: WPS420 Found wrong keyword: pass
+src/intellicrack\ui\panels\x64dbg_panel.py:579:38: WPS432 Found magic number: 16
 
-src/intellicrack\ui\app.py:891:9: WPS420 Found wrong keyword: del
+src/intellicrack\ui\panels\x64dbg_panel.py:584:9: WPS229 Found too long ``try`` body length: 3 > 1
 
-src/intellicrack\ui\app.py:894:5: WPS213 Found too many expressions: 10 > 9
+src/intellicrack\ui\panels\x64dbg_panel.py:588:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\app.py:897:9: WPS430 Found nested function: open_sandbox
+src/intellicrack\ui\panels\x64dbg_panel.py:605:45: WPS432 Found magic number: 16
 
-src/intellicrack\ui\app.py:908:9: WPS430 Found nested function: on_sandbox_opened
+src/intellicrack\ui\panels\x64dbg_panel.py:612:9: WPS229 Found too long ``try`` body length: 3 > 1
 
-src/intellicrack\ui\app.py:908:31: WPS110 Found wrong variable name: result
+src/intellicrack\ui\panels\x64dbg_panel.py:616:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\app.py:922:9: WPS430 Found nested function: on_sandbox_error
+src/intellicrack\ui\panels\x64dbg_panel.py:641:13: WPS221 Found line with high Jones Complexity: 15 > 14
 
-src/intellicrack\ui\app.py:922:30: WPS111 Found too short name: e < 2
+src/intellicrack\ui\panels\x64dbg_panel.py:641:13: WPS110 Found wrong variable name: value
 
-src/intellicrack\ui\app.py:950:9: WPS229 Found too long ``try`` body length: 3 > 1
+src/intellicrack\ui\panels\x64dbg_panel.py:641:35: WPS432 Found magic number: 16
 
-src/intellicrack\ui\app.py:960:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\panels\x64dbg_panel.py:646:9: WPS229 Found too long ``try`` body length: 2 > 1
 
-src/intellicrack\ui\app.py:961:31: WPS226 Found string literal over-use: tool_embed_failed > 3
+src/intellicrack\ui\panels\x64dbg_panel.py:649:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\app.py:961:59: WPS226 Found string literal over-use: tool_name > 3
+src/intellicrack\ui\panels\x64dbg_panel.py:666:13: WPS221 Found line with high Jones Complexity: 15 > 14
 
-src/intellicrack\ui\app.py:961:82: WPS226 Found string literal over-use: error > 3
+src/intellicrack\ui\panels\x64dbg_panel.py:666:38: WPS432 Found magic number: 16
 
-src/intellicrack\ui\app.py:966:9: WPS229 Found too long ``try`` body length: 3 > 1
+src/intellicrack\ui\panels\x64dbg_panel.py:672:53: WPS432 Found magic number: 256
 
-src/intellicrack\ui\app.py:976:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\panels\x64dbg_panel.py:677:13: WPS110 Found wrong variable name: data
 
-src/intellicrack\ui\app.py:982:9: WPS229 Found too long ``try`` body length: 3 > 1
+src/intellicrack\ui\panels\x64dbg_panel.py:678:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\app.py:992:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\panels\x64dbg_panel.py:684:13: WPS110 Found wrong variable name: data
 
-src/intellicrack\ui\app.py:998:9: WPS229 Found too long ``try`` body length: 3 > 1
+src/intellicrack\ui\panels\x64dbg_panel.py:701:9: WPS229 Found too long ``try`` body length: 2 > 1
 
-src/intellicrack\ui\app.py:1008:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\panels\x64dbg_panel.py:702:13: WPS110 Found wrong variable name: result
 
-src/intellicrack\ui\app.py:1014:9: WPS229 Found too long ``try`` body length: 3 > 1
+src/intellicrack\ui\panels\x64dbg_panel.py:705:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\app.py:1024:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\panels\x64dbg_panel.py:715:5: WPS210 Found too many local variables: 8 > 5
 
-src/intellicrack\ui\app.py:1120:9: WPS420 Found wrong keyword: del
+src/intellicrack\ui\panels\x64dbg_panel.py:715:5: WPS213 Found too many expressions: 10 > 9
 
-src/intellicrack\ui\app.py:1131:35: WPS237 Found a too complex `f` string
+src/intellicrack\ui\panels\x64dbg_panel.py:735:13: WPS110 Found wrong variable name: value
 
-src/intellicrack\ui\app.py:1141:40: WPS237 Found a too complex `f` string
+src/intellicrack\ui\panels\x64dbg_panel.py:762:79: WPS432 Found magic number: 30
 
-src/intellicrack\ui\app.py:1153:9: WPS430 Found nested function: cancel
+src/intellicrack\ui\panels\x64dbg_panel.py:773:13: WPS221 Found line with high Jones Complexity: 15 > 14
 
-src/intellicrack\ui\app.py:1167:9: WPS430 Found nested function: shutdown
+src/intellicrack\ui\panels\x64dbg_panel.py:829:5: WPS210 Found too many local variables: 6 > 5
+
+src/intellicrack\ui\panels\x64dbg_panel.py:829:5: WPS602 Found using `@staticmethod`
+
+src/intellicrack\ui\panels\x64dbg_panel.py:829:40: WPS110 Found wrong variable name: data
+
+src/intellicrack\ui\panels\x64dbg_panel.py:842:48: WPS111 Found too short name: b < 2
+
+src/intellicrack\ui\panels\x64dbg_panel.py:843:13: WPS221 Found line with high Jones Complexity: 17 > 14
+
+src/intellicrack\ui\panels\x64dbg_panel.py:843:95: WPS111 Found too short name: b < 2
 
 
 89 findings in src/intellicrack\providers\ollama.py
@@ -4620,6 +4935,179 @@ src/intellicrack\core\session.py:792:1: WPS214 Found too many methods: 18 > 7
 src/intellicrack\core\session.py:1034:9: WPS457 Found an infinite while loop
 
 
+85 findings in tests\test_ui\test_splash_screen.py
+
+tests\test_ui\test_splash_screen.py:0:1: WPS202 Found too many module members: 18 > 7
+
+tests\test_ui\test_splash_screen.py:17:1: WPS235 Found too many imported names from a module: 9 > 8
+
+tests\test_ui\test_splash_screen.py:41:1: WPS114 Found underscored number name pattern: _PROGRESS_25
+
+tests\test_ui\test_splash_screen.py:42:1: WPS114 Found underscored number name pattern: _PROGRESS_30
+
+tests\test_ui\test_splash_screen.py:43:1: WPS114 Found underscored number name pattern: _PROGRESS_50
+
+tests\test_ui\test_splash_screen.py:44:1: WPS114 Found underscored number name pattern: _PROGRESS_60
+
+tests\test_ui\test_splash_screen.py:45:1: WPS114 Found underscored number name pattern: _PROGRESS_75
+
+tests\test_ui\test_splash_screen.py:46:1: WPS114 Found underscored number name pattern: _PROGRESS_100
+
+tests\test_ui\test_splash_screen.py:70:5: WPS420 Found wrong keyword: del
+
+tests\test_ui\test_splash_screen.py:88:5: WPS420 Found wrong keyword: del
+
+tests\test_ui\test_splash_screen.py:98:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:100:9: WPS420 Found wrong keyword: del
+
+tests\test_ui\test_splash_screen.py:106:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:113:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:123:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:129:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:139:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:145:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:151:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:161:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:166:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:172:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:179:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:185:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:191:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:202:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:208:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:214:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:225:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:231:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:241:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:246:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:255:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:261:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:267:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:272:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:278:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:287:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:293:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:299:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:310:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:316:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:322:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:333:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:336:32: WPS226 Found string literal over-use: splash.png > 3
+
+tests\test_ui\test_splash_screen.py:340:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:348:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:356:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:372:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:374:9: WPS420 Found wrong keyword: del
+
+tests\test_ui\test_splash_screen.py:383:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:385:9: WPS420 Found wrong keyword: del
+
+tests\test_ui\test_splash_screen.py:407:5: WPS118 Found too long name: test_splash_screen_no_exceptions_on_operations > 45
+
+tests\test_ui\test_splash_screen.py:407:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:409:9: WPS420 Found wrong keyword: del
+
+tests\test_ui\test_splash_screen.py:410:9: WPS229 Found too long ``try`` body length: 7 > 1
+
+tests\test_ui\test_splash_screen.py:415:13: WPS122 Found all unused variables definition: _
+
+tests\test_ui\test_splash_screen.py:416:13: WPS122 Found all unused variables definition: _
+
+tests\test_ui\test_splash_screen.py:418:9: WPS111 Found too short name: e < 2
+
+tests\test_ui\test_splash_screen.py:426:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:433:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:437:16: WPS459 Found comparison with float or complex number
+
+tests\test_ui\test_splash_screen.py:440:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:447:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:457:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:463:16: WPS459 Found comparison with float or complex number
+
+tests\test_ui\test_splash_screen.py:463:60: WPS358 Found a float zero (0.0)
+
+tests\test_ui\test_splash_screen.py:471:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:476:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:483:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:488:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:497:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:504:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:510:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:512:13: WPS111 Found too short name: i < 2
+
+tests\test_ui\test_splash_screen.py:516:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:529:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:531:16: WPS459 Found comparison with float or complex number
+
+tests\test_ui\test_splash_screen.py:531:42: WPS358 Found a float zero (0.0)
+
+tests\test_ui\test_splash_screen.py:535:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:541:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:544:16: WPS459 Found comparison with float or complex number
+
+tests\test_ui\test_splash_screen.py:544:24: WPS358 Found a float zero (0.0)
+
+tests\test_ui\test_splash_screen.py:547:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_splash_screen.py:549:16: WPS459 Found comparison with float or complex number
+
+
 84 findings in src/intellicrack\providers\local_transformers.py
 
 src/intellicrack\providers\local_transformers.py:0:1: WPS232 Found module cognitive complexity that is too high: 8.5 > 8
@@ -5123,171 +5611,6 @@ src/intellicrack\ui\sandbox_config.py:842:9: WPS229 Found too long ``try`` body 
 src/intellicrack\ui\sandbox_config.py:845:13: WPS110 Found wrong variable name: result
 
 src/intellicrack\ui\sandbox_config.py:856:9: WPS111 Found too short name: e < 2
-
-
-81 findings in src/intellicrack\ui\embedding\win32_helper.py
-
-src/intellicrack\ui\embedding\win32_helper.py:14:1: WPS458 Found imports collision: ctypes
-
-src/intellicrack\ui\embedding\win32_helper.py:33:14: WPS339 Found number with meaningless zeros: 0x00C00000
-
-src/intellicrack\ui\embedding\win32_helper.py:34:17: WPS339 Found number with meaningless zeros: 0x00040000
-
-src/intellicrack\ui\embedding\win32_helper.py:35:13: WPS339 Found number with meaningless zeros: 0x00800000
-
-src/intellicrack\ui\embedding\win32_helper.py:36:14: WPS339 Found number with meaningless zeros: 0x00080000
-
-src/intellicrack\ui\embedding\win32_helper.py:37:18: WPS339 Found number with meaningless zeros: 0x00020000
-
-src/intellicrack\ui\embedding\win32_helper.py:38:18: WPS339 Found number with meaningless zeros: 0x00010000
-
-src/intellicrack\ui\embedding\win32_helper.py:39:19: WPS339 Found number with meaningless zeros: 0x00040000
-
-src/intellicrack\ui\embedding\win32_helper.py:40:20: WPS339 Found number with meaningless zeros: 0x00000100
-
-src/intellicrack\ui\embedding\win32_helper.py:41:20: WPS339 Found number with meaningless zeros: 0x00000200
-
-src/intellicrack\ui\embedding\win32_helper.py:42:23: WPS339 Found number with meaningless zeros: 0x00000001
-
-src/intellicrack\ui\embedding\win32_helper.py:43:20: WPS339 Found number with meaningless zeros: 0x0020
-
-src/intellicrack\ui\embedding\win32_helper.py:44:16: WPS339 Found number with meaningless zeros: 0x0004
-
-src/intellicrack\ui\embedding\win32_helper.py:45:18: WPS339 Found number with meaningless zeros: 0x0010
-
-src/intellicrack\ui\embedding\win32_helper.py:46:18: WPS339 Found number with meaningless zeros: 0x0040
-
-src/intellicrack\ui\embedding\win32_helper.py:47:12: WPS339 Found number with meaningless zeros: 0x0010
-
-src/intellicrack\ui\embedding\win32_helper.py:48:15: WPS339 Found number with meaningless zeros: 0x0007
-
-src/intellicrack\ui\embedding\win32_helper.py:49:16: WPS339 Found number with meaningless zeros: 0x0008
-
-src/intellicrack\ui\embedding\win32_helper.py:50:11: WPS339 Found number with meaningless zeros: 0x0005
-
-src/intellicrack\ui\embedding\win32_helper.py:183:1: WPS214 Found too many methods: 25 > 7
-
-src/intellicrack\ui\embedding\win32_helper.py:191:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:205:9: WPS110 Found wrong variable name: result
-
-src/intellicrack\ui\embedding\win32_helper.py:208:69: WPS226 Found string literal over-use: hwnd > 3
-
-src/intellicrack\ui\embedding\win32_helper.py:213:5: C901 'Win32WindowHelper.find_window_by_pid' is too complex (11)
-
-src/intellicrack\ui\embedding\win32_helper.py:213:5: WPS231 Found function with too much cognitive complexity: 25 > 12
-
-src/intellicrack\ui\embedding\win32_helper.py:213:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:232:9: WPS212 Found too many return statements: 6 > 5
-
-src/intellicrack\ui\embedding\win32_helper.py:232:9: WPS210 Found too many local variables: 6 > 5
-
-src/intellicrack\ui\embedding\win32_helper.py:232:9: WPS231 Found function with too much cognitive complexity: 13 > 12
-
-src/intellicrack\ui\embedding\win32_helper.py:232:9: WPS430 Found nested function: enum_callback
-
-src/intellicrack\ui\embedding\win32_helper.py:247:52: WPS432 Found magic number: 256
-
-src/intellicrack\ui\embedding\win32_helper.py:248:59: WPS432 Found magic number: 256
-
-src/intellicrack\ui\embedding\win32_helper.py:253:58: WPS432 Found magic number: 512
-
-src/intellicrack\ui\embedding\win32_helper.py:254:69: WPS432 Found magic number: 512
-
-src/intellicrack\ui\embedding\win32_helper.py:272:17: WPS221 Found line with high Jones Complexity: 15 > 14
-
-src/intellicrack\ui\embedding\win32_helper.py:280:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:299:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:312:9: WPS110 Found wrong variable name: results
-
-src/intellicrack\ui\embedding\win32_helper.py:314:9: WPS430 Found nested function: enum_callback
-
-src/intellicrack\ui\embedding\win32_helper.py:315:54: WPS432 Found magic number: 256
-
-src/intellicrack\ui\embedding\win32_helper.py:316:52: WPS432 Found magic number: 256
-
-src/intellicrack\ui\embedding\win32_helper.py:319:54: WPS432 Found magic number: 512
-
-src/intellicrack\ui\embedding\win32_helper.py:320:53: WPS432 Found magic number: 512
-
-src/intellicrack\ui\embedding\win32_helper.py:332:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:349:5: WPS615 Found unpythonic getter or setter: get_window_style
-
-src/intellicrack\ui\embedding\win32_helper.py:349:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:361:5: WPS615 Found unpythonic getter or setter: set_window_style
-
-src/intellicrack\ui\embedding\win32_helper.py:361:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:374:5: WPS615 Found unpythonic getter or setter: get_ex_style
-
-src/intellicrack\ui\embedding\win32_helper.py:374:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:386:5: WPS615 Found unpythonic getter or setter: set_ex_style
-
-src/intellicrack\ui\embedding\win32_helper.py:386:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:399:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:406:9: WPS221 Found line with high Jones Complexity: 15 > 14
-
-src/intellicrack\ui\embedding\win32_helper.py:407:9: WPS221 Found line with high Jones Complexity: 16 > 14
-
-src/intellicrack\ui\embedding\win32_helper.py:426:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:453:5: WPS211 Found too many arguments: 6 > 5
-
-src/intellicrack\ui\embedding\win32_helper.py:453:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:455:9: WPS111 Found too short name: x < 2
-
-src/intellicrack\ui\embedding\win32_helper.py:456:9: WPS111 Found too short name: y < 2
-
-src/intellicrack\ui\embedding\win32_helper.py:477:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:489:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:501:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:514:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:526:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:546:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:566:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:578:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:592:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:606:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:623:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:632:44: WPS432 Found magic number: 256
-
-src/intellicrack\ui\embedding\win32_helper.py:633:51: WPS432 Found magic number: 256
-
-src/intellicrack\ui\embedding\win32_helper.py:637:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:651:5: WPS210 Found too many local variables: 9 > 5
-
-src/intellicrack\ui\embedding\win32_helper.py:651:5: WPS231 Found function with too much cognitive complexity: 14 > 12
-
-src/intellicrack\ui\embedding\win32_helper.py:651:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\embedding\win32_helper.py:660:12: WPS332 Found walrus operator outside a comprehension
-
-src/intellicrack\ui\embedding\win32_helper.py:680:9: WPS327 Found useless `continue` at the end of the loop
-
-src/intellicrack\ui\embedding\win32_helper.py:683:21: WPS110 Found wrong variable name: value
-
-src/intellicrack\ui\embedding\win32_helper.py:685:25: WPS220 Found too deep nesting: 24 > 20
 
 
 80 findings in src/intellicrack\credentials\oauth.py
@@ -5922,6 +6245,151 @@ src/intellicrack\bridges\installer.py:675:20: WPS476 Found `await` in `for` loop
 src/intellicrack\bridges\installer.py:676:13: WPS504 Found negated condition
 
 src/intellicrack\bridges\installer.py:677:28: WPS476 Found `await` in `for` loop
+
+
+71 findings in src/intellicrack\ui\panels\process_panel.py
+
+src/intellicrack\ui\panels\process_panel.py:0:1: WPS202 Found too many module members: 11 > 7
+
+src/intellicrack\ui\panels\process_panel.py:10:1: WPS301 Found dotted raw import: ctypes.wintypes
+
+src/intellicrack\ui\panels\process_panel.py:10:1: WPS458 Found imports collision: ctypes
+
+src/intellicrack\ui\panels\process_panel.py:16:1: WPS235 Found too many imported names from a module: 13 > 8
+
+src/intellicrack\ui\panels\process_panel.py:42:1: WPS114 Found underscored number name pattern: _POINTER_BITS_64
+
+src/intellicrack\ui\panels\process_panel.py:44:1: WPS407 Found mutable module constant
+
+src/intellicrack\ui\panels\process_panel.py:51:23: WPS339 Found number with meaningless zeros: 0x00000002
+
+src/intellicrack\ui\panels\process_panel.py:52:22: WPS339 Found number with meaningless zeros: 0x00000008
+
+src/intellicrack\ui\panels\process_panel.py:53:24: WPS339 Found number with meaningless zeros: 0x00000010
+
+src/intellicrack\ui\panels\process_panel.py:54:22: WPS339 Found number with meaningless zeros: 0x00000004
+
+src/intellicrack\ui\panels\process_panel.py:56:30: WPS339 Found number with meaningless zeros: 0x0400
+
+src/intellicrack\ui\panels\process_panel.py:57:20: WPS339 Found number with meaningless zeros: 0x0010
+
+src/intellicrack\ui\panels\process_panel.py:58:22: WPS339 Found number with meaningless zeros: 0x0001
+
+src/intellicrack\ui\panels\process_panel.py:62:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\ui\panels\process_panel.py:72:39: WPS432 Found magic number: 260
+
+src/intellicrack\ui\panels\process_panel.py:77:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\ui\panels\process_panel.py:86:38: WPS432 Found magic number: 256
+
+src/intellicrack\ui\panels\process_panel.py:87:39: WPS432 Found magic number: 260
+
+src/intellicrack\ui\panels\process_panel.py:92:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\ui\panels\process_panel.py:104:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\ui\panels\process_panel.py:122:1: WPS231 Found function with too much cognitive complexity: 17 > 12
+
+src/intellicrack\ui\panels\process_panel.py:128:5: WPS110 Found wrong variable name: results
+
+src/intellicrack\ui\panels\process_panel.py:133:5: WPS501 Found `finally` in `try` block without `except`
+
+src/intellicrack\ui\panels\process_panel.py:133:5: WPS229 Found too long ``try`` body length: 3 > 1
+
+src/intellicrack\ui\panels\process_panel.py:141:21: WPS226 Found string literal over-use: pid > 3
+
+src/intellicrack\ui\panels\process_panel.py:142:21: WPS226 Found string literal over-use: name > 3
+
+src/intellicrack\ui\panels\process_panel.py:143:21: WPS226 Found string literal over-use: thread_count > 3
+
+src/intellicrack\ui\panels\process_panel.py:162:5: WPS110 Found wrong variable name: handle
+
+src/intellicrack\ui\panels\process_panel.py:164:16: WPS358 Found a float zero (0.0)
+
+src/intellicrack\ui\panels\process_panel.py:166:5: WPS501 Found `finally` in `try` block without `except`
+
+src/intellicrack\ui\panels\process_panel.py:166:5: WPS229 Found too long ``try`` body length: 3 > 1
+
+src/intellicrack\ui\panels\process_panel.py:174:12: WPS358 Found a float zero (0.0)
+
+src/intellicrack\ui\panels\process_panel.py:186:5: WPS110 Found wrong variable name: handle
+
+src/intellicrack\ui\panels\process_panel.py:190:5: WPS501 Found `finally` in `try` block without `except`
+
+src/intellicrack\ui\panels\process_panel.py:190:5: WPS229 Found too long ``try`` body length: 4 > 1
+
+src/intellicrack\ui\panels\process_panel.py:203:1: WPS210 Found too many local variables: 7 > 5
+
+src/intellicrack\ui\panels\process_panel.py:203:1: WPS231 Found function with too much cognitive complexity: 20 > 12
+
+src/intellicrack\ui\panels\process_panel.py:212:5: WPS110 Found wrong variable name: results
+
+src/intellicrack\ui\panels\process_panel.py:218:5: WPS501 Found `finally` in `try` block without `except`
+
+src/intellicrack\ui\panels\process_panel.py:218:5: WPS229 Found too long ``try`` body length: 3 > 1
+
+src/intellicrack\ui\panels\process_panel.py:241:1: WPS231 Found function with too much cognitive complexity: 21 > 12
+
+src/intellicrack\ui\panels\process_panel.py:250:5: WPS110 Found wrong variable name: results
+
+src/intellicrack\ui\panels\process_panel.py:255:5: WPS501 Found `finally` in `try` block without `except`
+
+src/intellicrack\ui\panels\process_panel.py:255:5: WPS229 Found too long ``try`` body length: 3 > 1
+
+src/intellicrack\ui\panels\process_panel.py:297:5: WPS210 Found too many local variables: 8 > 5
+
+src/intellicrack\ui\panels\process_panel.py:297:5: WPS231 Found function with too much cognitive complexity: 13 > 12
+
+src/intellicrack\ui\panels\process_panel.py:299:9: WPS110 Found wrong variable name: result
+
+src/intellicrack\ui\panels\process_panel.py:300:9: WPS229 Found too long ``try`` body length: 2 > 1
+
+src/intellicrack\ui\panels\process_panel.py:307:17: WPS221 Found line with high Jones Complexity: 16 > 14
+
+src/intellicrack\ui\panels\process_panel.py:320:9: WPS111 Found too short name: e < 2
+
+src/intellicrack\ui\panels\process_panel.py:326:1: WPS214 Found too many methods: 14 > 7
+
+src/intellicrack\ui\panels\process_panel.py:326:1: WPS338 Found incorrect order of methods in a class
+
+src/intellicrack\ui\panels\process_panel.py:352:5: WPS210 Found too many local variables: 7 > 5
+
+src/intellicrack\ui\panels\process_panel.py:352:5: WPS213 Found too many expressions: 52 > 9
+
+src/intellicrack\ui\panels\process_panel.py:360:32: WPS432 Found magic number: 32
+
+src/intellicrack\ui\panels\process_panel.py:363:48: WPS336 Found explicit string concatenation
+
+src/intellicrack\ui\panels\process_panel.py:363:66: WPS336 Found explicit string concatenation
+
+src/intellicrack\ui\panels\process_panel.py:365:44: WPS432 Found magic number: 250
+
+src/intellicrack\ui\panels\process_panel.py:410:9: WPS504 Found negated condition
+
+src/intellicrack\ui\panels\process_panel.py:480:5: WPS210 Found too many local variables: 11 > 5
+
+src/intellicrack\ui\panels\process_panel.py:480:5: WPS213 Found too many expressions: 17 > 9
+
+src/intellicrack\ui\panels\process_panel.py:541:44: WPS432 Found magic number: 3000
+
+src/intellicrack\ui\panels\process_panel.py:566:5: WPS210 Found too many local variables: 12 > 5
+
+src/intellicrack\ui\panels\process_panel.py:566:5: WPS213 Found too many expressions: 11 > 9
+
+src/intellicrack\ui\panels\process_panel.py:576:13: WPS110 Found wrong variable name: item
+
+src/intellicrack\ui\panels\process_panel.py:623:16: WPS332 Found walrus operator outside a comprehension
+
+src/intellicrack\ui\panels\process_panel.py:623:16: WPS110 Found wrong variable name: handle
+
+src/intellicrack\ui\panels\process_panel.py:628:35: WPS432 Found magic number: 500
+
+src/intellicrack\ui\panels\process_panel.py:629:9: WPS111 Found too short name: e < 2
+
+src/intellicrack\ui\panels\process_panel.py:632:5: WPS615 Found unpythonic getter or setter: get_selected_pid
+
+src/intellicrack\ui\panels\process_panel.py:662:43: WPS432 Found magic number: 2000
 
 
 70 findings in src/intellicrack\ui\panels\binary_panel.py
@@ -7159,135 +7627,6 @@ src/intellicrack\providers\xpu_utils.py:611:9: WPS122 Found all unused variables
 src/intellicrack\providers\xpu_utils.py:612:9: WPS420 Found wrong keyword: del
 
 
-63 findings in src/intellicrack\ui\panels\process_panel.py
-
-src/intellicrack\ui\panels\process_panel.py:0:1: WPS202 Found too many module members: 10 > 7
-
-src/intellicrack\ui\panels\process_panel.py:10:1: WPS301 Found dotted raw import: ctypes.wintypes
-
-src/intellicrack\ui\panels\process_panel.py:10:1: WPS458 Found imports collision: ctypes
-
-src/intellicrack\ui\panels\process_panel.py:16:1: WPS235 Found too many imported names from a module: 13 > 8
-
-src/intellicrack\ui\panels\process_panel.py:42:1: WPS114 Found underscored number name pattern: _POINTER_BITS_64
-
-src/intellicrack\ui\panels\process_panel.py:44:1: WPS407 Found mutable module constant
-
-src/intellicrack\ui\panels\process_panel.py:51:23: WPS339 Found number with meaningless zeros: 0x00000002
-
-src/intellicrack\ui\panels\process_panel.py:52:22: WPS339 Found number with meaningless zeros: 0x00000008
-
-src/intellicrack\ui\panels\process_panel.py:53:24: WPS339 Found number with meaningless zeros: 0x00000010
-
-src/intellicrack\ui\panels\process_panel.py:54:22: WPS339 Found number with meaningless zeros: 0x00000004
-
-src/intellicrack\ui\panels\process_panel.py:56:30: WPS339 Found number with meaningless zeros: 0x0400
-
-src/intellicrack\ui\panels\process_panel.py:57:20: WPS339 Found number with meaningless zeros: 0x0010
-
-src/intellicrack\ui\panels\process_panel.py:58:22: WPS339 Found number with meaningless zeros: 0x0001
-
-src/intellicrack\ui\panels\process_panel.py:62:5: WPS120 Found regular name with trailing underscore: _fields_
-
-src/intellicrack\ui\panels\process_panel.py:72:39: WPS432 Found magic number: 260
-
-src/intellicrack\ui\panels\process_panel.py:77:5: WPS120 Found regular name with trailing underscore: _fields_
-
-src/intellicrack\ui\panels\process_panel.py:86:38: WPS432 Found magic number: 256
-
-src/intellicrack\ui\panels\process_panel.py:87:39: WPS432 Found magic number: 260
-
-src/intellicrack\ui\panels\process_panel.py:92:5: WPS120 Found regular name with trailing underscore: _fields_
-
-src/intellicrack\ui\panels\process_panel.py:104:5: WPS120 Found regular name with trailing underscore: _fields_
-
-src/intellicrack\ui\panels\process_panel.py:122:1: WPS231 Found function with too much cognitive complexity: 17 > 12
-
-src/intellicrack\ui\panels\process_panel.py:128:5: WPS110 Found wrong variable name: results
-
-src/intellicrack\ui\panels\process_panel.py:133:5: WPS501 Found `finally` in `try` block without `except`
-
-src/intellicrack\ui\panels\process_panel.py:133:5: WPS229 Found too long ``try`` body length: 3 > 1
-
-src/intellicrack\ui\panels\process_panel.py:141:21: WPS226 Found string literal over-use: pid > 3
-
-src/intellicrack\ui\panels\process_panel.py:142:21: WPS226 Found string literal over-use: name > 3
-
-src/intellicrack\ui\panels\process_panel.py:162:5: WPS110 Found wrong variable name: handle
-
-src/intellicrack\ui\panels\process_panel.py:164:16: WPS358 Found a float zero (0.0)
-
-src/intellicrack\ui\panels\process_panel.py:166:5: WPS501 Found `finally` in `try` block without `except`
-
-src/intellicrack\ui\panels\process_panel.py:166:5: WPS229 Found too long ``try`` body length: 3 > 1
-
-src/intellicrack\ui\panels\process_panel.py:174:12: WPS358 Found a float zero (0.0)
-
-src/intellicrack\ui\panels\process_panel.py:186:5: WPS110 Found wrong variable name: handle
-
-src/intellicrack\ui\panels\process_panel.py:190:5: WPS501 Found `finally` in `try` block without `except`
-
-src/intellicrack\ui\panels\process_panel.py:190:5: WPS229 Found too long ``try`` body length: 4 > 1
-
-src/intellicrack\ui\panels\process_panel.py:203:1: WPS210 Found too many local variables: 7 > 5
-
-src/intellicrack\ui\panels\process_panel.py:203:1: WPS231 Found function with too much cognitive complexity: 20 > 12
-
-src/intellicrack\ui\panels\process_panel.py:212:5: WPS110 Found wrong variable name: results
-
-src/intellicrack\ui\panels\process_panel.py:218:5: WPS501 Found `finally` in `try` block without `except`
-
-src/intellicrack\ui\panels\process_panel.py:218:5: WPS229 Found too long ``try`` body length: 3 > 1
-
-src/intellicrack\ui\panels\process_panel.py:241:1: WPS231 Found function with too much cognitive complexity: 21 > 12
-
-src/intellicrack\ui\panels\process_panel.py:250:5: WPS110 Found wrong variable name: results
-
-src/intellicrack\ui\panels\process_panel.py:255:5: WPS501 Found `finally` in `try` block without `except`
-
-src/intellicrack\ui\panels\process_panel.py:255:5: WPS229 Found too long ``try`` body length: 3 > 1
-
-src/intellicrack\ui\panels\process_panel.py:274:1: WPS214 Found too many methods: 13 > 7
-
-src/intellicrack\ui\panels\process_panel.py:274:1: WPS338 Found incorrect order of methods in a class
-
-src/intellicrack\ui\panels\process_panel.py:299:5: WPS210 Found too many local variables: 7 > 5
-
-src/intellicrack\ui\panels\process_panel.py:299:5: WPS213 Found too many expressions: 52 > 9
-
-src/intellicrack\ui\panels\process_panel.py:307:32: WPS432 Found magic number: 32
-
-src/intellicrack\ui\panels\process_panel.py:310:48: WPS336 Found explicit string concatenation
-
-src/intellicrack\ui\panels\process_panel.py:310:66: WPS336 Found explicit string concatenation
-
-src/intellicrack\ui\panels\process_panel.py:312:44: WPS432 Found magic number: 250
-
-src/intellicrack\ui\panels\process_panel.py:357:9: WPS504 Found negated condition
-
-src/intellicrack\ui\panels\process_panel.py:402:5: WPS210 Found too many local variables: 13 > 5
-
-src/intellicrack\ui\panels\process_panel.py:402:5: WPS213 Found too many expressions: 16 > 9
-
-src/intellicrack\ui\panels\process_panel.py:463:44: WPS432 Found magic number: 3000
-
-src/intellicrack\ui\panels\process_panel.py:488:5: WPS210 Found too many local variables: 12 > 5
-
-src/intellicrack\ui\panels\process_panel.py:488:5: WPS213 Found too many expressions: 11 > 9
-
-src/intellicrack\ui\panels\process_panel.py:498:13: WPS110 Found wrong variable name: item
-
-src/intellicrack\ui\panels\process_panel.py:545:16: WPS332 Found walrus operator outside a comprehension
-
-src/intellicrack\ui\panels\process_panel.py:545:16: WPS110 Found wrong variable name: handle
-
-src/intellicrack\ui\panels\process_panel.py:550:35: WPS432 Found magic number: 500
-
-src/intellicrack\ui\panels\process_panel.py:551:9: WPS111 Found too short name: e < 2
-
-src/intellicrack\ui\panels\process_panel.py:554:5: WPS615 Found unpythonic getter or setter: get_selected_pid
-
-
 62 findings in src/intellicrack\ui\panels\licensing_panel.py
 
 src/intellicrack\ui\panels\licensing_panel.py:14:1: WPS235 Found too many imported names from a module: 13 > 8
@@ -8115,115 +8454,6 @@ tests\test_core\test_types.py:1381:58: WPS226 Found string literal over-use: qem
 tests\test_core\test_types.py:1412:23: WPS226 Found string literal over-use: test > 3
 
 
-53 findings in tests\test_ui\test_splash_screen.py
-
-tests\test_ui\test_splash_screen.py:0:1: WPS202 Found too many module members: 13 > 7
-
-tests\test_ui\test_splash_screen.py:36:1: WPS114 Found underscored number name pattern: _PROGRESS_25
-
-tests\test_ui\test_splash_screen.py:37:1: WPS114 Found underscored number name pattern: _PROGRESS_30
-
-tests\test_ui\test_splash_screen.py:38:1: WPS114 Found underscored number name pattern: _PROGRESS_50
-
-tests\test_ui\test_splash_screen.py:39:1: WPS114 Found underscored number name pattern: _PROGRESS_60
-
-tests\test_ui\test_splash_screen.py:40:1: WPS114 Found underscored number name pattern: _PROGRESS_75
-
-tests\test_ui\test_splash_screen.py:41:1: WPS114 Found underscored number name pattern: _PROGRESS_100
-
-tests\test_ui\test_splash_screen.py:65:5: WPS420 Found wrong keyword: del
-
-tests\test_ui\test_splash_screen.py:75:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:82:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:89:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:99:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:105:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:115:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:121:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:127:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:137:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:142:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:148:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:155:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:161:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:167:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:177:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:183:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:189:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:200:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:206:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:216:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:221:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:230:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:236:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:242:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:247:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:253:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:262:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:268:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:274:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:285:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:291:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:297:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:308:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:311:32: WPS226 Found string literal over-use: splash.png > 3
-
-tests\test_ui\test_splash_screen.py:315:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:323:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:331:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:347:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:357:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:380:5: WPS118 Found too long name: test_splash_screen_no_exceptions_on_operations > 45
-
-tests\test_ui\test_splash_screen.py:380:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_splash_screen.py:382:9: WPS229 Found too long ``try`` body length: 7 > 1
-
-tests\test_ui\test_splash_screen.py:387:13: WPS122 Found all unused variables definition: _
-
-tests\test_ui\test_splash_screen.py:388:13: WPS122 Found all unused variables definition: _
-
-tests\test_ui\test_splash_screen.py:390:9: WPS111 Found too short name: e < 2
-
-
 53 findings in tests\test_ui\test_theme_manager.py
 
 tests\test_ui\test_theme_manager.py:0:1: WPS202 Found too many module members: 11 > 7
@@ -8331,113 +8561,6 @@ tests\test_ui\test_theme_manager.py:326:5: WPS602 Found using `@staticmethod`
 tests\test_ui\test_theme_manager.py:329:9: WPS229 Found too long ``try`` body length: 2 > 1
 
 tests\test_ui\test_theme_manager.py:332:9: WPS111 Found too short name: e < 2
-
-
-52 findings in src/intellicrack\providers\anthropic.py
-
-src/intellicrack\providers\anthropic.py:0:1: WPS232 Found module cognitive complexity that is too high: 11.4 > 8
-
-src/intellicrack\providers\anthropic.py:0:1: WPS201 Found module with too many imports: 13 > 12
-
-src/intellicrack\providers\anthropic.py:23:1: WPS300 Found local folder import
-
-src/intellicrack\providers\anthropic.py:24:1: WPS300 Found local folder import
-
-src/intellicrack\providers\anthropic.py:24:1: WPS235 Found too many imported names from a module: 9 > 8
-
-src/intellicrack\providers\anthropic.py:35:1: WPS300 Found local folder import
-
-src/intellicrack\providers\anthropic.py:53:1: WPS214 Found too many methods: 14 > 7
-
-src/intellicrack\providers\anthropic.py:53:1: WPS338 Found incorrect order of methods in a class
-
-src/intellicrack\providers\anthropic.py:64:5: WPS234 Found overly complex annotation: 4 > 3
-
-src/intellicrack\providers\anthropic.py:64:5: WPS115 Found upper-case constant in a class: KNOWN_MODELS
-
-src/intellicrack\providers\anthropic.py:104:9: WPS229 Found too long ``try`` body length: 2 > 1
-
-src/intellicrack\providers\anthropic.py:112:28: WPS226 Found string literal over-use: role > 3
-
-src/intellicrack\providers\anthropic.py:112:36: WPS226 Found string literal over-use: user > 3
-
-src/intellicrack\providers\anthropic.py:112:44: WPS226 Found string literal over-use: content > 3
-
-src/intellicrack\providers\anthropic.py:114:9: WPS111 Found too short name: e < 2
-
-src/intellicrack\providers\anthropic.py:116:9: WPS111 Found too short name: e < 2
-
-src/intellicrack\providers\anthropic.py:133:5: WPS210 Found too many local variables: 7 > 5
-
-src/intellicrack\providers\anthropic.py:133:5: WPS231 Found function with too much cognitive complexity: 27 > 12
-
-src/intellicrack\providers\anthropic.py:148:9: WPS229 Found too long ``try`` body length: 3 > 1
-
-src/intellicrack\providers\anthropic.py:180:9: WPS111 Found too short name: e < 2
-
-src/intellicrack\providers\anthropic.py:188:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\providers\anthropic.py:197:16: WPS432 Found magic number: 200000
-
-src/intellicrack\providers\anthropic.py:200:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\providers\anthropic.py:212:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\providers\anthropic.py:223:5: C901 'AnthropicProvider.chat' is too complex (13)
-
-src/intellicrack\providers\anthropic.py:223:5: WPS238 Found too many raises in a function: 4 > 3
-
-src/intellicrack\providers\anthropic.py:223:5: WPS210 Found too many local variables: 14 > 5
-
-src/intellicrack\providers\anthropic.py:223:5: WPS231 Found function with too much cognitive complexity: 46 > 12
-
-src/intellicrack\providers\anthropic.py:268:9: WPS229 Found too long ``try`` body length: 8 > 1
-
-src/intellicrack\providers\anthropic.py:277:32: WPS226 Found string literal over-use: list[ToolParam] > 3
-
-src/intellicrack\providers\anthropic.py:279:13: WPS504 Found negated condition
-
-src/intellicrack\providers\anthropic.py:305:13: WPS110 Found wrong variable name: content
-
-src/intellicrack\providers\anthropic.py:310:21: WPS110 Found wrong variable name: content
-
-src/intellicrack\providers\anthropic.py:316:25: WPS221 Found line with high Jones Complexity: 15 > 14
-
-src/intellicrack\providers\anthropic.py:343:9: WPS111 Found too short name: e < 2
-
-src/intellicrack\providers\anthropic.py:345:9: WPS111 Found too short name: e < 2
-
-src/intellicrack\providers\anthropic.py:347:9: WPS111 Found too short name: e < 2
-
-src/intellicrack\providers\anthropic.py:352:5: C901 'AnthropicProvider.chat_stream' is too complex (13)
-
-src/intellicrack\providers\anthropic.py:352:5: WPS238 Found too many raises in a function: 4 > 3
-
-src/intellicrack\providers\anthropic.py:352:5: WPS210 Found too many local variables: 7 > 5
-
-src/intellicrack\providers\anthropic.py:352:5: WPS231 Found function with too much cognitive complexity: 29 > 12
-
-src/intellicrack\providers\anthropic.py:388:9: WPS229 Found too long ``try`` body length: 2 > 1
-
-src/intellicrack\providers\anthropic.py:398:13: WPS504 Found negated condition
-
-src/intellicrack\providers\anthropic.py:425:25: WPS220 Found too deep nesting: 24 > 20
-
-src/intellicrack\providers\anthropic.py:428:9: WPS111 Found too short name: e < 2
-
-src/intellicrack\providers\anthropic.py:430:9: WPS111 Found too short name: e < 2
-
-src/intellicrack\providers\anthropic.py:432:9: WPS111 Found too short name: e < 2
-
-src/intellicrack\providers\anthropic.py:446:5: WPS210 Found too many local variables: 6 > 5
-
-src/intellicrack\providers\anthropic.py:446:5: WPS231 Found function with too much cognitive complexity: 40 > 12
-
-src/intellicrack\providers\anthropic.py:470:17: WPS110 Found wrong variable name: content
-
-src/intellicrack\providers\anthropic.py:493:21: WPS221 Found line with high Jones Complexity: 15 > 14
-
-src/intellicrack\providers\anthropic.py:529:5: WPS602 Found using `@staticmethod`
 
 
 52 findings in tests\test_ui\test_app_embedded_tools.py
@@ -8848,99 +8971,198 @@ tests\test_ui\test_icon_manager.py:339:13: WPS111 Found too short name: e < 2
 tests\test_ui\test_icon_manager.py:343:5: WPS602 Found using `@staticmethod`
 
 
-46 findings in src/intellicrack\ui\embedding\x64dbg_widget.py
+47 findings in src/intellicrack\ui\panels\ghidra_panel.py
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:30:1: WPS214 Found too many methods: 25 > 7
+src/intellicrack\ui\panels\ghidra_panel.py:15:1: WPS235 Found too many imported names from a module: 16 > 8
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:30:1: WPS338 Found incorrect order of methods in a class
+src/intellicrack\ui\panels\ghidra_panel.py:50:1: WPS407 Found mutable module constant
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:37:5: WPS115 Found upper-case constant in a class: _X64DBG_CLASS
+src/intellicrack\ui\panels\ghidra_panel.py:50:26: WPS226 Found string literal over-use: Address > 3
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:37:36: WPS226 Found string literal over-use: x64dbg > 3
+src/intellicrack\ui\panels\ghidra_panel.py:51:1: WPS407 Found mutable module constant
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:38:5: WPS115 Found upper-case constant in a class: _X32DBG_CLASS
+src/intellicrack\ui\panels\ghidra_panel.py:52:1: WPS407 Found mutable module constant
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:39:5: WPS115 Found upper-case constant in a class: _COMMON_PATHS
+src/intellicrack\ui\panels\ghidra_panel.py:53:1: WPS407 Found mutable module constant
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:45:5: WPS234 Found overly complex annotation: 4 > 3
+src/intellicrack\ui\panels\ghidra_panel.py:54:1: WPS407 Found mutable module constant
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:45:5: WPS115 Found upper-case constant in a class: _REGISTRY_PATHS
+src/intellicrack\ui\panels\ghidra_panel.py:57:1: WPS214 Found too many methods: 22 > 7
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:50:55: WPS114 Found underscored number name pattern: use_64bit
+src/intellicrack\ui\panels\ghidra_panel.py:57:1: WPS338 Found incorrect order of methods in a class
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:57:9: WPS114 Found underscored number name pattern: _use_64bit
+src/intellicrack\ui\panels\ghidra_panel.py:78:5: WPS213 Found too many expressions: 11 > 9
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:72:5: WPS212 Found too many return statements: 6 > 5
+src/intellicrack\ui\panels\ghidra_panel.py:99:5: WPS213 Found too many expressions: 20 > 9
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:72:5: WPS210 Found too many local variables: 6 > 5
+src/intellicrack\ui\panels\ghidra_panel.py:107:32: WPS432 Found magic number: 32
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:86:12: WPS332 Found walrus operator outside a comprehension
+src/intellicrack\ui\panels\ghidra_panel.py:110:41: WPS226 Found string literal over-use: tool_button > 3
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:89:12: WPS332 Found walrus operator outside a comprehension
+src/intellicrack\ui\panels\ghidra_panel.py:151:52: WPS432 Found magic number: 50000
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:92:12: WPS332 Found walrus operator outside a comprehension
+src/intellicrack\ui\panels\ghidra_panel.py:157:48: WPS432 Found magic number: 50000
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:96:24: WPS219 Found too deep access level: 5 > 4
+src/intellicrack\ui\panels\ghidra_panel.py:162:5: WPS213 Found too many expressions: 19 > 9
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:106:5: WPS602 Found using `@staticmethod`
+src/intellicrack\ui\panels\ghidra_panel.py:198:5: WPS213 Found too many expressions: 18 > 9
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:123:5: WPS210 Found too many local variables: 6 > 5
+src/intellicrack\ui\panels\ghidra_panel.py:222:47: WPS336 Found explicit string concatenation
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:123:5: WPS231 Found function with too much cognitive complexity: 14 > 12
+src/intellicrack\ui\panels\ghidra_panel.py:222:65: WPS336 Found explicit string concatenation
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:133:9: WPS327 Found useless `continue` at the end of the loop
+src/intellicrack\ui\panels\ghidra_panel.py:236:5: WPS615 Found unpythonic getter or setter: set_bridge
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:138:25: WPS220 Found too deep nesting: 24 > 20
+src/intellicrack\ui\panels\ghidra_panel.py:245:5: WPS615 Found unpythonic getter or setter: get_bridge
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:139:25: WPS220 Found too deep nesting: 24 > 20
+src/intellicrack\ui\panels\ghidra_panel.py:262:12: WPS204 Found overused expression: self._bridge is None; used 10 > 7
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:140:29: WPS220 Found too deep nesting: 28 > 20
+src/intellicrack\ui\panels\ghidra_panel.py:266:9: WPS229 Found too long ``try`` body length: 3 > 1
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:141:33: WPS220 Found too deep nesting: 32 > 20
+src/intellicrack\ui\panels\ghidra_panel.py:270:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:142:33: WPS220 Found too deep nesting: 32 > 20
+src/intellicrack\ui\panels\ghidra_panel.py:272:60: WPS226 Found string literal over-use: error > 3
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:158:43: WPS111 Found too short name: p < 2
+src/intellicrack\ui\panels\ghidra_panel.py:300:5: WPS213 Found too many expressions: 10 > 9
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:159:12: WPS332 Found walrus operator outside a comprehension
+src/intellicrack\ui\panels\ghidra_panel.py:307:9: WPS229 Found too long ``try`` body length: 5 > 1
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:196:5: WPS114 Found underscored number name pattern: set_64bit
+src/intellicrack\ui\panels\ghidra_panel.py:313:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:196:25: WPS114 Found underscored number name pattern: use_64bit
+src/intellicrack\ui\panels\ghidra_panel.py:322:9: WPS229 Found too long ``try`` body length: 3 > 1
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:208:9: WPS114 Found underscored number name pattern: _use_64bit
+src/intellicrack\ui\panels\ghidra_panel.py:326:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:209:55: WPS432 Found magic number: 64
+src/intellicrack\ui\panels\ghidra_panel.py:346:5: WPS213 Found too many expressions: 11 > 9
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:209:76: WPS432 Found magic number: 32
+src/intellicrack\ui\panels\ghidra_panel.py:354:9: WPS229 Found too long ``try`` body length: 3 > 1
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:211:5: WPS114 Found underscored number name pattern: is_64bit
+src/intellicrack\ui\panels\ghidra_panel.py:358:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:228:5: WPS615 Found unpythonic getter or setter: get_bridge
+src/intellicrack\ui\panels\ghidra_panel.py:387:13: WPS110 Found wrong variable name: item
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:237:5: WPS602 Found using `@staticmethod`
+src/intellicrack\ui\panels\ghidra_panel.py:407:36: WPS110 Found wrong variable name: item
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:243:9: WPS229 Found too long ``try`` body length: 2 > 1
+src/intellicrack\ui\panels\ghidra_panel.py:418:9: WPS229 Found too long ``try`` body length: 2 > 1
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:247:17: WPS420 Found wrong keyword: del
+src/intellicrack\ui\panels\ghidra_panel.py:423:65: WPS226 Found string literal over-use: address > 3
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:264:54: WPS226 Found string literal over-use: path > 3
+src/intellicrack\ui\panels\ghidra_panel.py:425:9: WPS229 Found too long ``try`` body length: 2 > 1
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:267:9: WPS221 Found line with high Jones Complexity: 15 > 14
+src/intellicrack\ui\panels\ghidra_panel.py:428:17: WPS221 Found line with high Jones Complexity: 19 > 14
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:283:13: WPS229 Found too long ``try`` body length: 2 > 1
+src/intellicrack\ui\panels\ghidra_panel.py:474:13: WPS221 Found line with high Jones Complexity: 19 > 14
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:305:13: WPS229 Found too long ``try`` body length: 2 > 1
+src/intellicrack\ui\panels\ghidra_panel.py:474:66: WPS504 Found negated condition
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:314:25: WPS226 Found string literal over-use: no_bridge_attached > 3
+src/intellicrack\ui\panels\ghidra_panel.py:496:13: WPS111 Found too short name: s < 2
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:314:54: WPS226 Found string literal over-use: operation > 3
+src/intellicrack\ui\panels\ghidra_panel.py:504:5: WPS231 Found function with too much cognitive complexity: 21 > 12
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:327:13: WPS229 Found too long ``try`` body length: 2 > 1
+src/intellicrack\ui\panels\ghidra_panel.py:515:9: WPS229 Found too long ``try`` body length: 2 > 1
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:349:13: WPS229 Found too long ``try`` body length: 2 > 1
+src/intellicrack\ui\panels\ghidra_panel.py:519:21: WPS110 Found wrong variable name: item
 
-src/intellicrack\ui\embedding\x64dbg_widget.py:446:5: WPS615 Found unpythonic getter or setter: get_attached_pid
+src/intellicrack\ui\panels\ghidra_panel.py:529:9: WPS229 Found too long ``try`` body length: 2 > 1
+
+src/intellicrack\ui\panels\ghidra_panel.py:533:21: WPS110 Found wrong variable name: item
+
+
+47 findings in src/intellicrack\ui\panels\radare2_panel.py
+
+src/intellicrack\ui\panels\radare2_panel.py:16:1: WPS235 Found too many imported names from a module: 17 > 8
+
+src/intellicrack\ui\panels\radare2_panel.py:52:1: WPS407 Found mutable module constant
+
+src/intellicrack\ui\panels\radare2_panel.py:52:26: WPS226 Found string literal over-use: Address > 3
+
+src/intellicrack\ui\panels\radare2_panel.py:53:1: WPS407 Found mutable module constant
+
+src/intellicrack\ui\panels\radare2_panel.py:54:1: WPS407 Found mutable module constant
+
+src/intellicrack\ui\panels\radare2_panel.py:55:1: WPS407 Found mutable module constant
+
+src/intellicrack\ui\panels\radare2_panel.py:56:1: WPS407 Found mutable module constant
+
+src/intellicrack\ui\panels\radare2_panel.py:57:1: WPS407 Found mutable module constant
+
+src/intellicrack\ui\panels\radare2_panel.py:60:1: WPS214 Found too many methods: 21 > 7
+
+src/intellicrack\ui\panels\radare2_panel.py:60:1: WPS338 Found incorrect order of methods in a class
+
+src/intellicrack\ui\panels\radare2_panel.py:82:5: WPS213 Found too many expressions: 11 > 9
+
+src/intellicrack\ui\panels\radare2_panel.py:103:5: WPS213 Found too many expressions: 18 > 9
+
+src/intellicrack\ui\panels\radare2_panel.py:111:32: WPS432 Found magic number: 32
+
+src/intellicrack\ui\panels\radare2_panel.py:142:5: WPS213 Found too many expressions: 20 > 9
+
+src/intellicrack\ui\panels\radare2_panel.py:151:45: WPS226 Found string literal over-use: JetBrains Mono > 3
+
+src/intellicrack\ui\panels\radare2_panel.py:153:52: WPS432 Found magic number: 50000
+
+src/intellicrack\ui\panels\radare2_panel.py:159:48: WPS432 Found magic number: 50000
+
+src/intellicrack\ui\panels\radare2_panel.py:170:46: WPS432 Found magic number: 10000
+
+src/intellicrack\ui\panels\radare2_panel.py:175:44: WPS336 Found explicit string concatenation
+
+src/intellicrack\ui\panels\radare2_panel.py:175:62: WPS336 Found explicit string concatenation
+
+src/intellicrack\ui\panels\radare2_panel.py:183:5: WPS213 Found too many expressions: 24 > 9
+
+src/intellicrack\ui\panels\radare2_panel.py:226:5: WPS213 Found too many expressions: 18 > 9
+
+src/intellicrack\ui\panels\radare2_panel.py:250:47: WPS336 Found explicit string concatenation
+
+src/intellicrack\ui\panels\radare2_panel.py:250:65: WPS336 Found explicit string concatenation
+
+src/intellicrack\ui\panels\radare2_panel.py:264:5: WPS615 Found unpythonic getter or setter: set_bridge
+
+src/intellicrack\ui\panels\radare2_panel.py:273:5: WPS615 Found unpythonic getter or setter: get_bridge
+
+src/intellicrack\ui\panels\radare2_panel.py:290:12: WPS204 Found overused expression: self._bridge is None; used 9 > 7
+
+src/intellicrack\ui\panels\radare2_panel.py:294:9: WPS229 Found too long ``try`` body length: 3 > 1
+
+src/intellicrack\ui\panels\radare2_panel.py:298:9: WPS111 Found too short name: e < 2
+
+src/intellicrack\ui\panels\radare2_panel.py:341:5: WPS213 Found too many expressions: 11 > 9
+
+src/intellicrack\ui\panels\radare2_panel.py:350:9: WPS229 Found too long ``try`` body length: 3 > 1
+
+src/intellicrack\ui\panels\radare2_panel.py:354:9: WPS111 Found too short name: e < 2
+
+src/intellicrack\ui\panels\radare2_panel.py:383:13: WPS110 Found wrong variable name: item
+
+src/intellicrack\ui\panels\radare2_panel.py:403:36: WPS110 Found wrong variable name: item
+
+src/intellicrack\ui\panels\radare2_panel.py:414:9: WPS229 Found too long ``try`` body length: 2 > 1
+
+src/intellicrack\ui\panels\radare2_panel.py:419:66: WPS226 Found string literal over-use: address > 3
+
+src/intellicrack\ui\panels\radare2_panel.py:421:9: WPS229 Found too long ``try`` body length: 2 > 1
+
+src/intellicrack\ui\panels\radare2_panel.py:424:17: WPS221 Found line with high Jones Complexity: 19 > 14
+
+src/intellicrack\ui\panels\radare2_panel.py:491:13: WPS111 Found too short name: s < 2
+
+src/intellicrack\ui\panels\radare2_panel.py:499:5: WPS231 Found function with too much cognitive complexity: 21 > 12
+
+src/intellicrack\ui\panels\radare2_panel.py:510:9: WPS229 Found too long ``try`` body length: 2 > 1
+
+src/intellicrack\ui\panels\radare2_panel.py:514:21: WPS110 Found wrong variable name: item
+
+src/intellicrack\ui\panels\radare2_panel.py:524:9: WPS229 Found too long ``try`` body length: 2 > 1
+
+src/intellicrack\ui\panels\radare2_panel.py:528:21: WPS110 Found wrong variable name: item
+
+src/intellicrack\ui\panels\radare2_panel.py:551:9: WPS229 Found too long ``try`` body length: 2 > 1
+
+src/intellicrack\ui\panels\radare2_panel.py:552:13: WPS110 Found wrong variable name: result
+
+src/intellicrack\ui\panels\radare2_panel.py:555:9: WPS111 Found too short name: e < 2
 
 
 44 findings in src/intellicrack\core\config.py
@@ -9212,89 +9434,178 @@ src/intellicrack\bridges\schemas.py:624:1: WPS234 Found overly complex annotatio
 src/intellicrack\bridges\schemas.py:641:48: WPS111 Found too short name: e < 2
 
 
+43 findings in src/intellicrack\providers\anthropic.py
+
+src/intellicrack\providers\anthropic.py:22:1: WPS300 Found local folder import
+
+src/intellicrack\providers\anthropic.py:23:1: WPS300 Found local folder import
+
+src/intellicrack\providers\anthropic.py:23:1: WPS235 Found too many imported names from a module: 9 > 8
+
+src/intellicrack\providers\anthropic.py:34:1: WPS300 Found local folder import
+
+src/intellicrack\providers\anthropic.py:52:1: WPS214 Found too many methods: 22 > 7
+
+src/intellicrack\providers\anthropic.py:52:1: WPS338 Found incorrect order of methods in a class
+
+src/intellicrack\providers\anthropic.py:63:5: WPS234 Found overly complex annotation: 4 > 3
+
+src/intellicrack\providers\anthropic.py:63:5: WPS115 Found upper-case constant in a class: KNOWN_MODELS
+
+src/intellicrack\providers\anthropic.py:103:9: WPS229 Found too long ``try`` body length: 2 > 1
+
+src/intellicrack\providers\anthropic.py:111:28: WPS226 Found string literal over-use: role > 3
+
+src/intellicrack\providers\anthropic.py:111:36: WPS226 Found string literal over-use: user > 3
+
+src/intellicrack\providers\anthropic.py:111:44: WPS226 Found string literal over-use: content > 3
+
+src/intellicrack\providers\anthropic.py:113:9: WPS111 Found too short name: e < 2
+
+src/intellicrack\providers\anthropic.py:115:9: WPS111 Found too short name: e < 2
+
+src/intellicrack\providers\anthropic.py:149:9: WPS111 Found too short name: e < 2
+
+src/intellicrack\providers\anthropic.py:170:13: WPS221 Found line with high Jones Complexity: 16 > 14
+
+src/intellicrack\providers\anthropic.py:171:13: WPS221 Found line with high Jones Complexity: 19 > 14
+
+src/intellicrack\providers\anthropic.py:171:94: WPS111 Found too short name: m < 2
+
+src/intellicrack\providers\anthropic.py:202:5: WPS602 Found using `@staticmethod`
+
+src/intellicrack\providers\anthropic.py:211:16: WPS432 Found magic number: 200000
+
+src/intellicrack\providers\anthropic.py:214:5: WPS602 Found using `@staticmethod`
+
+src/intellicrack\providers\anthropic.py:226:5: WPS602 Found using `@staticmethod`
+
+src/intellicrack\providers\anthropic.py:238:5: WPS211 Found too many arguments: 6 > 5
+
+src/intellicrack\providers\anthropic.py:238:5: WPS602 Found using `@staticmethod`
+
+src/intellicrack\providers\anthropic.py:284:9: WPS110 Found wrong variable name: content
+
+src/intellicrack\providers\anthropic.py:289:17: WPS110 Found wrong variable name: content
+
+src/intellicrack\providers\anthropic.py:307:5: WPS210 Found too many local variables: 10 > 5
+
+src/intellicrack\providers\anthropic.py:360:9: WPS229 Found too long ``try`` body length: 4 > 1
+
+src/intellicrack\providers\anthropic.py:363:13: WPS110 Found wrong variable name: content
+
+src/intellicrack\providers\anthropic.py:371:9: WPS111 Found too short name: e < 2
+
+src/intellicrack\providers\anthropic.py:373:9: WPS111 Found too short name: e < 2
+
+src/intellicrack\providers\anthropic.py:376:5: WPS210 Found too many local variables: 8 > 5
+
+src/intellicrack\providers\anthropic.py:376:5: WPS231 Found function with too much cognitive complexity: 20 > 12
+
+src/intellicrack\providers\anthropic.py:421:9: WPS229 Found too long ``try`` body length: 2 > 1
+
+src/intellicrack\providers\anthropic.py:426:25: WPS220 Found too deep nesting: 24 > 20
+
+src/intellicrack\providers\anthropic.py:428:9: WPS111 Found too short name: e < 2
+
+src/intellicrack\providers\anthropic.py:430:9: WPS111 Found too short name: e < 2
+
+src/intellicrack\providers\anthropic.py:456:9: WPS110 Found wrong variable name: result
+
+src/intellicrack\providers\anthropic.py:483:5: WPS602 Found using `@staticmethod`
+
+src/intellicrack\providers\anthropic.py:495:5: WPS602 Found using `@staticmethod`
+
+src/intellicrack\providers\anthropic.py:504:9: WPS110 Found wrong variable name: content
+
+src/intellicrack\providers\anthropic.py:520:5: WPS602 Found using `@staticmethod`
+
+src/intellicrack\providers\anthropic.py:562:5: WPS602 Found using `@staticmethod`
+
+
 41 findings in src/intellicrack\ui\panels\sandbox_panel.py
 
-src/intellicrack\ui\panels\sandbox_panel.py:15:1: WPS235 Found too many imported names from a module: 14 > 8
+src/intellicrack\ui\panels\sandbox_panel.py:14:1: WPS235 Found too many imported names from a module: 14 > 8
 
-src/intellicrack\ui\panels\sandbox_panel.py:47:1: WPS214 Found too many methods: 17 > 7
+src/intellicrack\ui\panels\sandbox_panel.py:46:1: WPS214 Found too many methods: 17 > 7
 
-src/intellicrack\ui\panels\sandbox_panel.py:47:1: WPS338 Found incorrect order of methods in a class
+src/intellicrack\ui\panels\sandbox_panel.py:46:1: WPS338 Found incorrect order of methods in a class
 
-src/intellicrack\ui\panels\sandbox_panel.py:73:5: WPS210 Found too many local variables: 12 > 5
+src/intellicrack\ui\panels\sandbox_panel.py:72:5: WPS210 Found too many local variables: 12 > 5
 
-src/intellicrack\ui\panels\sandbox_panel.py:73:5: WPS213 Found too many expressions: 73 > 9
+src/intellicrack\ui\panels\sandbox_panel.py:72:5: WPS213 Found too many expressions: 73 > 9
 
-src/intellicrack\ui\panels\sandbox_panel.py:81:32: WPS432 Found magic number: 32
+src/intellicrack\ui\panels\sandbox_panel.py:80:32: WPS432 Found magic number: 32
 
-src/intellicrack\ui\panels\sandbox_panel.py:84:46: WPS226 Found string literal over-use: toolbar_label > 3
+src/intellicrack\ui\panels\sandbox_panel.py:83:46: WPS226 Found string literal over-use: toolbar_label > 3
 
-src/intellicrack\ui\panels\sandbox_panel.py:91:40: WPS226 Found string literal over-use: tool_button > 3
+src/intellicrack\ui\panels\sandbox_panel.py:90:40: WPS226 Found string literal over-use: tool_button > 3
 
-src/intellicrack\ui\panels\sandbox_panel.py:129:50: WPS432 Found magic number: 120
+src/intellicrack\ui\panels\sandbox_panel.py:128:50: WPS432 Found magic number: 120
 
-src/intellicrack\ui\panels\sandbox_panel.py:183:51: WPS432 Found magic number: 10000
+src/intellicrack\ui\panels\sandbox_panel.py:182:51: WPS432 Found magic number: 10000
 
-src/intellicrack\ui\panels\sandbox_panel.py:207:5: WPS615 Found unpythonic getter or setter: set_sandbox
+src/intellicrack\ui\panels\sandbox_panel.py:206:5: WPS615 Found unpythonic getter or setter: set_sandbox
 
-src/intellicrack\ui\panels\sandbox_panel.py:216:5: WPS615 Found unpythonic getter or setter: get_sandbox
+src/intellicrack\ui\panels\sandbox_panel.py:215:5: WPS615 Found unpythonic getter or setter: get_sandbox
 
-src/intellicrack\ui\panels\sandbox_panel.py:232:5: WPS213 Found too many expressions: 19 > 9
+src/intellicrack\ui\panels\sandbox_panel.py:231:5: WPS213 Found too many expressions: 19 > 9
 
-src/intellicrack\ui\panels\sandbox_panel.py:232:5: WPS231 Found function with too much cognitive complexity: 15 > 12
+src/intellicrack\ui\panels\sandbox_panel.py:231:5: WPS231 Found function with too much cognitive complexity: 15 > 12
 
-src/intellicrack\ui\panels\sandbox_panel.py:240:9: WPS229 Found too long ``try`` body length: 14 > 1
+src/intellicrack\ui\panels\sandbox_panel.py:239:9: WPS229 Found too long ``try`` body length: 14 > 1
 
-src/intellicrack\ui\panels\sandbox_panel.py:251:43: WPS432 Found magic number: 5000
+src/intellicrack\ui\panels\sandbox_panel.py:250:43: WPS432 Found magic number: 5000
 
-src/intellicrack\ui\panels\sandbox_panel.py:255:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\panels\sandbox_panel.py:254:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\panels\sandbox_panel.py:257:63: WPS226 Found string literal over-use: error > 3
+src/intellicrack\ui\panels\sandbox_panel.py:256:63: WPS226 Found string literal over-use: error > 3
 
-src/intellicrack\ui\panels\sandbox_panel.py:259:5: WPS213 Found too many expressions: 16 > 9
+src/intellicrack\ui\panels\sandbox_panel.py:258:5: WPS213 Found too many expressions: 16 > 9
 
-src/intellicrack\ui\panels\sandbox_panel.py:265:9: WPS229 Found too long ``try`` body length: 3 > 1
+src/intellicrack\ui\panels\sandbox_panel.py:264:9: WPS229 Found too long ``try`` body length: 3 > 1
 
-src/intellicrack\ui\panels\sandbox_panel.py:269:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\panels\sandbox_panel.py:268:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\panels\sandbox_panel.py:290:9: WPS229 Found too long ``try`` body length: 4 > 1
+src/intellicrack\ui\panels\sandbox_panel.py:289:9: WPS229 Found too long ``try`` body length: 4 > 1
 
-src/intellicrack\ui\panels\sandbox_panel.py:295:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\panels\sandbox_panel.py:294:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\panels\sandbox_panel.py:310:5: WPS210 Found too many local variables: 6 > 5
+src/intellicrack\ui\panels\sandbox_panel.py:309:5: WPS210 Found too many local variables: 6 > 5
 
-src/intellicrack\ui\panels\sandbox_panel.py:310:5: WPS213 Found too many expressions: 14 > 9
+src/intellicrack\ui\panels\sandbox_panel.py:309:5: WPS213 Found too many expressions: 14 > 9
 
-src/intellicrack\ui\panels\sandbox_panel.py:333:9: WPS229 Found too long ``try`` body length: 7 > 1
+src/intellicrack\ui\panels\sandbox_panel.py:332:9: WPS229 Found too long ``try`` body length: 7 > 1
 
-src/intellicrack\ui\panels\sandbox_panel.py:341:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\panels\sandbox_panel.py:340:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\panels\sandbox_panel.py:350:9: WPS229 Found too long ``try`` body length: 6 > 1
+src/intellicrack\ui\panels\sandbox_panel.py:349:9: WPS229 Found too long ``try`` body length: 6 > 1
 
-src/intellicrack\ui\panels\sandbox_panel.py:352:27: WPS504 Found negated condition
+src/intellicrack\ui\panels\sandbox_panel.py:351:27: WPS504 Found negated condition
 
-src/intellicrack\ui\panels\sandbox_panel.py:352:84: WPS226 Found string literal over-use: unknown > 3
+src/intellicrack\ui\panels\sandbox_panel.py:351:84: WPS226 Found string literal over-use: unknown > 3
 
-src/intellicrack\ui\panels\sandbox_panel.py:354:13: WPS110 Found wrong variable name: item
+src/intellicrack\ui\panels\sandbox_panel.py:353:13: WPS110 Found wrong variable name: item
 
-src/intellicrack\ui\panels\sandbox_panel.py:357:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\panels\sandbox_panel.py:356:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\panels\sandbox_panel.py:372:9: WPS229 Found too long ``try`` body length: 4 > 1
+src/intellicrack\ui\panels\sandbox_panel.py:371:9: WPS229 Found too long ``try`` body length: 4 > 1
 
-src/intellicrack\ui\panels\sandbox_panel.py:377:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\panels\sandbox_panel.py:376:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\panels\sandbox_panel.py:386:9: WPS229 Found too long ``try`` body length: 3 > 1
+src/intellicrack\ui\panels\sandbox_panel.py:385:9: WPS229 Found too long ``try`` body length: 3 > 1
 
-src/intellicrack\ui\panels\sandbox_panel.py:399:5: WPS210 Found too many local variables: 12 > 5
+src/intellicrack\ui\panels\sandbox_panel.py:398:5: WPS210 Found too many local variables: 12 > 5
 
-src/intellicrack\ui\panels\sandbox_panel.py:413:17: WPS110 Found wrong variable name: item
+src/intellicrack\ui\panels\sandbox_panel.py:412:17: WPS110 Found wrong variable name: item
 
-src/intellicrack\ui\panels\sandbox_panel.py:420:17: WPS110 Found wrong variable name: value
+src/intellicrack\ui\panels\sandbox_panel.py:419:17: WPS110 Found wrong variable name: value
 
-src/intellicrack\ui\panels\sandbox_panel.py:421:17: WPS110 Found wrong variable name: item
+src/intellicrack\ui\panels\sandbox_panel.py:420:17: WPS110 Found wrong variable name: item
 
-src/intellicrack\ui\panels\sandbox_panel.py:430:17: WPS221 Found line with high Jones Complexity: 16 > 14
+src/intellicrack\ui\panels\sandbox_panel.py:429:17: WPS221 Found line with high Jones Complexity: 16 > 14
 
-src/intellicrack\ui\panels\sandbox_panel.py:430:17: WPS110 Found wrong variable name: item
+src/intellicrack\ui\panels\sandbox_panel.py:429:17: WPS110 Found wrong variable name: item
 
 
 41 findings in src/intellicrack\ui\panels\stack_viewer.py
@@ -9623,85 +9934,6 @@ src/intellicrack\providers\model_loader.py:791:9: WPS226 Found string literal ov
 src/intellicrack\providers\model_loader.py:792:9: WPS226 Found string literal over-use: estimated_memory_gb > 3
 
 
-38 findings in src/intellicrack\ui\embedding\ghidra_widget.py
-
-src/intellicrack\ui\embedding\ghidra_widget.py:29:1: WPS111 Found too short name: _T < 2
-
-src/intellicrack\ui\embedding\ghidra_widget.py:32:1: WPS214 Found too many methods: 14 > 7
-
-src/intellicrack\ui\embedding\ghidra_widget.py:32:1: WPS338 Found incorrect order of methods in a class
-
-src/intellicrack\ui\embedding\ghidra_widget.py:39:5: WPS115 Found upper-case constant in a class: _GHIDRA_TITLE_PATTERN
-
-src/intellicrack\ui\embedding\ghidra_widget.py:40:5: WPS115 Found upper-case constant in a class: _GHIDRA_WINDOW_CLASS
-
-src/intellicrack\ui\embedding\ghidra_widget.py:41:5: WPS115 Found upper-case constant in a class: _COMMON_PATHS
-
-src/intellicrack\ui\embedding\ghidra_widget.py:48:5: WPS234 Found overly complex annotation: 4 > 3
-
-src/intellicrack\ui\embedding\ghidra_widget.py:48:5: WPS115 Found upper-case constant in a class: _REGISTRY_PATHS
-
-src/intellicrack\ui\embedding\ghidra_widget.py:74:5: WPS212 Found too many return statements: 7 > 5
-
-src/intellicrack\ui\embedding\ghidra_widget.py:74:5: WPS615 Found unpythonic getter or setter: get_executable_path
-
-src/intellicrack\ui\embedding\ghidra_widget.py:86:12: WPS332 Found walrus operator outside a comprehension
-
-src/intellicrack\ui\embedding\ghidra_widget.py:88:26: WPS226 Found string literal over-use: ghidraRun.bat > 3
-
-src/intellicrack\ui\embedding\ghidra_widget.py:95:12: WPS332 Found walrus operator outside a comprehension
-
-src/intellicrack\ui\embedding\ghidra_widget.py:98:12: WPS332 Found walrus operator outside a comprehension
-
-src/intellicrack\ui\embedding\ghidra_widget.py:101:12: WPS332 Found walrus operator outside a comprehension
-
-src/intellicrack\ui\embedding\ghidra_widget.py:104:12: WPS332 Found walrus operator outside a comprehension
-
-src/intellicrack\ui\embedding\ghidra_widget.py:109:56: WPS226 Found string literal over-use: tool > 3
-
-src/intellicrack\ui\embedding\ghidra_widget.py:109:64: WPS226 Found string literal over-use: ghidra > 3
-
-src/intellicrack\ui\embedding\ghidra_widget.py:112:5: WPS210 Found too many local variables: 6 > 5
-
-src/intellicrack\ui\embedding\ghidra_widget.py:118:9: WPS327 Found useless `continue` at the end of the loop
-
-src/intellicrack\ui\embedding\ghidra_widget.py:123:25: WPS220 Found too deep nesting: 24 > 20
-
-src/intellicrack\ui\embedding\ghidra_widget.py:124:25: WPS220 Found too deep nesting: 24 > 20
-
-src/intellicrack\ui\embedding\ghidra_widget.py:125:25: WPS220 Found too deep nesting: 24 > 20
-
-src/intellicrack\ui\embedding\ghidra_widget.py:126:29: WPS220 Found too deep nesting: 28 > 20
-
-src/intellicrack\ui\embedding\ghidra_widget.py:127:29: WPS220 Found too deep nesting: 28 > 20
-
-src/intellicrack\ui\embedding\ghidra_widget.py:128:29: WPS220 Found too deep nesting: 28 > 20
-
-src/intellicrack\ui\embedding\ghidra_widget.py:134:5: WPS231 Found function with too much cognitive complexity: 19 > 12
-
-src/intellicrack\ui\embedding\ghidra_widget.py:147:25: WPS220 Found too deep nesting: 24 > 20
-
-src/intellicrack\ui\embedding\ghidra_widget.py:148:25: WPS220 Found too deep nesting: 24 > 20
-
-src/intellicrack\ui\embedding\ghidra_widget.py:149:25: WPS220 Found too deep nesting: 24 > 20
-
-src/intellicrack\ui\embedding\ghidra_widget.py:163:24: WPS219 Found too deep access level: 5 > 4
-
-src/intellicrack\ui\embedding\ghidra_widget.py:202:9: WPS420 Found wrong keyword: del
-
-src/intellicrack\ui\embedding\ghidra_widget.py:231:9: WPS229 Found too long ``try`` body length: 3 > 1
-
-src/intellicrack\ui\embedding\ghidra_widget.py:252:5: WPS615 Found unpythonic getter or setter: get_bridge
-
-src/intellicrack\ui\embedding\ghidra_widget.py:274:74: WPS226 Found string literal over-use: path > 3
-
-src/intellicrack\ui\embedding\ghidra_widget.py:278:9: WPS229 Found too long ``try`` body length: 3 > 1
-
-src/intellicrack\ui\embedding\ghidra_widget.py:282:9: WPS111 Found too short name: e < 2
-
-src/intellicrack\ui\embedding\ghidra_widget.py:288:5: WPS615 Found unpythonic getter or setter: set_executable_path
-
-
 38 findings in tests\test_ui\test_resource_helper.py
 
 tests\test_ui\test_resource_helper.py:34:5: WPS602 Found using `@staticmethod`
@@ -9779,83 +10011,6 @@ tests\test_ui\test_resource_helper.py:291:5: WPS602 Found using `@staticmethod`
 tests\test_ui\test_resource_helper.py:301:5: WPS602 Found using `@staticmethod`
 
 tests\test_ui\test_resource_helper.py:311:5: WPS602 Found using `@staticmethod`
-
-
-37 findings in src/intellicrack\ui\embedding\hxd_widget.py
-
-src/intellicrack\ui\embedding\hxd_widget.py:25:15: WPS339 Found number with meaningless zeros: 0x0111
-
-src/intellicrack\ui\embedding\hxd_widget.py:26:15: WPS339 Found number with meaningless zeros: 0x0100
-
-src/intellicrack\ui\embedding\hxd_widget.py:27:12: WPS339 Found number with meaningless zeros: 0x0102
-
-src/intellicrack\ui\embedding\hxd_widget.py:32:1: WPS214 Found too many methods: 11 > 7
-
-src/intellicrack\ui\embedding\hxd_widget.py:32:1: WPS338 Found incorrect order of methods in a class
-
-src/intellicrack\ui\embedding\hxd_widget.py:39:5: WPS115 Found upper-case constant in a class: _HXD_CLASS_NAME
-
-src/intellicrack\ui\embedding\hxd_widget.py:40:5: WPS234 Found overly complex annotation: 4 > 3
-
-src/intellicrack\ui\embedding\hxd_widget.py:40:5: WPS115 Found upper-case constant in a class: _HXD_REGISTRY_PATHS
-
-src/intellicrack\ui\embedding\hxd_widget.py:45:5: WPS115 Found upper-case constant in a class: _HXD_COMMON_PATHS
-
-src/intellicrack\ui\embedding\hxd_widget.py:70:5: C901 'HxDWidget.get_executable_path' is too complex (11)
-
-src/intellicrack\ui\embedding\hxd_widget.py:70:5: WPS212 Found too many return statements: 6 > 5
-
-src/intellicrack\ui\embedding\hxd_widget.py:70:5: WPS210 Found too many local variables: 9 > 5
-
-src/intellicrack\ui\embedding\hxd_widget.py:70:5: WPS231 Found function with too much cognitive complexity: 17 > 12
-
-src/intellicrack\ui\embedding\hxd_widget.py:70:5: WPS615 Found unpythonic getter or setter: get_executable_path
-
-src/intellicrack\ui\embedding\hxd_widget.py:82:9: WPS327 Found useless `continue` at the end of the loop
-
-src/intellicrack\ui\embedding\hxd_widget.py:87:25: WPS220 Found too deep nesting: 24 > 20
-
-src/intellicrack\ui\embedding\hxd_widget.py:88:25: WPS220 Found too deep nesting: 24 > 20
-
-src/intellicrack\ui\embedding\hxd_widget.py:89:29: WPS220 Found too deep nesting: 28 > 20
-
-src/intellicrack\ui\embedding\hxd_widget.py:90:29: WPS220 Found too deep nesting: 28 > 20
-
-src/intellicrack\ui\embedding\hxd_widget.py:90:75: WPS226 Found string literal over-use: path > 3
-
-src/intellicrack\ui\embedding\hxd_widget.py:91:29: WPS220 Found too deep nesting: 28 > 20
-
-src/intellicrack\ui\embedding\hxd_widget.py:102:12: WPS332 Found walrus operator outside a comprehension
-
-src/intellicrack\ui\embedding\hxd_widget.py:107:24: WPS219 Found too deep access level: 5 > 4
-
-src/intellicrack\ui\embedding\hxd_widget.py:155:65: WPS204 Found overused expression: str(file_path); used 10 > 7
-
-src/intellicrack\ui\embedding\hxd_widget.py:167:5: WPS210 Found too many local variables: 6 > 5
-
-src/intellicrack\ui\embedding\hxd_widget.py:178:20: WPS111 Found too short name: _h < 2
-
-src/intellicrack\ui\embedding\hxd_widget.py:178:24: WPS111 Found too short name: c < 2
-
-src/intellicrack\ui\embedding\hxd_widget.py:178:27: WPS111 Found too short name: _t < 2
-
-src/intellicrack\ui\embedding\hxd_widget.py:209:13: WPS432 Found magic number: 0x00200001
-
-src/intellicrack\ui\embedding\hxd_widget.py:209:13: WPS339 Found number with meaningless zeros: 0x00200001
-
-src/intellicrack\ui\embedding\hxd_widget.py:209:27: WPS432 Found magic number: 0x22
-
-src/intellicrack\ui\embedding\hxd_widget.py:209:35: WPS432 Found magic number: 16
-
-src/intellicrack\ui\embedding\hxd_widget.py:234:5: WPS615 Found unpythonic getter or setter: get_current_offset
-
-src/intellicrack\ui\embedding\hxd_widget.py:242:5: WPS615 Found unpythonic getter or setter: set_executable_path
-
-src/intellicrack\ui\embedding\hxd_widget.py:334:27: WPS111 Found too short name: p < 2
-
-src/intellicrack\ui\embedding\hxd_widget.py:345:17: WPS229 Found too long ``try`` body length: 2 > 1
-
-src/intellicrack\ui\embedding\hxd_widget.py:347:39: WPS432 Found magic number: 5.0
 
 
 36 findings in src/intellicrack\ui\highlighter.py
@@ -10004,142 +10159,144 @@ tests\test_bridges\test_x64dbg.py:370:39: WPS114 Found underscored number name p
 tests\test_bridges\test_x64dbg.py:375:5: WPS110 Found wrong variable name: result
 
 
+34 findings in tests\test_ui\test_tools_logic.py
+
+tests\test_ui\test_tools_logic.py:0:1: WPS202 Found too many module members: 8 > 7
+
+tests\test_ui\test_tools_logic.py:21:26: WPS226 Found string literal over-use: qapp > 3
+
+tests\test_ui\test_tools_logic.py:26:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:35:9: WPS110 Found wrong variable name: item
+
+tests\test_ui\test_tools_logic.py:47:5: WPS210 Found too many local variables: 6 > 5
+
+tests\test_ui\test_tools_logic.py:47:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:73:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:91:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:111:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:117:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:123:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:129:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:135:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:146:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:149:16: WPS226 Found string literal over-use: log > 3
+
+tests\test_ui\test_tools_logic.py:159:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:169:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:179:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:186:9: WPS110 Found wrong variable name: content
+
+tests\test_ui\test_tools_logic.py:195:1: WPS214 Found too many methods: 8 > 7
+
+tests\test_ui\test_tools_logic.py:199:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:212:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:226:5: WPS218 Found too many `assert` statements: 6 > 5
+
+tests\test_ui\test_tools_logic.py:226:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:243:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:258:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:271:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:284:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:287:39: WPS432 Found magic number: 99
+
+tests\test_ui\test_tools_logic.py:291:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:314:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:329:5: WPS218 Found too many `assert` statements: 6 > 5
+
+tests\test_ui\test_tools_logic.py:329:5: WPS602 Found using `@staticmethod`
+
+tests\test_ui\test_tools_logic.py:347:5: WPS602 Found using `@staticmethod`
+
+
 33 findings in src/intellicrack\main.py
 
-src/intellicrack\main.py:0:1: WPS201 Found module with too many imports: 22 > 12
+src/intellicrack\main.py:0:1: WPS201 Found module with too many imports: 23 > 12
 
 src/intellicrack\main.py:0:1: WPS202 Found too many module members: 20 > 7
 
-src/intellicrack\main.py:49:1: WPS210 Found too many local variables: 6 > 5
+src/intellicrack\main.py:52:1: WPS210 Found too many local variables: 6 > 5
 
-src/intellicrack\main.py:60:5: WPS122 Found all unused variables definition: _
+src/intellicrack\main.py:63:5: WPS122 Found all unused variables definition: _
 
-src/intellicrack\main.py:67:5: WPS122 Found all unused variables definition: _
+src/intellicrack\main.py:70:5: WPS122 Found all unused variables definition: _
 
-src/intellicrack\main.py:70:16: WPS226 Found string literal over-use: store_true > 3
+src/intellicrack\main.py:73:16: WPS226 Found string literal over-use: store_true > 3
 
-src/intellicrack\main.py:74:5: WPS122 Found all unused variables definition: _
+src/intellicrack\main.py:77:5: WPS122 Found all unused variables definition: _
 
-src/intellicrack\main.py:81:5: WPS122 Found all unused variables definition: _
+src/intellicrack\main.py:84:5: WPS122 Found all unused variables definition: _
 
-src/intellicrack\main.py:89:5: WPS122 Found all unused variables definition: _
+src/intellicrack\main.py:92:5: WPS122 Found all unused variables definition: _
 
-src/intellicrack\main.py:95:5: WPS122 Found all unused variables definition: _
+src/intellicrack\main.py:98:5: WPS122 Found all unused variables definition: _
 
-src/intellicrack\main.py:103:34: WPS421 Found wrong function call: vars
+src/intellicrack\main.py:106:34: WPS421 Found wrong function call: vars
 
-src/intellicrack\main.py:148:32: WPS221 Found line with high Jones Complexity: 15 > 14
+src/intellicrack\main.py:151:32: WPS221 Found line with high Jones Complexity: 15 > 14
 
-src/intellicrack\main.py:267:1: WPS210 Found too many local variables: 8 > 5
+src/intellicrack\main.py:270:1: WPS210 Found too many local variables: 8 > 5
 
-src/intellicrack\main.py:267:1: WPS213 Found too many expressions: 10 > 9
+src/intellicrack\main.py:270:1: WPS213 Found too many expressions: 10 > 9
 
-src/intellicrack\main.py:278:5: WPS229 Found too long ``try`` body length: 3 > 1
+src/intellicrack\main.py:281:5: WPS229 Found too long ``try`` body length: 3 > 1
 
-src/intellicrack\main.py:282:5: WPS111 Found too short name: e < 2
+src/intellicrack\main.py:285:5: WPS111 Found too short name: e < 2
 
-src/intellicrack\main.py:322:1: WPS210 Found too many local variables: 13 > 5
+src/intellicrack\main.py:325:1: WPS210 Found too many local variables: 13 > 5
 
-src/intellicrack\main.py:354:9: WPS229 Found too long ``try`` body length: 3 > 1
+src/intellicrack\main.py:357:9: WPS229 Found too long ``try`` body length: 3 > 1
 
-src/intellicrack\main.py:356:16: WPS332 Found walrus operator outside a comprehension
+src/intellicrack\main.py:359:16: WPS332 Found walrus operator outside a comprehension
 
-src/intellicrack\main.py:357:17: WPS476 Found `await` in `for` loop
+src/intellicrack\main.py:360:17: WPS476 Found `await` in `for` loop
 
-src/intellicrack\main.py:364:9: WPS111 Found too short name: e < 2
+src/intellicrack\main.py:367:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\main.py:368:1: WPS210 Found too many local variables: 14 > 5
+src/intellicrack\main.py:371:1: WPS210 Found too many local variables: 14 > 5
 
-src/intellicrack\main.py:368:1: WPS213 Found too many expressions: 14 > 9
+src/intellicrack\main.py:371:1: WPS213 Found too many expressions: 14 > 9
 
-src/intellicrack\main.py:394:5: WPS110 Found wrong variable name: result
+src/intellicrack\main.py:397:5: WPS110 Found wrong variable name: result
 
-src/intellicrack\main.py:407:5: WPS243 Found too long `finally` block: 3 > 2
+src/intellicrack\main.py:410:5: WPS243 Found too long `finally` block: 3 > 2
 
-src/intellicrack\main.py:418:1: WPS211 Found too many arguments: 6 > 5
+src/intellicrack\main.py:421:1: WPS211 Found too many arguments: 6 > 5
 
-src/intellicrack\main.py:418:1: WPS210 Found too many local variables: 15 > 5
+src/intellicrack\main.py:421:1: WPS210 Found too many local variables: 15 > 5
 
-src/intellicrack\main.py:418:1: WPS213 Found too many expressions: 27 > 9
+src/intellicrack\main.py:421:1: WPS213 Found too many expressions: 26 > 9
 
-src/intellicrack\main.py:445:25: WPS432 Found magic number: 20
+src/intellicrack\main.py:448:25: WPS432 Found magic number: 20
 
-src/intellicrack\main.py:454:25: WPS432 Found magic number: 50
+src/intellicrack\main.py:457:25: WPS432 Found magic number: 50
 
-src/intellicrack\main.py:461:25: WPS432 Found magic number: 70
+src/intellicrack\main.py:464:25: WPS432 Found magic number: 70
 
-src/intellicrack\main.py:468:25: WPS432 Found magic number: 85
+src/intellicrack\main.py:471:25: WPS432 Found magic number: 85
 
-src/intellicrack\main.py:478:25: WPS432 Found magic number: 95
-
-
-33 findings in src/intellicrack\ui\embedding\cutter_widget.py
-
-src/intellicrack\ui\embedding\cutter_widget.py:29:1: WPS111 Found too short name: _T < 2
-
-src/intellicrack\ui\embedding\cutter_widget.py:32:1: WPS214 Found too many methods: 19 > 7
-
-src/intellicrack\ui\embedding\cutter_widget.py:32:1: WPS338 Found incorrect order of methods in a class
-
-src/intellicrack\ui\embedding\cutter_widget.py:39:5: WPS115 Found upper-case constant in a class: _CUTTER_TITLE_PATTERN
-
-src/intellicrack\ui\embedding\cutter_widget.py:40:5: WPS115 Found upper-case constant in a class: _COMMON_PATHS
-
-src/intellicrack\ui\embedding\cutter_widget.py:46:5: WPS234 Found overly complex annotation: 4 > 3
-
-src/intellicrack\ui\embedding\cutter_widget.py:46:5: WPS115 Found upper-case constant in a class: _REGISTRY_PATHS
-
-src/intellicrack\ui\embedding\cutter_widget.py:73:5: C901 'CutterWidget.get_executable_path' is too complex (19)
-
-src/intellicrack\ui\embedding\cutter_widget.py:73:5: WPS212 Found too many return statements: 8 > 5
-
-src/intellicrack\ui\embedding\cutter_widget.py:73:5: WPS210 Found too many local variables: 12 > 5
-
-src/intellicrack\ui\embedding\cutter_widget.py:73:5: WPS231 Found function with too much cognitive complexity: 38 > 12
-
-src/intellicrack\ui\embedding\cutter_widget.py:73:5: WPS615 Found unpythonic getter or setter: get_executable_path
-
-src/intellicrack\ui\embedding\cutter_widget.py:86:9: WPS327 Found useless `continue` at the end of the loop
-
-src/intellicrack\ui\embedding\cutter_widget.py:91:25: WPS220 Found too deep nesting: 24 > 20
-
-src/intellicrack\ui\embedding\cutter_widget.py:92:25: WPS220 Found too deep nesting: 24 > 20
-
-src/intellicrack\ui\embedding\cutter_widget.py:93:29: WPS220 Found too deep nesting: 28 > 20
-
-src/intellicrack\ui\embedding\cutter_widget.py:94:29: WPS220 Found too deep nesting: 28 > 20
-
-src/intellicrack\ui\embedding\cutter_widget.py:95:33: WPS220 Found too deep nesting: 32 > 20
-
-src/intellicrack\ui\embedding\cutter_widget.py:96:33: WPS220 Found too deep nesting: 32 > 20
-
-src/intellicrack\ui\embedding\cutter_widget.py:110:12: WPS332 Found walrus operator outside a comprehension
-
-src/intellicrack\ui\embedding\cutter_widget.py:122:16: WPS332 Found walrus operator outside a comprehension
-
-src/intellicrack\ui\embedding\cutter_widget.py:126:24: WPS219 Found too deep access level: 5 > 4
-
-src/intellicrack\ui\embedding\cutter_widget.py:127:48: WPS226 Found string literal over-use: cutter > 3
-
-src/intellicrack\ui\embedding\cutter_widget.py:132:56: WPS226 Found string literal over-use: tool > 3
-
-src/intellicrack\ui\embedding\cutter_widget.py:189:9: WPS229 Found too long ``try`` body length: 3 > 1
-
-src/intellicrack\ui\embedding\cutter_widget.py:211:54: WPS226 Found string literal over-use: path > 3
-
-src/intellicrack\ui\embedding\cutter_widget.py:275:17: WPS110 Found wrong variable name: result
-
-src/intellicrack\ui\embedding\cutter_widget.py:294:17: WPS110 Found wrong variable name: result
-
-src/intellicrack\ui\embedding\cutter_widget.py:313:17: WPS110 Found wrong variable name: result
-
-src/intellicrack\ui\embedding\cutter_widget.py:332:17: WPS110 Found wrong variable name: result
-
-src/intellicrack\ui\embedding\cutter_widget.py:350:12: WPS332 Found walrus operator outside a comprehension
-
-src/intellicrack\ui\embedding\cutter_widget.py:384:5: WPS615 Found unpythonic getter or setter: set_executable_path
-
-src/intellicrack\ui\embedding\cutter_widget.py:396:5: WPS615 Found unpythonic getter or setter: get_project_path
+src/intellicrack\main.py:481:25: WPS432 Found magic number: 95
 
 
 30 findings in src/intellicrack\bridges\named_pipe_client.py
@@ -10207,65 +10364,65 @@ src/intellicrack\bridges\named_pipe_client.py:352:27: WPS110 Found wrong variabl
 
 30 findings in src/intellicrack\ui\panels\frida_panel.py
 
-src/intellicrack\ui\panels\frida_panel.py:14:1: WPS235 Found too many imported names from a module: 13 > 8
+src/intellicrack\ui\panels\frida_panel.py:13:1: WPS235 Found too many imported names from a module: 13 > 8
 
-src/intellicrack\ui\panels\frida_panel.py:51:1: WPS407 Found mutable module constant
+src/intellicrack\ui\panels\frida_panel.py:50:1: WPS407 Found mutable module constant
 
-src/intellicrack\ui\panels\frida_panel.py:58:1: WPS214 Found too many methods: 19 > 7
+src/intellicrack\ui\panels\frida_panel.py:57:1: WPS214 Found too many methods: 19 > 7
 
-src/intellicrack\ui\panels\frida_panel.py:58:1: WPS338 Found incorrect order of methods in a class
+src/intellicrack\ui\panels\frida_panel.py:57:1: WPS338 Found incorrect order of methods in a class
 
-src/intellicrack\ui\panels\frida_panel.py:83:5: WPS210 Found too many local variables: 6 > 5
+src/intellicrack\ui\panels\frida_panel.py:82:5: WPS210 Found too many local variables: 6 > 5
 
-src/intellicrack\ui\panels\frida_panel.py:83:5: WPS213 Found too many expressions: 19 > 9
+src/intellicrack\ui\panels\frida_panel.py:82:5: WPS213 Found too many expressions: 19 > 9
 
-src/intellicrack\ui\panels\frida_panel.py:111:44: WPS432 Found magic number: 10000
+src/intellicrack\ui\panels\frida_panel.py:110:44: WPS432 Found magic number: 10000
 
-src/intellicrack\ui\panels\frida_panel.py:118:5: WPS213 Found too many expressions: 29 > 9
+src/intellicrack\ui\panels\frida_panel.py:117:5: WPS213 Found too many expressions: 29 > 9
 
-src/intellicrack\ui\panels\frida_panel.py:126:32: WPS432 Found magic number: 32
+src/intellicrack\ui\panels\frida_panel.py:125:32: WPS432 Found magic number: 32
 
-src/intellicrack\ui\panels\frida_panel.py:133:48: WPS336 Found explicit string concatenation
+src/intellicrack\ui\panels\frida_panel.py:132:48: WPS336 Found explicit string concatenation
 
-src/intellicrack\ui\panels\frida_panel.py:133:66: WPS336 Found explicit string concatenation
+src/intellicrack\ui\panels\frida_panel.py:132:66: WPS336 Found explicit string concatenation
 
-src/intellicrack\ui\panels\frida_panel.py:135:44: WPS432 Found magic number: 200
+src/intellicrack\ui\panels\frida_panel.py:134:44: WPS432 Found magic number: 200
 
-src/intellicrack\ui\panels\frida_panel.py:139:40: WPS226 Found string literal over-use: tool_button > 3
+src/intellicrack\ui\panels\frida_panel.py:138:40: WPS226 Found string literal over-use: tool_button > 3
 
-src/intellicrack\ui\panels\frida_panel.py:175:5: WPS213 Found too many expressions: 13 > 9
+src/intellicrack\ui\panels\frida_panel.py:174:5: WPS213 Found too many expressions: 13 > 9
 
-src/intellicrack\ui\panels\frida_panel.py:200:9: WPS221 Found line with high Jones Complexity: 16 > 14
+src/intellicrack\ui\panels\frida_panel.py:199:9: WPS221 Found line with high Jones Complexity: 16 > 14
 
-src/intellicrack\ui\panels\frida_panel.py:204:5: WPS213 Found too many expressions: 18 > 9
+src/intellicrack\ui\panels\frida_panel.py:203:5: WPS213 Found too many expressions: 18 > 9
 
-src/intellicrack\ui\panels\frida_panel.py:241:5: WPS615 Found unpythonic getter or setter: set_bridge
+src/intellicrack\ui\panels\frida_panel.py:240:5: WPS615 Found unpythonic getter or setter: set_bridge
 
-src/intellicrack\ui\panels\frida_panel.py:251:5: WPS615 Found unpythonic getter or setter: get_bridge
+src/intellicrack\ui\panels\frida_panel.py:250:5: WPS615 Found unpythonic getter or setter: get_bridge
 
-src/intellicrack\ui\panels\frida_panel.py:277:26: WPS226 Found string literal over-use: error > 3
+src/intellicrack\ui\panels\frida_panel.py:276:26: WPS226 Found string literal over-use: error > 3
 
-src/intellicrack\ui\panels\frida_panel.py:283:5: WPS213 Found too many expressions: 17 > 9
+src/intellicrack\ui\panels\frida_panel.py:282:5: WPS213 Found too many expressions: 17 > 9
 
-src/intellicrack\ui\panels\frida_panel.py:296:9: WPS229 Found too long ``try`` body length: 5 > 1
+src/intellicrack\ui\panels\frida_panel.py:295:9: WPS229 Found too long ``try`` body length: 5 > 1
 
-src/intellicrack\ui\panels\frida_panel.py:306:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\panels\frida_panel.py:305:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\panels\frida_panel.py:316:5: WPS213 Found too many expressions: 11 > 9
+src/intellicrack\ui\panels\frida_panel.py:315:5: WPS213 Found too many expressions: 11 > 9
 
-src/intellicrack\ui\panels\frida_panel.py:322:9: WPS229 Found too long ``try`` body length: 3 > 1
+src/intellicrack\ui\panels\frida_panel.py:321:9: WPS229 Found too long ``try`` body length: 3 > 1
 
-src/intellicrack\ui\panels\frida_panel.py:326:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\panels\frida_panel.py:325:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\panels\frida_panel.py:336:5: WPS213 Found too many expressions: 12 > 9
+src/intellicrack\ui\panels\frida_panel.py:335:5: WPS213 Found too many expressions: 12 > 9
 
-src/intellicrack\ui\panels\frida_panel.py:348:9: WPS229 Found too long ``try`` body length: 6 > 1
+src/intellicrack\ui\panels\frida_panel.py:347:9: WPS229 Found too long ``try`` body length: 6 > 1
 
-src/intellicrack\ui\panels\frida_panel.py:355:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\panels\frida_panel.py:354:9: WPS111 Found too short name: e < 2
 
-src/intellicrack\ui\panels\frida_panel.py:391:13: WPS229 Found too long ``try`` body length: 3 > 1
+src/intellicrack\ui\panels\frida_panel.py:390:13: WPS229 Found too long ``try`` body length: 3 > 1
 
-src/intellicrack\ui\panels\frida_panel.py:395:13: WPS111 Found too short name: e < 2
+src/intellicrack\ui\panels\frida_panel.py:394:13: WPS111 Found too short name: e < 2
 
 
 29 findings in src/intellicrack\core\logging.py
@@ -10569,59 +10726,6 @@ tests\test_core\test_main.py:257:5: WPS602 Found using `@staticmethod`
 tests\test_core\test_main.py:259:9: WPS110 Found wrong variable name: result
 
 
-25 findings in src/intellicrack\ui\embedding\radare2_widget.py
-
-src/intellicrack\ui\embedding\radare2_widget.py:29:1: WPS111 Found too short name: _T < 2
-
-src/intellicrack\ui\embedding\radare2_widget.py:32:1: WPS214 Found too many methods: 11 > 7
-
-src/intellicrack\ui\embedding\radare2_widget.py:32:1: WPS338 Found incorrect order of methods in a class
-
-src/intellicrack\ui\embedding\radare2_widget.py:39:5: WPS115 Found upper-case constant in a class: _IAITO_TITLE_PATTERN
-
-src/intellicrack\ui\embedding\radare2_widget.py:39:43: WPS226 Found string literal over-use: iaito > 3
-
-src/intellicrack\ui\embedding\radare2_widget.py:40:5: WPS115 Found upper-case constant in a class: _CUTTER_TITLE_PATTERN
-
-src/intellicrack\ui\embedding\radare2_widget.py:41:5: WPS115 Found upper-case constant in a class: _COMMON_PATHS
-
-src/intellicrack\ui\embedding\radare2_widget.py:70:5: C901 'Radare2Widget.get_executable_path' is too complex (20)
-
-src/intellicrack\ui\embedding\radare2_widget.py:70:5: WPS212 Found too many return statements: 9 > 5
-
-src/intellicrack\ui\embedding\radare2_widget.py:70:5: WPS210 Found too many local variables: 9 > 5
-
-src/intellicrack\ui\embedding\radare2_widget.py:70:5: WPS231 Found function with too much cognitive complexity: 40 > 12
-
-src/intellicrack\ui\embedding\radare2_widget.py:70:5: WPS615 Found unpythonic getter or setter: get_executable_path
-
-src/intellicrack\ui\embedding\radare2_widget.py:83:12: WPS332 Found walrus operator outside a comprehension
-
-src/intellicrack\ui\embedding\radare2_widget.py:89:26: WPS226 Found string literal over-use: iaito.exe > 3
-
-src/intellicrack\ui\embedding\radare2_widget.py:106:24: WPS219 Found too deep access level: 5 > 4
-
-src/intellicrack\ui\embedding\radare2_widget.py:127:16: WPS332 Found walrus operator outside a comprehension
-
-src/intellicrack\ui\embedding\radare2_widget.py:133:16: WPS332 Found walrus operator outside a comprehension
-
-src/intellicrack\ui\embedding\radare2_widget.py:178:9: WPS229 Found too long ``try`` body length: 3 > 1
-
-src/intellicrack\ui\embedding\radare2_widget.py:199:5: WPS615 Found unpythonic getter or setter: get_bridge
-
-src/intellicrack\ui\embedding\radare2_widget.py:207:5: WPS231 Found function with too much cognitive complexity: 13 > 12
-
-src/intellicrack\ui\embedding\radare2_widget.py:217:64: WPS226 Found string literal over-use: path > 3
-
-src/intellicrack\ui\embedding\radare2_widget.py:224:13: WPS229 Found too long ``try`` body length: 3 > 1
-
-src/intellicrack\ui\embedding\radare2_widget.py:228:13: WPS111 Found too short name: e < 2
-
-src/intellicrack\ui\embedding\radare2_widget.py:251:13: WPS111 Found too short name: e < 2
-
-src/intellicrack\ui\embedding\radare2_widget.py:254:5: WPS615 Found unpythonic getter or setter: set_executable_path
-
-
 25 findings in src/intellicrack\ui\resources\icon_manager.py
 
 src/intellicrack\ui\resources\icon_manager.py:13:1: WPS300 Found local folder import
@@ -10826,53 +10930,53 @@ src/intellicrack\ui\confirmation_dialog.py:200:34: WPS462 Wrong multiline string
 src/intellicrack\ui\confirmation_dialog.py:222:27: WPS462 Wrong multiline string usage
 
 
-23 findings in src/intellicrack\ui\embedding\embedded_widget.py
+23 findings in src/intellicrack\ui\dialogs\splash_screen.py
 
-src/intellicrack\ui\embedding\embedded_widget.py:37:1: WPS214 Found too many methods: 22 > 7
+src/intellicrack\ui\dialogs\splash_screen.py:22:1: WPS300 Found local folder import
 
-src/intellicrack\ui\embedding\embedded_widget.py:37:1: WPS338 Found incorrect order of methods in a class
+src/intellicrack\ui\dialogs\splash_screen.py:23:1: WPS300 Found local folder import
 
-src/intellicrack\ui\embedding\embedded_widget.py:103:5: WPS615 Found unpythonic getter or setter: get_tool_display_name
+src/intellicrack\ui\dialogs\splash_screen.py:52:1: WPS214 Found too many methods: 16 > 7
 
-src/intellicrack\ui\embedding\embedded_widget.py:132:5: WPS213 Found too many expressions: 10 > 9
+src/intellicrack\ui\dialogs\splash_screen.py:52:1: WPS338 Found incorrect order of methods in a class
 
-src/intellicrack\ui\embedding\embedded_widget.py:152:9: WPS229 Found too long ``try`` body length: 3 > 1
+src/intellicrack\ui\dialogs\splash_screen.py:77:9: WPS221 Found line with high Jones Complexity: 15 > 14
 
-src/intellicrack\ui\embedding\embedded_widget.py:157:53: WPS226 Found string literal over-use: pid > 3
+src/intellicrack\ui\dialogs\splash_screen.py:94:5: WPS602 Found using `@staticmethod`
 
-src/intellicrack\ui\embedding\embedded_widget.py:159:9: WPS111 Found too short name: e < 2
+src/intellicrack\ui\dialogs\splash_screen.py:109:5: WPS602 Found using `@staticmethod`
 
-src/intellicrack\ui\embedding\embedded_widget.py:169:27: WPS432 Found magic number: 500
+src/intellicrack\ui\dialogs\splash_screen.py:120:9: WPS229 Found too long ``try`` body length: 2 > 1
 
-src/intellicrack\ui\embedding\embedded_widget.py:209:21: WPS432 Found magic number: 8.0
+src/intellicrack\ui\dialogs\splash_screen.py:142:5: WPS210 Found too many local variables: 7 > 5
 
-src/intellicrack\ui\embedding\embedded_widget.py:217:24: WPS226 Found string literal over-use: tool > 3
+src/intellicrack\ui\dialogs\splash_screen.py:142:5: WPS213 Found too many expressions: 16 > 9
 
-src/intellicrack\ui\embedding\embedded_widget.py:225:5: WPS213 Found too many expressions: 11 > 9
+src/intellicrack\ui\dialogs\splash_screen.py:142:5: WPS602 Found using `@staticmethod`
 
-src/intellicrack\ui\embedding\embedded_widget.py:235:63: WPS226 Found string literal over-use: hwnd > 3
+src/intellicrack\ui\dialogs\splash_screen.py:181:9: WPS221 Found line with high Jones Complexity: 15 > 14
 
-src/intellicrack\ui\embedding\embedded_widget.py:256:32: WPS432 Found magic number: 500
+src/intellicrack\ui\dialogs\splash_screen.py:181:60: WPS432 Found magic number: 20
 
-src/intellicrack\ui\embedding\embedded_widget.py:317:5: WPS213 Found too many expressions: 11 > 9
+src/intellicrack\ui\dialogs\splash_screen.py:182:59: WPS432 Found magic number: 40
 
-src/intellicrack\ui\embedding\embedded_widget.py:331:13: WPS229 Found too long ``try`` body length: 2 > 1
+src/intellicrack\ui\dialogs\splash_screen.py:196:5: WPS210 Found too many local variables: 8 > 5
 
-src/intellicrack\ui\embedding\embedded_widget.py:332:52: WPS432 Found magic number: 3.0
+src/intellicrack\ui\dialogs\splash_screen.py:196:5: WPS213 Found too many expressions: 18 > 9
 
-src/intellicrack\ui\embedding\embedded_widget.py:332:57: WPS432 Found magic number: 2.0
+src/intellicrack\ui\dialogs\splash_screen.py:251:31: WPS358 Found a float zero (0.0)
 
-src/intellicrack\ui\embedding\embedded_widget.py:334:13: WPS111 Found too short name: e < 2
+src/intellicrack\ui\dialogs\splash_screen.py:256:44: WPS358 Found a float zero (0.0)
 
-src/intellicrack\ui\embedding\embedded_widget.py:345:5: WPS213 Found too many expressions: 10 > 9
+src/intellicrack\ui\dialogs\splash_screen.py:272:42: WPS358 Found a float zero (0.0)
 
-src/intellicrack\ui\embedding\embedded_widget.py:354:13: WPS229 Found too long ``try`` body length: 2 > 1
+src/intellicrack\ui\dialogs\splash_screen.py:283:5: WPS213 Found too many expressions: 10 > 9
 
-src/intellicrack\ui\embedding\embedded_widget.py:355:52: WPS432 Found magic number: 2.0
+src/intellicrack\ui\dialogs\splash_screen.py:283:28: WPS110 Found wrong variable name: value
 
-src/intellicrack\ui\embedding\embedded_widget.py:355:57: WPS432 Found magic number: 2.0
+src/intellicrack\ui\dialogs\splash_screen.py:316:36: WPS110 Found wrong variable name: value
 
-src/intellicrack\ui\embedding\embedded_widget.py:380:5: WPS615 Found unpythonic getter or setter: get_loaded_file
+src/intellicrack\ui\dialogs\splash_screen.py:340:9: WPS613 Found incorrect `super()` call context: incorrect name access
 
 
 22 findings in src/intellicrack\sandbox\manager.py
@@ -10920,51 +11024,6 @@ src/intellicrack\sandbox\manager.py:351:13: WPS221 Found line with high Jones Co
 src/intellicrack\sandbox\manager.py:376:17: WPS476 Found `await` in `for` loop
 
 src/intellicrack\sandbox\manager.py:377:13: WPS111 Found too short name: e < 2
-
-
-21 findings in src/intellicrack\ui\dialogs\splash_screen.py
-
-src/intellicrack\ui\dialogs\splash_screen.py:22:1: WPS300 Found local folder import
-
-src/intellicrack\ui\dialogs\splash_screen.py:23:1: WPS300 Found local folder import
-
-src/intellicrack\ui\dialogs\splash_screen.py:37:1: WPS214 Found too many methods: 10 > 7
-
-src/intellicrack\ui\dialogs\splash_screen.py:37:1: WPS338 Found incorrect order of methods in a class
-
-src/intellicrack\ui\dialogs\splash_screen.py:51:9: WPS221 Found line with high Jones Complexity: 15 > 14
-
-src/intellicrack\ui\dialogs\splash_screen.py:61:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\dialogs\splash_screen.py:67:9: WPS229 Found too long ``try`` body length: 2 > 1
-
-src/intellicrack\ui\dialogs\splash_screen.py:86:5: WPS210 Found too many local variables: 7 > 5
-
-src/intellicrack\ui\dialogs\splash_screen.py:86:5: WPS213 Found too many expressions: 16 > 9
-
-src/intellicrack\ui\dialogs\splash_screen.py:86:5: WPS602 Found using `@staticmethod`
-
-src/intellicrack\ui\dialogs\splash_screen.py:99:40: WPS432 Found magic number: 32
-
-src/intellicrack\ui\dialogs\splash_screen.py:111:43: WPS432 Found magic number: 12
-
-src/intellicrack\ui\dialogs\splash_screen.py:116:56: WPS432 Found magic number: 20
-
-src/intellicrack\ui\dialogs\splash_screen.py:117:55: WPS432 Found magic number: 40
-
-src/intellicrack\ui\dialogs\splash_screen.py:131:5: WPS213 Found too many expressions: 15 > 9
-
-src/intellicrack\ui\dialogs\splash_screen.py:137:35: WPS432 Found magic number: 20
-
-src/intellicrack\ui\dialogs\splash_screen.py:137:42: WPS432 Found magic number: 20
-
-src/intellicrack\ui\dialogs\splash_screen.py:137:46: WPS432 Found magic number: 30
-
-src/intellicrack\ui\dialogs\splash_screen.py:167:28: WPS110 Found wrong variable name: value
-
-src/intellicrack\ui\dialogs\splash_screen.py:191:36: WPS110 Found wrong variable name: value
-
-src/intellicrack\ui\dialogs\splash_screen.py:215:9: WPS613 Found incorrect `super()` call context: incorrect name access
 
 
 20 findings in src/intellicrack\providers\base.py
@@ -11658,21 +11717,6 @@ src/intellicrack\ui\resources\__init__.py:12:1: WPS300 Found local folder import
 src/intellicrack\ui\resources\__init__.py:15:1: WPS410 Found wrong metadata variable: __all__
 
 
-6 findings in tests\test_ui\test_tools_logic.py
-
-tests\test_ui\test_tools_logic.py:39:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_tools_logic.py:48:9: WPS110 Found wrong variable name: item
-
-tests\test_ui\test_tools_logic.py:59:5: WPS210 Found too many local variables: 6 > 5
-
-tests\test_ui\test_tools_logic.py:59:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_tools_logic.py:84:5: WPS602 Found using `@staticmethod`
-
-tests\test_ui\test_tools_logic.py:101:5: WPS602 Found using `@staticmethod`
-
-
 5 findings in src/intellicrack\__init__.py
 
 src/intellicrack\__init__.py:0:1: WPS412 Found `__init__.py` module with logic
@@ -11725,18 +11769,11 @@ src/intellicrack\core\_subprocess.py:14:7: WPS421 Found wrong function call: __i
 src/intellicrack\core\_subprocess.py:30:1: WPS410 Found wrong metadata variable: __all__
 
 
-2 findings in src/intellicrack\ui\embedding\__init__.py
-
-src/intellicrack\ui\embedding\__init__.py:0:1: WPS412 Found `__init__.py` module with logic
-
-src/intellicrack\ui\embedding\__init__.py:19:1: WPS410 Found wrong metadata variable: __all__
-
-
 2 findings in src/intellicrack\ui\panels\__init__.py
 
 src/intellicrack\ui\panels\__init__.py:0:1: WPS412 Found `__init__.py` module with logic
 
-src/intellicrack\ui\panels\__init__.py:25:1: WPS410 Found wrong metadata variable: __all__
+src/intellicrack\ui\panels\__init__.py:28:1: WPS410 Found wrong metadata variable: __all__
 
 
 2 findings in src/intellicrack\ui\panels\_async_bridge.py

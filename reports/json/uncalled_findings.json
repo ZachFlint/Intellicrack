@@ -1,93 +1,9 @@
 {
   "tool": "uncalled",
-  "generated": "2026-02-08T21:23:01.080806",
-  "total_findings": 156,
-  "total_files": 43,
+  "generated": "2026-02-20T14:08:27.901481",
+  "total_findings": 132,
+  "total_files": 39,
   "files": [
-    {
-      "path": "src\\intellicrack\\ui\\tools.py",
-      "count": 13,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: activate_licensing_tab",
-          "raw": "src\\intellicrack\\ui\\tools.py: Unused function activate_licensing_tab"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: activate_scripts_tab",
-          "raw": "src\\intellicrack\\ui\\tools.py: Unused function activate_scripts_tab"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: activate_stack_tab",
-          "raw": "src\\intellicrack\\ui\\tools.py: Unused function activate_stack_tab"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: activate_tab",
-          "raw": "src\\intellicrack\\ui\\tools.py: Unused function activate_tab"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: clear_tab",
-          "raw": "src\\intellicrack\\ui\\tools.py: Unused function clear_tab"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: get_embedded_tool",
-          "raw": "src\\intellicrack\\ui\\tools.py: Unused function get_embedded_tool"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: get_highlighter",
-          "raw": "src\\intellicrack\\ui\\tools.py: Unused function get_highlighter"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: get_panel",
-          "raw": "src\\intellicrack\\ui\\tools.py: Unused function get_panel"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: get_selected_pid",
-          "raw": "src\\intellicrack\\ui\\tools.py: Unused function get_selected_pid"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: log_message",
-          "raw": "src\\intellicrack\\ui\\tools.py: Unused function log_message"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: open_in_ghidra",
-          "raw": "src\\intellicrack\\ui\\tools.py: Unused function open_in_ghidra"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: open_in_radare2",
-          "raw": "src\\intellicrack\\ui\\tools.py: Unused function open_in_radare2"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: update_licensing_analysis",
-          "raw": "src\\intellicrack\\ui\\tools.py: Unused function update_licensing_analysis"
-        }
-      ]
-    },
     {
       "path": "src\\intellicrack\\core\\types.py",
       "count": 12,
@@ -167,50 +83,80 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\embedding\\win32_helper.py",
-      "count": 7,
+      "path": "src\\intellicrack\\ui\\tools.py",
+      "count": 12,
       "findings": [
         {
           "line": null,
           "column": null,
-          "message": "Unused function: find_child_window",
-          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py: Unused function find_child_window"
+          "message": "Unused function: activate_licensing_tab",
+          "raw": "src\\intellicrack\\ui\\tools.py: Unused function activate_licensing_tab"
         },
         {
           "line": null,
           "column": null,
-          "message": "Unused function: get_class_name",
-          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py: Unused function get_class_name"
+          "message": "Unused function: activate_scripts_tab",
+          "raw": "src\\intellicrack\\ui\\tools.py: Unused function activate_scripts_tab"
         },
         {
           "line": null,
           "column": null,
-          "message": "Unused function: get_client_rect",
-          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py: Unused function get_client_rect"
+          "message": "Unused function: activate_stack_tab",
+          "raw": "src\\intellicrack\\ui\\tools.py: Unused function activate_stack_tab"
         },
         {
           "line": null,
           "column": null,
-          "message": "Unused function: get_process_id",
-          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py: Unused function get_process_id"
+          "message": "Unused function: activate_tab",
+          "raw": "src\\intellicrack\\ui\\tools.py: Unused function activate_tab"
         },
         {
           "line": null,
           "column": null,
-          "message": "Unused function: get_window_rect",
-          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py: Unused function get_window_rect"
+          "message": "Unused function: clear_tab",
+          "raw": "src\\intellicrack\\ui\\tools.py: Unused function clear_tab"
         },
         {
           "line": null,
           "column": null,
-          "message": "Unused function: get_window_text",
-          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py: Unused function get_window_text"
+          "message": "Unused function: get_embedded_tool",
+          "raw": "src\\intellicrack\\ui\\tools.py: Unused function get_embedded_tool"
         },
         {
           "line": null,
           "column": null,
-          "message": "Unused function: is_window_visible",
-          "raw": "src\\intellicrack\\ui\\embedding\\win32_helper.py: Unused function is_window_visible"
+          "message": "Unused function: get_highlighter",
+          "raw": "src\\intellicrack\\ui\\tools.py: Unused function get_highlighter"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_panel",
+          "raw": "src\\intellicrack\\ui\\tools.py: Unused function get_panel"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_selected_pid",
+          "raw": "src\\intellicrack\\ui\\tools.py: Unused function get_selected_pid"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: log_message",
+          "raw": "src\\intellicrack\\ui\\tools.py: Unused function log_message"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: open_in_ghidra",
+          "raw": "src\\intellicrack\\ui\\tools.py: Unused function open_in_ghidra"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: open_in_radare2",
+          "raw": "src\\intellicrack\\ui\\tools.py: Unused function open_in_radare2"
         }
       ]
     },
@@ -437,48 +383,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\embedding\\cutter_widget.py",
-      "count": 6,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: get_project_path",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py: Unused function get_project_path"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: get_radare2_bridge",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py: Unused function get_radare2_bridge"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: goto_function",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py: Unused function goto_function"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: load_project",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py: Unused function load_project"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: save_project",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py: Unused function save_project"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: sync_with_radare2_bridge",
-          "raw": "src\\intellicrack\\ui\\embedding\\cutter_widget.py: Unused function sync_with_radare2_bridge"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\resources\\theme_manager.py",
       "count": 6,
       "findings": [
@@ -517,42 +421,6 @@
           "column": null,
           "message": "Unused function: toggle_theme",
           "raw": "src\\intellicrack\\ui\\resources\\theme_manager.py: Unused function toggle_theme"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\bridges\\base.py",
-      "count": 5,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: clear_error",
-          "raw": "src\\intellicrack\\bridges\\base.py: Unused function clear_error"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: has_capability",
-          "raw": "src\\intellicrack\\bridges\\base.py: Unused function has_capability"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: is_ready",
-          "raw": "src\\intellicrack\\bridges\\base.py: Unused function is_ready"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: supports_arch",
-          "raw": "src\\intellicrack\\bridges\\base.py: Unused function supports_arch"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: supports_format",
-          "raw": "src\\intellicrack\\bridges\\base.py: Unused function supports_format"
         }
       ]
     },
@@ -629,38 +497,32 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\embedding\\hxd_widget.py",
-      "count": 5,
+      "path": "src\\intellicrack\\bridges\\base.py",
+      "count": 4,
       "findings": [
         {
           "line": null,
           "column": null,
-          "message": "Unused function: cleanup_standalone",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py: Unused function cleanup_standalone"
+          "message": "Unused function: clear_error",
+          "raw": "src\\intellicrack\\bridges\\base.py: Unused function clear_error"
         },
         {
           "line": null,
           "column": null,
-          "message": "Unused function: get_current_offset",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py: Unused function get_current_offset"
+          "message": "Unused function: has_capability",
+          "raw": "src\\intellicrack\\bridges\\base.py: Unused function has_capability"
         },
         {
           "line": null,
           "column": null,
-          "message": "Unused function: get_standalone_pids",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py: Unused function get_standalone_pids"
+          "message": "Unused function: supports_arch",
+          "raw": "src\\intellicrack\\bridges\\base.py: Unused function supports_arch"
         },
         {
           "line": null,
           "column": null,
-          "message": "Unused function: open_at_offset",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py: Unused function open_at_offset"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: select_range",
-          "raw": "src\\intellicrack\\ui\\embedding\\hxd_widget.py: Unused function select_range"
+          "message": "Unused function: supports_format",
+          "raw": "src\\intellicrack\\bridges\\base.py: Unused function supports_format"
         }
       ]
     },
@@ -691,36 +553,6 @@
           "column": null,
           "message": "Unused function: is_b580_detected",
           "raw": "src\\intellicrack\\providers\\local_transformers.py: Unused function is_b580_detected"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py",
-      "count": 4,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: attach_to_bridge",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py: Unused function attach_to_bridge"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: attach_to_process",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py: Unused function attach_to_process"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: get_attached_pid",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py: Unused function get_attached_pid"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: get_bridge",
-          "raw": "src\\intellicrack\\ui\\embedding\\x64dbg_widget.py: Unused function get_bridge"
         }
       ]
     },
@@ -971,42 +803,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: attach_to_bridge",
-          "raw": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py: Unused function attach_to_bridge"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: get_bridge",
-          "raw": "src\\intellicrack\\ui\\embedding\\ghidra_widget.py: Unused function get_bridge"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\embedding\\radare2_widget.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: get_bridge",
-          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py: Unused function get_bridge"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: sync_with_bridge",
-          "raw": "src\\intellicrack\\ui\\embedding\\radare2_widget.py: Unused function sync_with_bridge"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\panels\\binary_panel.py",
       "count": 2,
       "findings": [
@@ -1021,6 +817,42 @@
           "column": null,
           "message": "Unused function: get_patches",
           "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: Unused function get_patches"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_bridge",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py: Unused function get_bridge"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: show_xrefs",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py: Unused function show_xrefs"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\radare2_panel.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_bridge",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py: Unused function get_bridge"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: show_xrefs",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py: Unused function show_xrefs"
         }
       ]
     },
@@ -1115,18 +947,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\embedding\\embedded_widget.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: get_loaded_file",
-          "raw": "src\\intellicrack\\ui\\embedding\\embedded_widget.py: Unused function get_loaded_file"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\highlighter.py",
       "count": 1,
       "findings": [
@@ -1159,6 +979,18 @@
           "column": null,
           "message": "Unused function: get_selected_pid",
           "raw": "src\\intellicrack\\ui\\panels\\process_panel.py: Unused function get_selected_pid"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_bridge",
+          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py: Unused function get_bridge"
         }
       ]
     },

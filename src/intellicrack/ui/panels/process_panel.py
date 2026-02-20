@@ -11,7 +11,7 @@ import ctypes.wintypes
 import struct
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QModelIndex, Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QModelIndex, Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QHeaderView,
@@ -271,6 +271,58 @@ def _enumerate_threads(pid: int) -> list[dict[str, int]]:
     return results
 
 
+class _ProcessRefreshWorker(QThread):
+    """Background worker for enumerating processes without blocking the UI.
+
+    Performs Win32 API calls (CreateToolhelp32Snapshot, OpenProcess,
+    IsWow64Process, GetProcessMemoryInfo) in a separate thread and emits
+    the collected results back to the main thread via signal.
+
+    Attributes:
+        refresh_finished: Signal emitted with process data when enumeration completes.
+    """
+
+    refresh_finished: pyqtSignal = pyqtSignal(list)
+
+    def __init__(self, filter_text: str, parent: QWidget | None = None) -> None:
+        """Initialize the worker.
+
+        Args:
+            filter_text: Current search filter text (lowercased).
+            parent: Parent QObject.
+        """
+        super().__init__(parent)
+        self._filter_text = filter_text
+
+    def run(self) -> None:
+        """Execute process enumeration in the background thread."""
+        result: list[dict[str, int | str | float]] = []
+        try:
+            processes = _enumerate_processes()
+            for proc in processes:
+                pid = int(proc["pid"])
+                name = str(proc["name"])
+                thread_count = int(proc["thread_count"])
+
+                if self._filter_text and self._filter_text not in name.lower() and self._filter_text not in str(pid):
+                    continue
+
+                arch = _detect_process_architecture(pid)
+                mem_mb = _get_process_memory_mb(pid)
+
+                result.append({
+                    "pid": pid,
+                    "name": name,
+                    "arch": arch,
+                    "mem_mb": round(mem_mb, 1),
+                    "thread_count": thread_count,
+                })
+        except Exception as e:
+            _logger.warning("process_enumeration_failed", extra={"error": str(e)})
+
+        self.refresh_finished.emit(result)
+
+
 class ProcessPanel(QWidget):
     """Panel for process listing, inspection, and management.
 
@@ -292,6 +344,7 @@ class ProcessPanel(QWidget):
         super().__init__(parent)
         self._process_mgr: ProcessManager | None = None
         self._selected_pid: int | None = None
+        self._refresh_worker: _ProcessRefreshWorker | None = None
         self._auto_refresh_timer = QTimer(self)
         self._auto_refresh_timer.timeout.connect(self._on_refresh)
         self._setup_ui()
@@ -400,25 +453,51 @@ class ProcessPanel(QWidget):
         self._process_mgr = mgr
 
     def _on_refresh(self) -> None:
-        """Refresh the process list from the system."""
+        """Refresh the process list from the system.
+
+        Spawns a background worker to enumerate processes without blocking
+        the UI thread. If a worker is already running, the request is skipped
+        to prevent concurrent enumeration.
+        """
+        if self._refresh_worker is not None and self._refresh_worker.isRunning():
+            _logger.debug("process_refresh_skipped_already_running")
+            return
+
+        if self._refresh_worker is not None:
+            self._refresh_worker.deleteLater()
+            self._refresh_worker = None
+
         _logger.debug("process_list_refresh_started")
         current_filter = self._search_input.text().strip().lower()
-        processes = _enumerate_processes()
+
+        self._refresh_btn.setEnabled(False)
+        self._refresh_btn.setText("Refreshing...")
+
+        self._refresh_worker = _ProcessRefreshWorker(current_filter, self)
+        self._refresh_worker.refresh_finished.connect(self._on_refresh_finished)
+        self._refresh_worker.start()
+
+    def _on_refresh_finished(self, processes: list[dict[str, int | str | float]]) -> None:
+        """Handle process enumeration results from the background worker.
+
+        Updates the process table on the main thread with the enumerated
+        process data. Re-enables the refresh button.
+
+        Args:
+            processes: List of process info dicts from the worker thread.
+        """
+        self._refresh_btn.setEnabled(True)
+        self._refresh_btn.setText("Refresh")
 
         set_sorting_enabled(self._process_table, enable=False)
         self._process_table.setRowCount(0)
 
-        visible_count = 0
         for proc in processes:
             pid = int(proc["pid"])
             name = str(proc["name"])
+            arch = str(proc["arch"])
+            mem_mb = float(proc["mem_mb"])
             thread_count = int(proc["thread_count"])
-
-            if current_filter and current_filter not in name.lower() and current_filter not in str(pid):
-                continue
-
-            arch = _detect_process_architecture(pid)
-            mem_mb = _get_process_memory_mb(pid)
 
             row = self._process_table.rowCount()
             self._process_table.insertRow(row)
@@ -431,18 +510,17 @@ class ProcessPanel(QWidget):
             self._process_table.setItem(row, _PROC_COL_ARCH, QTableWidgetItem(arch))
 
             mem_item = QTableWidgetItem()
-            mem_item.setData(Qt.ItemDataRole.DisplayRole, round(mem_mb, 1))
+            mem_item.setData(Qt.ItemDataRole.DisplayRole, mem_mb)
             self._process_table.setItem(row, _PROC_COL_MEMORY, mem_item)
 
             thread_item = QTableWidgetItem()
             thread_item.setData(Qt.ItemDataRole.DisplayRole, thread_count)
             self._process_table.setItem(row, _PROC_COL_THREADS, thread_item)
 
-            visible_count += 1
-
+        visible_count = len(processes)
         set_sorting_enabled(self._process_table, enable=True)
         self._proc_count_label.setText(f"{visible_count} processes")
-        _logger.debug("process_list_refreshed", extra={"visible_count": visible_count, "total_count": len(processes)})
+        _logger.debug("process_list_refreshed", extra={"visible_count": visible_count})
 
     def _on_filter_changed(self, _text: str) -> None:
         """Handle search filter text changes.
@@ -572,9 +650,17 @@ class ProcessPanel(QWidget):
     def stop_tool(self) -> bool:
         """Stop the process panel and cleanup.
 
+        Stops the auto-refresh timer and waits for any running background
+        worker to finish before emitting the tool_closed signal.
+
         Returns:
             True if cleanup succeeded.
         """
         self._auto_refresh_timer.stop()
+        if self._refresh_worker is not None:
+            if self._refresh_worker.isRunning():
+                self._refresh_worker.wait(2000)
+            self._refresh_worker.deleteLater()
+        self._refresh_worker = None
         self.tool_closed.emit()
         return True

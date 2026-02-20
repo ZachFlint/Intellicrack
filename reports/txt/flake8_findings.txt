@@ -20,11 +20,6 @@ src/intellicrack\ui\app.py:53:5: F811 redefinition of unused 'Callable' from lin
 src/intellicrack\ui\chat.py:484:13: F824 `nonlocal content_label` is unused: name is never assigned in scope
 
 
-1 findings in src/intellicrack\ui\embedding\x64dbg_widget.py
-
-src/intellicrack\ui\embedding\x64dbg_widget.py:246:17: F841 local variable 'task' is assigned to but never used
-
-
 1 findings in src/intellicrack\ui\tool_config.py
 
 src/intellicrack\ui\tool_config.py:90:141: E501 line too long (142 > 140 characters)

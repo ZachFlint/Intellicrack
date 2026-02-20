@@ -1,77 +1,52 @@
-18 findings in src\intellicrack\bridges\x64dbg.py
+24 findings in src\intellicrack\ui\tools.py
 
-src\intellicrack\bridges\x64dbg.py:72:0: [91mDC02[0m Function `[1mget_capstone[0m` is never used
+src\intellicrack\ui\tools.py:208:4: [91mDC04[0m Method `[1mlog_message[0m` is never used
 
-src\intellicrack\bridges\x64dbg.py:81:0: [91mDC02[0m Function `[1mget_keystone[0m` is never used
+src\intellicrack\ui\tools.py:221:4: [91mDC04[0m Method `[1mget_selected_pid[0m` is never used
 
-src\intellicrack\bridges\x64dbg.py:399:4: [91mDC08[0m Property `[1mbreakpoints[0m` is never used
+src\intellicrack\ui\tools.py:252:4: [91mDC04[0m Method `[1mset_sandbox[0m` is never used
 
-src\intellicrack\bridges\x64dbg.py:426:4: [91mDC08[0m Property `[1mwatchpoints[0m` is never used
+src\intellicrack\ui\tools.py:262:0: [91mDC03[0m Class `[1mAnalysisPanel[0m` is never used
 
-src\intellicrack\bridges\x64dbg.py:991:8: [91mDC05[0m Attribute `[1mbinary_loaded[0m` is never used
+src\intellicrack\ui\tools.py:339:4: [91mDC04[0m Method `[1mget_highlighter[0m` is never used
 
-src\intellicrack\bridges\x64dbg.py:1103:4: [91mDC04[0m Method `[1mstep_out[0m` is never used
+src\intellicrack\ui\tools.py:766:4: [91mDC04[0m Method `[1mset_tab_content[0m` is never used
 
-src\intellicrack\bridges\x64dbg.py:1170:4: [91mDC04[0m Method `[1mget_breakpoints[0m` is never used
+src\intellicrack\ui\tools.py:776:4: [91mDC04[0m Method `[1mset_tab_info[0m` is never used
 
-src\intellicrack\bridges\x64dbg.py:1178:4: [91mDC04[0m Method `[1mset_watchpoint[0m` is never used
+src\intellicrack\ui\tools.py:826:4: [91mDC04[0m Method `[1mactivate_tab[0m` is never used
 
-src\intellicrack\bridges\x64dbg.py:1220:4: [91mDC04[0m Method `[1mremove_watchpoint[0m` is never used
+src\intellicrack\ui\tools.py:853:4: [91mDC04[0m Method `[1mclear_tab[0m` is never used
 
-src\intellicrack\bridges\x64dbg.py:1242:4: [91mDC04[0m Method `[1mget_watchpoints[0m` is never used
+src\intellicrack\ui\tools.py:885:8: [91mDC05[0m Attribute `[1m_x64dbg_bridge[0m` is never used
 
-src\intellicrack\bridges\x64dbg.py:1306:4: [91mDC04[0m Method `[1m_get_register_value[0m` is never used
+src\intellicrack\ui\tools.py:886:8: [91mDC05[0m Attribute `[1m_ghidra_bridge[0m` is never used
 
-src\intellicrack\bridges\x64dbg.py:1328:4: [91mDC04[0m Method `[1mset_register[0m` is never used
+src\intellicrack\ui\tools.py:887:8: [91mDC05[0m Attribute `[1m_radare2_bridge[0m` is never used
 
-src\intellicrack\bridges\x64dbg.py:1453:4: [91mDC04[0m Method `[1mallocate_memory[0m` is never used
+src\intellicrack\ui\tools.py:888:8: [91mDC05[0m Attribute `[1m_frida_bridge[0m` is never used
 
-src\intellicrack\bridges\x64dbg.py:1508:4: [91mDC04[0m Method `[1mfree_memory[0m` is never used
+src\intellicrack\ui\tools.py:993:16: [91mDC05[0m Attribute `[1m_x64dbg_bridge[0m` is never used
 
-src\intellicrack\bridges\x64dbg.py:1636:4: [91mDC04[0m Method `[1mdisassemble_at[0m` is never used
+src\intellicrack\ui\tools.py:1045:16: [91mDC05[0m Attribute `[1m_ghidra_bridge[0m` is never used
 
-src\intellicrack\bridges\x64dbg.py:1681:4: [91mDC04[0m Method `[1massemble_at[0m` is never used
+src\intellicrack\ui\tools.py:1080:16: [91mDC05[0m Attribute `[1m_radare2_bridge[0m` is never used
 
-src\intellicrack\bridges\x64dbg.py:1774:4: [91mDC04[0m Method `[1mscan_memory[0m` is never used
+src\intellicrack\ui\tools.py:1115:16: [91mDC05[0m Attribute `[1m_frida_bridge[0m` is never used
 
-src\intellicrack\bridges\x64dbg.py:1989:4: [91mDC04[0m Method `[1m_get_process_info[0m` is never used
+src\intellicrack\ui\tools.py:1202:4: [91mDC04[0m Method `[1mopen_in_ghidra[0m` is never used
 
+src\intellicrack\ui\tools.py:1225:4: [91mDC04[0m Method `[1mopen_in_radare2[0m` is never used
 
-17 findings in src\intellicrack\ui\tools.py
+src\intellicrack\ui\tools.py:1354:4: [91mDC04[0m Method `[1mget_embedded_tool[0m` is never used
 
-src\intellicrack\ui\tools.py:176:4: [91mDC04[0m Method `[1mlog_message[0m` is never used
+src\intellicrack\ui\tools.py:1365:4: [91mDC04[0m Method `[1mget_panel[0m` is never used
 
-src\intellicrack\ui\tools.py:189:4: [91mDC04[0m Method `[1mget_selected_pid[0m` is never used
+src\intellicrack\ui\tools.py:1389:4: [91mDC04[0m Method `[1mactivate_licensing_tab[0m` is never used
 
-src\intellicrack\ui\tools.py:220:4: [91mDC04[0m Method `[1mset_sandbox[0m` is never used
+src\intellicrack\ui\tools.py:1396:4: [91mDC04[0m Method `[1mactivate_scripts_tab[0m` is never used
 
-src\intellicrack\ui\tools.py:230:0: [91mDC03[0m Class `[1mAnalysisPanel[0m` is never used
-
-src\intellicrack\ui\tools.py:307:4: [91mDC04[0m Method `[1mget_highlighter[0m` is never used
-
-src\intellicrack\ui\tools.py:752:4: [91mDC04[0m Method `[1mset_tab_content[0m` is never used
-
-src\intellicrack\ui\tools.py:762:4: [91mDC04[0m Method `[1mset_tab_info[0m` is never used
-
-src\intellicrack\ui\tools.py:812:4: [91mDC04[0m Method `[1mactivate_tab[0m` is never used
-
-src\intellicrack\ui\tools.py:833:4: [91mDC04[0m Method `[1mclear_tab[0m` is never used
-
-src\intellicrack\ui\tools.py:1145:4: [91mDC04[0m Method `[1mopen_in_ghidra[0m` is never used
-
-src\intellicrack\ui\tools.py:1168:4: [91mDC04[0m Method `[1mopen_in_radare2[0m` is never used
-
-src\intellicrack\ui\tools.py:1297:4: [91mDC04[0m Method `[1mget_embedded_tool[0m` is never used
-
-src\intellicrack\ui\tools.py:1308:4: [91mDC04[0m Method `[1mget_panel[0m` is never used
-
-src\intellicrack\ui\tools.py:1319:4: [91mDC04[0m Method `[1mupdate_licensing_analysis[0m` is never used
-
-src\intellicrack\ui\tools.py:1332:4: [91mDC04[0m Method `[1mactivate_licensing_tab[0m` is never used
-
-src\intellicrack\ui\tools.py:1339:4: [91mDC04[0m Method `[1mactivate_scripts_tab[0m` is never used
-
-src\intellicrack\ui\tools.py:1346:4: [91mDC04[0m Method `[1mactivate_stack_tab[0m` is never used
+src\intellicrack\ui\tools.py:1403:4: [91mDC04[0m Method `[1mactivate_stack_tab[0m` is never used
 
 
 15 findings in src\intellicrack\providers\base.py
@@ -105,6 +80,37 @@ src\intellicrack\providers\base.py:404:4: [91mDC01[0m Variable `[1musage_prom
 src\intellicrack\providers\base.py:405:4: [91mDC01[0m Variable `[1musage_completion_tokens[0m` is never used
 
 src\intellicrack\providers\base.py:527:0: [91mDC02[0m Function `[1mcreate_google_tool_schema[0m` is never used
+
+
+14 findings in src\intellicrack\bridges\x64dbg.py
+
+src\intellicrack\bridges\x64dbg.py:72:0: [91mDC02[0m Function `[1mget_capstone[0m` is never used
+
+src\intellicrack\bridges\x64dbg.py:81:0: [91mDC02[0m Function `[1mget_keystone[0m` is never used
+
+src\intellicrack\bridges\x64dbg.py:399:4: [91mDC08[0m Property `[1mbreakpoints[0m` is never used
+
+src\intellicrack\bridges\x64dbg.py:426:4: [91mDC08[0m Property `[1mwatchpoints[0m` is never used
+
+src\intellicrack\bridges\x64dbg.py:991:8: [91mDC05[0m Attribute `[1mbinary_loaded[0m` is never used
+
+src\intellicrack\bridges\x64dbg.py:1178:4: [91mDC04[0m Method `[1mset_watchpoint[0m` is never used
+
+src\intellicrack\bridges\x64dbg.py:1220:4: [91mDC04[0m Method `[1mremove_watchpoint[0m` is never used
+
+src\intellicrack\bridges\x64dbg.py:1242:4: [91mDC04[0m Method `[1mget_watchpoints[0m` is never used
+
+src\intellicrack\bridges\x64dbg.py:1306:4: [91mDC04[0m Method `[1m_get_register_value[0m` is never used
+
+src\intellicrack\bridges\x64dbg.py:1453:4: [91mDC04[0m Method `[1mallocate_memory[0m` is never used
+
+src\intellicrack\bridges\x64dbg.py:1508:4: [91mDC04[0m Method `[1mfree_memory[0m` is never used
+
+src\intellicrack\bridges\x64dbg.py:1681:4: [91mDC04[0m Method `[1massemble_at[0m` is never used
+
+src\intellicrack\bridges\x64dbg.py:1774:4: [91mDC04[0m Method `[1mscan_memory[0m` is never used
+
+src\intellicrack\bridges\x64dbg.py:1989:4: [91mDC04[0m Method `[1m_get_process_info[0m` is never used
 
 
 14 findings in src\intellicrack\core\types.py
@@ -192,60 +198,6 @@ src\intellicrack\sandbox\base.py:131:4: [91mDC01[0m Variable `[1mbytes_receiv
 src\intellicrack\sandbox\base.py:173:4: [91mDC01[0m Variable `[1menvironment_variables[0m` is never used
 
 src\intellicrack\sandbox\base.py:188:4: [91mDC01[0m Variable `[1mstarted_at[0m` is never used
-
-
-12 findings in src\intellicrack\ui\embedding\ghidra_widget.py
-
-src\intellicrack\ui\embedding\ghidra_widget.py:61:8: [91mDC05[0m Attribute `[1m_ghidra_home[0m` is never used
-
-src\intellicrack\ui\embedding\ghidra_widget.py:92:20: [91mDC05[0m Attribute `[1m_ghidra_home[0m` is never used
-
-src\intellicrack\ui\embedding\ghidra_widget.py:106:12: [91mDC05[0m Attribute `[1m_ghidra_home[0m` is never used
-
-src\intellicrack\ui\embedding\ghidra_widget.py:127:28: [91mDC05[0m Attribute `[1m_ghidra_home[0m` is never used
-
-src\intellicrack\ui\embedding\ghidra_widget.py:148:24: [91mDC05[0m Attribute `[1m_ghidra_home[0m` is never used
-
-src\intellicrack\ui\embedding\ghidra_widget.py:153:16: [91mDC05[0m Attribute `[1m_ghidra_home[0m` is never used
-
-src\intellicrack\ui\embedding\ghidra_widget.py:173:20: [91mDC05[0m Attribute `[1m_ghidra_home[0m` is never used
-
-src\intellicrack\ui\embedding\ghidra_widget.py:178:12: [91mDC05[0m Attribute `[1m_ghidra_home[0m` is never used
-
-src\intellicrack\ui\embedding\ghidra_widget.py:243:4: [91mDC04[0m Method `[1mattach_to_bridge[0m` is never used
-
-src\intellicrack\ui\embedding\ghidra_widget.py:252:4: [91mDC04[0m Method `[1mget_bridge[0m` is never used
-
-src\intellicrack\ui\embedding\ghidra_widget.py:288:4: [91mDC04[0m Method `[1mset_executable_path[0m` is never used
-
-src\intellicrack\ui\embedding\ghidra_widget.py:296:12: [91mDC05[0m Attribute `[1m_ghidra_home[0m` is never used
-
-
-12 findings in src\intellicrack\ui\embedding\win32_helper.py
-
-src\intellicrack\ui\embedding\win32_helper.py:48:0: [91mDC01[0m Variable `[1mWM_SETFOCUS[0m` is never used
-
-src\intellicrack\ui\embedding\win32_helper.py:49:0: [91mDC01[0m Variable `[1mWM_KILLFOCUS[0m` is never used
-
-src\intellicrack\ui\embedding\win32_helper.py:50:0: [91mDC01[0m Variable `[1mWM_SIZE[0m` is never used
-
-src\intellicrack\ui\embedding\win32_helper.py:191:4: [91mDC04[0m Method `[1mfind_window[0m` is never used
-
-src\intellicrack\ui\embedding\win32_helper.py:280:4: [91mDC04[0m Method `[1mfind_child_window[0m` is never used
-
-src\intellicrack\ui\embedding\win32_helper.py:489:4: [91mDC04[0m Method `[1mis_window_visible[0m` is never used
-
-src\intellicrack\ui\embedding\win32_helper.py:546:4: [91mDC04[0m Method `[1msend_message[0m` is never used
-
-src\intellicrack\ui\embedding\win32_helper.py:578:4: [91mDC04[0m Method `[1mget_window_rect[0m` is never used
-
-src\intellicrack\ui\embedding\win32_helper.py:592:4: [91mDC04[0m Method `[1mget_client_rect[0m` is never used
-
-src\intellicrack\ui\embedding\win32_helper.py:606:4: [91mDC04[0m Method `[1mget_window_text[0m` is never used
-
-src\intellicrack\ui\embedding\win32_helper.py:623:4: [91mDC04[0m Method `[1mget_class_name[0m` is never used
-
-src\intellicrack\ui\embedding\win32_helper.py:637:4: [91mDC04[0m Method `[1mget_process_id[0m` is never used
 
 
 11 findings in src\intellicrack\core\logging.py
@@ -367,25 +319,6 @@ src\intellicrack\ui\resources\font_manager.py:299:4: [91mDC08[0m Property `[1
 src\intellicrack\ui\resources\font_manager.py:315:4: [91mDC04[0m Method `[1mget_font_info[0m` is never used
 
 
-8 findings in src\intellicrack\bridges\base.py
-
-src\intellicrack\bridges\base.py:70:4: [91mDC01[0m Variable `[1mbytes_str[0m` is never used
-
-src\intellicrack\bridges\base.py:88:4: [91mDC01[0m Variable `[1mmatched_bytes[0m` is never used
-
-src\intellicrack\bridges\base.py:110:4: [91mDC01[0m Variable `[1mframe_pointer[0m` is never used
-
-src\intellicrack\bridges\base.py:111:4: [91mDC01[0m Variable `[1mstack_pointer[0m` is never used
-
-src\intellicrack\bridges\base.py:163:4: [91mDC04[0m Method `[1mhas_capability[0m` is never used
-
-src\intellicrack\bridges\base.py:213:4: [91mDC01[0m Variable `[1mbinary_loaded[0m` is never used
-
-src\intellicrack\bridges\base.py:219:4: [91mDC04[0m Method `[1mis_ready[0m` is never used
-
-src\intellicrack\bridges\base.py:227:4: [91mDC04[0m Method `[1mclear_error[0m` is never used
-
-
 8 findings in src\intellicrack\core\tools.py
 
 src\intellicrack\core\tools.py:203:4: [91mDC04[0m Method `[1mget_process_bridge[0m` is never used
@@ -405,23 +338,21 @@ src\intellicrack\core\tools.py:378:4: [91mDC04[0m Method `[1mget_available_to
 src\intellicrack\core\tools.py:453:4: [91mDC04[0m Method `[1mensure_tool_ready[0m` is never used
 
 
-8 findings in src\intellicrack\ui\embedding\cutter_widget.py
+7 findings in src\intellicrack\core\session.py
 
-src\intellicrack\ui\embedding\cutter_widget.py:163:4: [91mDC04[0m Method `[1msync_with_radare2_bridge[0m` is never used
+src\intellicrack\core\session.py:189:4: [91mDC04[0m Method `[1mget_licensing_analysis[0m` is never used
 
-src\intellicrack\ui\embedding\cutter_widget.py:172:4: [91mDC04[0m Method `[1mget_radare2_bridge[0m` is never used
+src\intellicrack\core\session.py:200:4: [91mDC04[0m Method `[1mto_metadata[0m` is never used
 
-src\intellicrack\ui\embedding\cutter_widget.py:244:4: [91mDC04[0m Method `[1mgoto_function[0m` is never used
+src\intellicrack\core\session.py:249:8: [91mDC05[0m Attribute `[1mrow_factory[0m` is never used
 
-src\intellicrack\ui\embedding\cutter_widget.py:284:4: [91mDC04[0m Method `[1mget_strings[0m` is never used
+src\intellicrack\core\session.py:954:4: [91mDC04[0m Method `[1mcleanup[0m` is never used
 
-src\intellicrack\ui\embedding\cutter_widget.py:341:4: [91mDC04[0m Method `[1msave_project[0m` is never used
+src\intellicrack\core\session.py:965:4: [91mDC04[0m Method `[1mexport_json[0m` is never used
 
-src\intellicrack\ui\embedding\cutter_widget.py:363:4: [91mDC04[0m Method `[1mload_project[0m` is never used
+src\intellicrack\core\session.py:981:4: [91mDC04[0m Method `[1mimport_json[0m` is never used
 
-src\intellicrack\ui\embedding\cutter_widget.py:384:4: [91mDC04[0m Method `[1mset_executable_path[0m` is never used
-
-src\intellicrack\ui\embedding\cutter_widget.py:396:4: [91mDC04[0m Method `[1mget_project_path[0m` is never used
+src\intellicrack\core\session.py:1003:4: [91mDC04[0m Method `[1mexport_current[0m` is never used
 
 
 7 findings in src\intellicrack\providers\registry.py
@@ -456,6 +387,21 @@ src\intellicrack\ui\resources\icon_manager.py:410:4: [91mDC04[0m Method `[1mp
 src\intellicrack\ui\resources\icon_manager.py:433:4: [91mDC04[0m Method `[1mlist_available_icons[0m` is never used
 
 src\intellicrack\ui\resources\icon_manager.py:441:4: [91mDC04[0m Method `[1micon_exists[0m` is never used
+
+
+6 findings in src\intellicrack\bridges\base.py
+
+src\intellicrack\bridges\base.py:88:4: [91mDC01[0m Variable `[1mmatched_bytes[0m` is never used
+
+src\intellicrack\bridges\base.py:110:4: [91mDC01[0m Variable `[1mframe_pointer[0m` is never used
+
+src\intellicrack\bridges\base.py:111:4: [91mDC01[0m Variable `[1mstack_pointer[0m` is never used
+
+src\intellicrack\bridges\base.py:163:4: [91mDC04[0m Method `[1mhas_capability[0m` is never used
+
+src\intellicrack\bridges\base.py:213:4: [91mDC01[0m Variable `[1mbinary_loaded[0m` is never used
+
+src\intellicrack\bridges\base.py:227:4: [91mDC04[0m Method `[1mclear_error[0m` is never used
 
 
 6 findings in src\intellicrack\bridges\frida_bridge.py
@@ -503,21 +449,6 @@ src\intellicrack\core\script_gen.py:749:4: [91mDC04[0m Method `[1mprepare_ai_
 src\intellicrack\core\script_gen.py:778:4: [91mDC04[0m Method `[1mgenerate_keygen_from_analysis[0m` is never used
 
 
-6 findings in src\intellicrack\core\session.py
-
-src\intellicrack\core\session.py:189:4: [91mDC04[0m Method `[1mget_licensing_analysis[0m` is never used
-
-src\intellicrack\core\session.py:200:4: [91mDC04[0m Method `[1mto_metadata[0m` is never used
-
-src\intellicrack\core\session.py:249:8: [91mDC05[0m Attribute `[1mrow_factory[0m` is never used
-
-src\intellicrack\core\session.py:965:4: [91mDC04[0m Method `[1mexport_json[0m` is never used
-
-src\intellicrack\core\session.py:981:4: [91mDC04[0m Method `[1mimport_json[0m` is never used
-
-src\intellicrack\core\session.py:1003:4: [91mDC04[0m Method `[1mexport_current[0m` is never used
-
-
 6 findings in src\intellicrack\credentials\env_loader.py
 
 src\intellicrack\credentials\env_loader.py:164:4: [91mDC04[0m Method `[1mreload[0m` is never used
@@ -546,36 +477,6 @@ src\intellicrack\credentials\store.py:422:4: [91mDC04[0m Method `[1mlist_prov
 src\intellicrack\credentials\store.py:451:4: [91mDC04[0m Method `[1mmigrate_from_env[0m` is never used
 
 src\intellicrack\credentials\store.py:525:4: [91mDC04[0m Method `[1mget_source[0m` is never used
-
-
-6 findings in src\intellicrack\ui\embedding\hxd_widget.py
-
-src\intellicrack\ui\embedding\hxd_widget.py:215:4: [91mDC04[0m Method `[1mselect_range[0m` is never used
-
-src\intellicrack\ui\embedding\hxd_widget.py:234:4: [91mDC04[0m Method `[1mget_current_offset[0m` is never used
-
-src\intellicrack\ui\embedding\hxd_widget.py:242:4: [91mDC04[0m Method `[1mset_executable_path[0m` is never used
-
-src\intellicrack\ui\embedding\hxd_widget.py:309:4: [91mDC04[0m Method `[1mopen_at_offset[0m` is never used
-
-src\intellicrack\ui\embedding\hxd_widget.py:328:4: [91mDC04[0m Method `[1mget_standalone_pids[0m` is never used
-
-src\intellicrack\ui\embedding\hxd_widget.py:336:4: [91mDC04[0m Method `[1mcleanup_standalone[0m` is never used
-
-
-6 findings in src\intellicrack\ui\embedding\x64dbg_widget.py
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:196:4: [91mDC04[0m Method `[1mset_64bit[0m` is never used
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:219:4: [91mDC04[0m Method `[1mattach_to_bridge[0m` is never used
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:228:4: [91mDC04[0m Method `[1mget_bridge[0m` is never used
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:295:4: [91mDC04[0m Method `[1mattach_to_process[0m` is never used
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:446:4: [91mDC04[0m Method `[1mget_attached_pid[0m` is never used
-
-src\intellicrack\ui\embedding\x64dbg_widget.py:454:4: [91mDC04[0m Method `[1mset_install_directory[0m` is never used
 
 
 6 findings in src\intellicrack\ui\highlighter.py
@@ -658,13 +559,13 @@ src\intellicrack\sandbox\qemu.py:529:4: [91mDC04[0m Method `[1mget_pending_me
 
 4 findings in src\intellicrack\ui\panels\process_panel.py
 
-src\intellicrack\ui\panels\process_panel.py:293:8: [91mDC05[0m Attribute `[1m_process_mgr[0m` is never used
+src\intellicrack\ui\panels\process_panel.py:345:8: [91mDC05[0m Attribute `[1m_process_mgr[0m` is never used
 
-src\intellicrack\ui\panels\process_panel.py:394:4: [91mDC04[0m Method `[1mset_process_manager[0m` is never used
+src\intellicrack\ui\panels\process_panel.py:447:4: [91mDC04[0m Method `[1mset_process_manager[0m` is never used
 
-src\intellicrack\ui\panels\process_panel.py:400:8: [91mDC05[0m Attribute `[1m_process_mgr[0m` is never used
+src\intellicrack\ui\panels\process_panel.py:453:8: [91mDC05[0m Attribute `[1m_process_mgr[0m` is never used
 
-src\intellicrack\ui\panels\process_panel.py:554:4: [91mDC04[0m Method `[1mget_selected_pid[0m` is never used
+src\intellicrack\ui\panels\process_panel.py:632:4: [91mDC04[0m Method `[1mget_selected_pid[0m` is never used
 
 
 3 findings in src\intellicrack\core\config.py
@@ -676,40 +577,22 @@ src\intellicrack\core\config.py:577:4: [91mDC04[0m Method `[1mis_provider_ena
 src\intellicrack\core\config.py:589:4: [91mDC04[0m Method `[1mis_tool_enabled[0m` is never used
 
 
-3 findings in src\intellicrack\ui\embedding\embedded_widget.py
-
-src\intellicrack\ui\embedding\embedded_widget.py:183:8: [91mDC05[0m Attribute `[1mdwFlags[0m` is never used
-
-src\intellicrack\ui\embedding\embedded_widget.py:184:8: [91mDC05[0m Attribute `[1mwShowWindow[0m` is never used
-
-src\intellicrack\ui\embedding\embedded_widget.py:380:4: [91mDC04[0m Method `[1mget_loaded_file[0m` is never used
-
-
-3 findings in src\intellicrack\ui\embedding\radare2_widget.py
-
-src\intellicrack\ui\embedding\radare2_widget.py:190:4: [91mDC04[0m Method `[1msync_with_bridge[0m` is never used
-
-src\intellicrack\ui\embedding\radare2_widget.py:199:4: [91mDC04[0m Method `[1mget_bridge[0m` is never used
-
-src\intellicrack\ui\embedding\radare2_widget.py:254:4: [91mDC04[0m Method `[1mset_executable_path[0m` is never used
-
-
 3 findings in src\intellicrack\ui\panels\frida_panel.py
 
-src\intellicrack\ui\panels\frida_panel.py:251:4: [91mDC04[0m Method `[1mget_bridge[0m` is never used
+src\intellicrack\ui\panels\frida_panel.py:250:4: [91mDC04[0m Method `[1mget_bridge[0m` is never used
 
-src\intellicrack\ui\panels\frida_panel.py:259:4: [91mDC04[0m Method `[1mlog_message[0m` is never used
+src\intellicrack\ui\panels\frida_panel.py:258:4: [91mDC04[0m Method `[1mlog_message[0m` is never used
 
-src\intellicrack\ui\panels\frida_panel.py:402:4: [91mDC04[0m Method `[1madd_hook_entry[0m` is never used
+src\intellicrack\ui\panels\frida_panel.py:401:4: [91mDC04[0m Method `[1madd_hook_entry[0m` is never used
 
 
 3 findings in src\intellicrack\ui\panels\sandbox_panel.py
 
-src\intellicrack\ui\panels\sandbox_panel.py:207:4: [91mDC04[0m Method `[1mset_sandbox[0m` is never used
+src\intellicrack\ui\panels\sandbox_panel.py:206:4: [91mDC04[0m Method `[1mset_sandbox[0m` is never used
 
-src\intellicrack\ui\panels\sandbox_panel.py:216:4: [91mDC04[0m Method `[1mget_sandbox[0m` is never used
+src\intellicrack\ui\panels\sandbox_panel.py:215:4: [91mDC04[0m Method `[1mget_sandbox[0m` is never used
 
-src\intellicrack\ui\panels\sandbox_panel.py:399:4: [91mDC04[0m Method `[1mload_execution_report[0m` is never used
+src\intellicrack\ui\panels\sandbox_panel.py:398:4: [91mDC04[0m Method `[1mload_execution_report[0m` is never used
 
 
 3 findings in src\intellicrack\ui\resources\resource_helper.py
@@ -719,13 +602,6 @@ src\intellicrack\ui\resources\resource_helper.py:140:0: [91mDC02[0m Function `
 src\intellicrack\ui\resources\resource_helper.py:154:0: [91mDC02[0m Function `[1mget_style_path[0m` is never used
 
 src\intellicrack\ui\resources\resource_helper.py:168:0: [91mDC02[0m Function `[1mresource_exists[0m` is never used
-
-
-2 findings in src\intellicrack\providers\anthropic.py
-
-src\intellicrack\providers\anthropic.py:17:4: [91mDC07[0m Import `[1mMessageParam[0m` is never used
-
-src\intellicrack\providers\anthropic.py:19:4: [91mDC07[0m Import `[1mToolParam[0m` is never used
 
 
 2 findings in src\intellicrack\providers\grok.py
@@ -742,11 +618,32 @@ src\intellicrack\providers\openai.py:65:0: [91mDC03[0m Class `[1mOpenAIMessag
 src\intellicrack\providers\openai.py:71:4: [91mDC01[0m Variable `[1mtool_call_id[0m` is never used
 
 
+2 findings in src\intellicrack\ui\app.py
+
+src\intellicrack\ui\app.py:147:8: [91mDC05[0m Attribute `[1m_theme_manager[0m` is never used
+
+src\intellicrack\ui\app.py:170:8: [91mDC05[0m Attribute `[1mcloseEvent[0m` is never used
+
+
 2 findings in src\intellicrack\ui\panels\binary_panel.py
 
 src\intellicrack\ui\panels\binary_panel.py:535:4: [91mDC04[0m Method `[1mget_file_data[0m` is never used
 
 src\intellicrack\ui\panels\binary_panel.py:543:4: [91mDC04[0m Method `[1mget_patches[0m` is never used
+
+
+2 findings in src\intellicrack\ui\panels\ghidra_panel.py
+
+src\intellicrack\ui\panels\ghidra_panel.py:245:4: [91mDC04[0m Method `[1mget_bridge[0m` is never used
+
+src\intellicrack\ui\panels\ghidra_panel.py:504:4: [91mDC04[0m Method `[1mshow_xrefs[0m` is never used
+
+
+2 findings in src\intellicrack\ui\panels\radare2_panel.py
+
+src\intellicrack\ui\panels\radare2_panel.py:273:4: [91mDC04[0m Method `[1mget_bridge[0m` is never used
+
+src\intellicrack\ui\panels\radare2_panel.py:499:4: [91mDC04[0m Method `[1mshow_xrefs[0m` is never used
 
 
 2 findings in src\intellicrack\ui\provider_config.py
@@ -797,6 +694,11 @@ src\intellicrack\bridges\named_pipe_client.py:79:4: [91mDC04[0m Method `[1mse
 src\intellicrack\core\license_analyzer.py:1720:8: [91mDC05[0m Attribute `[1mdetail[0m` is never used
 
 
+1 findings in src\intellicrack\providers\anthropic.py
+
+src\intellicrack\providers\anthropic.py:18:4: [91mDC07[0m Import `[1mToolParam[0m` is never used
+
+
 1 findings in src\intellicrack\providers\xpu_utils.py
 
 src\intellicrack\providers\xpu_utils.py:578:0: [91mDC02[0m Function `[1mget_optimal_dtype_for_xpu[0m` is never used
@@ -805,11 +707,6 @@ src\intellicrack\providers\xpu_utils.py:578:0: [91mDC02[0m Function `[1mget_o
 1 findings in src\intellicrack\sandbox\manager.py
 
 src\intellicrack\sandbox\manager.py:357:4: [91mDC04[0m Method `[1mcleanup_stale[0m` is never used
-
-
-1 findings in src\intellicrack\ui\app.py
-
-src\intellicrack\ui\app.py:146:8: [91mDC05[0m Attribute `[1m_theme_manager[0m` is never used
 
 
 1 findings in src\intellicrack\ui\chat.py
@@ -824,12 +721,17 @@ src\intellicrack\ui\confirmation_dialog.py:75:4: [91mDC08[0m Property `[1mrem
 
 1 findings in src\intellicrack\ui\dialogs\splash_screen.py
 
-src\intellicrack\ui\dialogs\splash_screen.py:200:4: [91mDC04[0m Method `[1mshow_loading_step[0m` is never used
+src\intellicrack\ui\dialogs\splash_screen.py:325:4: [91mDC04[0m Method `[1mshow_loading_step[0m` is never used
 
 
 1 findings in src\intellicrack\ui\panels\licensing_panel.py
 
 src\intellicrack\ui\panels\licensing_panel.py:670:4: [91mDC04[0m Method `[1mget_current_analysis[0m` is never used
+
+
+1 findings in src\intellicrack\ui\panels\x64dbg_panel.py
+
+src\intellicrack\ui\panels\x64dbg_panel.py:376:4: [91mDC04[0m Method `[1mget_bridge[0m` is never used
 
 
 1 findings in src\intellicrack\ui\preferences.py

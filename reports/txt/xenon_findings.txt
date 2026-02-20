@@ -44,15 +44,6 @@ src\intellicrack\ui\session_manager.py:546: '_export_session' has rank C
 src\intellicrack\ui\session_manager.py:609: '_prepare_export_data' has rank C
 
 
-3 findings in src\intellicrack\providers\anthropic.py
-
-src\intellicrack\providers\anthropic.py:223: 'chat' has rank C
-
-src\intellicrack\providers\anthropic.py:352: 'chat_stream' has rank C
-
-src\intellicrack\providers\anthropic.py:446: '_convert_messages_to_provider_format' has rank C
-
-
 3 findings in src\intellicrack\providers\discovery.py
 
 src\intellicrack\providers\discovery.py:575: 'filter' has rank C
@@ -166,6 +157,13 @@ src\intellicrack\sandbox\windows.py:300: '_generate_wsb_config' has rank C
 src\intellicrack\sandbox\windows.py:547: 'run_binary' has rank C
 
 
+2 findings in src\intellicrack\ui\tools.py
+
+src\intellicrack\ui\tools.py:1410: '_on_tab_close_requested' has rank D
+
+src\intellicrack\ui\tools.py:1482: 'close_embedded_tools' has rank C
+
+
 2 findings in tests\test_core\test_license_analyzer.py
 
 tests\test_core\test_license_analyzer.py:693: 'TestLicensingAnalysisDataclass' has rank C
@@ -225,21 +223,6 @@ src\intellicrack\ui\sandbox_config.py:91: 'run' has rank C
 1 findings in src\intellicrack\ui\tool_config.py
 
 src\intellicrack\ui\tool_config.py:356: '_update_radare2_path' has rank C
-
-
-1 findings in src\intellicrack\ui\embedding\cutter_widget.py
-
-src\intellicrack\ui\embedding\cutter_widget.py:73: 'get_executable_path' has rank C
-
-
-1 findings in src\intellicrack\ui\embedding\hxd_widget.py
-
-src\intellicrack\ui\embedding\hxd_widget.py:70: 'get_executable_path' has rank C
-
-
-1 findings in src\intellicrack\ui\embedding\radare2_widget.py
-
-src\intellicrack\ui\embedding\radare2_widget.py:70: 'get_executable_path' has rank D
 
 
 1 findings in src\intellicrack\ui\panels\binary_panel.py

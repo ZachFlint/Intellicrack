@@ -1,70 +1,7 @@
 {
   "tool": "darglint",
-  "generated": "2026-02-08T21:24:57.814836",
-  "total_findings": 7,
-  "total_files": 1,
-  "files": [
-    {
-      "path": "src\\intellicrack\\ui\\app.py",
-      "count": 7,
-      "findings": [
-        {
-          "line": 284,
-          "column": null,
-          "function": "_setup_file_menu",
-          "code": "DAR401",
-          "message": "[_setup_file_menu] -r TypeError",
-          "raw": "src\\intellicrack\\ui\\app.py:_setup_file_menu:284: DAR401: -r TypeError"
-        },
-        {
-          "line": 305,
-          "column": null,
-          "function": "_setup_tools_menu",
-          "code": "DAR401",
-          "message": "[_setup_tools_menu] -r TypeError",
-          "raw": "src\\intellicrack\\ui\\app.py:_setup_tools_menu:305: DAR401: -r TypeError"
-        },
-        {
-          "line": 333,
-          "column": null,
-          "function": "_setup_providers_menu",
-          "code": "DAR401",
-          "message": "[_setup_providers_menu] -r TypeError",
-          "raw": "src\\intellicrack\\ui\\app.py:_setup_providers_menu:333: DAR401: -r TypeError"
-        },
-        {
-          "line": 347,
-          "column": null,
-          "function": "_setup_sandbox_menu",
-          "code": "DAR401",
-          "message": "[_setup_sandbox_menu] -r TypeError",
-          "raw": "src\\intellicrack\\ui\\app.py:_setup_sandbox_menu:347: DAR401: -r TypeError"
-        },
-        {
-          "line": 361,
-          "column": null,
-          "function": "_setup_settings_menu",
-          "code": "DAR401",
-          "message": "[_setup_settings_menu] -r TypeError",
-          "raw": "src\\intellicrack\\ui\\app.py:_setup_settings_menu:361: DAR401: -r TypeError"
-        },
-        {
-          "line": 374,
-          "column": null,
-          "function": "_setup_help_menu",
-          "code": "DAR401",
-          "message": "[_setup_help_menu] -r TypeError",
-          "raw": "src\\intellicrack\\ui\\app.py:_setup_help_menu:374: DAR401: -r TypeError"
-        },
-        {
-          "line": 387,
-          "column": null,
-          "function": "_setup_menus",
-          "code": "DAR401",
-          "message": "[_setup_menus] -r TypeError",
-          "raw": "src\\intellicrack\\ui\\app.py:_setup_menus:387: DAR401: -r TypeError"
-        }
-      ]
-    }
-  ]
+  "generated": "2026-02-20T14:10:56.562744",
+  "total_findings": 0,
+  "total_files": 0,
+  "files": []
 }

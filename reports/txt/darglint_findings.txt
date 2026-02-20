@@ -1,15 +1,1 @@
-7 findings in src\intellicrack\ui\app.py
-
-src\intellicrack\ui\app.py:_setup_file_menu:284: DAR401: -r TypeError
-
-src\intellicrack\ui\app.py:_setup_tools_menu:305: DAR401: -r TypeError
-
-src\intellicrack\ui\app.py:_setup_providers_menu:333: DAR401: -r TypeError
-
-src\intellicrack\ui\app.py:_setup_sandbox_menu:347: DAR401: -r TypeError
-
-src\intellicrack\ui\app.py:_setup_settings_menu:361: DAR401: -r TypeError
-
-src\intellicrack\ui\app.py:_setup_help_menu:374: DAR401: -r TypeError
-
-src\intellicrack\ui\app.py:_setup_menus:387: DAR401: -r TypeError
+No findings.

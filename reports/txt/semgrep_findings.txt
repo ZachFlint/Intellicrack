@@ -54,30 +54,6 @@ src\intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp: [error] Sy
 // |_____|_____|_____|_|___|  https://github.com/... (truncated 960680 more characters)
 
 
-1 findings in src\intellicrack\bridges\x64dbg.py
-
-src\intellicrack\bridges\x64dbg.py: [error] Timeout when running python.lang.hardcoded.headers.hardcoded-basic-token.hardcoded-basic-token on src\intellicrack\bridges\x64dbg.py:
- 
-
-
-1 findings in src\intellicrack\core\license_analyzer.py
-
-src\intellicrack\core\license_analyzer.py: [error] Timeout when running python.lang.hardcoded.headers.hardcoded-basic-token.hardcoded-basic-token on src\intellicrack\core\license_analyzer.py:
- 
-
-
-1 findings in src\intellicrack\ui\highlighter.py
-
-src\intellicrack\ui\highlighter.py: [error] Timeout when running python.lang.hardcoded.headers.hardcoded-basic-token.hardcoded-basic-token on src\intellicrack\ui\highlighter.py:
- 
-
-
-1 findings in src\intellicrack\ui\provider_config.py
-
-src\intellicrack\ui\provider_config.py: [error] Timeout when running python.lang.hardcoded.headers.hardcoded-basic-token.hardcoded-basic-token on src\intellicrack\ui\provider_config.py:
- 
-
-
 1 findings in src\intellicrack\plugins\x64dbg_plugin\intellicrack_x64dbg.cpp
 
 src\intellicrack\plugins\x64dbg_plugin\intellicrack_x64dbg.cpp: [error] Syntax error at line src\intellicrack\plugins\x64dbg_plugin\intellicrack_x64dbg.cpp:33:

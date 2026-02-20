@@ -6,7 +6,6 @@ snapshot management, and execution report viewing.
 
 from __future__ import annotations
 
-import contextlib
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -461,7 +460,9 @@ class SandboxPanel(QWidget):
         """
         self._status_poll_timer.stop()
         if self._sandbox is not None and self._sandbox_id is not None:
-            with contextlib.suppress(Exception):
+            try:
                 run_bridge_coroutine(self._sandbox.stop())
+            except Exception:
+                _logger.debug("sandbox_stop_skipped")
         self.tool_closed.emit()
         return True

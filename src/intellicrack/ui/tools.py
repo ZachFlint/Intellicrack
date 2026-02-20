@@ -718,26 +718,8 @@ class ToolOutputPanel(QFrame):
 
         self._tab_widget = QTabWidget()
         self._tab_widget.setObjectName("analysis_tabs")
-
-        ghidra_tab = ToolTab("Ghidra", "c")
-        self._tabs["ghidra"] = ghidra_tab
-        self._tab_widget.addTab(ghidra_tab, "Ghidra")
-
-        frida_tab = ToolTab("Frida", "javascript")
-        self._tabs["frida"] = frida_tab
-        self._tab_widget.addTab(frida_tab, "Frida")
-
-        r2_tab = ToolTab("radare2", "asm")
-        self._tabs["radare2"] = r2_tab
-        self._tab_widget.addTab(r2_tab, "radare2")
-
-        x64dbg_tab = ToolTab("x64dbg", "asm")
-        self._tabs["x64dbg"] = x64dbg_tab
-        self._tab_widget.addTab(x64dbg_tab, "x64dbg")
-
-        log_tab = ToolTab("Log", "python")
-        self._tabs["log"] = log_tab
-        self._tab_widget.addTab(log_tab, "Log")
+        self._tab_widget.setTabsClosable(True)
+        self._tab_widget.tabCloseRequested.connect(self._on_tab_close_requested)
 
         left_layout.addWidget(self._tab_widget)
         self._main_splitter.addWidget(left_panel)
@@ -857,9 +839,15 @@ class ToolOutputPanel(QFrame):
     def log(self, message: str) -> None:
         """Append a message to the log tab.
 
+        Creates the Log tab on-demand if it does not already exist.
+
         Args:
             message: Message to log.
         """
+        if "log" not in self._tabs:
+            log_tab = ToolTab("Log", "python")
+            self._tabs["log"] = log_tab
+            self._tab_widget.addTab(log_tab, "Log")
         self.append_tab_content("log", message)
 
     def clear_tab(self, tab_name: OutputType) -> None:
@@ -893,6 +881,11 @@ class ToolOutputPanel(QFrame):
         self._process_panel: ProcessPanelProtocol | None = None
         self._binary_panel: BinaryPanelProtocol | None = None
         self._sandbox_panel: SandboxPanelProtocol | None = None
+
+        self._x64dbg_bridge: object | None = None
+        self._ghidra_bridge: object | None = None
+        self._radare2_bridge: object | None = None
+        self._frida_bridge: object | None = None
 
     def add_licensing_panel(self) -> LicensingAnalysisPanel:
         """Add the licensing analysis panel as a tab.
@@ -992,6 +985,16 @@ class ToolOutputPanel(QFrame):
             tab_name = "x64dbg" if is_64bit else "x32dbg"
             self._tab_widget.addTab(qwidget, tab_name)
             self._embedded_tools["x64dbg"] = qwidget
+
+            try:
+                bridge_module = importlib.import_module("intellicrack.bridges.x64dbg")
+                bridge = bridge_module.X64DbgBridge()
+                self._x64dbg_widget.set_bridge(bridge)
+                self._x64dbg_bridge = bridge
+                _logger.info("x64dbg_bridge_set")
+            except Exception as bridge_err:
+                _logger.warning("x64dbg_bridge_set_failed", extra={"error": str(bridge_err)})
+
             _logger.info("x64dbg_tab_added", extra={"is_64bit": is_64bit})
         except Exception as e:
             _logger.warning("x64dbg_tab_add_failed", extra={"error": str(e)})
@@ -1034,6 +1037,16 @@ class ToolOutputPanel(QFrame):
             self._ghidra_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("ghidra"))
             self._tab_widget.addTab(qwidget, "Ghidra")
             self._embedded_tools["ghidra"] = qwidget
+
+            try:
+                bridge_module = importlib.import_module("intellicrack.bridges.ghidra")
+                bridge = bridge_module.GhidraBridge()
+                self._ghidra_widget.set_bridge(bridge)
+                self._ghidra_bridge = bridge
+                _logger.info("ghidra_bridge_set")
+            except Exception as bridge_err:
+                _logger.warning("ghidra_bridge_set_failed", extra={"error": str(bridge_err)})
+
             _logger.info("ghidra_tab_added")
         except Exception as e:
             _logger.warning("ghidra_tab_add_failed", extra={"error": str(e)})
@@ -1059,6 +1072,16 @@ class ToolOutputPanel(QFrame):
             self._radare2_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("radare2"))
             self._tab_widget.addTab(qwidget, "radare2")
             self._embedded_tools["radare2"] = qwidget
+
+            try:
+                bridge_module = importlib.import_module("intellicrack.bridges.radare2")
+                bridge = bridge_module.Radare2Bridge()
+                self._radare2_widget.set_bridge(bridge)
+                self._radare2_bridge = bridge
+                _logger.info("radare2_bridge_set")
+            except Exception as bridge_err:
+                _logger.warning("radare2_bridge_set_failed", extra={"error": str(bridge_err)})
+
             _logger.info("radare2_tab_added")
         except Exception as e:
             _logger.warning("radare2_tab_add_failed", extra={"error": str(e)})
@@ -1084,6 +1107,16 @@ class ToolOutputPanel(QFrame):
             self._frida_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("frida"))
             self._tab_widget.addTab(qwidget, "Frida")
             self._panels["frida"] = qwidget
+
+            try:
+                bridge_module = importlib.import_module("intellicrack.bridges.frida_bridge")
+                bridge = bridge_module.FridaBridge()
+                self._frida_panel.set_bridge(bridge)
+                self._frida_bridge = bridge
+                _logger.info("frida_bridge_set")
+            except Exception as bridge_err:
+                _logger.warning("frida_bridge_set_failed", extra={"error": str(bridge_err)})
+
             _logger.info("frida_tab_added")
         except Exception as e:
             _logger.warning("frida_tab_add_failed", extra={"error": str(e)})
@@ -1374,33 +1407,132 @@ class ToolOutputPanel(QFrame):
         if self._stack_panel is not None:
             self._activate_tab_by_widget(self._stack_panel)
 
+    def _on_tab_close_requested(self, index: int) -> None:
+        """Handle a tab close request.
+
+        Identifies the widget at the given tab index, stops any associated
+        tool/bridge, removes it from tracking dicts, and frees Qt resources.
+
+        Args:
+            index: Tab index to close.
+        """
+        widget = self._tab_widget.widget(index)
+        if widget is None:
+            return
+
+        panel_registry: tuple[tuple[str, str | None], ...] = (
+            ("_ghidra_widget", "_ghidra_bridge"),
+            ("_radare2_widget", "_radare2_bridge"),
+            ("_x64dbg_widget", "_x64dbg_bridge"),
+            ("_hxd_widget", None),
+            ("_cutter_widget", "_radare2_bridge"),
+            ("_frida_panel", "_frida_bridge"),
+            ("_process_panel", None),
+            ("_binary_panel", None),
+            ("_sandbox_panel", None),
+            ("_licensing_panel", None),
+            ("_script_panel", None),
+            ("_stack_panel", None),
+        )
+
+        widget_id = id(widget)
+        matched_attrs: list[tuple[str, str | None]] = []
+        for attr_name, bridge_attr in panel_registry:
+            ref = getattr(self, attr_name, None)
+            if ref is not None and id(ref) == widget_id:
+                matched_attrs.append((attr_name, bridge_attr))
+
+        if matched_attrs:
+            stopped = False
+            for attr_name, bridge_attr in matched_attrs:
+                ref = getattr(self, attr_name)
+                if not stopped and hasattr(ref, "stop_tool"):
+                    ref.stop_tool()
+                    stopped = True
+
+                if bridge_attr is not None:
+                    bridge = getattr(self, bridge_attr, None)
+                    if bridge is not None:
+                        for method in ("detach", "shutdown", "stop"):
+                            if hasattr(bridge, method):
+                                try:
+                                    getattr(bridge, method)()
+                                except Exception:
+                                    _logger.debug(
+                                        "bridge_cleanup_error",
+                                        extra={"bridge": bridge_attr, "method": method},
+                                    )
+                        setattr(self, bridge_attr, None)
+
+                setattr(self, attr_name, None)
+
+            for tracking_dict in (self._embedded_tools, self._panels):
+                keys_to_remove = [k for k, v in tracking_dict.items() if id(v) == widget_id]
+                for k in keys_to_remove:
+                    del tracking_dict[k]
+        else:
+            keys_to_remove = [k for k, v in self._tabs.items() if id(v) == widget_id]
+            for k in keys_to_remove:
+                del self._tabs[k]
+
+        self._tab_widget.removeTab(index)
+        widget.deleteLater()
+        _logger.debug("tab_closed", extra={"tab_index": index})
+
     def close_embedded_tools(self) -> None:
-        """Close all embedded tool instances."""
+        """Close all embedded tool instances and null their references."""
         if self._hxd_widget is not None:
             self._hxd_widget.stop_tool()
+            self._hxd_widget = None
 
         if self._x64dbg_widget is not None:
             self._x64dbg_widget.stop_tool()
+            self._x64dbg_widget = None
 
         if self._cutter_widget is not None:
             self._cutter_widget.stop_tool()
+            self._cutter_widget = None
 
         if self._ghidra_widget is not None:
             self._ghidra_widget.stop_tool()
+            self._ghidra_widget = None
 
         if self._radare2_widget is not None:
             self._radare2_widget.stop_tool()
+            self._radare2_widget = None
 
         if self._frida_panel is not None:
             self._frida_panel.stop_tool()
+            self._frida_panel = None
 
         if self._process_panel is not None:
             self._process_panel.stop_tool()
+            self._process_panel = None
 
         if self._binary_panel is not None:
             self._binary_panel.stop_tool()
+            self._binary_panel = None
 
         if self._sandbox_panel is not None:
             self._sandbox_panel.stop_tool()
+            self._sandbox_panel = None
+
+        if self._licensing_panel is not None:
+            self._licensing_panel = None
+
+        if self._script_panel is not None:
+            self._script_panel = None
+
+        if self._stack_panel is not None:
+            self._stack_panel = None
+
+        for attr_name in ("_x64dbg_bridge", "_ghidra_bridge", "_radare2_bridge", "_frida_bridge"):
+            if getattr(self, attr_name, None) is not None:
+                setattr(self, attr_name, None)
+                _logger.debug("bridge_reference_released", extra={"bridge": attr_name})
+
+        self._embedded_tools.clear()
+        self._panels.clear()
+        self._tabs.clear()
 
         _logger.info("embedded_tools_closed")

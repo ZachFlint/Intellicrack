@@ -107,5 +107,8 @@
     "type": "command",
     "command": "node D:/Intellicrack/.claude/statusline.cjs"
   },
-  "outputStyle": "Intellicrack-Developer"
+  "outputStyle": "Intellicrack-Developer",
+  "enabledPlugins": {
+    "context7@claude-plugins-official": true
+  }
 }

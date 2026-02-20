@@ -1,7 +1,296 @@
 {
   "tool": "basedpyright",
-  "generated": "2026-02-08T21:24:21.183576",
-  "total_findings": 0,
-  "total_files": 0,
-  "files": []
+  "generated": "2026-02-20T14:10:12.555020",
+  "total_findings": 33,
+  "total_files": 4,
+  "files": [
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py",
+      "count": 14,
+      "findings": [
+        {
+          "line": 193,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"setSelectionMode\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:193:9: [error] Type of \"setSelectionMode\" is unknown"
+        },
+        {
+          "line": 193,
+          "column": 26,
+          "severity": "error",
+          "rule": "reportAttributeAccessIssue",
+          "message": "Cannot access attribute \"setSelectionMode\" for class \"QTreeWidget\"\n\u00a0\u00a0Attribute \"setSelectionMode\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:193:26: [error] Cannot access attribute \"setSelectionMode\" for class \"QTreeWidget\"\n\u00a0\u00a0Attribute \"setSelectionMode\" is unknown"
+        },
+        {
+          "line": 193,
+          "column": 43,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"SelectionMode\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:193:43: [error] Type of \"SelectionMode\" is unknown"
+        },
+        {
+          "line": 193,
+          "column": 43,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"SingleSelection\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:193:43: [error] Type of \"SingleSelection\" is unknown"
+        },
+        {
+          "line": 193,
+          "column": 55,
+          "severity": "error",
+          "rule": "reportAttributeAccessIssue",
+          "message": "Cannot access attribute \"SelectionMode\" for class \"type[QTreeWidget]\"\n\u00a0\u00a0Attribute \"SelectionMode\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:193:55: [error] Cannot access attribute \"SelectionMode\" for class \"type[QTreeWidget]\"\n\u00a0\u00a0Attribute \"SelectionMode\" is unknown"
+        },
+        {
+          "line": 229,
+          "column": 29,
+          "severity": "error",
+          "rule": "reportArgumentType",
+          "message": "Argument of type \"QTreeWidget\" cannot be assigned to parameter \"table\" of type \"QTableWidget\" in function \"set_sorting_enabled\"\n\u00a0\u00a0\"QTreeWidget\" is not assignable to \"QTableWidget\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:229:29: [error] Argument of type \"QTreeWidget\" cannot be assigned to parameter \"table\" of type \"QTableWidget\" in function \"set_sorting_enabled\"\n\u00a0\u00a0\"QTreeWidget\" is not assignable to \"QTableWidget\""
+        },
+        {
+          "line": 230,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"setSelectionMode\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:230:9: [error] Type of \"setSelectionMode\" is unknown"
+        },
+        {
+          "line": 230,
+          "column": 25,
+          "severity": "error",
+          "rule": "reportAttributeAccessIssue",
+          "message": "Cannot access attribute \"setSelectionMode\" for class \"QTreeWidget\"\n\u00a0\u00a0Attribute \"setSelectionMode\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:230:25: [error] Cannot access attribute \"setSelectionMode\" for class \"QTreeWidget\"\n\u00a0\u00a0Attribute \"setSelectionMode\" is unknown"
+        },
+        {
+          "line": 230,
+          "column": 42,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"SelectionMode\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:230:42: [error] Type of \"SelectionMode\" is unknown"
+        },
+        {
+          "line": 230,
+          "column": 42,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"SingleSelection\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:230:42: [error] Type of \"SingleSelection\" is unknown"
+        },
+        {
+          "line": 230,
+          "column": 54,
+          "severity": "error",
+          "rule": "reportAttributeAccessIssue",
+          "message": "Cannot access attribute \"SelectionMode\" for class \"type[QTreeWidget]\"\n\u00a0\u00a0Attribute \"SelectionMode\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:230:54: [error] Cannot access attribute \"SelectionMode\" for class \"type[QTreeWidget]\"\n\u00a0\u00a0Attribute \"SelectionMode\" is unknown"
+        },
+        {
+          "line": 383,
+          "column": 29,
+          "severity": "error",
+          "rule": "reportArgumentType",
+          "message": "Argument of type \"QTreeWidget\" cannot be assigned to parameter \"table\" of type \"QTableWidget\" in function \"set_sorting_enabled\"\n\u00a0\u00a0\"QTreeWidget\" is not assignable to \"QTableWidget\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:383:29: [error] Argument of type \"QTreeWidget\" cannot be assigned to parameter \"table\" of type \"QTableWidget\" in function \"set_sorting_enabled\"\n\u00a0\u00a0\"QTreeWidget\" is not assignable to \"QTableWidget\""
+        },
+        {
+          "line": 395,
+          "column": 29,
+          "severity": "error",
+          "rule": "reportArgumentType",
+          "message": "Argument of type \"QTreeWidget\" cannot be assigned to parameter \"table\" of type \"QTableWidget\" in function \"set_sorting_enabled\"\n\u00a0\u00a0\"QTreeWidget\" is not assignable to \"QTableWidget\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:395:29: [error] Argument of type \"QTreeWidget\" cannot be assigned to parameter \"table\" of type \"QTableWidget\" in function \"set_sorting_enabled\"\n\u00a0\u00a0\"QTreeWidget\" is not assignable to \"QTableWidget\""
+        },
+        {
+          "line": 474,
+          "column": 86,
+          "severity": "error",
+          "rule": "reportUnnecessaryComparison",
+          "message": "Condition will always evaluate to True since the types \"int\" and \"None\" have no overlap",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:474:86: [error] Condition will always evaluate to True since the types \"int\" and \"None\" have no overlap"
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py",
+      "count": 13,
+      "findings": [
+        {
+          "line": 221,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"setSelectionMode\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:221:9: [error] Type of \"setSelectionMode\" is unknown"
+        },
+        {
+          "line": 221,
+          "column": 26,
+          "severity": "error",
+          "rule": "reportAttributeAccessIssue",
+          "message": "Cannot access attribute \"setSelectionMode\" for class \"QTreeWidget\"\n\u00a0\u00a0Attribute \"setSelectionMode\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:221:26: [error] Cannot access attribute \"setSelectionMode\" for class \"QTreeWidget\"\n\u00a0\u00a0Attribute \"setSelectionMode\" is unknown"
+        },
+        {
+          "line": 221,
+          "column": 43,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"SelectionMode\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:221:43: [error] Type of \"SelectionMode\" is unknown"
+        },
+        {
+          "line": 221,
+          "column": 43,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"SingleSelection\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:221:43: [error] Type of \"SingleSelection\" is unknown"
+        },
+        {
+          "line": 221,
+          "column": 55,
+          "severity": "error",
+          "rule": "reportAttributeAccessIssue",
+          "message": "Cannot access attribute \"SelectionMode\" for class \"type[QTreeWidget]\"\n\u00a0\u00a0Attribute \"SelectionMode\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:221:55: [error] Cannot access attribute \"SelectionMode\" for class \"type[QTreeWidget]\"\n\u00a0\u00a0Attribute \"SelectionMode\" is unknown"
+        },
+        {
+          "line": 257,
+          "column": 29,
+          "severity": "error",
+          "rule": "reportArgumentType",
+          "message": "Argument of type \"QTreeWidget\" cannot be assigned to parameter \"table\" of type \"QTableWidget\" in function \"set_sorting_enabled\"\n\u00a0\u00a0\"QTreeWidget\" is not assignable to \"QTableWidget\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:257:29: [error] Argument of type \"QTreeWidget\" cannot be assigned to parameter \"table\" of type \"QTableWidget\" in function \"set_sorting_enabled\"\n\u00a0\u00a0\"QTreeWidget\" is not assignable to \"QTableWidget\""
+        },
+        {
+          "line": 258,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"setSelectionMode\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:258:9: [error] Type of \"setSelectionMode\" is unknown"
+        },
+        {
+          "line": 258,
+          "column": 25,
+          "severity": "error",
+          "rule": "reportAttributeAccessIssue",
+          "message": "Cannot access attribute \"setSelectionMode\" for class \"QTreeWidget\"\n\u00a0\u00a0Attribute \"setSelectionMode\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:258:25: [error] Cannot access attribute \"setSelectionMode\" for class \"QTreeWidget\"\n\u00a0\u00a0Attribute \"setSelectionMode\" is unknown"
+        },
+        {
+          "line": 258,
+          "column": 42,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"SelectionMode\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:258:42: [error] Type of \"SelectionMode\" is unknown"
+        },
+        {
+          "line": 258,
+          "column": 42,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"SingleSelection\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:258:42: [error] Type of \"SingleSelection\" is unknown"
+        },
+        {
+          "line": 258,
+          "column": 54,
+          "severity": "error",
+          "rule": "reportAttributeAccessIssue",
+          "message": "Cannot access attribute \"SelectionMode\" for class \"type[QTreeWidget]\"\n\u00a0\u00a0Attribute \"SelectionMode\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:258:54: [error] Cannot access attribute \"SelectionMode\" for class \"type[QTreeWidget]\"\n\u00a0\u00a0Attribute \"SelectionMode\" is unknown"
+        },
+        {
+          "line": 379,
+          "column": 29,
+          "severity": "error",
+          "rule": "reportArgumentType",
+          "message": "Argument of type \"QTreeWidget\" cannot be assigned to parameter \"table\" of type \"QTableWidget\" in function \"set_sorting_enabled\"\n\u00a0\u00a0\"QTreeWidget\" is not assignable to \"QTableWidget\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:379:29: [error] Argument of type \"QTreeWidget\" cannot be assigned to parameter \"table\" of type \"QTableWidget\" in function \"set_sorting_enabled\"\n\u00a0\u00a0\"QTreeWidget\" is not assignable to \"QTableWidget\""
+        },
+        {
+          "line": 391,
+          "column": 29,
+          "severity": "error",
+          "rule": "reportArgumentType",
+          "message": "Argument of type \"QTreeWidget\" cannot be assigned to parameter \"table\" of type \"QTableWidget\" in function \"set_sorting_enabled\"\n\u00a0\u00a0\"QTreeWidget\" is not assignable to \"QTableWidget\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:391:29: [error] Argument of type \"QTreeWidget\" cannot be assigned to parameter \"table\" of type \"QTableWidget\" in function \"set_sorting_enabled\"\n\u00a0\u00a0\"QTreeWidget\" is not assignable to \"QTableWidget\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\providers\\anthropic.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 294,
+          "column": 35,
+          "severity": "error",
+          "rule": "reportUnnecessaryCast",
+          "message": "Unnecessary \"cast\" call; type is already \"Dict[str, object]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\providers\\anthropic.py:294:35: [error] Unnecessary \"cast\" call; type is already \"Dict[str, object]\""
+        },
+        {
+          "line": 361,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Type of \"response\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\providers\\anthropic.py:361:13: [error] Type of \"response\" is unknown"
+        },
+        {
+          "line": 363,
+          "column": 63,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"response\" in function \"_parse_response_blocks\"\n\u00a0\u00a0Argument type is \"Unknown | Message\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\providers\\anthropic.py:363:63: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"response\" in function \"_parse_response_blocks\"\n\u00a0\u00a0Argument type is \"Unknown | Message\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\x64dbg_panel.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 235,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"cellChanged\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\x64dbg_panel.py:235:9: [error] Type of \"cellChanged\" is unknown"
+        },
+        {
+          "line": 235,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\x64dbg_panel.py:235:9: [error] Type of \"connect\" is unknown"
+        },
+        {
+          "line": 235,
+          "column": 25,
+          "severity": "error",
+          "rule": "reportAttributeAccessIssue",
+          "message": "Cannot access attribute \"cellChanged\" for class \"QTableWidget\"\n\u00a0\u00a0Attribute \"cellChanged\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\x64dbg_panel.py:235:25: [error] Cannot access attribute \"cellChanged\" for class \"QTableWidget\"\n\u00a0\u00a0Attribute \"cellChanged\" is unknown"
+        }
+      ]
+    }
+  ]
 }

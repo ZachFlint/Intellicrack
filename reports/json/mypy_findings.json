@@ -1,8 +1,8 @@
 {
   "tool": "mypy",
-  "generated": "2026-02-08T21:25:24.874568",
-  "total_findings": 176,
-  "total_files": 35,
+  "generated": "2026-02-20T14:11:17.910884",
+  "total_findings": 230,
+  "total_files": 40,
   "files": [
     {
       "path": "src\\intellicrack\\bridges\\radare2.py",
@@ -267,6 +267,148 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\panels\\radare2_panel.py",
+      "count": 17,
+      "findings": [
+        {
+          "line": 90,
+          "column": null,
+          "severity": "error",
+          "code": "call-overload",
+          "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:90: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+        },
+        {
+          "line": 90,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Possible overload variants:",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:90: note: Possible overload variants:"
+        },
+        {
+          "line": 90,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:90: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+        },
+        {
+          "line": 90,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:90: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+        },
+        {
+          "line": 92,
+          "column": null,
+          "severity": "error",
+          "code": "call-overload",
+          "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:92: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+        },
+        {
+          "line": 92,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Possible overload variants:",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:92: note: Possible overload variants:"
+        },
+        {
+          "line": 92,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:92: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+        },
+        {
+          "line": 92,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:92: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+        },
+        {
+          "line": 195,
+          "column": null,
+          "severity": "error",
+          "code": "union-attr",
+          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:195: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+        },
+        {
+          "line": 202,
+          "column": null,
+          "severity": "error",
+          "code": "union-attr",
+          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:202: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+        },
+        {
+          "line": 209,
+          "column": null,
+          "severity": "error",
+          "code": "union-attr",
+          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:209: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+        },
+        {
+          "line": 216,
+          "column": null,
+          "severity": "error",
+          "code": "union-attr",
+          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:216: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+        },
+        {
+          "line": 257,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 1 to \"set_sorting_enabled\" has incompatible type \"QTreeWidget\"; expected \"QTableWidget\"",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:257: error: Argument 1 to \"set_sorting_enabled\" has incompatible type \"QTreeWidget\"; expected \"QTableWidget\"  [arg-type]"
+        },
+        {
+          "line": 379,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 1 to \"set_sorting_enabled\" has incompatible type \"QTreeWidget\"; expected \"QTableWidget\"",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:379: error: Argument 1 to \"set_sorting_enabled\" has incompatible type \"QTreeWidget\"; expected \"QTableWidget\"  [arg-type]"
+        },
+        {
+          "line": 388,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 3 to \"tree_item_set_data\" has incompatible type \"int\"; expected \"ItemDataRole\"",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:388: error: Argument 3 to \"tree_item_set_data\" has incompatible type \"int\"; expected \"ItemDataRole\"  [arg-type]"
+        },
+        {
+          "line": 391,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 1 to \"set_sorting_enabled\" has incompatible type \"QTreeWidget\"; expected \"QTableWidget\"",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:391: error: Argument 1 to \"set_sorting_enabled\" has incompatible type \"QTreeWidget\"; expected \"QTableWidget\"  [arg-type]"
+        },
+        {
+          "line": 410,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 3 to \"tree_item_data\" has incompatible type \"int\"; expected \"ItemDataRole\"",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:410: error: Argument 3 to \"tree_item_data\" has incompatible type \"int\"; expected \"ItemDataRole\"  [arg-type]"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\session_manager.py",
       "count": 16,
       "findings": [
@@ -397,6 +539,250 @@
           "code": "union-attr",
           "message": "Item \"None\" of \"Any | None\" has no attribute \"selectedRows\"",
           "raw": "src\\intellicrack\\ui\\session_manager.py:761: error: Item \"None\" of \"Any | None\" has no attribute \"selectedRows\"  [union-attr]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py",
+      "count": 16,
+      "findings": [
+        {
+          "line": 86,
+          "column": null,
+          "severity": "error",
+          "code": "call-overload",
+          "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:86: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+        },
+        {
+          "line": 86,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Possible overload variants:",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:86: note: Possible overload variants:"
+        },
+        {
+          "line": 86,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:86: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+        },
+        {
+          "line": 86,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:86: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+        },
+        {
+          "line": 88,
+          "column": null,
+          "severity": "error",
+          "code": "call-overload",
+          "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:88: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+        },
+        {
+          "line": 88,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Possible overload variants:",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:88: note: Possible overload variants:"
+        },
+        {
+          "line": 88,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:88: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+        },
+        {
+          "line": 88,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:88: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+        },
+        {
+          "line": 174,
+          "column": null,
+          "severity": "error",
+          "code": "union-attr",
+          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:174: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+        },
+        {
+          "line": 181,
+          "column": null,
+          "severity": "error",
+          "code": "union-attr",
+          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:181: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+        },
+        {
+          "line": 188,
+          "column": null,
+          "severity": "error",
+          "code": "union-attr",
+          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:188: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+        },
+        {
+          "line": 229,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 1 to \"set_sorting_enabled\" has incompatible type \"QTreeWidget\"; expected \"QTableWidget\"",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:229: error: Argument 1 to \"set_sorting_enabled\" has incompatible type \"QTreeWidget\"; expected \"QTableWidget\"  [arg-type]"
+        },
+        {
+          "line": 383,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 1 to \"set_sorting_enabled\" has incompatible type \"QTreeWidget\"; expected \"QTableWidget\"",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:383: error: Argument 1 to \"set_sorting_enabled\" has incompatible type \"QTreeWidget\"; expected \"QTableWidget\"  [arg-type]"
+        },
+        {
+          "line": 392,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 3 to \"tree_item_set_data\" has incompatible type \"int\"; expected \"ItemDataRole\"",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:392: error: Argument 3 to \"tree_item_set_data\" has incompatible type \"int\"; expected \"ItemDataRole\"  [arg-type]"
+        },
+        {
+          "line": 395,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 1 to \"set_sorting_enabled\" has incompatible type \"QTreeWidget\"; expected \"QTableWidget\"",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:395: error: Argument 1 to \"set_sorting_enabled\" has incompatible type \"QTreeWidget\"; expected \"QTableWidget\"  [arg-type]"
+        },
+        {
+          "line": 414,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 3 to \"tree_item_data\" has incompatible type \"int\"; expected \"ItemDataRole\"",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:414: error: Argument 3 to \"tree_item_data\" has incompatible type \"int\"; expected \"ItemDataRole\"  [arg-type]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py",
+      "count": 13,
+      "findings": [
+        {
+          "line": 105,
+          "column": null,
+          "severity": "error",
+          "code": "call-overload",
+          "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
+          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:105: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+        },
+        {
+          "line": 105,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Possible overload variants:",
+          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:105: note: Possible overload variants:"
+        },
+        {
+          "line": 105,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
+          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:105: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+        },
+        {
+          "line": 105,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
+          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:105: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+        },
+        {
+          "line": 107,
+          "column": null,
+          "severity": "error",
+          "code": "call-overload",
+          "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
+          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:107: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+        },
+        {
+          "line": 107,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Possible overload variants:",
+          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:107: note: Possible overload variants:"
+        },
+        {
+          "line": 107,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
+          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:107: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+        },
+        {
+          "line": 107,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
+          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:107: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+        },
+        {
+          "line": 234,
+          "column": null,
+          "severity": "error",
+          "code": "union-attr",
+          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
+          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:234: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+        },
+        {
+          "line": 242,
+          "column": null,
+          "severity": "error",
+          "code": "union-attr",
+          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
+          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:242: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+        },
+        {
+          "line": 249,
+          "column": null,
+          "severity": "error",
+          "code": "union-attr",
+          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
+          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:249: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+        },
+        {
+          "line": 256,
+          "column": null,
+          "severity": "error",
+          "code": "union-attr",
+          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
+          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:256: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+        },
+        {
+          "line": 302,
+          "column": null,
+          "severity": "error",
+          "code": "union-attr",
+          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
+          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:302: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
         }
       ]
     },
@@ -711,84 +1097,84 @@
       "count": 10,
       "findings": [
         {
-          "line": 338,
+          "line": 370,
           "column": null,
           "severity": "error",
           "code": "union-attr",
           "message": "Item \"None\" of \"QTextDocument | None\" has no attribute \"findBlockByLineNumber\"",
-          "raw": "src\\intellicrack\\ui\\tools.py:338: error: Item \"None\" of \"QTextDocument | None\" has no attribute \"findBlockByLineNumber\"  [union-attr]"
+          "raw": "src\\intellicrack\\ui\\tools.py:370: error: Item \"None\" of \"QTextDocument | None\" has no attribute \"findBlockByLineNumber\"  [union-attr]"
         },
         {
-          "line": 377,
+          "line": 409,
           "column": null,
           "severity": "error",
           "code": "call-overload",
           "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
-          "raw": "src\\intellicrack\\ui\\tools.py:377: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+          "raw": "src\\intellicrack\\ui\\tools.py:409: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
         },
         {
-          "line": 377,
+          "line": 409,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "Possible overload variants:",
-          "raw": "src\\intellicrack\\ui\\tools.py:377: note: Possible overload variants:"
+          "raw": "src\\intellicrack\\ui\\tools.py:409: note: Possible overload variants:"
         },
         {
-          "line": 377,
+          "line": 409,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\tools.py:377: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\tools.py:409: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 377,
+          "line": 409,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\tools.py:377: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\tools.py:409: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 399,
+          "line": 431,
           "column": null,
           "severity": "error",
           "code": "arg-type",
           "message": "Argument 1 to \"setTextInteractionFlags\" of \"QLabel\" has incompatible type \"int\"; expected \"TextInteractionFlag\"",
-          "raw": "src\\intellicrack\\ui\\tools.py:399: error: Argument 1 to \"setTextInteractionFlags\" of \"QLabel\" has incompatible type \"int\"; expected \"TextInteractionFlag\"  [arg-type]"
+          "raw": "src\\intellicrack\\ui\\tools.py:431: error: Argument 1 to \"setTextInteractionFlags\" of \"QLabel\" has incompatible type \"int\"; expected \"TextInteractionFlag\"  [arg-type]"
         },
         {
-          "line": 680,
+          "line": 712,
           "column": null,
           "severity": "error",
           "code": "call-overload",
           "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
-          "raw": "src\\intellicrack\\ui\\tools.py:680: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+          "raw": "src\\intellicrack\\ui\\tools.py:712: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
         },
         {
-          "line": 680,
+          "line": 712,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "Possible overload variants:",
-          "raw": "src\\intellicrack\\ui\\tools.py:680: note: Possible overload variants:"
+          "raw": "src\\intellicrack\\ui\\tools.py:712: note: Possible overload variants:"
         },
         {
-          "line": 680,
+          "line": 712,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\tools.py:680: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\tools.py:712: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 680,
+          "line": 712,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\tools.py:680: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\tools.py:712: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
         }
       ]
     },
@@ -797,76 +1183,76 @@
       "count": 9,
       "findings": [
         {
-          "line": 91,
+          "line": 90,
           "column": null,
           "severity": "error",
           "code": "call-overload",
           "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:91: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:90: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
         },
         {
-          "line": 91,
+          "line": 90,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "Possible overload variants:",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:91: note: Possible overload variants:"
+          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:90: note: Possible overload variants:"
         },
         {
-          "line": 91,
+          "line": 90,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:91: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:90: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 91,
+          "line": 90,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:91: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:90: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 93,
+          "line": 92,
           "column": null,
           "severity": "error",
           "code": "call-overload",
           "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:93: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:92: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
         },
         {
-          "line": 93,
+          "line": 92,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "Possible overload variants:",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:93: note: Possible overload variants:"
+          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:92: note: Possible overload variants:"
         },
         {
-          "line": 93,
+          "line": 92,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:93: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:92: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 93,
+          "line": 92,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:93: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:92: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 237,
+          "line": 236,
           "column": null,
           "severity": "error",
           "code": "union-attr",
           "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:237: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:236: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
         }
       ]
     },
@@ -1069,98 +1455,52 @@
       "count": 6,
       "findings": [
         {
-          "line": 349,
+          "line": 402,
           "column": null,
           "severity": "error",
           "code": "call-overload",
           "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:349: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:402: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
         },
         {
-          "line": 349,
+          "line": 402,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "Possible overload variants:",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:349: note: Possible overload variants:"
+          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:402: note: Possible overload variants:"
         },
         {
-          "line": 349,
+          "line": 402,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:349: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:402: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 349,
+          "line": 402,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:349: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:402: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 361,
+          "line": 414,
           "column": null,
           "severity": "error",
           "code": "union-attr",
           "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:361: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:414: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
         },
         {
-          "line": 377,
+          "line": 430,
           "column": null,
           "severity": "error",
           "code": "union-attr",
           "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:377: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\sandbox_panel.py",
-      "count": 5,
-      "findings": [
-        {
-          "line": 134,
-          "column": null,
-          "severity": "error",
-          "code": "call-overload",
-          "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
-          "raw": "src\\intellicrack\\ui\\panels\\sandbox_panel.py:134: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
-        },
-        {
-          "line": 134,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Possible overload variants:",
-          "raw": "src\\intellicrack\\ui\\panels\\sandbox_panel.py:134: note: Possible overload variants:"
-        },
-        {
-          "line": 134,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\panels\\sandbox_panel.py:134: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
-        },
-        {
-          "line": 134,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\panels\\sandbox_panel.py:134: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
-        },
-        {
-          "line": 417,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"RegistryChange\", variable has type \"FileChange\")",
-          "raw": "src\\intellicrack\\ui\\panels\\sandbox_panel.py:417: error: Incompatible types in assignment (expression has type \"RegistryChange\", variable has type \"FileChange\")  [assignment]"
+          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:430: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
         }
       ]
     },
@@ -1211,48 +1551,140 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\app.py",
+      "path": "src\\intellicrack\\ui\\panels\\sandbox_panel.py",
       "count": 5,
       "findings": [
         {
-          "line": 169,
-          "column": null,
-          "severity": "error",
-          "code": "method-assign",
-          "message": "Cannot assign to a method",
-          "raw": "src\\intellicrack\\ui\\app.py:169: error: Cannot assign to a method  [method-assign]"
-        },
-        {
-          "line": 217,
+          "line": 133,
           "column": null,
           "severity": "error",
           "code": "call-overload",
           "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
-          "raw": "src\\intellicrack\\ui\\app.py:217: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+          "raw": "src\\intellicrack\\ui\\panels\\sandbox_panel.py:133: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
         },
         {
-          "line": 217,
+          "line": 133,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "Possible overload variants:",
-          "raw": "src\\intellicrack\\ui\\app.py:217: note: Possible overload variants:"
+          "raw": "src\\intellicrack\\ui\\panels\\sandbox_panel.py:133: note: Possible overload variants:"
         },
         {
-          "line": 217,
+          "line": 133,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\app.py:217: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\panels\\sandbox_panel.py:133: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 217,
+          "line": 133,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\app.py:217: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\panels\\sandbox_panel.py:133: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+        },
+        {
+          "line": 416,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"RegistryChange\", variable has type \"FileChange\")",
+          "raw": "src\\intellicrack\\ui\\panels\\sandbox_panel.py:416: error: Incompatible types in assignment (expression has type \"RegistryChange\", variable has type \"FileChange\")  [assignment]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\app.py",
+      "count": 5,
+      "findings": [
+        {
+          "line": 170,
+          "column": null,
+          "severity": "error",
+          "code": "method-assign",
+          "message": "Cannot assign to a method",
+          "raw": "src\\intellicrack\\ui\\app.py:170: error: Cannot assign to a method  [method-assign]"
+        },
+        {
+          "line": 218,
+          "column": null,
+          "severity": "error",
+          "code": "call-overload",
+          "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
+          "raw": "src\\intellicrack\\ui\\app.py:218: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+        },
+        {
+          "line": 218,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Possible overload variants:",
+          "raw": "src\\intellicrack\\ui\\app.py:218: note: Possible overload variants:"
+        },
+        {
+          "line": 218,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
+          "raw": "src\\intellicrack\\ui\\app.py:218: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+        },
+        {
+          "line": 218,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
+          "raw": "src\\intellicrack\\ui\\app.py:218: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_ui\\test_tools_logic.py",
+      "count": 5,
+      "findings": [
+        {
+          "line": 239,
+          "column": null,
+          "severity": "error",
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "tests\\test_ui\\test_tools_logic.py:239: error: Statement is unreachable  [unreachable]"
+        },
+        {
+          "line": 254,
+          "column": null,
+          "severity": "error",
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "tests\\test_ui\\test_tools_logic.py:254: error: Statement is unreachable  [unreachable]"
+        },
+        {
+          "line": 268,
+          "column": null,
+          "severity": "error",
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "tests\\test_ui\\test_tools_logic.py:268: error: Statement is unreachable  [unreachable]"
+        },
+        {
+          "line": 281,
+          "column": null,
+          "severity": "error",
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "tests\\test_ui\\test_tools_logic.py:281: error: Statement is unreachable  [unreachable]"
+        },
+        {
+          "line": 343,
+          "column": null,
+          "severity": "error",
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "tests\\test_ui\\test_tools_logic.py:343: error: Statement is unreachable  [unreachable]"
         }
       ]
     },
@@ -1326,23 +1758,31 @@
     },
     {
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py",
-      "count": 2,
+      "count": 3,
       "findings": [
         {
-          "line": 58,
+          "line": 91,
           "column": null,
           "severity": "error",
           "code": "method-assign",
           "message": "Cannot assign to a method",
-          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:58: error: Cannot assign to a method  [method-assign]"
+          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:91: error: Cannot assign to a method  [method-assign]"
         },
         {
-          "line": 144,
+          "line": 214,
           "column": null,
           "severity": "error",
           "code": "arg-type",
           "message": "Argument 1 to \"setAlignment\" of \"QLabel\" has incompatible type \"int\"; expected \"AlignmentFlag\"",
-          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:144: error: Argument 1 to \"setAlignment\" of \"QLabel\" has incompatible type \"int\"; expected \"AlignmentFlag\"  [arg-type]"
+          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:214: error: Argument 1 to \"setAlignment\" of \"QLabel\" has incompatible type \"int\"; expected \"AlignmentFlag\"  [arg-type]"
+        },
+        {
+          "line": 244,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 1 to \"setAlignment\" of \"QLabel\" has incompatible type \"int\"; expected \"AlignmentFlag\"",
+          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:244: error: Argument 1 to \"setAlignment\" of \"QLabel\" has incompatible type \"int\"; expected \"AlignmentFlag\"  [arg-type]"
         }
       ]
     },
@@ -1387,6 +1827,28 @@
           "code": "index",
           "message": "Value of type \"WatchpointInfo\" is not indexable",
           "raw": "tests\\test_bridges\\test_x64dbg.py:175: error: Value of type \"WatchpointInfo\" is not indexable  [index]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\anthropic.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 294,
+          "column": null,
+          "severity": "error",
+          "code": "redundant-cast",
+          "message": "Redundant cast to \"dict[str, object]\"",
+          "raw": "src\\intellicrack\\providers\\anthropic.py:294: error: Redundant cast to \"dict[str, object]\"  [redundant-cast]"
+        },
+        {
+          "line": 480,
+          "column": null,
+          "severity": "error",
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "src\\intellicrack\\providers\\anthropic.py:480: error: Statement is unreachable  [unreachable]"
         }
       ]
     },
@@ -1441,6 +1903,20 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\sandbox\\qemu.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 200,
+          "column": null,
+          "severity": "error",
+          "code": "union-attr",
+          "message": "Item \"None\" of \"StreamReader | None\" has no attribute \"readline\"",
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:200: error: Item \"None\" of \"StreamReader | None\" has no attribute \"readline\"  [union-attr]"
+        }
+      ]
+    },
+    {
       "path": "tests\\test_providers\\test_openrouter_provider.py",
       "count": 1,
       "findings": [
@@ -1465,34 +1941,6 @@
           "code": "no-untyped-def",
           "message": "Function is missing a type annotation for one or more arguments",
           "raw": "tests\\test_providers\\test_huggingface_provider.py:206: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\sandbox\\qemu.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 200,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"StreamReader | None\" has no attribute \"readline\"",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:200: error: Item \"None\" of \"StreamReader | None\" has no attribute \"readline\"  [union-attr]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\model_loader.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 22,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:22: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
         }
       ]
     },
@@ -1525,20 +1973,6 @@
       ]
     },
     {
-      "path": "tests\\test_providers\\test_anthropic_provider.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 193,
-          "column": null,
-          "severity": "error",
-          "code": "no-untyped-def",
-          "message": "Function is missing a type annotation for one or more arguments",
-          "raw": "tests\\test_providers\\test_anthropic_provider.py:193: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\sandbox_config.py",
       "count": 1,
       "findings": [
@@ -1549,34 +1983,6 @@
           "code": "arg-type",
           "message": "Argument 1 to \"setWindowModality\" of \"QWidget\" has incompatible type \"int\"; expected \"WindowModality\"",
           "raw": "src\\intellicrack\\ui\\sandbox_config.py:569: error: Argument 1 to \"setWindowModality\" of \"QWidget\" has incompatible type \"int\"; expected \"WindowModality\"  [arg-type]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\local_transformers.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 53,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:53: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
-        }
-      ]
-    },
-    {
-      "path": "tests\\test_providers\\test_model_discovery.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 112,
-          "column": null,
-          "severity": "error",
-          "code": "no-untyped-def",
-          "message": "Function is missing a type annotation for one or more arguments",
-          "raw": "tests\\test_providers\\test_model_discovery.py:112: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
         }
       ]
     },
@@ -1609,16 +2015,72 @@
       ]
     },
     {
-      "path": "tests\\test_ui\\test_tools_logic.py",
+      "path": "src\\intellicrack\\providers\\model_loader.py",
       "count": 1,
       "findings": [
         {
-          "line": 32,
+          "line": 22,
           "column": null,
           "severity": "error",
-          "code": "no-any-return",
-          "message": "Returning Any from function declared to return \"QApplication\"",
-          "raw": "tests\\test_ui\\test_tools_logic.py:32: error: Returning Any from function declared to return \"QApplication\"  [no-any-return]"
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
+          "raw": "src\\intellicrack\\providers\\model_loader.py:22: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\local_transformers.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 53,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:53: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_providers\\test_anthropic_provider.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 193,
+          "column": null,
+          "severity": "error",
+          "code": "no-untyped-def",
+          "message": "Function is missing a type annotation for one or more arguments",
+          "raw": "tests\\test_providers\\test_anthropic_provider.py:193: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_providers\\test_model_discovery.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 112,
+          "column": null,
+          "severity": "error",
+          "code": "no-untyped-def",
+          "message": "Function is missing a type annotation for one or more arguments",
+          "raw": "tests\\test_providers\\test_model_discovery.py:112: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_ui\\test_splash_screen.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 13,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "Module \"PyQt6.QtCore\" has no attribute \"QPropertyAnimation\"",
+          "raw": "tests\\test_ui\\test_splash_screen.py:13: error: Module \"PyQt6.QtCore\" has no attribute \"QPropertyAnimation\"  [attr-defined]"
         }
       ]
     }

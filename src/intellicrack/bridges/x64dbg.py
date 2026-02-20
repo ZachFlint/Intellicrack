@@ -1070,14 +1070,14 @@ class X64DbgBridge(DebuggerBridge):
 
     async def stop(self) -> None:
         """Stop debugging and terminate process."""
-        await self._send_pipe_command("stop")
-        self._attached_pid = None
+        if self._pipe_client is not None and self._pipe_client.is_connected:
+            await self._send_pipe_command("stop")
+            self._state.connected = True
+            self._state.tool_running = True
 
-        self._state.connected = True
-        self._state.tool_running = True
+        self._attached_pid = None
         self._state.process_attached = False
         self._state.target_pid = None
-
         _logger.info("debugging_stopped")
 
     async def step_into(self) -> int:

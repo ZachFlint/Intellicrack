@@ -1,8 +1,8 @@
 {
   "tool": "mccabe",
-  "generated": "2026-02-08T21:22:22.234769",
-  "total_findings": 35,
-  "total_files": 24,
+  "generated": "2026-02-20T14:07:43.247116",
+  "total_findings": 32,
+  "total_files": 21,
   "files": [
     {
       "path": "src/intellicrack\\providers\\discovery.py",
@@ -139,28 +139,6 @@
       ]
     },
     {
-      "path": "src/intellicrack\\providers\\anthropic.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 223,
-          "column": 5,
-          "code": "C901",
-          "complexity": 13,
-          "message": "'AnthropicProvider.chat' is too complex (13)",
-          "raw": "src/intellicrack\\providers\\anthropic.py:223:5: C901 'AnthropicProvider.chat' is too complex (13)"
-        },
-        {
-          "line": 352,
-          "column": 5,
-          "code": "C901",
-          "complexity": 13,
-          "message": "'AnthropicProvider.chat_stream' is too complex (13)",
-          "raw": "src/intellicrack\\providers\\anthropic.py:352:5: C901 'AnthropicProvider.chat_stream' is too complex (13)"
-        }
-      ]
-    },
-    {
       "path": "src/intellicrack\\sandbox\\qemu.py",
       "count": 2,
       "findings": [
@@ -201,6 +179,28 @@
           "complexity": 11,
           "message": "'ModelRefreshWorker._fetch_anthropic_models' is too complex (11)",
           "raw": "src/intellicrack\\ui\\provider_config.py:477:5: C901 'ModelRefreshWorker._fetch_anthropic_models' is too complex (11)"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack\\ui\\tools.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 1410,
+          "column": 5,
+          "code": "C901",
+          "complexity": 16,
+          "message": "'ToolOutputPanel._on_tab_close_requested' is too complex (16)",
+          "raw": "src/intellicrack\\ui\\tools.py:1410:5: C901 'ToolOutputPanel._on_tab_close_requested' is too complex (16)"
+        },
+        {
+          "line": 1482,
+          "column": 5,
+          "code": "C901",
+          "complexity": 15,
+          "message": "'ToolOutputPanel.close_embedded_tools' is too complex (15)",
+          "raw": "src/intellicrack\\ui\\tools.py:1482:5: C901 'ToolOutputPanel.close_embedded_tools' is too complex (15)"
         }
       ]
     },
@@ -345,58 +345,16 @@
       ]
     },
     {
-      "path": "src/intellicrack\\ui\\embedding\\cutter_widget.py",
+      "path": "src/intellicrack\\ui\\app.py",
       "count": 1,
       "findings": [
         {
-          "line": 73,
-          "column": 5,
-          "code": "C901",
-          "complexity": 19,
-          "message": "'CutterWidget.get_executable_path' is too complex (19)",
-          "raw": "src/intellicrack\\ui\\embedding\\cutter_widget.py:73:5: C901 'CutterWidget.get_executable_path' is too complex (19)"
-        }
-      ]
-    },
-    {
-      "path": "src/intellicrack\\ui\\embedding\\hxd_widget.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 70,
+          "line": 880,
           "column": 5,
           "code": "C901",
           "complexity": 11,
-          "message": "'HxDWidget.get_executable_path' is too complex (11)",
-          "raw": "src/intellicrack\\ui\\embedding\\hxd_widget.py:70:5: C901 'HxDWidget.get_executable_path' is too complex (11)"
-        }
-      ]
-    },
-    {
-      "path": "src/intellicrack\\ui\\embedding\\radare2_widget.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 70,
-          "column": 5,
-          "code": "C901",
-          "complexity": 20,
-          "message": "'Radare2Widget.get_executable_path' is too complex (20)",
-          "raw": "src/intellicrack\\ui\\embedding\\radare2_widget.py:70:5: C901 'Radare2Widget.get_executable_path' is too complex (20)"
-        }
-      ]
-    },
-    {
-      "path": "src/intellicrack\\ui\\embedding\\win32_helper.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 213,
-          "column": 5,
-          "code": "C901",
-          "complexity": 11,
-          "message": "'Win32WindowHelper.find_window_by_pid' is too complex (11)",
-          "raw": "src/intellicrack\\ui\\embedding\\win32_helper.py:213:5: C901 'Win32WindowHelper.find_window_by_pid' is too complex (11)"
+          "message": "'MainWindow._apply_provider_settings' is too complex (11)",
+          "raw": "src/intellicrack\\ui\\app.py:880:5: C901 'MainWindow._apply_provider_settings' is too complex (11)"
         }
       ]
     },

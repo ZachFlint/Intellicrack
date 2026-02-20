@@ -1,3 +1,1 @@
-1 findings in D:\Intellicrack\Intellicrack.cmd
-
-Line 5: Missing exit code (W001)
+No findings.

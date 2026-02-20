@@ -317,7 +317,7 @@ class Radare2Panel(QWidget):
         Returns:
             True if cleanup succeeded.
         """
-        if self._bridge is not None:
+        if self._bridge is not None and self._bridge.state.is_ready():
             try:
                 run_bridge_coroutine(self._bridge.shutdown())
             except Exception:

@@ -1,8 +1,8 @@
 {
   "tool": "flake8",
-  "generated": "2026-02-08T21:22:06.588220",
-  "total_findings": 8,
-  "total_files": 7,
+  "generated": "2026-02-20T14:07:23.745643",
+  "total_findings": 7,
+  "total_files": 6,
   "files": [
     {
       "path": "src/intellicrack\\providers\\xpu_utils.py",
@@ -60,19 +60,6 @@
           "code": "F824",
           "message": "`nonlocal content_label` is unused: name is never assigned in scope",
           "raw": "src/intellicrack\\ui\\chat.py:484:13: F824 `nonlocal content_label` is unused: name is never assigned in scope"
-        }
-      ]
-    },
-    {
-      "path": "src/intellicrack\\ui\\embedding\\x64dbg_widget.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 246,
-          "column": 17,
-          "code": "F841",
-          "message": "local variable 'task' is assigned to but never used",
-          "raw": "src/intellicrack\\ui\\embedding\\x64dbg_widget.py:246:17: F841 local variable 'task' is assigned to but never used"
         }
       ]
     },

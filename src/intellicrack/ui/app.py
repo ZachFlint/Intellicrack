@@ -36,7 +36,7 @@ from PyQt6.QtWidgets import (
 )
 
 from ..core.logging import get_logger
-from ..core.types import Message, ProviderName, ToolCall, ToolResult
+from ..core.types import Message, ProviderCredentials, ProviderName, ToolCall, ToolResult
 from ..providers.discovery import ModelDiscovery
 from ..sandbox import SandboxManager
 from ._screen_compat import get_screen_geometry, move_widget
@@ -114,6 +114,7 @@ class MainWindow(QMainWindow):
     tool_result_received = pyqtSignal(ToolResult)
     stream_chunk_received = pyqtSignal(str)
     status_update = pyqtSignal(str)
+    licensing_analysis_received = pyqtSignal(object)
 
     def __init__(
         self,
@@ -567,6 +568,20 @@ class MainWindow(QMainWindow):
         self._orchestrator.set_tool_result_callback(self.tool_result_received.emit)
         self._orchestrator.set_stream_callback(self.stream_chunk_received.emit)
         self._orchestrator.set_async_confirmation_callback(self._request_tool_confirmation)
+        self._orchestrator.set_licensing_analysis_callback(self._on_licensing_analysis_received)
+        self.licensing_analysis_received.connect(self._tool_panel.update_licensing_analysis)
+
+    def _on_licensing_analysis_received(self, analysis: object) -> None:
+        """Handle licensing analysis completion from orchestrator.
+
+        Marshals the analysis data to the Qt main thread via signal emission.
+        This callback is invoked from an async worker thread, so direct UI
+        updates are unsafe.
+
+        Args:
+            analysis: The LicensingAnalysis result from the orchestrator.
+        """
+        self.licensing_analysis_received.emit(analysis)
 
     def _request_tool_confirmation(self, call: ToolCall) -> asyncio.Future[bool]:
         """Request user confirmation for a tool call.
@@ -797,17 +812,57 @@ class MainWindow(QMainWindow):
             self._apply_tool_settings(settings)
 
     def _apply_tool_settings(self, settings: dict[str, dict[str, object]]) -> None:
-        """Apply tool configuration settings.
+        """Apply tool configuration settings at runtime.
 
         The ToolConfigDialog handles persistence via its own JSON config file.
-        This method is called after the dialog saves settings to update any
-        runtime state if needed.
+        This method updates runtime state: for tools that have a changed path
+        or enabled state, it schedules re-initialization through the orchestrator.
 
         Args:
             settings: Tool settings dictionary mapping tool IDs to their settings.
         """
-        del settings
-        self.status_update.emit("Tool settings saved")
+        tools_to_init: list[str] = []
+        for tool_id, tool_settings in settings.items():
+            enabled = bool(tool_settings.get("enabled", False))
+            path_value = str(tool_settings.get("path", ""))
+            if enabled and path_value:
+                tools_to_init.append(tool_id)
+
+        if tools_to_init:
+
+            async def _reinit_tools() -> None:
+                for tid in tools_to_init:
+                    try:
+                        await self._orchestrator.initialize_tool(tid)
+                        _logger.info("tool_reinitialized", extra={"tool_id": tid})
+                    except Exception as e:
+                        _logger.warning("tool_reinit_failed", extra={"tool_id": tid, "error": str(e)})
+
+            worker = AsyncWorker(_reinit_tools(), self)
+            worker.finished.connect(self._on_tool_reinit_finished)
+            worker.error.connect(self._on_tool_reinit_error)
+            worker.start()
+
+        count = len(settings)
+        self.status_update.emit(f"Tool settings applied ({count} tools configured)")
+
+    def _on_tool_reinit_finished(self, result: object) -> None:
+        """Handle tool re-initialization completion.
+
+        Args:
+            result: Worker result (unused).
+        """
+        del result
+        self.status_update.emit("Tool re-initialization complete")
+
+    def _on_tool_reinit_error(self, error: Exception) -> None:
+        """Handle tool re-initialization failure.
+
+        Args:
+            error: The exception that occurred.
+        """
+        _logger.warning("tool_reinit_batch_failed", extra={"error": str(error)})
+        self.status_update.emit("Tool re-initialization failed")
 
     def _on_configure_providers(self) -> None:
         """Handle configure providers action."""
@@ -823,17 +878,78 @@ class MainWindow(QMainWindow):
             self._apply_provider_settings(settings)
 
     def _apply_provider_settings(self, settings: dict[str, dict[str, object]]) -> None:
-        """Apply provider configuration settings.
+        """Apply provider configuration settings at runtime.
 
         The ProviderConfigDialog handles persistence via its own JSON config file.
-        This method is called after the dialog saves settings to update any
-        runtime state if needed.
+        This method reconnects providers with updated API keys and credentials
+        so changes take effect without an application restart.
 
         Args:
             settings: Provider settings dictionary mapping provider IDs to their settings.
         """
-        del settings
-        self.status_update.emit("Provider settings saved")
+        registry = self._orchestrator.provider_registry
+        providers_to_connect: list[tuple[ProviderName, ProviderCredentials]] = []
+
+        for provider_id, provider_settings in settings.items():
+            enabled = bool(provider_settings.get("enabled", False))
+            api_key = str(provider_settings.get("api_key", ""))
+            api_base = str(provider_settings.get("api_base", "")) or None
+            org_id = str(provider_settings.get("organization_id", "")) or None
+
+            if not enabled or not api_key:
+                continue
+
+            try:
+                pname = ProviderName(provider_id)
+            except ValueError:
+                _logger.warning("unknown_provider_id", extra={"provider_id": provider_id})
+                continue
+
+            provider = registry.get(pname)
+            if provider is None:
+                continue
+
+            creds = ProviderCredentials(api_key=api_key, api_base=api_base, organization_id=org_id)
+            providers_to_connect.append((pname, creds))
+
+        if providers_to_connect:
+
+            async def _reconnect_providers() -> None:
+                for pname, creds in providers_to_connect:
+                    try:
+                        await registry.connect_provider(pname, creds)
+                        _logger.info("provider_reconnected", extra={"provider": pname.value})
+                    except Exception as e:
+                        _logger.warning(
+                            "provider_reconnect_failed",
+                            extra={"provider": pname.value, "error": str(e)},
+                        )
+
+            worker = AsyncWorker(_reconnect_providers(), self)
+            worker.finished.connect(self._on_provider_reconnect_finished)
+            worker.error.connect(self._on_provider_reconnect_error)
+            worker.start()
+
+        count = len(settings)
+        self.status_update.emit(f"Provider settings applied ({count} providers configured)")
+
+    def _on_provider_reconnect_finished(self, result: object) -> None:
+        """Handle provider reconnection completion.
+
+        Args:
+            result: Worker result (unused).
+        """
+        del result
+        self.status_update.emit("Provider connections updated")
+
+    def _on_provider_reconnect_error(self, error: Exception) -> None:
+        """Handle provider reconnection failure.
+
+        Args:
+            error: The exception that occurred.
+        """
+        _logger.warning("provider_reconnect_batch_failed", extra={"error": str(error)})
+        self.status_update.emit("Provider reconnection failed")
 
     def _on_refresh_models(self) -> None:
         """Handle refresh models action."""
