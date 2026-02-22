@@ -16,7 +16,7 @@ jobs:
     setup:
         runs-on: windows-latest
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v6.0.2
               with:
                   fetch-depth: 0
 
@@ -58,7 +58,7 @@ jobs:
         if: success() || failure()
         continue-on-error: true
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v6.0.2
               with:
                   fetch-depth: 0
 
@@ -100,7 +100,7 @@ jobs:
         if: success() || failure()
         continue-on-error: true
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v6.0.2
               with:
                   fetch-depth: 0
 
@@ -129,7 +129,7 @@ jobs:
         if: success() || failure()
         continue-on-error: true
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v6.0.2
               with:
                   fetch-depth: 0
 
@@ -163,7 +163,7 @@ jobs:
         if: success() || failure()
         continue-on-error: true
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v6.0.2
               with:
                   fetch-depth: 0
 
@@ -196,7 +196,7 @@ jobs:
         if: success() || failure()
         continue-on-error: true
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v6.0.2
               with:
                   fetch-depth: 0
 
@@ -229,7 +229,7 @@ jobs:
         if: success() || failure()
         continue-on-error: true
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v6.0.2
               with:
                   fetch-depth: 0
 
@@ -252,7 +252,7 @@ jobs:
         if: success() || failure()
         continue-on-error: true
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v6.0.2
               with:
                   fetch-depth: 0
 
@@ -282,7 +282,7 @@ jobs:
         if: success() || failure()
         continue-on-error: true
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v6.0.2
               with:
                   fetch-depth: 0
 
@@ -304,7 +304,7 @@ jobs:
         if: success() || failure()
         continue-on-error: true
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v6.0.2
               with:
                   fetch-depth: 0
 
@@ -326,7 +326,7 @@ jobs:
         if: success() || failure()
         continue-on-error: true
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v6.0.2
               with:
                   fetch-depth: 0
 
