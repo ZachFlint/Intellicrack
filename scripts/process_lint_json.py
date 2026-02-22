@@ -1198,6 +1198,237 @@ def process_complexipy_text(text_output: str) -> tuple[dict[str, list[dict[str, 
     return grouped, cnt
 
 
+def process_taplo_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
+    r"""Process taplo TOML checker text output.
+
+    Taplo check/lint output format:
+    error: <message>
+      \u250c\u2500 <filepath>:<line>:<col>
+      \u2502
+    N \u2502 <source line>
+      \u2502   ^^^ <hint>
+
+    Example:
+    error: invalid TOML
+      \u250c\u2500 pyproject.toml:5:10
+      \u2502
+    5 \u2502 bad = [
+      \u2502       ^ unexpected EOF
+    """
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    location_pattern = re.compile(r"^\s*\u250c\u2500\s*(.+):(\d+):(\d+)\s*$")
+    error_pattern = re.compile(r"^(error|warning):\s*(.+)$")
+    lines = text_output.strip().split("\n")
+    current_message = ""
+
+    for i, line in enumerate(lines):
+        error_match = error_pattern.match(line.strip())
+        if error_match:
+            current_message = error_match.group(2).strip()
+            continue
+        loc_match = location_pattern.match(line)
+        if loc_match and current_message:
+            fp = loc_match.group(1)
+            line_num = int(loc_match.group(2))
+            col_num = int(loc_match.group(3))
+            hint = ""
+            for j in range(i + 1, min(i + 5, len(lines))):
+                hint_line = lines[j].strip()
+                if hint_line.startswith("\u2502"):
+                    content = hint_line.lstrip("\u2502").strip()
+                    if content.startswith("^") or content.startswith("\u2570") or content.startswith("\u256d"):
+                        hint = content.lstrip("^").lstrip("\u2570").lstrip("\u256d").strip()
+                        break
+            message = f"{current_message}: {hint}" if hint else current_message
+            grouped[fp].append({
+                "line": line_num,
+                "column": col_num,
+                "severity": "error",
+                "message": message,
+                "raw": f"{fp}:{line_num}:{col_num}: [error] {message}",
+            })
+            current_message = ""
+    cnt = sum(len(v) for v in grouped.values())
+    return grouped, cnt
+
+
+def process_interrogate_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
+    r"""Process interrogate docstring coverage verbose text output.
+
+    Interrogate ``-vv`` output has table rows like:
+    ``| path\file.py (module) | COVERED |``
+    ``|   ClassName.method (L42) | MISSED |``
+
+    Only MISSED items are reported as findings.
+    """
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    module_pattern = re.compile(r"^\|\s*(.+?)\s+\(module\)\s*\|\s*(COVERED|MISSED)\s*\|$")
+    item_pattern = re.compile(r"^\|\s+(.+?)\s+\(L(\d+)\)\s*\|\s*(COVERED|MISSED)\s*\|$")
+    current_file = ""
+
+    for line in text_output.strip().split("\n"):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        module_match = module_pattern.match(stripped)
+        if module_match:
+            current_file = module_match.group(1).strip()
+            status = module_match.group(2)
+            if status == "MISSED":
+                grouped[current_file].append({
+                    "line": None,
+                    "column": None,
+                    "code": "INT001",
+                    "message": f"Missing docstring for module '{current_file}'",
+                    "raw": f"{current_file}: INT001 Missing docstring for module",
+                })
+            continue
+        item_match = item_pattern.match(stripped)
+        if item_match and current_file:
+            name = item_match.group(1).strip()
+            line_num = int(item_match.group(2))
+            status = item_match.group(3)
+            if status == "MISSED":
+                grouped[current_file].append({
+                    "line": line_num,
+                    "column": None,
+                    "code": "INT001",
+                    "message": f"Missing docstring for '{name}'",
+                    "raw": f"{current_file}:{line_num}: INT001 Missing docstring for '{name}'",
+                })
+    cnt = sum(len(v) for v in grouped.values())
+    return grouped, cnt
+
+
+def process_deptry_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
+    """Process deptry dependency checker text output.
+
+    Deptry ``--no-ansi`` output formats:
+    ``filepath:line:col: DEP00X message``
+    ``filepath: DEP00X message``
+    """
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    full_pattern = re.compile(r"^(.+?):(\d+):(\d+):\s*(DEP\d+)\s+(.+)$")
+    simple_pattern = re.compile(r"^(.+?):\s*(DEP\d+)\s+(.+)$")
+
+    for line in text_output.strip().split("\n"):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("Scanning") or stripped.startswith("Found") or stripped.startswith("For more information"):
+            continue
+        full_match = full_pattern.match(stripped)
+        if full_match:
+            fp = full_match.group(1)
+            line_num = int(full_match.group(2))
+            col_num = int(full_match.group(3))
+            code = full_match.group(4)
+            message = full_match.group(5).strip()
+            grouped[fp].append({
+                "line": line_num,
+                "column": col_num,
+                "code": code,
+                "message": message,
+                "raw": stripped,
+            })
+            continue
+        simple_match = simple_pattern.match(stripped)
+        if simple_match:
+            fp = simple_match.group(1)
+            code = simple_match.group(2)
+            message = simple_match.group(3).strip()
+            grouped[fp].append({
+                "line": None,
+                "column": None,
+                "code": code,
+                "message": message,
+                "raw": stripped,
+            })
+    cnt = sum(len(v) for v in grouped.values())
+    return grouped, cnt
+
+
+def process_codespell_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
+    """Process codespell spelling checker text output.
+
+    Codespell output format: ``filepath:line: misspelling ==> correction``
+    """
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    pattern = re.compile(r"^(.+?):(\d+):\s*(.+?)\s*==>\s*(.+)$")
+
+    for line in text_output.strip().split("\n"):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        match = pattern.match(stripped)
+        if match:
+            fp = match.group(1)
+            line_num = int(match.group(2))
+            misspelling = match.group(3).strip()
+            correction = match.group(4).strip()
+            grouped[fp].append({
+                "line": line_num,
+                "column": None,
+                "code": "SPELL",
+                "misspelling": misspelling,
+                "correction": correction,
+                "message": f"'{misspelling}' ==> '{correction}'",
+                "raw": stripped,
+            })
+    cnt = sum(len(v) for v in grouped.values())
+    return grouped, cnt
+
+
+def process_mixed_line_ending_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
+    """Process mixed line ending detection text output.
+
+    Output format: ``filepath: mixed line endings``
+    """
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    pattern = re.compile(r"^(.+?):\s*mixed line endings\s*$")
+
+    for line in text_output.strip().split("\n"):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        match = pattern.match(stripped)
+        if match:
+            fp = match.group(1).strip()
+            grouped[fp].append({
+                "line": None,
+                "column": None,
+                "code": "MLE001",
+                "message": "File has mixed line endings",
+                "raw": stripped,
+            })
+    cnt = sum(len(v) for v in grouped.values())
+    return grouped, cnt
+
+
+def process_file_encoding_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
+    """Process file encoding (BOM) detection text output.
+
+    Output format: ``filepath: Has a byte-order marker (BOM)``
+    """
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    pattern = re.compile(r"^(.+?):\s*Has a byte-order marker.*$")
+
+    for line in text_output.strip().split("\n"):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        match = pattern.match(stripped)
+        if match:
+            fp = match.group(1).strip()
+            grouped[fp].append({
+                "line": None,
+                "column": None,
+                "code": "BOM001",
+                "message": "File has a byte-order marker (BOM)",
+                "raw": stripped,
+            })
+    cnt = sum(len(v) for v in grouped.values())
+    return grouped, cnt
+
+
 def escape_xml(s: str) -> str:
     """Escape special XML characters."""
     return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
@@ -1340,6 +1571,14 @@ TEXT_PROCESSORS: dict[str, Callable[[str], tuple[dict[str, list[dict[str, Any]]]
     "radon": process_radon_text,
     "xenon": process_xenon_text,
     "complexipy": process_complexipy_text,
+    "taplo": process_taplo_text,
+    "interrogate": process_interrogate_text,
+    "deptry": process_deptry_text,
+    "codespell": process_codespell_text,
+    "mixed-line-ending": process_mixed_line_ending_text,
+    "mixed_line_ending": process_mixed_line_ending_text,
+    "file-encoding": process_file_encoding_text,
+    "file_encoding": process_file_encoding_text,
 }
 
 JSON_PROCESSORS: dict[str, tuple[Callable[..., tuple[dict[str, list[dict[str, Any]]], int]], Any]] = {

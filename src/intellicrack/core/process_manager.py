@@ -9,7 +9,6 @@ from __future__ import annotations
 import asyncio
 import atexit
 import contextlib
-import ctypes
 import signal
 import sys
 import threading

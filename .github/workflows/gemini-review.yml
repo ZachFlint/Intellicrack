@@ -1,5 +1,4 @@
 name: '🔎 Gemini Review'
-
 on:
   workflow_dispatch:
   workflow_call:
@@ -8,15 +7,12 @@ on:
         type: 'string'
         description: 'Any additional context from the request'
         required: false
-
 concurrency:
   group: '${{ github.workflow }}-review-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.issue.number }}'
   cancel-in-progress: true
-
 defaults:
   run:
     shell: 'bash'
-
 jobs:
   review:
     runs-on: 'ubuntu-latest'
@@ -38,10 +34,8 @@ jobs:
           permission-contents: 'read'
           permission-issues: 'write'
           permission-pull-requests: 'write'
-
       - name: 'Checkout repository'
         uses: 'actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd' # ratchet:actions/checkout@v6
-
       - name: 'Check Gemini credentials'
         id: 'check_creds'
         run: |
@@ -54,7 +48,6 @@ jobs:
         env:
           GEMINI_KEY: '${{ secrets.GEMINI_API_KEY }}'
           GOOGLE_KEY: '${{ secrets.GOOGLE_API_KEY }}'
-
       - name: 'Run Gemini pull request review'
         if: steps.check_creds.outputs.available == 'true'
         uses: 'google-github-actions/run-gemini-cli@v0' # ratchet:exclude

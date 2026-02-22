@@ -358,6 +358,12 @@ class FridaBridge(InstrumentationBridge):
                     ],
                     returns="Address of allocated memory",
                 ),
+                ToolFunction(
+                    name="frida.get_hooks",
+                    description="Get all active hooks",
+                    parameters=[],
+                    returns="List of active hook information",
+                ),
             ],
         )
 

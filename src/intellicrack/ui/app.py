@@ -13,7 +13,7 @@ import json
 import os
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QAction
@@ -36,12 +36,12 @@ from PyQt6.QtWidgets import (
 )
 
 from ..core.logging import get_logger
-from ..core.types import Message, ProviderCredentials, ProviderName, ToolCall, ToolResult
+from ..core.types import Message, ModelInfo, ProviderCredentials, ProviderName, ToolCall, ToolName, ToolResult
 from ..providers.discovery import ModelDiscovery
 from ..sandbox import SandboxManager
 from ._screen_compat import get_screen_geometry, move_widget
 from .chat import ChatPanel
-from .provider_config import ModelRefreshWorker, ProviderConfigDialog
+from .provider_config import ModelRefreshWorker, ModelSelectionDialog, ProviderConfigDialog
 from .resources import FontManager, IconManager, ThemeManager
 from .sandbox_config import SandboxConfigDialog
 from .session_manager import SessionManagerDialog
@@ -136,6 +136,7 @@ class MainWindow(QMainWindow):
         self._stream_append: Callable[[str], None] | None = None
         self._sandbox_manager = SandboxManager()
         self._model_refresh_worker: ModelRefreshWorker | None = None
+        self._model_browse_worker: AsyncWorker | None = None
 
         self._current_binary: Path | None = None
 
@@ -311,6 +312,36 @@ class MainWindow(QMainWindow):
         file_menu.addSeparator()
         self._add_menu_action(file_menu, "Exit", self.close, "Alt+F4")
 
+    def _setup_view_menu(self, menubar: QMenuBar) -> None:
+        """Set up the View menu.
+
+        Args:
+            menubar: The menu bar to add the menu to.
+
+        Raises:
+            TypeError: If the menu could not be created.
+        """
+        view_menu: QMenu | None = menubar.addMenu("&View")
+        if view_menu is None:
+            msg = "Failed to create View menu"
+            raise TypeError(msg)
+
+        self._add_menu_action(view_menu, "Licensing Analysis", self._on_view_licensing)
+        self._add_menu_action(view_menu, "Scripts Manager", self._on_view_scripts)
+        self._add_menu_action(view_menu, "Stack Viewer", self._on_view_stack)
+
+    def _on_view_licensing(self) -> None:
+        """Show the licensing analysis panel."""
+        self._tool_panel.activate_licensing_tab()
+
+    def _on_view_scripts(self) -> None:
+        """Show the scripts manager panel."""
+        self._tool_panel.activate_scripts_tab()
+
+    def _on_view_stack(self) -> None:
+        """Show the stack viewer panel."""
+        self._tool_panel.activate_stack_tab()
+
     def _setup_tools_menu(self, menubar: QMenuBar) -> None:
         """Set up the Tools menu.
 
@@ -429,6 +460,7 @@ class MainWindow(QMainWindow):
             raise TypeError(msg)
 
         self._setup_file_menu(menubar)
+        self._setup_view_menu(menubar)
         self._setup_tools_menu(menubar)
         self._setup_providers_menu(menubar)
         self._setup_sandbox_menu(menubar)
@@ -606,6 +638,10 @@ class MainWindow(QMainWindow):
         self._orchestrator.set_stream_callback(self.stream_chunk_received.emit)
         self._orchestrator.set_async_confirmation_callback(self._request_tool_confirmation)
         self._orchestrator.set_licensing_analysis_callback(self._on_licensing_analysis_received)
+        self._orchestrator.configure_hooks(
+            on_licensing=self._on_licensing_analysis_received,
+            on_confirmation=None,
+        )
         self.licensing_analysis_received.connect(self._tool_panel.update_licensing_analysis)
 
     def _on_licensing_analysis_received(self, analysis: object) -> None:
@@ -644,6 +680,7 @@ class MainWindow(QMainWindow):
         def show_dialog() -> None:
             dialog = confirmation_module.ToolConfirmationDialog(call, self)
             dialog.exec()
+            self._orchestrator.resolve_confirmation(dialog.approved)
             with contextlib.suppress(asyncio.InvalidStateError):
                 future.set_result(dialog.approved)
 
@@ -701,12 +738,18 @@ class MainWindow(QMainWindow):
 
             tool_name = getattr(result, "tool_name", "")
             if tool_name == "patch_binary" and isinstance(result.result, dict):
-                patch_data = result.result
-                self._orchestrator.register_manual_patch(
-                    offset=patch_data.get("offset", 0),
-                    original=patch_data.get("original", b""),
-                    patched=patch_data.get("patched", b""),
-                    description=patch_data.get("description", "Manual patch"),
+                patch_data = cast("dict[str, object]", result.result)
+                address_val = patch_data.get("offset", 0)
+                orig_val = patch_data.get("original", b"")
+                new_val = patch_data.get("patched", b"")
+                desc_val = patch_data.get("description", "Manual patch")
+                self._run_async(
+                    self._orchestrator.register_manual_patch(
+                        address=int(address_val) if isinstance(address_val, (int, str)) else 0,
+                        original_bytes=bytes(orig_val) if isinstance(orig_val, (bytes, bytearray)) else b"",
+                        new_bytes=bytes(new_val) if isinstance(new_val, (bytes, bytearray)) else b"",
+                        description=str(desc_val),
+                    )
                 )
 
         if result.error:
@@ -783,6 +826,7 @@ class MainWindow(QMainWindow):
 
         async def load() -> None:
             await self._orchestrator.add_binary(path)
+            await self._orchestrator.refresh_session_state()
 
         self.status_update.emit(f"Loading {path.name}...")
         self._run_async(load())
@@ -874,9 +918,9 @@ class MainWindow(QMainWindow):
             "JSON Files (*.json);;All Files (*)",
         )
         if path:
-            session_mgr = getattr(self._orchestrator, "_session_manager", None)
-            if session_mgr is not None:
-                session_mgr.export_current(Path(path))
+            session_mgr = getattr(self._orchestrator, "_sessions", None)
+            if session_mgr is not None and hasattr(session_mgr, "export_json"):
+                self._run_async(session_mgr.export_json(session.id, Path(path)))
                 QMessageBox.information(self, "Export", f"Session exported to {path}")
             else:
                 QMessageBox.warning(self, "Export", "Session manager unavailable.")
@@ -911,7 +955,9 @@ class MainWindow(QMainWindow):
         file_data: bytes | None = None
         get_file_data = getattr(binary_panel, "get_file_data", None)
         if callable(get_file_data):
-            file_data = get_file_data()
+            raw_data = get_file_data()
+            if isinstance(raw_data, (bytes, bytearray)):
+                file_data = bytes(raw_data)
 
         if file_data is None:
             QMessageBox.information(self, "Save", "No binary data available.")
@@ -930,7 +976,9 @@ class MainWindow(QMainWindow):
             patches: list[object] = []
             get_patches = getattr(binary_panel, "get_patches", None)
             if callable(get_patches):
-                patches = get_patches()
+                raw_patches = get_patches()
+                if isinstance(raw_patches, list):
+                    patches = cast("list[object]", raw_patches)
 
             report_path = Path(path).with_suffix(".patch_report.txt")
             with open(report_path, "w", encoding="utf-8") as f:
@@ -966,10 +1014,11 @@ class MainWindow(QMainWindow):
         )
         if path:
             analysis_dict: object
-            if hasattr(analysis, "to_dict"):
-                analysis_dict = analysis.to_dict()
+            to_dict_fn = getattr(analysis, "to_dict", None)
+            if callable(to_dict_fn):
+                analysis_dict = to_dict_fn()
             elif hasattr(analysis, "__dict__"):
-                analysis_dict = analysis.__dict__
+                analysis_dict = vars(analysis)
             else:
                 analysis_dict = str(analysis)
 
@@ -1007,7 +1056,13 @@ class MainWindow(QMainWindow):
         for tool_id, tool_settings in settings.items():
             enabled = bool(tool_settings.get("enabled", False))
             path_value = str(tool_settings.get("path", ""))
-            if enabled and path_value:
+            config_enabled = True
+            if hasattr(self._config, "is_tool_enabled"):
+                try:
+                    config_enabled = self._config.is_tool_enabled(ToolName(tool_id.lower()))
+                except (ValueError, AttributeError):
+                    config_enabled = True
+            if enabled and path_value and config_enabled:
                 tools_to_init.append(tool_id)
 
         if tools_to_init:
@@ -1142,6 +1197,14 @@ class MainWindow(QMainWindow):
 
         provider_id: str = provider_data.value if isinstance(provider_data, ProviderName) else str(provider_data)
 
+        if (
+            hasattr(self._config, "is_provider_enabled")
+            and isinstance(provider_data, ProviderName)
+            and not self._config.is_provider_enabled(provider_data)
+        ):
+            QMessageBox.warning(self, "Warning", f"Provider {provider_id} is disabled in configuration.")
+            return
+
         env_vars: dict[str, str] = {
             "anthropic": "ANTHROPIC_API_KEY",
             "openai": "OPENAI_API_KEY",
@@ -1190,33 +1253,46 @@ class MainWindow(QMainWindow):
 
     def _on_browse_models(self) -> None:
         """Open the model selection dialog for browsing available models."""
-        provider_config_mod = importlib.import_module(".provider_config", "intellicrack.ui")
-        dialog_cls = getattr(provider_config_mod, "ModelSelectionDialog", None)
-        if dialog_cls is None:
+        registry = self._orchestrator.provider_registry
+        active_provider = registry.active
+        if active_provider is None:
+            QMessageBox.information(self, "Browse Models", "No active provider connected.")
             return
 
-        discovery = ModelDiscovery()
-        models = discovery.get_discovery_events()
-        model_names: list[str] = []
-        for event in models:
-            model_id = getattr(event, "model_id", None)
-            if model_id is not None:
-                model_names.append(str(model_id))
+        async def fetch() -> list[ModelInfo]:
+            return await active_provider.list_models()
 
-        if not model_names:
-            for i in range(self._model_combo.count()):
-                model_names.append(self._model_combo.itemText(i))
+        worker = AsyncWorker(fetch(), self)
+        worker.finished.connect(self._on_browse_models_result)
+        worker.error.connect(self._on_async_error)
+        self._model_browse_worker = worker
+        worker.start()
+        self.status_update.emit("Fetching models...")
 
-        dialog = dialog_cls(models=model_names, parent=self)
+    def _on_browse_models_result(self, result: object) -> None:
+        """Handle browse models async result.
+
+        Args:
+            result: The list of ModelInfo objects from the provider.
+        """
+        self.status_update.emit("Ready")
+        if not isinstance(result, list):
+            return
+
+        items = cast("list[object]", result)
+        model_infos: list[ModelInfo] = [item for item in items if isinstance(item, ModelInfo)]
+
+        if not model_infos:
+            QMessageBox.information(self, "Browse Models", "No models available.")
+            return
+
+        dialog = ModelSelectionDialog(models=model_infos, parent=self)
         if dialog.exec():
             selected = dialog.get_selected_model()
             if selected:
                 idx = self._model_combo.findText(selected)
                 if idx >= 0:
                     self._model_combo.setCurrentIndex(idx)
-                else:
-                    self._model_combo.addItem(selected)
-                    self._model_combo.setCurrentText(selected)
 
     def _on_configure_sandbox(self) -> None:
         """Handle configure sandbox action."""

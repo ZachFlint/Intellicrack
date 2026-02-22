@@ -979,6 +979,7 @@ class ToolOutputPanel(QFrame):
                 bridge = bridge_module.X64DbgBridge()
                 self._x64dbg_widget.set_bridge(bridge)
                 self._x64dbg_bridge = bridge
+                self.wire_stack_viewer_bridges()
                 _logger.info("x64dbg_bridge_set")
             except Exception as bridge_err:
                 _logger.warning("x64dbg_bridge_set_failed", extra={"error": str(bridge_err)})
@@ -1101,6 +1102,7 @@ class ToolOutputPanel(QFrame):
                 bridge = bridge_module.FridaBridge()
                 self._frida_panel.set_bridge(bridge)
                 self._frida_bridge = bridge
+                self.wire_stack_viewer_bridges()
                 _logger.info("frida_bridge_set")
             except Exception as bridge_err:
                 _logger.warning("frida_bridge_set_failed", extra={"error": str(bridge_err)})
@@ -1524,3 +1526,170 @@ class ToolOutputPanel(QFrame):
         self._tabs.clear()
 
         _logger.info("embedded_tools_closed")
+
+    def get_bridge_for_tool(self, tool_id: str) -> object | None:
+        """Get the bridge instance for a specific tool.
+
+        Delegates to the appropriate panel's get_bridge() method.
+
+        Args:
+            tool_id: Tool identifier (e.g., "frida", "ghidra", "radare2", "x64dbg").
+
+        Returns:
+            Bridge instance or None if not available.
+        """
+        panel_map: dict[str, str] = {
+            "frida": "_frida_panel",
+            "ghidra": "_ghidra_widget",
+            "radare2": "_radare2_widget",
+            "x64dbg": "_x64dbg_widget",
+        }
+        attr_name = panel_map.get(tool_id.lower())
+        if attr_name is None:
+            return None
+        panel = getattr(self, attr_name, None)
+        if panel is not None and hasattr(panel, "get_bridge"):
+            return panel.get_bridge()
+        return None
+
+    def get_active_process_pid(self) -> int | None:
+        """Get the currently selected PID from the process panel.
+
+        Returns:
+            Selected process ID or None if no process selected.
+        """
+        if self._process_panel is not None and hasattr(self._process_panel, "get_selected_pid"):
+            return self._process_panel.get_selected_pid()
+        return None
+
+    def display_analysis_result(
+        self,
+        tab_name: str,
+        content: str,
+        info: str = "",
+    ) -> None:
+        """Display analysis results in a specific tab.
+
+        Routes analysis output from the orchestrator to the appropriate
+        tab using set_tab_content and set_tab_info.
+
+        Args:
+            tab_name: Name of the tab to display in.
+            content: Content to display.
+            info: Additional info text for the tab header.
+        """
+        self.set_tab_content(tab_name, content)
+        if info:
+            self.set_tab_info(tab_name, info)
+        self.activate_tab(tab_name)
+
+    def clear_analysis_tab(self, tab_name: str) -> None:
+        """Clear a specific analysis tab's content.
+
+        Args:
+            tab_name: Name of the tab to clear.
+        """
+        self.clear_tab(tab_name)
+
+    def get_active_tool_widget(self, tool_id: str) -> QWidget | None:
+        """Get the active embedded tool widget by ID.
+
+        Args:
+            tool_id: Tool identifier string.
+
+        Returns:
+            The embedded tool widget or None.
+        """
+        return self.get_embedded_tool(tool_id)
+
+    def log_frida_message(self, message: str, level: str = "info") -> None:
+        """Log a message to the Frida panel.
+
+        Args:
+            message: Message to log.
+            level: Log level (info, warning, error).
+        """
+        if self._frida_panel is not None and hasattr(self._frida_panel, "log_message"):
+            self._frida_panel.log_message(message, level)
+
+    def add_frida_hook_entry(self, hook_info: dict[str, object]) -> None:
+        """Add a hook entry to the Frida panel.
+
+        Args:
+            hook_info: Dictionary with hook details.
+        """
+        if self._frida_panel is not None and hasattr(self._frida_panel, "add_hook_entry"):
+            self._frida_panel.add_hook_entry(hook_info)
+
+    def get_sandbox_backend(self) -> object | None:
+        """Get the sandbox backend from the sandbox panel.
+
+        Returns:
+            Sandbox backend or None.
+        """
+        if self._sandbox_panel is not None and hasattr(self._sandbox_panel, "get_sandbox"):
+            return self._sandbox_panel.get_sandbox()
+        return None
+
+    def load_sandbox_report(self, report_path: str) -> None:
+        """Load an execution report into the sandbox panel.
+
+        Args:
+            report_path: Path to the execution report.
+        """
+        if self._sandbox_panel is not None and hasattr(self._sandbox_panel, "load_execution_report"):
+            self._sandbox_panel.load_execution_report(report_path)
+
+    def get_script_panel_state(self) -> tuple[str | None, str | None]:
+        """Get the current script panel state.
+
+        Returns:
+            Tuple of (selected_script_id, current_script_content).
+        """
+        selected_id: str | None = None
+        current_script: str | None = None
+        if self._script_panel is not None:
+            if hasattr(self._script_panel, "get_selected_id"):
+                selected_id = self._script_panel.get_selected_id()
+            if hasattr(self._script_panel, "get_current_script"):
+                current_script = self._script_panel.get_current_script()
+        return selected_id, current_script
+
+    def get_code_highlighter(self) -> object | None:
+        """Get the syntax highlighter from the code display.
+
+        Returns:
+            Syntax highlighter or None.
+        """
+        return self.get_highlighter()
+
+    def wire_stack_viewer_bridges(self) -> None:
+        """Wire bridge instances to the stack viewer panel.
+
+        Connects x64dbg and Frida bridges to the stack viewer
+        for stack trace display.
+        """
+        if self._stack_panel is None:
+            return
+        if hasattr(self._stack_panel, "set_x64dbg_bridge") and self._x64dbg_bridge is not None:
+            self._stack_panel.set_x64dbg_bridge(self._x64dbg_bridge)
+        if hasattr(self._stack_panel, "set_frida_bridge") and self._frida_bridge is not None:
+            self._stack_panel.set_frida_bridge(self._frida_bridge)
+
+    def wire_sandbox_backend(self, sandbox: object) -> None:
+        """Wire a sandbox backend to the sandbox panel.
+
+        Args:
+            sandbox: Sandbox backend instance.
+        """
+        if self._sandbox_panel is not None and hasattr(self._sandbox_panel, "set_sandbox"):
+            self._sandbox_panel.set_sandbox(sandbox)
+
+    def wire_script_backend(self, backend: object) -> None:
+        """Wire a script generation backend to the script manager.
+
+        Args:
+            backend: Script generation backend instance.
+        """
+        if self._script_panel is not None and hasattr(self._script_panel, "set_backend"):
+            self._script_panel.set_backend(backend)

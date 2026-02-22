@@ -32,7 +32,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels._async_bridge import run_bridge_coroutine
-from intellicrack.ui.panels._qt_compat import set_max_block_count
+from intellicrack.ui.panels._qt_compat import connect_cell_changed, set_max_block_count
 
 
 if TYPE_CHECKING:
@@ -232,7 +232,7 @@ class X64DbgPanel(QWidget):
         self._reg_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._reg_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         self._reg_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self._reg_table.cellChanged.connect(self._on_register_edited)
+        connect_cell_changed(self._reg_table, self._on_register_edited)
         tabs.addTab(self._reg_table, "Registers")
 
         self._stack_table = QTableWidget(0, len(_STACK_COLUMNS))

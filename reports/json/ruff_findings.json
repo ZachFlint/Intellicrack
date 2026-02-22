@@ -1,26 +1,66 @@
 {
   "tool": "ruff",
-  "generated": "2026-02-21T19:52:04.405118",
-  "total_findings": 10,
-  "total_files": 9,
+  "generated": "2026-02-22T01:37:48.410132",
+  "total_findings": 13,
+  "total_files": 10,
   "files": [
     {
       "path": "D:\\Intellicrack\\src\\intellicrack\\ui\\app.py",
       "count": 2,
       "findings": [
         {
-          "line": 587,
+          "line": 618,
           "column": 9,
           "code": "S110",
           "message": "`try`-`except`-`pass` detected, consider logging the exception",
-          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\app.py:587:9: S110 `try`-`except`-`pass` detected, consider logging the exception"
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\app.py:618:9: S110 `try`-`except`-`pass` detected, consider logging the exception"
         },
         {
-          "line": 1208,
+          "line": 1259,
           "column": 17,
           "code": "PERF401",
           "message": "Use `list.extend` to create a transformed list",
-          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\app.py:1208:17: PERF401 Use `list.extend` to create a transformed list"
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\app.py:1259:17: PERF401 Use `list.extend` to create a transformed list"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 194,
+          "column": 46,
+          "code": "F821",
+          "message": "Undefined name `QAbstractItemView`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:194:46: F821 Undefined name `QAbstractItemView`"
+        },
+        {
+          "line": 231,
+          "column": 45,
+          "code": "F821",
+          "message": "Undefined name `QAbstractItemView`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:231:45: F821 Undefined name `QAbstractItemView`"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 222,
+          "column": 46,
+          "code": "F821",
+          "message": "Undefined name `QAbstractItemView`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:222:46: F821 Undefined name `QAbstractItemView`"
+        },
+        {
+          "line": 259,
+          "column": 45,
+          "code": "F821",
+          "message": "Undefined name `QAbstractItemView`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:259:45: F821 Undefined name `QAbstractItemView`"
         }
       ]
     },
@@ -47,19 +87,6 @@
           "code": "PLR6301",
           "message": "Method `configure` could be a function, class method, or static method",
           "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\logging.py:276:9: PLR6301 Method `configure` could be a function, class method, or static method"
-        }
-      ]
-    },
-    {
-      "path": "D:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 12,
-          "column": 8,
-          "code": "F401",
-          "message": "`ctypes` imported but unused",
-          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:12:8: F401 `ctypes` imported but unused"
         }
       ]
     },
@@ -108,10 +135,10 @@
       "findings": [
         {
           "line": 37,
-          "column": 51,
-          "code": "F401",
-          "message": "`intellicrack.core.process_manager.ProcessManager` imported but unused",
-          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\panels\\process_panel.py:37:51: F401 `intellicrack.core.process_manager.ProcessManager` imported but unused"
+          "column": 5,
+          "code": "TC005",
+          "message": "Found empty type-checking block",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\panels\\process_panel.py:37:5: TC005 Found empty type-checking block"
         }
       ]
     },

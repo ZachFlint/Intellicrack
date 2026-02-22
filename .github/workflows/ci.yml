@@ -1,367 +1,306 @@
 name: CI
-
 on:
-    workflow_dispatch:
-    push:
-        branches: [main, develop]
-    pull_request:
-        branches: [main]
-
+  workflow_dispatch:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
 permissions:
-    contents: read
-    checks: write
-    pull-requests: write
-
+  contents: read
+  checks: write
+  pull-requests: write
 jobs:
-    setup:
-        runs-on: windows-latest
-        steps:
-            - uses: actions/checkout@v6
-              with:
-                  fetch-depth: 0
-
-            - uses: prefix-dev/setup-pixi@v0.9.4
-              with:
-                  pixi-version: latest
-
-            - name: Set up Rust toolchain
-              uses: dtolnay/rust-toolchain@stable
-              with:
-                  toolchain: stable
-                  components: rustfmt, clippy
-
-            - name: Cache Rust dependencies
-              uses: Swatinem/rust-cache@v2
-              with:
-                  workspaces: intellicrack-launcher
-
-            - name: Install dependencies
-              run: |
-                  pixi install
-              timeout-minutes: 15
-
-            - name: Generate requirements.txt for Dependabot
-              shell: pwsh
-              run: |
-                  pixi list --frozen --json | ConvertFrom-Json | Where-Object { $_.kind -eq 'pypi' } | Sort-Object name | ForEach-Object {
-                    if ($_.version) {
-                      "$($_.name)==$($_.version)"
-                    } else {
-                      $_.name
-                    }
-                  } | Out-File -FilePath requirements.txt -Encoding utf8
-              timeout-minutes: 5
-
-    rust-check:
-        runs-on: windows-latest
-        needs: [setup]
-        if: success() || failure()
-        continue-on-error: true
-        steps:
-            - uses: actions/checkout@v6
-              with:
-                  fetch-depth: 0
-
-            - uses: prefix-dev/setup-pixi@v0.9.4
-              with:
-                  pixi-version: latest
-
-            - name: Set up Rust toolchain
-              uses: dtolnay/rust-toolchain@stable
-              with:
-                  toolchain: stable
-                  components: rustfmt, clippy
-
-            - name: Cache Rust dependencies
-              uses: Swatinem/rust-cache@v2
-              with:
-                  workspaces: intellicrack-launcher
-
-            - name: Install dependencies
-              run: pixi install
-              timeout-minutes: 15
-
-            - name: Force reinstall dependencies (clear cache issue)
-              run: |
-                  Write-Output "Removing pixi environment to force fresh install..."
-                  if (Test-Path "D:\Intellicrack\.pixi\envs\default") {
-                    Remove-Item -Recurse -Force "D:\Intellicrack\.pixi\envs\default"
-                  }
-                  pixi install --locked
-
-            - name: Rust - Check compilation
-              run: |
-                  cd intellicrack-launcher
-                  pixi run cargo check --all-features --all-targets
-
-    rust-format:
-        runs-on: windows-latest
-        needs: [setup]
-        if: success() || failure()
-        continue-on-error: true
-        steps:
-            - uses: actions/checkout@v6
-              with:
-                  fetch-depth: 0
-
-            - uses: prefix-dev/setup-pixi@v0.9.4
-              with:
-                  pixi-version: latest
-
-            - name: Set up Rust toolchain
-              uses: dtolnay/rust-toolchain@stable
-              with:
-                  toolchain: stable
-                  components: rustfmt, clippy
-
-            - name: Install dependencies
-              run: pixi install
-              timeout-minutes: 15
-
-            - name: Rust - Format check
-              run: |
-                  cd intellicrack-launcher
-                  pixi run cargo fmt -- --check
-
-    rust-clippy:
-        runs-on: windows-latest
-        needs: [setup]
-        if: success() || failure()
-        continue-on-error: true
-        steps:
-            - uses: actions/checkout@v6
-              with:
-                  fetch-depth: 0
-
-            - uses: prefix-dev/setup-pixi@v0.9.4
-              with:
-                  pixi-version: latest
-
-            - name: Set up Rust toolchain
-              uses: dtolnay/rust-toolchain@stable
-              with:
-                  toolchain: stable
-                  components: rustfmt, clippy
-
-            - name: Cache Rust dependencies
-              uses: Swatinem/rust-cache@v2
-              with:
-                  workspaces: intellicrack-launcher
-
-            - name: Install dependencies
-              run: pixi install
-              timeout-minutes: 15
-
-            - name: Rust - Clippy linting
-              run: |
-                  cd intellicrack-launcher
-                  pixi run cargo clippy --all-features --all-targets -- -D warnings
-
-    rust-test:
-        runs-on: windows-latest
-        needs: [setup]
-        if: success() || failure()
-        continue-on-error: true
-        steps:
-            - uses: actions/checkout@v6
-              with:
-                  fetch-depth: 0
-
-            - uses: prefix-dev/setup-pixi@v0.9.4
-              with:
-                  pixi-version: latest
-
-            - name: Set up Rust toolchain
-              uses: dtolnay/rust-toolchain@stable
-              with:
-                  toolchain: stable
-
-            - name: Cache Rust dependencies
-              uses: Swatinem/rust-cache@v2
-              with:
-                  workspaces: intellicrack-launcher
-
-            - name: Install dependencies
-              run: pixi install
-              timeout-minutes: 15
-
-            - name: Rust - Run tests
-              run: |
-                  cd intellicrack-launcher
-                  pixi run cargo test --all-features --verbose
-
-    rust-build:
-        runs-on: windows-latest
-        needs: [setup]
-        if: success() || failure()
-        continue-on-error: true
-        steps:
-            - uses: actions/checkout@v6
-              with:
-                  fetch-depth: 0
-
-            - uses: prefix-dev/setup-pixi@v0.9.4
-              with:
-                  pixi-version: latest
-
-            - name: Set up Rust toolchain
-              uses: dtolnay/rust-toolchain@stable
-              with:
-                  toolchain: stable
-
-            - name: Cache Rust dependencies
-              uses: Swatinem/rust-cache@v2
-              with:
-                  workspaces: intellicrack-launcher
-
-            - name: Install dependencies
-              run: pixi install
-              timeout-minutes: 15
-
-            - name: Rust - Build release
-              run: |
-                  cd intellicrack-launcher
-                  pixi run cargo build --release --all-features
-
-    python-lint:
-        runs-on: windows-latest
-        needs: [setup]
-        if: success() || failure()
-        continue-on-error: true
-        steps:
-            - uses: actions/checkout@v6
-              with:
-                  fetch-depth: 0
-
-            - uses: prefix-dev/setup-pixi@v0.9.4
-              with:
-                  pixi-version: latest
-
-            - name: Install dependencies
-              run: pixi install
-              timeout-minutes: 15
-
-            - name: Lint with ruff
-              run: |
-                  pixi run ruff check intellicrack/ tests/ --output-format=github
-                  pixi run ruff format --check intellicrack/ tests/
-
-    python-security:
-        runs-on: windows-latest
-        needs: [setup]
-        if: success() || failure()
-        continue-on-error: true
-        steps:
-            - uses: actions/checkout@v6
-              with:
-                  fetch-depth: 0
-
-            - uses: prefix-dev/setup-pixi@v0.9.4
-              with:
-                  pixi-version: latest
-
-            - name: Install dependencies
-              run: pixi install
-              timeout-minutes: 15
-
-            - name: Security scan with bandit
-              run: |
-                  pixi run bandit -r intellicrack/ -f json -o bandit-report.json || true
-                  python -c "import json; data=json.load(open('bandit-report.json')); print(f'Security Issues: {len(data.get(\"results\", []))}')"
-
-            - name: Upload bandit report
-              if: always()
-              uses: actions/upload-artifact@v6
-              with:
-                  name: bandit-report
-                  path: bandit-report.json
-
-    python-typecheck:
-        runs-on: windows-latest
-        needs: [setup]
-        if: success() || failure()
-        continue-on-error: true
-        steps:
-            - uses: actions/checkout@v6
-              with:
-                  fetch-depth: 0
-
-            - uses: prefix-dev/setup-pixi@v0.9.4
-              with:
-                  pixi-version: latest
-
-            - name: Install dependencies
-              run: pixi install
-              timeout-minutes: 15
-
-            - name: Type check with mypy
-              run: |
-                  pixi run mypy intellicrack/ --ignore-missing-imports --no-strict-optional
-
-    python-mock-verify:
-        runs-on: windows-latest
-        needs: [setup]
-        if: success() || failure()
-        continue-on-error: true
-        steps:
-            - uses: actions/checkout@v6
-              with:
-                  fetch-depth: 0
-
-            - uses: prefix-dev/setup-pixi@v0.9.4
-              with:
-                  pixi-version: latest
-
-            - name: Install dependencies
-              run: pixi install
-              timeout-minutes: 15
-
-            - name: Verify No Mock Usage (Production-Ready Enforcement)
-              run: |
-                  pixi run python tests/utils/verify_no_mocks.py --ci
-
-    python-test:
-        runs-on: windows-latest
-        needs: [setup]
-        if: success() || failure()
-        continue-on-error: true
-        steps:
-            - uses: actions/checkout@v6
-              with:
-                  fetch-depth: 0
-
-            - uses: prefix-dev/setup-pixi@v0.9.4
-              with:
-                  pixi-version: latest
-
-            - name: Install dependencies
-              run: pixi install
-              timeout-minutes: 15
-
-            - name: Test with pytest
-              run: |
-                  pixi run pytest tests/ -v --cov=intellicrack --cov-report=xml --cov-report=html --junitxml=test-results.xml
-              env:
-                  PYTHONDONTWRITEBYTECODE: 1
-
-            - name: Upload test results
-              if: always()
-              uses: actions/upload-artifact@v6
-              with:
-                  name: test-results
-                  path: |
-                      test-results.xml
-                      htmlcov/
-                      coverage.xml
-
-            - name: Upload coverage to Codecov
-              if: always()
-              uses: codecov/codecov-action@v5
-              with:
-                  file: ./coverage.xml
-                  flags: unittests
-                  name: codecov-windows-py3.12
-                  fail_ci_if_error: false
-                  verbose: true
-              env:
-                  CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  setup:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          pixi-version: latest
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: intellicrack-launcher
+      - name: Install dependencies
+        run: |
+          pixi install
+        timeout-minutes: 15
+      - name: Generate requirements.txt for Dependabot
+        shell: pwsh
+        run: |
+          pixi list --frozen --json | ConvertFrom-Json | Where-Object { $_.kind -eq 'pypi' } | Sort-Object name | ForEach-Object {
+            if ($_.version) {
+              "$($_.name)==$($_.version)"
+            } else {
+              $_.name
+            }
+          } | Out-File -FilePath requirements.txt -Encoding utf8
+        timeout-minutes: 5
+  rust-check:
+    runs-on: windows-latest
+    needs: [setup]
+    if: success() || failure()
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          pixi-version: latest
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: intellicrack-launcher
+      - name: Install dependencies
+        run: pixi install
+        timeout-minutes: 15
+      - name: Force reinstall dependencies (clear cache issue)
+        run: |
+          Write-Output "Removing pixi environment to force fresh install..."
+          if (Test-Path "D:\Intellicrack\.pixi\envs\default") {
+            Remove-Item -Recurse -Force "D:\Intellicrack\.pixi\envs\default"
+          }
+          pixi install --locked
+      - name: Rust - Check compilation
+        run: |
+          cd intellicrack-launcher
+          pixi run cargo check --all-features --all-targets
+  rust-format:
+    runs-on: windows-latest
+    needs: [setup]
+    if: success() || failure()
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          pixi-version: latest
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      - name: Install dependencies
+        run: pixi install
+        timeout-minutes: 15
+      - name: Rust - Format check
+        run: |
+          cd intellicrack-launcher
+          pixi run cargo fmt -- --check
+  rust-clippy:
+    runs-on: windows-latest
+    needs: [setup]
+    if: success() || failure()
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          pixi-version: latest
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: intellicrack-launcher
+      - name: Install dependencies
+        run: pixi install
+        timeout-minutes: 15
+      - name: Rust - Clippy linting
+        run: |
+          cd intellicrack-launcher
+          pixi run cargo clippy --all-features --all-targets -- -D warnings
+  rust-test:
+    runs-on: windows-latest
+    needs: [setup]
+    if: success() || failure()
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          pixi-version: latest
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: intellicrack-launcher
+      - name: Install dependencies
+        run: pixi install
+        timeout-minutes: 15
+      - name: Rust - Run tests
+        run: |
+          cd intellicrack-launcher
+          pixi run cargo test --all-features --verbose
+  rust-build:
+    runs-on: windows-latest
+    needs: [setup]
+    if: success() || failure()
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          pixi-version: latest
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: intellicrack-launcher
+      - name: Install dependencies
+        run: pixi install
+        timeout-minutes: 15
+      - name: Rust - Build release
+        run: |
+          cd intellicrack-launcher
+          pixi run cargo build --release --all-features
+  python-lint:
+    runs-on: windows-latest
+    needs: [setup]
+    if: success() || failure()
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          pixi-version: latest
+      - name: Install dependencies
+        run: pixi install
+        timeout-minutes: 15
+      - name: Lint with ruff
+        run: |
+          pixi run ruff check intellicrack/ tests/ --output-format=github
+          pixi run ruff format --check intellicrack/ tests/
+  python-security:
+    runs-on: windows-latest
+    needs: [setup]
+    if: success() || failure()
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          pixi-version: latest
+      - name: Install dependencies
+        run: pixi install
+        timeout-minutes: 15
+      - name: Security scan with bandit
+        run: |
+          pixi run bandit -r intellicrack/ -f json -o bandit-report.json || true
+          python -c "import json; data=json.load(open('bandit-report.json')); print(f'Security Issues: {len(data.get(\"results\", []))}')"
+      - name: Upload bandit report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: bandit-report
+          path: bandit-report.json
+  python-typecheck:
+    runs-on: windows-latest
+    needs: [setup]
+    if: success() || failure()
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          pixi-version: latest
+      - name: Install dependencies
+        run: pixi install
+        timeout-minutes: 15
+      - name: Type check with mypy
+        run: |
+          pixi run mypy intellicrack/ --ignore-missing-imports --no-strict-optional
+  python-mock-verify:
+    runs-on: windows-latest
+    needs: [setup]
+    if: success() || failure()
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          pixi-version: latest
+      - name: Install dependencies
+        run: pixi install
+        timeout-minutes: 15
+      - name: Verify No Mock Usage (Production-Ready Enforcement)
+        run: |
+          pixi run python tests/utils/verify_no_mocks.py --ci
+  python-test:
+    runs-on: windows-latest
+    needs: [setup]
+    if: success() || failure()
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          pixi-version: latest
+      - name: Install dependencies
+        run: pixi install
+        timeout-minutes: 15
+      - name: Test with pytest
+        run: |
+          pixi run pytest tests/ -v --cov=intellicrack --cov-report=xml --cov-report=html --junitxml=test-results.xml
+        env:
+          PYTHONDONTWRITEBYTECODE: 1
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-results
+          path: |
+            test-results.xml
+            htmlcov/
+            coverage.xml
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-windows-py3.12
+          fail_ci_if_error: false
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

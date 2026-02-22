@@ -1,6 +1,6 @@
 {
   "tool": "psscriptanalyzer",
-  "generated": "2026-02-21T19:57:55.820921",
+  "generated": "2026-02-22T01:49:12.935384",
   "total_findings": 238,
   "total_files": 24,
   "files": [
@@ -1465,6 +1465,14 @@
       "count": 12,
       "findings": [
         {
+          "line": 64,
+          "column": 13,
+          "severity": "Warning",
+          "rule": "PSReviewUnusedParameter",
+          "message": "The parameter 'ArgList' has been declared but not used.",
+          "raw": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-agent-lldb\\data\\support\\lldbsetuputils.ps1:64:13: [Warning] The parameter 'ArgList' has been declared but not used. (PSReviewUnusedParameter)"
+        },
+        {
           "line": 68,
           "column": 10,
           "severity": "Warning",
@@ -1495,14 +1503,6 @@
           "rule": "PSUseApprovedVerbs",
           "message": "The cmdlet 'Compute-Lldb-PipInstall-Args' uses an unapproved verb.",
           "raw": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-agent-lldb\\data\\support\\lldbsetuputils.ps1:110:10: [Warning] The cmdlet 'Compute-Lldb-PipInstall-Args' uses an unapproved verb. (PSUseApprovedVerbs)"
-        },
-        {
-          "line": 64,
-          "column": 13,
-          "severity": "Warning",
-          "rule": "PSReviewUnusedParameter",
-          "message": "The parameter 'ArgList' has been declared but not used.",
-          "raw": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-agent-lldb\\data\\support\\lldbsetuputils.ps1:64:13: [Warning] The parameter 'ArgList' has been declared but not used. (PSReviewUnusedParameter)"
         },
         {
           "line": 18,

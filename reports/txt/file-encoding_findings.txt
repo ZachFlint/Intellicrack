@@ -1,0 +1,13 @@
+1 findings in docs\source\api\_autosummary\intellicrack.core.rst
+
+docs\source\api\_autosummary\intellicrack.core.rst: Has a byte-order marker (BOM)
+
+
+1 findings in docs\source\api\_autosummary\intellicrack.credentials.rst
+
+docs\source\api\_autosummary\intellicrack.credentials.rst: Has a byte-order marker (BOM)
+
+
+1 findings in docs\source\api\_autosummary\intellicrack.rst
+
+docs\source\api\_autosummary\intellicrack.rst: Has a byte-order marker (BOM)

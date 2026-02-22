@@ -9,7 +9,6 @@ from __future__ import annotations
 import ctypes
 import ctypes.wintypes
 import struct
-from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QModelIndex, Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QFont
@@ -32,9 +31,6 @@ from PyQt6.QtWidgets import (
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels._qt_compat import set_header_labels, set_sorting_enabled
 
-
-if TYPE_CHECKING:
-    from intellicrack.core.process_manager import ProcessManager
 
 _logger = get_logger("ui.panels.process")
 

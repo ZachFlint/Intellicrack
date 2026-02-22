@@ -1,149 +1,104 @@
-16 findings in d:\Intellicrack\src\intellicrack\ui\app.py
+29 findings in d:\Intellicrack\src\intellicrack\ui\tools.py
 
-d:\Intellicrack\src\intellicrack\ui\app.py:704:17: [error] Type of "patch_data" is partially unknown
-  Type of "patch_data" is "dict[Unknown, Unknown]"
+d:\Intellicrack\src\intellicrack\ui\tools.py:1581:30: [error] Argument of type "str" cannot be assigned to parameter "tab_name" of type "OutputType" in function "set_tab_content"
+  Type "str" is not assignable to type "OutputType"
+    "str" is not assignable to type "Literal['ghidra']"
+    "str" is not assignable to type "Literal['frida']"
+    "str" is not assignable to type "Literal['radare2']"
+    "str" is not assignable to type "Literal['x64dbg']"
+    "str" is not assignable to type "Literal['log']"
+    "str" is not assignable to type "Literal['licensing']"
+    "str" is not assignable to type "Literal['scripts']"
+  ...
 
-d:\Intellicrack\src\intellicrack\ui\app.py:704:30: [error] Type of "result" is partially unknown
-  Type of "result" is "dict[Unknown, Unknown]"
+d:\Intellicrack\src\intellicrack\ui\tools.py:1583:13: [error] Argument missing for parameter "content"
 
-d:\Intellicrack\src\intellicrack\ui\app.py:705:17: [error] Arguments missing for parameters "address", "original_bytes", "new_bytes"
+d:\Intellicrack\src\intellicrack\ui\tools.py:1584:27: [error] Argument of type "str" cannot be assigned to parameter "tab_name" of type "OutputType" in function "activate_tab"
+  Type "str" is not assignable to type "OutputType"
+    "str" is not assignable to type "Literal['ghidra']"
+    "str" is not assignable to type "Literal['frida']"
+    "str" is not assignable to type "Literal['radare2']"
+    "str" is not assignable to type "Literal['x64dbg']"
+    "str" is not assignable to type "Literal['log']"
+    "str" is not assignable to type "Literal['licensing']"
+    "str" is not assignable to type "Literal['scripts']"
+  ...
 
-d:\Intellicrack\src\intellicrack\ui\app.py:706:21: [error] No parameter named "offset"
+d:\Intellicrack\src\intellicrack\ui\tools.py:1592:24: [error] Argument of type "str" cannot be assigned to parameter "tab_name" of type "OutputType" in function "clear_tab"
+  Type "str" is not assignable to type "OutputType"
+    "str" is not assignable to type "Literal['ghidra']"
+    "str" is not assignable to type "Literal['frida']"
+    "str" is not assignable to type "Literal['radare2']"
+    "str" is not assignable to type "Literal['x64dbg']"
+    "str" is not assignable to type "Literal['log']"
+    "str" is not assignable to type "Literal['licensing']"
+    "str" is not assignable to type "Literal['scripts']"
+  ...
 
-d:\Intellicrack\src\intellicrack\ui\app.py:706:28: [error] Type of "get" is partially unknown
-  Type of "get" is "Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]"
+d:\Intellicrack\src\intellicrack\ui\tools.py:1603:39: [error] Argument of type "str" cannot be assigned to parameter "tool_id" of type "OutputType" in function "get_embedded_tool"
+  Type "str" is not assignable to type "OutputType"
+    "str" is not assignable to type "Literal['ghidra']"
+    "str" is not assignable to type "Literal['frida']"
+    "str" is not assignable to type "Literal['radare2']"
+    "str" is not assignable to type "Literal['x64dbg']"
+    "str" is not assignable to type "Literal['log']"
+    "str" is not assignable to type "Literal['licensing']"
+    "str" is not assignable to type "Literal['scripts']"
+  ...
 
-d:\Intellicrack\src\intellicrack\ui\app.py:707:21: [error] No parameter named "original"
+d:\Intellicrack\src\intellicrack\ui\tools.py:1613:52: [error] Expected 1 positional argument
 
-d:\Intellicrack\src\intellicrack\ui\app.py:707:30: [error] Type of "get" is partially unknown
-  Type of "get" is "Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]"
+d:\Intellicrack\src\intellicrack\ui\tools.py:1622:13: [error] Type of "add_hook_entry" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\app.py:708:21: [error] No parameter named "patched"
+d:\Intellicrack\src\intellicrack\ui\tools.py:1622:31: [error] Cannot access attribute "add_hook_entry" for class "FridaPanelProtocol"
+  Attribute "add_hook_entry" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\app.py:708:29: [error] Type of "get" is partially unknown
-  Type of "get" is "Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]"
+d:\Intellicrack\src\intellicrack\ui\tools.py:1631:20: [error] Type of "get_sandbox" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\app.py:709:33: [error] Type of "get" is partially unknown
-  Type of "get" is "Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]"
+d:\Intellicrack\src\intellicrack\ui\tools.py:1631:20: [error] Return type is unknown
 
-d:\Intellicrack\src\intellicrack\ui\app.py:914:25: [error] Type "object" is not assignable to declared type "bytes | None"
-  Type "object" is not assignable to type "bytes | None"
-    "object" is not assignable to "bytes"
-    "object" is not assignable to "None"
+d:\Intellicrack\src\intellicrack\ui\tools.py:1631:40: [error] Cannot access attribute "get_sandbox" for class "SandboxPanelProtocol"
+  Attribute "get_sandbox" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\app.py:933:27: [error] Type "object" is not assignable to declared type "list[object]"
-  "object" is not assignable to "list[object]"
+d:\Intellicrack\src\intellicrack\ui\tools.py:1641:13: [error] Type of "load_execution_report" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\app.py:970:17: [error] Type of "analysis_dict" is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1641:33: [error] Cannot access attribute "load_execution_report" for class "SandboxPanelProtocol"
+  Attribute "load_execution_report" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\app.py:970:33: [error] Type of "to_dict" is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1653:17: [error] Type of "selected_id" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\app.py:970:42: [error] Cannot access attribute "to_dict" for class "object"
-  Attribute "to_dict" is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1653:31: [error] Type of "get_selected_id" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\app.py:1198:21: [error] Argument missing for parameter "registry"
+d:\Intellicrack\src\intellicrack\ui\tools.py:1653:50: [error] Cannot access attribute "get_selected_id" for class "QWidget"
+  Attribute "get_selected_id" is unknown
 
+d:\Intellicrack\src\intellicrack\ui\tools.py:1655:17: [error] Type of "current_script" is unknown
 
-14 findings in d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py
+d:\Intellicrack\src\intellicrack\ui\tools.py:1655:34: [error] Type of "get_current_script" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py:193:9: [error] Type of "setSelectionMode" is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1655:53: [error] Cannot access attribute "get_current_script" for class "QWidget"
+  Attribute "get_current_script" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py:193:26: [error] Cannot access attribute "setSelectionMode" for class "QTreeWidget"
-  Attribute "setSelectionMode" is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1656:16: [error] Return type, "tuple[Unknown | str | None, Unknown | str | None]", is partially unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py:193:43: [error] Type of "SelectionMode" is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1664:16: [error] Type of "get_highlighter" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py:193:43: [error] Type of "SingleSelection" is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1664:16: [error] Return type is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py:193:55: [error] Cannot access attribute "SelectionMode" for class "type[QTreeWidget]"
-  Attribute "SelectionMode" is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1664:21: [error] Cannot access attribute "get_highlighter" for class "ToolOutputPanel*"
+  Attribute "get_highlighter" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py:229:29: [error] Argument of type "QTreeWidget" cannot be assigned to parameter "table" of type "QTableWidget" in function "set_sorting_enabled"
-  "QTreeWidget" is not assignable to "QTableWidget"
+d:\Intellicrack\src\intellicrack\ui\tools.py:1675:13: [error] Type of "set_x64dbg_bridge" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py:230:9: [error] Type of "setSelectionMode" is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1675:31: [error] Cannot access attribute "set_x64dbg_bridge" for class "QWidget"
+  Attribute "set_x64dbg_bridge" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py:230:25: [error] Cannot access attribute "setSelectionMode" for class "QTreeWidget"
-  Attribute "setSelectionMode" is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1677:13: [error] Type of "set_frida_bridge" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py:230:42: [error] Type of "SelectionMode" is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1677:31: [error] Cannot access attribute "set_frida_bridge" for class "QWidget"
+  Attribute "set_frida_bridge" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py:230:42: [error] Type of "SingleSelection" is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1695:13: [error] Type of "set_backend" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py:230:54: [error] Cannot access attribute "SelectionMode" for class "type[QTreeWidget]"
-  Attribute "SelectionMode" is unknown
-
-d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py:383:29: [error] Argument of type "QTreeWidget" cannot be assigned to parameter "table" of type "QTableWidget" in function "set_sorting_enabled"
-  "QTreeWidget" is not assignable to "QTableWidget"
-
-d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py:395:29: [error] Argument of type "QTreeWidget" cannot be assigned to parameter "table" of type "QTableWidget" in function "set_sorting_enabled"
-  "QTreeWidget" is not assignable to "QTableWidget"
-
-d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py:476:86: [error] Condition will always evaluate to True since the types "int" and "None" have no overlap
-
-
-13 findings in d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py
-
-d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:221:9: [error] Type of "setSelectionMode" is unknown
-
-d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:221:26: [error] Cannot access attribute "setSelectionMode" for class "QTreeWidget"
-  Attribute "setSelectionMode" is unknown
-
-d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:221:43: [error] Type of "SelectionMode" is unknown
-
-d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:221:43: [error] Type of "SingleSelection" is unknown
-
-d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:221:55: [error] Cannot access attribute "SelectionMode" for class "type[QTreeWidget]"
-  Attribute "SelectionMode" is unknown
-
-d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:257:29: [error] Argument of type "QTreeWidget" cannot be assigned to parameter "table" of type "QTableWidget" in function "set_sorting_enabled"
-  "QTreeWidget" is not assignable to "QTableWidget"
-
-d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:258:9: [error] Type of "setSelectionMode" is unknown
-
-d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:258:25: [error] Cannot access attribute "setSelectionMode" for class "QTreeWidget"
-  Attribute "setSelectionMode" is unknown
-
-d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:258:42: [error] Type of "SelectionMode" is unknown
-
-d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:258:42: [error] Type of "SingleSelection" is unknown
-
-d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:258:54: [error] Cannot access attribute "SelectionMode" for class "type[QTreeWidget]"
-  Attribute "SelectionMode" is unknown
-
-d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:379:29: [error] Argument of type "QTreeWidget" cannot be assigned to parameter "table" of type "QTableWidget" in function "set_sorting_enabled"
-  "QTreeWidget" is not assignable to "QTableWidget"
-
-d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:391:29: [error] Argument of type "QTreeWidget" cannot be assigned to parameter "table" of type "QTableWidget" in function "set_sorting_enabled"
-  "QTreeWidget" is not assignable to "QTableWidget"
-
-
-3 findings in d:\Intellicrack\src\intellicrack\providers\anthropic.py
-
-d:\Intellicrack\src\intellicrack\providers\anthropic.py:294:35: [error] Unnecessary "cast" call; type is already "Dict[str, object]"
-
-d:\Intellicrack\src\intellicrack\providers\anthropic.py:361:13: [error] Type of "response" is unknown
-
-d:\Intellicrack\src\intellicrack\providers\anthropic.py:363:63: [error] Argument type is partially unknown
-  Argument corresponds to parameter "response" in function "_parse_response_blocks"
-  Argument type is "Unknown | Message"
-
-
-3 findings in d:\Intellicrack\src\intellicrack\ui\panels\x64dbg_panel.py
-
-d:\Intellicrack\src\intellicrack\ui\panels\x64dbg_panel.py:235:9: [error] Type of "cellChanged" is unknown
-
-d:\Intellicrack\src\intellicrack\ui\panels\x64dbg_panel.py:235:9: [error] Type of "connect" is unknown
-
-d:\Intellicrack\src\intellicrack\ui\panels\x64dbg_panel.py:235:25: [error] Cannot access attribute "cellChanged" for class "QTableWidget"
-  Attribute "cellChanged" is unknown
-
-
-1 findings in d:\Intellicrack\src\intellicrack\core\process_manager.py
-
-d:\Intellicrack\src\intellicrack\core\process_manager.py:12:8: [error] Import "ctypes" is not accessed
-
-
-1 findings in d:\Intellicrack\src\intellicrack\ui\panels\process_panel.py
-
-d:\Intellicrack\src\intellicrack\ui\panels\process_panel.py:37:51: [error] Import "ProcessManager" is not accessed
+d:\Intellicrack\src\intellicrack\ui\tools.py:1695:32: [error] Cannot access attribute "set_backend" for class "QWidget"
+  Attribute "set_backend" is unknown

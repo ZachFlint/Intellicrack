@@ -1,67 +1,13 @@
 {
   "tool": "deadcode",
-  "generated": "2026-02-21T19:57:07.719597",
-  "total_findings": 202,
-  "total_files": 47,
+  "generated": "2026-02-22T01:48:19.335721",
+  "total_findings": 183,
+  "total_files": 39,
   "files": [
     {
       "path": "src\\intellicrack\\ui\\tools.py",
-      "count": 19,
+      "count": 17,
       "findings": [
-        {
-          "line": 208,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mlog_message\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\tools.py:208:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mlog_message\u001b[0m` is never used"
-        },
-        {
-          "line": 221,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_selected_pid\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\tools.py:221:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_selected_pid\u001b[0m` is never used"
-        },
-        {
-          "line": 252,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mset_sandbox\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\tools.py:252:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mset_sandbox\u001b[0m` is never used"
-        },
-        {
-          "line": 327,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_highlighter\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\tools.py:327:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_highlighter\u001b[0m` is never used"
-        },
-        {
-          "line": 754,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mset_tab_content\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\tools.py:754:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mset_tab_content\u001b[0m` is never used"
-        },
-        {
-          "line": 764,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mset_tab_info\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\tools.py:764:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mset_tab_info\u001b[0m` is never used"
-        },
-        {
-          "line": 814,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mactivate_tab\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\tools.py:814:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mactivate_tab\u001b[0m` is never used"
-        },
-        {
-          "line": 841,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mclear_tab\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\tools.py:841:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mclear_tab\u001b[0m` is never used"
-        },
-        {
-          "line": 873,
-          "column": null,
-          "message": "8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_x64dbg_bridge\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\tools.py:873:8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_x64dbg_bridge\u001b[0m` is never used"
-        },
         {
           "line": 874,
           "column": null,
@@ -75,52 +21,94 @@
           "raw": "src\\intellicrack\\ui\\tools.py:875:8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_radare2_bridge\u001b[0m` is never used"
         },
         {
-          "line": 876,
-          "column": null,
-          "message": "8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_frida_bridge\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\tools.py:876:8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_frida_bridge\u001b[0m` is never used"
-        },
-        {
-          "line": 981,
-          "column": null,
-          "message": "16: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_x64dbg_bridge\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\tools.py:981:16: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_x64dbg_bridge\u001b[0m` is never used"
-        },
-        {
-          "line": 1033,
+          "line": 1034,
           "column": null,
           "message": "16: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_ghidra_bridge\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\tools.py:1033:16: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_ghidra_bridge\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\ui\\tools.py:1034:16: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_ghidra_bridge\u001b[0m` is never used"
         },
         {
-          "line": 1068,
+          "line": 1069,
           "column": null,
           "message": "16: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_radare2_bridge\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\tools.py:1068:16: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_radare2_bridge\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\ui\\tools.py:1069:16: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_radare2_bridge\u001b[0m` is never used"
         },
         {
-          "line": 1103,
+          "line": 1530,
           "column": null,
-          "message": "16: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_frida_bridge\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\tools.py:1103:16: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_frida_bridge\u001b[0m` is never used"
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_bridge_for_tool\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\tools.py:1530:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_bridge_for_tool\u001b[0m` is never used"
         },
         {
-          "line": 1342,
+          "line": 1555,
           "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_embedded_tool\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\tools.py:1342:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_embedded_tool\u001b[0m` is never used"
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_active_process_pid\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\tools.py:1555:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_active_process_pid\u001b[0m` is never used"
         },
         {
-          "line": 1384,
+          "line": 1565,
           "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mactivate_scripts_tab\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\tools.py:1384:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mactivate_scripts_tab\u001b[0m` is never used"
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mdisplay_analysis_result\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\tools.py:1565:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mdisplay_analysis_result\u001b[0m` is never used"
         },
         {
-          "line": 1391,
+          "line": 1586,
           "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mactivate_stack_tab\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\tools.py:1391:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mactivate_stack_tab\u001b[0m` is never used"
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mclear_analysis_tab\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\tools.py:1586:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mclear_analysis_tab\u001b[0m` is never used"
+        },
+        {
+          "line": 1594,
+          "column": null,
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_active_tool_widget\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\tools.py:1594:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_active_tool_widget\u001b[0m` is never used"
+        },
+        {
+          "line": 1605,
+          "column": null,
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mlog_frida_message\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\tools.py:1605:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mlog_frida_message\u001b[0m` is never used"
+        },
+        {
+          "line": 1615,
+          "column": null,
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1madd_frida_hook_entry\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\tools.py:1615:4: \u001b[91mDC04\u001b[0m Method `\u001b[1madd_frida_hook_entry\u001b[0m` is never used"
+        },
+        {
+          "line": 1624,
+          "column": null,
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_sandbox_backend\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\tools.py:1624:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_sandbox_backend\u001b[0m` is never used"
+        },
+        {
+          "line": 1634,
+          "column": null,
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mload_sandbox_report\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\tools.py:1634:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mload_sandbox_report\u001b[0m` is never used"
+        },
+        {
+          "line": 1643,
+          "column": null,
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_script_panel_state\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\tools.py:1643:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_script_panel_state\u001b[0m` is never used"
+        },
+        {
+          "line": 1658,
+          "column": null,
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_code_highlighter\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\tools.py:1658:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_code_highlighter\u001b[0m` is never used"
+        },
+        {
+          "line": 1679,
+          "column": null,
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mwire_sandbox_backend\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\tools.py:1679:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mwire_sandbox_backend\u001b[0m` is never used"
+        },
+        {
+          "line": 1688,
+          "column": null,
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mwire_script_backend\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\tools.py:1688:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mwire_script_backend\u001b[0m` is never used"
         }
       ]
     },
@@ -211,84 +199,6 @@
           "column": null,
           "message": "4: \u001b[91mDC08\u001b[0m Property `\u001b[1msignature\u001b[0m` is never used",
           "raw": "src\\intellicrack\\core\\types.py:1006:4: \u001b[91mDC08\u001b[0m Property `\u001b[1msignature\u001b[0m` is never used"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\credentials\\oauth.py",
-      "count": 12,
-      "findings": [
-        {
-          "line": 48,
-          "column": null,
-          "message": "0: \u001b[91mDC03\u001b[0m Class `\u001b[1mOAuthAuthorizationError\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:48:0: \u001b[91mDC03\u001b[0m Class `\u001b[1mOAuthAuthorizationError\u001b[0m` is never used"
-        },
-        {
-          "line": 66,
-          "column": null,
-          "message": "0: \u001b[91mDC03\u001b[0m Class `\u001b[1mOAuthFlowType\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:66:0: \u001b[91mDC03\u001b[0m Class `\u001b[1mOAuthFlowType\u001b[0m` is never used"
-        },
-        {
-          "line": 69,
-          "column": null,
-          "message": "4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mAUTHORIZATION_CODE\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:69:4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mAUTHORIZATION_CODE\u001b[0m` is never used"
-        },
-        {
-          "line": 70,
-          "column": null,
-          "message": "4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mCLIENT_CREDENTIALS\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:70:4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mCLIENT_CREDENTIALS\u001b[0m` is never used"
-        },
-        {
-          "line": 71,
-          "column": null,
-          "message": "4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mDEVICE_CODE\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:71:4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mDEVICE_CODE\u001b[0m` is never used"
-        },
-        {
-          "line": 140,
-          "column": null,
-          "message": "4: \u001b[91mDC08\u001b[0m Property `\u001b[1mneeds_refresh\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:140:4: \u001b[91mDC08\u001b[0m Property `\u001b[1mneeds_refresh\u001b[0m` is never used"
-        },
-        {
-          "line": 246,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mdo_GET\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:246:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mdo_GET\u001b[0m` is never used"
-        },
-        {
-          "line": 298,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mlog_message\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:298:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mlog_message\u001b[0m` is never used"
-        },
-        {
-          "line": 334,
-          "column": null,
-          "message": "8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1mallow_reuse_address\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:334:8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1mallow_reuse_address\u001b[0m` is never used"
-        },
-        {
-          "line": 781,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mrevoke_token\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:781:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mrevoke_token\u001b[0m` is never used"
-        },
-        {
-          "line": 817,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mto_provider_credentials\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:817:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mto_provider_credentials\u001b[0m` is never used"
-        },
-        {
-          "line": 895,
-          "column": null,
-          "message": "0: \u001b[91mDC02\u001b[0m Function `\u001b[1mauthorize_google\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:895:0: \u001b[91mDC02\u001b[0m Function `\u001b[1mauthorize_google\u001b[0m` is never used"
         }
       ]
     },
@@ -387,64 +297,136 @@
           "raw": "src\\intellicrack\\bridges\\x64dbg.py:408:4: \u001b[91mDC08\u001b[0m Property `\u001b[1mwatchpoints\u001b[0m` is never used"
         },
         {
-          "line": 973,
+          "line": 1083,
           "column": null,
           "message": "8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1mbinary_loaded\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:973:8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1mbinary_loaded\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1083:8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1mbinary_loaded\u001b[0m` is never used"
         },
         {
-          "line": 1160,
+          "line": 1270,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mset_watchpoint\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1160:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mset_watchpoint\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1270:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mset_watchpoint\u001b[0m` is never used"
         },
         {
-          "line": 1202,
+          "line": 1312,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mremove_watchpoint\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1202:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mremove_watchpoint\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1312:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mremove_watchpoint\u001b[0m` is never used"
         },
         {
-          "line": 1224,
+          "line": 1334,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_watchpoints\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1224:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_watchpoints\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1334:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_watchpoints\u001b[0m` is never used"
         },
         {
-          "line": 1413,
+          "line": 1523,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mallocate_memory\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1413:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mallocate_memory\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1523:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mallocate_memory\u001b[0m` is never used"
         },
         {
-          "line": 1468,
+          "line": 1578,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mfree_memory\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1468:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mfree_memory\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1578:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mfree_memory\u001b[0m` is never used"
         },
         {
-          "line": 1641,
+          "line": 1751,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1massemble_at\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1641:4: \u001b[91mDC04\u001b[0m Method `\u001b[1massemble_at\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1751:4: \u001b[91mDC04\u001b[0m Method `\u001b[1massemble_at\u001b[0m` is never used"
         },
         {
-          "line": 1734,
+          "line": 1844,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mscan_memory\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1734:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mscan_memory\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1844:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mscan_memory\u001b[0m` is never used"
         },
         {
-          "line": 1949,
+          "line": 2059,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1m_get_process_info\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1949:4: \u001b[91mDC04\u001b[0m Method `\u001b[1m_get_process_info\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:2059:4: \u001b[91mDC04\u001b[0m Method `\u001b[1m_get_process_info\u001b[0m` is never used"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\credentials\\oauth.py",
+      "count": 11,
+      "findings": [
+        {
+          "line": 48,
+          "column": null,
+          "message": "0: \u001b[91mDC03\u001b[0m Class `\u001b[1mOAuthAuthorizationError\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:48:0: \u001b[91mDC03\u001b[0m Class `\u001b[1mOAuthAuthorizationError\u001b[0m` is never used"
+        },
+        {
+          "line": 66,
+          "column": null,
+          "message": "0: \u001b[91mDC03\u001b[0m Class `\u001b[1mOAuthFlowType\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:66:0: \u001b[91mDC03\u001b[0m Class `\u001b[1mOAuthFlowType\u001b[0m` is never used"
+        },
+        {
+          "line": 69,
+          "column": null,
+          "message": "4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mAUTHORIZATION_CODE\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:69:4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mAUTHORIZATION_CODE\u001b[0m` is never used"
+        },
+        {
+          "line": 70,
+          "column": null,
+          "message": "4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mCLIENT_CREDENTIALS\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:70:4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mCLIENT_CREDENTIALS\u001b[0m` is never used"
+        },
+        {
+          "line": 71,
+          "column": null,
+          "message": "4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mDEVICE_CODE\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:71:4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mDEVICE_CODE\u001b[0m` is never used"
+        },
+        {
+          "line": 140,
+          "column": null,
+          "message": "4: \u001b[91mDC08\u001b[0m Property `\u001b[1mneeds_refresh\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:140:4: \u001b[91mDC08\u001b[0m Property `\u001b[1mneeds_refresh\u001b[0m` is never used"
+        },
+        {
+          "line": 246,
+          "column": null,
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mdo_GET\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:246:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mdo_GET\u001b[0m` is never used"
+        },
+        {
+          "line": 334,
+          "column": null,
+          "message": "8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1mallow_reuse_address\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:334:8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1mallow_reuse_address\u001b[0m` is never used"
+        },
+        {
+          "line": 781,
+          "column": null,
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mrevoke_token\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:781:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mrevoke_token\u001b[0m` is never used"
+        },
+        {
+          "line": 817,
+          "column": null,
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mto_provider_credentials\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:817:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mto_provider_credentials\u001b[0m` is never used"
+        },
+        {
+          "line": 895,
+          "column": null,
+          "message": "0: \u001b[91mDC02\u001b[0m Function `\u001b[1mauthorize_google\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:895:0: \u001b[91mDC02\u001b[0m Function `\u001b[1mauthorize_google\u001b[0m` is never used"
         }
       ]
     },
     {
       "path": "src\\intellicrack\\providers\\discovery.py",
-      "count": 9,
+      "count": 10,
       "findings": [
         {
           "line": 47,
@@ -483,6 +465,12 @@
           "raw": "src\\intellicrack\\providers\\discovery.py:629:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_by_id\u001b[0m` is never used"
         },
         {
+          "line": 649,
+          "column": null,
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_discovery_events\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\providers\\discovery.py:649:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_discovery_events\u001b[0m` is never used"
+        },
+        {
           "line": 666,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_last_event\u001b[0m` is never used",
@@ -499,66 +487,6 @@
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mload_cache\u001b[0m` is never used",
           "raw": "src\\intellicrack\\providers\\discovery.py:760:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mload_cache\u001b[0m` is never used"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\stack_viewer.py",
-      "count": 9,
-      "findings": [
-        {
-          "line": 53,
-          "column": null,
-          "message": "4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mframe_pointer\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:53:4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mframe_pointer\u001b[0m` is never used"
-        },
-        {
-          "line": 54,
-          "column": null,
-          "message": "4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mstack_pointer\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:54:4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mstack_pointer\u001b[0m` is never used"
-        },
-        {
-          "line": 58,
-          "column": null,
-          "message": "0: \u001b[91mDC03\u001b[0m Class `\u001b[1mStackDataSource\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:58:0: \u001b[91mDC03\u001b[0m Class `\u001b[1mStackDataSource\u001b[0m` is never used"
-        },
-        {
-          "line": 84,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_source_name\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:84:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_source_name\u001b[0m` is never used"
-        },
-        {
-          "line": 156,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_source_name\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:156:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_source_name\u001b[0m` is never used"
-        },
-        {
-          "line": 237,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_source_name\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:237:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_source_name\u001b[0m` is never used"
-        },
-        {
-          "line": 513,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mset_x64dbg_bridge\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:513:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mset_x64dbg_bridge\u001b[0m` is never used"
-        },
-        {
-          "line": 524,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mset_frida_bridge\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:524:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mset_frida_bridge\u001b[0m` is never used"
-        },
-        {
-          "line": 535,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1madd_source\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:535:4: \u001b[91mDC04\u001b[0m Method `\u001b[1madd_source\u001b[0m` is never used"
         }
       ]
     },
@@ -623,50 +551,50 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\core\\tools.py",
+      "path": "src\\intellicrack\\ui\\panels\\stack_viewer.py",
       "count": 7,
       "findings": [
         {
-          "line": 204,
+          "line": 53,
           "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_process_bridge\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\tools.py:204:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_process_bridge\u001b[0m` is never used"
+          "message": "4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mframe_pointer\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:53:4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mframe_pointer\u001b[0m` is never used"
         },
         {
-          "line": 219,
+          "line": 54,
           "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_frida_bridge\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\tools.py:219:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_frida_bridge\u001b[0m` is never used"
+          "message": "4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mstack_pointer\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:54:4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mstack_pointer\u001b[0m` is never used"
         },
         {
-          "line": 234,
+          "line": 58,
           "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_ghidra_bridge\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\tools.py:234:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_ghidra_bridge\u001b[0m` is never used"
+          "message": "0: \u001b[91mDC03\u001b[0m Class `\u001b[1mStackDataSource\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:58:0: \u001b[91mDC03\u001b[0m Class `\u001b[1mStackDataSource\u001b[0m` is never used"
         },
         {
-          "line": 249,
+          "line": 84,
           "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_radare2_bridge\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\tools.py:249:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_radare2_bridge\u001b[0m` is never used"
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_source_name\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:84:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_source_name\u001b[0m` is never used"
         },
         {
-          "line": 264,
+          "line": 156,
           "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_x64dbg_bridge\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\tools.py:264:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_x64dbg_bridge\u001b[0m` is never used"
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_source_name\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:156:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_source_name\u001b[0m` is never used"
         },
         {
-          "line": 279,
+          "line": 237,
           "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_sandbox_bridge\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\tools.py:279:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_sandbox_bridge\u001b[0m` is never used"
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_source_name\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:237:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_source_name\u001b[0m` is never used"
         },
         {
-          "line": 379,
+          "line": 535,
           "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_available_tools\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\tools.py:379:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_available_tools\u001b[0m` is never used"
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1madd_source\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:535:4: \u001b[91mDC04\u001b[0m Method `\u001b[1madd_source\u001b[0m` is never used"
         }
       ]
     },
@@ -717,40 +645,40 @@
       "count": 6,
       "findings": [
         {
-          "line": 764,
+          "line": 770,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mscan_memory\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:764:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mscan_memory\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:770:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mscan_memory\u001b[0m` is never used"
         },
         {
-          "line": 823,
+          "line": 829,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1menumerate_modules\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:823:4: \u001b[91mDC04\u001b[0m Method `\u001b[1menumerate_modules\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:829:4: \u001b[91mDC04\u001b[0m Method `\u001b[1menumerate_modules\u001b[0m` is never used"
         },
         {
-          "line": 877,
+          "line": 883,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1menumerate_exports\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:877:4: \u001b[91mDC04\u001b[0m Method `\u001b[1menumerate_exports\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:883:4: \u001b[91mDC04\u001b[0m Method `\u001b[1menumerate_exports\u001b[0m` is never used"
         },
         {
-          "line": 1037,
+          "line": 1043,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_hooks\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:1037:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_hooks\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:1043:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_hooks\u001b[0m` is never used"
         },
         {
-          "line": 1067,
+          "line": 1073,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mintercept_return\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:1067:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mintercept_return\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:1073:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mintercept_return\u001b[0m` is never used"
         },
         {
-          "line": 1083,
+          "line": 1089,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mcall_function\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:1083:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mcall_function\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:1089:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mcall_function\u001b[0m` is never used"
         }
       ]
     },
@@ -759,40 +687,40 @@
       "count": 6,
       "findings": [
         {
-          "line": 45,
+          "line": 44,
           "column": null,
           "message": "4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mASYNC_SUBPROCESS\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\process_manager.py:45:4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mASYNC_SUBPROCESS\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\core\\process_manager.py:44:4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mASYNC_SUBPROCESS\u001b[0m` is never used"
         },
         {
-          "line": 58,
+          "line": 57,
           "column": null,
           "message": "4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mregistered_at\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\process_manager.py:58:4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mregistered_at\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\core\\process_manager.py:57:4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mregistered_at\u001b[0m` is never used"
         },
         {
-          "line": 163,
+          "line": 162,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mreset_instance\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\process_manager.py:163:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mreset_instance\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\core\\process_manager.py:162:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mreset_instance\u001b[0m` is never used"
         },
         {
-          "line": 313,
+          "line": 312,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1m_terminate_process_sync\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\process_manager.py:313:4: \u001b[91mDC04\u001b[0m Method `\u001b[1m_terminate_process_sync\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\core\\process_manager.py:312:4: \u001b[91mDC04\u001b[0m Method `\u001b[1m_terminate_process_sync\u001b[0m` is never used"
         },
         {
-          "line": 450,
+          "line": 449,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_all_tracked\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\process_manager.py:450:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_all_tracked\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\core\\process_manager.py:449:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_all_tracked\u001b[0m` is never used"
         },
         {
-          "line": 459,
+          "line": 458,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_running_processes\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\process_manager.py:459:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_running_processes\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\core\\process_manager.py:458:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_running_processes\u001b[0m` is never used"
         }
       ]
     },
@@ -835,6 +763,48 @@
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mgenerate_keygen_from_analysis\u001b[0m` is never used",
           "raw": "src\\intellicrack\\core\\script_gen.py:778:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mgenerate_keygen_from_analysis\u001b[0m` is never used"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\tools.py",
+      "count": 6,
+      "findings": [
+        {
+          "line": 204,
+          "column": null,
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_process_bridge\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\core\\tools.py:204:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_process_bridge\u001b[0m` is never used"
+        },
+        {
+          "line": 219,
+          "column": null,
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_frida_bridge\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\core\\tools.py:219:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_frida_bridge\u001b[0m` is never used"
+        },
+        {
+          "line": 234,
+          "column": null,
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_ghidra_bridge\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\core\\tools.py:234:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_ghidra_bridge\u001b[0m` is never used"
+        },
+        {
+          "line": 249,
+          "column": null,
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_radare2_bridge\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\core\\tools.py:249:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_radare2_bridge\u001b[0m` is never used"
+        },
+        {
+          "line": 264,
+          "column": null,
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_x64dbg_bridge\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\core\\tools.py:264:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_x64dbg_bridge\u001b[0m` is never used"
+        },
+        {
+          "line": 279,
+          "column": null,
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_sandbox_bridge\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\core\\tools.py:279:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_sandbox_bridge\u001b[0m` is never used"
         }
       ]
     },
@@ -951,28 +921,28 @@
       "count": 4,
       "findings": [
         {
-          "line": 1218,
+          "line": 1176,
           "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mconfigure_hooks\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:1218:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mconfigure_hooks\u001b[0m` is never used"
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_available_tool_names\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\core\\orchestrator.py:1176:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_available_tool_names\u001b[0m` is never used"
         },
         {
-          "line": 1234,
+          "line": 1184,
           "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mrefresh_session_state\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:1234:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mrefresh_session_state\u001b[0m` is never used"
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_current_licensing_analysis\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\core\\orchestrator.py:1184:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_current_licensing_analysis\u001b[0m` is never used"
         },
         {
-          "line": 1262,
+          "line": 1197,
           "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mresolve_confirmation\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:1262:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mresolve_confirmation\u001b[0m` is never used"
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_typed_bridge\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\core\\orchestrator.py:1197:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_typed_bridge\u001b[0m` is never used"
         },
         {
-          "line": 1270,
+          "line": 1318,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mactivate_binary_by_name\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:1270:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mactivate_binary_by_name\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:1318:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mactivate_binary_by_name\u001b[0m` is never used"
         }
       ]
     },
@@ -1067,30 +1037,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\core\\session.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 189,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_licensing_analysis\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\session.py:189:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_licensing_analysis\u001b[0m` is never used"
-        },
-        {
-          "line": 232,
-          "column": null,
-          "message": "8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1mrow_factory\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\session.py:232:8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1mrow_factory\u001b[0m` is never used"
-        },
-        {
-          "line": 950,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mexport_json\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\session.py:950:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mexport_json\u001b[0m` is never used"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\sandbox\\qemu.py",
       "count": 3,
       "findings": [
@@ -1115,74 +1061,26 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\frida_panel.py",
+      "path": "src\\intellicrack\\ui\\app.py",
       "count": 3,
       "findings": [
         {
-          "line": 251,
+          "line": 139,
           "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_bridge\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:251:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_bridge\u001b[0m` is never used"
+          "message": "8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_model_browse_worker\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\app.py:139:8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_model_browse_worker\u001b[0m` is never used"
         },
         {
-          "line": 259,
+          "line": 171,
           "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mlog_message\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:259:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mlog_message\u001b[0m` is never used"
+          "message": "8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1mcloseEvent\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\app.py:171:8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1mcloseEvent\u001b[0m` is never used"
         },
         {
-          "line": 402,
+          "line": 1268,
           "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1madd_hook_entry\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:402:4: \u001b[91mDC04\u001b[0m Method `\u001b[1madd_hook_entry\u001b[0m` is never used"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\sandbox_panel.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 206,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mset_sandbox\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\sandbox_panel.py:206:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mset_sandbox\u001b[0m` is never used"
-        },
-        {
-          "line": 215,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_sandbox\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\sandbox_panel.py:215:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_sandbox\u001b[0m` is never used"
-        },
-        {
-          "line": 398,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mload_execution_report\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\sandbox_panel.py:398:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mload_execution_report\u001b[0m` is never used"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\script_manager.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 360,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_selected_id\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:360:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_selected_id\u001b[0m` is never used"
-        },
-        {
-          "line": 800,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mset_backend\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:800:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mset_backend\u001b[0m` is never used"
-        },
-        {
-          "line": 816,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_current_script\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:816:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_current_script\u001b[0m` is never used"
+          "message": "8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_model_browse_worker\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\ui\\app.py:1268:8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_model_browse_worker\u001b[0m` is never used"
         }
       ]
     },
@@ -1235,20 +1133,20 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\core\\config.py",
+      "path": "src\\intellicrack\\core\\session.py",
       "count": 2,
       "findings": [
         {
-          "line": 577,
+          "line": 232,
           "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mis_provider_enabled\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\config.py:577:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mis_provider_enabled\u001b[0m` is never used"
+          "message": "8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1mrow_factory\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\core\\session.py:232:8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1mrow_factory\u001b[0m` is never used"
         },
         {
-          "line": 589,
+          "line": 988,
           "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mis_tool_enabled\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\config.py:589:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mis_tool_enabled\u001b[0m` is never used"
+          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mexport_current\u001b[0m` is never used",
+          "raw": "src\\intellicrack\\core\\session.py:988:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mexport_current\u001b[0m` is never used"
         }
       ]
     },
@@ -1427,18 +1325,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\app.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 170,
-          "column": null,
-          "message": "8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1mcloseEvent\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\app.py:170:8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1mcloseEvent\u001b[0m` is never used"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\confirmation_dialog.py",
       "count": 1,
       "findings": [
@@ -1447,54 +1333,6 @@
           "column": null,
           "message": "4: \u001b[91mDC08\u001b[0m Property `\u001b[1mremember_similar\u001b[0m` is never used",
           "raw": "src\\intellicrack\\ui\\confirmation_dialog.py:75:4: \u001b[91mDC08\u001b[0m Property `\u001b[1mremember_similar\u001b[0m` is never used"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 245,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_bridge\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:245:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_bridge\u001b[0m` is never used"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\process_panel.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 623,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_selected_pid\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:623:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_selected_pid\u001b[0m` is never used"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\radare2_panel.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 273,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_bridge\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:273:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_bridge\u001b[0m` is never used"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 376,
-          "column": null,
-          "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_bridge\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:376:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_bridge\u001b[0m` is never used"
         }
       ]
     }

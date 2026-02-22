@@ -717,6 +717,116 @@ class X64DbgBridge(DebuggerBridge):
                     ],
                     returns="Command output",
                 ),
+                ToolFunction(
+                    name="x64dbg.set_watchpoint",
+                    description="Set a memory watchpoint",
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Memory address to watch",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="size",
+                            type="integer",
+                            description="Watch region size in bytes",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="watch_type",
+                            type="string",
+                            description="Access type to watch (read, write, execute)",
+                            required=True,
+                            enum=["read", "write", "execute"],
+                        ),
+                    ],
+                    returns="Watchpoint ID",
+                ),
+                ToolFunction(
+                    name="x64dbg.remove_watchpoint",
+                    description="Remove a memory watchpoint",
+                    parameters=[
+                        ToolParameter(
+                            name="watchpoint_id",
+                            type="integer",
+                            description="Watchpoint ID to remove",
+                            required=True,
+                        ),
+                    ],
+                    returns="True if removed",
+                ),
+                ToolFunction(
+                    name="x64dbg.get_watchpoints",
+                    description="Get all active watchpoints",
+                    parameters=[],
+                    returns="List of watchpoint information",
+                ),
+                ToolFunction(
+                    name="x64dbg.allocate_memory",
+                    description="Allocate memory in target process",
+                    parameters=[
+                        ToolParameter(
+                            name="size",
+                            type="integer",
+                            description="Size in bytes to allocate",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="protection",
+                            type="string",
+                            description="Memory protection flags",
+                            required=False,
+                            default="rwx",
+                        ),
+                    ],
+                    returns="Address of allocated memory",
+                ),
+                ToolFunction(
+                    name="x64dbg.free_memory",
+                    description="Free memory in target process",
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Address of memory to free",
+                            required=True,
+                        ),
+                    ],
+                    returns="True if freed successfully",
+                ),
+                ToolFunction(
+                    name="x64dbg.assemble_at",
+                    description="Assemble instruction at address",
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Target address",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="instruction",
+                            type="string",
+                            description="Assembly instruction",
+                            required=True,
+                        ),
+                    ],
+                    returns="Assembled bytes",
+                ),
+                ToolFunction(
+                    name="x64dbg.scan_memory",
+                    description="Scan process memory for a byte pattern",
+                    parameters=[
+                        ToolParameter(
+                            name="pattern",
+                            type="string",
+                            description="Hex byte pattern to search for",
+                            required=True,
+                        ),
+                    ],
+                    returns="List of memory search results with context",
+                ),
             ],
         )
 

@@ -291,7 +291,7 @@ class AnthropicProvider(LLMProviderBase):
                 tool_call = self._parse_tool_call_common(
                     call_id=block.id,
                     function_name=block.name,
-                    raw_arguments=cast("dict[str, object]", block.input),
+                    raw_arguments=block.input,
                 )
                 tool_calls.append(tool_call)
                 self._logger.debug(
@@ -358,7 +358,7 @@ class AnthropicProvider(LLMProviderBase):
         )
 
         try:
-            response: AnthropicMessage = await self._client.messages.create(**api_kwargs)
+            response = cast("AnthropicMessage", await self._client.messages.create(**api_kwargs))
             duration_ms = (time.perf_counter() - start_time) * 1000
             content, tool_calls = self._parse_response_blocks(response)
             return self._build_chat_response(

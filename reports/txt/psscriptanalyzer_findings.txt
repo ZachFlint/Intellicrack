@@ -370,6 +370,8 @@ D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\data\support\setupu
 
 12 findings in D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1
 
+D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1:64:13: [Warning] The parameter 'ArgList' has been declared but not used. (PSReviewUnusedParameter)
+
 D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1:68:10: [Warning] The cmdlet 'Compute-Lldb-Usermode-Args' uses an unapproved verb. (PSUseApprovedVerbs)
 
 D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1:81:10: [Warning] The cmdlet 'Compute-Lldb-Platform-Args' uses an unapproved verb. (PSUseApprovedVerbs)
@@ -377,8 +379,6 @@ D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbs
 D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1:96:10: [Warning] The cmdlet 'Compute-Lldb-Remote-Args' uses an unapproved verb. (PSUseApprovedVerbs)
 
 D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1:110:10: [Warning] The cmdlet 'Compute-Lldb-PipInstall-Args' uses an unapproved verb. (PSUseApprovedVerbs)
-
-D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1:64:13: [Warning] The parameter 'ArgList' has been declared but not used. (PSReviewUnusedParameter)
 
 D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1:18:10: [Warning] The cmdlet 'Add-Lldb-Init-Args' uses a plural noun. A singular noun should be used instead. (PSUseSingularNouns)
 

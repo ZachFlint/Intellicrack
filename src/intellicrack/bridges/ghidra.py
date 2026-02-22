@@ -329,6 +329,39 @@ class GhidraBridge(StaticAnalysisBridge):
                     ],
                     returns="Success status",
                 ),
+                ToolFunction(
+                    name="ghidra.start_headless",
+                    description="Start Ghidra in headless mode with bridge",
+                    parameters=[
+                        ToolParameter(
+                            name="project_dir",
+                            type="string",
+                            description="Directory for Ghidra project",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="project_name",
+                            type="string",
+                            description="Name of the project",
+                            required=False,
+                            default="intellicrack",
+                        ),
+                    ],
+                    returns="None",
+                ),
+                ToolFunction(
+                    name="ghidra.get_function",
+                    description="Get function at a specific address",
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Function address",
+                            required=True,
+                        ),
+                    ],
+                    returns="FunctionInfo or None if not found",
+                ),
             ],
         )
 

@@ -1,6 +1,6 @@
 {
   "tool": "pydocstyle",
-  "generated": "2026-02-21T19:58:09.221842",
+  "generated": "2026-02-22T01:49:29.234526",
   "total_findings": 9,
   "total_files": 7,
   "files": [
@@ -31,20 +31,20 @@
       "count": 2,
       "findings": [
         {
-          "line": 935,
+          "line": 941,
           "column": null,
           "code": "D401",
           "context": "in public method `hook_function`:",
           "message": "in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')",
-          "raw": "src/intellicrack\\bridges\\frida_bridge.py:935: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
+          "raw": "src/intellicrack\\bridges\\frida_bridge.py:941: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
         },
         {
-          "line": 1068,
+          "line": 1074,
           "column": null,
           "code": "D401",
           "context": "in public method `intercept_return`:",
           "message": "in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')",
-          "raw": "src/intellicrack\\bridges\\frida_bridge.py:1068: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
+          "raw": "src/intellicrack\\bridges\\frida_bridge.py:1074: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
         }
       ]
     },
@@ -53,12 +53,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 260,
+          "line": 259,
           "column": null,
           "code": "D401",
           "context": "in private method `_sync_cleanup`:",
           "message": "in private method `_sync_cleanup`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')",
-          "raw": "src/intellicrack\\core\\process_manager.py:260: D401: in private method `_sync_cleanup`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')"
+          "raw": "src/intellicrack\\core\\process_manager.py:259: D401: in private method `_sync_cleanup`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')"
         }
       ]
     },

@@ -82,9 +82,9 @@ src\intellicrack\ui\provider_config.py:1248: '_load_settings' has rank C
 
 2 findings in src\intellicrack\bridges\binary.py
 
-src\intellicrack\bridges\binary.py:509: '_detect_architecture' has rank C
+src\intellicrack\bridges\binary.py:556: '_detect_architecture' has rank C
 
-src\intellicrack\bridges\binary.py:620: '_get_imports_internal' has rank C
+src\intellicrack\bridges\binary.py:667: '_get_imports_internal' has rank C
 
 
 2 findings in src\intellicrack\bridges\installer.py
@@ -105,7 +105,7 @@ src\intellicrack\bridges\schemas.py:295: 'validate_tool_parameter' has rank C
 
 src\intellicrack\bridges\x64dbg.py:252: '_read_unicode_string_from_params' has rank C
 
-src\intellicrack\bridges\x64dbg.py:1507: 'get_memory_regions' has rank C
+src\intellicrack\bridges\x64dbg.py:1617: 'get_memory_regions' has rank C
 
 
 2 findings in src\intellicrack\providers\grok.py
@@ -157,11 +157,18 @@ src\intellicrack\sandbox\windows.py:301: '_generate_wsb_config' has rank C
 src\intellicrack\sandbox\windows.py:548: 'run_binary' has rank C
 
 
+2 findings in src\intellicrack\ui\app.py
+
+src\intellicrack\ui\app.py:724: '_on_tool_result' has rank C
+
+src\intellicrack\ui\app.py:1631: 'close_event_handler' has rank C
+
+
 2 findings in src\intellicrack\ui\tools.py
 
-src\intellicrack\ui\tools.py:1398: '_on_tab_close_requested' has rank D
+src\intellicrack\ui\tools.py:1400: '_on_tab_close_requested' has rank D
 
-src\intellicrack\ui\tools.py:1470: 'close_embedded_tools' has rank C
+src\intellicrack\ui\tools.py:1472: 'close_embedded_tools' has rank C
 
 
 2 findings in tests\test_core\test_license_analyzer.py
@@ -187,12 +194,12 @@ tests\test_ui\test_app_embedded_tools.py:83: 'TestEmbeddedToolsMenuIntegration' 
 
 1 findings in src\intellicrack\bridges\frida_bridge.py
 
-src\intellicrack\bridges\frida_bridge.py:929: 'hook_function' has rank C
+src\intellicrack\bridges\frida_bridge.py:935: 'hook_function' has rank C
 
 
 1 findings in src\intellicrack\bridges\process.py
 
-src\intellicrack\bridges\process.py:1097: 'search_pattern' has rank C
+src\intellicrack\bridges\process.py:1110: 'search_pattern' has rank C
 
 
 1 findings in src\intellicrack\core\logging.py
@@ -213,11 +220,6 @@ src\intellicrack\core\script_gen.py:175: 'to_prompt_context' has rank C
 1 findings in src\intellicrack\credentials\env_loader.py
 
 src\intellicrack\credentials\env_loader.py:283: '_validate_key_format' has rank C
-
-
-1 findings in src\intellicrack\ui\app.py
-
-src\intellicrack\ui\app.py:1550: 'close_event_handler' has rank C
 
 
 1 findings in src\intellicrack\ui\highlighter.py

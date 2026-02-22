@@ -150,6 +150,11 @@ src\intellicrack\bridges\frida_bridge.py: FridaBridge::hook_function - cognitive
 src\intellicrack\core\logging.py: _sanitize_arguments - cognitive complexity 21 (exceeds threshold)
 
 
+1 findings in src\intellicrack\core\orchestrator.py
+
+src\intellicrack\core\orchestrator.py: Orchestrator::_run_agent_loop - cognitive complexity 16 (exceeds threshold)
+
+
 1 findings in src\intellicrack\providers\model_loader.py
 
 src\intellicrack\providers\model_loader.py: load_model_for_xpu - cognitive complexity 17 (exceeds threshold)
@@ -158,6 +163,11 @@ src\intellicrack\providers\model_loader.py: load_model_for_xpu - cognitive compl
 1 findings in src\intellicrack\sandbox\manager.py
 
 src\intellicrack\sandbox\manager.py: SandboxManager::create - cognitive complexity 16 (exceeds threshold)
+
+
+1 findings in src\intellicrack\ui\highlighter.py
+
+src\intellicrack\ui\highlighter.py: PythonSyntaxHighlighter::_highlight_triple_quotes - cognitive complexity 18 (exceeds threshold)
 
 
 1 findings in src\intellicrack\ui\sandbox_config.py

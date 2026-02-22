@@ -1,6 +1,6 @@
 {
   "tool": "bandit",
-  "generated": "2026-02-21T19:53:38.503782",
+  "generated": "2026-02-22T01:40:12.844817",
   "total_findings": 10,
   "total_files": 7,
   "files": [
@@ -111,13 +111,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 587,
+          "line": 619,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B110:try_except_pass",
           "message": "Try, Except, Pass detected.",
-          "raw": "src/intellicrack/ui\\app.py:587: [Low] B110:try_except_pass: Try, Except, Pass detected."
+          "raw": "src/intellicrack/ui\\app.py:619: [Low] B110:try_except_pass: Try, Except, Pass detected."
         }
       ]
     },

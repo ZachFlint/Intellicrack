@@ -31,7 +31,7 @@ src/intellicrack/sandbox\windows.py:13: [Low] B405:blacklist: Using xml.etree.El
 
 1 findings in src/intellicrack/ui\app.py
 
-src/intellicrack/ui\app.py:587: [Low] B110:try_except_pass: Try, Except, Pass detected.
+src/intellicrack/ui\app.py:619: [Low] B110:try_except_pass: Try, Except, Pass detected.
 
 
 1 findings in src/intellicrack/ui\resources\icon_manager.py

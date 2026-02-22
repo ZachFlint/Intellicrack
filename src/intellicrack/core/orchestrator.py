@@ -1173,6 +1173,54 @@ class Orchestrator:
             for status in statuses
         ]
 
+    def get_available_tool_names(self) -> list[str]:
+        """Get names of all available tools.
+
+        Returns:
+            List of available tool name strings.
+        """
+        return [t.value for t in self._tools.get_available_tools()]
+
+    def get_current_licensing_analysis(self, binary_name: str) -> LicensingAnalysis | None:
+        """Get cached licensing analysis for a binary.
+
+        Args:
+            binary_name: Name of the binary.
+
+        Returns:
+            LicensingAnalysis if available, None otherwise.
+        """
+        if self._current_session is None:
+            return None
+        return self._current_session.get_licensing_analysis(binary_name)
+
+    def get_typed_bridge(self, tool_name: str) -> object | None:
+        """Get a typed bridge instance by tool name.
+
+        Uses the ToolRegistry's typed getters for safe bridge access.
+
+        Args:
+            tool_name: Name of the tool bridge to retrieve.
+
+        Returns:
+            Typed bridge instance or None if not available.
+        """
+        getter_map: dict[str, str] = {
+            "process": "get_process_bridge",
+            "frida": "get_frida_bridge",
+            "ghidra": "get_ghidra_bridge",
+            "radare2": "get_radare2_bridge",
+            "x64dbg": "get_x64dbg_bridge",
+            "sandbox": "get_sandbox_bridge",
+        }
+        getter_name = getter_map.get(tool_name.lower())
+        if getter_name is None:
+            return None
+        try:
+            return getattr(self._tools, getter_name)()
+        except Exception:
+            return None
+
     async def initialize_tool(self, tool_name: str | ToolName) -> bool:
         """Initialize a specific tool.
 

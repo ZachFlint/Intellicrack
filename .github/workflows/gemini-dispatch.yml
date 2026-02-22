@@ -1,5 +1,4 @@
 name: '🔀 Gemini Dispatch'
-
 on:
   workflow_dispatch:
   pull_request_review_comment:
@@ -18,11 +17,9 @@ on:
   issue_comment:
     types:
       - 'created'
-
 defaults:
   run:
     shell: 'bash'
-
 jobs:
   debugger:
     if: |-
@@ -42,7 +39,6 @@ jobs:
           DEBUG_event: '${{ toJSON(github.event) }}'
         run: |-
           env | grep '^DEBUG_'
-
   dispatch:
     # For PRs: only if not from a fork
     # For issues: only on open/reopen
@@ -81,7 +77,6 @@ jobs:
           permission-contents: 'read'
           permission-issues: 'write'
           permission-pull-requests: 'write'
-
       - name: 'Extract command'
         id: 'extract_command'
         uses: 'actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd' # ratchet:actions/github-script@v8
@@ -111,7 +106,6 @@ jobs:
             } else {
               core.setOutput('command', 'fallthrough');
             }
-
       - name: 'Acknowledge request'
         env:
           GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
@@ -123,7 +117,6 @@ jobs:
           gh issue comment "${ISSUE_NUMBER}" \
             --body "${MESSAGE}" \
             --repo "${REPOSITORY}"
-
   review:
     needs: 'dispatch'
     if: |-
@@ -137,7 +130,6 @@ jobs:
     with:
       additional_context: '${{ needs.dispatch.outputs.additional_context }}'
     secrets: 'inherit'
-
   triage:
     needs: 'dispatch'
     if: |-
@@ -151,7 +143,6 @@ jobs:
     with:
       additional_context: '${{ needs.dispatch.outputs.additional_context }}'
     secrets: 'inherit'
-
   invoke:
     needs: 'dispatch'
     if: |-
@@ -165,7 +156,6 @@ jobs:
     with:
       additional_context: '${{ needs.dispatch.outputs.additional_context }}'
     secrets: 'inherit'
-
   fallthrough:
     needs:
       - 'dispatch'
@@ -191,7 +181,6 @@ jobs:
           permission-contents: 'read'
           permission-issues: 'write'
           permission-pull-requests: 'write'
-
       - name: 'Send failure comment'
         env:
           GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'

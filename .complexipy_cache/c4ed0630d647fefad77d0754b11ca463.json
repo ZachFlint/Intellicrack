@@ -1275,30 +1275,6 @@
     {
       "complexity": 0,
       "file_name": "radare2.py",
-      "function_name": "Radare2Bridge::list_exports",
-      "path": "src\\intellicrack\\bridges\\radare2.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "radare2.py",
-      "function_name": "Radare2Bridge::list_functions",
-      "path": "src\\intellicrack\\bridges\\radare2.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "radare2.py",
-      "function_name": "Radare2Bridge::list_imports",
-      "path": "src\\intellicrack\\bridges\\radare2.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "radare2.py",
-      "function_name": "Radare2Bridge::list_strings",
-      "path": "src\\intellicrack\\bridges\\radare2.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "radare2.py",
       "function_name": "Radare2Bridge::name",
       "path": "src\\intellicrack\\bridges\\radare2.py"
     },
@@ -2721,6 +2697,12 @@
     {
       "complexity": 0,
       "file_name": "orchestrator.py",
+      "function_name": "Orchestrator::get_available_tool_names",
+      "path": "src\\intellicrack\\core\\orchestrator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "orchestrator.py",
       "function_name": "Orchestrator::get_tool_status",
       "path": "src\\intellicrack\\core\\orchestrator.py"
     },
@@ -2865,6 +2847,12 @@
     {
       "complexity": 1,
       "file_name": "orchestrator.py",
+      "function_name": "Orchestrator::get_current_licensing_analysis",
+      "path": "src\\intellicrack\\core\\orchestrator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "orchestrator.py",
       "function_name": "Orchestrator::get_system_status",
       "path": "src\\intellicrack\\core\\orchestrator.py"
     },
@@ -2908,6 +2896,12 @@
       "complexity": 2,
       "file_name": "orchestrator.py",
       "function_name": "Orchestrator::confirm_pending",
+      "path": "src\\intellicrack\\core\\orchestrator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "orchestrator.py",
+      "function_name": "Orchestrator::get_typed_bridge",
       "path": "src\\intellicrack\\core\\orchestrator.py"
     },
     {
@@ -6453,6 +6447,24 @@
     {
       "complexity": 0,
       "file_name": "app.py",
+      "function_name": "MainWindow::_on_view_licensing",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_on_view_scripts",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_on_view_stack",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "app.py",
       "function_name": "MainWindow::_request_tool_confirmation",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -6496,6 +6508,12 @@
       "complexity": 1,
       "file_name": "app.py",
       "function_name": "MainWindow::_add_menu_action",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_on_browse_models",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -6592,6 +6610,12 @@
       "complexity": 1,
       "file_name": "app.py",
       "function_name": "MainWindow::_setup_toolbar",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_setup_view_menu",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -6699,12 +6723,6 @@
     {
       "complexity": 5,
       "file_name": "app.py",
-      "function_name": "MainWindow::_on_export_session",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 5,
-      "file_name": "app.py",
       "function_name": "MainWindow::_on_new_session",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -6715,9 +6733,9 @@
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
-      "complexity": 8,
+      "complexity": 6,
       "file_name": "app.py",
-      "function_name": "MainWindow::_apply_tool_settings",
+      "function_name": "MainWindow::_on_export_session",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -6759,19 +6777,25 @@
     {
       "complexity": 9,
       "file_name": "app.py",
-      "function_name": "MainWindow::_on_refresh_models",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 9,
-      "file_name": "app.py",
-      "function_name": "MainWindow::_on_save_patched_binary",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 9,
-      "file_name": "app.py",
       "function_name": "MainWindow::_on_tool_result",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_apply_tool_settings",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_on_browse_models_result",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_on_refresh_models",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -6783,7 +6807,7 @@
     {
       "complexity": 14,
       "file_name": "app.py",
-      "function_name": "MainWindow::_on_browse_models",
+      "function_name": "MainWindow::_on_save_patched_binary",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -7215,6 +7239,12 @@
     {
       "complexity": 0,
       "file_name": "_qt_compat.py",
+      "function_name": "set_selection_mode",
+      "path": "src\\intellicrack\\ui\\panels\\_qt_compat.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_qt_compat.py",
       "function_name": "set_sorting_enabled",
       "path": "src\\intellicrack\\ui\\panels\\_qt_compat.py"
     },
@@ -7234,6 +7264,12 @@
       "complexity": 1,
       "file_name": "_qt_compat.py",
       "function_name": "_resolve",
+      "path": "src\\intellicrack\\ui\\panels\\_qt_compat.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "_qt_compat.py",
+      "function_name": "connect_cell_changed",
       "path": "src\\intellicrack\\ui\\panels\\_qt_compat.py"
     },
     {
@@ -10329,6 +10365,24 @@
     {
       "complexity": 0,
       "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::clear_analysis_tab",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::get_active_tool_widget",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::get_code_highlighter",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "tools.py",
       "function_name": "ToolOutputPanel::get_embedded_tool",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
@@ -10515,6 +10569,12 @@
     {
       "complexity": 1,
       "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::display_analysis_result",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "tools.py",
       "function_name": "ToolOutputPanel::log",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
@@ -10563,6 +10623,12 @@
     {
       "complexity": 2,
       "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::add_frida_hook_entry",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "tools.py",
       "function_name": "ToolOutputPanel::add_hxd_tab",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
@@ -10581,7 +10647,43 @@
     {
       "complexity": 2,
       "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::get_active_process_pid",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::get_sandbox_backend",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::load_sandbox_report",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::log_frida_message",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "tools.py",
       "function_name": "ToolOutputPanel::update_licensing_analysis",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::wire_sandbox_backend",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::wire_script_backend",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
     {
@@ -10609,6 +10711,12 @@
       "path": "src\\intellicrack\\ui\\tools.py"
     },
     {
+      "complexity": 3,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::get_bridge_for_tool",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
       "complexity": 4,
       "file_name": "tools.py",
       "function_name": "ToolOutputPanel::activate_tab",
@@ -10623,7 +10731,19 @@
     {
       "complexity": 5,
       "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::get_script_panel_state",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "tools.py",
       "function_name": "ToolOutputPanel::open_in_binary",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::wire_stack_viewer_bridges",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
     {

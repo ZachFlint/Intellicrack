@@ -1,0 +1,845 @@
+{
+  "tool": "codespell",
+  "generated": "2026-02-22T01:52:03.348532",
+  "total_findings": 85,
+  "total_files": 12,
+  "files": [
+    {
+      "path": "src/intellicrack\\bridges\\binary.py",
+      "count": 29,
+      "findings": [
+        {
+          "line": 4,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:4: lief ==> leaf, life"
+        },
+        {
+          "line": 17,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:17: lief ==> leaf, life"
+        },
+        {
+          "line": 18,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:18: lief ==> leaf, life"
+        },
+        {
+          "line": 19,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:19: lief ==> leaf, life"
+        },
+        {
+          "line": 20,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:20: lief ==> leaf, life"
+        },
+        {
+          "line": 21,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:21: lief ==> leaf, life"
+        },
+        {
+          "line": 22,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:22: lief ==> leaf, life"
+        },
+        {
+          "line": 44,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:44: lief ==> leaf, life"
+        },
+        {
+          "line": 44,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:44: lief ==> leaf, life"
+        },
+        {
+          "line": 44,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:44: lief ==> leaf, life"
+        },
+        {
+          "line": 44,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:44: lief ==> leaf, life"
+        },
+        {
+          "line": 44,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:44: lief ==> leaf, life"
+        },
+        {
+          "line": 47,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:47: lief ==> leaf, life"
+        },
+        {
+          "line": 59,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:59: lief ==> leaf, life"
+        },
+        {
+          "line": 86,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:86: lief ==> leaf, life"
+        },
+        {
+          "line": 91,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:91: lief ==> leaf, life"
+        },
+        {
+          "line": 101,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:101: lief ==> leaf, life"
+        },
+        {
+          "line": 542,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:542: lief ==> leaf, life"
+        },
+        {
+          "line": 543,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:543: lief ==> leaf, life"
+        },
+        {
+          "line": 549,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:549: lief ==> leaf, life"
+        },
+        {
+          "line": 554,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:554: lief ==> leaf, life"
+        },
+        {
+          "line": 574,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:574: lief ==> leaf, life"
+        },
+        {
+          "line": 575,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:575: lief ==> leaf, life"
+        },
+        {
+          "line": 576,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:576: lief ==> leaf, life"
+        },
+        {
+          "line": 578,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:578: lief ==> leaf, life"
+        },
+        {
+          "line": 580,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:580: lief ==> leaf, life"
+        },
+        {
+          "line": 582,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:582: lief ==> leaf, life"
+        },
+        {
+          "line": 1065,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:1065: lief ==> leaf, life"
+        },
+        {
+          "line": 1087,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\bridges\\binary.py:1087: lief ==> leaf, life"
+        }
+      ]
+    },
+    {
+      "path": "scripts/knowledge-graph\\IntellicrackKnowledgeGraph.graphml",
+      "count": 16,
+      "findings": [
+        {
+          "line": 666,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "scripts/knowledge-graph\\IntellicrackKnowledgeGraph.graphml:666: lief ==> leaf, life"
+        },
+        {
+          "line": 667,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "scripts/knowledge-graph\\IntellicrackKnowledgeGraph.graphml:667: lief ==> leaf, life"
+        },
+        {
+          "line": 668,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "scripts/knowledge-graph\\IntellicrackKnowledgeGraph.graphml:668: lief ==> leaf, life"
+        },
+        {
+          "line": 669,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "scripts/knowledge-graph\\IntellicrackKnowledgeGraph.graphml:669: lief ==> leaf, life"
+        },
+        {
+          "line": 670,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "scripts/knowledge-graph\\IntellicrackKnowledgeGraph.graphml:670: lief ==> leaf, life"
+        },
+        {
+          "line": 671,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "scripts/knowledge-graph\\IntellicrackKnowledgeGraph.graphml:671: lief ==> leaf, life"
+        },
+        {
+          "line": 4677,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "scripts/knowledge-graph\\IntellicrackKnowledgeGraph.graphml:4677: CrossReference ==> cross-reference"
+        },
+        {
+          "line": 4680,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "scripts/knowledge-graph\\IntellicrackKnowledgeGraph.graphml:4680: CrossReference ==> cross-reference"
+        },
+        {
+          "line": 12907,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "scripts/knowledge-graph\\IntellicrackKnowledgeGraph.graphml:12907: CrossReference ==> cross-reference"
+        },
+        {
+          "line": 13066,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "scripts/knowledge-graph\\IntellicrackKnowledgeGraph.graphml:13066: lief ==> leaf, life"
+        },
+        {
+          "line": 13069,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "scripts/knowledge-graph\\IntellicrackKnowledgeGraph.graphml:13069: lief ==> leaf, life"
+        },
+        {
+          "line": 13072,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "scripts/knowledge-graph\\IntellicrackKnowledgeGraph.graphml:13072: lief ==> leaf, life"
+        },
+        {
+          "line": 13075,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "scripts/knowledge-graph\\IntellicrackKnowledgeGraph.graphml:13075: lief ==> leaf, life"
+        },
+        {
+          "line": 13078,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "scripts/knowledge-graph\\IntellicrackKnowledgeGraph.graphml:13078: lief ==> leaf, life"
+        },
+        {
+          "line": 13081,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "scripts/knowledge-graph\\IntellicrackKnowledgeGraph.graphml:13081: lief ==> leaf, life"
+        },
+        {
+          "line": 14761,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "scripts/knowledge-graph\\IntellicrackKnowledgeGraph.graphml:14761: lief ==> leaf, life"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack\\core\\license_analyzer.py",
+      "count": 8,
+      "findings": [
+        {
+          "line": 37,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\core\\license_analyzer.py:37: lief ==> leaf, life"
+        },
+        {
+          "line": 157,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "LIEF",
+          "correction": "LEAF, LIFE",
+          "message": "'LIEF' ==> 'LEAF, LIFE'",
+          "raw": "src/intellicrack\\core\\license_analyzer.py:157: LIEF ==> LEAF, LIFE"
+        },
+        {
+          "line": 160,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "LIEF",
+          "correction": "LEAF, LIFE",
+          "message": "'LIEF' ==> 'LEAF, LIFE'",
+          "raw": "src/intellicrack\\core\\license_analyzer.py:160: LIEF ==> LEAF, LIFE"
+        },
+        {
+          "line": 192,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "LIEF",
+          "correction": "LEAF, LIFE",
+          "message": "'LIEF' ==> 'LEAF, LIFE'",
+          "raw": "src/intellicrack\\core\\license_analyzer.py:192: LIEF ==> LEAF, LIFE"
+        },
+        {
+          "line": 195,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "LIEF",
+          "correction": "LEAF, LIFE",
+          "message": "'LIEF' ==> 'LEAF, LIFE'",
+          "raw": "src/intellicrack\\core\\license_analyzer.py:195: LIEF ==> LEAF, LIFE"
+        },
+        {
+          "line": 790,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "src/intellicrack\\core\\license_analyzer.py:790: lief ==> leaf, life"
+        },
+        {
+          "line": 859,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "LIEF",
+          "correction": "LEAF, LIFE",
+          "message": "'LIEF' ==> 'LEAF, LIFE'",
+          "raw": "src/intellicrack\\core\\license_analyzer.py:859: LIEF ==> LEAF, LIFE"
+        },
+        {
+          "line": 868,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "LIEF",
+          "correction": "LEAF, LIFE",
+          "message": "'LIEF' ==> 'LEAF, LIFE'",
+          "raw": "src/intellicrack\\core\\license_analyzer.py:868: LIEF ==> LEAF, LIFE"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack\\bridges\\ghidra.py",
+      "count": 7,
+      "findings": [
+        {
+          "line": 26,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "src/intellicrack\\bridges\\ghidra.py:26: CrossReference ==> cross-reference"
+        },
+        {
+          "line": 201,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "src/intellicrack\\bridges\\ghidra.py:201: CrossReference ==> cross-reference"
+        },
+        {
+          "line": 214,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "src/intellicrack\\bridges\\ghidra.py:214: CrossReference ==> cross-reference"
+        },
+        {
+          "line": 1080,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "src/intellicrack\\bridges\\ghidra.py:1080: CrossReference ==> cross-reference"
+        },
+        {
+          "line": 1110,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "src/intellicrack\\bridges\\ghidra.py:1110: CrossReference ==> cross-reference"
+        },
+        {
+          "line": 1124,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "src/intellicrack\\bridges\\ghidra.py:1124: CrossReference ==> cross-reference"
+        },
+        {
+          "line": 1154,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "src/intellicrack\\bridges\\ghidra.py:1154: CrossReference ==> cross-reference"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack\\bridges\\radare2.py",
+      "count": 7,
+      "findings": [
+        {
+          "line": 20,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "src/intellicrack\\bridges\\radare2.py:20: CrossReference ==> cross-reference"
+        },
+        {
+          "line": 955,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "src/intellicrack\\bridges\\radare2.py:955: CrossReference ==> cross-reference"
+        },
+        {
+          "line": 974,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "src/intellicrack\\bridges\\radare2.py:974: CrossReference ==> cross-reference"
+        },
+        {
+          "line": 986,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "src/intellicrack\\bridges\\radare2.py:986: CrossReference ==> cross-reference"
+        },
+        {
+          "line": 997,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "src/intellicrack\\bridges\\radare2.py:997: CrossReference ==> cross-reference"
+        },
+        {
+          "line": 1016,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "src/intellicrack\\bridges\\radare2.py:1016: CrossReference ==> cross-reference"
+        },
+        {
+          "line": 1028,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "src/intellicrack\\bridges\\radare2.py:1028: CrossReference ==> cross-reference"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack\\plugins\\x64dbg_plugin\\third_party\\nlohmann\\json.hpp",
+      "count": 5,
+      "findings": [
+        {
+          "line": 329,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "thirdparty",
+          "correction": "third party, third-party",
+          "message": "'thirdparty' ==> 'third party, third-party'",
+          "raw": "src/intellicrack\\plugins\\x64dbg_plugin\\third_party\\nlohmann\\json.hpp:329: thirdparty ==> third party, third-party"
+        },
+        {
+          "line": 11797,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ND",
+          "correction": "AND, 2ND",
+          "message": "'ND' ==> 'AND, 2ND'",
+          "raw": "src/intellicrack\\plugins\\x64dbg_plugin\\third_party\\nlohmann\\json.hpp:11797: ND ==> AND, 2ND"
+        },
+        {
+          "line": 11798,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ND",
+          "correction": "AND, 2ND",
+          "message": "'ND' ==> 'AND, 2ND'",
+          "raw": "src/intellicrack\\plugins\\x64dbg_plugin\\third_party\\nlohmann\\json.hpp:11798: ND ==> AND, 2ND"
+        },
+        {
+          "line": 12092,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ND",
+          "correction": "AND, 2ND",
+          "message": "'ND' ==> 'AND, 2ND'",
+          "raw": "src/intellicrack\\plugins\\x64dbg_plugin\\third_party\\nlohmann\\json.hpp:12092: ND ==> AND, 2ND"
+        },
+        {
+          "line": 25560,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "thirdparty",
+          "correction": "third party, third-party",
+          "message": "'thirdparty' ==> 'third party, third-party'",
+          "raw": "src/intellicrack\\plugins\\x64dbg_plugin\\third_party\\nlohmann\\json.hpp:25560: thirdparty ==> third party, third-party"
+        }
+      ]
+    },
+    {
+      "path": "scripts/knowledge-graph\\visualize_architecture.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": 5,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "LOD",
+          "correction": "LOAD, LOUD, LODE",
+          "message": "'LOD' ==> 'LOAD, LOUD, LODE'",
+          "raw": "scripts/knowledge-graph\\visualize_architecture.py:5: LOD ==> LOAD, LOUD, LODE"
+        },
+        {
+          "line": 41,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "LOD",
+          "correction": "LOAD, LOUD, LODE",
+          "message": "'LOD' ==> 'LOAD, LOUD, LODE'",
+          "raw": "scripts/knowledge-graph\\visualize_architecture.py:41: LOD ==> LOAD, LOUD, LODE"
+        },
+        {
+          "line": 858,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "connIn",
+          "correction": "conning",
+          "message": "'connIn' ==> 'conning'",
+          "raw": "scripts/knowledge-graph\\visualize_architecture.py:858: connIn ==> conning"
+        },
+        {
+          "line": 865,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "connIn",
+          "correction": "conning",
+          "message": "'connIn' ==> 'conning'",
+          "raw": "scripts/knowledge-graph\\visualize_architecture.py:865: connIn ==> conning"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack\\bridges\\base.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 25,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "src/intellicrack\\bridges\\base.py:25: CrossReference ==> cross-reference"
+        },
+        {
+          "line": 437,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "src/intellicrack\\bridges\\base.py:437: CrossReference ==> cross-reference"
+        },
+        {
+          "line": 452,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "src/intellicrack\\bridges\\base.py:452: CrossReference ==> cross-reference"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack\\core\\__init__.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 54,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "src/intellicrack\\core\\__init__.py:54: CrossReference ==> cross-reference"
+        },
+        {
+          "line": 89,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "src/intellicrack\\core\\__init__.py:89: CrossReference ==> cross-reference"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack\\core\\types.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 27,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "src/intellicrack\\core\\types.py:27: CrossReference ==> cross-reference"
+        },
+        {
+          "line": 534,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "CrossReference",
+          "correction": "cross-reference",
+          "message": "'CrossReference' ==> 'cross-reference'",
+          "raw": "src/intellicrack\\core\\types.py:534: CrossReference ==> cross-reference"
+        }
+      ]
+    },
+    {
+      "path": "docs/source\\conf.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 40,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "lief",
+          "correction": "leaf, life",
+          "message": "'lief' ==> 'leaf, life'",
+          "raw": "docs/source\\conf.py:40: lief ==> leaf, life"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack\\ui\\panels\\script_manager.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 114,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "regist",
+          "correction": "register",
+          "message": "'regist' ==> 'register'",
+          "raw": "src/intellicrack\\ui\\panels\\script_manager.py:114: regist ==> register"
+        }
+      ]
+    }
+  ]
+}

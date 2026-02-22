@@ -1,123 +1,118 @@
 repos:
-    # Rust Quality Assurance (New Intellicrack Launcher)
-    - repo: https://github.com/doublify/pre-commit-rust
-      rev: eeee35a89e69d5772bdee97db1a6a898467b686e # pragma: allowlist secret
-      hooks:
-          - id: cargo-check
-            args: ['--manifest-path', 'intellicrack-launcher/Cargo.toml']
-            name: Rust cargo check
-          - id: clippy
-            args: ['--manifest-path', 'intellicrack-launcher/Cargo.toml', '--', '-D', 'warnings']
-            name: Rust clippy linting
+  # Rust Quality Assurance (New Intellicrack Launcher)
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: eeee35a89e69d5772bdee97db1a6a898467b686e # pragma: allowlist secret
+    hooks:
+      - id: cargo-check
+        args: ['--manifest-path', 'intellicrack-launcher/Cargo.toml']
+        name: Rust cargo check
+      - id: clippy
+        args: ['--manifest-path', 'intellicrack-launcher/Cargo.toml', '--', '-D', 'warnings']
+        name: Rust clippy linting
+  - repo: local
+    hooks:
+      - id: clean-nul-files
+        name: Clean NUL Files (Windows artifact cleanup)
+        entry: pixi run python scripts/clean_nul.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+      - id: generate-requirements
+        name: Generate requirements.txt from pixi environment
+        entry: bash -c 'pixi run generate-requirements && git add requirements.txt'
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+      - id: generate-structure-files
+        name: Generate Intellicrack Structure Files (HTA/TXT)
+        entry: bash -c 'pixi run python scripts/generate_tree.py && git add IntellicrackStructure.hta IntellicrackStructure.txt'
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+      - id: generate-knowledge-graph
+        name: Generate Intellicrack Knowledge Graph
+        entry: bash -c 'pixi run python scripts/knowledge-graph/visualize_architecture.py --layout hierarchical && git add IntellicrackKnowledgeGraph.html scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml scripts/knowledge-graph/IntellicrackKnowledgeGraph.dot'
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+      - id: rust-fmt
+        name: Rust code formatting (cargo fmt)
+        entry: cargo fmt --manifest-path intellicrack-launcher/Cargo.toml -- --check
+        language: system
+        types: [rust]
+        pass_filenames: false
+      - id: test-coverage-modified
+        name: Test Coverage (Modified Files - 80% minimum)
+        entry: pixi run python -m pytest --cov=intellicrack --cov-fail-under=80 --cov-report=term-missing
+        language: system
+        pass_filenames: false
+        files: '^intellicrack/.*\.py$'
+        stages: [pre-commit]
+      - id: production-readiness-audit-scoped
+        name: Production Readiness Audit (Intellicrack code only)
+        entry: pixi run python tests/utils/Production_Readiness_Audit.py intellicrack --whitelist-config tests/utils/audit_whitelist.yaml --output-dir tests/reports/
+        language: system
+        pass_filenames: false
+        files: '^intellicrack/.*\.(py|java|js|ts)$'
+        stages: [pre-commit]
+      - id: test-real-functionality-modified
+        name: Test Real Functionality (Modified Files)
+        entry: pixi run python -m pytest tests/unit -k "not slow" --tb=short
+        language: system
+        pass_filenames: false
+        files: '^intellicrack/.*\.py$'
+        stages: [pre-commit]
+      - id: test-coverage-full
+        # Full audit hooks for manual execution
 
-    - repo: local
-      hooks:
-          - id: clean-nul-files
-            name: Clean NUL Files (Windows artifact cleanup)
-            entry: pixi run python scripts/clean_nul.py
-            language: system
-            pass_filenames: false
-            always_run: true
-            stages: [pre-commit]
-
-          - id: generate-requirements
-            name: Generate requirements.txt from pixi environment
-            entry: bash -c 'pixi run generate-requirements && git add requirements.txt'
-            language: system
-            pass_filenames: false
-            always_run: true
-            stages: [pre-commit]
-
-          - id: generate-structure-files
-            name: Generate Intellicrack Structure Files (HTA/TXT)
-            entry: bash -c 'pixi run python scripts/generate_tree.py && git add IntellicrackStructure.hta IntellicrackStructure.txt'
-            language: system
-            pass_filenames: false
-            always_run: true
-            stages: [pre-commit]
-
-          - id: generate-knowledge-graph
-            name: Generate Intellicrack Knowledge Graph
-            entry: bash -c 'pixi run python scripts/knowledge-graph/visualize_architecture.py --layout hierarchical && git add IntellicrackKnowledgeGraph.html scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml scripts/knowledge-graph/IntellicrackKnowledgeGraph.dot'
-            language: system
-            pass_filenames: false
-            always_run: true
-            stages: [pre-commit]
-
-          - id: rust-fmt
-            name: Rust code formatting (cargo fmt)
-            entry: cargo fmt --manifest-path intellicrack-launcher/Cargo.toml -- --check
-            language: system
-            types: [rust]
-            pass_filenames: false
-
-          - id: test-coverage-modified
-            name: Test Coverage (Modified Files - 80% minimum)
-            entry: pixi run python -m pytest --cov=intellicrack --cov-fail-under=80 --cov-report=term-missing
-            language: system
-            pass_filenames: false
-            files: '^intellicrack/.*\.py$'
-            stages: [pre-commit]
-
-          - id: production-readiness-audit-scoped
-            name: Production Readiness Audit (Intellicrack code only)
-            entry: pixi run python tests/utils/Production_Readiness_Audit.py intellicrack --whitelist-config tests/utils/audit_whitelist.yaml --output-dir tests/reports/
-            language: system
-            pass_filenames: false
-            files: '^intellicrack/.*\.(py|java|js|ts)$'
-            stages: [pre-commit]
-
-          - id: test-real-functionality-modified
-            name: Test Real Functionality (Modified Files)
-            entry: pixi run python -m pytest tests/unit -k "not slow" --tb=short
-            language: system
-            pass_filenames: false
-            files: '^intellicrack/.*\.py$'
-            stages: [pre-commit]
-
-          # Full audit hooks for manual execution
-          - id: test-coverage-full
-            name: Full Codebase Test Coverage (80% minimum)
-            entry: pixi run python -m pytest --cov=intellicrack --cov-fail-under=80 --cov-report=term-missing --cov-report=html
-            language: system
-            pass_filenames: false
-            always_run: true
-            stages: [manual]
-
+        name: Full Codebase Test Coverage (80% minimum)
+        entry: pixi run python -m pytest --cov=intellicrack --cov-fail-under=80 --cov-report=term-missing --cov-report=html
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [manual]
+  - repo: https://github.com/astral-sh/ruff-pre-commit
     # Code Quality - Advanced Linting & Formatting (Updated to Latest)
-    - repo: https://github.com/astral-sh/ruff-pre-commit
-      rev: v0.12.11
-      hooks:
-          - id: ruff-check
-            args: [--fix, --exit-non-zero-on-fix]
-          - id: ruff-format
 
+    rev: v0.12.11
+    hooks:
+      - id: ruff-check
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+  - repo: https://github.com/Yelp/detect-secrets
     # Security - Secret Scanning (Up to date)
-    - repo: https://github.com/Yelp/detect-secrets
-      rev: v1.5.0
-      hooks:
-          - id: detect-secrets
-            args: ['--baseline', '.secrets.baseline']
 
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+  - repo: https://github.com/PyCQA/bandit
     # Security - Vulnerability Scanning (Updated)
-    - repo: https://github.com/PyCQA/bandit
-      rev: 1.8.3
-      hooks:
-          - id: bandit
-            args: ['-r', 'intellicrack/', '-ll', '-i']
-            pass_filenames: false
-            exclude: ^tests/
 
+    rev: 1.8.3
+    hooks:
+      - id: bandit
+        args: ['-r', 'intellicrack/', '-ll', '-i']
+        pass_filenames: false
+        exclude: ^tests/
+  - repo: https://github.com/pre-commit/pre-commit-hooks
     # Basic Git Hygiene (Updated to Latest)
-    - repo: https://github.com/pre-commit/pre-commit-hooks
-      rev: v6.0.0
-      hooks:
-          - id: trailing-whitespace
-          - id: end-of-file-fixer
-          - id: check-yaml
-          - id: check-json
-          - id: check-merge-conflict
-          - id: check-added-large-files
-            args: ['--maxkb=10000']
-          - id: check-ast
-          - id: debug-statements
+
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=10000']
+      - id: check-ast
+      - id: debug-statements
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+      - id: check-byte-order-marker

@@ -1,7 +1,7 @@
 {
   "tool": "xenon",
-  "generated": "2026-02-21T19:56:38.476276",
-  "total_findings": 72,
+  "generated": "2026-02-22T01:47:21.504265",
+  "total_findings": 73,
   "total_files": 36,
   "files": [
     {
@@ -318,22 +318,22 @@
       "count": 2,
       "findings": [
         {
-          "line": 509,
+          "line": 556,
           "column": null,
           "name": "_detect_architecture",
           "rank": "C",
           "complexity": 20,
           "message": "'_detect_architecture' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\bridges\\binary.py:509: '_detect_architecture' has rank C"
+          "raw": "src\\intellicrack\\bridges\\binary.py:556: '_detect_architecture' has rank C"
         },
         {
-          "line": 620,
+          "line": 667,
           "column": null,
           "name": "_get_imports_internal",
           "rank": "C",
           "complexity": 20,
           "message": "'_get_imports_internal' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\bridges\\binary.py:620: '_get_imports_internal' has rank C"
+          "raw": "src\\intellicrack\\bridges\\binary.py:667: '_get_imports_internal' has rank C"
         }
       ]
     },
@@ -399,13 +399,13 @@
           "raw": "src\\intellicrack\\bridges\\x64dbg.py:252: '_read_unicode_string_from_params' has rank C"
         },
         {
-          "line": 1507,
+          "line": 1617,
           "column": null,
           "name": "get_memory_regions",
           "rank": "C",
           "complexity": 20,
           "message": "'get_memory_regions' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1507: 'get_memory_regions' has rank C"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1617: 'get_memory_regions' has rank C"
         }
       ]
     },
@@ -578,26 +578,50 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\app.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 724,
+          "column": null,
+          "name": "_on_tool_result",
+          "rank": "C",
+          "complexity": 20,
+          "message": "'_on_tool_result' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\ui\\app.py:724: '_on_tool_result' has rank C"
+        },
+        {
+          "line": 1631,
+          "column": null,
+          "name": "close_event_handler",
+          "rank": "C",
+          "complexity": 20,
+          "message": "'close_event_handler' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\ui\\app.py:1631: 'close_event_handler' has rank C"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\tools.py",
       "count": 2,
       "findings": [
         {
-          "line": 1398,
+          "line": 1400,
           "column": null,
           "name": "_on_tab_close_requested",
           "rank": "D",
           "complexity": 30,
           "message": "'_on_tab_close_requested' has rank D (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\tools.py:1398: '_on_tab_close_requested' has rank D"
+          "raw": "src\\intellicrack\\ui\\tools.py:1400: '_on_tab_close_requested' has rank D"
         },
         {
-          "line": 1470,
+          "line": 1472,
           "column": null,
           "name": "close_embedded_tools",
           "rank": "C",
           "complexity": 20,
           "message": "'close_embedded_tools' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\tools.py:1470: 'close_embedded_tools' has rank C"
+          "raw": "src\\intellicrack\\ui\\tools.py:1472: 'close_embedded_tools' has rank C"
         }
       ]
     },
@@ -678,13 +702,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 929,
+          "line": 935,
           "column": null,
           "name": "hook_function",
           "rank": "C",
           "complexity": 20,
           "message": "'hook_function' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:929: 'hook_function' has rank C"
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:935: 'hook_function' has rank C"
         }
       ]
     },
@@ -693,13 +717,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 1097,
+          "line": 1110,
           "column": null,
           "name": "search_pattern",
           "rank": "C",
           "complexity": 20,
           "message": "'search_pattern' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\bridges\\process.py:1097: 'search_pattern' has rank C"
+          "raw": "src\\intellicrack\\bridges\\process.py:1110: 'search_pattern' has rank C"
         }
       ]
     },
@@ -760,21 +784,6 @@
           "complexity": 20,
           "message": "'_validate_key_format' has rank C (complexity > threshold)",
           "raw": "src\\intellicrack\\credentials\\env_loader.py:283: '_validate_key_format' has rank C"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\app.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 1550,
-          "column": null,
-          "name": "close_event_handler",
-          "rank": "C",
-          "complexity": 20,
-          "message": "'close_event_handler' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\app.py:1550: 'close_event_handler' has rank C"
         }
       ]
     },

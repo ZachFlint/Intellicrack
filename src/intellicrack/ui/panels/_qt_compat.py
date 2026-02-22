@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 
     from PyQt6.QtCore import Qt
     from PyQt6.QtWidgets import (
+        QAbstractItemView,
         QPlainTextEdit,
         QTableWidget,
         QTableWidgetItem,
@@ -34,6 +35,8 @@ if TYPE_CHECKING:
 _logger = get_logger("ui.panels.qt_compat")
 
 _SORT_ENABLED = "setSortingEnabled"
+_SELECTION_MODE = "setSelectionMode"
+_CELL_CHANGED = "cellChanged"
 _HEADER_LABELS = "setHeaderLabels"
 _MAX_BLOCK_COUNT = "setMaximumBlockCount"
 _EDIT_ITEM = "editItem"
@@ -63,14 +66,36 @@ def _resolve(obj: object, method_name: str) -> Callable[..., Any]:
     return method
 
 
-def set_sorting_enabled(table: QTableWidget, enable: bool) -> None:
-    """Toggle sorting on a QTableWidget by dispatching to its native method.
+def set_sorting_enabled(table: QTableWidget | QTreeWidget, enable: bool) -> None:
+    """Toggle sorting on a QTableWidget or QTreeWidget.
 
     Args:
-        table: The table widget.
+        table: The table or tree widget.
         enable: Whether to enable sorting.
     """
     _resolve(table, _SORT_ENABLED)(enable)
+
+
+def set_selection_mode(widget: QTableWidget | QTreeWidget, mode: QAbstractItemView.SelectionMode) -> None:
+    """Set the selection mode on a QTableWidget or QTreeWidget.
+
+    Args:
+        widget: The table or tree widget.
+        mode: The selection mode enum value.
+    """
+    _resolve(widget, _SELECTION_MODE)(mode)
+
+
+def connect_cell_changed(table: QTableWidget, slot: Callable[..., object]) -> None:
+    """Connect a slot to QTableWidget.cellChanged signal.
+
+    Args:
+        table: The table widget.
+        slot: The callback to connect.
+    """
+    signal = getattr(table, _CELL_CHANGED, None)
+    if signal is not None:
+        signal.connect(slot)
 
 
 def set_header_labels(tree: QTreeWidget, labels: list[str]) -> None:

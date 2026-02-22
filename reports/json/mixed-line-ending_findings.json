@@ -1,0 +1,21 @@
+{
+  "tool": "mixed-line-ending",
+  "generated": "2026-02-22T01:52:14.290780",
+  "total_findings": 1,
+  "total_files": 1,
+  "files": [
+    {
+      "path": "src\\intellicrack\\plugins\\x64dbg_plugin\\CMakeLists.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "MLE001",
+          "message": "File has mixed line endings",
+          "raw": "src\\intellicrack\\plugins\\x64dbg_plugin\\CMakeLists.txt: mixed line endings"
+        }
+      ]
+    }
+  ]
+}

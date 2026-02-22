@@ -1,8 +1,22 @@
 2 findings in D:\Intellicrack\src\intellicrack\ui\app.py
 
-D:\Intellicrack\src\intellicrack\ui\app.py:587:9: S110 `try`-`except`-`pass` detected, consider logging the exception
+D:\Intellicrack\src\intellicrack\ui\app.py:618:9: S110 `try`-`except`-`pass` detected, consider logging the exception
 
-D:\Intellicrack\src\intellicrack\ui\app.py:1208:17: PERF401 Use `list.extend` to create a transformed list
+D:\Intellicrack\src\intellicrack\ui\app.py:1259:17: PERF401 Use `list.extend` to create a transformed list
+
+
+2 findings in D:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py
+
+D:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py:194:46: F821 Undefined name `QAbstractItemView`
+
+D:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py:231:45: F821 Undefined name `QAbstractItemView`
+
+
+2 findings in D:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py
+
+D:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:222:46: F821 Undefined name `QAbstractItemView`
+
+D:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:259:45: F821 Undefined name `QAbstractItemView`
 
 
 1 findings in D:\Intellicrack\src\intellicrack\bridges\binary.py
@@ -13,11 +27,6 @@ D:\Intellicrack\src\intellicrack\bridges\binary.py:42:25: TC004 Move import `pat
 1 findings in D:\Intellicrack\src\intellicrack\core\logging.py
 
 D:\Intellicrack\src\intellicrack\core\logging.py:276:9: PLR6301 Method `configure` could be a function, class method, or static method
-
-
-1 findings in D:\Intellicrack\src\intellicrack\core\process_manager.py
-
-D:\Intellicrack\src\intellicrack\core\process_manager.py:12:8: F401 `ctypes` imported but unused
 
 
 1 findings in D:\Intellicrack\src\intellicrack\ui\highlighter.py
@@ -37,7 +46,7 @@ D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:7:1: I001 Import block
 
 1 findings in D:\Intellicrack\src\intellicrack\ui\panels\process_panel.py
 
-D:\Intellicrack\src\intellicrack\ui\panels\process_panel.py:37:51: F401 `intellicrack.core.process_manager.ProcessManager` imported but unused
+D:\Intellicrack\src\intellicrack\ui\panels\process_panel.py:37:5: TC005 Found empty type-checking block
 
 
 1 findings in D:\Intellicrack\src\intellicrack\ui\panels\script_manager.py

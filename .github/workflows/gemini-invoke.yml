@@ -1,5 +1,4 @@
 name: '▶️ Gemini Invoke'
-
 on:
   workflow_dispatch:
   workflow_call:
@@ -8,15 +7,12 @@ on:
         type: 'string'
         description: 'Any additional context from the request'
         required: false
-
 concurrency:
   group: '${{ github.workflow }}-invoke-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.issue.number }}'
   cancel-in-progress: false
-
 defaults:
   run:
     shell: 'bash'
-
 jobs:
   invoke:
     runs-on: 'ubuntu-latest'
@@ -37,7 +33,6 @@ jobs:
           permission-contents: 'read'
           permission-issues: 'write'
           permission-pull-requests: 'write'
-
       - name: 'Check Gemini credentials'
         id: 'check_creds'
         run: |
@@ -50,7 +45,6 @@ jobs:
         env:
           GEMINI_KEY: '${{ secrets.GEMINI_API_KEY }}'
           GOOGLE_KEY: '${{ secrets.GOOGLE_API_KEY }}'
-
       - name: 'Run Gemini CLI'
         id: 'run_gemini'
         if: steps.check_creds.outputs.available == 'true'

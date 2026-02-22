@@ -345,6 +345,53 @@ class BinaryBridge(BinaryOperationsBridge):
                     ],
                     returns="Path where file was saved",
                 ),
+                ToolFunction(
+                    name="binary.search_pattern_wildcard",
+                    description="Search for hex pattern with wildcards in the binary",
+                    parameters=[
+                        ToolParameter(
+                            name="hex_pattern",
+                            type="string",
+                            description="Hex pattern like '48 8B ?? ?? 00'",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="start_offset",
+                            type="integer",
+                            description="Starting offset for search",
+                            required=False,
+                            default=0,
+                        ),
+                        ToolParameter(
+                            name="max_results",
+                            type="integer",
+                            description="Maximum results to return",
+                            required=False,
+                            default=100,
+                        ),
+                    ],
+                    returns="List of offsets where pattern found",
+                ),
+                ToolFunction(
+                    name="binary.disassemble_at_offset",
+                    description="Disassemble instructions at a file offset",
+                    parameters=[
+                        ToolParameter(
+                            name="offset",
+                            type="integer",
+                            description="File offset to disassemble",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="count",
+                            type="integer",
+                            description="Number of instructions to disassemble",
+                            required=False,
+                            default=10,
+                        ),
+                    ],
+                    returns="Disassembly text",
+                ),
             ],
         )
 

@@ -425,6 +425,19 @@ class ProcessBridge(ToolBridgeBase):
                     ],
                     returns="Success status",
                 ),
+                ToolFunction(
+                    name="process.get_process_info",
+                    description="Get detailed process information",
+                    parameters=[
+                        ToolParameter(
+                            name="pid",
+                            type="integer",
+                            description="Process ID (uses current if not specified)",
+                            required=False,
+                        ),
+                    ],
+                    returns="Process info or None if not found",
+                ),
             ],
         )
 

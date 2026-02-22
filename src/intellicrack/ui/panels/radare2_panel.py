@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
+    QAbstractItemView,
     QComboBox,
     QFileDialog,
     QHBoxLayout,
@@ -38,6 +39,7 @@ from intellicrack.ui.panels._async_bridge import run_bridge_coroutine
 from intellicrack.ui.panels._qt_compat import (
     set_header_labels,
     set_max_block_count,
+    set_selection_mode,
     set_sorting_enabled,
     tree_item_data,
     tree_item_set_data,
@@ -218,7 +220,7 @@ class Radare2Panel(QWidget):
 
         self._xrefs_tree = QTreeWidget()
         set_header_labels(self._xrefs_tree, _XREF_COLUMNS)
-        self._xrefs_tree.setSelectionMode(QTreeWidget.SelectionMode.SingleSelection)
+        set_selection_mode(self._xrefs_tree, QAbstractItemView.SelectionMode.SingleSelection)
         tabs.addTab(self._xrefs_tree, "XRefs")
 
         return tabs
@@ -255,7 +257,7 @@ class Radare2Panel(QWidget):
         self._func_tree = QTreeWidget()
         set_header_labels(self._func_tree, _FUNC_COLUMNS)
         set_sorting_enabled(self._func_tree, True)
-        self._func_tree.setSelectionMode(QTreeWidget.SelectionMode.SingleSelection)
+        set_selection_mode(self._func_tree, QAbstractItemView.SelectionMode.SingleSelection)
         self._func_tree.itemClicked.connect(self._on_function_clicked)
         layout.addWidget(self._func_tree)
 

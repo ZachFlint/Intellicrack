@@ -1,0 +1,204 @@
+29 findings in src/intellicrack\bridges\binary.py
+
+src/intellicrack\bridges\binary.py:4: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:17: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:18: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:19: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:20: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:21: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:22: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:44: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:44: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:44: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:44: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:44: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:47: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:59: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:86: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:91: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:101: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:542: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:543: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:549: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:554: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:574: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:575: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:576: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:578: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:580: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:582: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:1065: lief ==> leaf, life
+
+src/intellicrack\bridges\binary.py:1087: lief ==> leaf, life
+
+
+16 findings in scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml
+
+scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml:666: lief ==> leaf, life
+
+scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml:667: lief ==> leaf, life
+
+scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml:668: lief ==> leaf, life
+
+scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml:669: lief ==> leaf, life
+
+scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml:670: lief ==> leaf, life
+
+scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml:671: lief ==> leaf, life
+
+scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml:4677: CrossReference ==> cross-reference
+
+scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml:4680: CrossReference ==> cross-reference
+
+scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml:12907: CrossReference ==> cross-reference
+
+scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml:13066: lief ==> leaf, life
+
+scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml:13069: lief ==> leaf, life
+
+scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml:13072: lief ==> leaf, life
+
+scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml:13075: lief ==> leaf, life
+
+scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml:13078: lief ==> leaf, life
+
+scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml:13081: lief ==> leaf, life
+
+scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml:14761: lief ==> leaf, life
+
+
+8 findings in src/intellicrack\core\license_analyzer.py
+
+src/intellicrack\core\license_analyzer.py:37: lief ==> leaf, life
+
+src/intellicrack\core\license_analyzer.py:157: LIEF ==> LEAF, LIFE
+
+src/intellicrack\core\license_analyzer.py:160: LIEF ==> LEAF, LIFE
+
+src/intellicrack\core\license_analyzer.py:192: LIEF ==> LEAF, LIFE
+
+src/intellicrack\core\license_analyzer.py:195: LIEF ==> LEAF, LIFE
+
+src/intellicrack\core\license_analyzer.py:790: lief ==> leaf, life
+
+src/intellicrack\core\license_analyzer.py:859: LIEF ==> LEAF, LIFE
+
+src/intellicrack\core\license_analyzer.py:868: LIEF ==> LEAF, LIFE
+
+
+7 findings in src/intellicrack\bridges\ghidra.py
+
+src/intellicrack\bridges\ghidra.py:26: CrossReference ==> cross-reference
+
+src/intellicrack\bridges\ghidra.py:201: CrossReference ==> cross-reference
+
+src/intellicrack\bridges\ghidra.py:214: CrossReference ==> cross-reference
+
+src/intellicrack\bridges\ghidra.py:1080: CrossReference ==> cross-reference
+
+src/intellicrack\bridges\ghidra.py:1110: CrossReference ==> cross-reference
+
+src/intellicrack\bridges\ghidra.py:1124: CrossReference ==> cross-reference
+
+src/intellicrack\bridges\ghidra.py:1154: CrossReference ==> cross-reference
+
+
+7 findings in src/intellicrack\bridges\radare2.py
+
+src/intellicrack\bridges\radare2.py:20: CrossReference ==> cross-reference
+
+src/intellicrack\bridges\radare2.py:955: CrossReference ==> cross-reference
+
+src/intellicrack\bridges\radare2.py:974: CrossReference ==> cross-reference
+
+src/intellicrack\bridges\radare2.py:986: CrossReference ==> cross-reference
+
+src/intellicrack\bridges\radare2.py:997: CrossReference ==> cross-reference
+
+src/intellicrack\bridges\radare2.py:1016: CrossReference ==> cross-reference
+
+src/intellicrack\bridges\radare2.py:1028: CrossReference ==> cross-reference
+
+
+5 findings in src/intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp
+
+src/intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp:329: thirdparty ==> third party, third-party
+
+src/intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp:11797: ND ==> AND, 2ND
+
+src/intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp:11798: ND ==> AND, 2ND
+
+src/intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp:12092: ND ==> AND, 2ND
+
+src/intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp:25560: thirdparty ==> third party, third-party
+
+
+4 findings in scripts/knowledge-graph\visualize_architecture.py
+
+scripts/knowledge-graph\visualize_architecture.py:5: LOD ==> LOAD, LOUD, LODE
+
+scripts/knowledge-graph\visualize_architecture.py:41: LOD ==> LOAD, LOUD, LODE
+
+scripts/knowledge-graph\visualize_architecture.py:858: connIn ==> conning
+
+scripts/knowledge-graph\visualize_architecture.py:865: connIn ==> conning
+
+
+3 findings in src/intellicrack\bridges\base.py
+
+src/intellicrack\bridges\base.py:25: CrossReference ==> cross-reference
+
+src/intellicrack\bridges\base.py:437: CrossReference ==> cross-reference
+
+src/intellicrack\bridges\base.py:452: CrossReference ==> cross-reference
+
+
+2 findings in src/intellicrack\core\__init__.py
+
+src/intellicrack\core\__init__.py:54: CrossReference ==> cross-reference
+
+src/intellicrack\core\__init__.py:89: CrossReference ==> cross-reference
+
+
+2 findings in src/intellicrack\core\types.py
+
+src/intellicrack\core\types.py:27: CrossReference ==> cross-reference
+
+src/intellicrack\core\types.py:534: CrossReference ==> cross-reference
+
+
+1 findings in docs/source\conf.py
+
+docs/source\conf.py:40: lief ==> leaf, life
+
+
+1 findings in src/intellicrack\ui\panels\script_manager.py
+
+src/intellicrack\ui\panels\script_manager.py:114: regist ==> register

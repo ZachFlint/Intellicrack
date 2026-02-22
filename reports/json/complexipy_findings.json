@@ -1,8 +1,8 @@
 {
   "tool": "complexipy",
-  "generated": "2026-02-21T19:56:44.074541",
-  "total_findings": 51,
-  "total_files": 25,
+  "generated": "2026-02-22T01:47:32.047442",
+  "total_findings": 53,
+  "total_files": 27,
   "files": [
     {
       "path": "src\\intellicrack\\bridges\\installer.py",
@@ -493,6 +493,20 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\core\\orchestrator.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "Orchestrator::_run_agent_loop",
+          "complexity": 16,
+          "message": "Orchestrator::_run_agent_loop - cognitive complexity 16 (exceeds threshold)",
+          "raw": "src\\intellicrack\\core\\orchestrator.py: Orchestrator::_run_agent_loop - cognitive complexity 16 (exceeds threshold)"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\providers\\model_loader.py",
       "count": 1,
       "findings": [
@@ -517,6 +531,20 @@
           "complexity": 16,
           "message": "SandboxManager::create - cognitive complexity 16 (exceeds threshold)",
           "raw": "src\\intellicrack\\sandbox\\manager.py: SandboxManager::create - cognitive complexity 16 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\highlighter.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "PythonSyntaxHighlighter::_highlight_triple_quotes",
+          "complexity": 18,
+          "message": "PythonSyntaxHighlighter::_highlight_triple_quotes - cognitive complexity 18 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\highlighter.py: PythonSyntaxHighlighter::_highlight_triple_quotes - cognitive complexity 18 (exceeds threshold)"
         }
       ]
     },

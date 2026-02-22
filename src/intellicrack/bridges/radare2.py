@@ -474,6 +474,77 @@ class Radare2Bridge(StaticAnalysisBridge):
                     ],
                     returns="Command output",
                 ),
+                ToolFunction(
+                    name="r2.get_function",
+                    description="Get function at a specific address",
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Function address",
+                            required=True,
+                        ),
+                    ],
+                    returns="FunctionInfo or None if not found",
+                ),
+                ToolFunction(
+                    name="r2.search_bytes_wildcard",
+                    description="Search for byte pattern with wildcards",
+                    parameters=[
+                        ToolParameter(
+                            name="hex_pattern",
+                            type="string",
+                            description="Hex pattern like '48 8B ?? ??'",
+                            required=True,
+                        ),
+                    ],
+                    returns="List of addresses where pattern found",
+                ),
+                ToolFunction(
+                    name="r2.assemble_at",
+                    description="Assemble instruction at address",
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Target address",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="instruction",
+                            type="string",
+                            description="Assembly instruction to assemble",
+                            required=True,
+                        ),
+                    ],
+                    returns="Assembled bytes",
+                ),
+                ToolFunction(
+                    name="r2.seek",
+                    description="Seek to a specific address in the binary",
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Target address",
+                            required=True,
+                        ),
+                    ],
+                    returns="Output of seek command",
+                ),
+                ToolFunction(
+                    name="r2.get_function_address",
+                    description="Get address of a function by name",
+                    parameters=[
+                        ToolParameter(
+                            name="name",
+                            type="string",
+                            description="Function name to look up",
+                            required=True,
+                        ),
+                    ],
+                    returns="Address of function or None if not found",
+                ),
             ],
         )
 
@@ -1298,35 +1369,3 @@ class Radare2Bridge(StaticAnalysisBridge):
         """
         funcs = await self.get_functions(filter_pattern=name)
         return next((f.address for f in funcs if f.name == name), None)
-
-    async def list_functions(self) -> list[tuple[str, int]]:
-        """List functions for compatibility with Radare2Panel.
-
-        Returns:
-            List of (name, address) tuples.
-        """
-        return [(f.name, f.address) for f in await self.get_functions()]
-
-    async def list_strings(self) -> list[tuple[int, str]]:
-        """List strings for compatibility with Radare2Panel.
-
-        Returns:
-            List of (address, value) tuples.
-        """
-        return [(s.address, s.value) for s in await self.search_strings("")]
-
-    async def list_imports(self) -> list[tuple[str, str, int]]:
-        """List imports for compatibility with Radare2Panel.
-
-        Returns:
-            List of (dll, function, address) tuples.
-        """
-        return [(i.dll, i.function, i.address) for i in await self.get_imports()]
-
-    async def list_exports(self) -> list[tuple[str, int]]:
-        """List exports for compatibility with Radare2Panel.
-
-        Returns:
-            List of (name, address) tuples.
-        """
-        return [(e.name, e.address) for e in await self.get_exports()]
