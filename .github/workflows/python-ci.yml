@@ -16,11 +16,11 @@ jobs:
     setup:
         runs-on: windows-latest
         steps:
-            - uses: actions/checkout@v5
+            - uses: actions/checkout@v6
               with:
                   fetch-depth: 0
 
-            - uses: prefix-dev/setup-pixi@v0.9.3
+            - uses: prefix-dev/setup-pixi@v0.9.4
               with:
                   pixi-version: latest
 
@@ -56,11 +56,11 @@ jobs:
         if: success() || failure()
         continue-on-error: true
         steps:
-            - uses: actions/checkout@v5
+            - uses: actions/checkout@v6
               with:
                   fetch-depth: 0
 
-            - uses: prefix-dev/setup-pixi@v0.9.3
+            - uses: prefix-dev/setup-pixi@v0.9.4
               with:
                   pixi-version: latest
 
@@ -89,11 +89,11 @@ jobs:
         if: success() || failure()
         continue-on-error: true
         steps:
-            - uses: actions/checkout@v5
+            - uses: actions/checkout@v6
               with:
                   fetch-depth: 0
 
-            - uses: prefix-dev/setup-pixi@v0.9.3
+            - uses: prefix-dev/setup-pixi@v0.9.4
               with:
                   pixi-version: latest
 
@@ -117,11 +117,11 @@ jobs:
         if: success() || failure()
         continue-on-error: true
         steps:
-            - uses: actions/checkout@v5
+            - uses: actions/checkout@v6
               with:
                   fetch-depth: 0
 
-            - uses: prefix-dev/setup-pixi@v0.9.3
+            - uses: prefix-dev/setup-pixi@v0.9.4
               with:
                   pixi-version: latest
 
@@ -150,11 +150,11 @@ jobs:
         if: success() || failure()
         continue-on-error: true
         steps:
-            - uses: actions/checkout@v5
+            - uses: actions/checkout@v6
               with:
                   fetch-depth: 0
 
-            - uses: prefix-dev/setup-pixi@v0.9.3
+            - uses: prefix-dev/setup-pixi@v0.9.4
               with:
                   pixi-version: latest
 
@@ -182,11 +182,11 @@ jobs:
         if: success() || failure()
         continue-on-error: true
         steps:
-            - uses: actions/checkout@v5
+            - uses: actions/checkout@v6
               with:
                   fetch-depth: 0
 
-            - uses: prefix-dev/setup-pixi@v0.9.3
+            - uses: prefix-dev/setup-pixi@v0.9.4
               with:
                   pixi-version: latest
 
@@ -214,11 +214,11 @@ jobs:
         if: success() || failure()
         continue-on-error: true
         steps:
-            - uses: actions/checkout@v5
+            - uses: actions/checkout@v6
               with:
                   fetch-depth: 0
 
-            - uses: prefix-dev/setup-pixi@v0.9.3
+            - uses: prefix-dev/setup-pixi@v0.9.4
               with:
                   pixi-version: latest
 
@@ -236,11 +236,11 @@ jobs:
         if: success() || failure()
         continue-on-error: true
         steps:
-            - uses: actions/checkout@v5
+            - uses: actions/checkout@v6
               with:
                   fetch-depth: 0
 
-            - uses: prefix-dev/setup-pixi@v0.9.3
+            - uses: prefix-dev/setup-pixi@v0.9.4
               with:
                   pixi-version: latest
 
@@ -255,7 +255,7 @@ jobs:
 
             - name: Upload test results
               if: always()
-              uses: actions/upload-artifact@v5
+              uses: actions/upload-artifact@v6
               with:
                   name: test-results-python-ci
                   path: |

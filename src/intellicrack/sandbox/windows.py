@@ -16,7 +16,7 @@ from pathlib import Path
 
 from intellicrack.core._subprocess import CREATE_NEW_CONSOLE, PIPE, Popen
 
-from ..core.logging import get_logger
+from ..core.logging import get_logger, log_sandbox_operation
 from ..core.process_manager import ProcessManager, ProcessType
 from .base import (
     ExecutionReport,
@@ -160,6 +160,7 @@ class WindowsSandbox(SandboxBase):
             _logger.warning("sandbox_already_running")
             return
 
+        log_sandbox_operation("start", "windows")
         self._state.status = "starting"
         self._state.last_error = None
 

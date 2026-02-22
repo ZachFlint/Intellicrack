@@ -769,6 +769,73 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
                     rule.format,
                 )
 
+        self._highlight_triple_quotes(text)
+
+    def _highlight_triple_quotes(self, text: str) -> None:
+        """Handle multi-line triple-quoted string highlighting.
+
+        Uses QSyntaxHighlighter block state to track whether we are
+        inside a triple-quoted string across lines.
+
+        State encoding:
+            -1 or 0: not inside a triple-quoted string
+            1: inside a double-triple-quote block
+            2: inside a single-triple-quote block
+
+        Args:
+            text: The text block to highlight.
+        """
+        delimiters = ('"""', "'''")
+        prev_state = self.previousBlockState()
+        offset = 0
+
+        if prev_state == 1:
+            end_idx = text.find('"""', offset)
+            if end_idx == -1:
+                self.setFormat(0, len(text), self._triple_quote_format)
+                self.setCurrentBlockState(1)
+                return
+            length = end_idx + 3
+            self.setFormat(0, length, self._triple_quote_format)
+            offset = length
+        elif prev_state == 2:
+            end_idx = text.find("'''", offset)
+            if end_idx == -1:
+                self.setFormat(0, len(text), self._triple_quote_format)
+                self.setCurrentBlockState(2)
+                return
+            length = end_idx + 3
+            self.setFormat(0, length, self._triple_quote_format)
+            offset = length
+
+        self.setCurrentBlockState(0)
+
+        while offset < len(text):
+            nearest_pos = -1
+            nearest_delim_idx = -1
+
+            for delim_idx, delim in enumerate(delimiters):
+                pos = text.find(delim, offset)
+                if pos != -1 and (nearest_pos == -1 or pos < nearest_pos):
+                    nearest_pos = pos
+                    nearest_delim_idx = delim_idx
+
+            if nearest_pos == -1:
+                break
+
+            delim = delimiters[nearest_delim_idx]
+            state_value = nearest_delim_idx + 1
+            end_idx = text.find(delim, nearest_pos + 3)
+
+            if end_idx == -1:
+                self.setFormat(nearest_pos, len(text) - nearest_pos, self._triple_quote_format)
+                self.setCurrentBlockState(state_value)
+                return
+
+            length = end_idx - nearest_pos + 3
+            self.setFormat(nearest_pos, length, self._triple_quote_format)
+            offset = nearest_pos + length
+
 
 class JavaScriptSyntaxHighlighter(QSyntaxHighlighter):
     """Syntax highlighter for JavaScript code.

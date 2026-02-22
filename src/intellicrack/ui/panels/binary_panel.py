@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.resources.font_manager import DEFAULT_CODE_FONT
 from intellicrack.ui.panels._qt_compat import (
     set_header_labels,
     tree_item_data,
@@ -101,7 +102,7 @@ class BinaryPanel(QWidget):
         set_hint = getattr(self._offset_input, "set" + "Place" + "holderText")
         set_hint("0x0")
         self._offset_input.setMaximumWidth(120)
-        self._offset_input.setFont(QFont("JetBrains Mono", 9))
+        self._offset_input.setFont(QFont(DEFAULT_CODE_FONT, 9))
         self._offset_input.returnPressed.connect(self._on_goto_offset)
         toolbar.addWidget(self._offset_input)
 
@@ -158,7 +159,7 @@ class BinaryPanel(QWidget):
 
         self._hex_table = QTableWidget(0, 3)
         self._hex_table.setHorizontalHeaderLabels(["Offset", "Hex", "ASCII"])
-        self._hex_table.setFont(QFont("JetBrains Mono", 9))
+        self._hex_table.setFont(QFont(DEFAULT_CODE_FONT, 9))
         self._hex_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._hex_table.verticalHeader().setVisible(False)
         hex_header = self._hex_table.horizontalHeader()

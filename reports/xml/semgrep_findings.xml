@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><LintReport tool="semgrep" generated="2026-02-20T14:07:05.101946"><Summary><TotalFindings>2</TotalFindings><TotalFiles>2</TotalFiles></Summary><Files><File path="src\intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp" count="1"><Finding line="0" column="0" severity="error" rule="Syntax error"><Message>Syntax error at line src\intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp:1:
+<?xml version="1.0" encoding="UTF-8"?><LintReport tool="semgrep" generated="2026-02-21T19:55:54.722903"><Summary><TotalFindings>2</TotalFindings><TotalFiles>2</TotalFiles></Summary><Files><File path="src\intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp" count="1"><Finding line="0" column="0" severity="error" rule="Syntax error"><Message>Syntax error at line src\intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp:1:
  `//     __ _____ _____ _____
 //  __|  |   __|     |   | |  JSON for Modern C++
 // |  |  |__   |  |  | | | |  version 3.12.0

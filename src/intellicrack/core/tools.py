@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -20,7 +21,7 @@ from ..bridges.process import ProcessBridge
 from ..bridges.radare2 import Radare2Bridge
 from ..bridges.sandbox_bridge import SandboxBridge
 from ..bridges.x64dbg import X64DbgBridge
-from .logging import get_logger
+from .logging import get_logger, log_tool_call
 from .types import ToolDefinition, ToolError, ToolName
 
 
@@ -438,15 +439,27 @@ class ToolRegistry:
             )
             raise ToolError(_ERR_NOT_CALLABLE)
 
+        start = time.monotonic()
         result: object = None
+        success = True
         try:
             if inspect.iscoroutinefunction(method):
                 result = await method(**arguments)
             else:
                 result = await asyncio.to_thread(method, **arguments)
         except Exception as e:
+            success = False
             _logger.exception("tool_call_failed", extra={"tool_name": tool_name, "function_name": function_name})
             raise ToolError(_ERR_CALL_FAILED) from e
+        finally:
+            elapsed_ms = (time.monotonic() - start) * 1000
+            log_tool_call(
+                tool_name=tool_name,
+                function_name=function_name,
+                arguments=arguments,
+                duration_ms=elapsed_ms,
+                success=success,
+            )
 
         return result
 

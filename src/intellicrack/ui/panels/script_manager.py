@@ -381,7 +381,6 @@ class ScriptEditor(QPlainTextEdit):
             parent: Parent widget.
         """
         super().__init__(parent=parent)
-        self._current_language = "text"
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -406,7 +405,7 @@ class ScriptEditor(QPlainTextEdit):
         Args:
             language: Language identifier.
         """
-        self._current_language = language
+        _ = language
 
     def get_content(self) -> str:
         """Get the current editor content.

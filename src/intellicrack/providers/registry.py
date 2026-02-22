@@ -6,11 +6,10 @@ and managing all LLM provider instances.
 
 from __future__ import annotations
 
-import asyncio
 from typing import TYPE_CHECKING
 
 from ..core.logging import get_logger
-from ..core.types import ModelInfo, ProviderCredentials, ProviderError, ProviderName
+from ..core.types import ProviderCredentials, ProviderError, ProviderName
 
 
 if TYPE_CHECKING:
@@ -175,76 +174,10 @@ class ProviderRegistry:
             await provider.disconnect()
             self._logger.info("provider_disconnected", extra={"provider": name.value})
 
-    async def connect_all(
-        self,
-        credentials_map: dict[ProviderName, ProviderCredentials] | None = None,
-    ) -> dict[ProviderName, bool]:
-        """Connect to all registered providers.
-
-        Args:
-            credentials_map: Optional mapping of providers to credentials.
-                           Falls back to credential loader if not provided.
-
-        Returns:
-            Dictionary mapping provider names to connection success status.
-        """
-        results: dict[ProviderName, bool] = {}
-
-        async def connect_one(name: ProviderName) -> tuple[ProviderName, bool]:
-            try:
-                creds = None
-                if credentials_map and name in credentials_map:
-                    creds = credentials_map[name]
-                elif self._credential_loader:
-                    creds = self._credential_loader.get_credentials(name)
-
-                if creds is None:
-                    return name, False
-
-                await self.connect_provider(name, creds)
-            except Exception as e:
-                self._logger.warning("provider_connection_failed", extra={"provider": name.value, "error": str(e)})
-                return name, False
-            else:
-                return name, True
-
-        tasks = [connect_one(name) for name in self._providers]
-        completed = await asyncio.gather(*tasks, return_exceptions=True)
-
-        for result in completed:
-            if isinstance(result, tuple):
-                name, success = result
-                results[name] = success
-            else:
-                self._logger.error("connection_task_failed", extra={"error": str(result)})
-
-        return results
-
     async def disconnect_all(self) -> None:
         """Disconnect from all providers."""
         for name in list(self._providers.keys()):
             await self.disconnect_provider(name)
-
-    async def get_all_models(self) -> dict[ProviderName, list[ModelInfo]]:
-        """Get models from all connected providers.
-
-        Returns:
-            Dict mapping provider names to their available models.
-        """
-        models: dict[ProviderName, list[ModelInfo]] = {}
-
-        for name, provider in self._providers.items():
-            if provider.is_connected:
-                try:
-                    provider_models = await provider.list_models()
-                    models[name] = provider_models
-                except Exception as e:
-                    self._logger.warning("models_fetch_failed", extra={"provider": name.value, "error": str(e)})
-                    models[name] = []
-            else:
-                models[name] = []
-
-        return models
 
     def set_active(self, name: ProviderName) -> None:
         """Set the active provider.
@@ -289,14 +222,6 @@ class ProviderRegistry:
         """
         return len(self.list_connected()) > 0
 
-    def set_credential_loader(self, loader: CredentialLoader) -> None:
-        """Set the credential loader for auto-connection.
-
-        Args:
-            loader: The credential loader to use.
-        """
-        self._credential_loader = loader
-
 
 class _RegistryHolder:
     """Holder for the singleton registry instance."""
@@ -313,29 +238,3 @@ def get_provider_registry() -> ProviderRegistry:
     if _RegistryHolder.instance is None:
         _RegistryHolder.instance = ProviderRegistry()
     return _RegistryHolder.instance
-
-
-def register_provider(provider: LLMProviderBase) -> None:
-    """Register a provider with the global registry.
-
-    Args:
-        provider: The provider to register.
-    """
-    registry = get_provider_registry()
-    registry.register(provider)
-
-
-def get_active_provider() -> LLMProviderBase:
-    """Get the currently active provider.
-
-    Returns:
-        The active provider.
-
-    Raises:
-        ProviderError: If no provider is active.
-    """
-    registry = get_provider_registry()
-    provider = registry.active
-    if provider is None:
-        raise ProviderError(_MSG_NO_ACTIVE_PROVIDER)
-    return provider

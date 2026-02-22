@@ -1,0 +1,9 @@
+{
+  "name": "intellicrack",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Intellicrack binary analysis platform",
+  "dependencies": {
+    "markdownlint-cli": "^0.47.0"
+  }
+}

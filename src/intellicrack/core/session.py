@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
-from .logging import get_logger
+from .logging import get_logger, log_session_operation
 from .types import (
     BinaryInfo,
     ExportInfo,
@@ -196,23 +196,6 @@ class Session:
             LicensingAnalysis if available, None otherwise.
         """
         return self.licensing_analyses.get(binary_name)
-
-    def to_metadata(self) -> SessionMetadata:
-        """Convert to metadata for listing.
-
-        Returns:
-            SessionMetadata instance.
-        """
-        return SessionMetadata(
-            id=self.id,
-            name=self.name,
-            created_at=self.created_at,
-            updated_at=self.updated_at,
-            provider=self.provider,
-            model=self.model,
-            binary_count=len(self.binaries),
-            message_count=len(self.messages),
-        )
 
 
 class SessionStore:
@@ -855,6 +838,7 @@ class SessionManager:
         await self.save()
         await self._start_auto_save()
 
+        log_session_operation("create", session.id, provider=provider.value, model=model)
         _logger.info("session_created", extra={"session_id": session.id})
         return session
 
@@ -903,6 +887,7 @@ class SessionManager:
         """Save the current session."""
         if self._current is not None:
             self._store.save(self._current)
+            log_session_operation("save", self._current.id)
             _logger.debug("current_session_saved", extra={"session_id": self._current.id})
 
     async def close(self) -> None:

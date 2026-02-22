@@ -430,6 +430,8 @@ class GhidraPanel(QWidget):
         except Exception:
             _logger.exception("ghidra_disassemble_failed", extra={"address": hex(address)})
 
+        self.show_xrefs(address)
+
     def _refresh_imports(self) -> None:
         """Refresh the imports table from bridge."""
         if self._bridge is None:

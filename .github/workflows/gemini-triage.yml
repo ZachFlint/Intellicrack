@@ -56,10 +56,23 @@ jobs:
             core.info(`Found ${labelNames.length} labels: ${labelNames.join(', ')}`);
             return labelNames;
 
+      - name: 'Check Gemini credentials'
+        id: 'check_creds'
+        run: |
+          if [ -z "$GEMINI_KEY" ] && [ -z "$GOOGLE_KEY" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Gemini API credentials not configured. Skipping."
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GEMINI_KEY: '${{ secrets.GEMINI_API_KEY }}'
+          GOOGLE_KEY: '${{ secrets.GOOGLE_API_KEY }}'
+
       - name: 'Run Gemini issue analysis'
         id: 'gemini_analysis'
         if: |-
-          ${{ steps.get_labels.outputs.available_labels != '' }}
+          ${{ steps.get_labels.outputs.available_labels != '' && steps.check_creds.outputs.available == 'true' }}
         uses: 'google-github-actions/run-gemini-cli@v0' # ratchet:exclude
         env:
           GITHUB_TOKEN: '' # Do NOT pass any auth tokens here since this runs on untrusted inputs

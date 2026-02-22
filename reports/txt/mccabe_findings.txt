@@ -41,9 +41,16 @@ src/intellicrack\core\license_analyzer.py:1957:5: C901 'LicenseAnalyzer._detect_
 
 2 findings in src/intellicrack\sandbox\qemu.py
 
-src/intellicrack\sandbox\qemu.py:768:5: C901 'QEMUSandbox._build_qemu_command' is too complex (11)
+src/intellicrack\sandbox\qemu.py:766:5: C901 'QEMUSandbox._build_qemu_command' is too complex (11)
 
-src/intellicrack\sandbox\qemu.py:862:5: C901 'QEMUSandbox.start' is too complex (11)
+src/intellicrack\sandbox\qemu.py:860:5: C901 'QEMUSandbox.start' is too complex (11)
+
+
+2 findings in src/intellicrack\ui\app.py
+
+src/intellicrack\ui\app.py:1062:5: C901 'MainWindow._apply_provider_settings' is too complex (11)
+
+src/intellicrack\ui\app.py:1550:5: C901 'MainWindow.close_event_handler' is too complex (11)
 
 
 2 findings in src/intellicrack\ui\provider_config.py
@@ -55,14 +62,14 @@ src/intellicrack\ui\provider_config.py:477:5: C901 'ModelRefreshWorker._fetch_an
 
 2 findings in src/intellicrack\ui\tools.py
 
-src/intellicrack\ui\tools.py:1410:5: C901 'ToolOutputPanel._on_tab_close_requested' is too complex (16)
+src/intellicrack\ui\tools.py:1398:5: C901 'ToolOutputPanel._on_tab_close_requested' is too complex (16)
 
-src/intellicrack\ui\tools.py:1482:5: C901 'ToolOutputPanel.close_embedded_tools' is too complex (15)
+src/intellicrack\ui\tools.py:1470:5: C901 'ToolOutputPanel.close_embedded_tools' is too complex (15)
 
 
 1 findings in src/intellicrack\bridges\binary.py
 
-src/intellicrack\bridges\binary.py:508:5: C901 'BinaryBridge._detect_architecture' is too complex (11)
+src/intellicrack\bridges\binary.py:509:5: C901 'BinaryBridge._detect_architecture' is too complex (11)
 
 
 1 findings in src/intellicrack\bridges\frida_bridge.py
@@ -73,6 +80,11 @@ src/intellicrack\bridges\frida_bridge.py:929:5: C901 'FridaBridge.hook_function'
 1 findings in src/intellicrack\bridges\process.py
 
 src/intellicrack\bridges\process.py:1097:5: C901 'ProcessBridge.search_pattern' is too complex (11)
+
+
+1 findings in src/intellicrack\core\orchestrator.py
+
+src/intellicrack\core\orchestrator.py:370:5: C901 'Orchestrator._run_agent_loop' is too complex (11)
 
 
 1 findings in src/intellicrack\providers\grok.py
@@ -110,14 +122,9 @@ src/intellicrack\providers\openrouter.py:411:5: C901 'OpenRouterProvider.chat_st
 src/intellicrack\providers\xpu_utils.py:217:1: C901 'get_xpu_device_info' is too complex (18)
 
 
-1 findings in src/intellicrack\ui\app.py
-
-src/intellicrack\ui\app.py:880:5: C901 'MainWindow._apply_provider_settings' is too complex (11)
-
-
 1 findings in src/intellicrack\ui\panels\binary_panel.py
 
-src/intellicrack\ui\panels\binary_panel.py:281:5: C901 'BinaryPanel._parse_sections' is too complex (12)
+src/intellicrack\ui\panels\binary_panel.py:282:5: C901 'BinaryPanel._parse_sections' is too complex (12)
 
 
 1 findings in src/intellicrack\ui\tool_config.py

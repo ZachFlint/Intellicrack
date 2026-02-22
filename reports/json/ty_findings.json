@@ -1,8 +1,8 @@
 {
   "tool": "ty",
-  "generated": "2026-02-20T14:04:42.734750",
-  "total_findings": 118,
-  "total_files": 32,
+  "generated": "2026-02-21T19:53:30.240201",
+  "total_findings": 136,
+  "total_files": 35,
   "files": [
     {
       "path": "src\\intellicrack\\providers\\model_loader.py",
@@ -185,6 +185,82 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\app.py",
+      "count": 10,
+      "findings": [
+        {
+          "line": 170,
+          "column": 9,
+          "code": "invalid-assignment",
+          "message": "Object of type `bound method Self@__init__.close_event_handler(a0: QCloseEvent | None) -> None` is not assignable to attribute `closeEvent` of type `def closeEvent(self, a0: QCloseEvent | None) -> None`",
+          "raw": "src\\intellicrack\\ui\\app.py:170:9: error[invalid-assignment] Object of type `bound method Self@__init__.close_event_handler(a0: QCloseEvent | None) -> None` is not assignable to attribute `closeEvent` of type `def closeEvent(self, a0: QCloseEvent | None) -> None`"
+        },
+        {
+          "line": 705,
+          "column": 17,
+          "code": "missing-argument",
+          "message": "No arguments provided for required parameters `address`, `original_bytes`, `new_bytes` of bound method `register_manual_patch`",
+          "raw": "src\\intellicrack\\ui\\app.py:705:17: error[missing-argument] No arguments provided for required parameters `address`, `original_bytes`, `new_bytes` of bound method `register_manual_patch`"
+        },
+        {
+          "line": 706,
+          "column": 21,
+          "code": "unknown-argument",
+          "message": "Argument `offset` does not match any known parameter of bound method `register_manual_patch`",
+          "raw": "src\\intellicrack\\ui\\app.py:706:21: error[unknown-argument] Argument `offset` does not match any known parameter of bound method `register_manual_patch`"
+        },
+        {
+          "line": 706,
+          "column": 28,
+          "code": "no-matching-overload",
+          "message": "No overload of bound method `get` matches arguments",
+          "raw": "src\\intellicrack\\ui\\app.py:706:28: error[no-matching-overload] No overload of bound method `get` matches arguments"
+        },
+        {
+          "line": 707,
+          "column": 21,
+          "code": "unknown-argument",
+          "message": "Argument `original` does not match any known parameter of bound method `register_manual_patch`",
+          "raw": "src\\intellicrack\\ui\\app.py:707:21: error[unknown-argument] Argument `original` does not match any known parameter of bound method `register_manual_patch`"
+        },
+        {
+          "line": 707,
+          "column": 30,
+          "code": "no-matching-overload",
+          "message": "No overload of bound method `get` matches arguments",
+          "raw": "src\\intellicrack\\ui\\app.py:707:30: error[no-matching-overload] No overload of bound method `get` matches arguments"
+        },
+        {
+          "line": 708,
+          "column": 21,
+          "code": "unknown-argument",
+          "message": "Argument `patched` does not match any known parameter of bound method `register_manual_patch`",
+          "raw": "src\\intellicrack\\ui\\app.py:708:21: error[unknown-argument] Argument `patched` does not match any known parameter of bound method `register_manual_patch`"
+        },
+        {
+          "line": 708,
+          "column": 29,
+          "code": "no-matching-overload",
+          "message": "No overload of bound method `get` matches arguments",
+          "raw": "src\\intellicrack\\ui\\app.py:708:29: error[no-matching-overload] No overload of bound method `get` matches arguments"
+        },
+        {
+          "line": 709,
+          "column": 33,
+          "code": "no-matching-overload",
+          "message": "No overload of bound method `get` matches arguments",
+          "raw": "src\\intellicrack\\ui\\app.py:709:33: error[no-matching-overload] No overload of bound method `get` matches arguments"
+        },
+        {
+          "line": 1198,
+          "column": 21,
+          "code": "missing-argument",
+          "message": "No argument provided for required parameter `registry` of bound method `__init__`",
+          "raw": "src\\intellicrack\\ui\\app.py:1198:21: error[missing-argument] No argument provided for required parameter `registry` of bound method `__init__`"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\bridges\\schemas.py",
       "count": 8,
       "findings": [
@@ -251,60 +327,60 @@
       "count": 8,
       "findings": [
         {
-          "line": 566,
+          "line": 565,
           "column": 38,
           "code": "invalid-argument-type",
           "message": "Argument to bound method `set_filter` is incorrect: Expected `str | None`, found `object`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:566:38: error[invalid-argument-type] Argument to bound method `set_filter` is incorrect: Expected `str | None`, found `object`"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:565:38: error[invalid-argument-type] Argument to bound method `set_filter` is incorrect: Expected `str | None`, found `object`"
         },
         {
-          "line": 575,
+          "line": 574,
           "column": 52,
           "code": "invalid-argument-type",
           "message": "Argument to bound method `get_language` is incorrect: Expected `str`, found `~AlwaysFalsy`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:575:52: error[invalid-argument-type] Argument to bound method `get_language` is incorrect: Expected `str`, found `~AlwaysFalsy`"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:574:52: error[invalid-argument-type] Argument to bound method `get_language` is incorrect: Expected `str`, found `~AlwaysFalsy`"
         },
         {
-          "line": 676,
+          "line": 675,
           "column": 48,
           "code": "invalid-argument-type",
           "message": "Argument to bound method `get_template` is incorrect: Expected `str`, found `~AlwaysFalsy`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:676:48: error[invalid-argument-type] Argument to bound method `get_template` is incorrect: Expected `str`, found `~AlwaysFalsy`"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:675:48: error[invalid-argument-type] Argument to bound method `get_template` is incorrect: Expected `str`, found `~AlwaysFalsy`"
         },
         {
-          "line": 693,
+          "line": 692,
           "column": 47,
           "code": "invalid-argument-type",
           "message": "Argument to function `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:693:47: error[invalid-argument-type] Argument to function `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:692:47: error[invalid-argument-type] Argument to function `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`"
         },
         {
-          "line": 697,
+          "line": 696,
           "column": 62,
           "code": "invalid-argument-type",
           "message": "Argument to bound method `add_script` is incorrect: Expected `str`, found `~AlwaysFalsy`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:697:62: error[invalid-argument-type] Argument to bound method `add_script` is incorrect: Expected `str`, found `~AlwaysFalsy`"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:696:62: error[invalid-argument-type] Argument to bound method `add_script` is incorrect: Expected `str`, found `~AlwaysFalsy`"
         },
         {
-          "line": 733,
+          "line": 732,
           "column": 50,
           "code": "invalid-argument-type",
           "message": "Argument to bound method `get_extension` is incorrect: Expected `str`, found `~AlwaysFalsy`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:733:50: error[invalid-argument-type] Argument to bound method `get_extension` is incorrect: Expected `str`, found `~AlwaysFalsy`"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:732:50: error[invalid-argument-type] Argument to bound method `get_extension` is incorrect: Expected `str`, found `~AlwaysFalsy`"
         },
         {
-          "line": 765,
+          "line": 764,
           "column": 43,
           "code": "invalid-argument-type",
           "message": "Argument to function `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:765:43: error[invalid-argument-type] Argument to function `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:764:43: error[invalid-argument-type] Argument to function `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`"
         },
         {
-          "line": 830,
+          "line": 829,
           "column": 16,
           "code": "invalid-return-type",
           "message": "Return type does not match returned value: expected `tuple[str, str, str] | None`, found `tuple[(Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy), ~AlwaysFalsy, (Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy)]`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:830:16: error[invalid-return-type] Return type does not match returned value: expected `tuple[str, str, str] | None`, found `tuple[(Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy), ~AlwaysFalsy, (Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy)]`"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:829:16: error[invalid-return-type] Return type does not match returned value: expected `tuple[str, str, str] | None`, found `tuple[(Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy), ~AlwaysFalsy, (Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy)]`"
         }
       ]
     },
@@ -423,18 +499,11 @@
       "count": 6,
       "findings": [
         {
-          "line": 163,
+          "line": 164,
           "column": 9,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:163:9: warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`"
-        },
-        {
-          "line": 165,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:165:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:164:9: warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`"
         },
         {
           "line": 166,
@@ -451,18 +520,25 @@
           "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:167:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
         },
         {
-          "line": 193,
+          "line": 168,
           "column": 9,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:193:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:168:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
         },
         {
-          "line": 200,
+          "line": 194,
           "column": 9,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:200:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:194:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+        },
+        {
+          "line": 201,
+          "column": 9,
+          "code": "",
+          "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:201:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
         }
       ]
     },
@@ -519,39 +595,39 @@
       "count": 5,
       "findings": [
         {
-          "line": 190,
+          "line": 191,
           "column": 13,
           "code": "invalid-assignment",
-          "message": "Object of type `Popen[bytes] | Popen[Any] | Popen[str]` is not assignable to attribute `_process` of type `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\sandbox\\windows.py:190:13: error[invalid-assignment] Object of type `Popen[bytes] | Popen[Any] | Popen[str]` is not assignable to attribute `_process` of type `Popen[bytes] | None`"
+          "message": "Object of type `Popen[Any] | Popen[str] | Popen[bytes]` is not assignable to attribute `_process` of type `Popen[bytes] | None`",
+          "raw": "src\\intellicrack\\sandbox\\windows.py:191:13: error[invalid-assignment] Object of type `Popen[Any] | Popen[str] | Popen[bytes]` is not assignable to attribute `_process` of type `Popen[bytes] | None`"
         },
         {
-          "line": 200,
+          "line": 201,
           "column": 17,
           "code": "invalid-argument-type",
           "message": "Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\sandbox\\windows.py:200:17: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`"
+          "raw": "src\\intellicrack\\sandbox\\windows.py:201:17: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`"
         },
         {
-          "line": 209,
+          "line": 210,
           "column": 16,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `poll` may be missing on object of type `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\sandbox\\windows.py:209:16: warning[possibly-missing-attribute] Attribute `poll` may be missing on object of type `Popen[bytes] | None`"
+          "raw": "src\\intellicrack\\sandbox\\windows.py:210:16: warning[possibly-missing-attribute] Attribute `poll` may be missing on object of type `Popen[bytes] | None`"
         },
         {
-          "line": 214,
+          "line": 215,
           "column": 31,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\sandbox\\windows.py:214:31: warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`"
+          "raw": "src\\intellicrack\\sandbox\\windows.py:215:31: warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`"
         },
         {
-          "line": 216,
+          "line": 217,
           "column": 67,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\sandbox\\windows.py:216:67: warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`"
+          "raw": "src\\intellicrack\\sandbox\\windows.py:217:67: warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`"
         }
       ]
     },
@@ -601,32 +677,32 @@
       "count": 4,
       "findings": [
         {
-          "line": 628,
+          "line": 629,
           "column": 26,
           "code": "not-iterable",
           "message": "Object of type `object` is not iterable",
-          "raw": "src\\intellicrack\\bridges\\binary.py:628:26: error[not-iterable] Object of type `object` is not iterable"
+          "raw": "src\\intellicrack\\bridges\\binary.py:629:26: error[not-iterable] Object of type `object` is not iterable"
         },
         {
-          "line": 665,
+          "line": 666,
           "column": 24,
           "code": "unresolved-attribute",
           "message": "Object of type `object` has no attribute `symbols`",
-          "raw": "src\\intellicrack\\bridges\\binary.py:665:24: error[unresolved-attribute] Object of type `object` has no attribute `symbols`"
+          "raw": "src\\intellicrack\\bridges\\binary.py:666:24: error[unresolved-attribute] Object of type `object` has no attribute `symbols`"
         },
         {
-          "line": 959,
+          "line": 973,
           "column": 50,
           "code": "missing-argument",
           "message": "No argument provided for required parameter `offset` of function `disasm`",
-          "raw": "src\\intellicrack\\bridges\\binary.py:959:50: error[missing-argument] No argument provided for required parameter `offset` of function `disasm`"
+          "raw": "src\\intellicrack\\bridges\\binary.py:973:50: error[missing-argument] No argument provided for required parameter `offset` of function `disasm`"
         },
         {
-          "line": 959,
+          "line": 973,
           "column": 60,
           "code": "invalid-argument-type",
           "message": "Argument to function `disasm` is incorrect: Expected `Cs`, found `bytes`",
-          "raw": "src\\intellicrack\\bridges\\binary.py:959:60: error[invalid-argument-type] Argument to function `disasm` is incorrect: Expected `Cs`, found `bytes`"
+          "raw": "src\\intellicrack\\bridges\\binary.py:973:60: error[invalid-argument-type] Argument to function `disasm` is incorrect: Expected `Cs`, found `bytes`"
         }
       ]
     },
@@ -690,11 +766,45 @@
           "raw": "src\\intellicrack\\ui\\highlighter.py:756:9: error[invalid-method-override] Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
         },
         {
-          "line": 916,
+          "line": 983,
           "column": 9,
           "code": "invalid-method-override",
           "message": "Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:916:9: error[invalid-method-override] Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
+          "raw": "src\\intellicrack\\ui\\highlighter.py:983:9: error[invalid-method-override] Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_bridges\\test_x64dbg.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": 28,
+          "column": 5,
+          "code": "unresolved-import",
+          "message": "Module `intellicrack.bridges.x64dbg` has no member `get_capstone`",
+          "raw": "tests\\test_bridges\\test_x64dbg.py:28:5: error[unresolved-import] Module `intellicrack.bridges.x64dbg` has no member `get_capstone`"
+        },
+        {
+          "line": 29,
+          "column": 5,
+          "code": "unresolved-import",
+          "message": "Module `intellicrack.bridges.x64dbg` has no member `get_keystone`",
+          "raw": "tests\\test_bridges\\test_x64dbg.py:29:5: error[unresolved-import] Module `intellicrack.bridges.x64dbg` has no member `get_keystone`"
+        },
+        {
+          "line": 165,
+          "column": 26,
+          "code": "invalid-assignment",
+          "message": "Object of type `dict[Unknown | str, Unknown | int | str]` is not assignable to `WatchpointInfo`",
+          "raw": "tests\\test_bridges\\test_x64dbg.py:165:26: error[invalid-assignment] Object of type `dict[Unknown | str, Unknown | int | str]` is not assignable to `WatchpointInfo`"
+        },
+        {
+          "line": 175,
+          "column": 12,
+          "code": "not-subscriptable",
+          "message": "Cannot subscript object of type `WatchpointInfo` with no `__getitem__` method",
+          "raw": "tests\\test_bridges\\test_x64dbg.py:175:12: error[not-subscriptable] Cannot subscript object of type `WatchpointInfo` with no `__getitem__` method"
         }
       ]
     },
@@ -703,25 +813,25 @@
       "count": 3,
       "findings": [
         {
-          "line": 209,
+          "line": 210,
           "column": 9,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:209:9: warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`"
+          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:210:9: warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`"
         },
         {
-          "line": 296,
+          "line": 297,
           "column": 9,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:296:9: warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`"
+          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:297:9: warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`"
         },
         {
-          "line": 373,
+          "line": 374,
           "column": 9,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:373:9: warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`"
+          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:374:9: warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`"
         }
       ]
     },
@@ -753,6 +863,60 @@
       ]
     },
     {
+      "path": "tests\\test_providers\\test_credential_loading.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 183,
+          "column": 18,
+          "code": "unresolved-attribute",
+          "message": "Object of type `CredentialLoader` has no attribute `get_env_var`",
+          "raw": "tests\\test_providers\\test_credential_loading.py:183:18: error[unresolved-attribute] Object of type `CredentialLoader` has no attribute `get_env_var`"
+        },
+        {
+          "line": 191,
+          "column": 18,
+          "code": "unresolved-attribute",
+          "message": "Object of type `CredentialLoader` has no attribute `get_env_var`",
+          "raw": "tests\\test_providers\\test_credential_loading.py:191:18: error[unresolved-attribute] Object of type `CredentialLoader` has no attribute `get_env_var`"
+        },
+        {
+          "line": 203,
+          "column": 18,
+          "code": "unresolved-attribute",
+          "message": "Object of type `CredentialLoader` has no attribute `get_env_var`",
+          "raw": "tests\\test_providers\\test_credential_loading.py:203:18: error[unresolved-attribute] Object of type `CredentialLoader` has no attribute `get_env_var`"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_ui\\test_splash_screen.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 227,
+          "column": 9,
+          "code": "unresolved-attribute",
+          "message": "Object of type `SplashScreen` has no attribute `show_loading_step`",
+          "raw": "tests\\test_ui\\test_splash_screen.py:227:9: error[unresolved-attribute] Object of type `SplashScreen` has no attribute `show_loading_step`"
+        },
+        {
+          "line": 233,
+          "column": 9,
+          "code": "unresolved-attribute",
+          "message": "Object of type `SplashScreen` has no attribute `show_loading_step`",
+          "raw": "tests\\test_ui\\test_splash_screen.py:233:9: error[unresolved-attribute] Object of type `SplashScreen` has no attribute `show_loading_step`"
+        },
+        {
+          "line": 414,
+          "column": 13,
+          "code": "unresolved-attribute",
+          "message": "Object of type `SplashScreen` has no attribute `show_loading_step`",
+          "raw": "tests\\test_ui\\test_splash_screen.py:414:13: error[unresolved-attribute] Object of type `SplashScreen` has no attribute `show_loading_step`"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\bridges\\sandbox_bridge.py",
       "count": 2,
       "findings": [
@@ -777,18 +941,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 834,
+          "line": 816,
           "column": 9,
           "code": "invalid-assignment",
-          "message": "Object of type `Popen[bytes] | Popen[Any] | Popen[str]` is not assignable to attribute `_process` of type `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:834:9: error[invalid-assignment] Object of type `Popen[bytes] | Popen[Any] | Popen[str]` is not assignable to attribute `_process` of type `Popen[bytes] | None`"
+          "message": "Object of type `Popen[Any] | Popen[str] | Popen[bytes]` is not assignable to attribute `_process` of type `Popen[bytes] | None`",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:816:9: error[invalid-assignment] Object of type `Popen[Any] | Popen[str] | Popen[bytes]` is not assignable to attribute `_process` of type `Popen[bytes] | None`"
         },
         {
-          "line": 844,
+          "line": 826,
           "column": 13,
           "code": "invalid-argument-type",
           "message": "Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:844:13: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:826:13: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`"
         }
       ]
     },
@@ -804,11 +968,11 @@
           "raw": "src\\intellicrack\\core\\process_manager.py:136:16: error[invalid-return-type] Return type does not match returned value: expected `ProcessManager`, found `ProcessManager | None | Unknown`"
         },
         {
-          "line": 536,
+          "line": 512,
           "column": 56,
           "code": "invalid-argument-type",
           "message": "Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`",
-          "raw": "src\\intellicrack\\core\\process_manager.py:536:56: error[invalid-argument-type] Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`"
+          "raw": "src\\intellicrack\\core\\process_manager.py:512:56: error[invalid-argument-type] Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`"
         }
       ]
     },
@@ -817,18 +981,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 516,
+          "line": 517,
           "column": 9,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `setValue` may be missing on object of type `Unknown | QScrollBar | None`",
-          "raw": "src\\intellicrack\\ui\\chat.py:516:9: warning[possibly-missing-attribute] Attribute `setValue` may be missing on object of type `Unknown | QScrollBar | None`"
+          "raw": "src\\intellicrack\\ui\\chat.py:517:9: warning[possibly-missing-attribute] Attribute `setValue` may be missing on object of type `Unknown | QScrollBar | None`"
         },
         {
-          "line": 516,
+          "line": 517,
           "column": 28,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `maximum` may be missing on object of type `Unknown | QScrollBar | None`",
-          "raw": "src\\intellicrack\\ui\\chat.py:516:28: warning[possibly-missing-attribute] Attribute `maximum` may be missing on object of type `Unknown | QScrollBar | None`"
+          "raw": "src\\intellicrack\\ui\\chat.py:517:28: warning[possibly-missing-attribute] Attribute `maximum` may be missing on object of type `Unknown | QScrollBar | None`"
         }
       ]
     },
@@ -857,38 +1021,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 414,
+          "line": 413,
           "column": 9,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:414:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:413:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
         },
         {
-          "line": 430,
+          "line": 429,
           "column": 9,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:430:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
-        }
-      ]
-    },
-    {
-      "path": "tests\\test_bridges\\test_x64dbg.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 165,
-          "column": 26,
-          "code": "invalid-assignment",
-          "message": "Object of type `dict[Unknown | str, Unknown | int | str]` is not assignable to `WatchpointInfo`",
-          "raw": "tests\\test_bridges\\test_x64dbg.py:165:26: error[invalid-assignment] Object of type `dict[Unknown | str, Unknown | int | str]` is not assignable to `WatchpointInfo`"
-        },
-        {
-          "line": 175,
-          "column": 12,
-          "code": "not-subscriptable",
-          "message": "Cannot subscript object of type `WatchpointInfo` with no `__getitem__` method",
-          "raw": "tests\\test_bridges\\test_x64dbg.py:175:12: error[not-subscriptable] Cannot subscript object of type `WatchpointInfo` with no `__getitem__` method"
+          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:429:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
         }
       ]
     },
@@ -897,11 +1041,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 468,
+          "line": 445,
           "column": 25,
           "code": "",
           "message": "warning[redundant-cast] Value is already of type `tuple[object, ...]`",
-          "raw": "src\\intellicrack\\core\\logging.py:468:25: warning[redundant-cast] Value is already of type `tuple[object, ...]`"
+          "raw": "src\\intellicrack\\core\\logging.py:445:25: warning[redundant-cast] Value is already of type `tuple[object, ...]`"
         }
       ]
     },
@@ -945,28 +1089,15 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\app.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 170,
-          "column": 9,
-          "code": "invalid-assignment",
-          "message": "Object of type `bound method Self@__init__.close_event_handler(a0: QCloseEvent | None) -> None` is not assignable to attribute `closeEvent` of type `def closeEvent(self, a0: QCloseEvent | None) -> None`",
-          "raw": "src\\intellicrack\\ui\\app.py:170:9: error[invalid-assignment] Object of type `bound method Self@__init__.close_event_handler(a0: QCloseEvent | None) -> None` is not assignable to attribute `closeEvent` of type `def closeEvent(self, a0: QCloseEvent | None) -> None`"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\panels\\frida_panel.py",
       "count": 1,
       "findings": [
         {
-          "line": 236,
+          "line": 237,
           "column": 9,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:236:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:237:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
         }
       ]
     },
@@ -1014,11 +1145,24 @@
       "count": 1,
       "findings": [
         {
-          "line": 370,
+          "line": 358,
           "column": 17,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `findBlockByLineNumber` may be missing on object of type `QTextDocument | None`",
-          "raw": "src\\intellicrack\\ui\\tools.py:370:17: warning[possibly-missing-attribute] Attribute `findBlockByLineNumber` may be missing on object of type `QTextDocument | None`"
+          "raw": "src\\intellicrack\\ui\\tools.py:358:17: warning[possibly-missing-attribute] Attribute `findBlockByLineNumber` may be missing on object of type `QTextDocument | None`"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_bridges\\test_x64dbg_api_coverage.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 102,
+          "column": 15,
+          "code": "unresolved-attribute",
+          "message": "Object of type `X64DbgBridge` has no attribute `_get_register_value`",
+          "raw": "tests\\test_bridges\\test_x64dbg_api_coverage.py:102:15: error[unresolved-attribute] Object of type `X64DbgBridge` has no attribute `_get_register_value`"
         }
       ]
     }

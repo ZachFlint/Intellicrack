@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
 
 from ..core.logging import get_logger
 from ..core.types import Message, ToolCall, ToolResult
+from .resources.font_manager import DEFAULT_CODE_FONT
 
 
 if TYPE_CHECKING:
@@ -154,7 +155,7 @@ class MessageBubble(QFrame):
         layout.setSpacing(2)
 
         header = QLabel(f"Tool: {call.tool_name}.{call.function_name}")
-        header.setFont(QFont("JetBrains Mono", 9, QFont.Weight.Bold))
+        header.setFont(QFont(DEFAULT_CODE_FONT, 9, QFont.Weight.Bold))
         header.setObjectName("tool_call_header")
         layout.addWidget(header)
 
@@ -163,7 +164,7 @@ class MessageBubble(QFrame):
             if len(args_text) > _MAX_ARGS_DISPLAY_LEN:
                 args_text = f"{args_text[: _MAX_ARGS_DISPLAY_LEN - 3]}..."
             args_label = QLabel(args_text)
-            args_label.setFont(QFont("JetBrains Mono", 8))
+            args_label.setFont(QFont(DEFAULT_CODE_FONT, 8))
             args_label.setObjectName("tool_call_args")
             args_label.setWordWrap(True)
             layout.addWidget(args_label)
@@ -189,13 +190,13 @@ class MessageBubble(QFrame):
 
         status = "Success" if result.success else "Failed"
         header = QLabel(f"Result: {status} ({result.duration_ms:.1f}ms)")
-        header.setFont(QFont("JetBrains Mono", 9))
+        header.setFont(QFont(DEFAULT_CODE_FONT, 9))
         header.setObjectName("result_header_success" if result.success else "result_header_error")
         layout.addWidget(header)
 
         if result.error:
             error_label = QLabel(result.error)
-            error_label.setFont(QFont("JetBrains Mono", 8))
+            error_label.setFont(QFont(DEFAULT_CODE_FONT, 8))
             error_label.setObjectName("error_text")
             error_label.setWordWrap(True)
             layout.addWidget(error_label)
@@ -204,7 +205,7 @@ class MessageBubble(QFrame):
             if len(result_text) > _MAX_RESULT_DISPLAY_LEN:
                 result_text = f"{result_text[: _MAX_RESULT_DISPLAY_LEN - 3]}..."
             result_label = QLabel(result_text)
-            result_label.setFont(QFont("JetBrains Mono", 8))
+            result_label.setFont(QFont(DEFAULT_CODE_FONT, 8))
             result_label.setObjectName("result_text")
             result_label.setWordWrap(True)
             layout.addWidget(result_label)

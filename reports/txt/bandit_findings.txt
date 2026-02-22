@@ -29,6 +29,11 @@ src/intellicrack/credentials\oauth.py:222: [Low] B106:hardcoded_password_funcarg
 src/intellicrack/sandbox\windows.py:13: [Low] B405:blacklist: Using xml.etree.ElementTree to parse untrusted XML data is known to be vulnerable to XML attacks. Replace xml.etree.ElementTree with the equivalent defusedxml package, or make sure defusedxml.defuse_stdlib() is called.
 
 
+1 findings in src/intellicrack/ui\app.py
+
+src/intellicrack/ui\app.py:587: [Low] B110:try_except_pass: Try, Except, Pass detected.
+
+
 1 findings in src/intellicrack/ui\resources\icon_manager.py
 
 src/intellicrack/ui\resources\icon_manager.py:99: [Low] B105:hardcoded_password_string: Possible hardcoded password: 'dialog-password.png'

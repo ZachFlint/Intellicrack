@@ -265,9 +265,6 @@ class IntellicrackLogger:
         name: The logger name.
     """
 
-    DEFAULT_FORMAT: str = "%(asctime)s | %(levelname)-8s | %(name)s:%(lineno)d | %(message)s"
-    DEFAULT_DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S"
-
     def __init__(self, name: str = "intellicrack") -> None:
         """Initialize the Intellicrack logger.
 
@@ -275,7 +272,6 @@ class IntellicrackLogger:
             name: The name for this logger instance.
         """
         self.name = name
-        self._configured = False
 
     def configure(
         self,
@@ -312,8 +308,6 @@ class IntellicrackLogger:
             backup_count=backup_count,
             json_file=json_file,
         )
-
-        self._configured = True
 
     def get_logger(self, name: str | None = None) -> logging.Logger:
         """Get a standard logging.Logger instance.
@@ -396,23 +390,6 @@ def get_structlog_logger(name: str | None = None) -> structlog.stdlib.BoundLogge
     """
     logger_name = f"intellicrack.{name}" if name else "intellicrack"
     return cast("structlog.stdlib.BoundLogger", structlog.get_logger(logger_name))
-
-
-def log_exception(
-    logger: logging.Logger,
-    message: str,
-    exc: BaseException,
-    level: int = logging.ERROR,
-) -> None:
-    """Log an exception with full traceback.
-
-    Args:
-        logger: Logger instance to use.
-        message: Context message for the exception.
-        exc: The exception that occurred.
-        level: Log level to use.
-    """
-    logger.log(level, message, extra={"error": str(exc)}, exc_info=True)
 
 
 def log_tool_call(

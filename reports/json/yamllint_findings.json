@@ -1,7 +1,7 @@
 {
   "tool": "yamllint",
-  "generated": "2026-02-20T14:08:21.750958",
-  "total_findings": 232,
+  "generated": "2026-02-21T19:56:56.247385",
+  "total_findings": 236,
   "total_files": 17,
   "files": [
     {
@@ -1533,20 +1533,20 @@
           "raw": ".\\.github\\workflows\\claude-code-review.yml:39:19: [error] wrong indentation: expected 16 but found 18  (indentation)"
         },
         {
-          "line": 51,
+          "line": 52,
           "column": 121,
           "severity": "warning",
           "code": "",
           "message": "line too long (137 > 120 characters)  (line-length)",
-          "raw": ".\\.github\\workflows\\claude-code-review.yml:51:121: [warning] line too long (137 > 120 characters)  (line-length)"
+          "raw": ".\\.github\\workflows\\claude-code-review.yml:52:121: [warning] line too long (137 > 120 characters)  (line-length)"
         },
         {
-          "line": 57,
+          "line": 58,
           "column": 121,
           "severity": "warning",
           "code": "",
           "message": "line too long (191 > 120 characters)  (line-length)",
-          "raw": ".\\.github\\workflows\\claude-code-review.yml:57:121: [warning] line too long (191 > 120 characters)  (line-length)"
+          "raw": ".\\.github\\workflows\\claude-code-review.yml:58:121: [warning] line too long (191 > 120 characters)  (line-length)"
         }
       ]
     },
@@ -1770,8 +1770,16 @@
     },
     {
       "path": ".\\.github\\workflows\\gemini-dispatch.yml",
-      "count": 5,
+      "count": 6,
       "findings": [
+        {
+          "line": 1,
+          "column": 26,
+          "severity": "error",
+          "code": "",
+          "message": "wrong new line character: expected \\n  (new-lines)",
+          "raw": ".\\.github\\workflows\\gemini-dispatch.yml:1:26: [error] wrong new line character: expected \\n  (new-lines)"
+        },
         {
           "line": 60,
           "column": 121,
@@ -1815,6 +1823,44 @@
       ]
     },
     {
+      "path": ".\\.github\\workflows\\gemini-triage.yml",
+      "count": 4,
+      "findings": [
+        {
+          "line": 1,
+          "column": 24,
+          "severity": "error",
+          "code": "",
+          "message": "wrong new line character: expected \\n  (new-lines)",
+          "raw": ".\\.github\\workflows\\gemini-triage.yml:1:24: [error] wrong new line character: expected \\n  (new-lines)"
+        },
+        {
+          "line": 13,
+          "column": 121,
+          "severity": "warning",
+          "code": "",
+          "message": "line too long (134 > 120 characters)  (line-length)",
+          "raw": ".\\.github\\workflows\\gemini-triage.yml:13:121: [warning] line too long (134 > 120 characters)  (line-length)"
+        },
+        {
+          "line": 129,
+          "column": 121,
+          "severity": "warning",
+          "code": "",
+          "message": "line too long (133 > 120 characters)  (line-length)",
+          "raw": ".\\.github\\workflows\\gemini-triage.yml:129:121: [warning] line too long (133 > 120 characters)  (line-length)"
+        },
+        {
+          "line": 171,
+          "column": 121,
+          "severity": "warning",
+          "code": "",
+          "message": "line too long (127 > 120 characters)  (line-length)",
+          "raw": ".\\.github\\workflows\\gemini-triage.yml:171:121: [warning] line too long (127 > 120 characters)  (line-length)"
+        }
+      ]
+    },
+    {
       "path": ".\\qodana.yaml",
       "count": 3,
       "findings": [
@@ -1845,69 +1891,17 @@
       ]
     },
     {
-      "path": ".\\.github\\workflows\\gemini-scheduled-triage.yml",
+      "path": ".\\.github\\workflows\\gemini-invoke.yml",
       "count": 3,
       "findings": [
         {
-          "line": 19,
-          "column": 3,
+          "line": 1,
+          "column": 25,
           "severity": "error",
           "code": "",
-          "message": "duplication of key \"workflow_dispatch\" in mapping  (key-duplicates)",
-          "raw": ".\\.github\\workflows\\gemini-scheduled-triage.yml:19:3: [error] duplication of key \"workflow_dispatch\" in mapping  (key-duplicates)"
+          "message": "wrong new line character: expected \\n  (new-lines)",
+          "raw": ".\\.github\\workflows\\gemini-invoke.yml:1:25: [error] wrong new line character: expected \\n  (new-lines)"
         },
-        {
-          "line": 151,
-          "column": 121,
-          "severity": "warning",
-          "code": "",
-          "message": "line too long (133 > 120 characters)  (line-length)",
-          "raw": ".\\.github\\workflows\\gemini-scheduled-triage.yml:151:121: [warning] line too long (133 > 120 characters)  (line-length)"
-        },
-        {
-          "line": 207,
-          "column": 121,
-          "severity": "warning",
-          "code": "",
-          "message": "line too long (139 > 120 characters)  (line-length)",
-          "raw": ".\\.github\\workflows\\gemini-scheduled-triage.yml:207:121: [warning] line too long (139 > 120 characters)  (line-length)"
-        }
-      ]
-    },
-    {
-      "path": ".\\.github\\workflows\\gemini-triage.yml",
-      "count": 3,
-      "findings": [
-        {
-          "line": 13,
-          "column": 121,
-          "severity": "warning",
-          "code": "",
-          "message": "line too long (134 > 120 characters)  (line-length)",
-          "raw": ".\\.github\\workflows\\gemini-triage.yml:13:121: [warning] line too long (134 > 120 characters)  (line-length)"
-        },
-        {
-          "line": 116,
-          "column": 121,
-          "severity": "warning",
-          "code": "",
-          "message": "line too long (133 > 120 characters)  (line-length)",
-          "raw": ".\\.github\\workflows\\gemini-triage.yml:116:121: [warning] line too long (133 > 120 characters)  (line-length)"
-        },
-        {
-          "line": 158,
-          "column": 121,
-          "severity": "warning",
-          "code": "",
-          "message": "line too long (127 > 120 characters)  (line-length)",
-          "raw": ".\\.github\\workflows\\gemini-triage.yml:158:121: [warning] line too long (127 > 120 characters)  (line-length)"
-        }
-      ]
-    },
-    {
-      "path": ".\\.github\\workflows\\gemini-invoke.yml",
-      "count": 2,
-      "findings": [
         {
           "line": 13,
           "column": 121,
@@ -1928,8 +1922,16 @@
     },
     {
       "path": ".\\.github\\workflows\\gemini-review.yml",
-      "count": 2,
+      "count": 3,
       "findings": [
+        {
+          "line": 1,
+          "column": 24,
+          "severity": "error",
+          "code": "",
+          "message": "wrong new line character: expected \\n  (new-lines)",
+          "raw": ".\\.github\\workflows\\gemini-review.yml:1:24: [error] wrong new line character: expected \\n  (new-lines)"
+        },
         {
           "line": 13,
           "column": 121,
@@ -1945,6 +1947,36 @@
           "code": "",
           "message": "line too long (133 > 120 characters)  (line-length)",
           "raw": ".\\.github\\workflows\\gemini-review.yml:34:121: [warning] line too long (133 > 120 characters)  (line-length)"
+        }
+      ]
+    },
+    {
+      "path": ".\\.github\\workflows\\gemini-scheduled-triage.yml",
+      "count": 3,
+      "findings": [
+        {
+          "line": 1,
+          "column": 40,
+          "severity": "error",
+          "code": "",
+          "message": "wrong new line character: expected \\n  (new-lines)",
+          "raw": ".\\.github\\workflows\\gemini-scheduled-triage.yml:1:40: [error] wrong new line character: expected \\n  (new-lines)"
+        },
+        {
+          "line": 163,
+          "column": 121,
+          "severity": "warning",
+          "code": "",
+          "message": "line too long (133 > 120 characters)  (line-length)",
+          "raw": ".\\.github\\workflows\\gemini-scheduled-triage.yml:163:121: [warning] line too long (133 > 120 characters)  (line-length)"
+        },
+        {
+          "line": 219,
+          "column": 121,
+          "severity": "warning",
+          "code": "",
+          "message": "line too long (139 > 120 characters)  (line-length)",
+          "raw": ".\\.github\\workflows\\gemini-scheduled-triage.yml:219:121: [warning] line too long (139 > 120 characters)  (line-length)"
         }
       ]
     },

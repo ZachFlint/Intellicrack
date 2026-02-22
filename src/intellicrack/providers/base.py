@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, TypedDict
 
@@ -79,13 +78,6 @@ class GoogleFunctionDeclaration(TypedDict):
     name: str
     description: str
     parameters: JSONSchemaParameters
-
-
-class MessageDict(TypedDict, total=False):
-    """Provider-agnostic message dictionary."""
-
-    role: str
-    content: str | list[dict[str, object]]
 
 
 class LLMProviderBase(ABC):
@@ -324,88 +316,6 @@ class LLMProviderBase(ABC):
         )
 
 
-@dataclass
-class ProviderCapabilities:
-    """Describes the capabilities of an LLM provider.
-
-    Attributes:
-        supports_tools: Whether the provider supports function calling.
-        supports_vision: Whether the provider supports image input.
-        supports_streaming: Whether the provider supports streaming.
-        supports_json_mode: Whether the provider supports JSON output mode.
-        max_context_window: Maximum context window size in tokens.
-    """
-
-    supports_tools: bool = False
-    supports_vision: bool = False
-    supports_streaming: bool = True
-    supports_json_mode: bool = False
-    max_context_window: int = 128000
-
-
-@dataclass
-class ProviderState:
-    """Current state of a provider connection.
-
-    Attributes:
-        connected: Whether connected to the provider.
-        authenticated: Whether authentication succeeded.
-        last_request_time: Timestamp of last request.
-        requests_made: Total requests made this session.
-        errors_count: Number of errors encountered.
-        last_error: Last error message if any.
-    """
-
-    connected: bool = False
-    authenticated: bool = False
-    last_request_time: float | None = None
-    requests_made: int = 0
-    errors_count: int = 0
-    last_error: str | None = None
-
-
-@dataclass
-class ChatRequest:
-    """Encapsulates a chat request to an LLM provider.
-
-    Attributes:
-        messages: Conversation history.
-        model: Model ID to use.
-        tools: Available tools for function calling.
-        temperature: Sampling temperature.
-        max_tokens: Maximum response tokens.
-        stream: Whether to stream the response.
-    """
-
-    messages: list[Message]
-    model: str
-    tools: list[ToolDefinition] = field(default_factory=list)
-    temperature: float = 0.7
-    max_tokens: int = 4096
-    stream: bool = False
-
-
-@dataclass
-class ChatResponse:
-    """Encapsulates a chat response from an LLM provider.
-
-    Attributes:
-        message: The assistant's response message.
-        tool_calls: Tool calls requested by the model.
-        finish_reason: Why the response ended.
-        usage_prompt_tokens: Tokens used in prompt.
-        usage_completion_tokens: Tokens in completion.
-        model: Model that generated the response.
-    """
-
-    message: Message
-    tool_calls: list[ToolCall] | None = None
-    finish_reason: str = "stop"
-    usage_prompt_tokens: int = 0
-    usage_completion_tokens: int = 0
-    model: str = ""
-
-
 def _build_schema_property(
     param_type: str,
     description: str,
@@ -522,49 +432,6 @@ def create_openai_tool_schema(
 
     _logger.debug("create_openai_tool_schema_complete", extra={"tools_created": len(tools)})
     return tools
-
-
-def create_google_tool_schema(
-    tool: ToolDefinition,
-) -> list[GoogleFunctionDeclaration]:
-    """Convert ToolDefinition to Google Gemini's tool format.
-
-    Args:
-        tool: The tool definition to convert.
-
-    Returns:
-        List of function declarations in Google's format.
-    """
-    _logger.debug("create_google_tool_schema", extra={"function_count": len(tool.functions)})
-    function_declarations: list[GoogleFunctionDeclaration] = []
-
-    for func in tool.functions:
-        properties: dict[str, JSONSchemaProperty] = {}
-        required: list[str] = []
-
-        for param in func.parameters:
-            properties[param.name] = _build_schema_property(
-                param_type=param.type.upper(),
-                description=param.description,
-                enum_values=param.enum,
-                default=param.default,
-            )
-            if param.required:
-                required.append(param.name)
-
-        func_decl: GoogleFunctionDeclaration = {
-            "name": func.name,
-            "description": func.description,
-            "parameters": {
-                "type": "OBJECT",
-                "properties": properties,
-                "required": required,
-            },
-        }
-        function_declarations.append(func_decl)
-
-    _logger.debug("create_google_tool_schema_complete", extra={"declarations_created": len(function_declarations)})
-    return function_declarations
 
 
 LLMProvider = LLMProviderBase

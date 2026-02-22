@@ -366,7 +366,6 @@ class StackViewerPanel(QWidget):
         super().__init__(parent)
         self._sources: dict[str, X64DbgStackSource | FridaStackSource] = {}
         self._active_source: str | None = None
-        self._auto_refresh = False
         self._refresh_timer: QTimer | None = None
         self._setup_ui()
         self._setup_default_sources()
@@ -454,8 +453,6 @@ class StackViewerPanel(QWidget):
         Args:
             checked: Whether auto-refresh is enabled.
         """
-        self._auto_refresh = checked
-
         if checked:
             if not self._refresh_timer:
                 self._refresh_timer = QTimer(self)

@@ -1,3 +1,49 @@
+16 findings in d:\Intellicrack\src\intellicrack\ui\app.py
+
+d:\Intellicrack\src\intellicrack\ui\app.py:704:17: [error] Type of "patch_data" is partially unknown
+  Type of "patch_data" is "dict[Unknown, Unknown]"
+
+d:\Intellicrack\src\intellicrack\ui\app.py:704:30: [error] Type of "result" is partially unknown
+  Type of "result" is "dict[Unknown, Unknown]"
+
+d:\Intellicrack\src\intellicrack\ui\app.py:705:17: [error] Arguments missing for parameters "address", "original_bytes", "new_bytes"
+
+d:\Intellicrack\src\intellicrack\ui\app.py:706:21: [error] No parameter named "offset"
+
+d:\Intellicrack\src\intellicrack\ui\app.py:706:28: [error] Type of "get" is partially unknown
+  Type of "get" is "Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]"
+
+d:\Intellicrack\src\intellicrack\ui\app.py:707:21: [error] No parameter named "original"
+
+d:\Intellicrack\src\intellicrack\ui\app.py:707:30: [error] Type of "get" is partially unknown
+  Type of "get" is "Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]"
+
+d:\Intellicrack\src\intellicrack\ui\app.py:708:21: [error] No parameter named "patched"
+
+d:\Intellicrack\src\intellicrack\ui\app.py:708:29: [error] Type of "get" is partially unknown
+  Type of "get" is "Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]"
+
+d:\Intellicrack\src\intellicrack\ui\app.py:709:33: [error] Type of "get" is partially unknown
+  Type of "get" is "Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]"
+
+d:\Intellicrack\src\intellicrack\ui\app.py:914:25: [error] Type "object" is not assignable to declared type "bytes | None"
+  Type "object" is not assignable to type "bytes | None"
+    "object" is not assignable to "bytes"
+    "object" is not assignable to "None"
+
+d:\Intellicrack\src\intellicrack\ui\app.py:933:27: [error] Type "object" is not assignable to declared type "list[object]"
+  "object" is not assignable to "list[object]"
+
+d:\Intellicrack\src\intellicrack\ui\app.py:970:17: [error] Type of "analysis_dict" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\app.py:970:33: [error] Type of "to_dict" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\app.py:970:42: [error] Cannot access attribute "to_dict" for class "object"
+  Attribute "to_dict" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\app.py:1198:21: [error] Argument missing for parameter "registry"
+
+
 14 findings in d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py
 
 d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py:193:9: [error] Type of "setSelectionMode" is unknown
@@ -33,7 +79,7 @@ d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py:383:29: [error] Argum
 d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py:395:29: [error] Argument of type "QTreeWidget" cannot be assigned to parameter "table" of type "QTableWidget" in function "set_sorting_enabled"
   "QTreeWidget" is not assignable to "QTableWidget"
 
-d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py:474:86: [error] Condition will always evaluate to True since the types "int" and "None" have no overlap
+d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py:476:86: [error] Condition will always evaluate to True since the types "int" and "None" have no overlap
 
 
 13 findings in d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py
@@ -91,3 +137,13 @@ d:\Intellicrack\src\intellicrack\ui\panels\x64dbg_panel.py:235:9: [error] Type o
 
 d:\Intellicrack\src\intellicrack\ui\panels\x64dbg_panel.py:235:25: [error] Cannot access attribute "cellChanged" for class "QTableWidget"
   Attribute "cellChanged" is unknown
+
+
+1 findings in d:\Intellicrack\src\intellicrack\core\process_manager.py
+
+d:\Intellicrack\src\intellicrack\core\process_manager.py:12:8: [error] Import "ctypes" is not accessed
+
+
+1 findings in d:\Intellicrack\src\intellicrack\ui\panels\process_panel.py
+
+d:\Intellicrack\src\intellicrack\ui\panels\process_panel.py:37:51: [error] Import "ProcessManager" is not accessed

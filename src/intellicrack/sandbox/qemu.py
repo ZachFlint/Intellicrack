@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Final, Literal
 
 import psutil
 
-from ..core.logging import get_logger
+from ..core.logging import get_logger, log_sandbox_operation
 from ..core.process_manager import ProcessManager, ProcessType
 from .base import (
     ExecutionReport,
@@ -359,8 +359,6 @@ class GuestAgentClient:
     Provides bidirectional communication with the guest OS for
     command execution, file transfer, and behavioral monitoring.
     """
-
-    RECV_BUFFER: Final[int] = 65536
 
     def __init__(self, host: str = "127.0.0.1", port: int = 4445) -> None:
         """Initialize guest agent client.
@@ -872,6 +870,7 @@ class QEMUSandbox(SandboxBase):
         if not await self.is_available():
             raise SandboxError(_ERR_QEMU_NA)
 
+        log_sandbox_operation("start", "qemu", guest_os=self._qemu_config.guest_os.value)
         self._state.status = "starting"
         self._state.last_error = None
 

@@ -1,8 +1,8 @@
 {
   "tool": "bandit",
-  "generated": "2026-02-20T14:04:50.306063",
-  "total_findings": 9,
-  "total_files": 6,
+  "generated": "2026-02-21T19:53:38.503782",
+  "total_findings": 10,
+  "total_files": 7,
   "files": [
     {
       "path": "src/intellicrack/providers\\model_loader.py",
@@ -103,6 +103,21 @@
           "code": "B405:blacklist",
           "message": "Using xml.etree.ElementTree to parse untrusted XML data is known to be vulnerable to XML attacks. Replace xml.etree.ElementTree with the equivalent defusedxml package, or make sure defusedxml.defuse_stdlib() is called.",
           "raw": "src/intellicrack/sandbox\\windows.py:13: [Low] B405:blacklist: Using xml.etree.ElementTree to parse untrusted XML data is known to be vulnerable to XML attacks. Replace xml.etree.ElementTree with the equivalent defusedxml package, or make sure defusedxml.defuse_stdlib() is called."
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui\\app.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 587,
+          "column": null,
+          "severity": "Low",
+          "confidence": "High",
+          "code": "B110:try_except_pass",
+          "message": "Try, Except, Pass detected.",
+          "raw": "src/intellicrack/ui\\app.py:587: [Low] B110:try_except_pass: Try, Except, Pass detected."
         }
       ]
     },

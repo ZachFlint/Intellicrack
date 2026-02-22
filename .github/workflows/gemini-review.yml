@@ -40,9 +40,23 @@ jobs:
           permission-pull-requests: 'write'
 
       - name: 'Checkout repository'
-        uses: 'actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8' # ratchet:actions/checkout@v6
+        uses: 'actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd' # ratchet:actions/checkout@v6
+
+      - name: 'Check Gemini credentials'
+        id: 'check_creds'
+        run: |
+          if [ -z "$GEMINI_KEY" ] && [ -z "$GOOGLE_KEY" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Gemini API credentials not configured. Skipping."
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GEMINI_KEY: '${{ secrets.GEMINI_API_KEY }}'
+          GOOGLE_KEY: '${{ secrets.GOOGLE_API_KEY }}'
 
       - name: 'Run Gemini pull request review'
+        if: steps.check_creds.outputs.available == 'true'
         uses: 'google-github-actions/run-gemini-cli@v0' # ratchet:exclude
         id: 'gemini_pr_review'
         env:

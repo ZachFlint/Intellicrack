@@ -64,11 +64,11 @@ src\intellicrack\providers\openrouter.py:513: '_convert_messages_to_provider_for
 
 3 findings in src\intellicrack\sandbox\qemu.py
 
-src\intellicrack\sandbox\qemu.py:768: '_build_qemu_command' has rank C
+src\intellicrack\sandbox\qemu.py:766: '_build_qemu_command' has rank C
 
-src\intellicrack\sandbox\qemu.py:1560: 'run_binary' has rank C
+src\intellicrack\sandbox\qemu.py:1559: 'run_binary' has rank C
 
-src\intellicrack\sandbox\qemu.py:1712: '_parse_network_log' has rank C
+src\intellicrack\sandbox\qemu.py:1711: '_parse_network_log' has rank C
 
 
 3 findings in src\intellicrack\ui\provider_config.py
@@ -82,9 +82,9 @@ src\intellicrack\ui\provider_config.py:1248: '_load_settings' has rank C
 
 2 findings in src\intellicrack\bridges\binary.py
 
-src\intellicrack\bridges\binary.py:508: '_detect_architecture' has rank C
+src\intellicrack\bridges\binary.py:509: '_detect_architecture' has rank C
 
-src\intellicrack\bridges\binary.py:619: '_get_imports_internal' has rank C
+src\intellicrack\bridges\binary.py:620: '_get_imports_internal' has rank C
 
 
 2 findings in src\intellicrack\bridges\installer.py
@@ -103,9 +103,9 @@ src\intellicrack\bridges\schemas.py:295: 'validate_tool_parameter' has rank C
 
 2 findings in src\intellicrack\bridges\x64dbg.py
 
-src\intellicrack\bridges\x64dbg.py:270: '_read_unicode_string_from_params' has rank C
+src\intellicrack\bridges\x64dbg.py:252: '_read_unicode_string_from_params' has rank C
 
-src\intellicrack\bridges\x64dbg.py:1547: 'get_memory_regions' has rank C
+src\intellicrack\bridges\x64dbg.py:1507: 'get_memory_regions' has rank C
 
 
 2 findings in src\intellicrack\providers\grok.py
@@ -152,16 +152,16 @@ src\intellicrack\providers\xpu_utils.py:419: 'get_xpu_memory_info' has rank C
 
 2 findings in src\intellicrack\sandbox\windows.py
 
-src\intellicrack\sandbox\windows.py:300: '_generate_wsb_config' has rank C
+src\intellicrack\sandbox\windows.py:301: '_generate_wsb_config' has rank C
 
-src\intellicrack\sandbox\windows.py:547: 'run_binary' has rank C
+src\intellicrack\sandbox\windows.py:548: 'run_binary' has rank C
 
 
 2 findings in src\intellicrack\ui\tools.py
 
-src\intellicrack\ui\tools.py:1410: '_on_tab_close_requested' has rank D
+src\intellicrack\ui\tools.py:1398: '_on_tab_close_requested' has rank D
 
-src\intellicrack\ui\tools.py:1482: 'close_embedded_tools' has rank C
+src\intellicrack\ui\tools.py:1470: 'close_embedded_tools' has rank C
 
 
 2 findings in tests\test_core\test_license_analyzer.py
@@ -197,7 +197,7 @@ src\intellicrack\bridges\process.py:1097: 'search_pattern' has rank C
 
 1 findings in src\intellicrack\core\logging.py
 
-src\intellicrack\core\logging.py:448: '_sanitize_arguments' has rank C
+src\intellicrack\core\logging.py:425: '_sanitize_arguments' has rank C
 
 
 1 findings in src\intellicrack\core\orchestrator.py
@@ -215,6 +215,16 @@ src\intellicrack\core\script_gen.py:175: 'to_prompt_context' has rank C
 src\intellicrack\credentials\env_loader.py:283: '_validate_key_format' has rank C
 
 
+1 findings in src\intellicrack\ui\app.py
+
+src\intellicrack\ui\app.py:1550: 'close_event_handler' has rank C
+
+
+1 findings in src\intellicrack\ui\highlighter.py
+
+src\intellicrack\ui\highlighter.py:774: '_highlight_triple_quotes' has rank C
+
+
 1 findings in src\intellicrack\ui\sandbox_config.py
 
 src\intellicrack\ui\sandbox_config.py:91: 'run' has rank C
@@ -227,12 +237,12 @@ src\intellicrack\ui\tool_config.py:356: '_update_radare2_path' has rank C
 
 1 findings in src\intellicrack\ui\panels\binary_panel.py
 
-src\intellicrack\ui\panels\binary_panel.py:281: '_parse_sections' has rank C
+src\intellicrack\ui\panels\binary_panel.py:282: '_parse_sections' has rank C
 
 
 1 findings in src\intellicrack\ui\panels\licensing_panel.py
 
-src\intellicrack\ui\panels\licensing_panel.py:134: 'update_from_analysis' has rank C
+src\intellicrack\ui\panels\licensing_panel.py:135: 'update_from_analysis' has rank C
 
 
 1 findings in tests\test_core\test_types.py

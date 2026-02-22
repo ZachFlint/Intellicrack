@@ -5,9 +5,19 @@ src/intellicrack\providers\xpu_utils.py:530:141: E501 line too long (146 > 140 c
 src/intellicrack\providers\xpu_utils.py:559:141: E501 line too long (179 > 140 characters)
 
 
+1 findings in src/intellicrack\core\process_manager.py
+
+src/intellicrack\core\process_manager.py:12:1: F401 'ctypes' imported but unused
+
+
+1 findings in src/intellicrack\credentials\env_loader.py
+
+src/intellicrack\credentials\env_loader.py:450:1: W391 blank line at end of file
+
+
 1 findings in src/intellicrack\sandbox\windows.py
 
-src/intellicrack\sandbox\windows.py:432:141: E501 line too long (160 > 140 characters)
+src/intellicrack\sandbox\windows.py:433:141: E501 line too long (160 > 140 characters)
 
 
 1 findings in src/intellicrack\ui\app.py
@@ -17,7 +27,12 @@ src/intellicrack\ui\app.py:53:5: F811 redefinition of unused 'Callable' from lin
 
 1 findings in src/intellicrack\ui\chat.py
 
-src/intellicrack\ui\chat.py:484:13: F824 `nonlocal content_label` is unused: name is never assigned in scope
+src/intellicrack\ui\chat.py:485:13: F824 `nonlocal content_label` is unused: name is never assigned in scope
+
+
+1 findings in src/intellicrack\ui\panels\process_panel.py
+
+src/intellicrack\ui\panels\process_panel.py:37:5: F401 'intellicrack.core.process_manager.ProcessManager' imported but unused
 
 
 1 findings in src/intellicrack\ui\tool_config.py

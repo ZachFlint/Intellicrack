@@ -390,9 +390,9 @@
 
 .\.github\workflows\claude-code-review.yml:39:19: [error] wrong indentation: expected 16 but found 18  (indentation)
 
-.\.github\workflows\claude-code-review.yml:51:121: [warning] line too long (137 > 120 characters)  (line-length)
+.\.github\workflows\claude-code-review.yml:52:121: [warning] line too long (137 > 120 characters)  (line-length)
 
-.\.github\workflows\claude-code-review.yml:57:121: [warning] line too long (191 > 120 characters)  (line-length)
+.\.github\workflows\claude-code-review.yml:58:121: [warning] line too long (191 > 120 characters)  (line-length)
 
 
 10 findings in .\.serena\project.yml
@@ -454,7 +454,9 @@
 .\.sourcery.yaml:1:17: [error] wrong new line character: expected \n  (new-lines)
 
 
-5 findings in .\.github\workflows\gemini-dispatch.yml
+6 findings in .\.github\workflows\gemini-dispatch.yml
+
+.\.github\workflows\gemini-dispatch.yml:1:26: [error] wrong new line character: expected \n  (new-lines)
 
 .\.github\workflows\gemini-dispatch.yml:60:121: [warning] line too long (189 > 120 characters)  (line-length)
 
@@ -467,6 +469,17 @@
 .\.github\workflows\gemini-dispatch.yml:200:121: [warning] line too long (212 > 120 characters)  (line-length)
 
 
+4 findings in .\.github\workflows\gemini-triage.yml
+
+.\.github\workflows\gemini-triage.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
+
+.\.github\workflows\gemini-triage.yml:13:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.github\workflows\gemini-triage.yml:129:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.github\workflows\gemini-triage.yml:171:121: [warning] line too long (127 > 120 characters)  (line-length)
+
+
 3 findings in .\qodana.yaml
 
 .\qodana.yaml:1:117: [error] wrong new line character: expected \n  (new-lines)
@@ -476,36 +489,31 @@
 .\qodana.yaml:10:5: [error] wrong indentation: expected 2 but found 4  (indentation)
 
 
-3 findings in .\.github\workflows\gemini-scheduled-triage.yml
+3 findings in .\.github\workflows\gemini-invoke.yml
 
-.\.github\workflows\gemini-scheduled-triage.yml:19:3: [error] duplication of key "workflow_dispatch" in mapping  (key-duplicates)
-
-.\.github\workflows\gemini-scheduled-triage.yml:151:121: [warning] line too long (133 > 120 characters)  (line-length)
-
-.\.github\workflows\gemini-scheduled-triage.yml:207:121: [warning] line too long (139 > 120 characters)  (line-length)
-
-
-3 findings in .\.github\workflows\gemini-triage.yml
-
-.\.github\workflows\gemini-triage.yml:13:121: [warning] line too long (134 > 120 characters)  (line-length)
-
-.\.github\workflows\gemini-triage.yml:116:121: [warning] line too long (133 > 120 characters)  (line-length)
-
-.\.github\workflows\gemini-triage.yml:158:121: [warning] line too long (127 > 120 characters)  (line-length)
-
-
-2 findings in .\.github\workflows\gemini-invoke.yml
+.\.github\workflows\gemini-invoke.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
 
 .\.github\workflows\gemini-invoke.yml:13:121: [warning] line too long (134 > 120 characters)  (line-length)
 
 .\.github\workflows\gemini-invoke.yml:33:121: [warning] line too long (133 > 120 characters)  (line-length)
 
 
-2 findings in .\.github\workflows\gemini-review.yml
+3 findings in .\.github\workflows\gemini-review.yml
+
+.\.github\workflows\gemini-review.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
 
 .\.github\workflows\gemini-review.yml:13:121: [warning] line too long (134 > 120 characters)  (line-length)
 
 .\.github\workflows\gemini-review.yml:34:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+
+3 findings in .\.github\workflows\gemini-scheduled-triage.yml
+
+.\.github\workflows\gemini-scheduled-triage.yml:1:40: [error] wrong new line character: expected \n  (new-lines)
+
+.\.github\workflows\gemini-scheduled-triage.yml:163:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.github\workflows\gemini-scheduled-triage.yml:219:121: [warning] line too long (139 > 120 characters)  (line-length)
 
 
 1 findings in .\.yarnrc.yml

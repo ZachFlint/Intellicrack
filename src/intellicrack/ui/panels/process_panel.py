@@ -342,7 +342,6 @@ class ProcessPanel(QWidget):
             parent: Parent widget.
         """
         super().__init__(parent)
-        self._process_mgr: ProcessManager | None = None
         self._selected_pid: int | None = None
         self._refresh_worker: _ProcessRefreshWorker | None = None
         self._auto_refresh_timer = QTimer(self)
@@ -443,14 +442,6 @@ class ProcessPanel(QWidget):
         layout.addWidget(main_splitter)
 
         self._on_refresh()
-
-    def set_process_manager(self, mgr: ProcessManager) -> None:
-        """Set the ProcessManager instance.
-
-        Args:
-            mgr: The ProcessManager to use for process operations.
-        """
-        self._process_mgr = mgr
 
     def _on_refresh(self) -> None:
         """Refresh the process list from the system.

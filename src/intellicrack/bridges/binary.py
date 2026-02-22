@@ -22,7 +22,7 @@ import lief.OAT
 import lief.PE
 import pefile
 
-from ..core.logging import get_logger
+from ..core.logging import get_logger, log_binary_operation
 from ..core.types import (
     BinaryInfo,
     ExportInfo,
@@ -401,6 +401,7 @@ class BinaryBridge(BinaryOperationsBridge):
         if not path.exists():
             raise ToolError(_ERR_FILE_NOT_FOUND)
 
+        log_binary_operation("load", path, size=path.stat().st_size)
         try:
             self._binary_path = path.resolve()
             self._data = bytearray(path.read_bytes())
@@ -750,6 +751,12 @@ class BinaryBridge(BinaryOperationsBridge):
             raise ToolError(_ERR_NO_BINARY)
 
         offset = patch.address
+        log_binary_operation(
+            "patch",
+            self._binary_path or Path("unknown"),
+            offset=hex(offset),
+            size=len(patch.new_bytes),
+        )
 
         original = await self.read_bytes(offset, len(patch.new_bytes))
         if original != patch.original_bytes:
@@ -864,6 +871,13 @@ class BinaryBridge(BinaryOperationsBridge):
         """
         if self._data is None:
             raise ToolError(_ERR_NO_BINARY)
+
+        log_binary_operation(
+            "search",
+            self._binary_path or Path("unknown"),
+            pattern_length=len(pattern),
+            start_offset=start_offset,
+        )
 
         results: list[int] = []
         data = bytes(self._data)

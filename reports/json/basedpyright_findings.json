@@ -1,9 +1,143 @@
 {
   "tool": "basedpyright",
-  "generated": "2026-02-20T14:10:12.555020",
-  "total_findings": 33,
-  "total_files": 4,
+  "generated": "2026-02-21T19:58:42.269636",
+  "total_findings": 51,
+  "total_files": 7,
   "files": [
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py",
+      "count": 16,
+      "findings": [
+        {
+          "line": 704,
+          "column": 17,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Type of \"patch_data\" is partially unknown\n\u00a0\u00a0Type of \"patch_data\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:704:17: [error] Type of \"patch_data\" is partially unknown\n\u00a0\u00a0Type of \"patch_data\" is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 704,
+          "column": 30,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"result\" is partially unknown\n\u00a0\u00a0Type of \"result\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:704:30: [error] Type of \"result\" is partially unknown\n\u00a0\u00a0Type of \"result\" is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 705,
+          "column": 17,
+          "severity": "error",
+          "rule": "reportCallIssue",
+          "message": "Arguments missing for parameters \"address\", \"original_bytes\", \"new_bytes\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:705:17: [error] Arguments missing for parameters \"address\", \"original_bytes\", \"new_bytes\""
+        },
+        {
+          "line": 706,
+          "column": 21,
+          "severity": "error",
+          "rule": "reportCallIssue",
+          "message": "No parameter named \"offset\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:706:21: [error] No parameter named \"offset\""
+        },
+        {
+          "line": 706,
+          "column": 28,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"get\" is partially unknown\n\u00a0\u00a0Type of \"get\" is \"Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:706:28: [error] Type of \"get\" is partially unknown\n\u00a0\u00a0Type of \"get\" is \"Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]\""
+        },
+        {
+          "line": 707,
+          "column": 21,
+          "severity": "error",
+          "rule": "reportCallIssue",
+          "message": "No parameter named \"original\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:707:21: [error] No parameter named \"original\""
+        },
+        {
+          "line": 707,
+          "column": 30,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"get\" is partially unknown\n\u00a0\u00a0Type of \"get\" is \"Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:707:30: [error] Type of \"get\" is partially unknown\n\u00a0\u00a0Type of \"get\" is \"Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]\""
+        },
+        {
+          "line": 708,
+          "column": 21,
+          "severity": "error",
+          "rule": "reportCallIssue",
+          "message": "No parameter named \"patched\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:708:21: [error] No parameter named \"patched\""
+        },
+        {
+          "line": 708,
+          "column": 29,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"get\" is partially unknown\n\u00a0\u00a0Type of \"get\" is \"Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:708:29: [error] Type of \"get\" is partially unknown\n\u00a0\u00a0Type of \"get\" is \"Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]\""
+        },
+        {
+          "line": 709,
+          "column": 33,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"get\" is partially unknown\n\u00a0\u00a0Type of \"get\" is \"Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:709:33: [error] Type of \"get\" is partially unknown\n\u00a0\u00a0Type of \"get\" is \"Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]\""
+        },
+        {
+          "line": 914,
+          "column": 25,
+          "severity": "error",
+          "rule": "reportAssignmentType",
+          "message": "Type \"object\" is not assignable to declared type \"bytes | None\"\n\u00a0\u00a0Type \"object\" is not assignable to type \"bytes | None\"\n\u00a0\u00a0\u00a0\u00a0\"object\" is not assignable to \"bytes\"\n\u00a0\u00a0\u00a0\u00a0\"object\" is not assignable to \"None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:914:25: [error] Type \"object\" is not assignable to declared type \"bytes | None\"\n\u00a0\u00a0Type \"object\" is not assignable to type \"bytes | None\"\n\u00a0\u00a0\u00a0\u00a0\"object\" is not assignable to \"bytes\"\n\u00a0\u00a0\u00a0\u00a0\"object\" is not assignable to \"None\""
+        },
+        {
+          "line": 933,
+          "column": 27,
+          "severity": "error",
+          "rule": "reportAssignmentType",
+          "message": "Type \"object\" is not assignable to declared type \"list[object]\"\n\u00a0\u00a0\"object\" is not assignable to \"list[object]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:933:27: [error] Type \"object\" is not assignable to declared type \"list[object]\"\n\u00a0\u00a0\"object\" is not assignable to \"list[object]\""
+        },
+        {
+          "line": 970,
+          "column": 17,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Type of \"analysis_dict\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:970:17: [error] Type of \"analysis_dict\" is unknown"
+        },
+        {
+          "line": 970,
+          "column": 33,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"to_dict\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:970:33: [error] Type of \"to_dict\" is unknown"
+        },
+        {
+          "line": 970,
+          "column": 42,
+          "severity": "error",
+          "rule": "reportAttributeAccessIssue",
+          "message": "Cannot access attribute \"to_dict\" for class \"object\"\n\u00a0\u00a0Attribute \"to_dict\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:970:42: [error] Cannot access attribute \"to_dict\" for class \"object\"\n\u00a0\u00a0Attribute \"to_dict\" is unknown"
+        },
+        {
+          "line": 1198,
+          "column": 21,
+          "severity": "error",
+          "rule": "reportCallIssue",
+          "message": "Argument missing for parameter \"registry\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:1198:21: [error] Argument missing for parameter \"registry\""
+        }
+      ]
+    },
     {
       "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py",
       "count": 14,
@@ -113,12 +247,12 @@
           "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:395:29: [error] Argument of type \"QTreeWidget\" cannot be assigned to parameter \"table\" of type \"QTableWidget\" in function \"set_sorting_enabled\"\n\u00a0\u00a0\"QTreeWidget\" is not assignable to \"QTableWidget\""
         },
         {
-          "line": 474,
+          "line": 476,
           "column": 86,
           "severity": "error",
           "rule": "reportUnnecessaryComparison",
           "message": "Condition will always evaluate to True since the types \"int\" and \"None\" have no overlap",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:474:86: [error] Condition will always evaluate to True since the types \"int\" and \"None\" have no overlap"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:476:86: [error] Condition will always evaluate to True since the types \"int\" and \"None\" have no overlap"
         }
       ]
     },
@@ -289,6 +423,34 @@
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"cellChanged\" for class \"QTableWidget\"\n\u00a0\u00a0Attribute \"cellChanged\" is unknown",
           "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\x64dbg_panel.py:235:25: [error] Cannot access attribute \"cellChanged\" for class \"QTableWidget\"\n\u00a0\u00a0Attribute \"cellChanged\" is unknown"
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 12,
+          "column": 8,
+          "severity": "error",
+          "rule": "reportUnusedImport",
+          "message": "Import \"ctypes\" is not accessed",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:12:8: [error] Import \"ctypes\" is not accessed"
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\process_panel.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 37,
+          "column": 51,
+          "severity": "error",
+          "rule": "reportUnusedImport",
+          "message": "Import \"ProcessManager\" is not accessed",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\process_panel.py:37:51: [error] Import \"ProcessManager\" is not accessed"
         }
       ]
     }

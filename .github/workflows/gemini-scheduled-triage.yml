@@ -16,7 +16,6 @@ on:
       - 'release/**/*'
     paths:
       - '.github/workflows/gemini-scheduled-triage.yml'
-  workflow_dispatch:
 
 concurrency:
   group: '${{ github.workflow }}'
@@ -86,10 +85,23 @@ jobs:
           ISSUE_COUNT="$(echo "${ISSUES}" | jq 'length')"
           echo "✅ Found ${ISSUE_COUNT} issue(s) to triage! 🎯"
 
+      - name: 'Check Gemini credentials'
+        id: 'check_creds'
+        run: |
+          if [ -z "$GEMINI_KEY" ] && [ -z "$GOOGLE_KEY" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Gemini API credentials not configured. Skipping."
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GEMINI_KEY: '${{ secrets.GEMINI_API_KEY }}'
+          GOOGLE_KEY: '${{ secrets.GOOGLE_API_KEY }}'
+
       - name: 'Run Gemini Issue Analysis'
         id: 'gemini_issue_analysis'
         if: |-
-          ${{ steps.find_issues.outputs.issues_to_triage != '[]' }}
+          ${{ steps.find_issues.outputs.issues_to_triage != '[]' && steps.check_creds.outputs.available == 'true' }}
         uses: 'google-github-actions/run-gemini-cli@v0' # ratchet:exclude
         env:
           GITHUB_TOKEN: '' # Do not pass any auth token here since this runs on untrusted inputs

@@ -385,6 +385,7 @@ def main() -> int:
     config = config_cls.load(config_path) if config_path.exists() else config_cls.default()
 
     _apply_cli_overrides(config, cli_options)
+    config.ensure_directories()
 
     setup_logging(config.log)
     logger = get_logger("main")

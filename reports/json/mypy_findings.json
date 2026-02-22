@@ -1,8 +1,8 @@
 {
   "tool": "mypy",
-  "generated": "2026-02-20T14:11:17.910884",
-  "total_findings": 230,
-  "total_files": 40,
+  "generated": "2026-02-21T19:59:49.034417",
+  "total_findings": 246,
+  "total_files": 42,
   "files": [
     {
       "path": "src\\intellicrack\\bridges\\radare2.py",
@@ -863,28 +863,28 @@
           "raw": "src\\intellicrack\\ui\\highlighter.py:756: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides"
         },
         {
-          "line": 916,
+          "line": 983,
           "column": null,
           "severity": "error",
           "code": "override",
           "message": "Argument 1 of \"highlightBlock\" is incompatible with supertype \"PyQt6.QtGui.QSyntaxHighlighter\"; supertype defines the argument type as \"str | None\"",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:916: error: Argument 1 of \"highlightBlock\" is incompatible with supertype \"PyQt6.QtGui.QSyntaxHighlighter\"; supertype defines the argument type as \"str | None\"  [override]"
+          "raw": "src\\intellicrack\\ui\\highlighter.py:983: error: Argument 1 of \"highlightBlock\" is incompatible with supertype \"PyQt6.QtGui.QSyntaxHighlighter\"; supertype defines the argument type as \"str | None\"  [override]"
         },
         {
-          "line": 916,
+          "line": 983,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "This violates the Liskov substitution principle",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:916: note: This violates the Liskov substitution principle"
+          "raw": "src\\intellicrack\\ui\\highlighter.py:983: note: This violates the Liskov substitution principle"
         },
         {
-          "line": 916,
+          "line": 983,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:916: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides"
+          "raw": "src\\intellicrack\\ui\\highlighter.py:983: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides"
         }
       ]
     },
@@ -893,52 +893,44 @@
       "count": 12,
       "findings": [
         {
-          "line": 153,
+          "line": 154,
           "column": null,
           "severity": "error",
           "code": "call-overload",
           "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:153: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:154: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
         },
         {
-          "line": 153,
+          "line": 154,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "Possible overload variants:",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:153: note: Possible overload variants:"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:154: note: Possible overload variants:"
         },
         {
-          "line": 153,
+          "line": 154,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:153: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:154: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 153,
+          "line": 154,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:153: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:154: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 163,
+          "line": 164,
           "column": null,
           "severity": "error",
           "code": "union-attr",
           "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setVisible\"",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:163: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setVisible\"  [union-attr]"
-        },
-        {
-          "line": 165,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:165: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:164: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setVisible\"  [union-attr]"
         },
         {
           "line": 166,
@@ -957,36 +949,44 @@
           "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:167: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
         },
         {
-          "line": 193,
+          "line": 168,
           "column": null,
           "severity": "error",
           "code": "union-attr",
           "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:193: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:168: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
         },
         {
-          "line": 200,
+          "line": 194,
           "column": null,
           "severity": "error",
           "code": "union-attr",
           "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:200: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:194: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
         },
         {
-          "line": 332,
+          "line": 201,
+          "column": null,
+          "severity": "error",
+          "code": "union-attr",
+          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:201: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+        },
+        {
+          "line": 333,
           "column": null,
           "severity": "error",
           "code": "arg-type",
           "message": "Argument 3 to \"tree_item_set_data\" has incompatible type \"int\"; expected \"ItemDataRole\"",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:332: error: Argument 3 to \"tree_item_set_data\" has incompatible type \"int\"; expected \"ItemDataRole\"  [arg-type]"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:333: error: Argument 3 to \"tree_item_set_data\" has incompatible type \"int\"; expected \"ItemDataRole\"  [arg-type]"
         },
         {
-          "line": 506,
+          "line": 507,
           "column": null,
           "severity": "error",
           "code": "arg-type",
           "message": "Argument 3 to \"tree_item_data\" has incompatible type \"int\"; expected \"ItemDataRole\"",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:506: error: Argument 3 to \"tree_item_data\" has incompatible type \"int\"; expected \"ItemDataRole\"  [arg-type]"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:507: error: Argument 3 to \"tree_item_data\" has incompatible type \"int\"; expected \"ItemDataRole\"  [arg-type]"
         }
       ]
     },
@@ -995,100 +995,194 @@
       "count": 12,
       "findings": [
         {
-          "line": 457,
+          "line": 456,
           "column": null,
           "severity": "error",
           "code": "call-overload",
           "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:457: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:456: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
         },
         {
-          "line": 457,
+          "line": 456,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "Possible overload variants:",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:457: note: Possible overload variants:"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:456: note: Possible overload variants:"
         },
         {
-          "line": 457,
+          "line": 456,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:457: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:456: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 457,
+          "line": 456,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:457: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:456: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 566,
+          "line": 565,
           "column": null,
           "severity": "error",
           "code": "arg-type",
           "message": "Argument 1 to \"set_filter\" of \"ScriptListWidget\" has incompatible type \"object\"; expected \"str | None\"",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:566: error: Argument 1 to \"set_filter\" of \"ScriptListWidget\" has incompatible type \"object\"; expected \"str | None\"  [arg-type]"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:565: error: Argument 1 to \"set_filter\" of \"ScriptListWidget\" has incompatible type \"object\"; expected \"str | None\"  [arg-type]"
         },
         {
-          "line": 575,
+          "line": 574,
           "column": null,
           "severity": "error",
           "code": "arg-type",
           "message": "Argument 1 to \"get_language\" of \"ScriptTypeInfo\" has incompatible type \"object\"; expected \"str\"",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:575: error: Argument 1 to \"get_language\" of \"ScriptTypeInfo\" has incompatible type \"object\"; expected \"str\"  [arg-type]"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:574: error: Argument 1 to \"get_language\" of \"ScriptTypeInfo\" has incompatible type \"object\"; expected \"str\"  [arg-type]"
         },
         {
-          "line": 676,
+          "line": 675,
           "column": null,
           "severity": "error",
           "code": "arg-type",
           "message": "Argument 1 to \"get_template\" of \"ScriptTypeInfo\" has incompatible type \"object\"; expected \"str\"",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:676: error: Argument 1 to \"get_template\" of \"ScriptTypeInfo\" has incompatible type \"object\"; expected \"str\"  [arg-type]"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:675: error: Argument 1 to \"get_template\" of \"ScriptTypeInfo\" has incompatible type \"object\"; expected \"str\"  [arg-type]"
         },
         {
-          "line": 693,
+          "line": 692,
           "column": null,
           "severity": "error",
           "code": "arg-type",
           "message": "Argument 2 to \"_build_script\" of \"ScriptManagerPanel\" has incompatible type \"object\"; expected \"str\"",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:693: error: Argument 2 to \"_build_script\" of \"ScriptManagerPanel\" has incompatible type \"object\"; expected \"str\"  [arg-type]"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:692: error: Argument 2 to \"_build_script\" of \"ScriptManagerPanel\" has incompatible type \"object\"; expected \"str\"  [arg-type]"
         },
         {
-          "line": 697,
+          "line": 696,
           "column": null,
           "severity": "error",
           "code": "arg-type",
           "message": "Argument 3 to \"add_script\" of \"ScriptListWidget\" has incompatible type \"object\"; expected \"str\"",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:697: error: Argument 3 to \"add_script\" of \"ScriptListWidget\" has incompatible type \"object\"; expected \"str\"  [arg-type]"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:696: error: Argument 3 to \"add_script\" of \"ScriptListWidget\" has incompatible type \"object\"; expected \"str\"  [arg-type]"
         },
         {
-          "line": 733,
+          "line": 732,
           "column": null,
           "severity": "error",
           "code": "arg-type",
           "message": "Argument 1 to \"get_extension\" of \"ScriptTypeInfo\" has incompatible type \"object\"; expected \"str\"",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:733: error: Argument 1 to \"get_extension\" of \"ScriptTypeInfo\" has incompatible type \"object\"; expected \"str\"  [arg-type]"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:732: error: Argument 1 to \"get_extension\" of \"ScriptTypeInfo\" has incompatible type \"object\"; expected \"str\"  [arg-type]"
         },
         {
-          "line": 765,
+          "line": 764,
           "column": null,
           "severity": "error",
           "code": "arg-type",
           "message": "Argument 2 to \"_build_script\" of \"ScriptManagerPanel\" has incompatible type \"object\"; expected \"str\"",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:765: error: Argument 2 to \"_build_script\" of \"ScriptManagerPanel\" has incompatible type \"object\"; expected \"str\"  [arg-type]"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:764: error: Argument 2 to \"_build_script\" of \"ScriptManagerPanel\" has incompatible type \"object\"; expected \"str\"  [arg-type]"
         },
         {
-          "line": 830,
+          "line": 829,
           "column": null,
           "severity": "error",
           "code": "return-value",
           "message": "Incompatible return value type (got \"tuple[str, object, str]\", expected \"tuple[str, str, str] | None\")",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:830: error: Incompatible return value type (got \"tuple[str, object, str]\", expected \"tuple[str, str, str] | None\")  [return-value]"
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:829: error: Incompatible return value type (got \"tuple[str, object, str]\", expected \"tuple[str, str, str] | None\")  [return-value]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\app.py",
+      "count": 11,
+      "findings": [
+        {
+          "line": 170,
+          "column": null,
+          "severity": "error",
+          "code": "method-assign",
+          "message": "Cannot assign to a method",
+          "raw": "src\\intellicrack\\ui\\app.py:170: error: Cannot assign to a method  [method-assign]"
+        },
+        {
+          "line": 218,
+          "column": null,
+          "severity": "error",
+          "code": "call-overload",
+          "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
+          "raw": "src\\intellicrack\\ui\\app.py:218: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+        },
+        {
+          "line": 218,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Possible overload variants:",
+          "raw": "src\\intellicrack\\ui\\app.py:218: note: Possible overload variants:"
+        },
+        {
+          "line": 218,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
+          "raw": "src\\intellicrack\\ui\\app.py:218: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+        },
+        {
+          "line": 218,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
+          "raw": "src\\intellicrack\\ui\\app.py:218: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+        },
+        {
+          "line": 705,
+          "column": null,
+          "severity": "error",
+          "code": "call-arg",
+          "message": "Unexpected keyword argument \"offset\" for \"register_manual_patch\" of \"Orchestrator\"",
+          "raw": "src\\intellicrack\\ui\\app.py:705: error: Unexpected keyword argument \"offset\" for \"register_manual_patch\" of \"Orchestrator\"  [call-arg]"
+        },
+        {
+          "line": 705,
+          "column": null,
+          "severity": "error",
+          "code": "call-arg",
+          "message": "Unexpected keyword argument \"original\" for \"register_manual_patch\" of \"Orchestrator\"",
+          "raw": "src\\intellicrack\\ui\\app.py:705: error: Unexpected keyword argument \"original\" for \"register_manual_patch\" of \"Orchestrator\"  [call-arg]"
+        },
+        {
+          "line": 705,
+          "column": null,
+          "severity": "error",
+          "code": "call-arg",
+          "message": "Unexpected keyword argument \"patched\" for \"register_manual_patch\" of \"Orchestrator\"",
+          "raw": "src\\intellicrack\\ui\\app.py:705: error: Unexpected keyword argument \"patched\" for \"register_manual_patch\" of \"Orchestrator\"  [call-arg]"
+        },
+        {
+          "line": 705,
+          "column": null,
+          "severity": "error",
+          "code": "unused-coroutine",
+          "message": "Value of type \"Coroutine[Any, Any, None]\" must be used",
+          "raw": "src\\intellicrack\\ui\\app.py:705: error: Value of type \"Coroutine[Any, Any, None]\" must be used  [unused-coroutine]"
+        },
+        {
+          "line": 705,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Are you missing an await?",
+          "raw": "src\\intellicrack\\ui\\app.py:705: note: Are you missing an await?"
+        },
+        {
+          "line": 1198,
+          "column": null,
+          "severity": "error",
+          "code": "call-arg",
+          "message": "Missing positional argument \"registry\" in call to \"ModelDiscovery\"",
+          "raw": "src\\intellicrack\\ui\\app.py:1198: error: Missing positional argument \"registry\" in call to \"ModelDiscovery\"  [call-arg]"
         }
       ]
     },
@@ -1097,84 +1191,84 @@
       "count": 10,
       "findings": [
         {
-          "line": 370,
+          "line": 358,
           "column": null,
           "severity": "error",
           "code": "union-attr",
           "message": "Item \"None\" of \"QTextDocument | None\" has no attribute \"findBlockByLineNumber\"",
-          "raw": "src\\intellicrack\\ui\\tools.py:370: error: Item \"None\" of \"QTextDocument | None\" has no attribute \"findBlockByLineNumber\"  [union-attr]"
+          "raw": "src\\intellicrack\\ui\\tools.py:358: error: Item \"None\" of \"QTextDocument | None\" has no attribute \"findBlockByLineNumber\"  [union-attr]"
         },
         {
-          "line": 409,
+          "line": 397,
           "column": null,
           "severity": "error",
           "code": "call-overload",
           "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
-          "raw": "src\\intellicrack\\ui\\tools.py:409: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+          "raw": "src\\intellicrack\\ui\\tools.py:397: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
         },
         {
-          "line": 409,
+          "line": 397,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "Possible overload variants:",
-          "raw": "src\\intellicrack\\ui\\tools.py:409: note: Possible overload variants:"
+          "raw": "src\\intellicrack\\ui\\tools.py:397: note: Possible overload variants:"
         },
         {
-          "line": 409,
+          "line": 397,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\tools.py:409: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\tools.py:397: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 409,
+          "line": 397,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\tools.py:409: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\tools.py:397: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 431,
+          "line": 419,
           "column": null,
           "severity": "error",
           "code": "arg-type",
           "message": "Argument 1 to \"setTextInteractionFlags\" of \"QLabel\" has incompatible type \"int\"; expected \"TextInteractionFlag\"",
-          "raw": "src\\intellicrack\\ui\\tools.py:431: error: Argument 1 to \"setTextInteractionFlags\" of \"QLabel\" has incompatible type \"int\"; expected \"TextInteractionFlag\"  [arg-type]"
+          "raw": "src\\intellicrack\\ui\\tools.py:419: error: Argument 1 to \"setTextInteractionFlags\" of \"QLabel\" has incompatible type \"int\"; expected \"TextInteractionFlag\"  [arg-type]"
         },
         {
-          "line": 712,
+          "line": 700,
           "column": null,
           "severity": "error",
           "code": "call-overload",
           "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
-          "raw": "src\\intellicrack\\ui\\tools.py:712: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+          "raw": "src\\intellicrack\\ui\\tools.py:700: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
         },
         {
-          "line": 712,
+          "line": 700,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "Possible overload variants:",
-          "raw": "src\\intellicrack\\ui\\tools.py:712: note: Possible overload variants:"
+          "raw": "src\\intellicrack\\ui\\tools.py:700: note: Possible overload variants:"
         },
         {
-          "line": 712,
+          "line": 700,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\tools.py:712: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\tools.py:700: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 712,
+          "line": 700,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\tools.py:712: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\tools.py:700: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
         }
       ]
     },
@@ -1183,76 +1277,76 @@
       "count": 9,
       "findings": [
         {
-          "line": 90,
+          "line": 91,
           "column": null,
           "severity": "error",
           "code": "call-overload",
           "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:90: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:91: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
         },
         {
-          "line": 90,
+          "line": 91,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "Possible overload variants:",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:90: note: Possible overload variants:"
+          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:91: note: Possible overload variants:"
         },
         {
-          "line": 90,
+          "line": 91,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:90: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:91: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 90,
+          "line": 91,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:90: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:91: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 92,
+          "line": 93,
           "column": null,
           "severity": "error",
           "code": "call-overload",
           "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:92: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:93: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
         },
         {
-          "line": 92,
+          "line": 93,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "Possible overload variants:",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:92: note: Possible overload variants:"
+          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:93: note: Possible overload variants:"
         },
         {
-          "line": 92,
+          "line": 93,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:92: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:93: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 92,
+          "line": 93,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:92: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:93: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 236,
+          "line": 237,
           "column": null,
           "severity": "error",
           "code": "union-attr",
           "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:236: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:237: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
         }
       ]
     },
@@ -1261,68 +1355,68 @@
       "count": 8,
       "findings": [
         {
-          "line": 671,
+          "line": 670,
           "column": null,
           "severity": "error",
           "code": "call-overload",
           "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
-          "raw": "src\\intellicrack\\ui\\tool_config.py:671: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+          "raw": "src\\intellicrack\\ui\\tool_config.py:670: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
         },
         {
-          "line": 671,
+          "line": 670,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "Possible overload variants:",
-          "raw": "src\\intellicrack\\ui\\tool_config.py:671: note: Possible overload variants:"
+          "raw": "src\\intellicrack\\ui\\tool_config.py:670: note: Possible overload variants:"
         },
         {
-          "line": 671,
+          "line": 670,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\tool_config.py:671: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\tool_config.py:670: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 671,
+          "line": 670,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\tool_config.py:671: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\tool_config.py:670: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 1278,
+          "line": 1277,
           "column": null,
           "severity": "error",
           "code": "call-overload",
           "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
-          "raw": "src\\intellicrack\\ui\\tool_config.py:1278: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+          "raw": "src\\intellicrack\\ui\\tool_config.py:1277: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
         },
         {
-          "line": 1278,
+          "line": 1277,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "Possible overload variants:",
-          "raw": "src\\intellicrack\\ui\\tool_config.py:1278: note: Possible overload variants:"
+          "raw": "src\\intellicrack\\ui\\tool_config.py:1277: note: Possible overload variants:"
         },
         {
-          "line": 1278,
+          "line": 1277,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\tool_config.py:1278: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\tool_config.py:1277: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 1278,
+          "line": 1277,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\tool_config.py:1278: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\tool_config.py:1277: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
         }
       ]
     },
@@ -1331,60 +1425,60 @@
       "count": 7,
       "findings": [
         {
-          "line": 209,
+          "line": 210,
           "column": null,
           "severity": "error",
           "code": "union-attr",
           "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setVisible\"",
-          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:209: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setVisible\"  [union-attr]"
+          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:210: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setVisible\"  [union-attr]"
         },
         {
-          "line": 296,
+          "line": 297,
           "column": null,
           "severity": "error",
           "code": "union-attr",
           "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setVisible\"",
-          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:296: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setVisible\"  [union-attr]"
+          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:297: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setVisible\"  [union-attr]"
         },
         {
-          "line": 373,
+          "line": 374,
           "column": null,
           "severity": "error",
           "code": "union-attr",
           "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setVisible\"",
-          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:373: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setVisible\"  [union-attr]"
+          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:374: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setVisible\"  [union-attr]"
         },
         {
-          "line": 564,
+          "line": 565,
           "column": null,
           "severity": "error",
           "code": "call-overload",
           "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
-          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:564: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:565: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
         },
         {
-          "line": 564,
+          "line": 565,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "Possible overload variants:",
-          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:564: note: Possible overload variants:"
+          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:565: note: Possible overload variants:"
         },
         {
-          "line": 564,
+          "line": 565,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:564: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:565: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 564,
+          "line": 565,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:564: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:565: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
         }
       ]
     },
@@ -1455,98 +1549,52 @@
       "count": 6,
       "findings": [
         {
-          "line": 402,
+          "line": 401,
           "column": null,
           "severity": "error",
           "code": "call-overload",
           "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:402: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:401: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
         },
         {
-          "line": 402,
+          "line": 401,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "Possible overload variants:",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:402: note: Possible overload variants:"
+          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:401: note: Possible overload variants:"
         },
         {
-          "line": 402,
+          "line": 401,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:402: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:401: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 402,
+          "line": 401,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:402: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:401: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
         },
         {
-          "line": 414,
+          "line": 413,
           "column": null,
           "severity": "error",
           "code": "union-attr",
           "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:414: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:413: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
         },
         {
-          "line": 430,
+          "line": 429,
           "column": null,
           "severity": "error",
           "code": "union-attr",
           "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:430: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\xpu_utils.py",
-      "count": 5,
-      "findings": [
-        {
-          "line": 24,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
-          "raw": "src\\intellicrack\\providers\\xpu_utils.py:24: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
-        },
-        {
-          "line": 81,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\providers\\xpu_utils.py:81: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 127,
-          "column": null,
-          "severity": "error",
-          "code": "no-any-return",
-          "message": "Returning Any from function declared to return \"int\"",
-          "raw": "src\\intellicrack\\providers\\xpu_utils.py:127: error: Returning Any from function declared to return \"int\"  [no-any-return]"
-        },
-        {
-          "line": 148,
-          "column": null,
-          "severity": "error",
-          "code": "no-any-return",
-          "message": "Returning Any from function declared to return \"str\"",
-          "raw": "src\\intellicrack\\providers\\xpu_utils.py:148: error: Returning Any from function declared to return \"str\"  [no-any-return]"
-        },
-        {
-          "line": 393,
-          "column": null,
-          "severity": "error",
-          "code": "no-any-return",
-          "message": "Returning Any from function declared to return \"device\"",
-          "raw": "src\\intellicrack\\providers\\xpu_utils.py:393: error: Returning Any from function declared to return \"device\"  [no-any-return]"
+          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:429: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
         }
       ]
     },
@@ -1597,48 +1645,48 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\app.py",
+      "path": "src\\intellicrack\\providers\\xpu_utils.py",
       "count": 5,
       "findings": [
         {
-          "line": 170,
+          "line": 24,
           "column": null,
           "severity": "error",
-          "code": "method-assign",
-          "message": "Cannot assign to a method",
-          "raw": "src\\intellicrack\\ui\\app.py:170: error: Cannot assign to a method  [method-assign]"
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:24: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
         },
         {
-          "line": 218,
+          "line": 81,
           "column": null,
           "severity": "error",
-          "code": "call-overload",
-          "message": "No overload variant of \"QSplitter\" matches argument type \"int\"",
-          "raw": "src\\intellicrack\\ui\\app.py:218: error: No overload variant of \"QSplitter\" matches argument type \"int\"  [call-overload]"
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:81: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 218,
+          "line": 127,
           "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Possible overload variants:",
-          "raw": "src\\intellicrack\\ui\\app.py:218: note: Possible overload variants:"
+          "severity": "error",
+          "code": "no-any-return",
+          "message": "Returning Any from function declared to return \"int\"",
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:127: error: Returning Any from function declared to return \"int\"  [no-any-return]"
         },
         {
-          "line": 218,
+          "line": 148,
           "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def QSplitter(self, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\app.py:218: note:     def QSplitter(self, parent: QWidget | None = ...) -> QSplitter"
+          "severity": "error",
+          "code": "no-any-return",
+          "message": "Returning Any from function declared to return \"str\"",
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:148: error: Returning Any from function declared to return \"str\"  [no-any-return]"
         },
         {
-          "line": 218,
+          "line": 393,
           "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter",
-          "raw": "src\\intellicrack\\ui\\app.py:218: note:     def QSplitter(self, orientation: Orientation, parent: QWidget | None = ...) -> QSplitter"
+          "severity": "error",
+          "code": "no-any-return",
+          "message": "Returning Any from function declared to return \"device\"",
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:393: error: Returning Any from function declared to return \"device\"  [no-any-return]"
         }
       ]
     },
@@ -1689,6 +1737,82 @@
       ]
     },
     {
+      "path": "tests\\test_bridges\\test_x64dbg.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": 26,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "Module \"intellicrack.bridges.x64dbg\" has no attribute \"get_capstone\"",
+          "raw": "tests\\test_bridges\\test_x64dbg.py:26: error: Module \"intellicrack.bridges.x64dbg\" has no attribute \"get_capstone\"  [attr-defined]"
+        },
+        {
+          "line": 26,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "Module \"intellicrack.bridges.x64dbg\" has no attribute \"get_keystone\"",
+          "raw": "tests\\test_bridges\\test_x64dbg.py:26: error: Module \"intellicrack.bridges.x64dbg\" has no attribute \"get_keystone\"  [attr-defined]"
+        },
+        {
+          "line": 165,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"dict[str, object]\", variable has type \"WatchpointInfo\")",
+          "raw": "tests\\test_bridges\\test_x64dbg.py:165: error: Incompatible types in assignment (expression has type \"dict[str, object]\", variable has type \"WatchpointInfo\")  [assignment]"
+        },
+        {
+          "line": 175,
+          "column": null,
+          "severity": "error",
+          "code": "index",
+          "message": "Value of type \"WatchpointInfo\" is not indexable",
+          "raw": "tests\\test_bridges\\test_x64dbg.py:175: error: Value of type \"WatchpointInfo\" is not indexable  [index]"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_ui\\test_splash_screen.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": 13,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "Module \"PyQt6.QtCore\" has no attribute \"QPropertyAnimation\"",
+          "raw": "tests\\test_ui\\test_splash_screen.py:13: error: Module \"PyQt6.QtCore\" has no attribute \"QPropertyAnimation\"  [attr-defined]"
+        },
+        {
+          "line": 227,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"SplashScreen\" has no attribute \"show_loading_step\"",
+          "raw": "tests\\test_ui\\test_splash_screen.py:227: error: \"SplashScreen\" has no attribute \"show_loading_step\"  [attr-defined]"
+        },
+        {
+          "line": 233,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"SplashScreen\" has no attribute \"show_loading_step\"",
+          "raw": "tests\\test_ui\\test_splash_screen.py:233: error: \"SplashScreen\" has no attribute \"show_loading_step\"  [attr-defined]"
+        },
+        {
+          "line": 414,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"SplashScreen\" has no attribute \"show_loading_step\"",
+          "raw": "tests\\test_ui\\test_splash_screen.py:414: error: \"SplashScreen\" has no attribute \"show_loading_step\"  [attr-defined]"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\provider_config.py",
       "count": 4,
       "findings": [
@@ -1727,32 +1851,62 @@
       ]
     },
     {
+      "path": "tests\\test_providers\\test_credential_loading.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 183,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"CredentialLoader\" has no attribute \"get_env_var\"; maybe \"set_env_var\" or \"_env_vars\"?",
+          "raw": "tests\\test_providers\\test_credential_loading.py:183: error: \"CredentialLoader\" has no attribute \"get_env_var\"; maybe \"set_env_var\" or \"_env_vars\"?  [attr-defined]"
+        },
+        {
+          "line": 191,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"CredentialLoader\" has no attribute \"get_env_var\"; maybe \"set_env_var\" or \"_env_vars\"?",
+          "raw": "tests\\test_providers\\test_credential_loading.py:191: error: \"CredentialLoader\" has no attribute \"get_env_var\"; maybe \"set_env_var\" or \"_env_vars\"?  [attr-defined]"
+        },
+        {
+          "line": 203,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"CredentialLoader\" has no attribute \"get_env_var\"; maybe \"set_env_var\" or \"_env_vars\"?",
+          "raw": "tests\\test_providers\\test_credential_loading.py:203: error: \"CredentialLoader\" has no attribute \"get_env_var\"; maybe \"set_env_var\" or \"_env_vars\"?  [attr-defined]"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\chat.py",
       "count": 3,
       "findings": [
         {
-          "line": 83,
+          "line": 84,
           "column": null,
           "severity": "error",
           "code": "arg-type",
           "message": "Argument 1 to \"setTextInteractionFlags\" of \"QLabel\" has incompatible type \"int\"; expected \"TextInteractionFlag\"",
-          "raw": "src\\intellicrack\\ui\\chat.py:83: error: Argument 1 to \"setTextInteractionFlags\" of \"QLabel\" has incompatible type \"int\"; expected \"TextInteractionFlag\"  [arg-type]"
+          "raw": "src\\intellicrack\\ui\\chat.py:84: error: Argument 1 to \"setTextInteractionFlags\" of \"QLabel\" has incompatible type \"int\"; expected \"TextInteractionFlag\"  [arg-type]"
         },
         {
-          "line": 516,
+          "line": 517,
           "column": null,
           "severity": "error",
           "code": "union-attr",
           "message": "Item \"None\" of \"QScrollBar | None\" has no attribute \"setValue\"",
-          "raw": "src\\intellicrack\\ui\\chat.py:516: error: Item \"None\" of \"QScrollBar | None\" has no attribute \"setValue\"  [union-attr]"
+          "raw": "src\\intellicrack\\ui\\chat.py:517: error: Item \"None\" of \"QScrollBar | None\" has no attribute \"setValue\"  [union-attr]"
         },
         {
-          "line": 516,
+          "line": 517,
           "column": null,
           "severity": "error",
           "code": "union-attr",
           "message": "Item \"None\" of \"QScrollBar | None\" has no attribute \"maximum\"",
-          "raw": "src\\intellicrack\\ui\\chat.py:516: error: Item \"None\" of \"QScrollBar | None\" has no attribute \"maximum\"  [union-attr]"
+          "raw": "src\\intellicrack\\ui\\chat.py:517: error: Item \"None\" of \"QScrollBar | None\" has no attribute \"maximum\"  [union-attr]"
         }
       ]
     },
@@ -1809,28 +1963,6 @@
       ]
     },
     {
-      "path": "tests\\test_bridges\\test_x64dbg.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 165,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"dict[str, object]\", variable has type \"WatchpointInfo\")",
-          "raw": "tests\\test_bridges\\test_x64dbg.py:165: error: Incompatible types in assignment (expression has type \"dict[str, object]\", variable has type \"WatchpointInfo\")  [assignment]"
-        },
-        {
-          "line": 175,
-          "column": null,
-          "severity": "error",
-          "code": "index",
-          "message": "Value of type \"WatchpointInfo\" is not indexable",
-          "raw": "tests\\test_bridges\\test_x64dbg.py:175: error: Value of type \"WatchpointInfo\" is not indexable  [index]"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\providers\\anthropic.py",
       "count": 2,
       "findings": [
@@ -1871,6 +2003,28 @@
           "code": "arg-type",
           "message": "Argument 1 to \"_format_prompt\" of \"LocalTransformersProvider\" has incompatible type \"list[dict[str, str]]\"; expected \"list[dict[str, object]]\"",
           "raw": "tests\\test_providers\\test_local_transformers_provider.py:512: error: Argument 1 to \"_format_prompt\" of \"LocalTransformersProvider\" has incompatible type \"list[dict[str, str]]\"; expected \"list[dict[str, object]]\"  [arg-type]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\orchestrator.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 631,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"tuple[Message, list[ToolCall] | None]\", variable has type \"tuple[Message, None]\")",
+          "raw": "src\\intellicrack\\core\\orchestrator.py:631: error: Incompatible types in assignment (expression has type \"tuple[Message, list[ToolCall] | None]\", variable has type \"tuple[Message, None]\")  [assignment]"
+        },
+        {
+          "line": 1238,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "\"register_manual_patch\" of \"Orchestrator\" defined here",
+          "raw": "src\\intellicrack\\core\\orchestrator.py:1238: note: \"register_manual_patch\" of \"Orchestrator\" defined here"
         }
       ]
     },
@@ -1973,76 +2127,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\sandbox_config.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 569,
-          "column": null,
-          "severity": "error",
-          "code": "arg-type",
-          "message": "Argument 1 to \"setWindowModality\" of \"QWidget\" has incompatible type \"int\"; expected \"WindowModality\"",
-          "raw": "src\\intellicrack\\ui\\sandbox_config.py:569: error: Argument 1 to \"setWindowModality\" of \"QWidget\" has incompatible type \"int\"; expected \"WindowModality\"  [arg-type]"
-        }
-      ]
-    },
-    {
-      "path": "tests\\test_providers\\test_google_provider.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 194,
-          "column": null,
-          "severity": "error",
-          "code": "no-untyped-def",
-          "message": "Function is missing a type annotation for one or more arguments",
-          "raw": "tests\\test_providers\\test_google_provider.py:194: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\core\\orchestrator.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 627,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"tuple[Message, list[ToolCall] | None]\", variable has type \"tuple[Message, None]\")",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:627: error: Incompatible types in assignment (expression has type \"tuple[Message, list[ToolCall] | None]\", variable has type \"tuple[Message, None]\")  [assignment]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\model_loader.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 22,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:22: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\local_transformers.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 53,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:53: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
-        }
-      ]
-    },
-    {
       "path": "tests\\test_providers\\test_anthropic_provider.py",
       "count": 1,
       "findings": [
@@ -2071,16 +2155,72 @@
       ]
     },
     {
-      "path": "tests\\test_ui\\test_splash_screen.py",
+      "path": "tests\\test_providers\\test_google_provider.py",
       "count": 1,
       "findings": [
         {
-          "line": 13,
+          "line": 194,
+          "column": null,
+          "severity": "error",
+          "code": "no-untyped-def",
+          "message": "Function is missing a type annotation for one or more arguments",
+          "raw": "tests\\test_providers\\test_google_provider.py:194: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\model_loader.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 22,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
+          "raw": "src\\intellicrack\\providers\\model_loader.py:22: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_bridges\\test_x64dbg_api_coverage.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 102,
           "column": null,
           "severity": "error",
           "code": "attr-defined",
-          "message": "Module \"PyQt6.QtCore\" has no attribute \"QPropertyAnimation\"",
-          "raw": "tests\\test_ui\\test_splash_screen.py:13: error: Module \"PyQt6.QtCore\" has no attribute \"QPropertyAnimation\"  [attr-defined]"
+          "message": "\"X64DbgBridge\" has no attribute \"_get_register_value\"",
+          "raw": "tests\\test_bridges\\test_x64dbg_api_coverage.py:102: error: \"X64DbgBridge\" has no attribute \"_get_register_value\"  [attr-defined]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\sandbox_config.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 569,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 1 to \"setWindowModality\" of \"QWidget\" has incompatible type \"int\"; expected \"WindowModality\"",
+          "raw": "src\\intellicrack\\ui\\sandbox_config.py:569: error: Argument 1 to \"setWindowModality\" of \"QWidget\" has incompatible type \"int\"; expected \"WindowModality\"  [arg-type]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\local_transformers.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 53,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:53: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
         }
       ]
     }

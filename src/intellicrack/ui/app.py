@@ -303,6 +303,11 @@ class MainWindow(QMainWindow):
         self._add_menu_action(file_menu, "Save Session", self._on_save_session, "Ctrl+S")
         file_menu.addSeparator()
         self._add_menu_action(file_menu, "Export Chat...", self._on_export_chat)
+        self._add_menu_action(file_menu, "Export Session...", self._on_export_session)
+        self._add_menu_action(file_menu, "Import Session...", self._on_import_session)
+        file_menu.addSeparator()
+        self._add_menu_action(file_menu, "Save Patched Binary...", self._on_save_patched_binary)
+        self._add_menu_action(file_menu, "Export Analysis...", self._on_export_analysis)
         file_menu.addSeparator()
         self._add_menu_action(file_menu, "Exit", self.close, "Alt+F4")
 
@@ -337,6 +342,10 @@ class MainWindow(QMainWindow):
         self._add_menu_action(embedded_menu, "Analyze Current Binary...", self._on_analyze_current_binary)
         self._add_menu_action(embedded_menu, "Hex Edit Current Binary...", self._on_hex_edit_current_binary)
 
+        tools_menu.addSeparator()
+        self._add_menu_action(tools_menu, "Open in Ghidra...", self._on_open_binary_in_ghidra)
+        self._add_menu_action(tools_menu, "Open in radare2...", self._on_open_binary_in_radare2)
+
     def _setup_providers_menu(self, menubar: QMenuBar) -> None:
         """Set up the Providers menu.
 
@@ -353,6 +362,7 @@ class MainWindow(QMainWindow):
 
         self._add_menu_action(providers_menu, "Configure Providers...", self._on_configure_providers)
         self._add_menu_action(providers_menu, "Refresh Models", self._on_refresh_models)
+        self._add_menu_action(providers_menu, "Browse Models...", self._on_browse_models)
 
     def _setup_sandbox_menu(self, menubar: QMenuBar) -> None:
         """Set up the Sandbox menu.
@@ -386,6 +396,10 @@ class MainWindow(QMainWindow):
             raise TypeError(msg)
 
         self._add_menu_action(settings_menu, "Preferences...", self._on_preferences)
+        settings_menu.addSeparator()
+        self._add_menu_action(settings_menu, "Toggle Theme", self._on_toggle_theme)
+        settings_menu.addSeparator()
+        self._add_menu_action(settings_menu, "Focus Chat Input", self._on_focus_chat_input, "Ctrl+/")
 
     def _setup_help_menu(self, menubar: QMenuBar) -> None:
         """Set up the Help menu.
@@ -551,6 +565,28 @@ class MainWindow(QMainWindow):
         self._token_label = QLabel()
         self._statusbar.addPermanentWidget(self._token_label)
 
+        self._status_timer = QTimer(self)
+        self._status_timer.timeout.connect(self._refresh_system_status)
+        self._status_timer.start(30000)
+
+    def _refresh_system_status(self) -> None:
+        """Periodically refresh the system status display."""
+
+        async def fetch_status() -> dict[str, object]:
+            return await self._orchestrator.get_system_status()
+
+        try:
+            loop = asyncio.new_event_loop()
+            status = loop.run_until_complete(fetch_status())
+            loop.close()
+
+            state = status.get("state", "unknown")
+            session_id = status.get("session_id")
+            session_text = f" | Session: {session_id}" if session_id else ""
+            self._status_label.setText(f"State: {state}{session_text}")
+        except Exception:
+            pass
+
     def _connect_signals(self) -> None:
         """Connect Qt signals."""
         self._chat_panel.message_submitted.connect(self._on_user_message)
@@ -560,6 +596,7 @@ class MainWindow(QMainWindow):
         self.stream_chunk_received.connect(self._on_stream_chunk)
         self.status_update.connect(self._update_status)
         self._tool_panel.address_clicked.connect(self._on_address_clicked)
+        self.licensing_analysis_received.connect(self._on_licensing_analysis_activated)
 
     def _configure_orchestrator(self) -> None:
         """Configure orchestrator callbacks."""
@@ -582,6 +619,14 @@ class MainWindow(QMainWindow):
             analysis: The LicensingAnalysis result from the orchestrator.
         """
         self.licensing_analysis_received.emit(analysis)
+
+    def _on_licensing_analysis_activated(self, _analysis: object) -> None:
+        """Activate the licensing tab after analysis completes.
+
+        Args:
+            _analysis: The licensing analysis result (unused here).
+        """
+        self._tool_panel.activate_licensing_tab()
 
     def _request_tool_confirmation(self, call: ToolCall) -> asyncio.Future[bool]:
         """Request user confirmation for a tool call.
@@ -653,6 +698,16 @@ class MainWindow(QMainWindow):
             if len(result_str) > _MAX_RESULT_DISPLAY_LEN:
                 result_str = f"{result_str[: _MAX_RESULT_DISPLAY_LEN - 3]}..."
             self._tool_panel.log(f"Result: {result_str}")
+
+            tool_name = getattr(result, "tool_name", "")
+            if tool_name == "patch_binary" and isinstance(result.result, dict):
+                patch_data = result.result
+                self._orchestrator.register_manual_patch(
+                    offset=patch_data.get("offset", 0),
+                    original=patch_data.get("original", b""),
+                    patched=patch_data.get("patched", b""),
+                    description=patch_data.get("description", "Manual patch"),
+                )
 
         if result.error:
             self._tool_panel.log(f"Error: {result.error}")
@@ -734,6 +789,15 @@ class MainWindow(QMainWindow):
 
     def _on_new_session(self) -> None:
         """Handle new session action."""
+        session_mgr_mod = importlib.import_module(".session_manager", "intellicrack.ui")
+        new_session_cls = getattr(session_mgr_mod, "NewSessionDialog", None)
+        if new_session_cls is not None:
+            dialog = new_session_cls(parent=self)
+            if not dialog.exec():
+                return
+            description = dialog.get_description()
+            _logger.debug("new_session_dialog", extra={"description": description})
+
         provider_data: object = self._provider_combo.currentData()
         model = self._model_combo.currentText()
 
@@ -795,6 +859,124 @@ class MainWindow(QMainWindow):
                     f.write(f"[{role}] {msg.timestamp.strftime('%H:%M:%S')}\n")
                     f.write(f"{msg.content}\n\n")
             QMessageBox.information(self, "Export", f"Chat exported to {path}")
+
+    def _on_export_session(self) -> None:
+        """Export the current session to a JSON file."""
+        session = self._orchestrator.current_session
+        if session is None:
+            QMessageBox.information(self, "Export", "No active session to export.")
+            return
+
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Session",
+            "",
+            "JSON Files (*.json);;All Files (*)",
+        )
+        if path:
+            session_mgr = getattr(self._orchestrator, "_session_manager", None)
+            if session_mgr is not None:
+                session_mgr.export_current(Path(path))
+                QMessageBox.information(self, "Export", f"Session exported to {path}")
+            else:
+                QMessageBox.warning(self, "Export", "Session manager unavailable.")
+
+    def _on_import_session(self) -> None:
+        """Import a session from a JSON file."""
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Import Session",
+            "",
+            "JSON Files (*.json);;All Files (*)",
+        )
+        if path:
+            session_mgr = getattr(self._orchestrator, "_session_manager", None)
+            if session_mgr is not None:
+                imported = session_mgr.import_json(Path(path))
+                if imported is not None:
+                    QMessageBox.information(self, "Import", "Session imported successfully.")
+                    self.status_update.emit("Session imported")
+                else:
+                    QMessageBox.warning(self, "Import", "Failed to import session.")
+            else:
+                QMessageBox.warning(self, "Import", "Session manager unavailable.")
+
+    def _on_save_patched_binary(self) -> None:
+        """Save the currently loaded binary with applied patches."""
+        binary_panel = self._tool_panel.get_panel("binary")
+        if binary_panel is None:
+            QMessageBox.information(self, "Save", "No binary panel loaded.")
+            return
+
+        file_data: bytes | None = None
+        get_file_data = getattr(binary_panel, "get_file_data", None)
+        if callable(get_file_data):
+            file_data = get_file_data()
+
+        if file_data is None:
+            QMessageBox.information(self, "Save", "No binary data available.")
+            return
+
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Patched Binary",
+            "",
+            "Executable Files (*.exe *.dll *.so *.dylib);;All Files (*)",
+        )
+        if path:
+            with open(path, "wb") as f:
+                f.write(file_data)
+
+            patches: list[object] = []
+            get_patches = getattr(binary_panel, "get_patches", None)
+            if callable(get_patches):
+                patches = get_patches()
+
+            report_path = Path(path).with_suffix(".patch_report.txt")
+            with open(report_path, "w", encoding="utf-8") as f:
+                f.write(f"Patch Report for {Path(path).name}\n")
+                f.write(f"{'=' * 40}\n")
+                f.write(f"Total patches applied: {len(patches)}\n\n")
+                for i, patch in enumerate(patches, 1):
+                    f.write(f"Patch {i}: {patch}\n")
+
+            QMessageBox.information(self, "Save", f"Patched binary saved to {path}\nReport: {report_path}")
+
+    def _on_export_analysis(self) -> None:
+        """Export the current licensing analysis to a JSON file."""
+        licensing_panel = self._tool_panel.get_panel("licensing")
+        if licensing_panel is None:
+            QMessageBox.information(self, "Export", "No licensing analysis available.")
+            return
+
+        analysis: object = None
+        get_analysis = getattr(licensing_panel, "get_current_analysis", None)
+        if callable(get_analysis):
+            analysis = get_analysis()
+
+        if analysis is None:
+            QMessageBox.information(self, "Export", "No analysis data available.")
+            return
+
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Analysis",
+            "",
+            "JSON Files (*.json);;All Files (*)",
+        )
+        if path:
+            analysis_dict: object
+            if hasattr(analysis, "to_dict"):
+                analysis_dict = analysis.to_dict()
+            elif hasattr(analysis, "__dict__"):
+                analysis_dict = analysis.__dict__
+            else:
+                analysis_dict = str(analysis)
+
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(analysis_dict, f, indent=2, default=str)
+
+            QMessageBox.information(self, "Export", f"Analysis exported to {path}")
 
     def _on_tool_status(self) -> None:
         """Handle tool status action."""
@@ -1006,6 +1188,36 @@ class MainWindow(QMainWindow):
             self.status_update.emit("Failed to refresh models")
             QMessageBox.warning(self, "Model Refresh Failed", message)
 
+    def _on_browse_models(self) -> None:
+        """Open the model selection dialog for browsing available models."""
+        provider_config_mod = importlib.import_module(".provider_config", "intellicrack.ui")
+        dialog_cls = getattr(provider_config_mod, "ModelSelectionDialog", None)
+        if dialog_cls is None:
+            return
+
+        discovery = ModelDiscovery()
+        models = discovery.get_discovery_events()
+        model_names: list[str] = []
+        for event in models:
+            model_id = getattr(event, "model_id", None)
+            if model_id is not None:
+                model_names.append(str(model_id))
+
+        if not model_names:
+            for i in range(self._model_combo.count()):
+                model_names.append(self._model_combo.itemText(i))
+
+        dialog = dialog_cls(models=model_names, parent=self)
+        if dialog.exec():
+            selected = dialog.get_selected_model()
+            if selected:
+                idx = self._model_combo.findText(selected)
+                if idx >= 0:
+                    self._model_combo.setCurrentIndex(idx)
+                else:
+                    self._model_combo.addItem(selected)
+                    self._model_combo.setCurrentText(selected)
+
     def _on_configure_sandbox(self) -> None:
         """Handle configure sandbox action."""
         dialog = SandboxConfigDialog(
@@ -1071,9 +1283,26 @@ class MainWindow(QMainWindow):
         """Handle preferences action."""
         preferences_module = importlib.import_module(".preferences", "intellicrack.ui")
         dialog = preferences_module.PreferencesDialog(self._config, self)
+        config_path = Path.home() / ".intellicrack" / "config.json"
+        set_config_path = getattr(dialog, "set_config_path", None)
+        if callable(set_config_path):
+            set_config_path(config_path)
         if dialog.exec():
             self._config = dialog.get_config()
             self.status_update.emit("Preferences saved")
+
+    def _on_toggle_theme(self) -> None:
+        """Toggle between dark and light themes."""
+        self._theme_manager.toggle_theme()
+        self._icon_manager.clear_cache()
+        is_dark = self._theme_manager.is_dark_theme()
+        theme_name = "dark" if is_dark else "light"
+        _logger.info("theme_toggled", extra={"theme": theme_name})
+        self.status_update.emit(f"Theme switched to {theme_name}")
+
+    def _on_focus_chat_input(self) -> None:
+        """Focus the chat input field."""
+        self._chat_panel.set_focus_input()
 
     def _on_about(self) -> None:
         """Handle about action."""
@@ -1086,6 +1315,12 @@ class MainWindow(QMainWindow):
     def _on_open_x64dbg(self) -> None:
         """Open x64dbg debugger panel."""
         try:
+            tool_reg = getattr(self._orchestrator, "_tool_registry", None)
+            if tool_reg is not None:
+                ensure_ready = getattr(tool_reg, "ensure_tool_ready", None)
+                if callable(ensure_ready):
+                    ensure_ready("x64dbg")
+
             widget = self._tool_panel.add_x64dbg_tab(is_64bit=True)
             if widget is None:
                 self._show_tool_error("x64dbg", "Failed to initialize x64dbg panel")
@@ -1122,6 +1357,12 @@ class MainWindow(QMainWindow):
     def _on_open_ghidra(self) -> None:
         """Open Ghidra analysis panel."""
         try:
+            tool_reg = getattr(self._orchestrator, "_tool_registry", None)
+            if tool_reg is not None:
+                ensure_ready = getattr(tool_reg, "ensure_tool_ready", None)
+                if callable(ensure_ready):
+                    ensure_ready("ghidra")
+
             widget = self._tool_panel.add_ghidra_tab()
             if widget is None:
                 self._show_tool_error("Ghidra", "Failed to initialize Ghidra panel")
@@ -1134,6 +1375,12 @@ class MainWindow(QMainWindow):
     def _on_open_radare2(self) -> None:
         """Open radare2 analysis panel."""
         try:
+            tool_reg = getattr(self._orchestrator, "_tool_registry", None)
+            if tool_reg is not None:
+                ensure_ready = getattr(tool_reg, "ensure_tool_ready", None)
+                if callable(ensure_ready):
+                    ensure_ready("radare2")
+
             widget = self._tool_panel.add_radare2_tab()
             if widget is None:
                 self._show_tool_error("radare2", "Failed to initialize radare2 panel")
@@ -1145,11 +1392,21 @@ class MainWindow(QMainWindow):
 
     def _on_open_frida(self) -> None:
         """Open Frida instrumentation panel."""
-        panel = self._tool_panel.add_frida_tab()
-        if panel is None:
-            self._show_tool_error("Frida", "Failed to initialize Frida panel")
-            return
-        panel.start_tool()
+        try:
+            tool_reg = getattr(self._orchestrator, "_tool_registry", None)
+            if tool_reg is not None:
+                ensure_ready = getattr(tool_reg, "ensure_tool_ready", None)
+                if callable(ensure_ready):
+                    ensure_ready("frida")
+
+            panel = self._tool_panel.add_frida_tab()
+            if panel is None:
+                self._show_tool_error("Frida", "Failed to initialize Frida panel")
+                return
+            panel.start_tool()
+        except Exception as e:
+            _logger.exception("tool_open_failed", extra={"tool_name": "Frida", "error": str(e)})
+            self._show_tool_error("Frida", f"Failed to open Frida panel: {e}")
 
     def _on_open_process(self) -> None:
         """Open process manager panel."""
@@ -1200,6 +1457,22 @@ class MainWindow(QMainWindow):
             return
         if not self._tool_panel.open_in_hxd(self._current_binary):
             self._show_tool_error("HxD", "Failed to open binary in HxD")
+
+    def _on_open_binary_in_ghidra(self) -> None:
+        """Open the currently loaded binary in the Ghidra panel."""
+        if self._current_binary is None:
+            self._show_no_binary_warning("Ghidra analysis")
+            return
+        if not self._tool_panel.open_in_ghidra(self._current_binary):
+            self._show_tool_error("Ghidra", "Failed to open binary in Ghidra")
+
+    def _on_open_binary_in_radare2(self) -> None:
+        """Open the currently loaded binary in the radare2 panel."""
+        if self._current_binary is None:
+            self._show_no_binary_warning("radare2 analysis")
+            return
+        if not self._tool_panel.open_in_radare2(self._current_binary):
+            self._show_tool_error("radare2", "Failed to open binary in radare2")
 
     def _show_tool_error(self, tool_name: str, message: str) -> None:
         """Show tool-related error dialog.
@@ -1281,6 +1554,29 @@ class MainWindow(QMainWindow):
             a0: Close event.
         """
         self._tool_panel.close_embedded_tools()
+
+        session_mgr = getattr(self._orchestrator, "_session_manager", None)
+        if session_mgr is not None:
+            cleanup = getattr(session_mgr, "cleanup", None)
+            if callable(cleanup):
+                cleanup()
+
+        process_mgr_mod = importlib.import_module("intellicrack.core.process_manager")
+        pm_cls = getattr(process_mgr_mod, "ProcessManager", None)
+        if pm_cls is not None:
+            pm_instance = pm_cls.get_instance()
+            request_shutdown = getattr(pm_instance, "request_shutdown", None)
+            if callable(request_shutdown):
+                request_shutdown()
+
+        registry_mod = importlib.import_module("intellicrack.providers.registry")
+        registry_cls = getattr(registry_mod, "ProviderRegistry", None)
+        if registry_cls is not None:
+            registry_inst = getattr(self._orchestrator, "_provider_registry", None)
+            if registry_inst is not None:
+                disconnect_all = getattr(registry_inst, "disconnect_all", None)
+                if callable(disconnect_all):
+                    disconnect_all()
 
         async def shutdown() -> None:
             await self._orchestrator.shutdown()

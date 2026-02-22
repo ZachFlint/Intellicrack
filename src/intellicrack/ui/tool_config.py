@@ -655,7 +655,6 @@ class ToolConfigDialog(QDialog):
         self._registry = tool_registry
         self._tools_directory = tools_directory or Path("D:/Intellicrack/tools")
         self._tool_widgets: dict[str, ToolSettingsWidget] = {}
-        self._current_tool: str | None = None
         self._config_path = Path.home() / ".intellicrack" / "tools.json"
 
         self._setup_ui()
@@ -732,7 +731,7 @@ class ToolConfigDialog(QDialog):
         """
         if index >= 0 and (item := self._tool_list.item(index)):
             tool_id = item.data(Qt.ItemDataRole.UserRole)
-            self._current_tool = tool_id
+            _ = tool_id
             self._settings_stack.setCurrentIndex(index)
 
     def _on_accept(self) -> None:

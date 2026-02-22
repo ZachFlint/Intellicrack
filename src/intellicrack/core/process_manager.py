@@ -375,30 +375,6 @@ class ProcessManager:
                     p.kill()
             psutil.wait_procs(alive, timeout=force_timeout)
 
-    def _wait_or_kill_sync(
-        self,
-        process: Popen[bytes] | asyncio.subprocess.Process,
-        name: str,
-    ) -> None:
-        """Wait for process to terminate, then kill if needed.
-
-        Args:
-            process: The process to wait for or kill.
-            name: Human-readable name for the process (for logging).
-        """
-        logger = ProcessManager._get_logger()
-
-        if isinstance(process, Popen):
-            try:
-                process.wait(timeout=self.DEFAULT_GRACEFUL_TIMEOUT)
-            except TimeoutExpired:
-                logger.warning("process_graceful_terminate_failed", extra={"process_name": name})
-                process.kill()
-                try:
-                    process.wait(timeout=self.DEFAULT_FORCE_TIMEOUT)
-                except TimeoutExpired:
-                    logger.warning("process_kill_timeout", extra={"process_name": name})
-
     def register(
         self,
         process: Popen[bytes] | asyncio.subprocess.Process,
@@ -636,6 +612,9 @@ class ProcessManager:
             external_pids = list(self._external_pids.keys())
 
         for pid in pids:
+            if self.is_shutdown_requested():
+                logger.info("cleanup_interrupted_by_shutdown", extra={"remaining": len(pids)})
+                break
             try:
                 await self.terminate_process(pid, graceful_timeout, force_timeout)
             except Exception as e:
@@ -652,6 +631,7 @@ class ProcessManager:
             self._external_pids.clear()
 
         self._cleanup_in_progress = False
+        self.clear_shutdown_request()
         logger.info("async_cleanup_complete")
 
     def is_shutdown_requested(self) -> bool:
@@ -665,6 +645,12 @@ class ProcessManager:
     def clear_shutdown_request(self) -> None:
         """Clear the shutdown request flag."""
         self._shutdown_event.clear()
+
+    def request_shutdown(self) -> None:
+        """Request a graceful shutdown of all tracked processes."""
+        logger = ProcessManager._get_logger()
+        logger.info("shutdown_requested", extra={})
+        self._shutdown_event.set()
 
     @property
     def process_count(self) -> int:
@@ -928,26 +914,3 @@ class ProcessManager:
 
         else:
             return True
-
-    def _terminate_windows_process(self, pid: int, name: str, logger: logging.Logger) -> bool:
-        """Terminate a process using Windows API.
-
-        Args:
-            pid: Process ID to terminate.
-            name: Process name for logging.
-            logger: Logger instance.
-
-        Returns:
-            True if terminated successfully, False otherwise.
-        """
-        kernel32 = ctypes.windll.kernel32
-        if handle := kernel32.OpenProcess(_WIN_PROCESS_TERMINATE, False, pid):
-            kernel32.TerminateProcess(handle, _WIN_PROCESS_TERMINATE)
-            kernel32.CloseHandle(handle)
-            logger.debug("windows_process_terminated", extra={"process_name": name, "pid": pid})
-            self.unregister_external_pid(pid)
-            return True
-
-        logger.warning("windows_process_open_failed", extra={"process_name": name, "pid": pid})
-        self.unregister_external_pid(pid)
-        return False

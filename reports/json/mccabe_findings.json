@@ -1,8 +1,8 @@
 {
   "tool": "mccabe",
-  "generated": "2026-02-20T14:07:43.247116",
-  "total_findings": 32,
-  "total_files": 21,
+  "generated": "2026-02-21T19:56:27.283244",
+  "total_findings": 34,
+  "total_files": 22,
   "files": [
     {
       "path": "src/intellicrack\\providers\\discovery.py",
@@ -143,20 +143,42 @@
       "count": 2,
       "findings": [
         {
-          "line": 768,
+          "line": 766,
           "column": 5,
           "code": "C901",
           "complexity": 11,
           "message": "'QEMUSandbox._build_qemu_command' is too complex (11)",
-          "raw": "src/intellicrack\\sandbox\\qemu.py:768:5: C901 'QEMUSandbox._build_qemu_command' is too complex (11)"
+          "raw": "src/intellicrack\\sandbox\\qemu.py:766:5: C901 'QEMUSandbox._build_qemu_command' is too complex (11)"
         },
         {
-          "line": 862,
+          "line": 860,
           "column": 5,
           "code": "C901",
           "complexity": 11,
           "message": "'QEMUSandbox.start' is too complex (11)",
-          "raw": "src/intellicrack\\sandbox\\qemu.py:862:5: C901 'QEMUSandbox.start' is too complex (11)"
+          "raw": "src/intellicrack\\sandbox\\qemu.py:860:5: C901 'QEMUSandbox.start' is too complex (11)"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack\\ui\\app.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 1062,
+          "column": 5,
+          "code": "C901",
+          "complexity": 11,
+          "message": "'MainWindow._apply_provider_settings' is too complex (11)",
+          "raw": "src/intellicrack\\ui\\app.py:1062:5: C901 'MainWindow._apply_provider_settings' is too complex (11)"
+        },
+        {
+          "line": 1550,
+          "column": 5,
+          "code": "C901",
+          "complexity": 11,
+          "message": "'MainWindow.close_event_handler' is too complex (11)",
+          "raw": "src/intellicrack\\ui\\app.py:1550:5: C901 'MainWindow.close_event_handler' is too complex (11)"
         }
       ]
     },
@@ -187,20 +209,20 @@
       "count": 2,
       "findings": [
         {
-          "line": 1410,
+          "line": 1398,
           "column": 5,
           "code": "C901",
           "complexity": 16,
           "message": "'ToolOutputPanel._on_tab_close_requested' is too complex (16)",
-          "raw": "src/intellicrack\\ui\\tools.py:1410:5: C901 'ToolOutputPanel._on_tab_close_requested' is too complex (16)"
+          "raw": "src/intellicrack\\ui\\tools.py:1398:5: C901 'ToolOutputPanel._on_tab_close_requested' is too complex (16)"
         },
         {
-          "line": 1482,
+          "line": 1470,
           "column": 5,
           "code": "C901",
           "complexity": 15,
           "message": "'ToolOutputPanel.close_embedded_tools' is too complex (15)",
-          "raw": "src/intellicrack\\ui\\tools.py:1482:5: C901 'ToolOutputPanel.close_embedded_tools' is too complex (15)"
+          "raw": "src/intellicrack\\ui\\tools.py:1470:5: C901 'ToolOutputPanel.close_embedded_tools' is too complex (15)"
         }
       ]
     },
@@ -209,12 +231,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 508,
+          "line": 509,
           "column": 5,
           "code": "C901",
           "complexity": 11,
           "message": "'BinaryBridge._detect_architecture' is too complex (11)",
-          "raw": "src/intellicrack\\bridges\\binary.py:508:5: C901 'BinaryBridge._detect_architecture' is too complex (11)"
+          "raw": "src/intellicrack\\bridges\\binary.py:509:5: C901 'BinaryBridge._detect_architecture' is too complex (11)"
         }
       ]
     },
@@ -243,6 +265,20 @@
           "complexity": 11,
           "message": "'ProcessBridge.search_pattern' is too complex (11)",
           "raw": "src/intellicrack\\bridges\\process.py:1097:5: C901 'ProcessBridge.search_pattern' is too complex (11)"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack\\core\\orchestrator.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 370,
+          "column": 5,
+          "code": "C901",
+          "complexity": 11,
+          "message": "'Orchestrator._run_agent_loop' is too complex (11)",
+          "raw": "src/intellicrack\\core\\orchestrator.py:370:5: C901 'Orchestrator._run_agent_loop' is too complex (11)"
         }
       ]
     },
@@ -345,30 +381,16 @@
       ]
     },
     {
-      "path": "src/intellicrack\\ui\\app.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 880,
-          "column": 5,
-          "code": "C901",
-          "complexity": 11,
-          "message": "'MainWindow._apply_provider_settings' is too complex (11)",
-          "raw": "src/intellicrack\\ui\\app.py:880:5: C901 'MainWindow._apply_provider_settings' is too complex (11)"
-        }
-      ]
-    },
-    {
       "path": "src/intellicrack\\ui\\panels\\binary_panel.py",
       "count": 1,
       "findings": [
         {
-          "line": 281,
+          "line": 282,
           "column": 5,
           "code": "C901",
           "complexity": 12,
           "message": "'BinaryPanel._parse_sections' is too complex (12)",
-          "raw": "src/intellicrack\\ui\\panels\\binary_panel.py:281:5: C901 'BinaryPanel._parse_sections' is too complex (12)"
+          "raw": "src/intellicrack\\ui\\panels\\binary_panel.py:282:5: C901 'BinaryPanel._parse_sections' is too complex (12)"
         }
       ]
     },

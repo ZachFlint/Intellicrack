@@ -69,24 +69,6 @@ except ImportError:
     _logger.debug("keystone_not_available")
 
 
-def get_capstone() -> ModuleType | None:
-    """Get the capstone module if available.
-
-    Returns:
-        The capstone module, or None if not installed.
-    """
-    return _capstone
-
-
-def get_keystone() -> ModuleType | None:
-    """Get the keystone module if available.
-
-    Returns:
-        The keystone module, or None if not installed.
-    """
-    return _keystone
-
-
 # Windows API constants
 WIN_PROCESS_VM_READ = 0x0010
 WIN_PROCESS_VM_WRITE = 0x0020
@@ -1302,28 +1284,6 @@ class X64DbgBridge(DebuggerBridge):
             gs=get_reg("gs"),
             ss=get_reg("ss"),
         )
-
-    async def _get_register_value(self, reg: str) -> int:
-        """Get a single register value.
-
-        Args:
-            reg: Register name.
-
-        Returns:
-            Register value.
-        """
-        result = await self._send_pipe_command(
-            "reg_get",
-            {"register": reg},
-        )
-        if isinstance(result, int):
-            return result
-        if isinstance(result, str):
-            try:
-                return int(result, 0)
-            except ValueError:
-                return 0
-        return 0
 
     async def set_register(self, register: str, value: int) -> bool:
         """Set a register value.

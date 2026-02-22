@@ -322,15 +322,6 @@ class SplashScreen(QSplashScreen):
         """
         self.set_progress(value, message)
 
-    def show_loading_step(self, step: str, progress: int) -> None:
-        """Show a loading step with progress.
-
-        Args:
-            step: Description of the current loading step.
-            progress: Progress percentage.
-        """
-        self.set_progress(progress, step)
-
     def resize_event_handler(self, a0: QResizeEvent | None) -> None:
         """Handle resize events to adjust overlay.
 

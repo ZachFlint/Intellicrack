@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.resources.font_manager import DEFAULT_CODE_FONT
 from intellicrack.ui.panels._async_bridge import run_bridge_coroutine
 from intellicrack.ui.panels._qt_compat import edit_table_item, set_max_block_count
 
@@ -105,7 +106,7 @@ class FridaPanel(QWidget):
         console_layout.addWidget(console_title)
 
         self._console = QPlainTextEdit()
-        self._console.setFont(QFont("JetBrains Mono", 9))
+        self._console.setFont(QFont(DEFAULT_CODE_FONT, 9))
         self._console.setReadOnly(True)
         set_max_block_count(self._console, 10000)
         console_layout.addWidget(self._console)
@@ -194,7 +195,7 @@ class FridaPanel(QWidget):
         editor_layout.addLayout(editor_header)
 
         self._script_editor = QPlainTextEdit()
-        self._script_editor.setFont(QFont("JetBrains Mono", 10))
+        self._script_editor.setFont(QFont(DEFAULT_CODE_FONT, 10))
         self._script_editor.setPlainText(_DEFAULT_FRIDA_SCRIPT)
         self._script_editor.setTabStopDistance(QFontMetrics(self._script_editor.font()).horizontalAdvance(" ") * 4)
         editor_layout.addWidget(self._script_editor)

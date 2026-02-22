@@ -426,6 +426,8 @@ class Radare2Panel(QWidget):
         except Exception:
             _logger.exception("radare2_disassemble_failed", extra={"address": hex(address)})
 
+        self.show_xrefs(address)
+
     def _refresh_imports(self) -> None:
         """Refresh the imports table from bridge."""
         if self._bridge is None:

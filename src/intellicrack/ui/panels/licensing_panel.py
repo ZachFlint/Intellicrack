@@ -28,6 +28,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.resources.font_manager import DEFAULT_CODE_FONT
 
 
 if TYPE_CHECKING:
@@ -74,7 +75,7 @@ class SummaryCard(QFrame):
         layout.setContentsMargins(16, 12, 16, 12)
         layout.setSpacing(12)
 
-        value_font = QFont("JetBrains Mono", 11)
+        value_font = QFont(DEFAULT_CODE_FONT, 11)
 
         self._algorithm_label = QLabel("Unknown")
         self._algorithm_label.setFont(value_font)
@@ -235,7 +236,7 @@ class ValidationFunctionsTable(QTableWidget):
 
         for row, func in enumerate(functions):
             addr_item = QTableWidgetItem(f"0x{func.address:08X}")
-            addr_item.setFont(QFont("JetBrains Mono", 9))
+            addr_item.setFont(QFont(DEFAULT_CODE_FONT, 9))
             addr_item.setForeground(QColor("#569cd6"))
             self.setItem(row, 0, addr_item)
 
@@ -322,7 +323,7 @@ class CryptoAPITable(QTableWidget):
 
         for row, call in enumerate(calls):
             addr_item = QTableWidgetItem(f"0x{call.address:08X}")
-            addr_item.setFont(QFont("JetBrains Mono", 9))
+            addr_item.setFont(QFont(DEFAULT_CODE_FONT, 9))
             addr_item.setForeground(QColor("#569cd6"))
             self.setItem(row, 0, addr_item)
 
@@ -399,18 +400,18 @@ class ConstantsTable(QTableWidget):
 
         for row, const in enumerate(constants):
             addr_item = QTableWidgetItem(f"0x{const.address:08X}")
-            addr_item.setFont(QFont("JetBrains Mono", 9))
+            addr_item.setFont(QFont(DEFAULT_CODE_FONT, 9))
             addr_item.setForeground(QColor("#569cd6"))
             self.setItem(row, 0, addr_item)
 
             hex_format = f"0x{{:0{const.bit_width // 4}X}}"
             hex_item = QTableWidgetItem(hex_format.format(const.value))
-            hex_item.setFont(QFont("JetBrains Mono", 9))
+            hex_item.setFont(QFont(DEFAULT_CODE_FONT, 9))
             hex_item.setForeground(QColor("#b5cea8"))
             self.setItem(row, 1, hex_item)
 
             dec_item = QTableWidgetItem(str(const.value))
-            dec_item.setFont(QFont("JetBrains Mono", 9))
+            dec_item.setFont(QFont(DEFAULT_CODE_FONT, 9))
             self.setItem(row, 2, dec_item)
 
             context_item = QTableWidgetItem(const.usage_context)

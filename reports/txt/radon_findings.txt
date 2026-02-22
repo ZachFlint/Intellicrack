@@ -211,59 +211,59 @@ tests\test_core\test_types.py:1379:0: function 'test_sandbox_error_with_type' - 
 tests\test_core\test_types.py:1385:0: function 'test_sandbox_error_with_vm_state' - complexity 2 (rank A)
 
 
-100 findings in src\intellicrack\ui\tools.py
+98 findings in src\intellicrack\ui\tools.py
 
-src\intellicrack\ui\tools.py:1410:4: method 'ToolOutputPanel._on_tab_close_requested' - complexity 21 (rank D)
+src\intellicrack\ui\tools.py:1398:4: method 'ToolOutputPanel._on_tab_close_requested' - complexity 21 (rank D)
 
-src\intellicrack\ui\tools.py:1482:4: method 'ToolOutputPanel.close_embedded_tools' - complexity 15 (rank C)
+src\intellicrack\ui\tools.py:1470:4: method 'ToolOutputPanel.close_embedded_tools' - complexity 15 (rank C)
 
-src\intellicrack\ui\tools.py:966:4: method 'ToolOutputPanel.add_x64dbg_tab' - complexity 6 (rank B)
+src\intellicrack\ui\tools.py:954:4: method 'ToolOutputPanel.add_x64dbg_tab' - complexity 6 (rank B)
 
-src\intellicrack\ui\tools.py:1202:4: method 'ToolOutputPanel.open_in_ghidra' - complexity 6 (rank B)
+src\intellicrack\ui\tools.py:1190:4: method 'ToolOutputPanel.open_in_ghidra' - complexity 6 (rank B)
 
-src\intellicrack\ui\tools.py:1225:4: method 'ToolOutputPanel.open_in_radare2' - complexity 6 (rank B)
+src\intellicrack\ui\tools.py:1213:4: method 'ToolOutputPanel.open_in_radare2' - complexity 6 (rank B)
 
-src\intellicrack\ui\tools.py:1270:4: method 'ToolOutputPanel.open_in_hxd' - complexity 6 (rank B)
+src\intellicrack\ui\tools.py:1258:4: method 'ToolOutputPanel.open_in_hxd' - complexity 6 (rank B)
 
-src\intellicrack\ui\tools.py:1293:4: method 'ToolOutputPanel.open_in_x64dbg' - complexity 6 (rank B)
+src\intellicrack\ui\tools.py:1281:4: method 'ToolOutputPanel.open_in_x64dbg' - complexity 6 (rank B)
 
-src\intellicrack\ui\tools.py:1321:4: method 'ToolOutputPanel.open_in_cutter' - complexity 6 (rank B)
+src\intellicrack\ui\tools.py:1309:4: method 'ToolOutputPanel.open_in_cutter' - complexity 6 (rank B)
 
-src\intellicrack\ui\tools.py:631:4: method 'XRefPanel.set_xrefs' - complexity 5 (rank A)
+src\intellicrack\ui\tools.py:619:4: method 'XRefPanel.set_xrefs' - complexity 5 (rank A)
 
-src\intellicrack\ui\tools.py:826:4: method 'ToolOutputPanel.activate_tab' - complexity 5 (rank A)
+src\intellicrack\ui\tools.py:814:4: method 'ToolOutputPanel.activate_tab' - complexity 5 (rank A)
 
-src\intellicrack\ui\tools.py:1022:4: method 'ToolOutputPanel.add_ghidra_tab' - complexity 5 (rank A)
+src\intellicrack\ui\tools.py:1010:4: method 'ToolOutputPanel.add_ghidra_tab' - complexity 5 (rank A)
 
-src\intellicrack\ui\tools.py:1057:4: method 'ToolOutputPanel.add_radare2_tab' - complexity 5 (rank A)
+src\intellicrack\ui\tools.py:1045:4: method 'ToolOutputPanel.add_radare2_tab' - complexity 5 (rank A)
 
-src\intellicrack\ui\tools.py:1092:4: method 'ToolOutputPanel.add_frida_tab' - complexity 5 (rank A)
+src\intellicrack\ui\tools.py:1080:4: method 'ToolOutputPanel.add_frida_tab' - complexity 5 (rank A)
 
-src\intellicrack\ui\tools.py:1248:4: method 'ToolOutputPanel.open_in_binary' - complexity 5 (rank A)
+src\intellicrack\ui\tools.py:1236:4: method 'ToolOutputPanel.open_in_binary' - complexity 5 (rank A)
 
-src\intellicrack\ui\tools.py:657:0: class 'ToolOutputPanel' - complexity 4 (rank A)
+src\intellicrack\ui\tools.py:645:0: class 'ToolOutputPanel' - complexity 4 (rank A)
 
-src\intellicrack\ui\tools.py:941:4: method 'ToolOutputPanel.add_hxd_tab' - complexity 4 (rank A)
+src\intellicrack\ui\tools.py:929:4: method 'ToolOutputPanel.add_hxd_tab' - complexity 4 (rank A)
 
-src\intellicrack\ui\tools.py:1127:4: method 'ToolOutputPanel.add_process_tab' - complexity 4 (rank A)
+src\intellicrack\ui\tools.py:1115:4: method 'ToolOutputPanel.add_process_tab' - complexity 4 (rank A)
 
-src\intellicrack\ui\tools.py:1152:4: method 'ToolOutputPanel.add_binary_tab' - complexity 4 (rank A)
+src\intellicrack\ui\tools.py:1140:4: method 'ToolOutputPanel.add_binary_tab' - complexity 4 (rank A)
 
-src\intellicrack\ui\tools.py:1177:4: method 'ToolOutputPanel.add_sandbox_tab' - complexity 4 (rank A)
+src\intellicrack\ui\tools.py:1165:4: method 'ToolOutputPanel.add_sandbox_tab' - complexity 4 (rank A)
 
-src\intellicrack\ui\tools.py:569:0: class 'XRefPanel' - complexity 3 (rank A)
+src\intellicrack\ui\tools.py:557:0: class 'XRefPanel' - complexity 3 (rank A)
 
-src\intellicrack\ui\tools.py:615:4: method 'XRefPanel._on_item_clicked' - complexity 3 (rank A)
+src\intellicrack\ui\tools.py:603:4: method 'XRefPanel._on_item_clicked' - complexity 3 (rank A)
 
-src\intellicrack\ui\tools.py:1005:4: method 'ToolOutputPanel.add_cutter_tab' - complexity 3 (rank A)
+src\intellicrack\ui\tools.py:993:4: method 'ToolOutputPanel.add_cutter_tab' - complexity 3 (rank A)
 
-src\intellicrack\ui\tools.py:1376:4: method 'ToolOutputPanel.update_licensing_analysis' - complexity 3 (rank A)
+src\intellicrack\ui\tools.py:1364:4: method 'ToolOutputPanel.update_licensing_analysis' - complexity 3 (rank A)
 
-src\intellicrack\ui\tools.py:1389:4: method 'ToolOutputPanel.activate_licensing_tab' - complexity 3 (rank A)
+src\intellicrack\ui\tools.py:1377:4: method 'ToolOutputPanel.activate_licensing_tab' - complexity 3 (rank A)
 
-src\intellicrack\ui\tools.py:1396:4: method 'ToolOutputPanel.activate_scripts_tab' - complexity 3 (rank A)
+src\intellicrack\ui\tools.py:1384:4: method 'ToolOutputPanel.activate_scripts_tab' - complexity 3 (rank A)
 
-src\intellicrack\ui\tools.py:1403:4: method 'ToolOutputPanel.activate_stack_tab' - complexity 3 (rank A)
+src\intellicrack\ui\tools.py:1391:4: method 'ToolOutputPanel.activate_stack_tab' - complexity 3 (rank A)
 
 src\intellicrack\ui\tools.py:39:0: class 'ToolWidget' - complexity 2 (rank A)
 
@@ -285,41 +285,39 @@ src\intellicrack\ui\tools.py:232:0: class 'BinaryPanelProtocol' - complexity 2 (
 
 src\intellicrack\ui\tools.py:249:0: class 'SandboxPanelProtocol' - complexity 2 (rank A)
 
-src\intellicrack\ui\tools.py:262:0: class 'AnalysisPanel' - complexity 2 (rank A)
+src\intellicrack\ui\tools.py:285:0: class 'CodeDisplay' - complexity 2 (rank A)
 
-src\intellicrack\ui\tools.py:297:0: class 'CodeDisplay' - complexity 2 (rank A)
+src\intellicrack\ui\tools.py:315:4: method 'CodeDisplay.set_language' - complexity 2 (rank A)
 
-src\intellicrack\ui\tools.py:327:4: method 'CodeDisplay.set_language' - complexity 2 (rank A)
+src\intellicrack\ui\tools.py:352:4: method 'CodeDisplay.goto_line' - complexity 2 (rank A)
 
-src\intellicrack\ui\tools.py:364:4: method 'CodeDisplay.goto_line' - complexity 2 (rank A)
+src\intellicrack\ui\tools.py:365:0: class 'ToolTab' - complexity 2 (rank A)
 
-src\intellicrack\ui\tools.py:377:0: class 'ToolTab' - complexity 2 (rank A)
+src\intellicrack\ui\tools.py:471:0: class 'FunctionListPanel' - complexity 2 (rank A)
 
-src\intellicrack\ui\tools.py:483:0: class 'FunctionListPanel' - complexity 2 (rank A)
+src\intellicrack\ui\tools.py:521:4: method 'FunctionListPanel._on_item_double_clicked' - complexity 2 (rank A)
 
-src\intellicrack\ui\tools.py:533:4: method 'FunctionListPanel._on_item_double_clicked' - complexity 2 (rank A)
+src\intellicrack\ui\tools.py:535:4: method 'FunctionListPanel.set_functions' - complexity 2 (rank A)
 
-src\intellicrack\ui\tools.py:547:4: method 'FunctionListPanel.set_functions' - complexity 2 (rank A)
+src\intellicrack\ui\tools.py:754:4: method 'ToolOutputPanel.set_tab_content' - complexity 2 (rank A)
 
-src\intellicrack\ui\tools.py:766:4: method 'ToolOutputPanel.set_tab_content' - complexity 2 (rank A)
+src\intellicrack\ui\tools.py:764:4: method 'ToolOutputPanel.set_tab_info' - complexity 2 (rank A)
 
-src\intellicrack\ui\tools.py:776:4: method 'ToolOutputPanel.set_tab_info' - complexity 2 (rank A)
+src\intellicrack\ui\tools.py:775:4: method 'ToolOutputPanel.append_tab_content' - complexity 2 (rank A)
 
-src\intellicrack\ui\tools.py:787:4: method 'ToolOutputPanel.append_tab_content' - complexity 2 (rank A)
+src\intellicrack\ui\tools.py:827:4: method 'ToolOutputPanel.log' - complexity 2 (rank A)
 
-src\intellicrack\ui\tools.py:839:4: method 'ToolOutputPanel.log' - complexity 2 (rank A)
+src\intellicrack\ui\tools.py:841:4: method 'ToolOutputPanel.clear_tab' - complexity 2 (rank A)
 
-src\intellicrack\ui\tools.py:853:4: method 'ToolOutputPanel.clear_tab' - complexity 2 (rank A)
+src\intellicrack\ui\tools.py:850:4: method 'ToolOutputPanel.clear_all' - complexity 2 (rank A)
 
-src\intellicrack\ui\tools.py:862:4: method 'ToolOutputPanel.clear_all' - complexity 2 (rank A)
+src\intellicrack\ui\tools.py:878:4: method 'ToolOutputPanel.add_licensing_panel' - complexity 2 (rank A)
 
-src\intellicrack\ui\tools.py:890:4: method 'ToolOutputPanel.add_licensing_panel' - complexity 2 (rank A)
+src\intellicrack\ui\tools.py:895:4: method 'ToolOutputPanel.add_script_panel' - complexity 2 (rank A)
 
-src\intellicrack\ui\tools.py:907:4: method 'ToolOutputPanel.add_script_panel' - complexity 2 (rank A)
+src\intellicrack\ui\tools.py:912:4: method 'ToolOutputPanel.add_stack_panel' - complexity 2 (rank A)
 
-src\intellicrack\ui\tools.py:924:4: method 'ToolOutputPanel.add_stack_panel' - complexity 2 (rank A)
-
-src\intellicrack\ui\tools.py:1344:4: method 'ToolOutputPanel._activate_tab_by_widget' - complexity 2 (rank A)
+src\intellicrack\ui\tools.py:1332:4: method 'ToolOutputPanel._activate_tab_by_widget' - complexity 2 (rank A)
 
 src\intellicrack\ui\tools.py:43:4: method 'ToolWidget.tool_started' - complexity 1 (rank A)
 
@@ -357,61 +355,59 @@ src\intellicrack\ui\tools.py:235:4: method 'BinaryPanelProtocol.load_file' - com
 
 src\intellicrack\ui\tools.py:252:4: method 'SandboxPanelProtocol.set_sandbox' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:265:4: method 'AnalysisPanel.set_analysis' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:292:4: method 'CodeDisplay.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:304:4: method 'CodeDisplay.__init__' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:308:4: method 'CodeDisplay._setup_ui' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:320:4: method 'CodeDisplay._setup_ui' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:327:4: method 'CodeDisplay.get_highlighter' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:339:4: method 'CodeDisplay.get_highlighter' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:335:4: method 'CodeDisplay.set_content' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:347:4: method 'CodeDisplay.set_content' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:344:4: method 'CodeDisplay.append_content' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:356:4: method 'CodeDisplay.append_content' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:372:4: method 'ToolTab.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:384:4: method 'ToolTab.__init__' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:390:4: method 'ToolTab._setup_ui' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:402:4: method 'ToolTab._setup_ui' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:428:4: method 'ToolTab.set_content' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:440:4: method 'ToolTab.set_content' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:436:4: method 'ToolTab.set_info' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:448:4: method 'ToolTab.set_info' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:446:4: method 'ToolTab.set_language' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:458:4: method 'ToolTab.set_language' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:454:4: method 'ToolTab.goto_line' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:466:4: method 'ToolTab.goto_line' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:462:4: method 'ToolTab.append_content' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:474:4: method 'ToolTab.append_content' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:479:4: method 'FunctionListPanel.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:491:4: method 'FunctionListPanel.__init__' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:489:4: method 'FunctionListPanel._setup_ui' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:501:4: method 'FunctionListPanel._setup_ui' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:548:4: method 'FunctionListPanel.get_functions' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:560:4: method 'FunctionListPanel.get_functions' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:565:4: method 'XRefPanel.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:577:4: method 'XRefPanel.__init__' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:574:4: method 'XRefPanel._setup_ui' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:586:4: method 'XRefPanel._setup_ui' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:662:4: method 'ToolOutputPanel.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:674:4: method 'ToolOutputPanel.__init__' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:675:4: method 'ToolOutputPanel._setup_ui' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:687:4: method 'ToolOutputPanel._setup_ui' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:736:4: method 'ToolOutputPanel._on_function_selected' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:748:4: method 'ToolOutputPanel._on_function_selected' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:746:4: method 'ToolOutputPanel._on_xref_selected' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:758:4: method 'ToolOutputPanel._on_xref_selected' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:785:4: method 'ToolOutputPanel.set_current_address' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:797:4: method 'ToolOutputPanel.set_current_address' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:793:4: method 'ToolOutputPanel.set_functions' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:805:4: method 'ToolOutputPanel.set_functions' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:801:4: method 'ToolOutputPanel.set_xrefs' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:813:4: method 'ToolOutputPanel.set_xrefs' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:858:4: method 'ToolOutputPanel._setup_embedded_tabs' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:870:4: method 'ToolOutputPanel._setup_embedded_tabs' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:1342:4: method 'ToolOutputPanel.get_embedded_tool' - complexity 1 (rank A)
 
-src\intellicrack\ui\tools.py:1354:4: method 'ToolOutputPanel.get_embedded_tool' - complexity 1 (rank A)
-
-src\intellicrack\ui\tools.py:1365:4: method 'ToolOutputPanel.get_panel' - complexity 1 (rank A)
+src\intellicrack\ui\tools.py:1353:4: method 'ToolOutputPanel.get_panel' - complexity 1 (rank A)
 
 
 89 findings in src\intellicrack\core\script_gen.py
@@ -593,6 +589,173 @@ src\intellicrack\core\script_gen.py:1243:4: method '_FallbackKeygenBuilder._algo
 src\intellicrack\core\script_gen.py:1247:4: method '_FallbackKeygenBuilder._generate_imports' - complexity 1 (rank A)
 
 src\intellicrack\core\script_gen.py:1251:4: method '_FallbackKeygenBuilder._generate_keygen_body' - complexity 1 (rank A)
+
+
+82 findings in src\intellicrack\ui\app.py
+
+src\intellicrack\ui\app.py:1550:4: method 'MainWindow.close_event_handler' - complexity 11 (rank C)
+
+src\intellicrack\ui\app.py:1062:4: method 'MainWindow._apply_provider_settings' - complexity 9 (rank B)
+
+src\intellicrack\ui\app.py:1191:4: method 'MainWindow._on_browse_models' - complexity 9 (rank B)
+
+src\intellicrack\ui\app.py:687:4: method 'MainWindow._on_tool_result' - complexity 8 (rank B)
+
+src\intellicrack\ui\app.py:904:4: method 'MainWindow._on_save_patched_binary' - complexity 7 (rank B)
+
+src\intellicrack\ui\app.py:945:4: method 'MainWindow._on_export_analysis' - complexity 7 (rank B)
+
+src\intellicrack\ui\app.py:1136:4: method 'MainWindow._on_refresh_models' - complexity 7 (rank B)
+
+src\intellicrack\ui\app.py:790:4: method 'MainWindow._on_new_session' - complexity 5 (rank A)
+
+src\intellicrack\ui\app.py:996:4: method 'MainWindow._apply_tool_settings' - complexity 5 (rank A)
+
+src\intellicrack\ui\app.py:1315:4: method 'MainWindow._on_open_x64dbg' - complexity 5 (rank A)
+
+src\intellicrack\ui\app.py:1357:4: method 'MainWindow._on_open_ghidra' - complexity 5 (rank A)
+
+src\intellicrack\ui\app.py:1375:4: method 'MainWindow._on_open_radare2' - complexity 5 (rank A)
+
+src\intellicrack\ui\app.py:1393:4: method 'MainWindow._on_open_frida' - complexity 5 (rank A)
+
+src\intellicrack\ui\app.py:172:4: method 'MainWindow._apply_smart_window_size' - complexity 4 (rank A)
+
+src\intellicrack\ui\app.py:842:4: method 'MainWindow._on_export_chat' - complexity 4 (rank A)
+
+src\intellicrack\ui\app.py:863:4: method 'MainWindow._on_export_session' - complexity 4 (rank A)
+
+src\intellicrack\ui\app.py:884:4: method 'MainWindow._on_import_session' - complexity 4 (rank A)
+
+src\intellicrack\ui\app.py:66:0: class 'AsyncWorker' - complexity 3 (rank A)
+
+src\intellicrack\ui\app.py:90:4: method 'AsyncWorker.run' - complexity 3 (rank A)
+
+src\intellicrack\ui\app.py:105:0: class 'MainWindow' - complexity 3 (rank A)
+
+src\intellicrack\ui\app.py:314:4: method 'MainWindow._setup_tools_menu' - complexity 3 (rank A)
+
+src\intellicrack\ui\app.py:572:4: method 'MainWindow._refresh_system_status' - complexity 3 (rank A)
+
+src\intellicrack\ui\app.py:818:4: method 'MainWindow._on_load_session' - complexity 3 (rank A)
+
+src\intellicrack\ui\app.py:1174:4: method 'MainWindow._on_models_refresh_finished' - complexity 3 (rank A)
+
+src\intellicrack\ui\app.py:1282:4: method 'MainWindow._on_preferences' - complexity 3 (rank A)
+
+src\intellicrack\ui\app.py:1333:4: method 'MainWindow._on_open_cutter' - complexity 3 (rank A)
+
+src\intellicrack\ui\app.py:1345:4: method 'MainWindow._on_open_hxd' - complexity 3 (rank A)
+
+src\intellicrack\ui\app.py:1419:4: method 'MainWindow._on_open_binary' - complexity 3 (rank A)
+
+src\intellicrack\ui\app.py:1437:4: method 'MainWindow._on_debug_current_binary' - complexity 3 (rank A)
+
+src\intellicrack\ui\app.py:1445:4: method 'MainWindow._on_analyze_current_binary' - complexity 3 (rank A)
+
+src\intellicrack\ui\app.py:1453:4: method 'MainWindow._on_hex_edit_current_binary' - complexity 3 (rank A)
+
+src\intellicrack\ui\app.py:1461:4: method 'MainWindow._on_open_binary_in_ghidra' - complexity 3 (rank A)
+
+src\intellicrack\ui\app.py:1469:4: method 'MainWindow._on_open_binary_in_radare2' - complexity 3 (rank A)
+
+src\intellicrack\ui\app.py:1524:4: method 'MainWindow._on_auto_approve_toggled' - complexity 3 (rank A)
+
+src\intellicrack\ui\app.py:264:4: method 'MainWindow._add_menu_action' - complexity 2 (rank A)
+
+src\intellicrack\ui\app.py:285:4: method 'MainWindow._setup_file_menu' - complexity 2 (rank A)
+
+src\intellicrack\ui\app.py:349:4: method 'MainWindow._setup_providers_menu' - complexity 2 (rank A)
+
+src\intellicrack\ui\app.py:367:4: method 'MainWindow._setup_sandbox_menu' - complexity 2 (rank A)
+
+src\intellicrack\ui\app.py:384:4: method 'MainWindow._setup_settings_menu' - complexity 2 (rank A)
+
+src\intellicrack\ui\app.py:404:4: method 'MainWindow._setup_help_menu' - complexity 2 (rank A)
+
+src\intellicrack\ui\app.py:420:4: method 'MainWindow._setup_menus' - complexity 2 (rank A)
+
+src\intellicrack\ui\app.py:438:4: method 'MainWindow._setup_toolbar' - complexity 2 (rank A)
+
+src\intellicrack\ui\app.py:669:4: method 'MainWindow._on_stream_chunk' - complexity 2 (rank A)
+
+src\intellicrack\ui\app.py:765:4: method 'MainWindow._on_load_binary' - complexity 2 (rank A)
+
+src\intellicrack\ui\app.py:986:4: method 'MainWindow._on_configure_tools' - complexity 2 (rank A)
+
+src\intellicrack\ui\app.py:1049:4: method 'MainWindow._on_configure_providers' - complexity 2 (rank A)
+
+src\intellicrack\ui\app.py:1221:4: method 'MainWindow._on_configure_sandbox' - complexity 2 (rank A)
+
+src\intellicrack\ui\app.py:1294:4: method 'MainWindow._on_toggle_theme' - complexity 2 (rank A)
+
+src\intellicrack\ui\app.py:1411:4: method 'MainWindow._on_open_process' - complexity 2 (rank A)
+
+src\intellicrack\ui\app.py:1429:4: method 'MainWindow._on_open_sandbox_panel' - complexity 2 (rank A)
+
+src\intellicrack\ui\app.py:1505:4: method 'MainWindow._on_provider_changed' - complexity 2 (rank A)
+
+src\intellicrack\ui\app.py:1516:4: method 'MainWindow._on_sandbox_toggled' - complexity 2 (rank A)
+
+src\intellicrack\ui\app.py:76:4: method 'AsyncWorker.__init__' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:119:4: method 'MainWindow.__init__' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:209:4: method 'MainWindow._setup_ui' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:554:4: method 'MainWindow._setup_statusbar' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:590:4: method 'MainWindow._connect_signals' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:601:4: method 'MainWindow._configure_orchestrator' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:611:4: method 'MainWindow._on_licensing_analysis_received' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:623:4: method 'MainWindow._on_licensing_analysis_activated' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:631:4: method 'MainWindow._request_tool_confirmation' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:654:4: method 'MainWindow._on_user_message' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:678:4: method 'MainWindow._on_tool_call' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:715:4: method 'MainWindow._run_async' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:726:4: method 'MainWindow._on_async_finished' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:737:4: method 'MainWindow._on_async_error' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:748:4: method 'MainWindow._update_status' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:756:4: method 'MainWindow._on_address_clicked' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:776:4: method 'MainWindow._load_binary' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:833:4: method 'MainWindow._on_save_session' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:981:4: method 'MainWindow._on_tool_status' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:1031:4: method 'MainWindow._on_tool_reinit_finished' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:1040:4: method 'MainWindow._on_tool_reinit_error' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:1118:4: method 'MainWindow._on_provider_reconnect_finished' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:1127:4: method 'MainWindow._on_provider_reconnect_error' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:1231:4: method 'MainWindow._apply_sandbox_settings' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:1244:4: method 'MainWindow._on_open_sandbox' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:1303:4: method 'MainWindow._on_focus_chat_input' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:1307:4: method 'MainWindow._on_about' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:1477:4: method 'MainWindow._show_tool_error' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:1492:4: method 'MainWindow._show_no_binary_warning' - complexity 1 (rank A)
+
+src\intellicrack\ui\app.py:1541:4: method 'MainWindow._on_cancel' - complexity 1 (rank A)
 
 
 81 findings in src\intellicrack\bridges\base.py
@@ -1213,151 +1376,6 @@ tests\test_providers\test_local_transformers_provider.py:484:4: method 'TestProv
 tests\test_providers\test_local_transformers_provider.py:598:4: method 'TestCacheClear.test_clear_cache' - complexity 1 (rank A)
 
 
-71 findings in src\intellicrack\ui\app.py
-
-src\intellicrack\ui\app.py:880:4: method 'MainWindow._apply_provider_settings' - complexity 9 (rank B)
-
-src\intellicrack\ui\app.py:954:4: method 'MainWindow._on_refresh_models' - complexity 7 (rank B)
-
-src\intellicrack\ui\app.py:642:4: method 'MainWindow._on_tool_result' - complexity 6 (rank B)
-
-src\intellicrack\ui\app.py:814:4: method 'MainWindow._apply_tool_settings' - complexity 5 (rank A)
-
-src\intellicrack\ui\app.py:172:4: method 'MainWindow._apply_smart_window_size' - complexity 4 (rank A)
-
-src\intellicrack\ui\app.py:778:4: method 'MainWindow._on_export_chat' - complexity 4 (rank A)
-
-src\intellicrack\ui\app.py:1277:4: method 'MainWindow.close_event_handler' - complexity 4 (rank A)
-
-src\intellicrack\ui\app.py:66:0: class 'AsyncWorker' - complexity 3 (rank A)
-
-src\intellicrack\ui\app.py:90:4: method 'AsyncWorker.run' - complexity 3 (rank A)
-
-src\intellicrack\ui\app.py:105:0: class 'MainWindow' - complexity 3 (rank A)
-
-src\intellicrack\ui\app.py:309:4: method 'MainWindow._setup_tools_menu' - complexity 3 (rank A)
-
-src\intellicrack\ui\app.py:735:4: method 'MainWindow._on_new_session' - complexity 3 (rank A)
-
-src\intellicrack\ui\app.py:754:4: method 'MainWindow._on_load_session' - complexity 3 (rank A)
-
-src\intellicrack\ui\app.py:992:4: method 'MainWindow._on_models_refresh_finished' - complexity 3 (rank A)
-
-src\intellicrack\ui\app.py:1086:4: method 'MainWindow._on_open_x64dbg' - complexity 3 (rank A)
-
-src\intellicrack\ui\app.py:1098:4: method 'MainWindow._on_open_cutter' - complexity 3 (rank A)
-
-src\intellicrack\ui\app.py:1110:4: method 'MainWindow._on_open_hxd' - complexity 3 (rank A)
-
-src\intellicrack\ui\app.py:1122:4: method 'MainWindow._on_open_ghidra' - complexity 3 (rank A)
-
-src\intellicrack\ui\app.py:1134:4: method 'MainWindow._on_open_radare2' - complexity 3 (rank A)
-
-src\intellicrack\ui\app.py:1162:4: method 'MainWindow._on_open_binary' - complexity 3 (rank A)
-
-src\intellicrack\ui\app.py:1180:4: method 'MainWindow._on_debug_current_binary' - complexity 3 (rank A)
-
-src\intellicrack\ui\app.py:1188:4: method 'MainWindow._on_analyze_current_binary' - complexity 3 (rank A)
-
-src\intellicrack\ui\app.py:1196:4: method 'MainWindow._on_hex_edit_current_binary' - complexity 3 (rank A)
-
-src\intellicrack\ui\app.py:1251:4: method 'MainWindow._on_auto_approve_toggled' - complexity 3 (rank A)
-
-src\intellicrack\ui\app.py:264:4: method 'MainWindow._add_menu_action' - complexity 2 (rank A)
-
-src\intellicrack\ui\app.py:285:4: method 'MainWindow._setup_file_menu' - complexity 2 (rank A)
-
-src\intellicrack\ui\app.py:340:4: method 'MainWindow._setup_providers_menu' - complexity 2 (rank A)
-
-src\intellicrack\ui\app.py:357:4: method 'MainWindow._setup_sandbox_menu' - complexity 2 (rank A)
-
-src\intellicrack\ui\app.py:374:4: method 'MainWindow._setup_settings_menu' - complexity 2 (rank A)
-
-src\intellicrack\ui\app.py:390:4: method 'MainWindow._setup_help_menu' - complexity 2 (rank A)
-
-src\intellicrack\ui\app.py:406:4: method 'MainWindow._setup_menus' - complexity 2 (rank A)
-
-src\intellicrack\ui\app.py:424:4: method 'MainWindow._setup_toolbar' - complexity 2 (rank A)
-
-src\intellicrack\ui\app.py:624:4: method 'MainWindow._on_stream_chunk' - complexity 2 (rank A)
-
-src\intellicrack\ui\app.py:710:4: method 'MainWindow._on_load_binary' - complexity 2 (rank A)
-
-src\intellicrack\ui\app.py:804:4: method 'MainWindow._on_configure_tools' - complexity 2 (rank A)
-
-src\intellicrack\ui\app.py:867:4: method 'MainWindow._on_configure_providers' - complexity 2 (rank A)
-
-src\intellicrack\ui\app.py:1009:4: method 'MainWindow._on_configure_sandbox' - complexity 2 (rank A)
-
-src\intellicrack\ui\app.py:1070:4: method 'MainWindow._on_preferences' - complexity 2 (rank A)
-
-src\intellicrack\ui\app.py:1146:4: method 'MainWindow._on_open_frida' - complexity 2 (rank A)
-
-src\intellicrack\ui\app.py:1154:4: method 'MainWindow._on_open_process' - complexity 2 (rank A)
-
-src\intellicrack\ui\app.py:1172:4: method 'MainWindow._on_open_sandbox_panel' - complexity 2 (rank A)
-
-src\intellicrack\ui\app.py:1232:4: method 'MainWindow._on_provider_changed' - complexity 2 (rank A)
-
-src\intellicrack\ui\app.py:1243:4: method 'MainWindow._on_sandbox_toggled' - complexity 2 (rank A)
-
-src\intellicrack\ui\app.py:76:4: method 'AsyncWorker.__init__' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:119:4: method 'MainWindow.__init__' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:209:4: method 'MainWindow._setup_ui' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:540:4: method 'MainWindow._setup_statusbar' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:554:4: method 'MainWindow._connect_signals' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:564:4: method 'MainWindow._configure_orchestrator' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:574:4: method 'MainWindow._on_licensing_analysis_received' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:586:4: method 'MainWindow._request_tool_confirmation' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:609:4: method 'MainWindow._on_user_message' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:633:4: method 'MainWindow._on_tool_call' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:660:4: method 'MainWindow._run_async' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:671:4: method 'MainWindow._on_async_finished' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:682:4: method 'MainWindow._on_async_error' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:693:4: method 'MainWindow._update_status' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:701:4: method 'MainWindow._on_address_clicked' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:721:4: method 'MainWindow._load_binary' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:769:4: method 'MainWindow._on_save_session' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:799:4: method 'MainWindow._on_tool_status' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:849:4: method 'MainWindow._on_tool_reinit_finished' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:858:4: method 'MainWindow._on_tool_reinit_error' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:936:4: method 'MainWindow._on_provider_reconnect_finished' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:945:4: method 'MainWindow._on_provider_reconnect_error' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:1019:4: method 'MainWindow._apply_sandbox_settings' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:1032:4: method 'MainWindow._on_open_sandbox' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:1078:4: method 'MainWindow._on_about' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:1204:4: method 'MainWindow._show_tool_error' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:1219:4: method 'MainWindow._show_no_binary_warning' - complexity 1 (rank A)
-
-src\intellicrack\ui\app.py:1268:4: method 'MainWindow._on_cancel' - complexity 1 (rank A)
-
-
 70 findings in src\intellicrack\ui\provider_config.py
 
 src\intellicrack\ui\provider_config.py:477:4: method 'ModelRefreshWorker._fetch_anthropic_models' - complexity 14 (rank C)
@@ -1501,147 +1519,6 @@ src\intellicrack\ui\provider_config.py:1633:4: method 'ModelSelectionDialog._set
 src\intellicrack\ui\provider_config.py:1683:4: method 'ModelSelectionDialog._on_item_double_clicked' - complexity 1 (rank A)
 
 
-69 findings in src\intellicrack\bridges\x64dbg.py
-
-src\intellicrack\bridges\x64dbg.py:270:0: function '_read_unicode_string_from_params' - complexity 11 (rank C)
-
-src\intellicrack\bridges\x64dbg.py:1547:4: method 'X64DbgBridge.get_memory_regions' - complexity 11 (rank C)
-
-src\intellicrack\bridges\x64dbg.py:1709:4: method 'X64DbgBridge.get_stack_trace' - complexity 9 (rank B)
-
-src\intellicrack\bridges\x64dbg.py:1846:4: method 'X64DbgBridge._get_threads' - complexity 9 (rank B)
-
-src\intellicrack\bridges\x64dbg.py:1914:4: method 'X64DbgBridge._get_modules' - complexity 9 (rank B)
-
-src\intellicrack\bridges\x64dbg.py:207:0: function '_extract_command_line_from_peb' - complexity 8 (rank B)
-
-src\intellicrack\bridges\x64dbg.py:1636:4: method 'X64DbgBridge.disassemble_at' - complexity 8 (rank B)
-
-src\intellicrack\bridges\x64dbg.py:2018:4: method 'X64DbgBridge._get_parent_pid' - complexity 8 (rank B)
-
-src\intellicrack\bridges\x64dbg.py:997:4: method 'X64DbgBridge._detect_architecture' - complexity 7 (rank B)
-
-src\intellicrack\bridges\x64dbg.py:1774:4: method 'X64DbgBridge.scan_memory' - complexity 7 (rank B)
-
-src\intellicrack\bridges\x64dbg.py:880:4: method 'X64DbgBridge._handle_event' - complexity 6 (rank B)
-
-src\intellicrack\bridges\x64dbg.py:899:4: method 'X64DbgBridge._send_pipe_command' - complexity 6 (rank B)
-
-src\intellicrack\bridges\x64dbg.py:250:0: function '_get_process_pointer_size' - complexity 5 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:809:4: method 'X64DbgBridge._start_debugger' - complexity 5 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:938:4: method 'X64DbgBridge._send_command' - complexity 5 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1345:4: method 'X64DbgBridge.read_memory' - complexity 5 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1399:4: method 'X64DbgBridge.write_memory' - complexity 5 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1453:4: method 'X64DbgBridge.allocate_memory' - complexity 5 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:143:0: function '_read_process_memory_block' - complexity 4 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:175:0: function '_read_process_command_line' - complexity 4 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:305:0: class 'X64DbgBridge' - complexity 4 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:741:4: method 'X64DbgBridge.initialize' - complexity 4 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:962:4: method 'X64DbgBridge.load' - complexity 4 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1306:4: method 'X64DbgBridge._get_register_value' - complexity 4 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1508:4: method 'X64DbgBridge.free_memory' - complexity 4 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1681:4: method 'X64DbgBridge.assemble_at' - complexity 4 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:768:4: method 'X64DbgBridge.shutdown' - complexity 3 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:795:4: method 'X64DbgBridge.is_available' - complexity 3 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:855:4: method 'X64DbgBridge._connect' - complexity 3 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1071:4: method 'X64DbgBridge.stop' - complexity 3 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1832:4: method 'X64DbgBridge.spawn' - complexity 3 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1989:4: method 'X64DbgBridge._get_process_info' - complexity 3 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:874:4: method 'X64DbgBridge._close_connection' - complexity 2 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1030:4: method 'X64DbgBridge.attach' - complexity 2 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1083:4: method 'X64DbgBridge.step_into' - complexity 2 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1093:4: method 'X64DbgBridge.step_over' - complexity 2 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1103:4: method 'X64DbgBridge.step_out' - complexity 2 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1153:4: method 'X64DbgBridge.remove_breakpoint' - complexity 2 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1220:4: method 'X64DbgBridge.remove_watchpoint' - complexity 2 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1250:4: method 'X64DbgBridge.get_registers' - complexity 2 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:2078:4: method 'X64DbgBridge._get_command_line' - complexity 2 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:72:0: function 'get_capstone' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:81:0: function 'get_keystone' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:321:4: method 'X64DbgBridge.__init__' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:345:4: method 'X64DbgBridge.attached_pid' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:354:4: method 'X64DbgBridge.attached_pid' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:363:4: method 'X64DbgBridge.binary_path' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:372:4: method 'X64DbgBridge.binary_path' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:381:4: method 'X64DbgBridge.is_64bit' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:390:4: method 'X64DbgBridge.is_64bit' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:399:4: method 'X64DbgBridge.breakpoints' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:408:4: method 'X64DbgBridge.next_bp_id' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:417:4: method 'X64DbgBridge.next_bp_id' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:426:4: method 'X64DbgBridge.watchpoints' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:435:4: method 'X64DbgBridge.next_wp_id' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:444:4: method 'X64DbgBridge.next_wp_id' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:453:4: method 'X64DbgBridge.x64dbg_path' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:462:4: method 'X64DbgBridge.x64dbg_path' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:471:4: method 'X64DbgBridge.name' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:480:4: method 'X64DbgBridge.tool_definition' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1049:4: method 'X64DbgBridge.detach' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1061:4: method 'X64DbgBridge.run' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1066:4: method 'X64DbgBridge.pause' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1113:4: method 'X64DbgBridge.set_breakpoint' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1170:4: method 'X64DbgBridge.get_breakpoints' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1178:4: method 'X64DbgBridge.set_watchpoint' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1242:4: method 'X64DbgBridge.get_watchpoints' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1328:4: method 'X64DbgBridge.set_register' - complexity 1 (rank A)
-
-src\intellicrack\bridges\x64dbg.py:1821:4: method 'X64DbgBridge.run_command' - complexity 1 (rank A)
-
-
 69 findings in tests\test_core\test_license_analyzer.py
 
 tests\test_core\test_license_analyzer.py:693:0: class 'TestLicensingAnalysisDataclass' - complexity 18 (rank C)
@@ -1781,6 +1658,141 @@ tests\test_core\test_license_analyzer.py:102:4: method '_TestableAnalyzer.parse_
 tests\test_core\test_license_analyzer.py:105:4: method '_TestableAnalyzer.build_confidence' - complexity 1 (rank A)
 
 tests\test_core\test_license_analyzer.py:686:4: method 'TestAnalyzeNonexistentFile.test_analyze_missing_file_raises' - complexity 1 (rank A)
+
+
+66 findings in src\intellicrack\bridges\x64dbg.py
+
+src\intellicrack\bridges\x64dbg.py:252:0: function '_read_unicode_string_from_params' - complexity 11 (rank C)
+
+src\intellicrack\bridges\x64dbg.py:1507:4: method 'X64DbgBridge.get_memory_regions' - complexity 11 (rank C)
+
+src\intellicrack\bridges\x64dbg.py:1669:4: method 'X64DbgBridge.get_stack_trace' - complexity 9 (rank B)
+
+src\intellicrack\bridges\x64dbg.py:1806:4: method 'X64DbgBridge._get_threads' - complexity 9 (rank B)
+
+src\intellicrack\bridges\x64dbg.py:1874:4: method 'X64DbgBridge._get_modules' - complexity 9 (rank B)
+
+src\intellicrack\bridges\x64dbg.py:189:0: function '_extract_command_line_from_peb' - complexity 8 (rank B)
+
+src\intellicrack\bridges\x64dbg.py:1596:4: method 'X64DbgBridge.disassemble_at' - complexity 8 (rank B)
+
+src\intellicrack\bridges\x64dbg.py:1978:4: method 'X64DbgBridge._get_parent_pid' - complexity 8 (rank B)
+
+src\intellicrack\bridges\x64dbg.py:979:4: method 'X64DbgBridge._detect_architecture' - complexity 7 (rank B)
+
+src\intellicrack\bridges\x64dbg.py:1734:4: method 'X64DbgBridge.scan_memory' - complexity 7 (rank B)
+
+src\intellicrack\bridges\x64dbg.py:862:4: method 'X64DbgBridge._handle_event' - complexity 6 (rank B)
+
+src\intellicrack\bridges\x64dbg.py:881:4: method 'X64DbgBridge._send_pipe_command' - complexity 6 (rank B)
+
+src\intellicrack\bridges\x64dbg.py:232:0: function '_get_process_pointer_size' - complexity 5 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:791:4: method 'X64DbgBridge._start_debugger' - complexity 5 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:920:4: method 'X64DbgBridge._send_command' - complexity 5 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1305:4: method 'X64DbgBridge.read_memory' - complexity 5 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1359:4: method 'X64DbgBridge.write_memory' - complexity 5 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1413:4: method 'X64DbgBridge.allocate_memory' - complexity 5 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:125:0: function '_read_process_memory_block' - complexity 4 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:157:0: function '_read_process_command_line' - complexity 4 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:287:0: class 'X64DbgBridge' - complexity 4 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:723:4: method 'X64DbgBridge.initialize' - complexity 4 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:944:4: method 'X64DbgBridge.load' - complexity 4 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1468:4: method 'X64DbgBridge.free_memory' - complexity 4 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1641:4: method 'X64DbgBridge.assemble_at' - complexity 4 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:750:4: method 'X64DbgBridge.shutdown' - complexity 3 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:777:4: method 'X64DbgBridge.is_available' - complexity 3 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:837:4: method 'X64DbgBridge._connect' - complexity 3 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1053:4: method 'X64DbgBridge.stop' - complexity 3 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1792:4: method 'X64DbgBridge.spawn' - complexity 3 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1949:4: method 'X64DbgBridge._get_process_info' - complexity 3 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:856:4: method 'X64DbgBridge._close_connection' - complexity 2 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1012:4: method 'X64DbgBridge.attach' - complexity 2 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1065:4: method 'X64DbgBridge.step_into' - complexity 2 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1075:4: method 'X64DbgBridge.step_over' - complexity 2 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1085:4: method 'X64DbgBridge.step_out' - complexity 2 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1135:4: method 'X64DbgBridge.remove_breakpoint' - complexity 2 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1202:4: method 'X64DbgBridge.remove_watchpoint' - complexity 2 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1232:4: method 'X64DbgBridge.get_registers' - complexity 2 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:2038:4: method 'X64DbgBridge._get_command_line' - complexity 2 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:303:4: method 'X64DbgBridge.__init__' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:327:4: method 'X64DbgBridge.attached_pid' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:336:4: method 'X64DbgBridge.attached_pid' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:345:4: method 'X64DbgBridge.binary_path' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:354:4: method 'X64DbgBridge.binary_path' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:363:4: method 'X64DbgBridge.is_64bit' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:372:4: method 'X64DbgBridge.is_64bit' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:381:4: method 'X64DbgBridge.breakpoints' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:390:4: method 'X64DbgBridge.next_bp_id' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:399:4: method 'X64DbgBridge.next_bp_id' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:408:4: method 'X64DbgBridge.watchpoints' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:417:4: method 'X64DbgBridge.next_wp_id' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:426:4: method 'X64DbgBridge.next_wp_id' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:435:4: method 'X64DbgBridge.x64dbg_path' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:444:4: method 'X64DbgBridge.x64dbg_path' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:453:4: method 'X64DbgBridge.name' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:462:4: method 'X64DbgBridge.tool_definition' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1031:4: method 'X64DbgBridge.detach' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1043:4: method 'X64DbgBridge.run' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1048:4: method 'X64DbgBridge.pause' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1095:4: method 'X64DbgBridge.set_breakpoint' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1152:4: method 'X64DbgBridge.get_breakpoints' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1160:4: method 'X64DbgBridge.set_watchpoint' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1224:4: method 'X64DbgBridge.get_watchpoints' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1288:4: method 'X64DbgBridge.set_register' - complexity 1 (rank A)
+
+src\intellicrack\bridges\x64dbg.py:1781:4: method 'X64DbgBridge.run_command' - complexity 1 (rank A)
 
 
 66 findings in src\intellicrack\core\license_analyzer.py
@@ -2043,51 +2055,51 @@ tests\test_core\test_script_gen_keygen.py:419:4: method 'TestKeyFormatting.test_
 
 54 findings in src\intellicrack\core\orchestrator.py
 
-src\intellicrack\core\orchestrator.py:370:4: method 'Orchestrator._run_agent_loop' - complexity 11 (rank C)
+src\intellicrack\core\orchestrator.py:370:4: method 'Orchestrator._run_agent_loop' - complexity 12 (rank C)
 
-src\intellicrack\core\orchestrator.py:953:4: method 'Orchestrator.cancel' - complexity 8 (rank B)
+src\intellicrack\core\orchestrator.py:957:4: method 'Orchestrator.cancel' - complexity 8 (rank B)
 
-src\intellicrack\core\orchestrator.py:1027:4: method 'Orchestrator.reanalyze_licensing' - complexity 8 (rank B)
+src\intellicrack\core\orchestrator.py:1032:4: method 'Orchestrator.reanalyze_licensing' - complexity 8 (rank B)
 
-src\intellicrack\core\orchestrator.py:763:4: method 'Orchestrator._execute_tool_calls' - complexity 7 (rank B)
+src\intellicrack\core\orchestrator.py:767:4: method 'Orchestrator._execute_tool_calls' - complexity 7 (rank B)
 
-src\intellicrack\core\orchestrator.py:465:4: method 'Orchestrator._generate_system_prompt' - complexity 6 (rank B)
+src\intellicrack\core\orchestrator.py:469:4: method 'Orchestrator._generate_system_prompt' - complexity 6 (rank B)
 
-src\intellicrack\core\orchestrator.py:647:4: method 'Orchestrator._should_use_streaming' - complexity 6 (rank B)
+src\intellicrack\core\orchestrator.py:651:4: method 'Orchestrator._should_use_streaming' - complexity 6 (rank B)
 
 src\intellicrack\core\orchestrator.py:228:4: method 'Orchestrator.start_session' - complexity 5 (rank A)
 
 src\intellicrack\core\orchestrator.py:320:4: method 'Orchestrator.process_user_input' - complexity 5 (rank A)
 
-src\intellicrack\core\orchestrator.py:671:4: method 'Orchestrator._stream_response' - complexity 5 (rank A)
+src\intellicrack\core\orchestrator.py:675:4: method 'Orchestrator._stream_response' - complexity 5 (rank A)
 
-src\intellicrack\core\orchestrator.py:975:4: method 'Orchestrator.add_binary' - complexity 5 (rank A)
+src\intellicrack\core\orchestrator.py:979:4: method 'Orchestrator.add_binary' - complexity 5 (rank A)
 
-src\intellicrack\core\orchestrator.py:1287:4: method 'Orchestrator.shutdown' - complexity 5 (rank A)
+src\intellicrack\core\orchestrator.py:1292:4: method 'Orchestrator.shutdown' - complexity 5 (rank A)
 
-src\intellicrack\core\orchestrator.py:577:4: method 'Orchestrator._call_llm' - complexity 4 (rank A)
+src\intellicrack\core\orchestrator.py:581:4: method 'Orchestrator._call_llm' - complexity 4 (rank A)
 
-src\intellicrack\core\orchestrator.py:1061:4: method 'Orchestrator.set_active_binary' - complexity 4 (rank A)
+src\intellicrack\core\orchestrator.py:1066:4: method 'Orchestrator.set_active_binary' - complexity 4 (rank A)
 
-src\intellicrack\core\orchestrator.py:1265:4: method 'Orchestrator.activate_binary_by_name' - complexity 4 (rank A)
+src\intellicrack\core\orchestrator.py:1270:4: method 'Orchestrator.activate_binary_by_name' - complexity 4 (rank A)
 
 src\intellicrack\core\orchestrator.py:127:0: class 'Orchestrator' - complexity 3 (rank A)
 
-src\intellicrack\core\orchestrator.py:430:4: method 'Orchestrator._is_final_response_expected' - complexity 3 (rank A)
+src\intellicrack\core\orchestrator.py:434:4: method 'Orchestrator._is_final_response_expected' - complexity 3 (rank A)
 
-src\intellicrack\core\orchestrator.py:722:4: method 'Orchestrator._non_stream_response' - complexity 3 (rank A)
+src\intellicrack\core\orchestrator.py:726:4: method 'Orchestrator._non_stream_response' - complexity 3 (rank A)
 
-src\intellicrack\core\orchestrator.py:864:4: method 'Orchestrator._should_confirm' - complexity 3 (rank A)
+src\intellicrack\core\orchestrator.py:868:4: method 'Orchestrator._should_confirm' - complexity 3 (rank A)
 
-src\intellicrack\core\orchestrator.py:914:4: method 'Orchestrator._request_confirmation' - complexity 3 (rank A)
+src\intellicrack\core\orchestrator.py:918:4: method 'Orchestrator._request_confirmation' - complexity 3 (rank A)
 
-src\intellicrack\core\orchestrator.py:944:4: method 'Orchestrator.confirm_pending' - complexity 3 (rank A)
+src\intellicrack\core\orchestrator.py:948:4: method 'Orchestrator.confirm_pending' - complexity 3 (rank A)
 
-src\intellicrack\core\orchestrator.py:1007:4: method 'Orchestrator._run_license_analysis' - complexity 3 (rank A)
+src\intellicrack\core\orchestrator.py:1011:4: method 'Orchestrator._run_license_analysis' - complexity 3 (rank A)
 
-src\intellicrack\core\orchestrator.py:1152:4: method 'Orchestrator.get_tool_status' - complexity 3 (rank A)
+src\intellicrack\core\orchestrator.py:1157:4: method 'Orchestrator.get_tool_status' - complexity 3 (rank A)
 
-src\intellicrack\core\orchestrator.py:1213:4: method 'Orchestrator.configure_hooks' - complexity 3 (rank A)
+src\intellicrack\core\orchestrator.py:1218:4: method 'Orchestrator.configure_hooks' - complexity 3 (rank A)
 
 src\intellicrack\core\orchestrator.py:82:0: class 'OrchestratorStats' - complexity 2 (rank A)
 
@@ -2095,17 +2107,17 @@ src\intellicrack\core\orchestrator.py:158:4: method 'Orchestrator.__init__' - co
 
 src\intellicrack\core\orchestrator.py:279:4: method 'Orchestrator.load_session' - complexity 2 (rank A)
 
-src\intellicrack\core\orchestrator.py:442:4: method 'Orchestrator._build_messages' - complexity 2 (rank A)
+src\intellicrack\core\orchestrator.py:446:4: method 'Orchestrator._build_messages' - complexity 2 (rank A)
 
-src\intellicrack\core\orchestrator.py:808:4: method 'Orchestrator._execute_single_tool_call' - complexity 2 (rank A)
+src\intellicrack\core\orchestrator.py:812:4: method 'Orchestrator._execute_single_tool_call' - complexity 2 (rank A)
 
-src\intellicrack\core\orchestrator.py:896:4: method 'Orchestrator._is_destructive_operation' - complexity 2 (rank A)
+src\intellicrack\core\orchestrator.py:900:4: method 'Orchestrator._is_destructive_operation' - complexity 2 (rank A)
 
-src\intellicrack\core\orchestrator.py:1082:4: method 'Orchestrator.add_patch' - complexity 2 (rank A)
+src\intellicrack\core\orchestrator.py:1087:4: method 'Orchestrator.add_patch' - complexity 2 (rank A)
 
-src\intellicrack\core\orchestrator.py:1171:4: method 'Orchestrator.initialize_tool' - complexity 2 (rank A)
+src\intellicrack\core\orchestrator.py:1176:4: method 'Orchestrator.initialize_tool' - complexity 2 (rank A)
 
-src\intellicrack\core\orchestrator.py:1200:4: method 'Orchestrator.get_system_status' - complexity 2 (rank A)
+src\intellicrack\core\orchestrator.py:1205:4: method 'Orchestrator.get_system_status' - complexity 2 (rank A)
 
 src\intellicrack\core\orchestrator.py:46:0: class 'OrchestratorConfig' - complexity 1 (rank A)
 
@@ -2125,108 +2137,108 @@ src\intellicrack\core\orchestrator.py:220:4: method 'Orchestrator.provider_regis
 
 src\intellicrack\core\orchestrator.py:302:4: method 'Orchestrator._load_binary' - complexity 1 (rank A)
 
-src\intellicrack\core\orchestrator.py:566:4: method 'Orchestrator._estimate_tokens' - complexity 1 (rank A)
+src\intellicrack\core\orchestrator.py:570:4: method 'Orchestrator._estimate_tokens' - complexity 1 (rank A)
 
-src\intellicrack\core\orchestrator.py:1053:4: method 'Orchestrator.set_licensing_analysis_callback' - complexity 1 (rank A)
+src\intellicrack\core\orchestrator.py:1058:4: method 'Orchestrator.set_licensing_analysis_callback' - complexity 1 (rank A)
 
-src\intellicrack\core\orchestrator.py:1098:4: method 'Orchestrator.set_message_callback' - complexity 1 (rank A)
+src\intellicrack\core\orchestrator.py:1103:4: method 'Orchestrator.set_message_callback' - complexity 1 (rank A)
 
-src\intellicrack\core\orchestrator.py:1106:4: method 'Orchestrator.set_tool_call_callback' - complexity 1 (rank A)
+src\intellicrack\core\orchestrator.py:1111:4: method 'Orchestrator.set_tool_call_callback' - complexity 1 (rank A)
 
-src\intellicrack\core\orchestrator.py:1114:4: method 'Orchestrator.set_tool_result_callback' - complexity 1 (rank A)
+src\intellicrack\core\orchestrator.py:1119:4: method 'Orchestrator.set_tool_result_callback' - complexity 1 (rank A)
 
-src\intellicrack\core\orchestrator.py:1122:4: method 'Orchestrator.set_stream_callback' - complexity 1 (rank A)
+src\intellicrack\core\orchestrator.py:1127:4: method 'Orchestrator.set_stream_callback' - complexity 1 (rank A)
 
-src\intellicrack\core\orchestrator.py:1130:4: method 'Orchestrator.set_confirmation_callback' - complexity 1 (rank A)
+src\intellicrack\core\orchestrator.py:1135:4: method 'Orchestrator.set_confirmation_callback' - complexity 1 (rank A)
 
-src\intellicrack\core\orchestrator.py:1141:4: method 'Orchestrator.set_async_confirmation_callback' - complexity 1 (rank A)
+src\intellicrack\core\orchestrator.py:1146:4: method 'Orchestrator.set_async_confirmation_callback' - complexity 1 (rank A)
 
-src\intellicrack\core\orchestrator.py:1185:4: method 'Orchestrator.save_session' - complexity 1 (rank A)
+src\intellicrack\core\orchestrator.py:1190:4: method 'Orchestrator.save_session' - complexity 1 (rank A)
 
-src\intellicrack\core\orchestrator.py:1192:4: method 'Orchestrator.set_confirmation_level' - complexity 1 (rank A)
+src\intellicrack\core\orchestrator.py:1197:4: method 'Orchestrator.set_confirmation_level' - complexity 1 (rank A)
 
-src\intellicrack\core\orchestrator.py:1229:4: method 'Orchestrator.refresh_session_state' - complexity 1 (rank A)
+src\intellicrack\core\orchestrator.py:1234:4: method 'Orchestrator.refresh_session_state' - complexity 1 (rank A)
 
-src\intellicrack\core\orchestrator.py:1233:4: method 'Orchestrator.register_manual_patch' - complexity 1 (rank A)
+src\intellicrack\core\orchestrator.py:1238:4: method 'Orchestrator.register_manual_patch' - complexity 1 (rank A)
 
-src\intellicrack\core\orchestrator.py:1257:4: method 'Orchestrator.resolve_confirmation' - complexity 1 (rank A)
+src\intellicrack\core\orchestrator.py:1262:4: method 'Orchestrator.resolve_confirmation' - complexity 1 (rank A)
 
 
 54 findings in src\intellicrack\sandbox\qemu.py
 
-src\intellicrack\sandbox\qemu.py:768:4: method 'QEMUSandbox._build_qemu_command' - complexity 15 (rank C)
+src\intellicrack\sandbox\qemu.py:766:4: method 'QEMUSandbox._build_qemu_command' - complexity 15 (rank C)
 
-src\intellicrack\sandbox\qemu.py:1560:4: method 'QEMUSandbox.run_binary' - complexity 13 (rank C)
+src\intellicrack\sandbox\qemu.py:1559:4: method 'QEMUSandbox.run_binary' - complexity 13 (rank C)
 
-src\intellicrack\sandbox\qemu.py:1712:4: method 'QEMUSandbox._parse_network_log' - complexity 12 (rank C)
+src\intellicrack\sandbox\qemu.py:1711:4: method 'QEMUSandbox._parse_network_log' - complexity 12 (rank C)
 
-src\intellicrack\sandbox\qemu.py:471:4: method 'GuestAgentClient.send_command' - complexity 10 (rank B)
+src\intellicrack\sandbox\qemu.py:469:4: method 'GuestAgentClient.send_command' - complexity 10 (rank B)
 
-src\intellicrack\sandbox\qemu.py:644:4: method 'QEMUSandbox._detect_accelerator' - complexity 9 (rank B)
+src\intellicrack\sandbox\qemu.py:642:4: method 'QEMUSandbox._detect_accelerator' - complexity 9 (rank B)
 
-src\intellicrack\sandbox\qemu.py:862:4: method 'QEMUSandbox.start' - complexity 9 (rank B)
+src\intellicrack\sandbox\qemu.py:860:4: method 'QEMUSandbox.start' - complexity 9 (rank B)
 
-src\intellicrack\sandbox\qemu.py:1751:4: method 'QEMUSandbox._parse_process_log' - complexity 9 (rank B)
+src\intellicrack\sandbox\qemu.py:1750:4: method 'QEMUSandbox._parse_process_log' - complexity 9 (rank B)
 
-src\intellicrack\sandbox\qemu.py:615:4: method 'QEMUSandbox._find_qemu' - complexity 8 (rank B)
+src\intellicrack\sandbox\qemu.py:613:4: method 'QEMUSandbox._find_qemu' - complexity 8 (rank B)
 
-src\intellicrack\sandbox\qemu.py:443:4: method 'GuestAgentClient._read_messages' - complexity 7 (rank B)
+src\intellicrack\sandbox\qemu.py:441:4: method 'GuestAgentClient._read_messages' - complexity 7 (rank B)
 
-src\intellicrack\sandbox\qemu.py:1000:4: method 'QEMUSandbox._cleanup' - complexity 7 (rank B)
+src\intellicrack\sandbox\qemu.py:999:4: method 'QEMUSandbox._cleanup' - complexity 7 (rank B)
 
-src\intellicrack\sandbox\qemu.py:1445:4: method 'QEMUSandbox.run_command' - complexity 7 (rank B)
+src\intellicrack\sandbox\qemu.py:1444:4: method 'QEMUSandbox.run_command' - complexity 7 (rank B)
 
-src\intellicrack\sandbox\qemu.py:1883:4: method 'QEMUSandbox.list_snapshots' - complexity 7 (rank B)
+src\intellicrack\sandbox\qemu.py:1882:4: method 'QEMUSandbox.list_snapshots' - complexity 7 (rank B)
 
 src\intellicrack\sandbox\qemu.py:227:4: method 'QMPClient._send_command' - complexity 6 (rank B)
 
-src\intellicrack\sandbox\qemu.py:545:0: class 'QEMUSandbox' - complexity 6 (rank B)
+src\intellicrack\sandbox\qemu.py:543:0: class 'QEMUSandbox' - complexity 6 (rank B)
 
-src\intellicrack\sandbox\qemu.py:959:4: method 'QEMUSandbox.stop' - complexity 6 (rank B)
+src\intellicrack\sandbox\qemu.py:958:4: method 'QEMUSandbox.stop' - complexity 6 (rank B)
 
-src\intellicrack\sandbox\qemu.py:1528:4: method 'QEMUSandbox._poll_for_result' - complexity 6 (rank B)
+src\intellicrack\sandbox\qemu.py:1527:4: method 'QEMUSandbox._poll_for_result' - complexity 6 (rank B)
 
-src\intellicrack\sandbox\qemu.py:1647:4: method 'QEMUSandbox._parse_file_log' - complexity 6 (rank B)
+src\intellicrack\sandbox\qemu.py:1646:4: method 'QEMUSandbox._parse_file_log' - complexity 6 (rank B)
 
-src\intellicrack\sandbox\qemu.py:1679:4: method 'QEMUSandbox._parse_registry_log' - complexity 6 (rank B)
+src\intellicrack\sandbox\qemu.py:1678:4: method 'QEMUSandbox._parse_registry_log' - complexity 6 (rank B)
 
 src\intellicrack\sandbox\qemu.py:356:0: class 'GuestAgentClient' - complexity 5 (rank A)
 
-src\intellicrack\sandbox\qemu.py:390:4: method 'GuestAgentClient.connect' - complexity 4 (rank A)
+src\intellicrack\sandbox\qemu.py:388:4: method 'GuestAgentClient.connect' - complexity 4 (rank A)
 
-src\intellicrack\sandbox\qemu.py:424:4: method 'GuestAgentClient.disconnect' - complexity 4 (rank A)
+src\intellicrack\sandbox\qemu.py:422:4: method 'GuestAgentClient.disconnect' - complexity 4 (rank A)
 
-src\intellicrack\sandbox\qemu.py:1492:4: method 'QEMUSandbox._generate_execution_script' - complexity 4 (rank A)
+src\intellicrack\sandbox\qemu.py:1491:4: method 'QEMUSandbox._generate_execution_script' - complexity 4 (rank A)
 
-src\intellicrack\sandbox\qemu.py:1786:4: method 'QEMUSandbox.copy_to_sandbox' - complexity 4 (rank A)
+src\intellicrack\sandbox\qemu.py:1785:4: method 'QEMUSandbox.copy_to_sandbox' - complexity 4 (rank A)
 
-src\intellicrack\sandbox\qemu.py:1813:4: method 'QEMUSandbox.copy_from_sandbox' - complexity 4 (rank A)
+src\intellicrack\sandbox\qemu.py:1812:4: method 'QEMUSandbox.copy_from_sandbox' - complexity 4 (rank A)
 
 src\intellicrack\sandbox\qemu.py:184:4: method 'QMPClient.connect' - complexity 3 (rank A)
 
 src\intellicrack\sandbox\qemu.py:215:4: method 'QMPClient.disconnect' - complexity 3 (rank A)
 
-src\intellicrack\sandbox\qemu.py:529:4: method 'GuestAgentClient.get_pending_messages' - complexity 3 (rank A)
+src\intellicrack\sandbox\qemu.py:527:4: method 'GuestAgentClient.get_pending_messages' - complexity 3 (rank A)
 
-src\intellicrack\sandbox\qemu.py:717:4: method 'QEMUSandbox._get_free_port' - complexity 3 (rank A)
+src\intellicrack\sandbox\qemu.py:715:4: method 'QEMUSandbox._get_free_port' - complexity 3 (rank A)
 
-src\intellicrack\sandbox\qemu.py:738:4: method 'QEMUSandbox._check_qemu_started' - complexity 3 (rank A)
+src\intellicrack\sandbox\qemu.py:736:4: method 'QEMUSandbox._check_qemu_started' - complexity 3 (rank A)
 
-src\intellicrack\sandbox\qemu.py:753:4: method 'QEMUSandbox._connect_and_verify_qmp' - complexity 3 (rank A)
+src\intellicrack\sandbox\qemu.py:751:4: method 'QEMUSandbox._connect_and_verify_qmp' - complexity 3 (rank A)
 
-src\intellicrack\sandbox\qemu.py:1028:4: method 'QEMUSandbox._create_guest_agent_script' - complexity 3 (rank A)
+src\intellicrack\sandbox\qemu.py:1027:4: method 'QEMUSandbox._create_guest_agent_script' - complexity 3 (rank A)
 
-src\intellicrack\sandbox\qemu.py:1841:4: method 'QEMUSandbox.take_snapshot' - complexity 3 (rank A)
+src\intellicrack\sandbox\qemu.py:1840:4: method 'QEMUSandbox.take_snapshot' - complexity 3 (rank A)
 
-src\intellicrack\sandbox\qemu.py:1864:4: method 'QEMUSandbox.restore_snapshot' - complexity 3 (rank A)
+src\intellicrack\sandbox\qemu.py:1863:4: method 'QEMUSandbox.restore_snapshot' - complexity 3 (rank A)
 
-src\intellicrack\sandbox\qemu.py:1905:4: method 'QEMUSandbox.delete_snapshot' - complexity 3 (rank A)
+src\intellicrack\sandbox\qemu.py:1904:4: method 'QEMUSandbox.delete_snapshot' - complexity 3 (rank A)
 
 src\intellicrack\sandbox\qemu.py:163:0: class 'QMPClient' - complexity 2 (rank A)
 
-src\intellicrack\sandbox\qemu.py:561:4: method 'QEMUSandbox.__init__' - complexity 2 (rank A)
+src\intellicrack\sandbox\qemu.py:559:4: method 'QEMUSandbox.__init__' - complexity 2 (rank A)
 
-src\intellicrack\sandbox\qemu.py:593:4: method 'QEMUSandbox.is_available' - complexity 2 (rank A)
+src\intellicrack\sandbox\qemu.py:591:4: method 'QEMUSandbox.is_available' - complexity 2 (rank A)
 
 src\intellicrack\sandbox\qemu.py:87:0: class 'GuestOS' - complexity 1 (rank A)
 
@@ -2256,11 +2268,11 @@ src\intellicrack\sandbox\qemu.py:330:4: method 'QMPClient.delvm' - complexity 1 
 
 src\intellicrack\sandbox\qemu.py:344:4: method 'QMPClient.info_snapshots' - complexity 1 (rank A)
 
-src\intellicrack\sandbox\qemu.py:365:4: method 'GuestAgentClient.__init__' - complexity 1 (rank A)
+src\intellicrack\sandbox\qemu.py:363:4: method 'GuestAgentClient.__init__' - complexity 1 (rank A)
 
-src\intellicrack\sandbox\qemu.py:382:4: method 'GuestAgentClient.is_connected' - complexity 1 (rank A)
+src\intellicrack\sandbox\qemu.py:380:4: method 'GuestAgentClient.is_connected' - complexity 1 (rank A)
 
-src\intellicrack\sandbox\qemu.py:585:4: method 'QEMUSandbox.qemu_config' - complexity 1 (rank A)
+src\intellicrack\sandbox\qemu.py:583:4: method 'QEMUSandbox.qemu_config' - complexity 1 (rank A)
 
 
 52 findings in src\intellicrack\ui\tool_config.py
@@ -2279,19 +2291,19 @@ src\intellicrack\ui\tool_config.py:488:4: method 'ToolStatusCheckWorker._check_t
 
 src\intellicrack\ui\tool_config.py:588:4: method 'ToolStatusCheckWorker._check_radare2' - complexity 7 (rank B)
 
-src\intellicrack\ui\tool_config.py:1393:4: method 'ToolStatusDialog._on_tool_status_received' - complexity 7 (rank B)
+src\intellicrack\ui\tool_config.py:1392:4: method 'ToolStatusDialog._on_tool_status_received' - complexity 7 (rank B)
 
-src\intellicrack\ui\tool_config.py:1141:4: method 'ToolCapabilitiesWidget.set_tool' - complexity 6 (rank B)
+src\intellicrack\ui\tool_config.py:1140:4: method 'ToolCapabilitiesWidget.set_tool' - complexity 6 (rank B)
 
 src\intellicrack\ui\tool_config.py:75:0: class 'ToolInstallWorker' - complexity 5 (rank A)
 
 src\intellicrack\ui\tool_config.py:449:0: class 'ToolStatusCheckWorker' - complexity 5 (rank A)
 
-src\intellicrack\ui\tool_config.py:984:4: method 'ToolSettingsWidget._install_tool' - complexity 5 (rank A)
+src\intellicrack\ui\tool_config.py:983:4: method 'ToolSettingsWidget._install_tool' - complexity 5 (rank A)
 
-src\intellicrack\ui\tool_config.py:1053:4: method 'ToolSettingsWidget.save_settings' - complexity 4 (rank A)
+src\intellicrack\ui\tool_config.py:1052:4: method 'ToolSettingsWidget.save_settings' - complexity 4 (rank A)
 
-src\intellicrack\ui\tool_config.py:1078:0: class 'ToolCapabilitiesWidget' - complexity 4 (rank A)
+src\intellicrack\ui\tool_config.py:1077:0: class 'ToolCapabilitiesWidget' - complexity 4 (rank A)
 
 src\intellicrack\ui\tool_config.py:513:4: method 'ToolStatusCheckWorker._check_builtin' - complexity 3 (rank A)
 
@@ -2299,17 +2311,17 @@ src\intellicrack\ui\tool_config.py:561:4: method 'ToolStatusCheckWorker._check_x
 
 src\intellicrack\ui\tool_config.py:625:0: class 'ToolConfigDialog' - complexity 3 (rank A)
 
-src\intellicrack\ui\tool_config.py:696:4: method 'ToolConfigDialog._load_tools' - complexity 3 (rank A)
+src\intellicrack\ui\tool_config.py:695:4: method 'ToolConfigDialog._load_tools' - complexity 3 (rank A)
 
-src\intellicrack\ui\tool_config.py:727:4: method 'ToolConfigDialog._on_tool_selected' - complexity 3 (rank A)
+src\intellicrack\ui\tool_config.py:726:4: method 'ToolConfigDialog._on_tool_selected' - complexity 3 (rank A)
 
-src\intellicrack\ui\tool_config.py:763:0: class 'ToolSettingsWidget' - complexity 3 (rank A)
+src\intellicrack\ui\tool_config.py:762:0: class 'ToolSettingsWidget' - complexity 3 (rank A)
 
-src\intellicrack\ui\tool_config.py:925:4: method 'ToolSettingsWidget._load_from_config' - complexity 3 (rank A)
+src\intellicrack\ui\tool_config.py:924:4: method 'ToolSettingsWidget._load_from_config' - complexity 3 (rank A)
 
-src\intellicrack\ui\tool_config.py:1175:0: class 'ToolStatusDialog' - complexity 3 (rank A)
+src\intellicrack\ui\tool_config.py:1174:0: class 'ToolStatusDialog' - complexity 3 (rank A)
 
-src\intellicrack\ui\tool_config.py:1348:4: method 'ToolStatusDialog._load_settings' - complexity 3 (rank A)
+src\intellicrack\ui\tool_config.py:1347:4: method 'ToolStatusDialog._load_settings' - complexity 3 (rank A)
 
 src\intellicrack\ui\tool_config.py:120:4: method 'ToolInstallWorker.run' - complexity 2 (rank A)
 
@@ -2323,29 +2335,29 @@ src\intellicrack\ui\tool_config.py:475:4: method 'ToolStatusCheckWorker.run' - c
 
 src\intellicrack\ui\tool_config.py:641:4: method 'ToolConfigDialog.__init__' - complexity 2 (rank A)
 
-src\intellicrack\ui\tool_config.py:667:4: method 'ToolConfigDialog._setup_ui' - complexity 2 (rank A)
+src\intellicrack\ui\tool_config.py:666:4: method 'ToolConfigDialog._setup_ui' - complexity 2 (rank A)
 
-src\intellicrack\ui\tool_config.py:747:4: method 'ToolConfigDialog._save_all_settings' - complexity 2 (rank A)
+src\intellicrack\ui\tool_config.py:746:4: method 'ToolConfigDialog._save_all_settings' - complexity 2 (rank A)
 
-src\intellicrack\ui\tool_config.py:753:4: method 'ToolConfigDialog.get_settings' - complexity 2 (rank A)
+src\intellicrack\ui\tool_config.py:752:4: method 'ToolConfigDialog.get_settings' - complexity 2 (rank A)
 
-src\intellicrack\ui\tool_config.py:775:4: method 'ToolSettingsWidget.__init__' - complexity 2 (rank A)
+src\intellicrack\ui\tool_config.py:774:4: method 'ToolSettingsWidget.__init__' - complexity 2 (rank A)
 
-src\intellicrack\ui\tool_config.py:898:4: method 'ToolSettingsWidget._load_settings' - complexity 2 (rank A)
+src\intellicrack\ui\tool_config.py:897:4: method 'ToolSettingsWidget._load_settings' - complexity 2 (rank A)
 
-src\intellicrack\ui\tool_config.py:942:4: method 'ToolSettingsWidget._browse_path' - complexity 2 (rank A)
+src\intellicrack\ui\tool_config.py:941:4: method 'ToolSettingsWidget._browse_path' - complexity 2 (rank A)
 
-src\intellicrack\ui\tool_config.py:966:4: method 'ToolSettingsWidget._on_status_checked' - complexity 2 (rank A)
+src\intellicrack\ui\tool_config.py:965:4: method 'ToolSettingsWidget._on_status_checked' - complexity 2 (rank A)
 
-src\intellicrack\ui\tool_config.py:1024:4: method 'ToolSettingsWidget._on_install_finished' - complexity 2 (rank A)
+src\intellicrack\ui\tool_config.py:1023:4: method 'ToolSettingsWidget._on_install_finished' - complexity 2 (rank A)
 
-src\intellicrack\ui\tool_config.py:1090:4: method 'ToolCapabilitiesWidget._setup_ui' - complexity 2 (rank A)
+src\intellicrack\ui\tool_config.py:1089:4: method 'ToolCapabilitiesWidget._setup_ui' - complexity 2 (rank A)
 
-src\intellicrack\ui\tool_config.py:1318:4: method 'ToolStatusDialog._on_tool_selected' - complexity 2 (rank A)
+src\intellicrack\ui\tool_config.py:1317:4: method 'ToolStatusDialog._on_tool_selected' - complexity 2 (rank A)
 
-src\intellicrack\ui\tool_config.py:1341:4: method 'ToolStatusDialog._on_configure' - complexity 2 (rank A)
+src\intellicrack\ui\tool_config.py:1340:4: method 'ToolStatusDialog._on_configure' - complexity 2 (rank A)
 
-src\intellicrack\ui\tool_config.py:1364:4: method 'ToolStatusDialog._refresh_status' - complexity 2 (rank A)
+src\intellicrack\ui\tool_config.py:1363:4: method 'ToolStatusDialog._refresh_status' - complexity 2 (rank A)
 
 src\intellicrack\ui\tool_config.py:103:4: method 'ToolInstallWorker.__init__' - complexity 1 (rank A)
 
@@ -2353,21 +2365,21 @@ src\intellicrack\ui\tool_config.py:322:4: method 'ToolInstallWorker._post_instal
 
 src\intellicrack\ui\tool_config.py:458:4: method 'ToolStatusCheckWorker.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\tool_config.py:738:4: method 'ToolConfigDialog._on_accept' - complexity 1 (rank A)
+src\intellicrack\ui\tool_config.py:737:4: method 'ToolConfigDialog._on_accept' - complexity 1 (rank A)
 
-src\intellicrack\ui\tool_config.py:743:4: method 'ToolConfigDialog._on_apply' - complexity 1 (rank A)
+src\intellicrack\ui\tool_config.py:742:4: method 'ToolConfigDialog._on_apply' - complexity 1 (rank A)
 
-src\intellicrack\ui\tool_config.py:809:4: method 'ToolSettingsWidget._setup_ui' - complexity 1 (rank A)
+src\intellicrack\ui\tool_config.py:808:4: method 'ToolSettingsWidget._setup_ui' - complexity 1 (rank A)
 
-src\intellicrack\ui\tool_config.py:951:4: method 'ToolSettingsWidget._check_status' - complexity 1 (rank A)
+src\intellicrack\ui\tool_config.py:950:4: method 'ToolSettingsWidget._check_status' - complexity 1 (rank A)
 
-src\intellicrack\ui\tool_config.py:1040:4: method 'ToolSettingsWidget.get_settings' - complexity 1 (rank A)
+src\intellicrack\ui\tool_config.py:1039:4: method 'ToolSettingsWidget.get_settings' - complexity 1 (rank A)
 
-src\intellicrack\ui\tool_config.py:1081:4: method 'ToolCapabilitiesWidget.__init__' - complexity 1 (rank A)
+src\intellicrack\ui\tool_config.py:1080:4: method 'ToolCapabilitiesWidget.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\tool_config.py:1251:4: method 'ToolStatusDialog.__init__' - complexity 1 (rank A)
+src\intellicrack\ui\tool_config.py:1250:4: method 'ToolStatusDialog.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\tool_config.py:1274:4: method 'ToolStatusDialog._setup_ui' - complexity 1 (rank A)
+src\intellicrack\ui\tool_config.py:1273:4: method 'ToolStatusDialog._setup_ui' - complexity 1 (rank A)
 
 
 52 findings in tests\test_ui\test_font_manager.py
@@ -2477,107 +2489,6 @@ tests\test_ui\test_font_manager.py:385:4: method 'TestFontAssets.test_font_confi
 tests\test_ui\test_font_manager.py:40:0: function 'font_manager' - complexity 1 (rank A)
 
 
-49 findings in src\intellicrack\core\session.py
-
-src\intellicrack\core\session.py:738:4: method 'SessionStore.import_from_json' - complexity 9 (rank B)
-
-src\intellicrack\core\session.py:344:4: method 'SessionStore.load' - complexity 7 (rank B)
-
-src\intellicrack\core\session.py:297:4: method 'SessionStore.save' - complexity 6 (rank B)
-
-src\intellicrack\core\session.py:574:4: method 'SessionStore._serialize_message' - complexity 5 (rank A)
-
-src\intellicrack\core\session.py:607:4: method 'SessionStore._deserialize_message' - complexity 5 (rank A)
-
-src\intellicrack\core\session.py:704:4: method 'SessionStore.export_to_json' - complexity 5 (rank A)
-
-src\intellicrack\core\session.py:218:0: class 'SessionStore' - complexity 4 (rank A)
-
-src\intellicrack\core\session.py:524:4: method 'SessionStore._serialize_binary' - complexity 4 (rank A)
-
-src\intellicrack\core\session.py:549:4: method 'SessionStore._deserialize_binary' - complexity 4 (rank A)
-
-src\intellicrack\core\session.py:861:4: method 'SessionManager.load' - complexity 3 (rank A)
-
-src\intellicrack\core\session.py:917:4: method 'SessionManager.delete' - complexity 3 (rank A)
-
-src\intellicrack\core\session.py:981:4: method 'SessionManager.import_json' - complexity 3 (rank A)
-
-src\intellicrack\core\session.py:76:0: class 'Session' - complexity 2 (rank A)
-
-src\intellicrack\core\session.py:112:4: method 'Session.create' - complexity 2 (rank A)
-
-src\intellicrack\core\session.py:141:4: method 'Session.active_binary' - complexity 2 (rank A)
-
-src\intellicrack\core\session.py:239:4: method 'SessionStore._connection' - complexity 2 (rank A)
-
-src\intellicrack\core\session.py:392:4: method 'SessionStore.delete' - complexity 2 (rank A)
-
-src\intellicrack\core\session.py:414:4: method 'SessionStore.list_all' - complexity 2 (rank A)
-
-src\intellicrack\core\session.py:454:4: method 'SessionStore.search_by_tag' - complexity 2 (rank A)
-
-src\intellicrack\core\session.py:495:4: method 'SessionStore.cleanup_old' - complexity 2 (rank A)
-
-src\intellicrack\core\session.py:633:4: method 'SessionStore._serialize_tool_state' - complexity 2 (rank A)
-
-src\intellicrack\core\session.py:651:4: method 'SessionStore._deserialize_tool_state' - complexity 2 (rank A)
-
-src\intellicrack\core\session.py:792:0: class 'SessionManager' - complexity 2 (rank A)
-
-src\intellicrack\core\session.py:833:4: method 'SessionManager.create' - complexity 2 (rank A)
-
-src\intellicrack\core\session.py:902:4: method 'SessionManager.save' - complexity 2 (rank A)
-
-src\intellicrack\core\session.py:908:4: method 'SessionManager.close' - complexity 2 (rank A)
-
-src\intellicrack\core\session.py:965:4: method 'SessionManager.export_json' - complexity 2 (rank A)
-
-src\intellicrack\core\session.py:1003:4: method 'SessionManager.export_current' - complexity 2 (rank A)
-
-src\intellicrack\core\session.py:1017:4: method 'SessionManager._start_auto_save' - complexity 2 (rank A)
-
-src\intellicrack\core\session.py:1024:4: method 'SessionManager._stop_auto_save' - complexity 2 (rank A)
-
-src\intellicrack\core\session.py:1032:4: method 'SessionManager._auto_save_loop' - complexity 2 (rank A)
-
-src\intellicrack\core\session.py:51:0: class 'SessionMetadata' - complexity 1 (rank A)
-
-src\intellicrack\core\session.py:151:4: method 'Session.add_binary' - complexity 1 (rank A)
-
-src\intellicrack\core\session.py:161:4: method 'Session.add_message' - complexity 1 (rank A)
-
-src\intellicrack\core\session.py:170:4: method 'Session.add_patch' - complexity 1 (rank A)
-
-src\intellicrack\core\session.py:179:4: method 'Session.add_licensing_analysis' - complexity 1 (rank A)
-
-src\intellicrack\core\session.py:189:4: method 'Session.get_licensing_analysis' - complexity 1 (rank A)
-
-src\intellicrack\core\session.py:200:4: method 'Session.to_metadata' - complexity 1 (rank A)
-
-src\intellicrack\core\session.py:227:4: method 'SessionStore.__init__' - complexity 1 (rank A)
-
-src\intellicrack\core\session.py:263:4: method 'SessionStore._init_database' - complexity 1 (rank A)
-
-src\intellicrack\core\session.py:669:4: method 'SessionStore._serialize_patch' - complexity 1 (rank A)
-
-src\intellicrack\core\session.py:687:4: method 'SessionStore._deserialize_patch' - complexity 1 (rank A)
-
-src\intellicrack\core\session.py:804:4: method 'SessionManager.__init__' - complexity 1 (rank A)
-
-src\intellicrack\core\session.py:825:4: method 'SessionManager.current' - complexity 1 (rank A)
-
-src\intellicrack\core\session.py:882:4: method 'SessionManager.get' - complexity 1 (rank A)
-
-src\intellicrack\core\session.py:893:4: method 'SessionManager.update' - complexity 1 (rank A)
-
-src\intellicrack\core\session.py:932:4: method 'SessionManager.list_sessions' - complexity 1 (rank A)
-
-src\intellicrack\core\session.py:943:4: method 'SessionManager.search_by_tag' - complexity 1 (rank A)
-
-src\intellicrack\core\session.py:954:4: method 'SessionManager.cleanup' - complexity 1 (rank A)
-
-
 49 findings in tests\test_ui\test_icon_manager.py
 
 tests\test_ui\test_icon_manager.py:54:0: class 'TestIconLoading' - complexity 4 (rank A)
@@ -2677,6 +2588,105 @@ tests\test_ui\test_icon_manager.py:314:4: method 'TestPreloadIcons.test_preload_
 tests\test_ui\test_icon_manager.py:343:4: method 'TestIconIntegrity.test_icon_manager_available_flag' - complexity 2 (rank A)
 
 tests\test_ui\test_icon_manager.py:27:0: function 'icon_manager' - complexity 1 (rank A)
+
+
+48 findings in src\intellicrack\core\session.py
+
+src\intellicrack\core\session.py:721:4: method 'SessionStore.import_from_json' - complexity 9 (rank B)
+
+src\intellicrack\core\session.py:327:4: method 'SessionStore.load' - complexity 7 (rank B)
+
+src\intellicrack\core\session.py:280:4: method 'SessionStore.save' - complexity 6 (rank B)
+
+src\intellicrack\core\session.py:557:4: method 'SessionStore._serialize_message' - complexity 5 (rank A)
+
+src\intellicrack\core\session.py:590:4: method 'SessionStore._deserialize_message' - complexity 5 (rank A)
+
+src\intellicrack\core\session.py:687:4: method 'SessionStore.export_to_json' - complexity 5 (rank A)
+
+src\intellicrack\core\session.py:201:0: class 'SessionStore' - complexity 4 (rank A)
+
+src\intellicrack\core\session.py:507:4: method 'SessionStore._serialize_binary' - complexity 4 (rank A)
+
+src\intellicrack\core\session.py:532:4: method 'SessionStore._deserialize_binary' - complexity 4 (rank A)
+
+src\intellicrack\core\session.py:845:4: method 'SessionManager.load' - complexity 3 (rank A)
+
+src\intellicrack\core\session.py:902:4: method 'SessionManager.delete' - complexity 3 (rank A)
+
+src\intellicrack\core\session.py:966:4: method 'SessionManager.import_json' - complexity 3 (rank A)
+
+src\intellicrack\core\session.py:76:0: class 'Session' - complexity 2 (rank A)
+
+src\intellicrack\core\session.py:112:4: method 'Session.create' - complexity 2 (rank A)
+
+src\intellicrack\core\session.py:141:4: method 'Session.active_binary' - complexity 2 (rank A)
+
+src\intellicrack\core\session.py:222:4: method 'SessionStore._connection' - complexity 2 (rank A)
+
+src\intellicrack\core\session.py:375:4: method 'SessionStore.delete' - complexity 2 (rank A)
+
+src\intellicrack\core\session.py:397:4: method 'SessionStore.list_all' - complexity 2 (rank A)
+
+src\intellicrack\core\session.py:437:4: method 'SessionStore.search_by_tag' - complexity 2 (rank A)
+
+src\intellicrack\core\session.py:478:4: method 'SessionStore.cleanup_old' - complexity 2 (rank A)
+
+src\intellicrack\core\session.py:616:4: method 'SessionStore._serialize_tool_state' - complexity 2 (rank A)
+
+src\intellicrack\core\session.py:634:4: method 'SessionStore._deserialize_tool_state' - complexity 2 (rank A)
+
+src\intellicrack\core\session.py:775:0: class 'SessionManager' - complexity 2 (rank A)
+
+src\intellicrack\core\session.py:816:4: method 'SessionManager.create' - complexity 2 (rank A)
+
+src\intellicrack\core\session.py:886:4: method 'SessionManager.save' - complexity 2 (rank A)
+
+src\intellicrack\core\session.py:893:4: method 'SessionManager.close' - complexity 2 (rank A)
+
+src\intellicrack\core\session.py:950:4: method 'SessionManager.export_json' - complexity 2 (rank A)
+
+src\intellicrack\core\session.py:988:4: method 'SessionManager.export_current' - complexity 2 (rank A)
+
+src\intellicrack\core\session.py:1002:4: method 'SessionManager._start_auto_save' - complexity 2 (rank A)
+
+src\intellicrack\core\session.py:1009:4: method 'SessionManager._stop_auto_save' - complexity 2 (rank A)
+
+src\intellicrack\core\session.py:1017:4: method 'SessionManager._auto_save_loop' - complexity 2 (rank A)
+
+src\intellicrack\core\session.py:51:0: class 'SessionMetadata' - complexity 1 (rank A)
+
+src\intellicrack\core\session.py:151:4: method 'Session.add_binary' - complexity 1 (rank A)
+
+src\intellicrack\core\session.py:161:4: method 'Session.add_message' - complexity 1 (rank A)
+
+src\intellicrack\core\session.py:170:4: method 'Session.add_patch' - complexity 1 (rank A)
+
+src\intellicrack\core\session.py:179:4: method 'Session.add_licensing_analysis' - complexity 1 (rank A)
+
+src\intellicrack\core\session.py:189:4: method 'Session.get_licensing_analysis' - complexity 1 (rank A)
+
+src\intellicrack\core\session.py:210:4: method 'SessionStore.__init__' - complexity 1 (rank A)
+
+src\intellicrack\core\session.py:246:4: method 'SessionStore._init_database' - complexity 1 (rank A)
+
+src\intellicrack\core\session.py:652:4: method 'SessionStore._serialize_patch' - complexity 1 (rank A)
+
+src\intellicrack\core\session.py:670:4: method 'SessionStore._deserialize_patch' - complexity 1 (rank A)
+
+src\intellicrack\core\session.py:787:4: method 'SessionManager.__init__' - complexity 1 (rank A)
+
+src\intellicrack\core\session.py:808:4: method 'SessionManager.current' - complexity 1 (rank A)
+
+src\intellicrack\core\session.py:866:4: method 'SessionManager.get' - complexity 1 (rank A)
+
+src\intellicrack\core\session.py:877:4: method 'SessionManager.update' - complexity 1 (rank A)
+
+src\intellicrack\core\session.py:917:4: method 'SessionManager.list_sessions' - complexity 1 (rank A)
+
+src\intellicrack\core\session.py:928:4: method 'SessionManager.search_by_tag' - complexity 1 (rank A)
+
+src\intellicrack\core\session.py:939:4: method 'SessionManager.cleanup' - complexity 1 (rank A)
 
 
 48 findings in tests\test_ui\test_theme_manager.py
@@ -2974,27 +2984,27 @@ tests\test_core\test_process_manager.py:263:4: method 'TestRunTrackedAsync.test_
 
 43 findings in src\intellicrack\credentials\oauth.py
 
-src\intellicrack\credentials\oauth.py:691:4: method 'OAuthManager.get_token' - complexity 9 (rank B)
+src\intellicrack\credentials\oauth.py:689:4: method 'OAuthManager.get_token' - complexity 9 (rank B)
 
-src\intellicrack\credentials\oauth.py:720:4: method 'OAuthManager.refresh_token' - complexity 7 (rank B)
+src\intellicrack\credentials\oauth.py:718:4: method 'OAuthManager.refresh_token' - complexity 7 (rank B)
 
-src\intellicrack\credentials\oauth.py:783:4: method 'OAuthManager.revoke_token' - complexity 7 (rank B)
+src\intellicrack\credentials\oauth.py:781:4: method 'OAuthManager.revoke_token' - complexity 7 (rank B)
 
-src\intellicrack\credentials\oauth.py:561:4: method 'OAuthManager._exchange_code_for_token' - complexity 6 (rank B)
+src\intellicrack\credentials\oauth.py:559:4: method 'OAuthManager._exchange_code_for_token' - complexity 6 (rank B)
 
 src\intellicrack\credentials\oauth.py:246:4: method 'OAuthCallbackHandler.do_GET' - complexity 5 (rank A)
 
 src\intellicrack\credentials\oauth.py:345:4: method 'OAuthCallbackServer.wait_for_callback' - complexity 5 (rank A)
 
-src\intellicrack\credentials\oauth.py:445:4: method 'OAuthManager.build_authorization_url' - complexity 5 (rank A)
+src\intellicrack\credentials\oauth.py:443:4: method 'OAuthManager.build_authorization_url' - complexity 5 (rank A)
 
-src\intellicrack\credentials\oauth.py:662:4: method 'OAuthManager._load_token' - complexity 5 (rank A)
+src\intellicrack\credentials\oauth.py:660:4: method 'OAuthManager._load_token' - complexity 5 (rank A)
 
 src\intellicrack\credentials\oauth.py:238:0: class 'OAuthCallbackHandler' - complexity 4 (rank A)
 
 src\intellicrack\credentials\oauth.py:379:0: class 'OAuthManager' - complexity 4 (rank A)
 
-src\intellicrack\credentials\oauth.py:628:4: method 'OAuthManager._store_token' - complexity 4 (rank A)
+src\intellicrack\credentials\oauth.py:626:4: method 'OAuthManager._store_token' - complexity 4 (rank A)
 
 src\intellicrack\credentials\oauth.py:108:0: class 'OAuthToken' - complexity 3 (rank A)
 
@@ -3004,11 +3014,11 @@ src\intellicrack\credentials\oauth.py:308:0: class 'OAuthCallbackServer' - compl
 
 src\intellicrack\credentials\oauth.py:368:4: method 'OAuthCallbackServer.stop' - complexity 3 (rank A)
 
-src\intellicrack\credentials\oauth.py:522:4: method 'OAuthManager.handle_callback' - complexity 3 (rank A)
+src\intellicrack\credentials\oauth.py:520:4: method 'OAuthManager.handle_callback' - complexity 3 (rank A)
 
-src\intellicrack\credentials\oauth.py:883:0: function 'get_oauth_manager' - complexity 2 (rank A)
+src\intellicrack\credentials\oauth.py:881:0: function 'get_oauth_manager' - complexity 2 (rank A)
 
-src\intellicrack\credentials\oauth.py:897:0: function 'authorize_google' - complexity 2 (rank A)
+src\intellicrack\credentials\oauth.py:895:0: function 'authorize_google' - complexity 2 (rank A)
 
 src\intellicrack\credentials\oauth.py:128:4: method 'OAuthToken.is_expired' - complexity 2 (rank A)
 
@@ -3020,15 +3030,15 @@ src\intellicrack\credentials\oauth.py:167:4: method 'OAuthToken.from_dict' - com
 
 src\intellicrack\credentials\oauth.py:191:0: class 'OAuthState' - complexity 2 (rank A)
 
-src\intellicrack\credentials\oauth.py:410:4: method 'OAuthManager._get_http_client' - complexity 2 (rank A)
+src\intellicrack\credentials\oauth.py:408:4: method 'OAuthManager._get_http_client' - complexity 2 (rank A)
 
-src\intellicrack\credentials\oauth.py:420:4: method 'OAuthManager.close' - complexity 2 (rank A)
+src\intellicrack\credentials\oauth.py:418:4: method 'OAuthManager.close' - complexity 2 (rank A)
 
-src\intellicrack\credentials\oauth.py:494:4: method 'OAuthManager.start_authorization_flow' - complexity 2 (rank A)
+src\intellicrack\credentials\oauth.py:492:4: method 'OAuthManager.start_authorization_flow' - complexity 2 (rank A)
 
-src\intellicrack\credentials\oauth.py:819:4: method 'OAuthManager.to_provider_credentials' - complexity 2 (rank A)
+src\intellicrack\credentials\oauth.py:817:4: method 'OAuthManager.to_provider_credentials' - complexity 2 (rank A)
 
-src\intellicrack\credentials\oauth.py:841:4: method 'OAuthManager.run_authorization_flow' - complexity 2 (rank A)
+src\intellicrack\credentials\oauth.py:839:4: method 'OAuthManager.run_authorization_flow' - complexity 2 (rank A)
 
 src\intellicrack\credentials\oauth.py:36:0: class 'OAuthError' - complexity 1 (rank A)
 
@@ -3054,94 +3064,11 @@ src\intellicrack\credentials\oauth.py:314:4: method 'OAuthCallbackServer.__init_
 
 src\intellicrack\credentials\oauth.py:327:4: method 'OAuthCallbackServer.start' - complexity 1 (rank A)
 
-src\intellicrack\credentials\oauth.py:393:4: method 'OAuthManager.__init__' - complexity 1 (rank A)
+src\intellicrack\credentials\oauth.py:391:4: method 'OAuthManager.__init__' - complexity 1 (rank A)
 
-src\intellicrack\credentials\oauth.py:426:4: method 'OAuthManager._generate_state' - complexity 1 (rank A)
+src\intellicrack\credentials\oauth.py:424:4: method 'OAuthManager._generate_state' - complexity 1 (rank A)
 
-src\intellicrack\credentials\oauth.py:434:4: method 'OAuthManager._generate_pkce_pair' - complexity 1 (rank A)
-
-
-40 findings in src\intellicrack\core\process_manager.py
-
-src\intellicrack\core\process_manager.py:259:4: method 'ProcessManager._sync_cleanup' - complexity 10 (rank B)
-
-src\intellicrack\core\process_manager.py:492:4: method 'ProcessManager.terminate_process' - complexity 9 (rank B)
-
-src\intellicrack\core\process_manager.py:697:4: method 'ProcessManager.run_tracked' - complexity 9 (rank B)
-
-src\intellicrack\core\process_manager.py:613:4: method 'ProcessManager.cleanup_all_async' - complexity 8 (rank B)
-
-src\intellicrack\core\process_manager.py:208:4: method 'ProcessManager.uninstall_handlers' - complexity 6 (rank B)
-
-src\intellicrack\core\process_manager.py:890:4: method 'ProcessManager.terminate_external_pid' - complexity 6 (rank B)
-
-src\intellicrack\core\process_manager.py:180:4: method 'ProcessManager.install_handlers' - complexity 5 (rank A)
-
-src\intellicrack\core\process_manager.py:226:4: method 'ProcessManager._signal_handler' - complexity 5 (rank A)
-
-src\intellicrack\core\process_manager.py:97:0: class 'ProcessManager' - complexity 4 (rank A)
-
-src\intellicrack\core\process_manager.py:347:4: method 'ProcessManager._terminate_tree_with_psutil' - complexity 4 (rank A)
-
-src\intellicrack\core\process_manager.py:378:4: method 'ProcessManager._wait_or_kill_sync' - complexity 4 (rank A)
-
-src\intellicrack\core\process_manager.py:837:4: method 'ProcessManager.register_external_pid' - complexity 4 (rank A)
-
-src\intellicrack\core\process_manager.py:52:0: class 'TrackedProcess' - complexity 3 (rank A)
-
-src\intellicrack\core\process_manager.py:124:4: method 'ProcessManager.__new__' - complexity 3 (rank A)
-
-src\intellicrack\core\process_manager.py:483:4: method 'ProcessManager.get_running_processes' - complexity 3 (rank A)
-
-src\intellicrack\core\process_manager.py:544:4: method 'ProcessManager._terminate_subprocess' - complexity 3 (rank A)
-
-src\intellicrack\core\process_manager.py:72:4: method 'TrackedProcess.is_running' - complexity 2 (rank A)
-
-src\intellicrack\core\process_manager.py:82:4: method 'TrackedProcess.check_running' - complexity 2 (rank A)
-
-src\intellicrack\core\process_manager.py:138:4: method 'ProcessManager.__init__' - complexity 2 (rank A)
-
-src\intellicrack\core\process_manager.py:163:4: method 'ProcessManager.reset_instance' - complexity 2 (rank A)
-
-src\intellicrack\core\process_manager.py:251:4: method 'ProcessManager._atexit_cleanup' - complexity 2 (rank A)
-
-src\intellicrack\core\process_manager.py:402:4: method 'ProcessManager.register' - complexity 2 (rank A)
-
-src\intellicrack\core\process_manager.py:442:4: method 'ProcessManager.unregister' - complexity 2 (rank A)
-
-src\intellicrack\core\process_manager.py:580:4: method 'ProcessManager._terminate_async_subprocess' - complexity 2 (rank A)
-
-src\intellicrack\core\process_manager.py:680:4: method 'ProcessManager.running_count' - complexity 2 (rank A)
-
-src\intellicrack\core\process_manager.py:874:4: method 'ProcessManager.unregister_external_pid' - complexity 2 (rank A)
-
-src\intellicrack\core\process_manager.py:932:4: method 'ProcessManager._terminate_windows_process' - complexity 2 (rank A)
-
-src\intellicrack\core\process_manager.py:41:0: class 'ProcessType' - complexity 1 (rank A)
-
-src\intellicrack\core\process_manager.py:63:4: method 'TrackedProcess.pid' - complexity 1 (rank A)
-
-src\intellicrack\core\process_manager.py:154:4: method 'ProcessManager.get_instance' - complexity 1 (rank A)
-
-src\intellicrack\core\process_manager.py:172:4: method 'ProcessManager._get_logger' - complexity 1 (rank A)
-
-src\intellicrack\core\process_manager.py:313:4: method 'ProcessManager._terminate_process_sync' - complexity 1 (rank A)
-
-src\intellicrack\core\process_manager.py:328:4: method 'ProcessManager.terminate_tree' - complexity 1 (rank A)
-
-src\intellicrack\core\process_manager.py:462:4: method 'ProcessManager.get_tracked' - complexity 1 (rank A)
-
-src\intellicrack\core\process_manager.py:474:4: method 'ProcessManager.get_all_tracked' - complexity 1 (rank A)
-
-src\intellicrack\core\process_manager.py:657:4: method 'ProcessManager.is_shutdown_requested' - complexity 1 (rank A)
-
-src\intellicrack\core\process_manager.py:665:4: method 'ProcessManager.clear_shutdown_request' - complexity 1 (rank A)
-
-src\intellicrack\core\process_manager.py:670:4: method 'ProcessManager.process_count' - complexity 1 (rank A)
-
-src\intellicrack\core\process_manager.py:689:4: method 'ProcessManager.__repr__' - complexity 1 (rank A)
-
-src\intellicrack\core\process_manager.py:791:4: method 'ProcessManager.run_tracked_async' - complexity 1 (rank A)
+src\intellicrack\credentials\oauth.py:432:4: method 'OAuthManager._generate_pkce_pair' - complexity 1 (rank A)
 
 
 40 findings in tests\test_ui\test_resource_helper.py
@@ -3227,33 +3154,114 @@ tests\test_ui\test_resource_helper.py:229:4: method 'TestResourceExists.test_ret
 tests\test_ui\test_resource_helper.py:239:4: method 'TestAssetIntegrity.test_minimum_icon_count' - complexity 2 (rank A)
 
 
+39 findings in src\intellicrack\core\process_manager.py
+
+src\intellicrack\core\process_manager.py:259:4: method 'ProcessManager._sync_cleanup' - complexity 10 (rank B)
+
+src\intellicrack\core\process_manager.py:468:4: method 'ProcessManager.terminate_process' - complexity 9 (rank B)
+
+src\intellicrack\core\process_manager.py:589:4: method 'ProcessManager.cleanup_all_async' - complexity 9 (rank B)
+
+src\intellicrack\core\process_manager.py:683:4: method 'ProcessManager.run_tracked' - complexity 9 (rank B)
+
+src\intellicrack\core\process_manager.py:208:4: method 'ProcessManager.uninstall_handlers' - complexity 6 (rank B)
+
+src\intellicrack\core\process_manager.py:876:4: method 'ProcessManager.terminate_external_pid' - complexity 6 (rank B)
+
+src\intellicrack\core\process_manager.py:180:4: method 'ProcessManager.install_handlers' - complexity 5 (rank A)
+
+src\intellicrack\core\process_manager.py:226:4: method 'ProcessManager._signal_handler' - complexity 5 (rank A)
+
+src\intellicrack\core\process_manager.py:97:0: class 'ProcessManager' - complexity 4 (rank A)
+
+src\intellicrack\core\process_manager.py:347:4: method 'ProcessManager._terminate_tree_with_psutil' - complexity 4 (rank A)
+
+src\intellicrack\core\process_manager.py:823:4: method 'ProcessManager.register_external_pid' - complexity 4 (rank A)
+
+src\intellicrack\core\process_manager.py:52:0: class 'TrackedProcess' - complexity 3 (rank A)
+
+src\intellicrack\core\process_manager.py:124:4: method 'ProcessManager.__new__' - complexity 3 (rank A)
+
+src\intellicrack\core\process_manager.py:459:4: method 'ProcessManager.get_running_processes' - complexity 3 (rank A)
+
+src\intellicrack\core\process_manager.py:520:4: method 'ProcessManager._terminate_subprocess' - complexity 3 (rank A)
+
+src\intellicrack\core\process_manager.py:72:4: method 'TrackedProcess.is_running' - complexity 2 (rank A)
+
+src\intellicrack\core\process_manager.py:82:4: method 'TrackedProcess.check_running' - complexity 2 (rank A)
+
+src\intellicrack\core\process_manager.py:138:4: method 'ProcessManager.__init__' - complexity 2 (rank A)
+
+src\intellicrack\core\process_manager.py:163:4: method 'ProcessManager.reset_instance' - complexity 2 (rank A)
+
+src\intellicrack\core\process_manager.py:251:4: method 'ProcessManager._atexit_cleanup' - complexity 2 (rank A)
+
+src\intellicrack\core\process_manager.py:378:4: method 'ProcessManager.register' - complexity 2 (rank A)
+
+src\intellicrack\core\process_manager.py:418:4: method 'ProcessManager.unregister' - complexity 2 (rank A)
+
+src\intellicrack\core\process_manager.py:556:4: method 'ProcessManager._terminate_async_subprocess' - complexity 2 (rank A)
+
+src\intellicrack\core\process_manager.py:666:4: method 'ProcessManager.running_count' - complexity 2 (rank A)
+
+src\intellicrack\core\process_manager.py:860:4: method 'ProcessManager.unregister_external_pid' - complexity 2 (rank A)
+
+src\intellicrack\core\process_manager.py:41:0: class 'ProcessType' - complexity 1 (rank A)
+
+src\intellicrack\core\process_manager.py:63:4: method 'TrackedProcess.pid' - complexity 1 (rank A)
+
+src\intellicrack\core\process_manager.py:154:4: method 'ProcessManager.get_instance' - complexity 1 (rank A)
+
+src\intellicrack\core\process_manager.py:172:4: method 'ProcessManager._get_logger' - complexity 1 (rank A)
+
+src\intellicrack\core\process_manager.py:313:4: method 'ProcessManager._terminate_process_sync' - complexity 1 (rank A)
+
+src\intellicrack\core\process_manager.py:328:4: method 'ProcessManager.terminate_tree' - complexity 1 (rank A)
+
+src\intellicrack\core\process_manager.py:438:4: method 'ProcessManager.get_tracked' - complexity 1 (rank A)
+
+src\intellicrack\core\process_manager.py:450:4: method 'ProcessManager.get_all_tracked' - complexity 1 (rank A)
+
+src\intellicrack\core\process_manager.py:637:4: method 'ProcessManager.is_shutdown_requested' - complexity 1 (rank A)
+
+src\intellicrack\core\process_manager.py:645:4: method 'ProcessManager.clear_shutdown_request' - complexity 1 (rank A)
+
+src\intellicrack\core\process_manager.py:649:4: method 'ProcessManager.request_shutdown' - complexity 1 (rank A)
+
+src\intellicrack\core\process_manager.py:656:4: method 'ProcessManager.process_count' - complexity 1 (rank A)
+
+src\intellicrack\core\process_manager.py:675:4: method 'ProcessManager.__repr__' - complexity 1 (rank A)
+
+src\intellicrack\core\process_manager.py:777:4: method 'ProcessManager.run_tracked_async' - complexity 1 (rank A)
+
+
 38 findings in src\intellicrack\ui\panels\script_manager.py
 
-src\intellicrack\ui\panels\script_manager.py:755:4: method 'ScriptManagerPanel._on_validate' - complexity 8 (rank B)
+src\intellicrack\ui\panels\script_manager.py:754:4: method 'ScriptManagerPanel._on_validate' - complexity 8 (rank B)
 
-src\intellicrack\ui\panels\script_manager.py:658:4: method 'ScriptManagerPanel._on_new' - complexity 6 (rank B)
+src\intellicrack\ui\panels\script_manager.py:657:4: method 'ScriptManagerPanel._on_new' - complexity 6 (rank B)
 
-src\intellicrack\ui\panels\script_manager.py:682:4: method 'ScriptManagerPanel._on_save' - complexity 6 (rank B)
+src\intellicrack\ui\panels\script_manager.py:681:4: method 'ScriptManagerPanel._on_save' - complexity 6 (rank B)
 
-src\intellicrack\ui\panels\script_manager.py:730:4: method 'ScriptManagerPanel._on_load_file' - complexity 5 (rank A)
+src\intellicrack\ui\panels\script_manager.py:729:4: method 'ScriptManagerPanel._on_load_file' - complexity 5 (rank A)
 
 src\intellicrack\ui\panels\script_manager.py:347:4: method 'ScriptListWidget._refresh_list' - complexity 4 (rank A)
 
-src\intellicrack\ui\panels\script_manager.py:428:0: class 'ScriptManagerPanel' - complexity 4 (rank A)
+src\intellicrack\ui\panels\script_manager.py:427:0: class 'ScriptManagerPanel' - complexity 4 (rank A)
 
-src\intellicrack\ui\panels\script_manager.py:609:4: method 'ScriptManagerPanel._on_script_selected' - complexity 4 (rank A)
+src\intellicrack\ui\panels\script_manager.py:608:4: method 'ScriptManagerPanel._on_script_selected' - complexity 4 (rank A)
 
-src\intellicrack\ui\panels\script_manager.py:629:4: method 'ScriptManagerPanel._load_script' - complexity 4 (rank A)
+src\intellicrack\ui\panels\script_manager.py:628:4: method 'ScriptManagerPanel._load_script' - complexity 4 (rank A)
 
-src\intellicrack\ui\panels\script_manager.py:706:4: method 'ScriptManagerPanel._on_delete' - complexity 4 (rank A)
+src\intellicrack\ui\panels\script_manager.py:705:4: method 'ScriptManagerPanel._on_delete' - complexity 4 (rank A)
 
-src\intellicrack\ui\panels\script_manager.py:787:4: method 'ScriptManagerPanel._on_execute' - complexity 4 (rank A)
+src\intellicrack\ui\panels\script_manager.py:786:4: method 'ScriptManagerPanel._on_execute' - complexity 4 (rank A)
 
-src\intellicrack\ui\panels\script_manager.py:817:4: method 'ScriptManagerPanel.get_current_script' - complexity 4 (rank A)
+src\intellicrack\ui\panels\script_manager.py:816:4: method 'ScriptManagerPanel.get_current_script' - complexity 4 (rank A)
 
-src\intellicrack\ui\panels\script_manager.py:451:4: method 'ScriptManagerPanel._setup_ui' - complexity 3 (rank A)
+src\intellicrack\ui\panels\script_manager.py:450:4: method 'ScriptManagerPanel._setup_ui' - complexity 3 (rank A)
 
-src\intellicrack\ui\panels\script_manager.py:801:4: method 'ScriptManagerPanel.set_backend' - complexity 3 (rank A)
+src\intellicrack\ui\panels\script_manager.py:800:4: method 'ScriptManagerPanel.set_backend' - complexity 3 (rank A)
 
 src\intellicrack\ui\panels\script_manager.py:42:0: class 'ScriptTypeInfo' - complexity 2 (rank A)
 
@@ -3267,9 +3275,9 @@ src\intellicrack\ui\panels\script_manager.py:360:4: method 'ScriptListWidget.get
 
 src\intellicrack\ui\panels\script_manager.py:371:0: class 'ScriptEditor' - complexity 2 (rank A)
 
-src\intellicrack\ui\panels\script_manager.py:568:4: method 'ScriptManagerPanel._on_type_changed' - complexity 2 (rank A)
+src\intellicrack\ui\panels\script_manager.py:567:4: method 'ScriptManagerPanel._on_type_changed' - complexity 2 (rank A)
 
-src\intellicrack\ui\panels\script_manager.py:579:4: method 'ScriptManagerPanel._build_script' - complexity 2 (rank A)
+src\intellicrack\ui\panels\script_manager.py:578:4: method 'ScriptManagerPanel._build_script' - complexity 2 (rank A)
 
 src\intellicrack\ui\panels\script_manager.py:205:4: method 'ScriptTypeInfo.get_types' - complexity 1 (rank A)
 
@@ -3291,19 +3299,19 @@ src\intellicrack\ui\panels\script_manager.py:338:4: method 'ScriptListWidget.set
 
 src\intellicrack\ui\panels\script_manager.py:377:4: method 'ScriptEditor.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\script_manager.py:387:4: method 'ScriptEditor._setup_ui' - complexity 1 (rank A)
+src\intellicrack\ui\panels\script_manager.py:386:4: method 'ScriptEditor._setup_ui' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\script_manager.py:403:4: method 'ScriptEditor.set_language' - complexity 1 (rank A)
+src\intellicrack\ui\panels\script_manager.py:402:4: method 'ScriptEditor.set_language' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\script_manager.py:411:4: method 'ScriptEditor.get_content' - complexity 1 (rank A)
+src\intellicrack\ui\panels\script_manager.py:410:4: method 'ScriptEditor.get_content' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\script_manager.py:419:4: method 'ScriptEditor.set_content' - complexity 1 (rank A)
+src\intellicrack\ui\panels\script_manager.py:418:4: method 'ScriptEditor.set_content' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\script_manager.py:438:4: method 'ScriptManagerPanel.__init__' - complexity 1 (rank A)
+src\intellicrack\ui\panels\script_manager.py:437:4: method 'ScriptManagerPanel.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\script_manager.py:559:4: method 'ScriptManagerPanel._on_filter_changed' - complexity 1 (rank A)
+src\intellicrack\ui\panels\script_manager.py:558:4: method 'ScriptManagerPanel._on_filter_changed' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\script_manager.py:654:4: method 'ScriptManagerPanel._on_content_changed' - complexity 1 (rank A)
+src\intellicrack\ui\panels\script_manager.py:653:4: method 'ScriptManagerPanel._on_content_changed' - complexity 1 (rank A)
 
 
 36 findings in src\intellicrack\ui\panels\stack_viewer.py
@@ -3316,9 +3324,9 @@ src\intellicrack\ui\panels\stack_viewer.py:310:4: method 'StackFrameTable.set_fr
 
 src\intellicrack\ui\panels\stack_viewer.py:246:0: class 'StackFrameTable' - complexity 4 (rank A)
 
-src\intellicrack\ui\panels\stack_viewer.py:451:4: method 'StackViewerPanel._on_auto_refresh_toggled' - complexity 4 (rank A)
+src\intellicrack\ui\panels\stack_viewer.py:450:4: method 'StackViewerPanel._on_auto_refresh_toggled' - complexity 4 (rank A)
 
-src\intellicrack\ui\panels\stack_viewer.py:476:4: method 'StackViewerPanel._update_status' - complexity 4 (rank A)
+src\intellicrack\ui\panels\stack_viewer.py:473:4: method 'StackViewerPanel._update_status' - complexity 4 (rank A)
 
 src\intellicrack\ui\panels\stack_viewer.py:93:0: class 'X64DbgStackSource' - complexity 3 (rank A)
 
@@ -3334,19 +3342,19 @@ src\intellicrack\ui\panels\stack_viewer.py:296:4: method 'StackFrameTable._on_ce
 
 src\intellicrack\ui\panels\stack_viewer.py:351:0: class 'StackViewerPanel' - complexity 3 (rank A)
 
-src\intellicrack\ui\panels\stack_viewer.py:496:4: method 'StackViewerPanel.refresh' - complexity 3 (rank A)
+src\intellicrack\ui\panels\stack_viewer.py:493:4: method 'StackViewerPanel.refresh' - complexity 3 (rank A)
 
-src\intellicrack\ui\panels\stack_viewer.py:538:4: method 'StackViewerPanel.add_source' - complexity 3 (rank A)
+src\intellicrack\ui\panels\stack_viewer.py:535:4: method 'StackViewerPanel.add_source' - complexity 3 (rank A)
 
 src\intellicrack\ui\panels\stack_viewer.py:58:0: class 'StackDataSource' - complexity 2 (rank A)
 
 src\intellicrack\ui\panels\stack_viewer.py:261:4: method 'StackFrameTable._setup_ui' - complexity 2 (rank A)
 
-src\intellicrack\ui\panels\stack_viewer.py:431:4: method 'StackViewerPanel._setup_default_sources' - complexity 2 (rank A)
+src\intellicrack\ui\panels\stack_viewer.py:430:4: method 'StackViewerPanel._setup_default_sources' - complexity 2 (rank A)
 
-src\intellicrack\ui\panels\stack_viewer.py:516:4: method 'StackViewerPanel.set_x64dbg_bridge' - complexity 2 (rank A)
+src\intellicrack\ui\panels\stack_viewer.py:513:4: method 'StackViewerPanel.set_x64dbg_bridge' - complexity 2 (rank A)
 
-src\intellicrack\ui\panels\stack_viewer.py:527:4: method 'StackViewerPanel.set_frida_bridge' - complexity 2 (rank A)
+src\intellicrack\ui\panels\stack_viewer.py:524:4: method 'StackViewerPanel.set_frida_bridge' - complexity 2 (rank A)
 
 src\intellicrack\ui\panels\stack_viewer.py:35:0: class 'StackFrame' - complexity 1 (rank A)
 
@@ -3372,86 +3380,86 @@ src\intellicrack\ui\panels\stack_viewer.py:252:4: method 'StackFrameTable.__init
 
 src\intellicrack\ui\panels\stack_viewer.py:360:4: method 'StackViewerPanel.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\stack_viewer.py:374:4: method 'StackViewerPanel._setup_ui' - complexity 1 (rank A)
+src\intellicrack\ui\panels\stack_viewer.py:373:4: method 'StackViewerPanel._setup_ui' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\stack_viewer.py:440:4: method 'StackViewerPanel._on_source_changed' - complexity 1 (rank A)
+src\intellicrack\ui\panels\stack_viewer.py:439:4: method 'StackViewerPanel._on_source_changed' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\stack_viewer.py:467:4: method 'StackViewerPanel._on_frame_double_clicked' - complexity 1 (rank A)
+src\intellicrack\ui\panels\stack_viewer.py:464:4: method 'StackViewerPanel._on_frame_double_clicked' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\stack_viewer.py:549:4: method 'StackViewerPanel.clear' - complexity 1 (rank A)
+src\intellicrack\ui\panels\stack_viewer.py:546:4: method 'StackViewerPanel.clear' - complexity 1 (rank A)
 
 
 35 findings in src\intellicrack\ui\panels\licensing_panel.py
 
-src\intellicrack\ui\panels\licensing_panel.py:134:4: method 'SummaryCard.update_from_analysis' - complexity 12 (rank C)
+src\intellicrack\ui\panels\licensing_panel.py:135:4: method 'SummaryCard.update_from_analysis' - complexity 12 (rank C)
 
-src\intellicrack\ui\panels\licensing_panel.py:228:4: method 'ValidationFunctionsTable.set_functions' - complexity 6 (rank B)
+src\intellicrack\ui\panels\licensing_panel.py:229:4: method 'ValidationFunctionsTable.set_functions' - complexity 6 (rank B)
 
-src\intellicrack\ui\panels\licensing_panel.py:49:0: class 'SummaryCard' - complexity 5 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:50:0: class 'SummaryCard' - complexity 5 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:179:0: class 'ValidationFunctionsTable' - complexity 4 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:180:0: class 'ValidationFunctionsTable' - complexity 4 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:315:4: method 'CryptoAPITable.set_calls' - complexity 4 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:316:4: method 'CryptoAPITable.set_calls' - complexity 4 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:617:4: method 'LicensingAnalysisPanel.set_analysis' - complexity 4 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:618:4: method 'LicensingAnalysisPanel.set_analysis' - complexity 4 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:214:4: method 'ValidationFunctionsTable._on_cell_double_clicked' - complexity 3 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:215:4: method 'ValidationFunctionsTable._on_cell_double_clicked' - complexity 3 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:267:0: class 'CryptoAPITable' - complexity 3 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:268:0: class 'CryptoAPITable' - complexity 3 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:301:4: method 'CryptoAPITable._on_cell_double_clicked' - complexity 3 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:302:4: method 'CryptoAPITable._on_cell_double_clicked' - complexity 3 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:345:0: class 'ConstantsTable' - complexity 3 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:346:0: class 'ConstantsTable' - complexity 3 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:378:4: method 'ConstantsTable._on_cell_double_clicked' - complexity 3 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:379:4: method 'ConstantsTable._on_cell_double_clicked' - complexity 3 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:421:0: class 'NotesPanel' - complexity 3 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:422:0: class 'NotesPanel' - complexity 3 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:445:4: method 'NotesPanel.set_notes' - complexity 3 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:446:4: method 'NotesPanel.set_notes' - complexity 3 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:459:0: class 'ProtectionIndicators' - complexity 3 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:460:0: class 'ProtectionIndicators' - complexity 3 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:522:4: method 'ProtectionIndicators._set_indicator' - complexity 3 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:523:4: method 'ProtectionIndicators._set_indicator' - complexity 3 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:193:4: method 'ValidationFunctionsTable._setup_ui' - complexity 2 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:194:4: method 'ValidationFunctionsTable._setup_ui' - complexity 2 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:281:4: method 'CryptoAPITable._setup_ui' - complexity 2 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:282:4: method 'CryptoAPITable._setup_ui' - complexity 2 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:359:4: method 'ConstantsTable._setup_ui' - complexity 2 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:360:4: method 'ConstantsTable._setup_ui' - complexity 2 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:392:4: method 'ConstantsTable.set_constants' - complexity 2 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:393:4: method 'ConstantsTable.set_constants' - complexity 2 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:471:4: method 'ProtectionIndicators._setup_ui' - complexity 2 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:472:4: method 'ProtectionIndicators._setup_ui' - complexity 2 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:536:0: class 'LicensingAnalysisPanel' - complexity 2 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:537:0: class 'LicensingAnalysisPanel' - complexity 2 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:52:4: method 'SummaryCard.__init__' - complexity 1 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:53:4: method 'SummaryCard.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:61:4: method 'SummaryCard._setup_ui' - complexity 1 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:62:4: method 'SummaryCard._setup_ui' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:112:4: method 'SummaryCard._create_labeled_value' - complexity 1 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:113:4: method 'SummaryCard._create_labeled_value' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:184:4: method 'ValidationFunctionsTable.__init__' - complexity 1 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:185:4: method 'ValidationFunctionsTable.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:272:4: method 'CryptoAPITable.__init__' - complexity 1 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:273:4: method 'CryptoAPITable.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:350:4: method 'ConstantsTable.__init__' - complexity 1 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:351:4: method 'ConstantsTable.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:424:4: method 'NotesPanel.__init__' - complexity 1 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:425:4: method 'NotesPanel.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:433:4: method 'NotesPanel._setup_ui' - complexity 1 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:434:4: method 'NotesPanel._setup_ui' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:462:4: method 'ProtectionIndicators.__init__' - complexity 1 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:463:4: method 'ProtectionIndicators.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:509:4: method 'ProtectionIndicators.update_from_analysis' - complexity 1 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:510:4: method 'ProtectionIndicators.update_from_analysis' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:545:4: method 'LicensingAnalysisPanel.__init__' - complexity 1 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:546:4: method 'LicensingAnalysisPanel.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:555:4: method 'LicensingAnalysisPanel._setup_ui' - complexity 1 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:556:4: method 'LicensingAnalysisPanel._setup_ui' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:670:4: method 'LicensingAnalysisPanel.get_current_analysis' - complexity 1 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:671:4: method 'LicensingAnalysisPanel.get_current_analysis' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\licensing_panel.py:678:4: method 'LicensingAnalysisPanel.clear' - complexity 1 (rank A)
+src\intellicrack\ui\panels\licensing_panel.py:679:4: method 'LicensingAnalysisPanel.clear' - complexity 1 (rank A)
 
 
 34 findings in src\intellicrack\ui\preferences.py
@@ -3789,49 +3797,49 @@ src\intellicrack\ui\sandbox_config.py:788:4: method 'SandboxMonitorWidget.append
 
 29 findings in src\intellicrack\bridges\binary.py
 
-src\intellicrack\bridges\binary.py:508:4: method 'BinaryBridge._detect_architecture' - complexity 11 (rank C)
+src\intellicrack\bridges\binary.py:509:4: method 'BinaryBridge._detect_architecture' - complexity 11 (rank C)
 
-src\intellicrack\bridges\binary.py:619:4: method 'BinaryBridge._get_imports_internal' - complexity 11 (rank C)
+src\intellicrack\bridges\binary.py:620:4: method 'BinaryBridge._get_imports_internal' - complexity 11 (rank C)
 
-src\intellicrack\bridges\binary.py:656:4: method 'BinaryBridge._get_exports_internal' - complexity 9 (rank B)
+src\intellicrack\bridges\binary.py:657:4: method 'BinaryBridge._get_exports_internal' - complexity 9 (rank B)
 
-src\intellicrack\bridges\binary.py:920:4: method 'BinaryBridge.disassemble_at_offset' - complexity 9 (rank B)
+src\intellicrack\bridges\binary.py:934:4: method 'BinaryBridge.disassemble_at_offset' - complexity 9 (rank B)
 
-src\intellicrack\bridges\binary.py:550:4: method 'BinaryBridge._get_sections_internal' - complexity 7 (rank B)
+src\intellicrack\bridges\binary.py:551:4: method 'BinaryBridge._get_sections_internal' - complexity 7 (rank B)
 
-src\intellicrack\bridges\binary.py:465:4: method 'BinaryBridge._detect_format' - complexity 6 (rank B)
+src\intellicrack\bridges\binary.py:466:4: method 'BinaryBridge._detect_format' - complexity 6 (rank B)
 
-src\intellicrack\bridges\binary.py:881:4: method 'BinaryBridge.search_pattern_with_wildcards' - complexity 6 (rank B)
+src\intellicrack\bridges\binary.py:895:4: method 'BinaryBridge.search_pattern_with_wildcards' - complexity 6 (rank B)
 
 src\intellicrack\bridges\binary.py:82:0: class 'BinaryBridge' - complexity 5 (rank A)
 
 src\intellicrack\bridges\binary.py:389:4: method 'BinaryBridge.load_file' - complexity 5 (rank A)
 
-src\intellicrack\bridges\binary.py:713:4: method 'BinaryBridge.write_bytes' - complexity 5 (rank A)
+src\intellicrack\bridges\binary.py:714:4: method 'BinaryBridge.write_bytes' - complexity 5 (rank A)
 
-src\intellicrack\bridges\binary.py:788:4: method 'BinaryBridge.revert_patch' - complexity 5 (rank A)
+src\intellicrack\bridges\binary.py:795:4: method 'BinaryBridge.revert_patch' - complexity 5 (rank A)
 
-src\intellicrack\bridges\binary.py:819:4: method 'BinaryBridge.save' - complexity 5 (rank A)
+src\intellicrack\bridges\binary.py:826:4: method 'BinaryBridge.save' - complexity 5 (rank A)
 
-src\intellicrack\bridges\binary.py:596:4: method 'BinaryBridge._calculate_entropy' - complexity 4 (rank A)
+src\intellicrack\bridges\binary.py:853:4: method 'BinaryBridge.search_pattern' - complexity 5 (rank A)
 
-src\intellicrack\bridges\binary.py:691:4: method 'BinaryBridge.read_bytes' - complexity 4 (rank A)
+src\intellicrack\bridges\binary.py:597:4: method 'BinaryBridge._calculate_entropy' - complexity 4 (rank A)
 
-src\intellicrack\bridges\binary.py:846:4: method 'BinaryBridge.search_pattern' - complexity 4 (rank A)
+src\intellicrack\bridges\binary.py:692:4: method 'BinaryBridge.read_bytes' - complexity 4 (rank A)
 
-src\intellicrack\bridges\binary.py:967:4: method 'BinaryBridge.calculate_checksum' - complexity 4 (rank A)
+src\intellicrack\bridges\binary.py:738:4: method 'BinaryBridge.apply_patch' - complexity 4 (rank A)
 
-src\intellicrack\bridges\binary.py:988:4: method 'BinaryBridge.rva_to_offset' - complexity 4 (rank A)
+src\intellicrack\bridges\binary.py:981:4: method 'BinaryBridge.calculate_checksum' - complexity 4 (rank A)
 
-src\intellicrack\bridges\binary.py:1010:4: method 'BinaryBridge.offset_to_rva' - complexity 4 (rank A)
+src\intellicrack\bridges\binary.py:1002:4: method 'BinaryBridge.rva_to_offset' - complexity 4 (rank A)
 
-src\intellicrack\bridges\binary.py:494:4: method 'BinaryBridge._parse_lief' - complexity 3 (rank A)
+src\intellicrack\bridges\binary.py:1024:4: method 'BinaryBridge.offset_to_rva' - complexity 4 (rank A)
 
-src\intellicrack\bridges\binary.py:539:4: method 'BinaryBridge._get_entry_point' - complexity 3 (rank A)
+src\intellicrack\bridges\binary.py:495:4: method 'BinaryBridge._parse_lief' - complexity 3 (rank A)
 
-src\intellicrack\bridges\binary.py:737:4: method 'BinaryBridge.apply_patch' - complexity 3 (rank A)
+src\intellicrack\bridges\binary.py:540:4: method 'BinaryBridge._get_entry_point' - complexity 3 (rank A)
 
-src\intellicrack\bridges\binary.py:1033:4: method 'BinaryBridge.get_strings' - complexity 3 (rank A)
+src\intellicrack\bridges\binary.py:1047:4: method 'BinaryBridge.get_strings' - complexity 3 (rank A)
 
 src\intellicrack\bridges\binary.py:46:4: function '_lief_parse_raw' - complexity 1 (rank A)
 
@@ -3907,67 +3915,6 @@ src\intellicrack\bridges\ghidra.py:106:4: method 'GhidraBridge.name' - complexit
 src\intellicrack\bridges\ghidra.py:115:4: method 'GhidraBridge.tool_definition' - complexity 1 (rank A)
 
 src\intellicrack\bridges\ghidra.py:508:4: method 'GhidraBridge._create_bridge_script' - complexity 1 (rank A)
-
-
-29 findings in src\intellicrack\providers\base.py
-
-src\intellicrack\providers\base.py:409:0: function '_build_schema_property' - complexity 4 (rank A)
-
-src\intellicrack\providers\base.py:438:0: function 'create_anthropic_tool_schema' - complexity 4 (rank A)
-
-src\intellicrack\providers\base.py:481:0: function 'create_openai_tool_schema' - complexity 4 (rank A)
-
-src\intellicrack\providers\base.py:527:0: function 'create_google_tool_schema' - complexity 4 (rank A)
-
-src\intellicrack\providers\base.py:290:4: method 'LLMProviderBase._parse_tool_call_common' - complexity 4 (rank A)
-
-src\intellicrack\providers\base.py:255:4: method 'LLMProviderBase._build_chat_response' - complexity 3 (rank A)
-
-src\intellicrack\providers\base.py:91:0: class 'LLMProviderBase' - complexity 2 (rank A)
-
-src\intellicrack\providers\base.py:36:0: class 'JSONSchemaProperty' - complexity 1 (rank A)
-
-src\intellicrack\providers\base.py:45:0: class 'JSONSchemaParameters' - complexity 1 (rank A)
-
-src\intellicrack\providers\base.py:53:0: class 'AnthropicToolSchema' - complexity 1 (rank A)
-
-src\intellicrack\providers\base.py:61:0: class 'OpenAIFunctionSchema' - complexity 1 (rank A)
-
-src\intellicrack\providers\base.py:69:0: class 'OpenAIToolSchema' - complexity 1 (rank A)
-
-src\intellicrack\providers\base.py:76:0: class 'GoogleFunctionDeclaration' - complexity 1 (rank A)
-
-src\intellicrack\providers\base.py:84:0: class 'MessageDict' - complexity 1 (rank A)
-
-src\intellicrack\providers\base.py:104:4: method 'LLMProviderBase.__init__' - complexity 1 (rank A)
-
-src\intellicrack\providers\base.py:113:4: method 'LLMProviderBase.name' - complexity 1 (rank A)
-
-src\intellicrack\providers\base.py:121:4: method 'LLMProviderBase.is_connected' - complexity 1 (rank A)
-
-src\intellicrack\providers\base.py:130:4: method 'LLMProviderBase.connect' - complexity 1 (rank A)
-
-src\intellicrack\providers\base.py:141:4: method 'LLMProviderBase.disconnect' - complexity 1 (rank A)
-
-src\intellicrack\providers\base.py:152:4: method 'LLMProviderBase.list_models' - complexity 1 (rank A)
-
-src\intellicrack\providers\base.py:163:4: method 'LLMProviderBase.chat' - complexity 1 (rank A)
-
-src\intellicrack\providers\base.py:190:4: method 'LLMProviderBase.chat_stream' - complexity 1 (rank A)
-
-src\intellicrack\providers\base.py:218:4: method 'LLMProviderBase.cancel_request' - complexity 1 (rank A)
-
-src\intellicrack\providers\base.py:227:4: method 'LLMProviderBase._convert_tools_to_provider_format' - complexity 1 (rank A)
-
-src\intellicrack\providers\base.py:241:4: method 'LLMProviderBase._convert_messages_to_provider_format' - complexity 1 (rank A)
-
-src\intellicrack\providers\base.py:328:0: class 'ProviderCapabilities' - complexity 1 (rank A)
-
-src\intellicrack\providers\base.py:347:0: class 'ProviderState' - complexity 1 (rank A)
-
-src\intellicrack\providers\base.py:368:0: class 'ChatRequest' - complexity 1 (rank A)
-
-src\intellicrack\providers\base.py:389:0: class 'ChatResponse' - complexity 1 (rank A)
 
 
 28 findings in src\intellicrack\bridges\process.py
@@ -4263,6 +4210,63 @@ src\intellicrack\bridges\frida_bridge.py:1067:4: method 'FridaBridge.intercept_r
 src\intellicrack\bridges\frida_bridge.py:1183:4: method 'FridaBridge.set_message_handler' - complexity 1 (rank A)
 
 
+27 findings in src\intellicrack\credentials\store.py
+
+src\intellicrack\credentials\store.py:468:4: method 'CredentialStore.migrate_from_env' - complexity 10 (rank B)
+
+src\intellicrack\credentials\store.py:515:4: method 'CredentialStore.validate' - complexity 9 (rank B)
+
+src\intellicrack\credentials\store.py:542:4: method 'CredentialStore.get_source' - complexity 9 (rank B)
+
+src\intellicrack\credentials\store.py:103:4: method 'CredentialStore._check_keyring' - complexity 5 (rank A)
+
+src\intellicrack\credentials\store.py:267:4: method 'CredentialStore._set_to_keyring' - complexity 5 (rank A)
+
+src\intellicrack\credentials\store.py:439:4: method 'CredentialStore.list_providers' - complexity 5 (rank A)
+
+src\intellicrack\credentials\store.py:73:0: class 'CredentialStore' - complexity 4 (rank A)
+
+src\intellicrack\credentials\store.py:241:4: method 'CredentialStore._get_from_keyring' - complexity 4 (rank A)
+
+src\intellicrack\credentials\store.py:314:4: method 'CredentialStore._get_metadata' - complexity 4 (rank A)
+
+src\intellicrack\credentials\store.py:340:4: method 'CredentialStore.get' - complexity 4 (rank A)
+
+src\intellicrack\credentials\store.py:402:4: method 'CredentialStore.delete' - complexity 4 (rank A)
+
+src\intellicrack\credentials\store.py:569:0: function 'get_credential_store' - complexity 2 (rank A)
+
+src\intellicrack\credentials\store.py:90:4: method 'CredentialStore.__init__' - complexity 2 (rank A)
+
+src\intellicrack\credentials\store.py:170:4: method 'CredentialStore._deserialize_credentials' - complexity 2 (rank A)
+
+src\intellicrack\credentials\store.py:211:4: method 'CredentialStore._deserialize_metadata' - complexity 2 (rank A)
+
+src\intellicrack\credentials\store.py:360:4: method 'CredentialStore.get_or_raise' - complexity 2 (rank A)
+
+src\intellicrack\credentials\store.py:377:4: method 'CredentialStore.set' - complexity 2 (rank A)
+
+src\intellicrack\credentials\store.py:581:0: function 'get_credentials' - complexity 1 (rank A)
+
+src\intellicrack\credentials\store.py:27:0: class 'CredentialStoreError' - complexity 1 (rank A)
+
+src\intellicrack\credentials\store.py:33:0: class 'KeyringUnavailableError' - complexity 1 (rank A)
+
+src\intellicrack\credentials\store.py:39:0: class 'CredentialNotFoundError' - complexity 1 (rank A)
+
+src\intellicrack\credentials\store.py:45:0: class 'CredentialSource' - complexity 1 (rank A)
+
+src\intellicrack\credentials\store.py:55:0: class 'StoredCredential' - complexity 1 (rank A)
+
+src\intellicrack\credentials\store.py:139:4: method 'CredentialStore.keyring_available' - complexity 1 (rank A)
+
+src\intellicrack\credentials\store.py:147:4: method 'CredentialStore._get_keyring_key' - complexity 1 (rank A)
+
+src\intellicrack\credentials\store.py:158:4: method 'CredentialStore._serialize_credentials' - complexity 1 (rank A)
+
+src\intellicrack\credentials\store.py:193:4: method 'CredentialStore._serialize_metadata' - complexity 1 (rank A)
+
+
 27 findings in src\intellicrack\providers\local_transformers.py
 
 src\intellicrack\providers\local_transformers.py:831:4: method 'LocalTransformersProvider._parse_tool_calls' - complexity 16 (rank C)
@@ -4322,116 +4326,59 @@ src\intellicrack\providers\local_transformers.py:1014:4: method 'LocalTransforme
 
 27 findings in src\intellicrack\ui\chat.py
 
-src\intellicrack\ui\chat.py:174:4: method 'MessageBubble._create_tool_result_widget' - complexity 7 (rank B)
+src\intellicrack\ui\chat.py:175:4: method 'MessageBubble._create_tool_result_widget' - complexity 7 (rank B)
 
-src\intellicrack\ui\chat.py:60:4: method 'MessageBubble._setup_ui' - complexity 6 (rank B)
+src\intellicrack\ui\chat.py:61:4: method 'MessageBubble._setup_ui' - complexity 6 (rank B)
 
-src\intellicrack\ui\chat.py:452:4: method 'ChatPanel.add_streaming_message' - complexity 6 (rank B)
+src\intellicrack\ui\chat.py:453:4: method 'ChatPanel.add_streaming_message' - complexity 6 (rank B)
 
-src\intellicrack\ui\chat.py:38:0: class 'MessageBubble' - complexity 4 (rank A)
+src\intellicrack\ui\chat.py:39:0: class 'MessageBubble' - complexity 4 (rank A)
 
-src\intellicrack\ui\chat.py:140:4: method 'MessageBubble._create_tool_call_widget' - complexity 4 (rank A)
+src\intellicrack\ui\chat.py:141:4: method 'MessageBubble._create_tool_call_widget' - complexity 4 (rank A)
 
-src\intellicrack\ui\chat.py:492:4: method 'ChatPanel.clear_messages' - complexity 4 (rank A)
+src\intellicrack\ui\chat.py:493:4: method 'ChatPanel.clear_messages' - complexity 4 (rank A)
 
-src\intellicrack\ui\chat.py:278:4: method 'ChatInput._on_send' - complexity 3 (rank A)
+src\intellicrack\ui\chat.py:279:4: method 'ChatInput._on_send' - complexity 3 (rank A)
 
-src\intellicrack\ui\chat.py:322:4: method 'ChatInput._on_text_changed' - complexity 3 (rank A)
+src\intellicrack\ui\chat.py:323:4: method 'ChatInput._on_text_changed' - complexity 3 (rank A)
 
-src\intellicrack\ui\chat.py:359:0: class 'ChatPanel' - complexity 3 (rank A)
+src\intellicrack\ui\chat.py:360:0: class 'ChatPanel' - complexity 3 (rank A)
 
-src\intellicrack\ui\chat.py:215:0: class 'ChatInput' - complexity 2 (rank A)
+src\intellicrack\ui\chat.py:216:0: class 'ChatInput' - complexity 2 (rank A)
 
-src\intellicrack\ui\chat.py:287:4: method 'ChatInput._show_hint' - complexity 2 (rank A)
+src\intellicrack\ui\chat.py:288:4: method 'ChatInput._show_hint' - complexity 2 (rank A)
 
-src\intellicrack\ui\chat.py:305:4: method 'ChatInput._clear_hint' - complexity 2 (rank A)
+src\intellicrack\ui\chat.py:306:4: method 'ChatInput._clear_hint' - complexity 2 (rank A)
 
-src\intellicrack\ui\chat.py:45:4: method 'MessageBubble.__init__' - complexity 1 (rank A)
+src\intellicrack\ui\chat.py:46:4: method 'MessageBubble.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\chat.py:99:4: method 'MessageBubble._get_role_display' - complexity 1 (rank A)
+src\intellicrack\ui\chat.py:100:4: method 'MessageBubble._get_role_display' - complexity 1 (rank A)
 
-src\intellicrack\ui\chat.py:113:4: method 'MessageBubble._apply_style' - complexity 1 (rank A)
+src\intellicrack\ui\chat.py:114:4: method 'MessageBubble._apply_style' - complexity 1 (rank A)
 
-src\intellicrack\ui\chat.py:224:4: method 'ChatInput.__init__' - complexity 1 (rank A)
+src\intellicrack\ui\chat.py:225:4: method 'ChatInput.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\chat.py:233:4: method 'ChatInput._setup_ui' - complexity 1 (rank A)
+src\intellicrack\ui\chat.py:234:4: method 'ChatInput._setup_ui' - complexity 1 (rank A)
 
-src\intellicrack\ui\chat.py:339:4: method 'ChatInput.set_enabled' - complexity 1 (rank A)
+src\intellicrack\ui\chat.py:340:4: method 'ChatInput.set_enabled' - complexity 1 (rank A)
 
-src\intellicrack\ui\chat.py:348:4: method 'ChatInput.clear' - complexity 1 (rank A)
+src\intellicrack\ui\chat.py:349:4: method 'ChatInput.clear' - complexity 1 (rank A)
 
-src\intellicrack\ui\chat.py:353:4: method 'ChatInput.set_focus' - complexity 1 (rank A)
+src\intellicrack\ui\chat.py:354:4: method 'ChatInput.set_focus' - complexity 1 (rank A)
 
-src\intellicrack\ui\chat.py:368:4: method 'ChatPanel.__init__' - complexity 1 (rank A)
+src\intellicrack\ui\chat.py:369:4: method 'ChatPanel.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\chat.py:378:4: method 'ChatPanel._setup_ui' - complexity 1 (rank A)
+src\intellicrack\ui\chat.py:379:4: method 'ChatPanel._setup_ui' - complexity 1 (rank A)
 
-src\intellicrack\ui\chat.py:428:4: method 'ChatPanel.add_message' - complexity 1 (rank A)
+src\intellicrack\ui\chat.py:429:4: method 'ChatPanel.add_message' - complexity 1 (rank A)
 
-src\intellicrack\ui\chat.py:505:4: method 'ChatPanel.set_input_enabled' - complexity 1 (rank A)
+src\intellicrack\ui\chat.py:506:4: method 'ChatPanel.set_input_enabled' - complexity 1 (rank A)
 
-src\intellicrack\ui\chat.py:513:4: method 'ChatPanel._scroll_to_bottom' - complexity 1 (rank A)
+src\intellicrack\ui\chat.py:514:4: method 'ChatPanel._scroll_to_bottom' - complexity 1 (rank A)
 
-src\intellicrack\ui\chat.py:518:4: method 'ChatPanel.get_messages' - complexity 1 (rank A)
+src\intellicrack\ui\chat.py:519:4: method 'ChatPanel.get_messages' - complexity 1 (rank A)
 
-src\intellicrack\ui\chat.py:526:4: method 'ChatPanel.set_focus_input' - complexity 1 (rank A)
-
-
-27 findings in src\intellicrack\ui\panels\process_panel.py
-
-src\intellicrack\ui\panels\process_panel.py:203:0: function '_enumerate_modules' - complexity 6 (rank B)
-
-src\intellicrack\ui\panels\process_panel.py:241:0: function '_enumerate_threads' - complexity 6 (rank B)
-
-src\intellicrack\ui\panels\process_panel.py:297:4: method '_ProcessRefreshWorker.run' - complexity 6 (rank B)
-
-src\intellicrack\ui\panels\process_panel.py:122:0: function '_enumerate_processes' - complexity 5 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:177:0: function '_detect_process_architecture' - complexity 5 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:274:0: class '_ProcessRefreshWorker' - complexity 5 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:566:4: method 'ProcessPanel._load_process_details' - complexity 5 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:455:4: method 'ProcessPanel._on_refresh' - complexity 4 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:617:4: method 'ProcessPanel._on_terminate' - complexity 4 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:153:0: function '_get_process_memory_mb' - complexity 3 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:326:0: class 'ProcessPanel' - complexity 3 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:546:4: method 'ProcessPanel._on_process_selection_changed' - complexity 3 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:650:4: method 'ProcessPanel.stop_tool' - complexity 3 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:352:4: method 'ProcessPanel._setup_ui' - complexity 2 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:480:4: method 'ProcessPanel._on_refresh_finished' - complexity 2 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:533:4: method 'ProcessPanel._on_auto_refresh_toggled' - complexity 2 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:610:4: method 'ProcessPanel._on_attach' - complexity 2 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:61:0: class '_PROCESSENTRY32' - complexity 1 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:76:0: class '_MODULEENTRY32' - complexity 1 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:91:0: class '_THREADENTRY32' - complexity 1 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:103:0: class '_ProcessMemoryCounters' - complexity 1 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:287:4: method '_ProcessRefreshWorker.__init__' - complexity 1 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:338:4: method 'ProcessPanel.__init__' - complexity 1 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:447:4: method 'ProcessPanel.set_process_manager' - complexity 1 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:525:4: method 'ProcessPanel._on_filter_changed' - complexity 1 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:632:4: method 'ProcessPanel.get_selected_pid' - complexity 1 (rank A)
-
-src\intellicrack\ui\panels\process_panel.py:640:4: method 'ProcessPanel.start_tool' - complexity 1 (rank A)
+src\intellicrack\ui\chat.py:527:4: method 'ChatPanel.set_focus_input' - complexity 1 (rank A)
 
 
 27 findings in tests\test_providers\test_huggingface_provider.py
@@ -4489,116 +4436,6 @@ tests\test_providers\test_huggingface_provider.py:267:4: method 'TestHuggingFace
 tests\test_providers\test_huggingface_provider.py:187:4: method 'TestHuggingFaceConnection.test_connection_with_empty_key_raises_error' - complexity 1 (rank A)
 
 tests\test_providers\test_huggingface_provider.py:197:4: method 'TestHuggingFaceConnection.test_list_models_without_connection_raises_error' - complexity 1 (rank A)
-
-
-26 findings in src\intellicrack\core\logging.py
-
-src\intellicrack\core\logging.py:448:0: function '_sanitize_arguments' - complexity 11 (rank C)
-
-src\intellicrack\core\logging.py:37:0: class 'ColoredConsoleRenderer' - complexity 9 (rank B)
-
-src\intellicrack\core\logging.py:57:4: method 'ColoredConsoleRenderer.__call__' - complexity 8 (rank B)
-
-src\intellicrack\core\logging.py:95:0: function 'cleanup_old_logs' - complexity 5 (rank A)
-
-src\intellicrack\core\logging.py:125:0: function '_add_call_info' - complexity 5 (rank A)
-
-src\intellicrack\core\logging.py:157:0: function '_configure_structlog' - complexity 5 (rank A)
-
-src\intellicrack\core\logging.py:368:0: function 'get_logger' - complexity 4 (rank A)
-
-src\intellicrack\core\logging.py:418:0: function 'log_tool_call' - complexity 3 (rank A)
-
-src\intellicrack\core\logging.py:257:0: class 'IntellicrackLogger' - complexity 3 (rank A)
-
-src\intellicrack\core\logging.py:280:4: method 'IntellicrackLogger.configure' - complexity 3 (rank A)
-
-src\intellicrack\core\logging.py:606:0: class 'OperationTimer' - complexity 3 (rank A)
-
-src\intellicrack\core\logging.py:644:4: method 'OperationTimer.__exit__' - complexity 3 (rank A)
-
-src\intellicrack\core\logging.py:388:0: function 'get_structlog_logger' - complexity 2 (rank A)
-
-src\intellicrack\core\logging.py:510:0: function 'log_provider_response' - complexity 2 (rank A)
-
-src\intellicrack\core\logging.py:571:0: function 'log_session_operation' - complexity 2 (rank A)
-
-src\intellicrack\core\logging.py:318:4: method 'IntellicrackLogger.get_logger' - complexity 2 (rank A)
-
-src\intellicrack\core\logging.py:341:0: function 'setup_logging' - complexity 1 (rank A)
-
-src\intellicrack\core\logging.py:401:0: function 'log_exception' - complexity 1 (rank A)
-
-src\intellicrack\core\logging.py:486:0: function 'log_provider_request' - complexity 1 (rank A)
-
-src\intellicrack\core\logging.py:539:0: function 'log_binary_operation' - complexity 1 (rank A)
-
-src\intellicrack\core\logging.py:555:0: function 'log_sandbox_operation' - complexity 1 (rank A)
-
-src\intellicrack\core\logging.py:590:0: function 'log_analysis_operation' - complexity 1 (rank A)
-
-src\intellicrack\core\logging.py:271:4: method 'IntellicrackLogger.__init__' - complexity 1 (rank A)
-
-src\intellicrack\core\logging.py:332:0: class '_LoggerState' - complexity 1 (rank A)
-
-src\intellicrack\core\logging.py:615:4: method 'OperationTimer.__init__' - complexity 1 (rank A)
-
-src\intellicrack\core\logging.py:634:4: method 'OperationTimer.__enter__' - complexity 1 (rank A)
-
-
-26 findings in src\intellicrack\credentials\store.py
-
-src\intellicrack\credentials\store.py:451:4: method 'CredentialStore.migrate_from_env' - complexity 10 (rank B)
-
-src\intellicrack\credentials\store.py:498:4: method 'CredentialStore.validate' - complexity 9 (rank B)
-
-src\intellicrack\credentials\store.py:525:4: method 'CredentialStore.get_source' - complexity 6 (rank B)
-
-src\intellicrack\credentials\store.py:103:4: method 'CredentialStore._check_keyring' - complexity 5 (rank A)
-
-src\intellicrack\credentials\store.py:267:4: method 'CredentialStore._set_to_keyring' - complexity 5 (rank A)
-
-src\intellicrack\credentials\store.py:422:4: method 'CredentialStore.list_providers' - complexity 5 (rank A)
-
-src\intellicrack\credentials\store.py:73:0: class 'CredentialStore' - complexity 4 (rank A)
-
-src\intellicrack\credentials\store.py:241:4: method 'CredentialStore._get_from_keyring' - complexity 4 (rank A)
-
-src\intellicrack\credentials\store.py:314:4: method 'CredentialStore._get_metadata' - complexity 4 (rank A)
-
-src\intellicrack\credentials\store.py:340:4: method 'CredentialStore.get' - complexity 4 (rank A)
-
-src\intellicrack\credentials\store.py:385:4: method 'CredentialStore.delete' - complexity 4 (rank A)
-
-src\intellicrack\credentials\store.py:549:0: function 'get_credential_store' - complexity 2 (rank A)
-
-src\intellicrack\credentials\store.py:90:4: method 'CredentialStore.__init__' - complexity 2 (rank A)
-
-src\intellicrack\credentials\store.py:170:4: method 'CredentialStore._deserialize_credentials' - complexity 2 (rank A)
-
-src\intellicrack\credentials\store.py:211:4: method 'CredentialStore._deserialize_metadata' - complexity 2 (rank A)
-
-src\intellicrack\credentials\store.py:360:4: method 'CredentialStore.set' - complexity 2 (rank A)
-
-src\intellicrack\credentials\store.py:561:0: function 'get_credentials' - complexity 1 (rank A)
-
-src\intellicrack\credentials\store.py:27:0: class 'CredentialStoreError' - complexity 1 (rank A)
-
-src\intellicrack\credentials\store.py:33:0: class 'KeyringUnavailableError' - complexity 1 (rank A)
-
-src\intellicrack\credentials\store.py:39:0: class 'CredentialNotFoundError' - complexity 1 (rank A)
-
-src\intellicrack\credentials\store.py:45:0: class 'CredentialSource' - complexity 1 (rank A)
-
-src\intellicrack\credentials\store.py:55:0: class 'StoredCredential' - complexity 1 (rank A)
-
-src\intellicrack\credentials\store.py:139:4: method 'CredentialStore.keyring_available' - complexity 1 (rank A)
-
-src\intellicrack\credentials\store.py:147:4: method 'CredentialStore._get_keyring_key' - complexity 1 (rank A)
-
-src\intellicrack\credentials\store.py:158:4: method 'CredentialStore._serialize_credentials' - complexity 1 (rank A)
-
-src\intellicrack\credentials\store.py:193:4: method 'CredentialStore._serialize_metadata' - complexity 1 (rank A)
 
 
 26 findings in src\intellicrack\providers\discovery.py
@@ -4711,6 +4548,61 @@ src\intellicrack\sandbox\base.py:411:4: method 'SandboxBase.take_snapshot' - com
 src\intellicrack\sandbox\base.py:429:4: method 'SandboxBase.restore_snapshot' - complexity 1 (rank A)
 
 
+26 findings in src\intellicrack\ui\panels\process_panel.py
+
+src\intellicrack\ui\panels\process_panel.py:203:0: function '_enumerate_modules' - complexity 6 (rank B)
+
+src\intellicrack\ui\panels\process_panel.py:241:0: function '_enumerate_threads' - complexity 6 (rank B)
+
+src\intellicrack\ui\panels\process_panel.py:297:4: method '_ProcessRefreshWorker.run' - complexity 6 (rank B)
+
+src\intellicrack\ui\panels\process_panel.py:122:0: function '_enumerate_processes' - complexity 5 (rank A)
+
+src\intellicrack\ui\panels\process_panel.py:177:0: function '_detect_process_architecture' - complexity 5 (rank A)
+
+src\intellicrack\ui\panels\process_panel.py:274:0: class '_ProcessRefreshWorker' - complexity 5 (rank A)
+
+src\intellicrack\ui\panels\process_panel.py:557:4: method 'ProcessPanel._load_process_details' - complexity 5 (rank A)
+
+src\intellicrack\ui\panels\process_panel.py:446:4: method 'ProcessPanel._on_refresh' - complexity 4 (rank A)
+
+src\intellicrack\ui\panels\process_panel.py:608:4: method 'ProcessPanel._on_terminate' - complexity 4 (rank A)
+
+src\intellicrack\ui\panels\process_panel.py:153:0: function '_get_process_memory_mb' - complexity 3 (rank A)
+
+src\intellicrack\ui\panels\process_panel.py:326:0: class 'ProcessPanel' - complexity 3 (rank A)
+
+src\intellicrack\ui\panels\process_panel.py:537:4: method 'ProcessPanel._on_process_selection_changed' - complexity 3 (rank A)
+
+src\intellicrack\ui\panels\process_panel.py:641:4: method 'ProcessPanel.stop_tool' - complexity 3 (rank A)
+
+src\intellicrack\ui\panels\process_panel.py:351:4: method 'ProcessPanel._setup_ui' - complexity 2 (rank A)
+
+src\intellicrack\ui\panels\process_panel.py:471:4: method 'ProcessPanel._on_refresh_finished' - complexity 2 (rank A)
+
+src\intellicrack\ui\panels\process_panel.py:524:4: method 'ProcessPanel._on_auto_refresh_toggled' - complexity 2 (rank A)
+
+src\intellicrack\ui\panels\process_panel.py:601:4: method 'ProcessPanel._on_attach' - complexity 2 (rank A)
+
+src\intellicrack\ui\panels\process_panel.py:61:0: class '_PROCESSENTRY32' - complexity 1 (rank A)
+
+src\intellicrack\ui\panels\process_panel.py:76:0: class '_MODULEENTRY32' - complexity 1 (rank A)
+
+src\intellicrack\ui\panels\process_panel.py:91:0: class '_THREADENTRY32' - complexity 1 (rank A)
+
+src\intellicrack\ui\panels\process_panel.py:103:0: class '_ProcessMemoryCounters' - complexity 1 (rank A)
+
+src\intellicrack\ui\panels\process_panel.py:287:4: method '_ProcessRefreshWorker.__init__' - complexity 1 (rank A)
+
+src\intellicrack\ui\panels\process_panel.py:338:4: method 'ProcessPanel.__init__' - complexity 1 (rank A)
+
+src\intellicrack\ui\panels\process_panel.py:516:4: method 'ProcessPanel._on_filter_changed' - complexity 1 (rank A)
+
+src\intellicrack\ui\panels\process_panel.py:623:4: method 'ProcessPanel.get_selected_pid' - complexity 1 (rank A)
+
+src\intellicrack\ui\panels\process_panel.py:631:4: method 'ProcessPanel.start_tool' - complexity 1 (rank A)
+
+
 26 findings in tests\core\test_process_cleanup.py
 
 tests\core\test_process_cleanup.py:390:0: function 'test_ghidra_create_bridge_script_writes_real_file' - complexity 8 (rank B)
@@ -4764,6 +4656,59 @@ tests\core\test_process_cleanup.py:170:4: method '_BlockingR2.release' - complex
 tests\core\test_process_cleanup.py:179:4: method '_FastR2.cmd' - complexity 1 (rank A)
 
 tests\core\test_process_cleanup.py:195:4: method '_NoneR2.cmd' - complexity 1 (rank A)
+
+
+25 findings in src\intellicrack\core\logging.py
+
+src\intellicrack\core\logging.py:425:0: function '_sanitize_arguments' - complexity 11 (rank C)
+
+src\intellicrack\core\logging.py:37:0: class 'ColoredConsoleRenderer' - complexity 9 (rank B)
+
+src\intellicrack\core\logging.py:57:4: method 'ColoredConsoleRenderer.__call__' - complexity 8 (rank B)
+
+src\intellicrack\core\logging.py:95:0: function 'cleanup_old_logs' - complexity 5 (rank A)
+
+src\intellicrack\core\logging.py:125:0: function '_add_call_info' - complexity 5 (rank A)
+
+src\intellicrack\core\logging.py:157:0: function '_configure_structlog' - complexity 5 (rank A)
+
+src\intellicrack\core\logging.py:362:0: function 'get_logger' - complexity 4 (rank A)
+
+src\intellicrack\core\logging.py:395:0: function 'log_tool_call' - complexity 3 (rank A)
+
+src\intellicrack\core\logging.py:257:0: class 'IntellicrackLogger' - complexity 3 (rank A)
+
+src\intellicrack\core\logging.py:276:4: method 'IntellicrackLogger.configure' - complexity 3 (rank A)
+
+src\intellicrack\core\logging.py:583:0: class 'OperationTimer' - complexity 3 (rank A)
+
+src\intellicrack\core\logging.py:621:4: method 'OperationTimer.__exit__' - complexity 3 (rank A)
+
+src\intellicrack\core\logging.py:382:0: function 'get_structlog_logger' - complexity 2 (rank A)
+
+src\intellicrack\core\logging.py:487:0: function 'log_provider_response' - complexity 2 (rank A)
+
+src\intellicrack\core\logging.py:548:0: function 'log_session_operation' - complexity 2 (rank A)
+
+src\intellicrack\core\logging.py:312:4: method 'IntellicrackLogger.get_logger' - complexity 2 (rank A)
+
+src\intellicrack\core\logging.py:335:0: function 'setup_logging' - complexity 1 (rank A)
+
+src\intellicrack\core\logging.py:463:0: function 'log_provider_request' - complexity 1 (rank A)
+
+src\intellicrack\core\logging.py:516:0: function 'log_binary_operation' - complexity 1 (rank A)
+
+src\intellicrack\core\logging.py:532:0: function 'log_sandbox_operation' - complexity 1 (rank A)
+
+src\intellicrack\core\logging.py:567:0: function 'log_analysis_operation' - complexity 1 (rank A)
+
+src\intellicrack\core\logging.py:268:4: method 'IntellicrackLogger.__init__' - complexity 1 (rank A)
+
+src\intellicrack\core\logging.py:326:0: class '_LoggerState' - complexity 1 (rank A)
+
+src\intellicrack\core\logging.py:592:4: method 'OperationTimer.__init__' - complexity 1 (rank A)
+
+src\intellicrack\core\logging.py:611:4: method 'OperationTimer.__enter__' - complexity 1 (rank A)
 
 
 24 findings in src\intellicrack\providers\model_loader.py
@@ -4868,6 +4813,57 @@ src\intellicrack\providers\ollama.py:94:4: method 'OllamaProvider.cloud_availabl
 src\intellicrack\providers\ollama.py:591:4: method 'OllamaProvider.cancel_request' - complexity 1 (rank A)
 
 
+24 findings in src\intellicrack\ui\highlighter.py
+
+src\intellicrack\ui\highlighter.py:774:4: method 'PythonSyntaxHighlighter._highlight_triple_quotes' - complexity 12 (rank C)
+
+src\intellicrack\ui\highlighter.py:210:4: method 'CSyntaxHighlighter.highlightBlock' - complexity 8 (rank B)
+
+src\intellicrack\ui\highlighter.py:983:4: method 'JavaScriptSyntaxHighlighter.highlightBlock' - complexity 8 (rank B)
+
+src\intellicrack\ui\highlighter.py:1025:0: function 'get_highlighter_for_language' - complexity 5 (rank A)
+
+src\intellicrack\ui\highlighter.py:42:0: class 'CSyntaxHighlighter' - complexity 5 (rank A)
+
+src\intellicrack\ui\highlighter.py:570:0: class 'PythonSyntaxHighlighter' - complexity 5 (rank A)
+
+src\intellicrack\ui\highlighter.py:840:0: class 'JavaScriptSyntaxHighlighter' - complexity 5 (rank A)
+
+src\intellicrack\ui\highlighter.py:252:0: class 'AssemblySyntaxHighlighter' - complexity 4 (rank A)
+
+src\intellicrack\ui\highlighter.py:518:4: method 'AssemblySyntaxHighlighter._setup_rules' - complexity 4 (rank A)
+
+src\intellicrack\ui\highlighter.py:152:4: method 'CSyntaxHighlighter._create_format' - complexity 3 (rank A)
+
+src\intellicrack\ui\highlighter.py:175:4: method 'CSyntaxHighlighter._setup_rules' - complexity 3 (rank A)
+
+src\intellicrack\ui\highlighter.py:495:4: method 'AssemblySyntaxHighlighter._create_format' - complexity 3 (rank A)
+
+src\intellicrack\ui\highlighter.py:553:4: method 'AssemblySyntaxHighlighter.highlightBlock' - complexity 3 (rank A)
+
+src\intellicrack\ui\highlighter.py:695:4: method 'PythonSyntaxHighlighter._create_format' - complexity 3 (rank A)
+
+src\intellicrack\ui\highlighter.py:718:4: method 'PythonSyntaxHighlighter._setup_rules' - complexity 3 (rank A)
+
+src\intellicrack\ui\highlighter.py:756:4: method 'PythonSyntaxHighlighter.highlightBlock' - complexity 3 (rank A)
+
+src\intellicrack\ui\highlighter.py:931:4: method 'JavaScriptSyntaxHighlighter._create_format' - complexity 3 (rank A)
+
+src\intellicrack\ui\highlighter.py:954:4: method 'JavaScriptSyntaxHighlighter._setup_rules' - complexity 3 (rank A)
+
+src\intellicrack\ui\highlighter.py:21:0: class 'HighlightRule' - complexity 2 (rank A)
+
+src\intellicrack\ui\highlighter.py:31:4: method 'HighlightRule.__init__' - complexity 1 (rank A)
+
+src\intellicrack\ui\highlighter.py:138:4: method 'CSyntaxHighlighter.__init__' - complexity 1 (rank A)
+
+src\intellicrack\ui\highlighter.py:484:4: method 'AssemblySyntaxHighlighter.__init__' - complexity 1 (rank A)
+
+src\intellicrack\ui\highlighter.py:683:4: method 'PythonSyntaxHighlighter.__init__' - complexity 1 (rank A)
+
+src\intellicrack\ui\highlighter.py:917:4: method 'JavaScriptSyntaxHighlighter.__init__' - complexity 1 (rank A)
+
+
 23 findings in src\intellicrack\core\config.py
 
 src\intellicrack\core\config.py:469:4: method 'Config._to_dict' - complexity 6 (rank B)
@@ -4966,68 +4962,68 @@ src\intellicrack\providers\anthropic.py:202:4: method 'AnthropicProvider._get_co
 src\intellicrack\providers\anthropic.py:483:4: method 'AnthropicProvider._format_user_message' - complexity 1 (rank A)
 
 
-23 findings in src\intellicrack\ui\highlighter.py
+23 findings in src\intellicrack\providers\base.py
 
-src\intellicrack\ui\highlighter.py:210:4: method 'CSyntaxHighlighter.highlightBlock' - complexity 8 (rank B)
+src\intellicrack\providers\base.py:319:0: function '_build_schema_property' - complexity 4 (rank A)
 
-src\intellicrack\ui\highlighter.py:916:4: method 'JavaScriptSyntaxHighlighter.highlightBlock' - complexity 8 (rank B)
+src\intellicrack\providers\base.py:348:0: function 'create_anthropic_tool_schema' - complexity 4 (rank A)
 
-src\intellicrack\ui\highlighter.py:958:0: function 'get_highlighter_for_language' - complexity 5 (rank A)
+src\intellicrack\providers\base.py:391:0: function 'create_openai_tool_schema' - complexity 4 (rank A)
 
-src\intellicrack\ui\highlighter.py:42:0: class 'CSyntaxHighlighter' - complexity 5 (rank A)
+src\intellicrack\providers\base.py:282:4: method 'LLMProviderBase._parse_tool_call_common' - complexity 4 (rank A)
 
-src\intellicrack\ui\highlighter.py:773:0: class 'JavaScriptSyntaxHighlighter' - complexity 5 (rank A)
+src\intellicrack\providers\base.py:247:4: method 'LLMProviderBase._build_chat_response' - complexity 3 (rank A)
 
-src\intellicrack\ui\highlighter.py:252:0: class 'AssemblySyntaxHighlighter' - complexity 4 (rank A)
+src\intellicrack\providers\base.py:83:0: class 'LLMProviderBase' - complexity 2 (rank A)
 
-src\intellicrack\ui\highlighter.py:518:4: method 'AssemblySyntaxHighlighter._setup_rules' - complexity 4 (rank A)
+src\intellicrack\providers\base.py:35:0: class 'JSONSchemaProperty' - complexity 1 (rank A)
 
-src\intellicrack\ui\highlighter.py:152:4: method 'CSyntaxHighlighter._create_format' - complexity 3 (rank A)
+src\intellicrack\providers\base.py:44:0: class 'JSONSchemaParameters' - complexity 1 (rank A)
 
-src\intellicrack\ui\highlighter.py:175:4: method 'CSyntaxHighlighter._setup_rules' - complexity 3 (rank A)
+src\intellicrack\providers\base.py:52:0: class 'AnthropicToolSchema' - complexity 1 (rank A)
 
-src\intellicrack\ui\highlighter.py:495:4: method 'AssemblySyntaxHighlighter._create_format' - complexity 3 (rank A)
+src\intellicrack\providers\base.py:60:0: class 'OpenAIFunctionSchema' - complexity 1 (rank A)
 
-src\intellicrack\ui\highlighter.py:553:4: method 'AssemblySyntaxHighlighter.highlightBlock' - complexity 3 (rank A)
+src\intellicrack\providers\base.py:68:0: class 'OpenAIToolSchema' - complexity 1 (rank A)
 
-src\intellicrack\ui\highlighter.py:570:0: class 'PythonSyntaxHighlighter' - complexity 3 (rank A)
+src\intellicrack\providers\base.py:75:0: class 'GoogleFunctionDeclaration' - complexity 1 (rank A)
 
-src\intellicrack\ui\highlighter.py:695:4: method 'PythonSyntaxHighlighter._create_format' - complexity 3 (rank A)
+src\intellicrack\providers\base.py:96:4: method 'LLMProviderBase.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\highlighter.py:718:4: method 'PythonSyntaxHighlighter._setup_rules' - complexity 3 (rank A)
+src\intellicrack\providers\base.py:105:4: method 'LLMProviderBase.name' - complexity 1 (rank A)
 
-src\intellicrack\ui\highlighter.py:756:4: method 'PythonSyntaxHighlighter.highlightBlock' - complexity 3 (rank A)
+src\intellicrack\providers\base.py:113:4: method 'LLMProviderBase.is_connected' - complexity 1 (rank A)
 
-src\intellicrack\ui\highlighter.py:864:4: method 'JavaScriptSyntaxHighlighter._create_format' - complexity 3 (rank A)
+src\intellicrack\providers\base.py:122:4: method 'LLMProviderBase.connect' - complexity 1 (rank A)
 
-src\intellicrack\ui\highlighter.py:887:4: method 'JavaScriptSyntaxHighlighter._setup_rules' - complexity 3 (rank A)
+src\intellicrack\providers\base.py:133:4: method 'LLMProviderBase.disconnect' - complexity 1 (rank A)
 
-src\intellicrack\ui\highlighter.py:21:0: class 'HighlightRule' - complexity 2 (rank A)
+src\intellicrack\providers\base.py:144:4: method 'LLMProviderBase.list_models' - complexity 1 (rank A)
 
-src\intellicrack\ui\highlighter.py:31:4: method 'HighlightRule.__init__' - complexity 1 (rank A)
+src\intellicrack\providers\base.py:155:4: method 'LLMProviderBase.chat' - complexity 1 (rank A)
 
-src\intellicrack\ui\highlighter.py:138:4: method 'CSyntaxHighlighter.__init__' - complexity 1 (rank A)
+src\intellicrack\providers\base.py:182:4: method 'LLMProviderBase.chat_stream' - complexity 1 (rank A)
 
-src\intellicrack\ui\highlighter.py:484:4: method 'AssemblySyntaxHighlighter.__init__' - complexity 1 (rank A)
+src\intellicrack\providers\base.py:210:4: method 'LLMProviderBase.cancel_request' - complexity 1 (rank A)
 
-src\intellicrack\ui\highlighter.py:683:4: method 'PythonSyntaxHighlighter.__init__' - complexity 1 (rank A)
+src\intellicrack\providers\base.py:219:4: method 'LLMProviderBase._convert_tools_to_provider_format' - complexity 1 (rank A)
 
-src\intellicrack\ui\highlighter.py:850:4: method 'JavaScriptSyntaxHighlighter.__init__' - complexity 1 (rank A)
+src\intellicrack\providers\base.py:233:4: method 'LLMProviderBase._convert_messages_to_provider_format' - complexity 1 (rank A)
 
 
 23 findings in src\intellicrack\ui\panels\ghidra_panel.py
 
-src\intellicrack\ui\panels\ghidra_panel.py:504:4: method 'GhidraPanel.show_xrefs' - complexity 10 (rank B)
+src\intellicrack\ui\panels\ghidra_panel.py:506:4: method 'GhidraPanel.show_xrefs' - complexity 10 (rank B)
 
 src\intellicrack\ui\panels\ghidra_panel.py:407:4: method 'GhidraPanel._on_function_clicked' - complexity 8 (rank B)
 
 src\intellicrack\ui\panels\ghidra_panel.py:367:4: method 'GhidraPanel._on_refresh_functions' - complexity 6 (rank B)
 
-src\intellicrack\ui\panels\ghidra_panel.py:455:4: method 'GhidraPanel._refresh_exports' - complexity 6 (rank B)
+src\intellicrack\ui\panels\ghidra_panel.py:457:4: method 'GhidraPanel._refresh_exports' - complexity 6 (rank B)
 
-src\intellicrack\ui\panels\ghidra_panel.py:433:4: method 'GhidraPanel._refresh_imports' - complexity 5 (rank A)
+src\intellicrack\ui\panels\ghidra_panel.py:435:4: method 'GhidraPanel._refresh_imports' - complexity 5 (rank A)
 
-src\intellicrack\ui\panels\ghidra_panel.py:477:4: method 'GhidraPanel.search_strings' - complexity 5 (rank A)
+src\intellicrack\ui\panels\ghidra_panel.py:479:4: method 'GhidraPanel.search_strings' - complexity 5 (rank A)
 
 src\intellicrack\ui\panels\ghidra_panel.py:57:0: class 'GhidraPanel' - complexity 4 (rank A)
 
@@ -5111,68 +5107,21 @@ src\intellicrack\bridges\installer.py:201:4: method 'ToolInstaller.__init__' - c
 src\intellicrack\bridges\installer.py:631:4: method 'ToolInstaller._extract_zip' - complexity 1 (rank A)
 
 
-22 findings in src\intellicrack\providers\registry.py
-
-src\intellicrack\providers\registry.py:131:4: method 'ProviderRegistry.connect_provider' - complexity 6 (rank B)
-
-src\intellicrack\providers\registry.py:178:4: method 'ProviderRegistry.connect_all' - complexity 4 (rank A)
-
-src\intellicrack\providers\registry.py:228:4: method 'ProviderRegistry.get_all_models' - complexity 4 (rank A)
-
-src\intellicrack\providers\registry.py:27:0: class 'ProviderRegistry' - complexity 3 (rank A)
-
-src\intellicrack\providers\registry.py:69:4: method 'ProviderRegistry.unregister' - complexity 3 (rank A)
-
-src\intellicrack\providers\registry.py:122:4: method 'ProviderRegistry.list_connected' - complexity 3 (rank A)
-
-src\intellicrack\providers\registry.py:167:4: method 'ProviderRegistry.disconnect_provider' - complexity 3 (rank A)
-
-src\intellicrack\providers\registry.py:307:0: function 'get_provider_registry' - complexity 2 (rank A)
-
-src\intellicrack\providers\registry.py:328:0: function 'get_active_provider' - complexity 2 (rank A)
-
-src\intellicrack\providers\registry.py:53:4: method 'ProviderRegistry.register' - complexity 2 (rank A)
-
-src\intellicrack\providers\registry.py:97:4: method 'ProviderRegistry.get_or_raise' - complexity 2 (rank A)
-
-src\intellicrack\providers\registry.py:223:4: method 'ProviderRegistry.disconnect_all' - complexity 2 (rank A)
-
-src\intellicrack\providers\registry.py:249:4: method 'ProviderRegistry.set_active' - complexity 2 (rank A)
-
-src\intellicrack\providers\registry.py:265:4: method 'ProviderRegistry.active' - complexity 2 (rank A)
-
-src\intellicrack\providers\registry.py:318:0: function 'register_provider' - complexity 1 (rank A)
-
-src\intellicrack\providers\registry.py:39:4: method 'ProviderRegistry.__init__' - complexity 1 (rank A)
-
-src\intellicrack\providers\registry.py:86:4: method 'ProviderRegistry.get' - complexity 1 (rank A)
-
-src\intellicrack\providers\registry.py:114:4: method 'ProviderRegistry.list_registered' - complexity 1 (rank A)
-
-src\intellicrack\providers\registry.py:276:4: method 'ProviderRegistry.active_name' - complexity 1 (rank A)
-
-src\intellicrack\providers\registry.py:284:4: method 'ProviderRegistry.has_connected_provider' - complexity 1 (rank A)
-
-src\intellicrack\providers\registry.py:292:4: method 'ProviderRegistry.set_credential_loader' - complexity 1 (rank A)
-
-src\intellicrack\providers\registry.py:301:0: class '_RegistryHolder' - complexity 1 (rank A)
-
-
 22 findings in src\intellicrack\ui\panels\radare2_panel.py
 
-src\intellicrack\ui\panels\radare2_panel.py:499:4: method 'Radare2Panel.show_xrefs' - complexity 10 (rank B)
+src\intellicrack\ui\panels\radare2_panel.py:501:4: method 'Radare2Panel.show_xrefs' - complexity 10 (rank B)
 
 src\intellicrack\ui\panels\radare2_panel.py:403:4: method 'Radare2Panel._on_function_clicked' - complexity 8 (rank B)
 
 src\intellicrack\ui\panels\radare2_panel.py:363:4: method 'Radare2Panel._on_refresh_functions' - complexity 6 (rank B)
 
-src\intellicrack\ui\panels\radare2_panel.py:429:4: method 'Radare2Panel._refresh_imports' - complexity 5 (rank A)
+src\intellicrack\ui\panels\radare2_panel.py:431:4: method 'Radare2Panel._refresh_imports' - complexity 5 (rank A)
 
-src\intellicrack\ui\panels\radare2_panel.py:451:4: method 'Radare2Panel._refresh_exports' - complexity 5 (rank A)
+src\intellicrack\ui\panels\radare2_panel.py:453:4: method 'Radare2Panel._refresh_exports' - complexity 5 (rank A)
 
-src\intellicrack\ui\panels\radare2_panel.py:472:4: method 'Radare2Panel.search_strings' - complexity 5 (rank A)
+src\intellicrack\ui\panels\radare2_panel.py:474:4: method 'Radare2Panel.search_strings' - complexity 5 (rank A)
 
-src\intellicrack\ui\panels\radare2_panel.py:538:4: method 'Radare2Panel._on_execute_r2_command' - complexity 5 (rank A)
+src\intellicrack\ui\panels\radare2_panel.py:540:4: method 'Radare2Panel._on_execute_r2_command' - complexity 5 (rank A)
 
 src\intellicrack\ui\panels\radare2_panel.py:60:0: class 'Radare2Panel' - complexity 4 (rank A)
 
@@ -5301,47 +5250,47 @@ tests\test_providers\test_credential_loading.py:212:4: method 'TestReload.test_r
 
 21 findings in src\intellicrack\core\tools.py
 
-src\intellicrack\core\tools.py:293:4: method 'ToolRegistry.get_status' - complexity 7 (rank B)
+src\intellicrack\core\tools.py:294:4: method 'ToolRegistry.get_status' - complexity 7 (rank B)
 
-src\intellicrack\core\tools.py:391:4: method 'ToolRegistry.execute_tool_call' - complexity 7 (rank B)
+src\intellicrack\core\tools.py:392:4: method 'ToolRegistry.execute_tool_call' - complexity 7 (rank B)
 
-src\intellicrack\core\tools.py:127:4: method 'ToolRegistry.initialize_tool' - complexity 5 (rank A)
+src\intellicrack\core\tools.py:128:4: method 'ToolRegistry.initialize_tool' - complexity 5 (rank A)
 
-src\intellicrack\core\tools.py:64:0: class 'ToolRegistry' - complexity 4 (rank A)
+src\intellicrack\core\tools.py:65:0: class 'ToolRegistry' - complexity 4 (rank A)
 
-src\intellicrack\core\tools.py:97:4: method 'ToolRegistry.initialize' - complexity 3 (rank A)
+src\intellicrack\core\tools.py:98:4: method 'ToolRegistry.initialize' - complexity 3 (rank A)
 
-src\intellicrack\core\tools.py:160:4: method 'ToolRegistry.shutdown' - complexity 3 (rank A)
+src\intellicrack\core\tools.py:161:4: method 'ToolRegistry.shutdown' - complexity 3 (rank A)
 
-src\intellicrack\core\tools.py:188:4: method 'ToolRegistry.get_binary_bridge' - complexity 3 (rank A)
+src\intellicrack\core\tools.py:189:4: method 'ToolRegistry.get_binary_bridge' - complexity 3 (rank A)
 
-src\intellicrack\core\tools.py:203:4: method 'ToolRegistry.get_process_bridge' - complexity 3 (rank A)
+src\intellicrack\core\tools.py:204:4: method 'ToolRegistry.get_process_bridge' - complexity 3 (rank A)
 
-src\intellicrack\core\tools.py:218:4: method 'ToolRegistry.get_frida_bridge' - complexity 3 (rank A)
+src\intellicrack\core\tools.py:219:4: method 'ToolRegistry.get_frida_bridge' - complexity 3 (rank A)
 
-src\intellicrack\core\tools.py:233:4: method 'ToolRegistry.get_ghidra_bridge' - complexity 3 (rank A)
+src\intellicrack\core\tools.py:234:4: method 'ToolRegistry.get_ghidra_bridge' - complexity 3 (rank A)
 
-src\intellicrack\core\tools.py:248:4: method 'ToolRegistry.get_radare2_bridge' - complexity 3 (rank A)
+src\intellicrack\core\tools.py:249:4: method 'ToolRegistry.get_radare2_bridge' - complexity 3 (rank A)
 
-src\intellicrack\core\tools.py:263:4: method 'ToolRegistry.get_x64dbg_bridge' - complexity 3 (rank A)
+src\intellicrack\core\tools.py:264:4: method 'ToolRegistry.get_x64dbg_bridge' - complexity 3 (rank A)
 
-src\intellicrack\core\tools.py:278:4: method 'ToolRegistry.get_sandbox_bridge' - complexity 3 (rank A)
+src\intellicrack\core\tools.py:279:4: method 'ToolRegistry.get_sandbox_bridge' - complexity 3 (rank A)
 
-src\intellicrack\core\tools.py:360:4: method 'ToolRegistry.get_tool_definitions' - complexity 3 (rank A)
+src\intellicrack\core\tools.py:361:4: method 'ToolRegistry.get_tool_definitions' - complexity 3 (rank A)
 
-src\intellicrack\core\tools.py:453:4: method 'ToolRegistry.ensure_tool_ready' - complexity 3 (rank A)
+src\intellicrack\core\tools.py:466:4: method 'ToolRegistry.ensure_tool_ready' - complexity 3 (rank A)
 
-src\intellicrack\core\tools.py:172:4: method 'ToolRegistry.get' - complexity 2 (rank A)
+src\intellicrack\core\tools.py:173:4: method 'ToolRegistry.get' - complexity 2 (rank A)
 
-src\intellicrack\core\tools.py:348:4: method 'ToolRegistry.get_all_status' - complexity 2 (rank A)
+src\intellicrack\core\tools.py:349:4: method 'ToolRegistry.get_all_status' - complexity 2 (rank A)
 
-src\intellicrack\core\tools.py:378:4: method 'ToolRegistry.get_available_tools' - complexity 2 (rank A)
+src\intellicrack\core\tools.py:379:4: method 'ToolRegistry.get_available_tools' - complexity 2 (rank A)
 
-src\intellicrack\core\tools.py:44:0: class 'ToolStatus' - complexity 1 (rank A)
+src\intellicrack\core\tools.py:45:0: class 'ToolStatus' - complexity 1 (rank A)
 
-src\intellicrack\core\tools.py:76:4: method 'ToolRegistry.__init__' - complexity 1 (rank A)
+src\intellicrack\core\tools.py:77:4: method 'ToolRegistry.__init__' - complexity 1 (rank A)
 
-src\intellicrack\core\tools.py:89:4: method 'ToolRegistry.tools_directory' - complexity 1 (rank A)
+src\intellicrack\core\tools.py:90:4: method 'ToolRegistry.tools_directory' - complexity 1 (rank A)
 
 
 20 findings in src\intellicrack\main.py
@@ -5382,95 +5331,95 @@ src\intellicrack\main.py:260:0: function '_import_main_window' - complexity 1 (r
 
 src\intellicrack\main.py:308:0: function '_initialize_providers_sync' - complexity 1 (rank A)
 
-src\intellicrack\main.py:421:0: function '_run_application' - complexity 1 (rank A)
+src\intellicrack\main.py:422:0: function '_run_application' - complexity 1 (rank A)
 
 src\intellicrack\main.py:44:0: class '_CLIOptions' - complexity 1 (rank A)
 
 
 20 findings in src\intellicrack\ui\panels\binary_panel.py
 
-src\intellicrack\ui\panels\binary_panel.py:281:4: method 'BinaryPanel._parse_sections' - complexity 12 (rank C)
+src\intellicrack\ui\panels\binary_panel.py:282:4: method 'BinaryPanel._parse_sections' - complexity 12 (rank C)
 
-src\intellicrack\ui\panels\binary_panel.py:338:4: method 'BinaryPanel._extract_strings' - complexity 9 (rank B)
+src\intellicrack\ui\panels\binary_panel.py:339:4: method 'BinaryPanel._extract_strings' - complexity 9 (rank B)
 
-src\intellicrack\ui\panels\binary_panel.py:428:4: method 'BinaryPanel._on_apply_patch' - complexity 6 (rank B)
+src\intellicrack\ui\panels\binary_panel.py:429:4: method 'BinaryPanel._on_apply_patch' - complexity 6 (rank B)
 
-src\intellicrack\ui\panels\binary_panel.py:209:4: method 'BinaryPanel.load_file' - complexity 5 (rank A)
+src\intellicrack\ui\panels\binary_panel.py:210:4: method 'BinaryPanel.load_file' - complexity 5 (rank A)
 
-src\intellicrack\ui\panels\binary_panel.py:248:4: method 'BinaryPanel._populate_hex_view' - complexity 5 (rank A)
+src\intellicrack\ui\panels\binary_panel.py:249:4: method 'BinaryPanel._populate_hex_view' - complexity 5 (rank A)
 
-src\intellicrack\ui\panels\binary_panel.py:406:4: method 'BinaryPanel._on_search' - complexity 5 (rank A)
+src\intellicrack\ui\panels\binary_panel.py:407:4: method 'BinaryPanel._on_search' - complexity 5 (rank A)
 
-src\intellicrack\ui\panels\binary_panel.py:54:0: class 'BinaryPanel' - complexity 4 (rank A)
+src\intellicrack\ui\panels\binary_panel.py:55:0: class 'BinaryPanel' - complexity 4 (rank A)
 
-src\intellicrack\ui\panels\binary_panel.py:391:4: method 'BinaryPanel._on_goto_offset' - complexity 4 (rank A)
+src\intellicrack\ui\panels\binary_panel.py:392:4: method 'BinaryPanel._on_goto_offset' - complexity 4 (rank A)
 
-src\intellicrack\ui\panels\binary_panel.py:476:4: method 'BinaryPanel._on_save' - complexity 4 (rank A)
+src\intellicrack\ui\panels\binary_panel.py:477:4: method 'BinaryPanel._on_save' - complexity 4 (rank A)
 
-src\intellicrack\ui\panels\binary_panel.py:525:4: method 'BinaryPanel._update_patches_table' - complexity 4 (rank A)
+src\intellicrack\ui\panels\binary_panel.py:526:4: method 'BinaryPanel._update_patches_table' - complexity 4 (rank A)
 
-src\intellicrack\ui\panels\binary_panel.py:511:4: method 'BinaryPanel._on_string_double_clicked' - complexity 3 (rank A)
+src\intellicrack\ui\panels\binary_panel.py:512:4: method 'BinaryPanel._on_string_double_clicked' - complexity 3 (rank A)
 
-src\intellicrack\ui\panels\binary_panel.py:380:4: method 'BinaryPanel._on_open_file' - complexity 2 (rank A)
+src\intellicrack\ui\panels\binary_panel.py:381:4: method 'BinaryPanel._on_open_file' - complexity 2 (rank A)
 
-src\intellicrack\ui\panels\binary_panel.py:463:4: method 'BinaryPanel._on_revert_patch' - complexity 2 (rank A)
+src\intellicrack\ui\panels\binary_panel.py:464:4: method 'BinaryPanel._on_revert_patch' - complexity 2 (rank A)
 
-src\intellicrack\ui\panels\binary_panel.py:499:4: method 'BinaryPanel._on_section_double_clicked' - complexity 2 (rank A)
+src\intellicrack\ui\panels\binary_panel.py:500:4: method 'BinaryPanel._on_section_double_clicked' - complexity 2 (rank A)
 
-src\intellicrack\ui\panels\binary_panel.py:66:4: method 'BinaryPanel.__init__' - complexity 1 (rank A)
+src\intellicrack\ui\panels\binary_panel.py:67:4: method 'BinaryPanel.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\binary_panel.py:79:4: method 'BinaryPanel._setup_ui' - complexity 1 (rank A)
+src\intellicrack\ui\panels\binary_panel.py:80:4: method 'BinaryPanel._setup_ui' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\binary_panel.py:535:4: method 'BinaryPanel.get_file_data' - complexity 1 (rank A)
+src\intellicrack\ui\panels\binary_panel.py:536:4: method 'BinaryPanel.get_file_data' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\binary_panel.py:543:4: method 'BinaryPanel.get_patches' - complexity 1 (rank A)
+src\intellicrack\ui\panels\binary_panel.py:544:4: method 'BinaryPanel.get_patches' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\binary_panel.py:551:4: method 'BinaryPanel.start_tool' - complexity 1 (rank A)
+src\intellicrack\ui\panels\binary_panel.py:552:4: method 'BinaryPanel.start_tool' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\binary_panel.py:560:4: method 'BinaryPanel.stop_tool' - complexity 1 (rank A)
+src\intellicrack\ui\panels\binary_panel.py:561:4: method 'BinaryPanel.stop_tool' - complexity 1 (rank A)
 
 
 20 findings in src\intellicrack\ui\panels\frida_panel.py
 
-src\intellicrack\ui\panels\frida_panel.py:282:4: method 'FridaPanel._on_attach' - complexity 5 (rank A)
+src\intellicrack\ui\panels\frida_panel.py:283:4: method 'FridaPanel._on_attach' - complexity 5 (rank A)
 
-src\intellicrack\ui\panels\frida_panel.py:382:4: method 'FridaPanel._on_remove_hook' - complexity 5 (rank A)
+src\intellicrack\ui\panels\frida_panel.py:383:4: method 'FridaPanel._on_remove_hook' - complexity 5 (rank A)
 
-src\intellicrack\ui\panels\frida_panel.py:335:4: method 'FridaPanel._on_run_script' - complexity 4 (rank A)
+src\intellicrack\ui\panels\frida_panel.py:336:4: method 'FridaPanel._on_run_script' - complexity 4 (rank A)
 
-src\intellicrack\ui\panels\frida_panel.py:437:4: method 'FridaPanel.stop_tool' - complexity 4 (rank A)
+src\intellicrack\ui\panels\frida_panel.py:438:4: method 'FridaPanel.stop_tool' - complexity 4 (rank A)
 
-src\intellicrack\ui\panels\frida_panel.py:57:0: class 'FridaPanel' - complexity 3 (rank A)
+src\intellicrack\ui\panels\frida_panel.py:58:0: class 'FridaPanel' - complexity 3 (rank A)
 
-src\intellicrack\ui\panels\frida_panel.py:266:4: method 'FridaPanel._on_frida_message' - complexity 3 (rank A)
+src\intellicrack\ui\panels\frida_panel.py:267:4: method 'FridaPanel._on_frida_message' - complexity 3 (rank A)
 
-src\intellicrack\ui\panels\frida_panel.py:315:4: method 'FridaPanel._on_detach' - complexity 3 (rank A)
+src\intellicrack\ui\panels\frida_panel.py:316:4: method 'FridaPanel._on_detach' - complexity 3 (rank A)
 
-src\intellicrack\ui\panels\frida_panel.py:368:4: method 'FridaPanel._on_add_hook' - complexity 2 (rank A)
+src\intellicrack\ui\panels\frida_panel.py:369:4: method 'FridaPanel._on_add_hook' - complexity 2 (rank A)
 
-src\intellicrack\ui\panels\frida_panel.py:70:4: method 'FridaPanel.__init__' - complexity 1 (rank A)
+src\intellicrack\ui\panels\frida_panel.py:71:4: method 'FridaPanel.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\frida_panel.py:82:4: method 'FridaPanel._setup_ui' - complexity 1 (rank A)
+src\intellicrack\ui\panels\frida_panel.py:83:4: method 'FridaPanel._setup_ui' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\frida_panel.py:117:4: method 'FridaPanel._create_toolbar' - complexity 1 (rank A)
+src\intellicrack\ui\panels\frida_panel.py:118:4: method 'FridaPanel._create_toolbar' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\frida_panel.py:174:4: method 'FridaPanel._create_editor_section' - complexity 1 (rank A)
+src\intellicrack\ui\panels\frida_panel.py:175:4: method 'FridaPanel._create_editor_section' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\frida_panel.py:203:4: method 'FridaPanel._create_hooks_section' - complexity 1 (rank A)
+src\intellicrack\ui\panels\frida_panel.py:204:4: method 'FridaPanel._create_hooks_section' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\frida_panel.py:240:4: method 'FridaPanel.set_bridge' - complexity 1 (rank A)
+src\intellicrack\ui\panels\frida_panel.py:241:4: method 'FridaPanel.set_bridge' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\frida_panel.py:250:4: method 'FridaPanel.get_bridge' - complexity 1 (rank A)
+src\intellicrack\ui\panels\frida_panel.py:251:4: method 'FridaPanel.get_bridge' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\frida_panel.py:258:4: method 'FridaPanel.log_message' - complexity 1 (rank A)
+src\intellicrack\ui\panels\frida_panel.py:259:4: method 'FridaPanel.log_message' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\frida_panel.py:358:4: method 'FridaPanel._on_stop_script' - complexity 1 (rank A)
+src\intellicrack\ui\panels\frida_panel.py:359:4: method 'FridaPanel._on_stop_script' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\frida_panel.py:364:4: method 'FridaPanel._on_clear_console' - complexity 1 (rank A)
+src\intellicrack\ui\panels\frida_panel.py:365:4: method 'FridaPanel._on_clear_console' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\frida_panel.py:401:4: method 'FridaPanel.add_hook_entry' - complexity 1 (rank A)
+src\intellicrack\ui\panels\frida_panel.py:402:4: method 'FridaPanel.add_hook_entry' - complexity 1 (rank A)
 
-src\intellicrack\ui\panels\frida_panel.py:428:4: method 'FridaPanel.start_tool' - complexity 1 (rank A)
+src\intellicrack\ui\panels\frida_panel.py:429:4: method 'FridaPanel.start_tool' - complexity 1 (rank A)
 
 
 20 findings in src\intellicrack\ui\resources\font_manager.py
@@ -5723,45 +5672,6 @@ src\intellicrack\providers\xpu_utils.py:396:0: function '_validate_xpu_device' -
 src\intellicrack\providers\xpu_utils.py:48:0: class 'XPUDeviceInfo' - complexity 1 (rank A)
 
 
-18 findings in src\intellicrack\credentials\env_loader.py
-
-src\intellicrack\credentials\env_loader.py:283:4: method 'CredentialLoader._validate_key_format' - complexity 11 (rank C)
-
-src\intellicrack\credentials\env_loader.py:122:4: method 'CredentialLoader._load_env_file' - complexity 9 (rank B)
-
-src\intellicrack\credentials\env_loader.py:367:4: method 'CredentialLoader.save_to_env_file' - complexity 8 (rank B)
-
-src\intellicrack\credentials\env_loader.py:175:4: method 'CredentialLoader.get_credentials' - complexity 6 (rank B)
-
-src\intellicrack\credentials\env_loader.py:39:0: class 'CredentialLoader' - complexity 5 (rank A)
-
-src\intellicrack\credentials\env_loader.py:97:4: method 'CredentialLoader._find_env_file' - complexity 4 (rank A)
-
-src\intellicrack\credentials\env_loader.py:244:4: method 'CredentialLoader.validate_credentials' - complexity 4 (rank A)
-
-src\intellicrack\credentials\env_loader.py:310:4: method 'CredentialLoader.list_configured_providers' - complexity 4 (rank A)
-
-src\intellicrack\credentials\env_loader.py:327:4: method 'CredentialLoader.list_missing_providers' - complexity 4 (rank A)
-
-src\intellicrack\credentials\env_loader.py:452:0: function 'get_credential_loader' - complexity 2 (rank A)
-
-src\intellicrack\credentials\env_loader.py:84:4: method 'CredentialLoader.__init__' - complexity 2 (rank A)
-
-src\intellicrack\credentials\env_loader.py:229:4: method 'CredentialLoader._get_var' - complexity 2 (rank A)
-
-src\intellicrack\credentials\env_loader.py:344:4: method 'CredentialLoader.get_env_var' - complexity 2 (rank A)
-
-src\intellicrack\credentials\env_loader.py:413:0: function 'create_env_template' - complexity 1 (rank A)
-
-src\intellicrack\credentials\env_loader.py:464:0: function 'get_provider_credentials' - complexity 1 (rank A)
-
-src\intellicrack\credentials\env_loader.py:23:0: class 'ProviderCredentialMapping' - complexity 1 (rank A)
-
-src\intellicrack\credentials\env_loader.py:164:4: method 'CredentialLoader.reload' - complexity 1 (rank A)
-
-src\intellicrack\credentials\env_loader.py:357:4: method 'CredentialLoader.set_env_var' - complexity 1 (rank A)
-
-
 18 findings in src\intellicrack\providers\google.py
 
 src\intellicrack\providers\google.py:499:4: method 'GoogleProvider._parse_response' - complexity 18 (rank C)
@@ -5992,41 +5902,41 @@ src\intellicrack\providers\huggingface.py:110:4: method 'HuggingFaceProvider.nam
 src\intellicrack\providers\huggingface.py:623:4: method 'HuggingFaceProvider.cancel_request' - complexity 1 (rank A)
 
 
-17 findings in src\intellicrack\ui\dialogs\splash_screen.py
+17 findings in src\intellicrack\providers\registry.py
 
-src\intellicrack\ui\dialogs\splash_screen.py:109:4: method 'SplashScreen._load_splash_pixmap' - complexity 4 (rank A)
+src\intellicrack\providers\registry.py:130:4: method 'ProviderRegistry.connect_provider' - complexity 6 (rank B)
 
-src\intellicrack\ui\dialogs\splash_screen.py:283:4: method 'SplashScreen.set_progress' - complexity 4 (rank A)
+src\intellicrack\providers\registry.py:26:0: class 'ProviderRegistry' - complexity 3 (rank A)
 
-src\intellicrack\ui\dialogs\splash_screen.py:94:4: method 'SplashScreen._compute_dpi_scale' - complexity 3 (rank A)
+src\intellicrack\providers\registry.py:68:4: method 'ProviderRegistry.unregister' - complexity 3 (rank A)
 
-src\intellicrack\ui\dialogs\splash_screen.py:52:0: class 'SplashScreen' - complexity 2 (rank A)
+src\intellicrack\providers\registry.py:121:4: method 'ProviderRegistry.list_connected' - complexity 3 (rank A)
 
-src\intellicrack\ui\dialogs\splash_screen.py:196:4: method 'SplashScreen._setup_overlay' - complexity 2 (rank A)
+src\intellicrack\providers\registry.py:166:4: method 'ProviderRegistry.disconnect_provider' - complexity 3 (rank A)
 
-src\intellicrack\ui\dialogs\splash_screen.py:277:4: method 'SplashScreen._on_fade_out_finished' - complexity 2 (rank A)
+src\intellicrack\providers\registry.py:232:0: function 'get_provider_registry' - complexity 2 (rank A)
 
-src\intellicrack\ui\dialogs\splash_screen.py:334:4: method 'SplashScreen.resize_event_handler' - complexity 2 (rank A)
+src\intellicrack\providers\registry.py:52:4: method 'ProviderRegistry.register' - complexity 2 (rank A)
 
-src\intellicrack\ui\dialogs\splash_screen.py:64:4: method 'SplashScreen.__init__' - complexity 1 (rank A)
+src\intellicrack\providers\registry.py:96:4: method 'ProviderRegistry.get_or_raise' - complexity 2 (rank A)
 
-src\intellicrack\ui\dialogs\splash_screen.py:142:4: method 'SplashScreen._create_fallback_pixmap' - complexity 1 (rank A)
+src\intellicrack\providers\registry.py:177:4: method 'ProviderRegistry.disconnect_all' - complexity 2 (rank A)
 
-src\intellicrack\ui\dialogs\splash_screen.py:249:4: method 'SplashScreen.show_animated' - complexity 1 (rank A)
+src\intellicrack\providers\registry.py:182:4: method 'ProviderRegistry.set_active' - complexity 2 (rank A)
 
-src\intellicrack\ui\dialogs\splash_screen.py:261:4: method 'SplashScreen.finish_animated' - complexity 1 (rank A)
+src\intellicrack\providers\registry.py:198:4: method 'ProviderRegistry.active' - complexity 2 (rank A)
 
-src\intellicrack\ui\dialogs\splash_screen.py:316:4: method 'SplashScreen._on_progress_updated' - complexity 1 (rank A)
+src\intellicrack\providers\registry.py:38:4: method 'ProviderRegistry.__init__' - complexity 1 (rank A)
 
-src\intellicrack\ui\dialogs\splash_screen.py:325:4: method 'SplashScreen.show_loading_step' - complexity 1 (rank A)
+src\intellicrack\providers\registry.py:85:4: method 'ProviderRegistry.get' - complexity 1 (rank A)
 
-src\intellicrack\ui\dialogs\splash_screen.py:345:4: method 'SplashScreen.progress' - complexity 1 (rank A)
+src\intellicrack\providers\registry.py:113:4: method 'ProviderRegistry.list_registered' - complexity 1 (rank A)
 
-src\intellicrack\ui\dialogs\splash_screen.py:354:4: method 'SplashScreen.status' - complexity 1 (rank A)
+src\intellicrack\providers\registry.py:209:4: method 'ProviderRegistry.active_name' - complexity 1 (rank A)
 
-src\intellicrack\ui\dialogs\splash_screen.py:363:4: method 'SplashScreen.dpi_scale' - complexity 1 (rank A)
+src\intellicrack\providers\registry.py:217:4: method 'ProviderRegistry.has_connected_provider' - complexity 1 (rank A)
 
-src\intellicrack\ui\dialogs\splash_screen.py:372:4: method 'SplashScreen.version' - complexity 1 (rank A)
+src\intellicrack\providers\registry.py:226:0: class '_RegistryHolder' - complexity 1 (rank A)
 
 
 17 findings in src\intellicrack\ui\resources\icon_manager.py
@@ -6214,39 +6124,109 @@ tests\test_providers\test_openai_provider.py:177:4: method 'TestOpenAIConnection
 tests\test_providers\test_openai_provider.py:187:4: method 'TestOpenAIConnection.test_list_models_without_connection_raises_error' - complexity 1 (rank A)
 
 
+16 findings in src\intellicrack\credentials\env_loader.py
+
+src\intellicrack\credentials\env_loader.py:283:4: method 'CredentialLoader._validate_key_format' - complexity 11 (rank C)
+
+src\intellicrack\credentials\env_loader.py:122:4: method 'CredentialLoader._load_env_file' - complexity 9 (rank B)
+
+src\intellicrack\credentials\env_loader.py:354:4: method 'CredentialLoader.save_to_env_file' - complexity 8 (rank B)
+
+src\intellicrack\credentials\env_loader.py:175:4: method 'CredentialLoader.get_credentials' - complexity 6 (rank B)
+
+src\intellicrack\credentials\env_loader.py:39:0: class 'CredentialLoader' - complexity 5 (rank A)
+
+src\intellicrack\credentials\env_loader.py:97:4: method 'CredentialLoader._find_env_file' - complexity 4 (rank A)
+
+src\intellicrack\credentials\env_loader.py:244:4: method 'CredentialLoader.validate_credentials' - complexity 4 (rank A)
+
+src\intellicrack\credentials\env_loader.py:310:4: method 'CredentialLoader.list_configured_providers' - complexity 4 (rank A)
+
+src\intellicrack\credentials\env_loader.py:327:4: method 'CredentialLoader.list_missing_providers' - complexity 4 (rank A)
+
+src\intellicrack\credentials\env_loader.py:439:0: function 'get_credential_loader' - complexity 2 (rank A)
+
+src\intellicrack\credentials\env_loader.py:84:4: method 'CredentialLoader.__init__' - complexity 2 (rank A)
+
+src\intellicrack\credentials\env_loader.py:229:4: method 'CredentialLoader._get_var' - complexity 2 (rank A)
+
+src\intellicrack\credentials\env_loader.py:400:0: function 'create_env_template' - complexity 1 (rank A)
+
+src\intellicrack\credentials\env_loader.py:23:0: class 'ProviderCredentialMapping' - complexity 1 (rank A)
+
+src\intellicrack\credentials\env_loader.py:164:4: method 'CredentialLoader.reload' - complexity 1 (rank A)
+
+src\intellicrack\credentials\env_loader.py:344:4: method 'CredentialLoader.set_env_var' - complexity 1 (rank A)
+
+
 16 findings in src\intellicrack\sandbox\windows.py
 
-src\intellicrack\sandbox\windows.py:300:4: method 'WindowsSandbox._generate_wsb_config' - complexity 12 (rank C)
+src\intellicrack\sandbox\windows.py:301:4: method 'WindowsSandbox._generate_wsb_config' - complexity 12 (rank C)
 
-src\intellicrack\sandbox\windows.py:547:4: method 'WindowsSandbox.run_binary' - complexity 12 (rank C)
+src\intellicrack\sandbox\windows.py:548:4: method 'WindowsSandbox.run_binary' - complexity 12 (rank C)
 
-src\intellicrack\sandbox\windows.py:481:4: method 'WindowsSandbox.run_command' - complexity 10 (rank B)
+src\intellicrack\sandbox\windows.py:482:4: method 'WindowsSandbox.run_command' - complexity 10 (rank B)
 
-src\intellicrack\sandbox\windows.py:700:4: method 'WindowsSandbox._parse_network_log' - complexity 10 (rank B)
+src\intellicrack\sandbox\windows.py:701:4: method 'WindowsSandbox._parse_network_log' - complexity 10 (rank B)
 
-src\intellicrack\sandbox\windows.py:739:4: method 'WindowsSandbox._parse_process_log' - complexity 9 (rank B)
+src\intellicrack\sandbox\windows.py:740:4: method 'WindowsSandbox._parse_process_log' - complexity 9 (rank B)
 
 src\intellicrack\sandbox\windows.py:79:0: class 'WindowsSandbox' - complexity 7 (rank B)
 
-src\intellicrack\sandbox\windows.py:224:4: method 'WindowsSandbox.stop' - complexity 6 (rank B)
+src\intellicrack\sandbox\windows.py:225:4: method 'WindowsSandbox.stop' - complexity 6 (rank B)
 
-src\intellicrack\sandbox\windows.py:635:4: method 'WindowsSandbox._parse_file_log' - complexity 6 (rank B)
+src\intellicrack\sandbox\windows.py:636:4: method 'WindowsSandbox._parse_file_log' - complexity 6 (rank B)
 
-src\intellicrack\sandbox\windows.py:667:4: method 'WindowsSandbox._parse_registry_log' - complexity 6 (rank B)
+src\intellicrack\sandbox\windows.py:668:4: method 'WindowsSandbox._parse_registry_log' - complexity 6 (rank B)
 
 src\intellicrack\sandbox\windows.py:109:4: method 'WindowsSandbox.is_available' - complexity 5 (rank A)
 
 src\intellicrack\sandbox\windows.py:150:4: method 'WindowsSandbox.start' - complexity 4 (rank A)
 
-src\intellicrack\sandbox\windows.py:283:4: method 'WindowsSandbox._cleanup' - complexity 4 (rank A)
+src\intellicrack\sandbox\windows.py:284:4: method 'WindowsSandbox._cleanup' - complexity 4 (rank A)
 
-src\intellicrack\sandbox\windows.py:774:4: method 'WindowsSandbox.copy_to_sandbox' - complexity 4 (rank A)
+src\intellicrack\sandbox\windows.py:775:4: method 'WindowsSandbox.copy_to_sandbox' - complexity 4 (rank A)
 
-src\intellicrack\sandbox\windows.py:799:4: method 'WindowsSandbox.copy_from_sandbox' - complexity 4 (rank A)
+src\intellicrack\sandbox\windows.py:800:4: method 'WindowsSandbox.copy_from_sandbox' - complexity 4 (rank A)
 
-src\intellicrack\sandbox\windows.py:354:4: method 'WindowsSandbox._create_monitor_scripts' - complexity 2 (rank A)
+src\intellicrack\sandbox\windows.py:355:4: method 'WindowsSandbox._create_monitor_scripts' - complexity 2 (rank A)
 
 src\intellicrack\sandbox\windows.py:96:4: method 'WindowsSandbox.__init__' - complexity 1 (rank A)
+
+
+16 findings in src\intellicrack\ui\dialogs\splash_screen.py
+
+src\intellicrack\ui\dialogs\splash_screen.py:109:4: method 'SplashScreen._load_splash_pixmap' - complexity 4 (rank A)
+
+src\intellicrack\ui\dialogs\splash_screen.py:283:4: method 'SplashScreen.set_progress' - complexity 4 (rank A)
+
+src\intellicrack\ui\dialogs\splash_screen.py:94:4: method 'SplashScreen._compute_dpi_scale' - complexity 3 (rank A)
+
+src\intellicrack\ui\dialogs\splash_screen.py:52:0: class 'SplashScreen' - complexity 2 (rank A)
+
+src\intellicrack\ui\dialogs\splash_screen.py:196:4: method 'SplashScreen._setup_overlay' - complexity 2 (rank A)
+
+src\intellicrack\ui\dialogs\splash_screen.py:277:4: method 'SplashScreen._on_fade_out_finished' - complexity 2 (rank A)
+
+src\intellicrack\ui\dialogs\splash_screen.py:325:4: method 'SplashScreen.resize_event_handler' - complexity 2 (rank A)
+
+src\intellicrack\ui\dialogs\splash_screen.py:64:4: method 'SplashScreen.__init__' - complexity 1 (rank A)
+
+src\intellicrack\ui\dialogs\splash_screen.py:142:4: method 'SplashScreen._create_fallback_pixmap' - complexity 1 (rank A)
+
+src\intellicrack\ui\dialogs\splash_screen.py:249:4: method 'SplashScreen.show_animated' - complexity 1 (rank A)
+
+src\intellicrack\ui\dialogs\splash_screen.py:261:4: method 'SplashScreen.finish_animated' - complexity 1 (rank A)
+
+src\intellicrack\ui\dialogs\splash_screen.py:316:4: method 'SplashScreen._on_progress_updated' - complexity 1 (rank A)
+
+src\intellicrack\ui\dialogs\splash_screen.py:336:4: method 'SplashScreen.progress' - complexity 1 (rank A)
+
+src\intellicrack\ui\dialogs\splash_screen.py:345:4: method 'SplashScreen.status' - complexity 1 (rank A)
+
+src\intellicrack\ui\dialogs\splash_screen.py:354:4: method 'SplashScreen.dpi_scale' - complexity 1 (rank A)
+
+src\intellicrack\ui\dialogs\splash_screen.py:363:4: method 'SplashScreen.version' - complexity 1 (rank A)
 
 
 16 findings in tests\test_providers\test_ollama_provider.py

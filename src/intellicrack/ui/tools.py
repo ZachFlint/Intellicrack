@@ -258,18 +258,6 @@ class SandboxPanelProtocol(ToolWidget, Protocol):
         _ = (self, sandbox)
 
 
-@runtime_checkable
-class AnalysisPanel(Protocol):
-    """Protocol for analysis panels."""
-
-    def set_analysis(self, analysis: LicensingAnalysis) -> None:
-        """Update the panel with new licensing analysis data.
-
-        Args:
-            analysis: The licensing analysis results to display.
-        """
-
-
 if TYPE_CHECKING:
     from ..core.types import LicensingAnalysis
     from .panels.licensing_panel import LicensingAnalysisPanel

@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from .license_analyzer import LicenseAnalyzer
-from .logging import get_logger
+from .logging import get_logger, log_analysis_operation
 from .types import (
     ConfirmationLevel,
     Message,
@@ -376,6 +376,10 @@ class Orchestrator:
         """
         if self._current_session is None:
             return
+
+        if not self._providers.has_connected_provider():
+            error_message = "No provider is connected"
+            raise RuntimeError(error_message)
 
         provider = self._providers.get(self._current_session.provider)
         if provider is None:
@@ -1013,6 +1017,7 @@ class Orchestrator:
         Returns:
             LicensingAnalysis results or None on failure.
         """
+        log_analysis_operation("license_analysis", path.name)
         try:
             analyzer = LicenseAnalyzer()
             loop = asyncio.get_running_loop()

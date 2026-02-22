@@ -1,8 +1,8 @@
 {
   "tool": "flake8",
-  "generated": "2026-02-20T14:07:23.745643",
-  "total_findings": 7,
-  "total_files": 6,
+  "generated": "2026-02-21T19:56:11.020467",
+  "total_findings": 10,
+  "total_files": 9,
   "files": [
     {
       "path": "src/intellicrack\\providers\\xpu_utils.py",
@@ -25,15 +25,41 @@
       ]
     },
     {
+      "path": "src/intellicrack\\core\\process_manager.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 12,
+          "column": 1,
+          "code": "F401",
+          "message": "'ctypes' imported but unused",
+          "raw": "src/intellicrack\\core\\process_manager.py:12:1: F401 'ctypes' imported but unused"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack\\credentials\\env_loader.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 450,
+          "column": 1,
+          "code": "W391",
+          "message": "blank line at end of file",
+          "raw": "src/intellicrack\\credentials\\env_loader.py:450:1: W391 blank line at end of file"
+        }
+      ]
+    },
+    {
       "path": "src/intellicrack\\sandbox\\windows.py",
       "count": 1,
       "findings": [
         {
-          "line": 432,
+          "line": 433,
           "column": 141,
           "code": "E501",
           "message": "line too long (160 > 140 characters)",
-          "raw": "src/intellicrack\\sandbox\\windows.py:432:141: E501 line too long (160 > 140 characters)"
+          "raw": "src/intellicrack\\sandbox\\windows.py:433:141: E501 line too long (160 > 140 characters)"
         }
       ]
     },
@@ -55,11 +81,24 @@
       "count": 1,
       "findings": [
         {
-          "line": 484,
+          "line": 485,
           "column": 13,
           "code": "F824",
           "message": "`nonlocal content_label` is unused: name is never assigned in scope",
-          "raw": "src/intellicrack\\ui\\chat.py:484:13: F824 `nonlocal content_label` is unused: name is never assigned in scope"
+          "raw": "src/intellicrack\\ui\\chat.py:485:13: F824 `nonlocal content_label` is unused: name is never assigned in scope"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack\\ui\\panels\\process_panel.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 37,
+          "column": 5,
+          "code": "F401",
+          "message": "'intellicrack.core.process_manager.ProcessManager' imported but unused",
+          "raw": "src/intellicrack\\ui\\panels\\process_panel.py:37:5: F401 'intellicrack.core.process_manager.ProcessManager' imported but unused"
         }
       ]
     },
