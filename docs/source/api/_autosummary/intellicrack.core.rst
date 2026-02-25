@@ -1,4 +1,4 @@
-﻿intellicrack.core
+intellicrack.core
 =================
 
 .. automodule:: intellicrack.core
@@ -6,19 +6,3 @@
    :undoc-members:
    :show-inheritance:
    :inherited-members:
-
-   
-   
-   
-
-   
-   
-   
-
-   
-   
-   
-
-   
-   
-   

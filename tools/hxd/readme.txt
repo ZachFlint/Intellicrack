@@ -1,4 +1,4 @@
-﻿HxD Hex Editor README
+HxD Hex Editor README
 =====================
 
 HxD Copyright© 2002-2021 by Maël Hörz. All rights reserved.
@@ -8,7 +8,7 @@ See also the license file.
 Features
 ========
 - Data inspector
-  - interprets bytes at the current caret position into various datatypes: 
+  - interprets bytes at the current caret position into various datatypes:
     - binary (bit sequence), integer, floats, time and date, character, GUID and disassembly (x86 and AMD64)
 - Instant opening regardless of file-size
   (>4GB is no problem, if it fits on a disk/drive you can open it)
@@ -74,7 +74,7 @@ Q: I found a bug. How should I report it?
 A: Please use the "Bugs"-section in the support-forum: https://forum.mh-nexus.de
    Try to give as many details as possible, especially describe the necessary
    steps to reproduce the bug.
-   
+
 Q: I would like to translate HxD. What should I do?
 A: Translations are very welcome! Please contact me and I will send you the
    necessary language files and the translation program.

@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Sun, Feb 22, 2026 01:52:28 AM
+Generated: Tue, Feb 24, 2026 09:24:03 PM
 Directory: D:\Intellicrack\src
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -9,7 +9,11 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 
 ----------------------------------------
 
+├── .benchmarks/
 ├── intellicrack/
+│   ├── .skylos/
+│   │   └── cache/
+│   │       └── pypi_exists.json
 │   ├── assets/
 │   │   ├── configs/
 │   │   │   ├── anthropic_claude3.json
@@ -257,10 +261,11 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   ├── __main__.py
 │   ├── _metadata.py
 │   └── main.py
-└── Intellicrack.egg-info/
-    ├── dependency_links.txt
-    ├── entry_points.txt
-    ├── PKG-INFO
-    ├── requires.txt
-    ├── SOURCES.txt
-    └── top_level.txt
+├── Intellicrack.egg-info/
+│   ├── dependency_links.txt
+│   ├── entry_points.txt
+│   ├── PKG-INFO
+│   ├── requires.txt
+│   ├── SOURCES.txt
+│   └── top_level.txt
+└── .skylos_unused_fixtures.json

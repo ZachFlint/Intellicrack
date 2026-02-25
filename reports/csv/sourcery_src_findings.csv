@@ -10,4 +10,3 @@ src\intellicrack\sandbox\qemu.py,816,hoist-similar-statement-from-if,Hoist neste
 src\intellicrack\sandbox\qemu.py,1448,low-code-quality,Low code quality found in QEMUSandbox.execute - 23%
 src\intellicrack\ui\embedding\ghidra_widget.py,72,low-code-quality,Low code quality found in GhidraWidget.get_executable_path - 23%
 src\intellicrack\ui\embedding\x64dbg_widget.py,70,low-code-quality,Low code quality found in X64DbgWidget.get_executable_path - 22%
-

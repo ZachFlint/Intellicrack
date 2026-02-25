@@ -1,4 +1,4 @@
-﻿intellicrack.credentials
+intellicrack.credentials
 ========================
 
 .. automodule:: intellicrack.credentials
@@ -6,19 +6,3 @@
    :undoc-members:
    :show-inheritance:
    :inherited-members:
-
-   
-   
-   
-
-   
-   
-   
-
-   
-   
-   
-
-   
-   
-   

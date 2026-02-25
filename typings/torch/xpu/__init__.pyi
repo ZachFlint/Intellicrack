@@ -32,4 +32,3 @@ class _DeviceProperties:
 
 def get_device_properties(device: int) -> _DeviceProperties:
     ...
-

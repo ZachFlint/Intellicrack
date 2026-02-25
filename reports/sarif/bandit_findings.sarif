@@ -1,0 +1,244 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "bandit",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "B404:blacklist",
+              "shortDescription": {
+                "text": "Consider possible security implications associated with the subprocess module."
+              }
+            },
+            {
+              "id": "B106:hardcoded_password_funcarg",
+              "shortDescription": {
+                "text": "Possible hardcoded password: 'https://oauth2.googleapis.com/token'"
+              }
+            },
+            {
+              "id": "B615:huggingface_unsafe_download",
+              "shortDescription": {
+                "text": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+              }
+            },
+            {
+              "id": "B405:blacklist",
+              "shortDescription": {
+                "text": "Using xml.etree.ElementTree to parse untrusted XML data is known to be vulnerable to XML attacks. Replace xml.etree.ElementTree with the equivalent defusedxml package, or make sure defusedxml.defuse_stdlib() is called."
+              }
+            },
+            {
+              "id": "B105:hardcoded_password_string",
+              "shortDescription": {
+                "text": "Possible hardcoded password: 'dialog-password.png'"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "B404:blacklist",
+          "level": "note",
+          "message": {
+            "text": "Consider possible security implications associated with the subprocess module."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/_subprocess.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "B404:blacklist",
+          "level": "note",
+          "message": {
+            "text": "Consider possible security implications associated with the subprocess module."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/script_gen.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 401,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "B106:hardcoded_password_funcarg",
+          "level": "note",
+          "message": {
+            "text": "Possible hardcoded password: 'https://oauth2.googleapis.com/token'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/credentials/oauth.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 220,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "B615:huggingface_unsafe_download",
+          "level": "warning",
+          "message": {
+            "text": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 522,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "B615:huggingface_unsafe_download",
+          "level": "warning",
+          "message": {
+            "text": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 541,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "B615:huggingface_unsafe_download",
+          "level": "warning",
+          "message": {
+            "text": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 625,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "B615:huggingface_unsafe_download",
+          "level": "warning",
+          "message": {
+            "text": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 644,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "B405:blacklist",
+          "level": "note",
+          "message": {
+            "text": "Using xml.etree.ElementTree to parse untrusted XML data is known to be vulnerable to XML attacks. Replace xml.etree.ElementTree with the equivalent defusedxml package, or make sure defusedxml.defuse_stdlib() is called."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/windows.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "B105:hardcoded_password_string",
+          "level": "note",
+          "message": {
+            "text": "Possible hardcoded password: 'dialog-password.png'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/resources/icon_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 99,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "columnKind": "utf16CodeUnits",
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "endTimeUtc": "2026-02-24T19:35:42.641051"
+        }
+      ]
+    }
+  ]
+}

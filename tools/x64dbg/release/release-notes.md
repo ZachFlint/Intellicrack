@@ -322,5 +322,3 @@ Also many thanks to the other active sponsors: @adam-the, @verdeckt, @emesare, @
 - Fix: Trim trailing whitespace in script labels #3589 by @oxqnd in #3610
 - Fix Handles->Message Breakpoint: wnd proc or handle is unavailable (wine) by @eldarkg in #3607
 - Fixed inverted logic by @OldGamesCracking in #3588
-
-

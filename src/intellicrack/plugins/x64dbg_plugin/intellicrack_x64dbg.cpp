@@ -28,7 +28,7 @@ void cb_memory_breakpoint(CBTYPE, PLUG_CB_MEMORYBREAKPOINT* info) {
     g_event_handler.send_watchpoint(static_cast<std::uint64_t>(info->addr));
 }
 
-} 
+}
 
 PLUG_EXPORT bool pluginit(PLUG_INITSTRUCT* initStruct) {
     if (initStruct == nullptr) {

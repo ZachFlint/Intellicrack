@@ -1,0 +1,3250 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "ty",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "not-iterable",
+              "shortDescription": {
+                "text": "Object of type `object` is not iterable"
+              }
+            },
+            {
+              "id": "unresolved-attribute",
+              "shortDescription": {
+                "text": "Object of type `object` has no attribute `symbols`"
+              }
+            },
+            {
+              "id": "missing-argument",
+              "shortDescription": {
+                "text": "No argument provided for required parameter `offset` of function `disasm`"
+              }
+            },
+            {
+              "id": "invalid-argument-type",
+              "shortDescription": {
+                "text": "Argument to function `disasm` is incorrect: Expected `Cs`, found `bytes`"
+              }
+            },
+            {
+              "id": "invalid-type-form",
+              "shortDescription": {
+                "text": "Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in type expression"
+              }
+            },
+            {
+              "id": "no-matching-overload",
+              "shortDescription": {
+                "text": "No overload of bound method `__init__` matches arguments"
+              }
+            },
+            {
+              "id": "invalid-assignment",
+              "shortDescription": {
+                "text": "Object of type `Popen[Any] | Popen[str] | Popen[bytes]` is not assignable to attribute `_process` of type `Popen[bytes] | None`"
+              }
+            },
+            {
+              "id": "general",
+              "shortDescription": {
+                "text": "warning[redundant-cast] Value is already of type `tuple[object, ...]`"
+              }
+            },
+            {
+              "id": "call-non-callable",
+              "shortDescription": {
+                "text": "Object of type `object` is not callable"
+              }
+            },
+            {
+              "id": "invalid-return-type",
+              "shortDescription": {
+                "text": "Return type does not match returned value: expected `ProcessManager`, found `ProcessManager | None | Unknown`"
+              }
+            },
+            {
+              "id": "not-subscriptable",
+              "shortDescription": {
+                "text": "Cannot subscript object of type `None` with no `__getitem__` method"
+              }
+            },
+            {
+              "id": "invalid-method-override",
+              "shortDescription": {
+                "text": "Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
+              }
+            },
+            {
+              "id": "unresolved-reference",
+              "shortDescription": {
+                "text": "Name `_PROC_COL_COUNT` used when not defined"
+              }
+            },
+            {
+              "id": "conflicting-declarations",
+              "shortDescription": {
+                "text": "Conflicting declared types for `_winreg_module`: `ModuleType | None` and `<module 'winreg'>`"
+              }
+            },
+            {
+              "id": "too-many-positional-arguments",
+              "shortDescription": {
+                "text": "Too many positional arguments to bound method `log_message`: expected 2, got 3"
+              }
+            },
+            {
+              "id": "unresolved-import",
+              "shortDescription": {
+                "text": "Module `intellicrack.bridges.x64dbg` has no member `get_capstone`"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "not-iterable",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `object` is not iterable"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 676,
+                  "startColumn": 26
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "unresolved-attribute",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `object` has no attribute `symbols`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 713,
+                  "startColumn": 24
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "missing-argument",
+          "level": "warning",
+          "message": {
+            "text": "No argument provided for required parameter `offset` of function `disasm`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1020,
+                  "startColumn": 50
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-argument-type",
+          "level": "warning",
+          "message": {
+            "text": "Argument to function `disasm` is incorrect: Expected `Cs`, found `bytes`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1020,
+                  "startColumn": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-type-form",
+          "level": "warning",
+          "message": {
+            "text": "Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in type expression"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/sandbox_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 457,
+                  "startColumn": 15
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-type-form",
+          "level": "warning",
+          "message": {
+            "text": "Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in type expression"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/sandbox_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 652,
+                  "startColumn": 29
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "no-matching-overload",
+          "level": "warning",
+          "message": {
+            "text": "No overload of bound method `__init__` matches arguments"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/schemas.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 600,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "no-matching-overload",
+          "level": "warning",
+          "message": {
+            "text": "No overload of bound method `__init__` matches arguments"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/schemas.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 602,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "no-matching-overload",
+          "level": "warning",
+          "message": {
+            "text": "No overload of bound method `__init__` matches arguments"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/schemas.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 604,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "no-matching-overload",
+          "level": "warning",
+          "message": {
+            "text": "No overload of bound method `__init__` matches arguments"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/schemas.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 606,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "no-matching-overload",
+          "level": "warning",
+          "message": {
+            "text": "No overload of bound method `__init__` matches arguments"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/schemas.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 608,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "no-matching-overload",
+          "level": "warning",
+          "message": {
+            "text": "No overload of bound method `__init__` matches arguments"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/schemas.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 610,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "no-matching-overload",
+          "level": "warning",
+          "message": {
+            "text": "No overload of bound method `__init__` matches arguments"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/schemas.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 612,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "no-matching-overload",
+          "level": "warning",
+          "message": {
+            "text": "No overload of bound method `__init__` matches arguments"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/schemas.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 614,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `Popen[Any] | Popen[str] | Popen[bytes]` is not assignable to attribute `_process` of type `Popen[bytes] | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 926,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-argument-type",
+          "level": "warning",
+          "message": {
+            "text": "Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 936,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[redundant-cast] Value is already of type `tuple[object, ...]`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/logging.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 445,
+                  "startColumn": 25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "call-non-callable",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `object` is not callable"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/orchestrator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 667,
+                  "startColumn": 41
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-return-type",
+          "level": "warning",
+          "message": {
+            "text": "Return type does not match returned value: expected `ProcessManager`, found `ProcessManager | None | Unknown`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/process_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 135,
+                  "startColumn": 16
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-argument-type",
+          "level": "warning",
+          "message": {
+            "text": "Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/process_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 511,
+                  "startColumn": 56
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[redundant-cast] Value is already of type `<class 'SplashScreen'>`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/main.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 191,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `None` is not assignable to `<module 'torch'>`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/local_transformers.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 54,
+                  "startColumn": 14
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-argument-type",
+          "level": "warning",
+          "message": {
+            "text": "Argument is incorrect: Expected `Literal[\"auto\", \"float32\", \"float16\", \"bfloat16\", \"int8\", \"int4\"]`, found `str`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/local_transformers.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 434,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "call-non-callable",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `Tensor` is not callable"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/local_transformers.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 517,
+                  "startColumn": 23
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "not-subscriptable",
+          "level": "warning",
+          "message": {
+            "text": "Cannot subscript object of type `None` with no `__getitem__` method"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/local_transformers.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 598,
+                  "startColumn": 22
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/local_transformers.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 744,
+                  "startColumn": 47
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `None` is not assignable to `<module 'torch'>`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 22,
+                  "startColumn": 14
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `None` is not assignable to `<class 'AutoModelForCausalLM'>`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 27,
+                  "startColumn": 28
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `None` is not assignable to `<class 'AutoTokenizer'>`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 28,
+                  "startColumn": 21
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `None` is not assignable to `<class 'BitsAndBytesConfig'>`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 33,
+                  "startColumn": 26
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `pad_token` may be missing on object of type `TokenizersBackend | None | SentencePieceBackend`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 527,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `Unknown` is not assignable to attribute `pad_token` on type `TokenizersBackend | None | SentencePieceBackend`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 528,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `eos_token` may be missing on object of type `TokenizersBackend | None | SentencePieceBackend`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 528,
+                  "startColumn": 35
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-argument-type",
+          "level": "warning",
+          "message": {
+            "text": "Argument to bound method `__call__` is incorrect: Expected `PreTrainedModel`, found `device`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 544,
+                  "startColumn": 30
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-argument-type",
+          "level": "warning",
+          "message": {
+            "text": "Argument is incorrect: Expected `PreTrainedTokenizerBase`, found `TokenizersBackend | None | SentencePieceBackend`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 554,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `pad_token` may be missing on object of type `TokenizersBackend | None | SentencePieceBackend`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 630,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `Unknown` is not assignable to attribute `pad_token` on type `TokenizersBackend | None | SentencePieceBackend`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 631,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `eos_token` may be missing on object of type `TokenizersBackend | None | SentencePieceBackend`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 631,
+                  "startColumn": 35
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-argument-type",
+          "level": "warning",
+          "message": {
+            "text": "Argument is incorrect: Expected `PreTrainedTokenizerBase`, found `TokenizersBackend | None | SentencePieceBackend`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 653,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `None` is not assignable to `<module 'torch'>`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/xpu_utils.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 24,
+                  "startColumn": 21
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `Popen[Any] | Popen[str] | Popen[bytes]` is not assignable to attribute `_process` of type `Popen[bytes] | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/windows.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 191,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-argument-type",
+          "level": "warning",
+          "message": {
+            "text": "Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/windows.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 201,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `poll` may be missing on object of type `Popen[bytes] | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/windows.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 210,
+                  "startColumn": 16
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/windows.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 215,
+                  "startColumn": 31
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/windows.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 217,
+                  "startColumn": 67
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `bound method Self@__init__.close_event_handler(a0: QCloseEvent | None) -> None` is not assignable to attribute `closeEvent` of type `def closeEvent(self, a0: QCloseEvent | None) -> None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 182,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "no-matching-overload",
+          "level": "warning",
+          "message": {
+            "text": "No overload of bound method `get` matches arguments"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 854,
+                  "startColumn": 43
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "call-non-callable",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `object` is not callable"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1887,
+                  "startColumn": 45
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setValue` may be missing on object of type `Unknown | QScrollBar | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/chat.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 517,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `maximum` may be missing on object of type `Unknown | QScrollBar | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/chat.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 517,
+                  "startColumn": 28
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `bound method Self@__init__.resize_event_handler(a0: QResizeEvent | None) -> None` is not assignable to attribute `resizeEvent` of type `def resizeEvent(self, a0: QResizeEvent | None) -> None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/dialogs/splash_screen.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 92,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "unresolved-attribute",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `QCoreApplication` has no attribute `primaryScreen`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/dialogs/splash_screen.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 104,
+                  "startColumn": 18
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-method-override",
+          "level": "warning",
+          "message": {
+            "text": "Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/highlighter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 210,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-method-override",
+          "level": "warning",
+          "message": {
+            "text": "Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/highlighter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 553,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-method-override",
+          "level": "warning",
+          "message": {
+            "text": "Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/highlighter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 756,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-method-override",
+          "level": "warning",
+          "message": {
+            "text": "Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/highlighter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 983,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/binary_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 164,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/binary_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 166,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/binary_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 167,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/binary_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 168,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/binary_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 194,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/binary_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 201,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/frida_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 237,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 177,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 184,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 191,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/licensing_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 210,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/licensing_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 297,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/licensing_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 374,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/process_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 409,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/process_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 425,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-argument-type",
+          "level": "warning",
+          "message": {
+            "text": "Argument to bound method `add` is incorrect: Expected `int`, found `int | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/process_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 513,
+                  "startColumn": 34
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "unresolved-reference",
+          "level": "warning",
+          "message": {
+            "text": "Name `_PROC_COL_COUNT` used when not defined"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/process_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 527,
+                  "startColumn": 38
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "unresolved-reference",
+          "level": "warning",
+          "message": {
+            "text": "Name `QColor` used when not defined"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/process_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 530,
+                  "startColumn": 48
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/radare2_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 198,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/radare2_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 205,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/radare2_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 212,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/radare2_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 219,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `Unknown | None` is not assignable to `list[str]`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/sandbox_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 421,
+                  "startColumn": 36
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "call-non-callable",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `object` is not callable"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/sandbox_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 421,
+                  "startColumn": 57
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "call-non-callable",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `object` is not callable"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/sandbox_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 448,
+                  "startColumn": 34
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "not-iterable",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `Unknown | None` may not be iterable"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/sandbox_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 492,
+                  "startColumn": 28
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-argument-type",
+          "level": "warning",
+          "message": {
+            "text": "Argument to bound method `set_filter` is incorrect: Expected `str | None`, found `object`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/script_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 565,
+                  "startColumn": 38
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-argument-type",
+          "level": "warning",
+          "message": {
+            "text": "Argument to bound method `get_language` is incorrect: Expected `str`, found `~AlwaysFalsy`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/script_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 574,
+                  "startColumn": 52
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-argument-type",
+          "level": "warning",
+          "message": {
+            "text": "Argument to bound method `get_template` is incorrect: Expected `str`, found `~AlwaysFalsy`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/script_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 675,
+                  "startColumn": 48
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-argument-type",
+          "level": "warning",
+          "message": {
+            "text": "Argument to function `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/script_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 692,
+                  "startColumn": 47
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-argument-type",
+          "level": "warning",
+          "message": {
+            "text": "Argument to bound method `add_script` is incorrect: Expected `str`, found `~AlwaysFalsy`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/script_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 696,
+                  "startColumn": 62
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-argument-type",
+          "level": "warning",
+          "message": {
+            "text": "Argument to bound method `get_extension` is incorrect: Expected `str`, found `~AlwaysFalsy`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/script_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 732,
+                  "startColumn": 50
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-argument-type",
+          "level": "warning",
+          "message": {
+            "text": "Argument to function `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/script_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 764,
+                  "startColumn": 43
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-return-type",
+          "level": "warning",
+          "message": {
+            "text": "Return type does not match returned value: expected `tuple[str, str, str] | None`, found `tuple[(Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy), ~AlwaysFalsy, (Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy)]`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/script_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 870,
+                  "startColumn": 16
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/stack_viewer.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 277,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/x64dbg_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 235,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/x64dbg_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 243,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/x64dbg_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 250,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/x64dbg_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 257,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/x64dbg_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 303,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "not-iterable",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `<Protocol with members '__aiter__'>` is not async-iterable"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1799,
+                  "startColumn": 49
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "call-non-callable",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `object` is not callable"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1874,
+                  "startColumn": 58
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "unresolved-attribute",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `QCoreApplication` has no attribute `setStyleSheet`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/resources/theme_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1054,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/session_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 125,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setStretchLastSection` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/session_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 126,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/session_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 128,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/session_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 129,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/session_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 130,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/session_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 131,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `selectedRows` may be missing on object of type `Unknown | QItemSelectionModel | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/session_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 366,
+                  "startColumn": 29
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `selectedRows` may be missing on object of type `Unknown | QItemSelectionModel | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/session_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 455,
+                  "startColumn": 25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `selectedRows` may be missing on object of type `Unknown | QItemSelectionModel | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/session_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 487,
+                  "startColumn": 25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `selectedRows` may be missing on object of type `Unknown | QItemSelectionModel | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/session_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 548,
+                  "startColumn": 25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `selectedRows` may be missing on object of type `Unknown | QItemSelectionModel | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/session_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 761,
+                  "startColumn": 29
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "conflicting-declarations",
+          "level": "warning",
+          "message": {
+            "text": "Conflicting declared types for `_winreg_module`: `ModuleType | None` and `<module 'winreg'>`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tool_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 57,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[possibly-missing-attribute] Attribute `findBlockByLineNumber` may be missing on object of type `QTextDocument | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 359,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-argument-type",
+          "level": "warning",
+          "message": {
+            "text": "Argument to bound method `set_tab_content` is incorrect: Expected `Literal[\"ghidra\", \"frida\", \"radare2\", \"x64dbg\", \"log\", ... omitted 8 literals]`, found `str`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1582,
+                  "startColumn": 30
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "missing-argument",
+          "level": "warning",
+          "message": {
+            "text": "No argument provided for required parameter `content` of bound method `set_tab_info`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1584,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-argument-type",
+          "level": "warning",
+          "message": {
+            "text": "Argument to bound method `set_tab_info` is incorrect: Expected `Literal[\"ghidra\", \"frida\", \"radare2\", \"x64dbg\", \"log\", ... omitted 8 literals]`, found `str`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1584,
+                  "startColumn": 31
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-argument-type",
+          "level": "warning",
+          "message": {
+            "text": "Argument to bound method `activate_tab` is incorrect: Expected `Literal[\"ghidra\", \"frida\", \"radare2\", \"x64dbg\", \"log\", ... omitted 8 literals]`, found `str`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1585,
+                  "startColumn": 27
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-argument-type",
+          "level": "warning",
+          "message": {
+            "text": "Argument to bound method `clear_tab` is incorrect: Expected `Literal[\"ghidra\", \"frida\", \"radare2\", \"x64dbg\", \"log\", ... omitted 8 literals]`, found `str`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1593,
+                  "startColumn": 24
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-argument-type",
+          "level": "warning",
+          "message": {
+            "text": "Argument to bound method `get_embedded_tool` is incorrect: Expected `Literal[\"ghidra\", \"frida\", \"radare2\", \"x64dbg\", \"log\", ... omitted 8 literals]`, found `str`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1604,
+                  "startColumn": 39
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "too-many-positional-arguments",
+          "level": "warning",
+          "message": {
+            "text": "Too many positional arguments to bound method `log_message`: expected 2, got 3"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1614,
+                  "startColumn": 52
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "call-non-callable",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `object` is not callable"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1623,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "call-non-callable",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `object` is not callable"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1632,
+                  "startColumn": 20
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "call-non-callable",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `object` is not callable"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1642,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "call-non-callable",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `object` is not callable"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1654,
+                  "startColumn": 31
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "call-non-callable",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `object` is not callable"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1656,
+                  "startColumn": 34
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "unresolved-attribute",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `Self@get_code_highlighter` has no attribute `get_highlighter`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1665,
+                  "startColumn": 16
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "call-non-callable",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `object` is not callable"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1676,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "call-non-callable",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `object` is not callable"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1678,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "call-non-callable",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `object` is not callable"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1696,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `_BlockingR2` is not assignable to attribute `_r2` of type `open | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/core/test_process_cleanup.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 213,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `_FastR2` is not assignable to attribute `_r2` of type `open | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/core/test_process_cleanup.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 235,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `_NoneR2` is not assignable to attribute `_r2` of type `open | None`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/core/test_process_cleanup.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 245,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "unresolved-import",
+          "level": "warning",
+          "message": {
+            "text": "Module `intellicrack.bridges.x64dbg` has no member `get_capstone`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 28,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "unresolved-import",
+          "level": "warning",
+          "message": {
+            "text": "Module `intellicrack.bridges.x64dbg` has no member `get_keystone`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 29,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `dict[Unknown | str, Unknown | int | str]` is not assignable to `WatchpointInfo`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 165,
+                  "startColumn": 26
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "not-subscriptable",
+          "level": "warning",
+          "message": {
+            "text": "Cannot subscript object of type `WatchpointInfo` with no `__getitem__` method"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 175,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "unresolved-attribute",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `X64DbgBridge` has no attribute `_get_register_value`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_x64dbg_api_coverage.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 102,
+                  "startColumn": 15
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "unresolved-attribute",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `CredentialLoader` has no attribute `get_env_var`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_providers/test_credential_loading.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 183,
+                  "startColumn": 18
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "unresolved-attribute",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `CredentialLoader` has no attribute `get_env_var`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_providers/test_credential_loading.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 191,
+                  "startColumn": 18
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "unresolved-attribute",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `CredentialLoader` has no attribute `get_env_var`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_providers/test_credential_loading.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 203,
+                  "startColumn": 18
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `MagicMock` is not assignable to attribute `add_x64dbg_tab` on type `Unknown | ToolOutputPanel`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_ui/test_app_embedded_tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 228,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `MagicMock` is not assignable to attribute `add_x64dbg_tab` on type `Unknown | ToolOutputPanel`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_ui/test_app_embedded_tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 250,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `MagicMock` is not assignable to attribute `add_cutter_tab` on type `Unknown | ToolOutputPanel`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_ui/test_app_embedded_tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 277,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `MagicMock` is not assignable to attribute `add_hxd_tab` on type `Unknown | ToolOutputPanel`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_ui/test_app_embedded_tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 302,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `MagicMock` is not assignable to attribute `open_in_x64dbg` on type `Unknown | ToolOutputPanel`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_ui/test_app_embedded_tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 391,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `MagicMock` is not assignable to attribute `open_in_cutter` on type `Unknown | ToolOutputPanel`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_ui/test_app_embedded_tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 415,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "invalid-assignment",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `MagicMock` is not assignable to attribute `open_in_hxd` on type `Unknown | ToolOutputPanel`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_ui/test_app_embedded_tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 439,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "unresolved-attribute",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `SplashScreen` has no attribute `show_loading_step`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_ui/test_splash_screen.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 227,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "unresolved-attribute",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `SplashScreen` has no attribute `show_loading_step`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_ui/test_splash_screen.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 233,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "unresolved-attribute",
+          "level": "warning",
+          "message": {
+            "text": "Object of type `SplashScreen` has no attribute `show_loading_step`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_ui/test_splash_screen.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 414,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "columnKind": "utf16CodeUnits",
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "endTimeUtc": "2026-02-24T19:35:34.910567"
+        }
+      ]
+    }
+  ]
+}

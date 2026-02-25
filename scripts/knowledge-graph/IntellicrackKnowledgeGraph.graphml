@@ -5378,7 +5378,7 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_set_to_keyring</data>
-      <data key="d4">['self', 'provider', 'credentials', 'key_name']</data>
+      <data key="d4">['self', 'provider', 'credentials', 'key_name', 'source']</data>
     </node>
     <node id="src.intellicrack.credentials.store._get_metadata">
       <data key="d0">function</data>
@@ -5402,7 +5402,7 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">set</data>
-      <data key="d4">['self', 'provider', 'credentials', 'key_name']</data>
+      <data key="d4">['self', 'provider', 'credentials', 'key_name', 'source']</data>
     </node>
     <node id="src.intellicrack.credentials.store.delete">
       <data key="d0">function</data>

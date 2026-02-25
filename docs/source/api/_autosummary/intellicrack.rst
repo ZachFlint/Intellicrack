@@ -1,4 +1,4 @@
-﻿intellicrack
+intellicrack
 ============
 
 .. currentmodule:: intellicrack

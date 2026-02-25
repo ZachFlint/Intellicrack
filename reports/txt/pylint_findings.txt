@@ -1,0 +1,2531 @@
+140 findings in src\intellicrack\ui\resources\__init__.py
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.ghidra_panel:[193:245]
+==intellicrack.ui.panels.radare2_panel:[221:273]
+        self._xrefs_tree = QTreeWidget()
+        set_header_labels(self._xrefs_tree, _XREF_COLUMNS)
+        set_selection_mode(self._xrefs_tree, QAbstractItemView.SelectionMode.SingleSelection)
+        tabs.addTab(self._xrefs_tree, "XRefs")
+
+        return tabs
+
+    def _create_functions_sidebar(self) -> QWidget:
+        """Create the functions list sidebar.
+
+        Returns:
+            Functions sidebar widget.
+        """
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
+
+        header = QHBoxLayout()
+        self._func_count_label = QLabel("Functions")
+        self._func_count_label.setFont(FontManager.get_instance().get_ui_font_bold(9))
+        header.addWidget(self._func_count_label)
+        header.addStretch()
+
+        self._refresh_funcs_btn = QPushButton("Refresh")
+        self._refresh_funcs_btn.setObjectName("secondary_button")
+        self._refresh_funcs_btn.clicked.connect(self._on_refresh_functions)
+        header.addWidget(self._refresh_funcs_btn)
+        layout.addLayout(header)
+
+        self._func_filter = QLineEdit()
+        set_hint = getattr(self._func_filter, "set" + "Place" + "holderText")
+        set_hint("Filter functions...")
+        self._func_filter.textChanged.connect(self._on_filter_changed)
+        layout.addWidget(self._func_filter)
+
+        self._func_tree = QTreeWidget()
+        set_header_labels(self._func_tree, _FUNC_COLUMNS)
+        set_sorting_enabled(self._func_tree, True)
+        set_selection_mode(self._func_tree, QAbstractItemView.SelectionMode.SingleSelection)
+        self._func_tree.itemClicked.connect(self._on_function_clicked)
+        layout.addWidget(self._func_tree)
+
+        return container
+
+    def set_bridge(self, bridge: GhidraBridge) -> None:
+        """Set the GhidraBridge instance for analysis.
+
+        Args:
+            bridge: The GhidraBridge to use.
+        """
+        self._bridge = bridge
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.core._subprocess:[13:44]
+==intellicrack.core._subprocess:[13:44]
+_sp = __import__("subprocess")
+
+CREATE_NEW_CONSOLE: int = _sp.CREATE_NEW_CONSOLE
+CREATE_NEW_PROCESS_GROUP: int = _sp.CREATE_NEW_PROCESS_GROUP
+CREATE_NO_WINDOW: int = _sp.CREATE_NO_WINDOW
+DEVNULL = _sp.DEVNULL
+PIPE = _sp.PIPE
+STARTF_USESHOWWINDOW: int = _sp.STARTF_USESHOWWINDOW
+STARTUPINFO = _sp.STARTUPINFO
+CalledProcessError = _sp.CalledProcessError
+CompletedProcess = _sp.CompletedProcess
+Popen = _sp.Popen
+SubprocessError = _sp.SubprocessError
+TimeoutExpired = _sp.TimeoutExpired
+run = _sp.run
+
+__all__: list[str] = [
+    "CREATE_NEW_CONSOLE",
+    "CREATE_NEW_PROCESS_GROUP",
+    "CREATE_NO_WINDOW",
+    "DEVNULL",
+    "PIPE",
+    "STARTF_USESHOWWINDOW",
+    "STARTUPINFO",
+    "CalledProcessError",
+    "CompletedProcess",
+    "Popen",
+    "SubprocessError",
+    "TimeoutExpired",
+    "run",
+]
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels._qt_compat:[20:175]
+==intellicrack.ui.panels._qt_compat:[20:175]
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Any
+
+    from PyQt6.QtCore import Qt
+    from PyQt6.QtWidgets import (
+        QAbstractItemView,
+        QPlainTextEdit,
+        QTableWidget,
+        QTableWidgetItem,
+        QTreeWidget,
+        QTreeWidgetItem,
+    )
+
+_logger = get_logger("ui.panels.qt_compat")
+
+_SORT_ENABLED = "setSortingEnabled"
+_SELECTION_MODE = "setSelectionMode"
+_CELL_CHANGED = "cellChanged"
+_HEADER_LABELS = "setHeaderLabels"
+_MAX_BLOCK_COUNT = "setMaximumBlockCount"
+_EDIT_ITEM = "editItem"
+_CURRENT_ITEM = "currentItem"
+_SET_DATA = "setData"
+_GET_DATA = "data"
+
+
+def _resolve(obj: object, method_name: str) -> Callable[..., Any]:
+    """Resolve a method on a Qt object, raising a clear error if absent.
+
+    Args:
+        obj: The Qt widget or item instance.
+        method_name: The camelCase method name to look up.
+
+    Returns:
+        The bound method callable.
+
+    Raises:
+        AttributeError: If the method does not exist on the object.
+    """
+    if not hasattr(obj, method_name):
+        cls_name = type(obj).__name__
+        msg = f"{cls_name} has no method '{method_name}'; PyQt6 binding may be incompatible"
+        raise AttributeError(msg)
+    method: Callable[..., Any] = getattr(obj, method_name)
+    return method
+
+
+def set_sorting_enabled(table: QTableWidget | QTreeWidget, enable: bool) -> None:
+    """Toggle sorting on a QTableWidget or QTreeWidget.
+
+    Args:
+        table: The table or tree widget.
+        enable: Whether to enable sorting.
+    """
+    _resolve(table, _SORT_ENABLED)(enable)
+
+
+def set_selection_mode(widget: QTableWidget | QTreeWidget, mode: QAbstractItemView.SelectionMode) -> None:
+    """Set the selection mode on a QTableWidget or QTreeWidget.
+
+    Args:
+        widget: The table or tree widget.
+        mode: The selection mode enum value.
+    """
+    _resolve(widget, _SELECTION_MODE)(mode)
+
+
+def connect_cell_changed(table: QTableWidget, slot: Callable[..., object]) -> None:
+    """Connect a slot to QTableWidget.cellChanged signal.
+
+    Args:
+        table: The table widget.
+        slot: The callback to connect.
+    """
+    signal = getattr(table, _CELL_CHANGED, None)
+    if signal is not None:
+        signal.connect(slot)
+
+
+def set_header_labels(tree: QTreeWidget, labels: list[str]) -> None:
+    """Set column header labels on a QTreeWidget by dispatching to its native method.
+
+    Args:
+        tree: The tree widget.
+        labels: Column header label strings.
+    """
+    _resolve(tree, _HEADER_LABELS)(labels)
+
+
+def set_max_block_count(editor: QPlainTextEdit, maximum: int) -> None:
+    """Set maximum block count on a QPlainTextEdit by dispatching to its native method.
+
+    Args:
+        editor: The plain text editor widget.
+        maximum: Maximum number of text blocks to retain.
+    """
+    _resolve(editor, _MAX_BLOCK_COUNT)(maximum)
+
+
+def edit_table_item(table: QTableWidget, item: QTableWidgetItem | None) -> None:
+    """Begin editing a cell in a QTableWidget by dispatching to its native method.
+
+    Args:
+        table: The table widget.
+        item: The cell item to edit, or None.
+    """
+    _resolve(table, _EDIT_ITEM)(item)
+
+
+def get_current_tree_item(tree: QTreeWidget) -> QTreeWidgetItem | None:
+    """Return the currently selected QTreeWidgetItem, or None if nothing is selected.
+
+    Args:
+        tree: The tree widget.
+
+    Returns:
+        The selected item or None.
+    """
+    return _resolve(tree, _CURRENT_ITEM)()
+
+
+def tree_item_set_data(
+    item: QTreeWidgetItem,
+    column: int,
+    role: Qt.ItemDataRole,
+    value: object,
+) -> None:
+    """Store application data on a QTreeWidgetItem for the specified column and role.
+
+    Args:
+        item: The tree widget item.
+        column: Column index.
+        role: Qt item data role.
+        value: Data value to store.
+    """
+    _resolve(item, _SET_DATA)(column, role, value)
+
+
+def tree_item_data(
+    item: QTreeWidgetItem,
+    column: int,
+    role: Qt.ItemDataRole,
+) -> object:
+    """Retrieve application data from a QTreeWidgetItem for the specified column and role.
+
+    Args:
+        item: The tree widget item.
+        column: Column index.
+        role: Qt item data role.
+
+    Returns:
+        The stored data value.
+    """
+    return _resolve(item, _GET_DATA)(column, role)
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.grok:[274:324]
+==intellicrack.providers.openai:[298:348]
+            model=model,
+            content=content,
+            tool_calls=tool_calls,
+            duration_ms=duration_ms,
+        )
+
+    async def _make_grok_api_call(
+        self,
+        *,
+        model: str,
+        messages: list[ChatCompletionMessageParam],
+        temperature: float,
+        max_tokens: int,
+        tools: list[ChatCompletionToolParam] | None,
+    ) -> ChatCompletion:
+        """Execute the Grok API chat completion call with error handling.
+
+        Args:
+            model: Model ID to use.
+            messages: Formatted messages for the API.
+            temperature: Sampling temperature.
+            max_tokens: Maximum tokens in response.
+            tools: Formatted tools for the API, or None.
+
+        Returns:
+            The chat completion response object.
+
+        Raises:
+            ProviderError: If the API call fails.
+            RateLimitError: If rate limited.
+        """
+        if self._client is None:
+            raise ProviderError(_ERR_NOT_CONNECTED)
+
+        try:
+            if tools:
+                return await self._client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    tools=tools,
+                )
+            return await self._client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        except openai.RateLimitError as e:
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.grok:[470:493]
+==intellicrack.providers.openrouter:[536:559]
+                    "role": "user",
+                    "content": msg.content,
+                })
+            elif msg.role == "assistant":
+                assistant_msg: dict[str, object] = {
+                    "role": "assistant",
+                    "content": msg.content,
+                }
+
+                if msg.tool_calls:
+                    tool_calls_list: list[dict[str, object]] = [
+                        {
+                            "id": tc.id,
+                            "type": "function",
+                            "function": {
+                                "name": tc.function_name,
+                                "arguments": json.dumps(tc.arguments),
+                            },
+                        }
+                        for tc in msg.tool_calls
+                    ]
+                    assistant_msg["tool_calls"] = tool_calls_list
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.huggingface:[672:694]
+==intellicrack.providers.openai:[512:534]
+                    "role": "user",
+                    "content": msg.content,
+                })
+            elif msg.role == "assistant":
+                assistant_msg: dict[str, object] = {
+                    "role": "assistant",
+                    "content": msg.content,
+                }
+
+                if msg.tool_calls:
+                    assistant_msg["tool_calls"] = [
+                        {
+                            "id": tc.id,
+                            "type": "function",
+                            "function": {
+                                "name": tc.function_name,
+                                "arguments": json.dumps(tc.arguments),
+                            },
+                        }
+                        for tc in msg.tool_calls
+                    ]
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui._screen_compat:[18:79]
+==intellicrack.ui._screen_compat:[18:79]
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Any
+
+    from PyQt6.QtWidgets import QApplication, QWidget
+
+_PRIMARY_SCREEN = "primaryScreen"
+_AVAILABLE_GEOMETRY = "availableGeometry"
+_MOVE = "move"
+
+
+def _resolve(obj: object, method_name: str) -> Callable[..., Any]:
+    """Resolve a method on a Qt object, raising a clear error if absent.
+
+    Args:
+        obj: The Qt object instance.
+        method_name: The camelCase method name to look up.
+
+    Returns:
+        The bound method callable.
+
+    Raises:
+        AttributeError: If the method does not exist on the object.
+    """
+    if not hasattr(obj, method_name):
+        cls_name = type(obj).__name__
+        msg = f"{cls_name} has no method '{method_name}'; PyQt6 binding may be incompatible"
+        raise AttributeError(msg)
+    method: Callable[..., Any] = getattr(obj, method_name)
+    return method
+
+
+def get_screen_geometry(app: QApplication) -> tuple[int, int, int, int] | None:
+    """Return the primary screen's available area as (x, y, width, height).
+
+    Args:
+        app: The QApplication instance.
+
+    Returns:
+        Tuple of (x, y, width, height) or None if no screen detected.
+    """
+    screen: object = _resolve(app, _PRIMARY_SCREEN)()
+    if screen is None:
+        return None
+    rect: object = _resolve(screen, _AVAILABLE_GEOMETRY)()
+    x: int = _resolve(rect, "x")()
+    y: int = _resolve(rect, "y")()
+    w: int = _resolve(rect, "width")()
+    h: int = _resolve(rect, "height")()
+    return (x, y, w, h)
+
+
+def move_widget(widget: QWidget, x: int, y: int) -> None:
+    """Move a widget to the specified screen coordinates.
+
+    Args:
+        widget: The widget to move.
+        x: X coordinate in screen pixels.
+        y: Y coordinate in screen pixels.
+    """
+    _resolve(widget, _MOVE)(x, y)
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.ghidra_panel:[162:193]
+==intellicrack.ui.panels.radare2_panel:[183:214]
+        return tabs
+
+    def _create_data_tabs(self) -> QTabWidget:
+        """Create strings, imports, exports, sections, and xrefs tabs.
+
+        Returns:
+            Tab widget with data tables.
+        """
+        tabs = QTabWidget()
+
+        self._strings_table = QTableWidget(0, len(_STRING_COLUMNS))
+        self._strings_table.setHorizontalHeaderLabels(_STRING_COLUMNS)
+        self._strings_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._strings_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        self._strings_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        tabs.addTab(self._strings_table, "Strings")
+
+        self._imports_table = QTableWidget(0, len(_IMPORT_COLUMNS))
+        self._imports_table.setHorizontalHeaderLabels(_IMPORT_COLUMNS)
+        self._imports_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._imports_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        self._imports_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        tabs.addTab(self._imports_table, "Imports")
+
+        self._exports_table = QTableWidget(0, len(_EXPORT_COLUMNS))
+        self._exports_table.setHorizontalHeaderLabels(_EXPORT_COLUMNS)
+        self._exports_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._exports_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        self._exports_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        tabs.addTab(self._exports_table, "Exports")
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.radare2:[447:464]
+==intellicrack.bridges.x64dbg:[671:688]
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Target address",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="instruction",
+                            type="string",
+                            description="Assembly instruction",
+                            required=True,
+                        ),
+                    ],
+                    returns="Assembled bytes",
+                ),
+                ToolFunction(
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.highlighter:[372:389]
+==intellicrack.ui.panels.x64dbg_panel:[53:70]
+    "rax",
+    "rbx",
+    "rcx",
+    "rdx",
+    "rsi",
+    "rdi",
+    "rbp",
+    "rsp",
+    "rip",
+    "r8",
+    "r9",
+    "r10",
+    "r11",
+    "r12",
+    "r13",
+    "r14",
+    "r15",
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.ghidra_panel:[78:111]
+==intellicrack.ui.panels.radare2_panel:[82:115]
+        self._setup_ui()
+
+    def _setup_ui(self) -> None:
+        """Build the panel layout."""
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(4)
+
+        layout.addWidget(self._create_toolbar())
+
+        main_splitter = QSplitter(Qt.Orientation.Horizontal)
+
+        left_splitter = QSplitter(Qt.Orientation.Vertical)
+        left_splitter.addWidget(self._create_code_tabs())
+        left_splitter.addWidget(self._create_data_tabs())
+        left_splitter.setSizes([400, 300])
+        main_splitter.addWidget(left_splitter)
+
+        main_splitter.addWidget(self._create_functions_sidebar())
+        main_splitter.setSizes([600, 250])
+
+        layout.addWidget(main_splitter)
+
+    def _create_toolbar(self) -> QToolBar:
+        """Create the analysis toolbar.
+
+        Returns:
+            Configured toolbar widget.
+        """
+        toolbar = QToolBar()
+        toolbar.setMovable(False)
+        toolbar.setFixedHeight(32)
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels._async_bridge:[15:63]
+==intellicrack.ui.panels._async_bridge:[15:63]
+if TYPE_CHECKING:
+    from collections.abc import Coroutine
+
+_logger = get_logger("ui.panels.async_bridge")
+
+
+def run_bridge_coroutine[T](coro: Coroutine[object, object, T]) -> T | None:
+    """Run an async bridge coroutine from a synchronous Qt context.
+
+    Attempts to execute the coroutine on the current event loop.
+    When called from within a running loop (typical in Qt apps),
+    the coroutine is scheduled as a task with an error-logging
+    callback instead of being silently dropped. When no loop is
+    running, the coroutine is executed synchronously via
+    ``asyncio.run``.
+
+    Args:
+        coro: Coroutine to execute.
+
+    Returns:
+        Coroutine result when executed synchronously, or None
+        when the coroutine was scheduled on a running loop.
+    """
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop is not None and loop.is_running():
+        task = loop.create_task(coro)
+        task.add_done_callback(_log_task_exception)
+        return None
+
+    return asyncio.run(coro)
+
+
+def _log_task_exception(task: asyncio.Task[object]) -> None:
+    """Log exceptions from completed async bridge tasks.
+
+    Args:
+        task: The completed asyncio task to inspect.
+    """
+    if task.cancelled():
+        _logger.debug("bridge_task_cancelled")
+        return
+    exc = task.exception()
+    if exc is not None:
+        _logger.error("bridge_task_failed: %s: %s", type(exc).__name__, exc)
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.ghidra_panel:[380:399]
+==intellicrack.ui.panels.radare2_panel:[376:395]
+            return
+
+        if functions is None:
+            functions = []
+
+        set_sorting_enabled(self._func_tree, False)
+        self._func_tree.clear()
+
+        for func in functions:
+            item = QTreeWidgetItem([
+                func.name,
+                f"0x{func.address:X}",
+                str(func.size),
+            ])
+            tree_item_set_data(item, 0, Qt.ItemDataRole.UserRole, func.address)
+            self._func_tree.addTopLevelItem(item)
+
+        set_sorting_enabled(self._func_tree, True)
+        self._func_count_label.setText(f"Functions ({len(functions)})")
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.ghidra_panel:[446:467]
+==intellicrack.ui.panels.radare2_panel:[442:463]
+            return
+
+        if imports is None:
+            imports = []
+
+        self._imports_table.setRowCount(0)
+        for imp in imports:
+            row = self._imports_table.rowCount()
+            self._imports_table.insertRow(row)
+            self._imports_table.setItem(row, 0, QTableWidgetItem(imp.dll))
+            self._imports_table.setItem(row, 1, QTableWidgetItem(imp.function))
+            self._imports_table.setItem(row, 2, QTableWidgetItem(f"0x{imp.address:X}"))
+
+    def _refresh_exports(self) -> None:
+        """Refresh the exports table from bridge."""
+        if self._bridge is None:
+            return
+
+        try:
+            exports = run_bridge_coroutine(self._bridge.get_exports())
+        except Exception:
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.ghidra_panel:[514:531]
+==intellicrack.ui.panels.radare2_panel:[509:526]
+        if self._bridge is None:
+            return
+
+        self._xrefs_tree.clear()
+
+        try:
+            xrefs_to = run_bridge_coroutine(self._bridge.get_xrefs_to(address))
+            if xrefs_to:
+                for xref in xrefs_to:
+                    item = QTreeWidgetItem([
+                        "To",
+                        f"0x{xref.from_address:X}",
+                        xref.ref_type,
+                        xref.from_function or "",
+                    ])
+                    self._xrefs_tree.addTopLevelItem(item)
+        except Exception:
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.process:[276:290]
+==intellicrack.bridges.x64dbg:[613:627]
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Memory address",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="size",
+                            type="integer",
+                            description="Bytes to read",
+                            required=True,
+                        ),
+                    ],
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.process:[295:309]
+==intellicrack.bridges.x64dbg:[632:646]
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Memory address",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="data",
+                            type="string",
+                            description="Hex data to write",
+                            required=True,
+                        ),
+                    ],
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.huggingface:[723:739]
+==intellicrack.providers.local_transformers:[683:699]
+        for tool in tools:
+            for func in tool.functions:
+                properties: dict[str, dict[str, object]] = {}
+                required: list[str] = []
+
+                for param in func.parameters:
+                    prop: dict[str, object] = {
+                        "type": param.type,
+                        "description": param.description,
+                    }
+                    if param.enum:
+                        prop["enum"] = param.enum
+                    properties[param.name] = prop
+                    if param.required:
+                        required.append(param.name)
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.ollama:[663:679]
+==intellicrack.providers.openrouter:[589:605]
+        for tool in tools:
+            for func in tool.functions:
+                properties: dict[str, dict[str, object]] = {}
+                required: list[str] = []
+
+                for param in func.parameters:
+                    prop: dict[str, object] = {
+                        "type": param.type,
+                        "description": param.description,
+                    }
+                    if param.enum:
+                        prop["enum"] = param.enum
+                    properties[param.name] = prop
+                    if param.required:
+                        required.append(param.name)
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.ghidra_panel:[137:162]
+==intellicrack.ui.panels.radare2_panel:[139:164]
+        self._status_label.setObjectName("toolbar_label")
+        toolbar.addWidget(self._status_label)
+
+        return toolbar
+
+    def _create_code_tabs(self) -> QTabWidget:
+        """Create decompiled, disassembly, and r2 console tabs.
+
+        Returns:
+            Tab widget with code views.
+        """
+        tabs = QTabWidget()
+
+        self._decompiled_view = QPlainTextEdit()
+        self._decompiled_view.setFont(QFont("JetBrains Mono", 10))
+        self._decompiled_view.setReadOnly(True)
+        set_max_block_count(self._decompiled_view, 50000)
+        tabs.addTab(self._decompiled_view, "Decompiled")
+
+        self._disasm_view = QPlainTextEdit()
+        self._disasm_view.setFont(QFont("JetBrains Mono", 10))
+        self._disasm_view.setReadOnly(True)
+        set_max_block_count(self._disasm_view, 50000)
+        tabs.addTab(self._disasm_view, "Disassembly")
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.binary:[393:413]
+==intellicrack.bridges.radare2:[546:566]
+                ),
+            ],
+        )
+
+    async def initialize(self, tool_path: Path | None = None) -> None:
+        """Initialize the binary operations bridge.
+
+        Args:
+            tool_path: Not used for this bridge.
+        """
+        del tool_path
+        self._state = BridgeState(
+            connected=True,
+            tool_running=True,
+            binary_loaded=False,
+            process_attached=False,
+            target_path=None,
+            target_pid=None,
+            last_error=None,
+        )
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.grok:[357:397]
+==intellicrack.providers.huggingface:[514:553]
+            )
+            tool_calls.append(tool_call)
+            self._logger.debug(
+                "tool_call_parsed",
+                extra={
+                    "tool_name": tool_call.tool_name,
+                    "arguments_count": len(tool_call.arguments),
+                },
+            )
+        return tool_calls
+
+    async def chat_stream(
+        self,
+        messages: list[Message],
+        model: str,
+        tools: list[ToolDefinition] | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+    ) -> AsyncIterator[str]:
+        """Stream a chat completion response from Grok.
+
+        Args:
+            messages: Conversation history.
+            model: Model ID to use.
+            tools: Available tools for function calling.
+            temperature: Sampling temperature.
+            max_tokens: Maximum tokens in response.
+
+        Yields:
+            Text chunks as they arrive.
+
+        Raises:
+            ProviderError: If not connected or request fails.
+            RateLimitError: If rate limit is exceeded.
+        """
+        if not self._connected or self._client is None:
+            raise ProviderError(_ERR_NOT_CONNECTED)
+
+        self._cancel_requested = False
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.openai:[389:429]
+==intellicrack.providers.openrouter:[398:438]
+            )
+            tool_calls.append(tool_call)
+            self._logger.debug(
+                "tool_call_parsed",
+                extra={
+                    "tool_name": tool_call.tool_name,
+                    "arguments_count": len(tool_call.arguments),
+                },
+            )
+
+        return tool_calls
+
+    async def chat_stream(
+        self,
+        messages: list[Message],
+        model: str,
+        tools: list[ToolDefinition] | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+    ) -> AsyncIterator[str]:
+        """Stream a chat completion response from OpenRouter.
+
+        Args:
+            messages: Conversation history.
+            model: Model ID to use.
+            tools: Available tools for function calling.
+            temperature: Sampling temperature.
+            max_tokens: Maximum tokens in response.
+
+        Yields:
+            Text chunks as they arrive.
+
+        Raises:
+            ProviderError: If not connected or request fails.
+        """
+        if not self._connected or self._client is None:
+            raise ProviderError(_ERR_NOT_CONNECTED)
+
+        self._cancel_requested = False
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.radare2:[300:312]
+==intellicrack.bridges.x64dbg:[651:663]
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Start address",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="count",
+                            type="integer",
+                            description="Number of instructions",
+                            required=False,
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.ghidra_panel:[533:545]
+==intellicrack.ui.panels.radare2_panel:[528:540]
+        try:
+            xrefs_from = run_bridge_coroutine(self._bridge.get_xrefs_from(address))
+            if xrefs_from:
+                for xref in xrefs_from:
+                    item = QTreeWidgetItem([
+                        "From",
+                        f"0x{xref.to_address:X}",
+                        xref.ref_type,
+                        xref.to_function or "",
+                    ])
+                    self._xrefs_tree.addTopLevelItem(item)
+        except Exception:
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.binary:[134:145]
+==intellicrack.bridges.ghidra:[127:138]
+                    parameters=[
+                        ToolParameter(
+                            name="path",
+                            type="string",
+                            description="Path to the binary file",
+                            required=True,
+                        ),
+                    ],
+                    returns="BinaryInfo object with file details",
+                ),
+                ToolFunction(
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.process:[404:415]
+==intellicrack.bridges.x64dbg:[696:707]
+                    parameters=[
+                        ToolParameter(
+                            name="pattern",
+                            type="string",
+                            description="Hex pattern with wildcards",
+                            required=True,
+                        ),
+                    ],
+                    returns="List of matching addresses",
+                ),
+                ToolFunction(
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.huggingface:[740:752]
+==intellicrack.providers.local_transformers:[700:712]
+                    "type": "function",
+                    "function": {
+                        "name": func.name,
+                        "description": func.description,
+                        "parameters": {
+                            "type": "object",
+                            "properties": properties,
+                            "required": required,
+                        },
+                    },
+                })
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.huggingface:[672:684]
+==intellicrack.providers.ollama:[617:629]
+                    "role": "user",
+                    "content": msg.content,
+                })
+            elif msg.role == "assistant":
+                assistant_msg: dict[str, object] = {
+                    "role": "assistant",
+                    "content": msg.content,
+                }
+
+                if msg.tool_calls:
+                    assistant_msg["tool_calls"] = [
+                        {
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.huggingface:[590:601]
+==intellicrack.providers.openrouter:[476:487]
+                        )
+                        break
+                    if line.startswith("data: "):
+                        data_str = line[6:]
+                        if data_str == "[DONE]":
+                            break
+                        try:
+                            data = json.loads(data_str)
+                            if choices := data.get("choices", []):
+                                delta = choices[0].get("delta", {})
+                                if content := delta.get("content", ""):
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.ollama:[680:692]
+==intellicrack.providers.openrouter:[606:618]
+                    "type": "function",
+                    "function": {
+                        "name": func.name,
+                        "description": func.description,
+                        "parameters": {
+                            "type": "object",
+                            "properties": properties,
+                            "required": required,
+                        },
+                    },
+                })
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.sandbox.qemu:[1013:1028]
+==intellicrack.sandbox.windows:[285:297]
+        if self._temp_dir is not None and self._temp_dir.exists():
+            try:
+                await asyncio.to_thread(
+                    shutil.rmtree,
+                    self._temp_dir,
+                    ignore_errors=True,
+                )
+            except Exception as e:
+                _logger.warning("temp_dir_cleanup_failed", extra={"error": str(e)})
+
+        self._temp_dir = None
+        self._shared_folder = None
+
+    async def _create_guest_agent_script(self) -> None:
+        """Create guest agent monitoring scripts."""
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.chat:[256:272]
+==intellicrack.ui.resources.theme_manager:[109:124]
+            }
+            QPushButton:hover {
+                background-color: #1177bb;
+            }
+            QPushButton:pressed {
+                background-color: #0d5289;
+            }
+            QPushButton:disabled {
+                background-color: #3e3e42;
+                color: #888888;
+            }
+        """)
+        self._send_button.clicked.connect(self._on_send)
+        layout.addWidget(self._send_button)
+
+        self.setStyleSheet("""
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.process:[63:73]
+==intellicrack.bridges.x64dbg:[2109:2119]
+    _fields_ = [
+        ("dwSize", wintypes.DWORD),
+        ("cntUsage", wintypes.DWORD),
+        ("th32ProcessID", wintypes.DWORD),
+        ("th32DefaultHeapID", ctypes.POINTER(ctypes.c_ulong)),
+        ("th32ModuleID", wintypes.DWORD),
+        ("cntThreads", wintypes.DWORD),
+        ("th32ParentProcessID", wintypes.DWORD),
+        ("pcPriClassBase", wintypes.LONG),
+        ("dwFlags", wintypes.DWORD),
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.process:[108:122]
+==intellicrack.bridges.x64dbg:[1637:1648]
+class MemoryBasicInformation(ctypes.Structure):
+    """Windows MEMORY_BASIC_INFORMATION structure."""
+
+    _fields_ = [
+        ("BaseAddress", ctypes.c_void_p),
+        ("AllocationBase", ctypes.c_void_p),
+        ("AllocationProtect", wintypes.DWORD),
+        ("RegionSize", ctypes.c_size_t),
+        ("State", wintypes.DWORD),
+        ("Protect", wintypes.DWORD),
+        ("Type", wintypes.DWORD),
+    ]
+
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.process:[347:357]
+==intellicrack.bridges.x64dbg:[613:623]
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Memory address",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="size",
+                            type="integer",
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.schemas:[98:120]
+==intellicrack.providers.base:[48:70]
+    required: list[str]
+
+
+class AnthropicToolSchema(TypedDict):
+    """Anthropic tool schema format."""
+
+    name: str
+    description: str
+    input_schema: JSONSchemaParameters
+
+
+class OpenAIFunctionSchema(TypedDict):
+    """OpenAI function definition within a tool."""
+
+    name: str
+    description: str
+    parameters: JSONSchemaParameters
+
+
+class OpenAIToolSchema(TypedDict):
+    """OpenAI tool schema format."""
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.grok:[481:491]
+==intellicrack.providers.huggingface:[683:694]
+                        {
+                            "id": tc.id,
+                            "type": "function",
+                            "function": {
+                                "name": tc.function_name,
+                                "arguments": json.dumps(tc.arguments),
+                            },
+                        }
+                        for tc in msg.tool_calls
+                    ]
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.grok:[357:392]
+==intellicrack.providers.ollama:[510:546]
+            )
+            tool_calls.append(tool_call)
+            self._logger.debug(
+                "tool_call_parsed",
+                extra={
+                    "tool_name": tool_call.tool_name,
+                    "arguments_count": len(tool_call.arguments),
+                },
+            )
+        return tool_calls
+
+    async def chat_stream(
+        self,
+        messages: list[Message],
+        model: str,
+        tools: list[ToolDefinition] | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+    ) -> AsyncIterator[str]:
+        """Stream a chat completion response from Grok.
+
+        Args:
+            messages: Conversation history.
+            model: Model ID to use.
+            tools: Available tools for function calling.
+            temperature: Sampling temperature.
+            max_tokens: Maximum tokens in response.
+
+        Yields:
+            Text chunks as they arrive.
+
+        Raises:
+            ProviderError: If not connected or request fails.
+            RateLimitError: If rate limit is exceeded.
+        """
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.grok:[419:431]
+==intellicrack.providers.openai:[448:460]
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    stream=True,
+                )
+
+            async for chunk in stream:
+                if self._cancel_requested:
+                    break
+                if chunk.choices and chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+
+        except openai.RateLimitError as e:
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.openai:[523:534]
+==intellicrack.providers.openrouter:[547:557]
+                        {
+                            "id": tc.id,
+                            "type": "function",
+                            "function": {
+                                "name": tc.function_name,
+                                "arguments": json.dumps(tc.arguments),
+                            },
+                        }
+                        for tc in msg.tool_calls
+                    ]
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.ghidra_panel:[363:379]
+==intellicrack.ui.panels.radare2_panel:[359:375]
+            return
+
+        self._on_refresh_functions()
+        self._refresh_imports()
+        self._refresh_exports()
+
+    def _on_refresh_functions(self) -> None:
+        """Refresh the functions list from bridge."""
+        if self._bridge is None:
+            return
+
+        filter_text = self._func_filter.text().strip() or None
+
+        try:
+            functions = run_bridge_coroutine(self._bridge.get_functions(filter_text))
+        except Exception:
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.binary:[152:161]
+==intellicrack.bridges.frida_bridge:[234:243]
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="size",
+                            type="integer",
+                            description="Number of bytes to read",
+                            required=True,
+                        ),
+                    ],
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.binary:[404:413]
+==intellicrack.bridges.frida_bridge:[381:390]
+        self._state = BridgeState(
+            connected=True,
+            tool_running=True,
+            binary_loaded=False,
+            process_attached=False,
+            target_path=None,
+            target_pid=None,
+            last_error=None,
+        )
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.frida_bridge:[115:124]
+==intellicrack.bridges.x64dbg:[474:483]
+                    parameters=[
+                        ToolParameter(
+                            name="path",
+                            type="string",
+                            description="Path to executable",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="args",
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.ghidra:[374:384]
+==intellicrack.bridges.x64dbg:[839:849]
+        self._state = BridgeState(
+            connected=False,
+            tool_running=False,
+            binary_loaded=False,
+            process_attached=False,
+            target_path=None,
+            target_pid=None,
+            last_error=None,
+        )
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.process:[453:462]
+==intellicrack.bridges.radare2:[557:566]
+        self._state = BridgeState(
+            connected=True,
+            tool_running=True,
+            binary_loaded=False,
+            process_attached=False,
+            target_path=None,
+            target_pid=None,
+            last_error=None,
+        )
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.process:[80:91]
+==intellicrack.bridges.x64dbg:[1940:1950]
+    _fields_ = [
+        ("dwSize", wintypes.DWORD),
+        ("cntUsage", wintypes.DWORD),
+        ("th32ThreadID", wintypes.DWORD),
+        ("th32OwnerProcessID", wintypes.DWORD),
+        ("tpBasePri", wintypes.LONG),
+        ("tpDeltaPri", wintypes.LONG),
+        ("dwFlags", wintypes.DWORD),
+    ]
+
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.anthropic:[312:322]
+==intellicrack.providers.grok:[357:366]
+            )
+            tool_calls.append(tool_call)
+            self._logger.debug(
+                "tool_call_parsed",
+                extra={
+                    "tool_name": tool_call.tool_name,
+                    "arguments_count": len(tool_call.arguments),
+                },
+            )
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.base:[419:429]
+==intellicrack.providers.huggingface:[740:750]
+                    "type": "function",
+                    "function": {
+                        "name": func.name,
+                        "description": func.description,
+                        "parameters": {
+                            "type": "object",
+                            "properties": properties,
+                            "required": required,
+                        },
+                    },
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.grok:[470:480]
+==intellicrack.providers.huggingface:[672:682]
+                    "role": "user",
+                    "content": msg.content,
+                })
+            elif msg.role == "assistant":
+                assistant_msg: dict[str, object] = {
+                    "role": "assistant",
+                    "content": msg.content,
+                }
+
+                if msg.tool_calls:
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.ollama:[617:627]
+==intellicrack.providers.openrouter:[536:546]
+                    "role": "user",
+                    "content": msg.content,
+                })
+            elif msg.role == "assistant":
+                assistant_msg: dict[str, object] = {
+                    "role": "assistant",
+                    "content": msg.content,
+                }
+
+                if msg.tool_calls:
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.ghidra_panel:[275:298]
+==intellicrack.ui.panels.radare2_panel:[303:326]
+            return False
+        else:
+            return True
+
+    def start_tool(self) -> bool:
+        """Start the radare2 panel.
+
+        Returns:
+            True always since native panels are always ready.
+        """
+        self.tool_started.emit()
+        return True
+
+    def stop_tool(self) -> bool:
+        """Stop radare2 operations and clean up.
+
+        Returns:
+            True if cleanup succeeded.
+        """
+        if self._bridge is not None and self._bridge.state.is_ready():
+            try:
+                run_bridge_coroutine(self._bridge.shutdown())
+            except Exception:
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.ghidra_panel:[407:425]
+==intellicrack.ui.panels.radare2_panel:[403:421]
+        self._on_refresh_functions()
+
+    def _on_function_clicked(self, item: QTreeWidgetItem, _column: int) -> None:
+        """Handle function tree item click to show decompilation.
+
+        Args:
+            item: Clicked tree widget item.
+            _column: Column index (unused).
+        """
+        address = tree_item_data(item, 0, Qt.ItemDataRole.UserRole)
+        if not isinstance(address, int) or self._bridge is None:
+            return
+
+        try:
+            code = run_bridge_coroutine(self._bridge.decompile(address))
+            if code is not None:
+                self._decompiled_view.setPlainText(code)
+        except Exception:
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.ghidra_panel:[494:505]
+==intellicrack.ui.panels.radare2_panel:[489:500]
+            return
+
+        if strings is None:
+            strings = []
+
+        self._strings_table.setRowCount(0)
+        for s in strings:
+            row = self._strings_table.rowCount()
+            self._strings_table.insertRow(row)
+            self._strings_table.setItem(row, 0, QTableWidgetItem(f"0x{s.address:X}"))
+            self._strings_table.setItem(row, 1, QTableWidgetItem(s.value))
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.binary:[499:508]
+==intellicrack.bridges.ghidra:[620:637]
+            file_type=file_type,
+            architecture=arch,
+            is_64bit=is_64,
+            entry_point=entry_point,
+            sections=sections,
+            imports=imports,
+            exports=exports,
+        )
+
+    async def _extract_binary_metadata(
+        self,
+    ) -> tuple[int, list[SectionInfo], list[ImportInfo], list[ExportInfo]]:
+        """Extract entry point, sections, imports, and exports from Ghidra.
+
+        Returns:
+            Tuple of (entry_point, sections, imports, exports).
+        """
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.frida_bridge:[318:326]
+==intellicrack.bridges.ghidra:[244:252]
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Function address",
+                            required=True,
+                        ),
+                        ToolParameter(
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.ghidra:[192:200]
+==intellicrack.bridges.radare2:[320:328]
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Target address",
+                            required=True,
+                        ),
+                    ],
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.ghidra:[205:213]
+==intellicrack.bridges.radare2:[333:341]
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Source address",
+                            required=True,
+                        ),
+                    ],
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.process:[276:284]
+==intellicrack.bridges.x64dbg:[632:640]
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Memory address",
+                            required=True,
+                        ),
+                        ToolParameter(
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.process:[295:303]
+==intellicrack.bridges.x64dbg:[613:621]
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Memory address",
+                            required=True,
+                        ),
+                        ToolParameter(
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.sandbox_bridge:[660:668]
+==intellicrack.sandbox.manager:[390:398]
+            {
+                "id": inst.id,
+                "type": inst.sandbox_type,
+                "status": inst.state.status,
+                "created_at": inst.created_at.isoformat(),
+                "last_used": inst.last_used.isoformat(),
+                "binary": str(inst.binary_path) if inst.binary_path else None,
+            }
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.anthropic:[36:51]
+==intellicrack.providers.google:[31:46]
+if TYPE_CHECKING:
+    import logging
+    from asyncio import Task
+    from collections.abc import AsyncIterator
+
+
+_MSG_API_KEY_REQUIRED = "API key required"
+_MSG_NOT_CONNECTED = "Not connected"
+_MSG_INVALID_API_KEY = "Invalid API key"
+_MSG_CONNECTION_FAILED = "Connection failed"
+_MSG_REQUEST_FAILED = "Request failed"
+_MSG_RATE_LIMITED = "Rate limited"
+_MSG_STREAM_FAILED = "Stream failed"
+
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.google:[675:684]
+==intellicrack.providers.local_transformers:[691:700]
+                        "description": param.description,
+                    }
+                    if param.enum:
+                        prop["enum"] = param.enum
+                    properties[param.name] = prop
+                    if param.required:
+                        required.append(param.name)
+
+                result.append({
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.grok:[274:309]
+==intellicrack.providers.huggingface:[427:456]
+            model=model,
+            content=content,
+            tool_calls=tool_calls,
+            duration_ms=duration_ms,
+        )
+
+    async def _make_hf_api_call(
+        self,
+        *,
+        model: str,
+        request_body: dict[str, object],
+    ) -> dict[str, Any]:
+        """Execute the HuggingFace API chat call with error handling.
+
+        Args:
+            model: Model ID for URL construction and logging.
+            request_body: The request payload.
+
+        Returns:
+            Parsed JSON response dictionary.
+
+        Raises:
+            ProviderError: If the API call fails or model is loading.
+            RateLimitError: If rate limited by the API.
+        """
+        if self._client is None:
+            raise ProviderError(_ERR_NOT_CONNECTED)
+
+        try:
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.grok:[141:151]
+==intellicrack.providers.openai:[154:164]
+                    continue
+
+                context_window = self._get_context_window(model_id)
+                supports_tools = self._supports_tools(model_id)
+                supports_vision = self._supports_vision(model_id)
+
+                models.append(
+                    ModelInfo(
+                        id=model_id,
+                        name=model_id,
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.grok:[152:161]
+==intellicrack.providers.openai:[165:174]
+                        context_window=context_window,
+                        supports_tools=supports_tools,
+                        supports_vision=supports_vision,
+                        supports_streaming=True,
+                        input_cost_per_1m_tokens=None,
+                        output_cost_per_1m_tokens=None,
+                    )
+                )
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.huggingface:[569:579]
+==intellicrack.providers.openrouter:[457:467]
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "stream": True,
+            }
+
+            if tools:
+                request_body["tools"] = self._convert_tools_to_provider_format(tools)
+
+            async with self._client.stream(
+                "POST",
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.ghidra_panel:[337:346]
+==intellicrack.ui.panels.radare2_panel:[332:341]
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Load Binary",
+            "",
+            "All Files (*)",
+        )
+        if not file_path:
+            return
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.ghidra_panel:[468:478]
+==intellicrack.ui.panels.radare2_panel:[464:474]
+            return
+
+        if exports is None:
+            exports = []
+
+        self._exports_table.setRowCount(0)
+        for exp in exports:
+            row = self._exports_table.rowCount()
+            self._exports_table.insertRow(row)
+            self._exports_table.setItem(row, 0, QTableWidgetItem(exp.name))
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.binary:[210:217]
+==intellicrack.bridges.ghidra:[177:184]
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="count",
+                            type="integer",
+                            description="Number of instructions to disassemble",
+                            required=False,
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.binary:[482:491]
+==intellicrack.bridges.radare2:[710:719]
+            sections = await self._get_sections_internal()
+            imports = await self._get_imports_internal()
+            exports = await self._get_exports_internal()
+
+            self._state.connected = True
+            self._state.tool_running = True
+            self._state.binary_loaded = True
+            self._state.target_path = self._binary_path
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.binary:[503:518]
+==intellicrack.bridges.radare2:[731:749]
+                sections=sections,
+                imports=imports,
+                exports=exports,
+            )
+
+        except Exception as e:
+            _logger.exception("binary_load_failed")
+            raise ToolError(_ERR_LOAD_FAILED) from e
+
+    def _detect_format(self) -> str:
+        """Detect the binary format.
+
+        Returns:
+            The binary format ('pe', 'elf', 'macho', or 'raw').
+        """
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.binary:[531:550]
+==intellicrack.core.license_analyzer:[929:947]
+            b"\xfe\xed\xfa\xce",
+            b"\xce\xfa\xed\xfe",
+            b"\xfe\xed\xfa\xcf",
+            b"\xcf\xfa\xed\xfe",
+        }:
+            return "macho"
+
+        return "raw"
+
+    @staticmethod
+    def _parse_lief(data: bytes) -> lief.Binary | None:
+        """Parse binary data with lief.
+
+        Args:
+            data: Raw binary data.
+
+        Returns:
+            Parsed lief Binary object or None if parsing fails.
+        """
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.frida_bridge:[318:325]
+==intellicrack.bridges.ghidra:[354:361]
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Function address",
+                            required=True,
+                        ),
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.ghidra:[374:381]
+==intellicrack.bridges.process:[465:472]
+        self._state = BridgeState(
+            connected=False,
+            tool_running=False,
+            binary_loaded=False,
+            process_attached=False,
+            target_path=None,
+            target_pid=None,
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.ghidra:[192:199]
+==intellicrack.bridges.radare2:[447:454]
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Target address",
+                            required=True,
+                        ),
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.ghidra:[244:251]
+==intellicrack.bridges.radare2:[479:486]
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Function address",
+                            required=True,
+                        ),
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.ghidra:[413:421]
+==intellicrack.bridges.x64dbg:[863:871]
+        if self._process is not None:
+            pid = self._process.pid
+            process_manager = ProcessManager.get_instance()
+
+            self._process.terminate()
+            try:
+                await asyncio.wait_for(
+                    asyncio.to_thread(self._process.wait),
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.radare2:[320:327]
+==intellicrack.bridges.x64dbg:[671:678]
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Target address",
+                            required=True,
+                        ),
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.radare2:[524:531]
+==intellicrack.bridges.x64dbg:[800:807]
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Target address",
+                            required=True,
+                        ),
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.x64dbg:[928:936]
+==intellicrack.sandbox.windows:[193:201]
+                stdout=PIPE,
+                stderr=PIPE,
+                creationflags=CREATE_NEW_CONSOLE,
+            )
+
+            process_manager = ProcessManager.get_instance()
+            process_manager.register(
+                self._process,
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.base:[266:273]
+==intellicrack.providers.google:[325:333]
+            message = Message(
+                role="assistant",
+                content=content,
+                tool_calls=tool_calls or None,
+                timestamp=datetime.now(),
+            )
+
+            log_provider_response(
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.google:[168:176]
+==intellicrack.providers.huggingface:[238:246]
+                        supports_tools=self._estimate_tool_support(model_id),
+                        supports_vision=self._estimate_vision_support(model_id),
+                        supports_streaming=True,
+                        input_cost_per_1m_tokens=None,
+                        output_cost_per_1m_tokens=None,
+                    )
+                )
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.google:[632:640]
+==intellicrack.providers.huggingface:[731:739]
+                        "description": param.description,
+                    }
+                    if param.enum:
+                        prop["enum"] = param.enum
+                    properties[param.name] = prop
+                    if param.required:
+                        required.append(param.name)
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.google:[666:674]
+==intellicrack.providers.local_transformers:[681:690]
+        result: list[dict[str, object]] = []
+
+        for tool in tools:
+            for func in tool.functions:
+                properties: dict[str, dict[str, object]] = {}
+                required: list[str] = []
+
+                for param in func.parameters:
+                    prop: dict[str, object] = {
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.google:[675:683]
+==intellicrack.providers.ollama:[671:679]
+                        "description": param.description,
+                    }
+                    if param.enum:
+                        prop["enum"] = param.enum
+                    properties[param.name] = prop
+                    if param.required:
+                        required.append(param.name)
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.google:[170:178]
+==intellicrack.providers.openai:[168:176]
+                        supports_streaming=True,
+                        input_cost_per_1m_tokens=None,
+                        output_cost_per_1m_tokens=None,
+                    )
+                )
+
+            sorted_models = sorted(models, key=lambda m: m.id, reverse=True)
+            self._logger.info(
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.grok:[131:140]
+==intellicrack.providers.openai:[144:153]
+        if not self._connected or self._client is None:
+            raise ProviderError(_ERR_NOT_CONNECTED)
+
+        try:
+            response = await self._client.models.list()
+            models: list[ModelInfo] = []
+
+            for model_data in response.data:
+                model_id = model_data.id
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.provider_config:[786:795]
+==intellicrack.ui.sandbox_config:[372:381]
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Apply
+        )
+        button_box.accepted.connect(self._on_accept)
+        button_box.rejected.connect(self.reject)
+
+        if apply_button := button_box.button(QDialogButtonBox.StandardButton.Apply):
+            apply_button.clicked.connect(self._on_apply)
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.binary_panel:[77:89]
+==intellicrack.ui.panels.process_panel:[344:356]
+        self._setup_ui()
+
+    def _setup_ui(self) -> None:
+        """Set up the process panel layout."""
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(4)
+
+        toolbar = QToolBar()
+        toolbar.setMovable(False)
+        toolbar.setFixedHeight(32)
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.frida_panel:[80:93]
+==intellicrack.ui.panels.x64dbg_panel:[95:108]
+        self._setup_ui()
+
+    def _setup_ui(self) -> None:
+        """Set up the panel layout with script editor, hooks, and console."""
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(4)
+
+        layout.addWidget(self._create_toolbar())
+
+        main_splitter = QSplitter(Qt.Orientation.Vertical)
+
+        top_splitter = QSplitter(Qt.Orientation.Horizontal)
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.base:[1036:1057]
+==intellicrack.bridges.binary:[104:118]
+        self._capabilities = BridgeCapabilities(
+            supports_static_analysis=True,
+            supports_patching=True,
+            supported_architectures=["x86", "x86_64", "arm", "arm64"],
+            supported_formats=["pe", "elf", "macho", "raw"],
+        )
+
+    @abc.abstractmethod
+    async def load_file(self, path: Path) -> BinaryInfo:
+        """Load a binary file.
+
+        Args:
+            path: Path to the binary.
+
+        Raises:
+            RuntimeError: If the subclass does not override this method.
+
+        Note:
+            Subclasses must override to return BinaryInfo with file details
+            including format, architecture, sections, and entry point.
+        """
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.__init__:[34:40]
+==intellicrack.bridges.base:[39:45]
+    "BinaryOperationsBridge",
+    "BridgeCapabilities",
+    "BridgeState",
+    "DebuggerBridge",
+    "DisassemblyLine",
+    "DynamicAnalysisBridge",
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.binary:[407:413]
+==intellicrack.bridges.ghidra:[377:384]
+            binary_loaded=False,
+            process_attached=False,
+            target_path=None,
+            target_pid=None,
+            last_error=None,
+        )
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.frida_bridge:[384:390]
+==intellicrack.bridges.x64dbg:[842:849]
+                binary_loaded=False,
+                process_attached=False,
+                target_path=None,
+                target_pid=None,
+                last_error=None,
+            )
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.ghidra:[422:430]
+==intellicrack.bridges.x64dbg:[872:880]
+                )
+            except TimeoutError:
+                self._process.kill()
+                await asyncio.to_thread(self._process.wait)
+
+            process_manager.unregister(pid)
+            self._process = None
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.process:[94:100]
+==intellicrack.bridges.x64dbg:[2008:2014]
+            _fields_ = [
+                ("dwSize", wintypes.DWORD),
+                ("th32ModuleID", wintypes.DWORD),
+                ("th32ProcessID", wintypes.DWORD),
+                ("GlblcntUsage", wintypes.DWORD),
+                ("ProccntUsage", wintypes.DWORD),
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.process:[1061:1069]
+==intellicrack.bridges.x64dbg:[1668:1676]
+                    ctypes.c_void_p(address),
+                    ctypes.byref(mbi),
+                    ctypes.sizeof(mbi),
+                )
+
+                if result == 0:
+                    break
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.process:[1089:1096]
+==intellicrack.bridges.x64dbg:[1684:1691]
+                    }
+
+                    regions.append(
+                        MemoryRegion(
+                            base_address=mbi.BaseAddress or 0,
+                            size=mbi.RegionSize,
+                            protection=prot_map.get(mbi.Protect, "???"),
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.sandbox_bridge:[201:207]
+==intellicrack.bridges.x64dbg:[710:716]
+                        ToolParameter(
+                            name="command",
+                            type="string",
+                            description="Command to execute",
+                            required=True,
+                        ),
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.schemas:[67:79]
+==intellicrack.providers.base:[34:46]
+class JSONSchemaProperty(TypedDict, total=False):
+    """JSON Schema property definition for tool parameters."""
+
+    type: str
+    description: str
+    enum: list[str]
+    default: str | int | float | bool | None
+
+
+class JSONSchemaParameters(TypedDict):
+    """JSON Schema parameters object for tool functions."""
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.core.license_analyzer:[357:363]
+==intellicrack.ui.highlighter:[290:296]
+        "add",
+        "sub",
+        "mul",
+        "imul",
+        "div",
+        "idiv",
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.core.license_analyzer:[365:371]
+==intellicrack.ui.highlighter:[303:309]
+    "shl",
+    "shr",
+    "sal",
+    "sar",
+    "rol",
+    "ror",
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.google:[667:674]
+==intellicrack.providers.huggingface:[723:730]
+        for tool in tools:
+            for func in tool.functions:
+                properties: dict[str, dict[str, object]] = {}
+                required: list[str] = []
+
+                for param in func.parameters:
+                    prop: dict[str, object] = {
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.huggingface:[404:412]
+==intellicrack.providers.openrouter:[329:337]
+        duration_ms = (time.perf_counter() - start_time) * 1000
+
+        choices = data.get("choices", [])
+        if not choices:
+            raise ProviderError(_ERR_NO_RESPONSE_CHOICES)
+
+        response_message = choices[0].get("message", {})
+        content = response_message.get("content", "") or ""
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.confirmation_dialog:[168:184]
+==intellicrack.ui.preferences:[624:630]
+            }
+            QPushButton {
+                background-color: #0e639c;
+                color: white;
+                border: none;
+                border-radius: 4px;
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.provider_config:[1913:1920]
+==intellicrack.ui.tool_config:[1054:1061]
+        self._config_path.parent.mkdir(parents=True, exist_ok=True)
+
+        all_settings: dict[str, dict[str, Any]] = {}
+        if self._config_path.exists():
+            try:
+                with open(self._config_path, encoding="utf-8") as f:
+                    all_settings = json.load(f)
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui._screen_compat:[42:59]
+==intellicrack.ui.panels._qt_compat:[60:75]
+    if not hasattr(obj, method_name):
+        cls_name = type(obj).__name__
+        msg = f"{cls_name} has no method '{method_name}'; PyQt6 binding may be incompatible"
+        raise AttributeError(msg)
+    method: Callable[..., Any] = getattr(obj, method_name)
+    return method
+
+
+def get_screen_geometry(app: QApplication) -> tuple[int, int, int, int] | None:
+    """Return the primary screen's available area as (x, y, width, height).
+
+    Args:
+        app: The QApplication instance.
+
+    Returns:
+        Tuple of (x, y, width, height) or None if no screen detected.
+    """
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui._screen_compat:[42:59]
+==intellicrack.ui.panels._qt_compat:[60:75]
+    if not hasattr(obj, method_name):
+        cls_name = type(obj).__name__
+        msg = f"{cls_name} has no method '{method_name}'; PyQt6 binding may be incompatible"
+        raise AttributeError(msg)
+    method: Callable[..., Any] = getattr(obj, method_name)
+    return method
+
+
+def set_sorting_enabled(table: QTableWidget | QTreeWidget, enable: bool) -> None:
+    """Toggle sorting on a QTableWidget or QTreeWidget.
+
+    Args:
+        table: The table or tree widget.
+        enable: Whether to enable sorting.
+    """
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.ghidra_panel:[427:433]
+==intellicrack.ui.panels.radare2_panel:[423:429]
+        try:
+            lines = run_bridge_coroutine(self._bridge.disassemble(address))
+            if lines:
+                text_lines = [f"0x{dl.address:X}  {dl.bytes_str:<24s}  {dl.mnemonic} {dl.operands}" for dl in lines]
+                self._disasm_view.setPlainText("\n".join(text_lines))
+        except Exception:
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.ghidra_panel:[435:445]
+==intellicrack.ui.panels.radare2_panel:[431:441]
+        self.show_xrefs(address)
+
+    def _refresh_imports(self) -> None:
+        """Refresh the imports table from bridge."""
+        if self._bridge is None:
+            return
+
+        try:
+            imports = run_bridge_coroutine(self._bridge.get_imports())
+        except Exception:
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.binary:[184:189]
+==intellicrack.bridges.ghidra:[230:235]
+                    description="Search for a byte pattern in the binary",
+                    parameters=[
+                        ToolParameter(
+                            name="hex_pattern",
+                            type="string",
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.ghidra:[217:222]
+==intellicrack.bridges.radare2:[345:350]
+                    description="Search for strings in the binary",
+                    parameters=[
+                        ToolParameter(
+                            name="pattern",
+                            type="string",
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.ghidra:[243:261]
+==intellicrack.bridges.radare2:[389:407]
+                    description="Rename a function",
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Function address",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="new_name",
+                            type="string",
+                            description="New function name",
+                            required=True,
+                        ),
+                    ],
+                    returns="Success status",
+                ),
+                ToolFunction(
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.ghidra:[262:276]
+==intellicrack.bridges.radare2:[408:422]
+                    description="Add a comment at an address",
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Address for comment",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="comment",
+                            type="string",
+                            description="Comment text",
+                            required=True,
+                        ),
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.ghidra:[353:364]
+==intellicrack.bridges.radare2:[478:489]
+                    description="Get function at a specific address",
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Function address",
+                            required=True,
+                        ),
+                    ],
+                    returns="FunctionInfo or None if not found",
+                ),
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.process:[153:158]
+==intellicrack.bridges.x64dbg:[91:96]
+    PAGE_NOACCESS = 0x01
+    PAGE_READONLY = 0x02
+    PAGE_READWRITE = 0x04
+    PAGE_EXECUTE = 0x10
+    PAGE_EXECUTE_READ = 0x20
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.radare2:[504:515]
+==intellicrack.bridges.x64dbg:[670:681]
+                    description="Assemble instruction at address",
+                    parameters=[
+                        ToolParameter(
+                            name="address",
+                            type="integer",
+                            description="Target address",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="instruction",
+                            type="string",
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.schemas:[516:521]
+==intellicrack.providers.base:[418:423]
+        tool_schema: OpenAIToolSchema = {
+            "type": "function",
+            "function": {
+                "name": func.name,
+                "description": func.description,
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.bridges.x64dbg:[1866:1872]
+==intellicrack.ui.panels.script_manager:[182:187]
+        offset = 0
+        while True:
+            idx = data.find(pattern, offset)
+            if idx == -1:
+                break
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.core.license_analyzer:[322:329]
+==intellicrack.core.types:[616:621]
+    hardware_id_apis: list[str]
+    time_check_present: bool
+    feature_flags: dict[str, int]
+    blacklist_present: bool
+    online_validation: bool
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.grok:[310:315]
+==intellicrack.providers.openai:[341:346]
+                return await self._client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.grok:[317:322]
+==intellicrack.providers.openai:[334:339]
+            return await self._client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.grok:[331:350]
+==intellicrack.providers.openai:[364:383]
+            raise ProviderError(_ERR_REQUEST_FAILED % e) from e
+
+    def _parse_grok_tool_calls(
+        self,
+        response_message: ChatCompletionMessage,
+    ) -> list[ToolCall]:
+        """Parse tool calls from a Grok API response message.
+
+        Args:
+            response_message: The message from the Grok API response.
+
+        Returns:
+            List of parsed ToolCall instances.
+        """
+        tool_calls: list[ToolCall] = []
+        if not response_message.tool_calls:
+            return tool_calls
+
+        for tc in response_message.tool_calls:
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.huggingface:[295:300]
+==intellicrack.providers.local_transformers:[949:954]
+            return 128000
+        if "32k" in model_lower:
+            return 32768
+        if "16k" in model_lower:
+            return 16384
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.huggingface:[503:510]
+==intellicrack.providers.openrouter:[380:386]
+            return tool_calls
+
+        for tc in response_message["tool_calls"]:
+            func_data = tc.get("function", {})
+            func_name = func_data.get("name", "")
+            args_str = func_data.get("arguments", "{}")
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.huggingface:[602:608]
+==intellicrack.providers.openrouter:[488:494]
+                                    yield content
+                        except json.JSONDecodeError as exc:
+                            self._logger.debug("stream_json_parse_skipped", extra={"error": str(exc)})
+                            continue
+
+            self._logger.info(
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.providers.ollama:[571:576]
+==intellicrack.providers.openrouter:[468:473]
+                json=request_body,
+            ) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if self._cancel_requested:
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.app:[297:302]
+==intellicrack.ui.resources.theme_manager:[87:92]
+            QToolBar {
+                background-color: #2d2d30;
+                border: none;
+                border-bottom: 1px solid #3e3e42;
+                spacing: 4px;
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.chat:[376:385]
+==intellicrack.ui.tools:[487:496]
+        self._setup_ui()
+
+    def _setup_ui(self) -> None:
+        """Set up the chat panel UI."""
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        header = QFrame()
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.chat:[380:386]
+==intellicrack.ui.tools:[677:683]
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        header = QFrame()
+        header.setFixedHeight(40)
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.provider_config:[1619:1625]
+==intellicrack.ui.tool_config:[930:936]
+        if not self._config_path.exists():
+            return {}
+
+        try:
+            with open(self._config_path, encoding="utf-8") as f:
+                all_settings: dict[str, Any] = json.load(f)
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.frida_panel:[80:90]
+==intellicrack.ui.panels.ghidra_panel:[78:88]
+        self._setup_ui()
+
+    def _setup_ui(self) -> None:
+        """Build the panel layout."""
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(4)
+
+        layout.addWidget(self._create_toolbar())
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.ghidra_panel:[129:136]
+==intellicrack.ui.panels.radare2_panel:[131:138]
+        self._analyze_btn = QPushButton("Analyze")
+        self._analyze_btn.setObjectName("tool_button")
+        self._analyze_btn.clicked.connect(self._on_analyze)
+        toolbar.addWidget(self._analyze_btn)
+
+        toolbar.addSeparator()
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.ghidra_panel:[487:493]
+==intellicrack.ui.panels.radare2_panel:[482:488]
+        if self._bridge is None:
+            return
+
+        try:
+            strings = run_bridge_coroutine(self._bridge.search_strings(pattern))
+        except Exception:
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.ghidra_panel:[277:296]
+==intellicrack.ui.panels.x64dbg_panel:[407:426]
+        return True
+
+    def start_tool(self) -> bool:
+        """Start the x64dbg panel.
+
+        Returns:
+            True always since native panels are always ready.
+        """
+        self.tool_started.emit()
+        return True
+
+    def stop_tool(self) -> bool:
+        """Stop debugging and clean up.
+
+        Returns:
+            True if cleanup succeeded.
+        """
+        if self._bridge is not None and self._bridge.state.is_ready():
+            try:
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.licensing_panel:[206:212]
+==intellicrack.ui.panels.stack_viewer:[273:279]
+        self.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        self.setAlternatingRowColors(True)
+        self.verticalHeader().setVisible(False)
+        self.setShowGrid(False)
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.panels.radare2_panel:[82:92]
+==intellicrack.ui.panels.x64dbg_panel:[95:105]
+        self._setup_ui()
+
+    def _setup_ui(self) -> None:
+        """Build the panel layout."""
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(4)
+
+        layout.addWidget(self._create_toolbar())
+
+
+src\intellicrack\ui\resources\__init__.py:1:0: [refactor] R0801 duplicate-code: Similar lines in 2 files
+==intellicrack.ui.resources.icon_manager:[197:214]
+==intellicrack.ui.resources.theme_manager:[1010:1027]
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
+    @classmethod
+    def reset_instance(cls) -> None:
+        """Reset the singleton instance (primarily for testing)."""
+        cls._instance = None
+
+    @staticmethod
+    def _check_icons_available() -> bool:
+        """Check if the icons directory is available.
+
+        Returns:
+            True if icons directory exists and contains files.
+        """
+        try:

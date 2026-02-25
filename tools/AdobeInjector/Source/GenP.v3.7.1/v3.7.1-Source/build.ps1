@@ -212,7 +212,7 @@ if (!$hasUpx) {
                 exit 1
             }
             Write-Host " - Extracting zip: $($upxZip.Name)"
-            
+
             $tarExe = "tar.exe"
             $extracted = $false
             if (Get-Command $tarExe -ErrorAction SilentlyContinue) {
@@ -226,12 +226,12 @@ if (!$hasUpx) {
                     Write-Warning "tar.exe failed to extract $($upxZip.Name). Check $tarErrLog. Falling back to Expand-Archive."
                 }
             }
-            
+
             if (-not $extracted) {
                 $unzipErrLog = Join-Path $logsDir "unzip_err.log"
                 Expand-Archive -Path $upxZip.FullName -DestinationPath $upxDir -Force -ErrorAction Stop 2> $unzipErrLog
             }
-            
+
             $upxExtractedDir = Get-ChildItem -Path $upxDir -Directory | Where-Object { $_.Name -match '^upx-.*-win64$' } | Select-Object -First 1
             if (-not $upxExtractedDir) {
                 Write-Error "UPX extracted directory not found in $upxDir after extraction."
@@ -241,14 +241,14 @@ if (!$hasUpx) {
         }
         $upxExtractedDir = $upxExtractedDir.FullName
         Write-Host " - Found UPX directory: $upxExtractedDir"
-        
+
         $upxExe = Join-Path $upxExtractedDir "upx.exe"
         if (-not (Test-Path $upxExe)) {
             Write-Error "UPX executable not found at $upxExe."
             Stop-Transcript | Out-Null
             exit 1
         }
-        
+
         Copy-Item -Path $upxExe -Destination $genpDir -Force
         Write-Host " - UPX copied to $genpDir" -ForegroundColor Green
     }
@@ -299,10 +299,10 @@ if (!$hasAutoIt) {
     try {
         Download-File -Url $autoItUrl -Destination $autoItZipPath
         Write-Host " - Extracting AutoIt Portable to $autoItInstallDir"
-        
+
         New-Item -Path $autoItInstallDir -ItemType Directory -Force | Out-Null
         Remove-Item -Path "$autoItInstallDir\*" -Recurse -Force -ErrorAction SilentlyContinue
-        
+
         $tarExe = "tar.exe"
         $extracted = $false
         if (Get-Command $tarExe -ErrorAction SilentlyContinue) {
@@ -316,12 +316,12 @@ if (!$hasAutoIt) {
                 Write-Warning "tar.exe failed to extract $(Split-Path -Leaf $autoItZipPath). Check $tarErrLog. Falling back to Expand-Archive."
             }
         }
-        
+
         if (-not $extracted) {
             $unzipErrLog = Join-Path $logsDir "unzip_err.log"
             Expand-Archive -Path $autoItZipPath -DestinationPath $autoItInstallDir -Force -ErrorAction Stop 2> $unzipErrLog
         }
-        
+
         Remove-Item $autoItZipPath -Force -ErrorAction SilentlyContinue
         Write-Host " - AutoIt extracted to $autoItInstallDir" -ForegroundColor Green
     }
@@ -339,10 +339,10 @@ if (!$hasSciTE) {
         Download-File -Url $sciTEUrl -Destination $sciTEZipPath
         $sciTEDestDir = Join-Path $autoItInstallDir "install\SciTE"
         Write-Host " - Extracting SciTE Portable to $sciTEDestDir"
-        
+
         New-Item -Path $sciTEDestDir -ItemType Directory -Force | Out-Null
         Remove-Item -Path "$sciTEDestDir\*" -Recurse -Force -ErrorAction SilentlyContinue
-        
+
         $tarExe = "tar.exe"
         $extracted = $false
         if (Get-Command $tarExe -ErrorAction SilentlyContinue) {
@@ -356,12 +356,12 @@ if (!$hasSciTE) {
                 Write-Warning "tar.exe failed to extract $(Split-Path -Leaf $sciTEZipPath). Check $tarErrLog. Falling back to Expand-Archive."
             }
         }
-        
+
         if (-not $extracted) {
             $unzipErrLog = Join-Path $logsDir "unzip_err.log"
             Expand-Archive -Path $sciTEZipPath -DestinationPath $sciTEDestDir -Force -ErrorAction Stop 2> $unzipErrLog
         }
-        
+
         Remove-Item $sciTEZipPath -Force -ErrorAction SilentlyContinue
         Write-Host " - SciTE extracted to $sciTEDestDir" -ForegroundColor Green
     }

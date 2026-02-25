@@ -1,7 +1,7 @@
 			Visual Studio 2008 NASM integration
 
 
-In order to use nasm seamlessly in your VS2k8, follow the steps below. 
+In order to use nasm seamlessly in your VS2k8, follow the steps below.
 
 1. First install nasm by running its installer
 2. copy nasm.rules to c:\Program Files\Microsoft Visual Studio 2008\VC\VCProjectDefaults

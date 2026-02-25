@@ -1,0 +1,736 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "ruff",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "TC004",
+              "shortDescription": {
+                "text": "Move import `pathlib.Path` out of type-checking block. Import is used for more than type hinting."
+              }
+            },
+            {
+              "id": "PLR6301",
+              "shortDescription": {
+                "text": "Method `configure` could be a function, class method, or static method"
+              }
+            },
+            {
+              "id": "PLR0914",
+              "shortDescription": {
+                "text": "Too many local variables (17/15)"
+              }
+            },
+            {
+              "id": "PLC0415",
+              "shortDescription": {
+                "text": "`import` should be at the top-level of a file"
+              }
+            },
+            {
+              "id": "SIM105",
+              "shortDescription": {
+                "text": "Use `contextlib.suppress(ValueError, RuntimeError)` instead of `try`-`except`-`pass`"
+              }
+            },
+            {
+              "id": "PLR2004",
+              "shortDescription": {
+                "text": "Magic value used in comparison, consider replacing `2` with a constant variable"
+              }
+            },
+            {
+              "id": "I001",
+              "shortDescription": {
+                "text": "Import block is un-sorted or un-formatted"
+              }
+            },
+            {
+              "id": "F821",
+              "shortDescription": {
+                "text": "Undefined name `_PROC_COL_COUNT`"
+              }
+            },
+            {
+              "id": "TC003",
+              "shortDescription": {
+                "text": "Move standard library import `collections.abc.Callable` into a type-checking block"
+              }
+            },
+            {
+              "id": "TRY300",
+              "shortDescription": {
+                "text": "Consider moving this statement to an `else` block"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "TC004",
+          "level": "warning",
+          "message": {
+            "text": "Move import `pathlib.Path` out of type-checking block. Import is used for more than type hinting."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/bridges/binary.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 42,
+                  "startColumn": 25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PLR6301",
+          "level": "warning",
+          "message": {
+            "text": "Method `configure` could be a function, class method, or static method"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/core/logging.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 276,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PLR0914",
+          "level": "warning",
+          "message": {
+            "text": "Too many local variables (17/15)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/main.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 426,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PLR6301",
+          "level": "warning",
+          "message": {
+            "text": "Method `_log_credential_status` could be a function, class method, or static method"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 703,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PLC0415",
+          "level": "warning",
+          "message": {
+            "text": "`import` should be at the top-level of a file"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 706,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SIM105",
+          "level": "warning",
+          "message": {
+            "text": "Use `contextlib.suppress(ValueError, RuntimeError)` instead of `try`-`except`-`pass`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1016,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PLC0415",
+          "level": "warning",
+          "message": {
+            "text": "`import` should be at the top-level of a file"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1308,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PLR2004",
+          "level": "warning",
+          "message": {
+            "text": "Magic value used in comparison, consider replacing `2` with a constant variable"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/highlighter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 801,
+                  "startColumn": 28
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "I001",
+          "level": "warning",
+          "message": {
+            "text": "Import block is un-sorted or un-formatted"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/panels/binary_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 7,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PLR0914",
+          "level": "warning",
+          "message": {
+            "text": "Too many local variables (16/15)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/panels/process_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 467,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PLC0415",
+          "level": "warning",
+          "message": {
+            "text": "`import` should be at the top-level of a file"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/panels/process_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 509,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F821",
+          "level": "warning",
+          "message": {
+            "text": "Undefined name `_PROC_COL_COUNT`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/panels/process_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 527,
+                  "startColumn": 38
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F821",
+          "level": "warning",
+          "message": {
+            "text": "Undefined name `QColor`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/panels/process_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 530,
+                  "startColumn": 48
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PLR6301",
+          "level": "warning",
+          "message": {
+            "text": "Method `set_language` could be a function, class method, or static method"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/panels/script_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 402,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PLC0415",
+          "level": "warning",
+          "message": {
+            "text": "`import` should be at the top-level of a file"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/preferences.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 183,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PLC0415",
+          "level": "warning",
+          "message": {
+            "text": "`import` should be at the top-level of a file"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/preferences.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 195,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PLC0415",
+          "level": "warning",
+          "message": {
+            "text": "`import` should be at the top-level of a file"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/preferences.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 242,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "I001",
+          "level": "warning",
+          "message": {
+            "text": "Import block is un-sorted or un-formatted"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 7,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "TC003",
+          "level": "warning",
+          "message": {
+            "text": "Move standard library import `collections.abc.Callable` into a type-checking block"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 29
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PLC0415",
+          "level": "warning",
+          "message": {
+            "text": "`import` should be at the top-level of a file"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1105,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PLC0415",
+          "level": "warning",
+          "message": {
+            "text": "`import` should be at the top-level of a file"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1157,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PLR6301",
+          "level": "warning",
+          "message": {
+            "text": "Method `migrate_credentials_to_keyring` could be a function, class method, or static method"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1170,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PLC0415",
+          "level": "warning",
+          "message": {
+            "text": "`import` should be at the top-level of a file"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1179,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "TRY300",
+          "level": "warning",
+          "message": {
+            "text": "Consider moving this statement to an `else` block"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1185,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PLR6301",
+          "level": "warning",
+          "message": {
+            "text": "Method `list_stored_credentials` could be a function, class method, or static method"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1193,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PLC0415",
+          "level": "warning",
+          "message": {
+            "text": "`import` should be at the top-level of a file"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1202,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PLC0415",
+          "level": "warning",
+          "message": {
+            "text": "`import` should be at the top-level of a file"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1244,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "TRY300",
+          "level": "warning",
+          "message": {
+            "text": "Consider moving this statement to an `else` block"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1263,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PLR6301",
+          "level": "warning",
+          "message": {
+            "text": "Method `revoke_google_oauth` could be a function, class method, or static method"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1271,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PLC0415",
+          "level": "warning",
+          "message": {
+            "text": "`import` should be at the top-level of a file"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1280,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "TRY300",
+          "level": "warning",
+          "message": {
+            "text": "Consider moving this statement to an `else` block"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1285,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "columnKind": "utf16CodeUnits",
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "endTimeUtc": "2026-02-24T19:33:32.385551"
+        }
+      ]
+    }
+  ]
+}

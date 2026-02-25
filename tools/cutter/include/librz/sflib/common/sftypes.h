@@ -79,7 +79,7 @@ struct utsname {};
 struct ustat {};
 struct stat {};
 struct sched_param {};
-struct timeval 
+struct timeval
 {
 	long    tv_sec;         /* seconds */
 	long    tv_usec;        /* microseconds */
@@ -239,7 +239,7 @@ enum __socket_type
                                    other similar things on the user level. */
 #define SOCK_PACKET SOCK_PACKET
 };
-	
+
 /* Protocol families.  */
 #define PF_UNSPEC       0       /* Unspecified.  */
 #define PF_LOCAL        1       /* Local to host (pipes and file-domain).  */
@@ -545,7 +545,7 @@ struct cmsghdr
 #define LOCK_WRITE      128     /* ... Which allows concurrent write operations */
 #define LOCK_RW         192     /* ... Which allows concurrent read & write ops */
 
-		
+
 /**************** from ptrace.h *********/
 
 
@@ -3561,7 +3561,7 @@ struct bsd_dirent {
            uint16_t       d_reclen;
            uint8_t        d_type;
            uint8_t        d_namlen;
-           char           d_name[MAXNAMLEN + 1]; 
+           char           d_name[MAXNAMLEN + 1];
 };
 
 /* semop system calls takes an array of these. */
@@ -3570,4 +3570,3 @@ struct sembuf {
 	short       sem_op;     /* semaphore operation */
 	short       sem_flg;    /* operation flags */
 };
-

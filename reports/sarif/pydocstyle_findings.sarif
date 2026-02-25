@@ -1,0 +1,226 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "pydocstyle",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "D401",
+              "shortDescription": {
+                "text": "in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
+              }
+            },
+            {
+              "id": "D103",
+              "shortDescription": {
+                "text": "in public function `run_bridge_coroutine`: - Missing docstring in public function"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "D401",
+          "level": "warning",
+          "message": {
+            "text": "in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/base.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 927,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "D401",
+          "level": "warning",
+          "message": {
+            "text": "in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/base.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 990,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "D401",
+          "level": "warning",
+          "message": {
+            "text": "in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 941,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "D401",
+          "level": "warning",
+          "message": {
+            "text": "in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1074,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "D401",
+          "level": "warning",
+          "message": {
+            "text": "in private method `_sync_cleanup`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/process_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 259,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "D401",
+          "level": "warning",
+          "message": {
+            "text": "in public method `validate_java`: - First line should be in imperative mood; try rephrasing (found 'Basic')"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/script_gen.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 410,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "D401",
+          "level": "warning",
+          "message": {
+            "text": "in public function `authorize_google`: - First line should be in imperative mood; try rephrasing (found 'Convenience')"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/credentials/oauth.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 904,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "D401",
+          "level": "warning",
+          "message": {
+            "text": "in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/local_transformers.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 486,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "D103",
+          "level": "warning",
+          "message": {
+            "text": "in public function `run_bridge_coroutine`: - Missing docstring in public function"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/_async_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 22,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "columnKind": "utf16CodeUnits",
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "endTimeUtc": "2026-02-24T19:39:42.113434"
+        }
+      ]
+    }
+  ]
+}

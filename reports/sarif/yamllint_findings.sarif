@@ -1,0 +1,1123 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "yamllint",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "general",
+              "shortDescription": {
+                "text": "wrong new line character: expected \\n  (new-lines)"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "general",
+          "level": "error",
+          "message": {
+            "text": "wrong new line character: expected \\n  (new-lines)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.pre-commit-config.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (128 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.pre-commit-config.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 31,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (269 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.pre-commit-config.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 38,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (165 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.pre-commit-config.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 58,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (123 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.pre-commit-config.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 74,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "error",
+          "message": {
+            "text": "wrong new line character: expected \\n  (new-lines)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.readthedocs.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 35
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "error",
+          "message": {
+            "text": "wrong new line character: expected \\n  (new-lines)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.sourcery.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 56
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (168 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.sourcery.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 33,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "error",
+          "message": {
+            "text": "wrong new line character: expected \\n  (new-lines)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.sourcery.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "error",
+          "message": {
+            "text": "wrong new line character: expected \\n  (new-lines)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.yarnrc.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "error",
+          "message": {
+            "text": "wrong new line character: expected \\n  (new-lines)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./qodana.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 117
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "error",
+          "message": {
+            "text": "wrong new line character: expected \\n  (new-lines)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/dependabot.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 11
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "error",
+          "message": {
+            "text": "wrong new line character: expected \\n  (new-lines)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/ci.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (130 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/ci.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 38,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (138 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/ci.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 224,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "error",
+          "message": {
+            "text": "wrong new line character: expected \\n  (new-lines)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/claude-code-review.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (127 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/claude-code-review.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 47,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (183 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/claude-code-review.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 53,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "error",
+          "message": {
+            "text": "wrong new line character: expected \\n  (new-lines)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/claude.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 18
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (136 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/claude.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 18,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (147 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/claude.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 41,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "error",
+          "message": {
+            "text": "wrong new line character: expected \\n  (new-lines)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/gemini-dispatch.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 26
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (189 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/gemini-dispatch.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 56,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (133 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/gemini-dispatch.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 73,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (236 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/gemini-dispatch.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 114,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (133 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/gemini-dispatch.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 177,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (212 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/gemini-dispatch.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 189,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "error",
+          "message": {
+            "text": "wrong new line character: expected \\n  (new-lines)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/gemini-invoke.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (134 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/gemini-invoke.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 11,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (133 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/gemini-invoke.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 29,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "error",
+          "message": {
+            "text": "wrong new line character: expected \\n  (new-lines)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/gemini-review.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 24
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (134 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/gemini-review.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 11,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (133 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/gemini-review.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 30,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "error",
+          "message": {
+            "text": "wrong new line character: expected \\n  (new-lines)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/gemini-scheduled-triage.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 40
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (133 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/gemini-scheduled-triage.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 155,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (139 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/gemini-scheduled-triage.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 210,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "error",
+          "message": {
+            "text": "wrong new line character: expected \\n  (new-lines)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/gemini-triage.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 24
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (134 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/gemini-triage.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 11,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (133 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/gemini-triage.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 122,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (127 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/gemini-triage.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 163,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "error",
+          "message": {
+            "text": "wrong new line character: expected \\n  (new-lines)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/python-ci.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 16
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (121 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/python-ci.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 37,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "error",
+          "message": {
+            "text": "wrong new line character: expected \\n  (new-lines)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/qodana_code_quality.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (124 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.github/workflows/qodana_code_quality.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 19,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "error",
+          "message": {
+            "text": "wrong new line character: expected \\n  (new-lines)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.serena/project.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 73
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "error",
+          "message": {
+            "text": "trailing spaces  (trailing-spaces)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.serena/project.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 54,
+                  "startColumn": 82
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (125 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.serena/project.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 64,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (137 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.serena/project.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 65,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (146 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.serena/project.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 66,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (125 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.serena/project.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 76,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (146 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.serena/project.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 77,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "line too long (123 > 120 characters)  (line-length)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.serena/project.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 88,
+                  "startColumn": 121
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "columnKind": "utf16CodeUnits",
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "endTimeUtc": "2026-02-24T19:38:43.979001"
+        }
+      ]
+    }
+  ]
+}

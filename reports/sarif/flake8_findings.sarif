@@ -1,0 +1,244 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "flake8",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "E501",
+              "shortDescription": {
+                "text": "line too long (146 > 140 characters)"
+              }
+            },
+            {
+              "id": "F811",
+              "shortDescription": {
+                "text": "redefinition of unused 'Callable' from line 14"
+              }
+            },
+            {
+              "id": "F824",
+              "shortDescription": {
+                "text": "`nonlocal content_label` is unused: name is never assigned in scope"
+              }
+            },
+            {
+              "id": "F821",
+              "shortDescription": {
+                "text": "undefined name '_PROC_COL_COUNT'"
+              }
+            },
+            {
+              "id": "F841",
+              "shortDescription": {
+                "text": "local variable '_store' is assigned to but never used"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (146 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/xpu_utils.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 530,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (179 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/xpu_utils.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 559,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (160 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/windows.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 433,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F811",
+          "level": "warning",
+          "message": {
+            "text": "redefinition of unused 'Callable' from line 14"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 54,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F824",
+          "level": "warning",
+          "message": {
+            "text": "`nonlocal content_label` is unused: name is never assigned in scope"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/chat.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 485,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F821",
+          "level": "warning",
+          "message": {
+            "text": "undefined name '_PROC_COL_COUNT'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/process_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 527,
+                  "startColumn": 38
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F821",
+          "level": "warning",
+          "message": {
+            "text": "undefined name 'QColor'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/process_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 530,
+                  "startColumn": 48
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (142 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tool_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 91,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F841",
+          "level": "warning",
+          "message": {
+            "text": "local variable '_store' is assigned to but never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_core/test_main.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 47,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "columnKind": "utf16CodeUnits",
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "endTimeUtc": "2026-02-24T19:38:03.436665"
+        }
+      ]
+    }
+  ]
+}

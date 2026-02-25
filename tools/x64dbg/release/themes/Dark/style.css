@@ -10,7 +10,7 @@ QTabWidget::pane {
     border: 0px;
 }
 
-QTabBar::tear { 
+QTabBar::tear {
     width: 0px;
     border: none;
 }
@@ -1103,7 +1103,7 @@ QTabWidget::pane {
     border: 0px;
 }
 
-QTabBar::tear { 
+QTabBar::tear {
     width: 0px;
     border: none;
 }
@@ -1113,6 +1113,6 @@ QTableView, QListView {
     selection-color: #c8c8c8;
 }
 
-DisassemblyPopup { 
-    border: 1px solid #c0c0c0; 
+DisassemblyPopup {
+    border: 1px solid #c0c0c0;
 }

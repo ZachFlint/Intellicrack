@@ -5,15 +5,15 @@
 #define IDS_APP_NAME          "SampleApp"
 #define IDS_APP_AUTHOR        "Angus Johnson"
 
-#define RELEASE                 
+#define RELEASE
 
 #if defined(RELEASE)
   #define MAJOR_VERSION         1
   #define MINOR_VERSION         2
   #define RELEASE_NUMBER        3
   //and just showing what's possible ...
-  #define BUILD_NUMBER          (40*(5+5)+56)    
-#else 
+  #define BUILD_NUMBER          (40*(5+5)+56)
+#else
   #define MAJOR_VERSION         0
   #define MINOR_VERSION         0
   #define RELEASE_NUMBER        0

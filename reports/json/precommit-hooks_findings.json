@@ -1,0 +1,3980 @@
+{
+  "tool": "precommit-hooks",
+  "generated": "2026-02-24T20:35:26.302607",
+  "total_findings": 390,
+  "total_files": 207,
+  "files": [
+    {
+      "path": "docs/source/api/_autosummary/intellicrack.core.rst",
+      "count": 4,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "docs/source/api/_autosummary/intellicrack.core.rst: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "docs/source/api/_autosummary/intellicrack.core.rst: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "docs/source/api/_autosummary/intellicrack.core.rst: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "fix-byte-order-marker",
+          "message": "[FIXED] removed byte-order marker",
+          "raw": "docs/source/api/_autosummary/intellicrack.core.rst: [fix-byte-order-marker] [FIXED] removed byte-order marker"
+        }
+      ]
+    },
+    {
+      "path": "docs/source/api/_autosummary/intellicrack.credentials.rst",
+      "count": 4,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "docs/source/api/_autosummary/intellicrack.credentials.rst: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "docs/source/api/_autosummary/intellicrack.credentials.rst: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "docs/source/api/_autosummary/intellicrack.credentials.rst: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "fix-byte-order-marker",
+          "message": "[FIXED] removed byte-order marker",
+          "raw": "docs/source/api/_autosummary/intellicrack.credentials.rst: [fix-byte-order-marker] [FIXED] removed byte-order marker"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/include/librz/sflib/common/sftypes.h",
+      "count": 3,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/include/librz/sflib/common/sftypes.h: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/include/librz/sflib/common/sftypes.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/include/librz/sflib/common/sftypes.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/magic/compressed",
+      "count": 3,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/magic/compressed: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/magic/compressed: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/magic/compressed: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/hxd/changelog.txt",
+      "count": 3,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/hxd/changelog.txt: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/hxd/changelog.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "fix-byte-order-marker",
+          "message": "[FIXED] removed byte-order marker",
+          "raw": "tools/hxd/changelog.txt: [fix-byte-order-marker] [FIXED] removed byte-order marker"
+        }
+      ]
+    },
+    {
+      "path": "tools/hxd/license.txt",
+      "count": 3,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/hxd/license.txt: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/hxd/license.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "fix-byte-order-marker",
+          "message": "[FIXED] removed byte-order marker",
+          "raw": "tools/hxd/license.txt: [fix-byte-order-marker] [FIXED] removed byte-order marker"
+        }
+      ]
+    },
+    {
+      "path": "tools/hxd/readme.txt",
+      "count": 3,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/hxd/readme.txt: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/hxd/readme.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "fix-byte-order-marker",
+          "message": "[FIXED] removed byte-order marker",
+          "raw": "tools/hxd/readme.txt: [fix-byte-order-marker] [FIXED] removed byte-order marker"
+        }
+      ]
+    },
+    {
+      "path": "tools/resource_hacker/changes.txt",
+      "count": 3,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/resource_hacker/changes.txt: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/resource_hacker/changes.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/resource_hacker/changes.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/resource_hacker/samples/sample1.h",
+      "count": 3,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/resource_hacker/samples/sample1.h: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/resource_hacker/samples/sample1.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/resource_hacker/samples/sample1.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "typings/torch/__init__.pyi",
+      "count": 3,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "typings/torch/__init__.pyi: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "typings/torch/__init__.pyi: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "typings/torch/__init__.pyi: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "docs/source/api/_autosummary/intellicrack.rst",
+      "count": 3,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "docs/source/api/_autosummary/intellicrack.rst: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "docs/source/api/_autosummary/intellicrack.rst: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "fix-byte-order-marker",
+          "message": "[FIXED] removed byte-order marker",
+          "raw": "docs/source/api/_autosummary/intellicrack.rst: [fix-byte-order-marker] [FIXED] removed byte-order marker"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/plugins/x64dbg_plugin/intellicrack_x64dbg.cpp",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "src/intellicrack/plugins/x64dbg_plugin/intellicrack_x64dbg.cpp: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/plugins/x64dbg_plugin/intellicrack_x64dbg.cpp: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/NASM/LICENSE",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/NASM/LICENSE: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/NASM/LICENSE: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/NASM/VSrules/nasm.README",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/NASM/VSrules/nasm.README: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/NASM/VSrules/nasm.README: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/include/librz/sflib/darwin-x86-32/sflib.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/include/librz/sflib/darwin-x86-32/sflib.h: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/include/librz/sflib/darwin-x86-32/sflib.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/include/librz/sflib/darwin-x86-32/sfsyscall.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/include/librz/sflib/darwin-x86-32/sfsyscall.h: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/include/librz/sflib/darwin-x86-32/sfsyscall.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/include/librz/sflib/darwin-x86-32/sfsysnr.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/include/librz/sflib/darwin-x86-32/sfsysnr.h: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/include/librz/sflib/darwin-x86-32/sfsysnr.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/include/librz/sflib/linux-arm-32/sflib.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/include/librz/sflib/linux-arm-32/sflib.h: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/include/librz/sflib/linux-arm-32/sflib.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/include/librz/sflib/linux-arm-32/sfsysnr.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/include/librz/sflib/linux-arm-32/sfsysnr.h: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/include/librz/sflib/linux-arm-32/sfsysnr.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/include/librz/sflib/linux-arm-64/sflib.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/include/librz/sflib/linux-arm-64/sflib.h: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/include/librz/sflib/linux-arm-64/sflib.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/include/librz/sflib/linux-arm-64/sfsysnr.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/include/librz/sflib/linux-arm-64/sfsysnr.h: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/include/librz/sflib/linux-arm-64/sfsysnr.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/include/librz/sflib/linux-x86-32/sflib.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/include/librz/sflib/linux-x86-32/sflib.h: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/include/librz/sflib/linux-x86-32/sflib.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/include/librz/sflib/linux-x86-32/sfsyscall.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/include/librz/sflib/linux-x86-32/sfsyscall.h: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/include/librz/sflib/linux-x86-32/sfsyscall.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/include/librz/sflib/linux-x86-32/sfsysnr.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/include/librz/sflib/linux-x86-32/sfsysnr.h: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/include/librz/sflib/linux-x86-32/sfsysnr.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/include/librz/sflib/linux-x86-64/sflib.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/include/librz/sflib/linux-x86-64/sflib.h: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/include/librz/sflib/linux-x86-64/sflib.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/include/librz/sflib/linux-x86-64/sfsyscall.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/include/librz/sflib/linux-x86-64/sfsyscall.h: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/include/librz/sflib/linux-x86-64/sfsyscall.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/include/librz/sflib/linux-x86-64/sfsysnr.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/include/librz/sflib/linux-x86-64/sfsysnr.h: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/include/librz/sflib/linux-x86-64/sfsysnr.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/cons/ayu",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/cons/ayu: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/cons/ayu: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/cons/focus",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/cons/focus: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/cons/focus: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/cons/white2",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/cons/white2: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/cons/white2: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/magic/apple",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/magic/apple: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/magic/apple: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/magic/archive",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/magic/archive: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/magic/archive: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/magic/cafebabe",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/magic/cafebabe: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/magic/cafebabe: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/magic/database",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/magic/database: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/magic/database: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/magic/filesystems",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/magic/filesystems: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/magic/filesystems: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/magic/jpeg",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/magic/jpeg: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/magic/jpeg: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/magic/microsoft",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/magic/microsoft: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/magic/microsoft: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/magic/mime",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/magic/mime: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/magic/mime: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/magic/netbsd",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/magic/netbsd: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/magic/netbsd: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/magic/openbsd",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/magic/openbsd: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/magic/openbsd: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/magic/riff",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/magic/riff: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/magic/riff: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/magic/vim",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/magic/vim: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/magic/vim: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/magic/vorbis",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/magic/vorbis: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/magic/vorbis: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/man/man1/rizin.1",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/man/man1/rizin.1: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/man/man1/rizin.1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/man/man1/rz-bin.1",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/man/man1/rz-bin.1: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/man/man1/rz-bin.1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/man/man1/rz-diff.1",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/man/man1/rz-diff.1: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/man/man1/rz-diff.1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/man/man1/rz-hash.1",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/man/man1/rz-hash.1: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/man/man1/rz-hash.1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/pmd-bin-7.8.0/sbom/pmd-7.8.0-cyclonedx.xml",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/pmd-bin-7.8.0/sbom/pmd-7.8.0-cyclonedx.xml: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/pmd-bin-7.8.0/sbom/pmd-7.8.0-cyclonedx.xml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/pmd/sbom/pmd-7.8.0-cyclonedx.xml",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/pmd/sbom/pmd-7.8.0-cyclonedx.xml: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/pmd/sbom/pmd-7.8.0-cyclonedx.xml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/resource_hacker/ReadMe.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/resource_hacker/ReadMe.txt: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/resource_hacker/ReadMe.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/resource_hacker/help/manual.htm",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/resource_hacker/help/manual.htm: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/resource_hacker/help/manual.htm: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/resource_hacker/samples/sample1.inc",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/resource_hacker/samples/sample1.inc: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/resource_hacker/samples/sample1.inc: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/resource_hacker/samples/sample1.rc",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/resource_hacker/samples/sample1.rc: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/resource_hacker/samples/sample1.rc: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/release/themes/Dark/style.css",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/release/themes/Dark/style.css: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/release/themes/Dark/style.css: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".complexipy_cache/c4ed0630d647fefad77d0754b11ca463.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": ".complexipy_cache/c4ed0630d647fefad77d0754b11ca463.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".complexipy_cache/c4ed0630d647fefad77d0754b11ca463.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".fleet/settings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": ".fleet/settings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".fleet/settings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".grok/settings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": ".grok/settings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".grok/settings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "CLI Coding/Aider.ps1",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "CLI Coding/Aider.ps1: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "CLI Coding/Aider.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "CLI Coding/Grok.ps1",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "CLI Coding/Grok.ps1: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "CLI Coding/Grok.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "CLI Coding/Kimi.ps1",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "CLI Coding/Kimi.ps1: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "CLI Coding/Kimi.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "CLI Coding/Kiro.ps1",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "CLI Coding/Kiro.ps1: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "CLI Coding/Kiro.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "CLI Coding/OpenCode.ps1",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "CLI Coding/OpenCode.ps1: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "CLI Coding/OpenCode.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "CLI Coding/Qodo.ps1",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "CLI Coding/Qodo.ps1: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "CLI Coding/Qodo.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "CLI Coding/UpdateTools.ps1",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "CLI Coding/UpdateTools.ps1: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "CLI Coding/UpdateTools.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "IntellicrackKnowledgeGraph.html",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "IntellicrackKnowledgeGraph.html: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "IntellicrackKnowledgeGraph.html: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "IntellicrackStructure.hta",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "IntellicrackStructure.hta: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "IntellicrackStructure.hta: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/csv/sourcery_src_findings.csv",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/csv/sourcery_src_findings.csv: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/csv/sourcery_src_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/csv/sourcery_tests_findings.csv",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/csv/sourcery_tests_findings.csv: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/csv/sourcery_tests_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/bandit_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/bandit_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/bandit_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/basedpyright_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/basedpyright_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/basedpyright_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/blinter_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/blinter_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/blinter_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/codespell_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/codespell_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/codespell_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/complexipy_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/complexipy_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/complexipy_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/darglint_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/darglint_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/darglint_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/dead_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/dead_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/dead_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/deadcode_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/deadcode_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/deadcode_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/deptry_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/deptry_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/deptry_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/file-encoding_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/file-encoding_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/file-encoding_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/flake8_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/flake8_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/flake8_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/interrogate_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/interrogate_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/interrogate_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/jsonlint_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/jsonlint_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/jsonlint_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/markdownlint_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/markdownlint_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/markdownlint_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/mccabe_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/mccabe_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/mccabe_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/mixed-line-ending_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/mixed-line-ending_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/mixed-line-ending_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/mypy_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/mypy_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/mypy_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/psscriptanalyzer_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/psscriptanalyzer_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/psscriptanalyzer_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/pydocstyle_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/pydocstyle_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/pydocstyle_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/radon_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/radon_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/radon_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/ruff_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/ruff_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/ruff_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/semgrep_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/semgrep_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/semgrep_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/shellcheck_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/shellcheck_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/shellcheck_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/taplo_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/taplo_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/taplo_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/ty_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/ty_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/ty_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/uncalled_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/uncalled_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/uncalled_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/vulture_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/vulture_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/vulture_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/wemake_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/wemake_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/wemake_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/xenon_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/xenon_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/xenon_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/yamllint_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/yamllint_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/yamllint_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/bandit_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/bandit_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/bandit_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/basedpyright_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/basedpyright_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/basedpyright_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/codespell_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/codespell_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/codespell_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/complexipy_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/complexipy_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/complexipy_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/deadcode_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/deadcode_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/deadcode_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/deptry_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/deptry_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/deptry_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/file-encoding_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/file-encoding_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/file-encoding_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/flake8_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/flake8_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/flake8_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/markdownlint_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/markdownlint_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/markdownlint_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/mccabe_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/mccabe_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/mccabe_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/mixed-line-ending_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/mixed-line-ending_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/mixed-line-ending_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/mypy_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/mypy_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/mypy_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/psscriptanalyzer_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/psscriptanalyzer_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/psscriptanalyzer_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/pydocstyle_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/pydocstyle_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/pydocstyle_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/radon_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/radon_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/radon_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/ruff_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/ruff_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/ruff_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/semgrep_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/semgrep_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/semgrep_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/shellcheck_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/shellcheck_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/shellcheck_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/ty_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/ty_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/ty_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/uncalled_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/uncalled_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/uncalled_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/vulture_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/vulture_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/vulture_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/wemake_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/wemake_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/wemake_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/xenon_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/xenon_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/xenon_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/yamllint_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/yamllint_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/yamllint_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/basedpyright_findings.xml",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/basedpyright_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/xml/basedpyright_findings.xml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/semgrep_findings.xml",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/semgrep_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/xml/semgrep_findings.xml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/WinTrust/patch_wintrust.ps1",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/WinTrust/patch_wintrust.ps1: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/WinTrust/patch_wintrust.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/run_build.bat",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/run_build.bat: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/run_build.bat: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/Source/Rebranded/UPX/upx-5.0.1-win64/upx-doc.html",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/AdobeInjector/Source/Rebranded/UPX/upx-5.0.1-win64/upx-doc.html: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/Source/Rebranded/UPX/upx-5.0.1-win64/upx-doc.html: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/Source/Rebranded/UPX/upx-5.0.1-win64/upx-doc.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/AdobeInjector/Source/Rebranded/UPX/upx-5.0.1-win64/upx-doc.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/Source/Rebranded/UPX/upx-5.0.1-win64/upx-doc.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/NASM/nasmpath.bat",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/NASM/nasmpath.bat: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/NASM/nasmpath.bat: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/include/cutter/common/AsyncTask.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/include/cutter/common/AsyncTask.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/include/cutter/common/AsyncTask.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/include/cutter/dialogs/preferences/InitializationFileEditor.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/include/cutter/dialogs/preferences/InitializationFileEditor.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/include/cutter/dialogs/preferences/InitializationFileEditor.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/include/librz/rz_util/ht_sp.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/include/librz/rz_util/ht_sp.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/include/librz/rz_util/ht_sp.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/include/librz/rz_util/ht_ss.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/include/librz/rz_util/ht_ss.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/include/librz/rz_util/ht_ss.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/include/librz/rz_util/ht_su.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/include/librz/rz_util/ht_su.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/include/librz/rz_util/ht_su.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/include/librz/sflib/darwin-arm-64/sflib.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/include/librz/sflib/darwin-arm-64/sflib.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/include/librz/sflib/darwin-arm-64/sflib.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/include/librz/sflib/darwin-arm-64/sfsysnr.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/include/librz/sflib/darwin-arm-64/sfsysnr.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/include/librz/sflib/darwin-arm-64/sfsysnr.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/python312/site-packages/PySide6/_config.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/python312/site-packages/PySide6/_config.py: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/python312/site-packages/PySide6/_config.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/python312/site-packages/shiboken6/_config.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/python312/site-packages/shiboken6/_config.py: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/python312/site-packages/shiboken6/_config.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/python312/site-packages/shiboken6_generator/_config.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/python312/site-packages/shiboken6_generator/_config.py: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/python312/site-packages/shiboken6_generator/_config.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/qt.conf",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/qt.conf: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/qt.conf: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/magic/linux",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/magic/linux: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/magic/linux: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/magic/python",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/magic/python: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/magic/python: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/magic/video",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/magic/video: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/cutter/share/magic/video: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/pluginsdk/_scriptapi.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/pluginsdk/_scriptapi_argument.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_argument.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_argument.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/pluginsdk/_scriptapi_assembler.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_assembler.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_assembler.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/pluginsdk/_scriptapi_bookmark.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_bookmark.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_bookmark.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/pluginsdk/_scriptapi_comment.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_comment.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_comment.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/pluginsdk/_scriptapi_debug.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_debug.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_debug.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/pluginsdk/_scriptapi_flag.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_flag.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_flag.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/pluginsdk/_scriptapi_gui.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_gui.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_gui.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/pluginsdk/_scriptapi_label.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_label.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_label.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/pluginsdk/_scriptapi_memory.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_memory.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_memory.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/pluginsdk/_scriptapi_misc.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_misc.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_misc.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/pluginsdk/_scriptapi_pattern.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_pattern.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_pattern.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/pluginsdk/_scriptapi_register.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_register.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_register.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/pluginsdk/_scriptapi_stack.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_stack.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_stack.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/pluginsdk/_scriptapi_symbol.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_symbol.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/pluginsdk/_scriptapi_symbol.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/pluginsdk/bridgegraph.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/pluginsdk/bridgegraph.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/pluginsdk/bridgegraph.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/pluginsdk/bridgelist.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/pluginsdk/bridgelist.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/pluginsdk/bridgelist.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/pluginsdk/lz4/lz4.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/pluginsdk/lz4/lz4.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/pluginsdk/lz4/lz4.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/pluginsdk/lz4/lz4file.h",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/pluginsdk/lz4/lz4file.h: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/pluginsdk/lz4/lz4file.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/release/errordb.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/release/errordb.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/release/errordb.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/release/exceptiondb.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/release/exceptiondb.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/release/exceptiondb.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/release/ntstatusdb.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/release/ntstatusdb.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/release/ntstatusdb.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/release/release-notes.md",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/release/release-notes.md: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/release/release-notes.md: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/release/themes/Dark/index.theme",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/release/themes/Dark/index.theme: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/release/themes/Dark/index.theme: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/x64dbg/release/winconstants.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/x64dbg/release/winconstants.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/x64dbg/release/winconstants.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "typings/torch/xpu/__init__.pyi",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "typings/torch/xpu/__init__.pyi: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "typings/torch/xpu/__init__.pyi: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/blinter_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/blinter_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/darglint_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/darglint_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/dead_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/dead_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/interrogate_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/interrogate_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/jsonlint_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/jsonlint_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/taplo_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/taplo_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/bandit_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/bandit_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/blinter_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/blinter_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/codespell_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/codespell_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/complexipy_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/complexipy_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/darglint_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/darglint_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/dead_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/dead_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/deadcode_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/deadcode_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/deptry_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/deptry_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/file-encoding_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/file-encoding_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/flake8_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/flake8_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/interrogate_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/interrogate_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/jsonlint_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/jsonlint_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/markdownlint_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/markdownlint_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/mccabe_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/mccabe_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/mixed-line-ending_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/mixed-line-ending_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/mypy_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/mypy_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/psscriptanalyzer_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/psscriptanalyzer_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/pydocstyle_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/pydocstyle_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/radon_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/radon_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/ruff_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/ruff_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/shellcheck_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/shellcheck_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/taplo_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/taplo_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/ty_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/ty_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/uncalled_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/uncalled_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/vulture_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/vulture_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/wemake_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/wemake_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/xenon_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/xenon_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/yamllint_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/yamllint_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "tools/cutter/share/gittip",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/cutter/share/gittip: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "tools/hxd/Settings/HxD Hex Editor.lang",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "tools/hxd/Settings/HxD Hex Editor.lang: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "LICENSE",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "LICENSE: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    }
+  ]
+}

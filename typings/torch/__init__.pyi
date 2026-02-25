@@ -16,69 +16,69 @@ bfloat16: dtype
 class Size:
     def __getitem__(self, index: int) -> int:
         ...
-    
+
     def __len__(self) -> int:
         ...
-    
+
 
 
 class Tensor:
     @property
     def shape(self) -> Size:
         ...
-    
+
     def to(self, device: device | str | dtype, **kwargs: object) -> Tensor:
         ...
-    
+
     def clone(self) -> Tensor:
         ...
-    
+
     @overload
     def __getitem__(self, index: int) -> Tensor:
         ...
-    
+
     @overload
     def __getitem__(self, index: slice) -> Tensor:
         ...
-    
+
     @overload
     def __getitem__(self, index: tuple[int | slice, ...]) -> Tensor:
         ...
-    
+
     def item(self) -> int | float:
         ...
-    
+
     def argmax(self, dim: int = ..., keepdim: bool = ...) -> Tensor:
         ...
-    
+
     def __add__(self, other: object) -> Tensor:
         ...
-    
+
     def __truediv__(self, other: object) -> Tensor:
         ...
-    
+
     def __sub__(self, other: object) -> Tensor:
         ...
-    
+
     def __mul__(self, other: object) -> Tensor:
         ...
-    
+
 
 
 class device:
     type: str
     def __init__(self, device: str | device, index: int | None = ...) -> None:
         ...
-    
+
 
 
 class no_grad:
     def __enter__(self) -> None:
         ...
-    
+
     def __exit__(self, *args: object) -> None:
         ...
-    
+
 
 
 def softmax(input: Tensor, dim: int, dtype: dtype | None = ...) -> Tensor:
@@ -105,4 +105,3 @@ def zeros(*size: int, device: device | str | None = ..., dtype: dtype | None = .
 @overload
 def zeros(size: tuple[int, ...], device: device | str | None = ..., dtype: dtype | None = ...) -> Tensor:
     ...
-

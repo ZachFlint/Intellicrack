@@ -1,0 +1,5065 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "psscriptanalyzer",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "PSAvoidUsingEmptyCatchBlock",
+              "shortDescription": {
+                "text": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks."
+              }
+            },
+            {
+              "id": "PSAvoidUsingWriteHost",
+              "shortDescription": {
+                "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+              }
+            },
+            {
+              "id": "PSUseApprovedVerbs",
+              "shortDescription": {
+                "text": "The cmdlet 'Download-File' uses an unapproved verb."
+              }
+            },
+            {
+              "id": "PSAvoidTrailingWhitespace",
+              "shortDescription": {
+                "text": "Line has trailing whitespace"
+              }
+            },
+            {
+              "id": "PSAvoidUsingCmdletAliases",
+              "shortDescription": {
+                "text": "'sleep' is an alias of 'Start-Sleep'. Alias can introduce possible problems and make scripts hard to maintain. Please consider changing alias to its full content."
+              }
+            },
+            {
+              "id": "PSUseSingularNouns",
+              "shortDescription": {
+                "text": "The cmdlet 'Add-Gdb-Init-Args' uses a plural noun. A singular noun should be used instead."
+              }
+            },
+            {
+              "id": "PSReviewUnusedParameter",
+              "shortDescription": {
+                "text": "The parameter 'ArgList' has been declared but not used."
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "PSAvoidUsingEmptyCatchBlock",
+          "level": "warning",
+          "message": {
+            "text": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/Aider.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 3
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingEmptyCatchBlock",
+          "level": "warning",
+          "message": {
+            "text": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/ClaudeCode.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 3
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingEmptyCatchBlock",
+          "level": "warning",
+          "message": {
+            "text": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/Codex.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 3
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingEmptyCatchBlock",
+          "level": "warning",
+          "message": {
+            "text": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/Gemini.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 3
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingEmptyCatchBlock",
+          "level": "warning",
+          "message": {
+            "text": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/Grok.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 3
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingEmptyCatchBlock",
+          "level": "warning",
+          "message": {
+            "text": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/Kimi.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 3
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingEmptyCatchBlock",
+          "level": "warning",
+          "message": {
+            "text": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/Kiro.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 3
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingEmptyCatchBlock",
+          "level": "warning",
+          "message": {
+            "text": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/OpenCode.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 3
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingEmptyCatchBlock",
+          "level": "warning",
+          "message": {
+            "text": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/Qodo.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 3
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingEmptyCatchBlock",
+          "level": "warning",
+          "message": {
+            "text": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/Qwen.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 3
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingEmptyCatchBlock",
+          "level": "warning",
+          "message": {
+            "text": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 3
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 17,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 18,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 19,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 20,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 22,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 23,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 24,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 25,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 27,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 28,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 29,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 30,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 32,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 33,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 34,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 35,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 37,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 38,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 39,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 40,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 42,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 43,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 44,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 45,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 47,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 48,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 49,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 50,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 52,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 53,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 54,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 55,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 57,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 58,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 59,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 60,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 63,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 64,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 65,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 66,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 68,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 69,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 70,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 71,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 72,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 73,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/CLI Coding/UpdateTools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 74,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/test_semgrep.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/test_semgrep.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 7,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/test_semgrep.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 11,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/test_semgrep.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/test_semgrep.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 17,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/test_semgrep.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 20,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/test_semgrep.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 22,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/test_semgrep.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 27,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'test_semgrep.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/test_semgrep.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 29,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'patch_wintrust.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/WinTrust/patch_wintrust.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 17,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'patch_wintrust.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/WinTrust/patch_wintrust.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 18,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'patch_wintrust.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/WinTrust/patch_wintrust.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 19,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'patch_wintrust.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/WinTrust/patch_wintrust.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 20,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 53,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 54,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 55,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 71,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 159,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 162,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 165,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 176,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 179,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 187,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 188,
+                  "startColumn": 41
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 190,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 197,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 198,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 203,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 204,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 214,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 243,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 253,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 264,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 265,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 287,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 297,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 298,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 301,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 326,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 336,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 337,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 341,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 366,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 375,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 376,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 387,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 398,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 410,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 419,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 422,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 429,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 439,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 443,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 448,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 449,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseApprovedVerbs",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Download-File' uses an unapproved verb."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 76,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidTrailingWhitespace",
+          "level": "note",
+          "message": {
+            "text": "Line has trailing whitespace"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 215,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidTrailingWhitespace",
+          "level": "note",
+          "message": {
+            "text": "Line has trailing whitespace"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 229,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidTrailingWhitespace",
+          "level": "note",
+          "message": {
+            "text": "Line has trailing whitespace"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 234,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidTrailingWhitespace",
+          "level": "note",
+          "message": {
+            "text": "Line has trailing whitespace"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 244,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidTrailingWhitespace",
+          "level": "note",
+          "message": {
+            "text": "Line has trailing whitespace"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 251,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidTrailingWhitespace",
+          "level": "note",
+          "message": {
+            "text": "Line has trailing whitespace"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 302,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidTrailingWhitespace",
+          "level": "note",
+          "message": {
+            "text": "Line has trailing whitespace"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 305,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidTrailingWhitespace",
+          "level": "note",
+          "message": {
+            "text": "Line has trailing whitespace"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 319,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidTrailingWhitespace",
+          "level": "note",
+          "message": {
+            "text": "Line has trailing whitespace"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 324,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidTrailingWhitespace",
+          "level": "note",
+          "message": {
+            "text": "Line has trailing whitespace"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 342,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidTrailingWhitespace",
+          "level": "note",
+          "message": {
+            "text": "Line has trailing whitespace"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 345,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidTrailingWhitespace",
+          "level": "note",
+          "message": {
+            "text": "Line has trailing whitespace"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 359,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidTrailingWhitespace",
+          "level": "note",
+          "message": {
+            "text": "Line has trailing whitespace"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 364,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'patch_wintrust.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/WinTrust/patch_wintrust.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 18,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'patch_wintrust.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/WinTrust/patch_wintrust.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 19,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'patch_wintrust.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/WinTrust/patch_wintrust.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 20,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'patch_wintrust.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/WinTrust/patch_wintrust.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 21,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'patch_wintrust.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/WinTrust/patch_wintrust.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 26,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 61,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 149,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 150,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 151,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 152,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 155,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 158,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 169,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 172,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 180,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 181,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 182,
+                  "startColumn": 41
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 184,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 191,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 192,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 197,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 198,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 208,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 237,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 247,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 255,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 256,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 260,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 261,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 263,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 264,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 286,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 296,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 297,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 299,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 301,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 326,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 334,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 335,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 339,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 340,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 342,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 345,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 370,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 379,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 380,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 384,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 385,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 396,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 407,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 424,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 435,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 436,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 453,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 454,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 459,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 464,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 465,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 466,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 467,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 468,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 469,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 470,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 471,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 472,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 473,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseApprovedVerbs",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Download-File' uses an unapproved verb."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/AdobeInjector/Source/Rebranded/build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 66,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingCmdletAliases",
+          "level": "warning",
+          "message": {
+            "text": "'sleep' is an alias of 'Start-Sleep'. Alias can introduce possible problems and make scripts hard to maintain. Please consider changing alias to its full content."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-gdb/data/debugger-launchers/qemu-sys-gdb.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 60,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidTrailingWhitespace",
+          "level": "note",
+          "message": {
+            "text": "Line has trailing whitespace"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-gdb/data/debugger-launchers/remote-gdb.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 21,
+                  "startColumn": 109
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidTrailingWhitespace",
+          "level": "note",
+          "message": {
+            "text": "Line has trailing whitespace"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-gdb/data/debugger-launchers/remote-gdb.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 22,
+                  "startColumn": 52
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'ssh-gdb.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-gdb/data/debugger-launchers/ssh-gdb.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 78,
+                  "startColumn": 2
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'ssh-gdb.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-gdb/data/debugger-launchers/ssh-gdb.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 81,
+                  "startColumn": 2
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseApprovedVerbs",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Compute-Gdb-Usermode-Args' uses an unapproved verb."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-gdb/data/support/gdbsetuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 68,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseApprovedVerbs",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Compute-Gdb-Remote-Args' uses an unapproved verb."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-gdb/data/support/gdbsetuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 81,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseApprovedVerbs",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Compute-Gdb-PipInstall-Args' uses an unapproved verb."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-gdb/data/support/gdbsetuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 96,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseSingularNouns",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Add-Gdb-Init-Args' uses a plural noun. A singular noun should be used instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-gdb/data/support/gdbsetuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 18,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseSingularNouns",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Add-Gdb-Image-And-Args' uses a plural noun. A singular noun should be used instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-gdb/data/support/gdbsetuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 31,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseSingularNouns",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Add-Gdb-Tail-Args' uses a plural noun. A singular noun should be used instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-gdb/data/support/gdbsetuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 61,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseSingularNouns",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Compute-Gdb-Usermode-Args' uses a plural noun. A singular noun should be used instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-gdb/data/support/gdbsetuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 68,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseSingularNouns",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Compute-Gdb-Remote-Args' uses a plural noun. A singular noun should be used instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-gdb/data/support/gdbsetuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 81,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseSingularNouns",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Compute-Gdb-PipInstall-Args' uses a plural noun. A singular noun should be used instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-gdb/data/support/gdbsetuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 96,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'ssh-lldb.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-lldb/data/debugger-launchers/ssh-lldb.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 77,
+                  "startColumn": 2
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'ssh-lldb.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-lldb/data/debugger-launchers/ssh-lldb.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 80,
+                  "startColumn": 2
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseApprovedVerbs",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Compute-Lldb-Usermode-Args' uses an unapproved verb."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-lldb/data/support/lldbsetuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 68,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseApprovedVerbs",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Compute-Lldb-Platform-Args' uses an unapproved verb."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-lldb/data/support/lldbsetuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 81,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseApprovedVerbs",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Compute-Lldb-Remote-Args' uses an unapproved verb."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-lldb/data/support/lldbsetuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 96,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseApprovedVerbs",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Compute-Lldb-PipInstall-Args' uses an unapproved verb."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-lldb/data/support/lldbsetuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 110,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseSingularNouns",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Add-Lldb-Init-Args' uses a plural noun. A singular noun should be used instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-lldb/data/support/lldbsetuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 18,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseSingularNouns",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Add-Lldb-Image-And-Args' uses a plural noun. A singular noun should be used instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-lldb/data/support/lldbsetuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 29,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseSingularNouns",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Add-Lldb-Tail-Args' uses a plural noun. A singular noun should be used instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-lldb/data/support/lldbsetuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 63,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseSingularNouns",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Compute-Lldb-Usermode-Args' uses a plural noun. A singular noun should be used instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-lldb/data/support/lldbsetuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 68,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseSingularNouns",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Compute-Lldb-Platform-Args' uses a plural noun. A singular noun should be used instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-lldb/data/support/lldbsetuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 81,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseSingularNouns",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Compute-Lldb-Remote-Args' uses a plural noun. A singular noun should be used instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-lldb/data/support/lldbsetuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 96,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseSingularNouns",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Compute-Lldb-PipInstall-Args' uses a plural noun. A singular noun should be used instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-lldb/data/support/lldbsetuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 110,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSReviewUnusedParameter",
+          "level": "warning",
+          "message": {
+            "text": "The parameter 'ArgList' has been declared but not used."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-agent-lldb/data/support/lldbsetuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 64,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'setuputils.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-rmi-trace/data/support/setuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 89,
+                  "startColumn": 3
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'setuputils.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-rmi-trace/data/support/setuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 95,
+                  "startColumn": 3
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'setuputils.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-rmi-trace/data/support/setuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 96,
+                  "startColumn": 3
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'setuputils.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-rmi-trace/data/support/setuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 97,
+                  "startColumn": 3
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'setuputils.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-rmi-trace/data/support/setuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 98,
+                  "startColumn": 3
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseApprovedVerbs",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Ghidra-Module-PyPath' uses an unapproved verb."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-rmi-trace/data/support/setuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 34,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseApprovedVerbs",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Ghidra-Module-PyDist' uses an unapproved verb."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-rmi-trace/data/support/setuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 50,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseApprovedVerbs",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Compute-Ssh-Args' uses an unapproved verb."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-rmi-trace/data/support/setuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 66,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseApprovedVerbs",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Check-Result-And-Prompt-Mitigation' uses an unapproved verb."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-rmi-trace/data/support/setuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 84,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseApprovedVerbs",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Mitigate-Scp-PyModules' uses an unapproved verb."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-rmi-trace/data/support/setuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 104,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseSingularNouns",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Find-App-Properties' uses a plural noun. A singular noun should be used instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-rmi-trace/data/support/setuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 16,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseSingularNouns",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Compute-Ssh-Args' uses a plural noun. A singular noun should be used instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-rmi-trace/data/support/setuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 66,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseSingularNouns",
+          "level": "warning",
+          "message": {
+            "text": "The cmdlet 'Mitigate-Scp-PyModules' uses a plural noun. A singular noun should be used instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/ghidra/Ghidra/Debug/Debugger-rmi-trace/data/support/setuputils.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 104,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'download_rh.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/resource_hacker/download_rh.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'download_rh.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/resource_hacker/download_rh.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 8,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'download_rh.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/tools/resource_hacker/download_rh.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 9,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "columnKind": "utf16CodeUnits",
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "endTimeUtc": "2026-02-24T19:39:31.056610"
+        }
+      ]
+    }
+  ]
+}

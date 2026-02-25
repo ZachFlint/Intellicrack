@@ -4,5 +4,4 @@
 #define IDC_ABOUT_OKBTN       103
 
 //uncomment the following line to see how the compiler handles errors inside nested INCLUDEs ...
-//#defin MISSPELLED_DEFINE           
-
+//#defin MISSPELLED_DEFINE

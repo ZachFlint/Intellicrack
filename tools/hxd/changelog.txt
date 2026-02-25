@@ -1,4 +1,4 @@
-﻿Version history of HxD
+Version history of HxD
 ======================
 
 Below you find a list with the added features, changes and fixes for each version.
@@ -14,7 +14,7 @@ Version 2.5.0.0
     • New: introduce readonly type converters (to allow uniform error messages when attempting to change values, also for converter plugins)
     • Enhancement: better error handling so that typical errors are caught and a more specific error message is given
       - error message for plugin DLLs of wrong machine type (x86-32 vs. x86-64)
-  
+
   * Exporters:
     • New: skip undefined or unreadable sections, such that Intel Hex and S-Record files can be created that have gaps
     • New: source code exporter option to set the maximum text column or bytes per lines (= array elements per line)
@@ -26,7 +26,7 @@ Version 2.5.0.0
      • New: Intel Hex and S-Record support undefined regions of arbitrary size, by creating undefined foldable regions, instead of creating zero filled blocks for them
      • Enhancement: rewrite logic to allow for data records that are out of order (addresses aren't strictly increasing), or overlapping, even when there are gaps of undefined data; previously this could lead to errors, or would only function without undefined data gaps
      • Enhancement: Intel Hex and S-Record importers ignore leading and trailing whitespace in a line
-  
+
   * Checksums / digests:
     • New: custom checksum
       - can generate a checksum, with settable bitwidth for the checksum result, the checksum addends, and the endianness
@@ -56,12 +56,12 @@ Version 2.5.0.0
   * Extensive work to support undefined sections in hex editor that can be deleted, or overwritten, all with undo capability; concerned a lot of supporting internal data structures/algorithms
     • allows for support in importing and exporting files with gaps (=undefined sections)
       - allows for round-trip handling of Intel Hex or S-Record files
-    
+
   * Settings:
     • Data type converters only store their friendly type names in the settings/INI file, when the user changes them
       - this allows for updating those names from version to version, and having them appear automatically without resetting the data inspector in the options
         - also useful for translating HxD, which read the names from the settings when not resetting them, making it appear the translation is not complete
-      
+
   * Fix: entering positive numbers for (U)Int64 results in an out of range error message
   * Fix: Search window: "any" bitwidth does not accept positive integers >= 2^63 (since it was limited to signed numbers only, now supports unsigned ones, too)
   * Fix: HxD would sometimes not detect it was installed (and not in portable mode), because of a case sensitive path comparison
@@ -81,20 +81,20 @@ Version 2.4.0.0
   * Restructured plugin interface
     • easier to use from non-object-oriented languages, such as C
     • https://github.com/maelh/hxd-plugin-framework
-    
+
   * New: support signed hexadecimal numbers in data inspector (for Int8, Int16, Int32, Int64)
     • relative numbers are used in assembly, for example, so signed hexadecimal numbers should be supported
     • UInt8, UInt16, UInt32, UInt64 remain unsigned
-  
+
   * Enhancement: integer types in the datainspector support a leading + sign
     • rewrote many conversion functions for more consistency and to deal with corner cases not handled well by Delphi's built-in functions
-      
+
   * Enhancement: error message (when a relative "goto" offset is not within the bounds of a file/stream) will mention both relative and absolute offsets for easier reference
-    • negative offsets are now also shown with a minus sign in hexadecimal      
-  
-  * Fix: datainspector plugins fail to jump to the previous/next/first/last element  
+    • negative offsets are now also shown with a minus sign in hexadecimal
+
+  * Fix: datainspector plugins fail to jump to the previous/next/first/last element
   * Fix: Closing "Block select" window with Enter key will ignore changes in currently selected text box
-  
+
   * Other minor fixes and clean up
 
   * New translations:
@@ -118,23 +118,23 @@ Version 2.3.0.0
     • all fixed-width data types support navigating forwards and backwards by default
     • backward navigation needs special support for variable-width data types like UTF-8
       - since UTF-8 is self-synchronizing, determining the previous element is possible (however, x86 assembly, for example, cannot be supported, since trailing bytes in an instruction encoding can also appear as leading bytes, which therefore only allows for an unambigious forward scan)
-  
+
   * New: unintrusive pointer type support in data inspector
     • clickable goto link, which is right aligned next to integer type name
     • implicitly treats integer types as pointers / addresses / offsets
     • signed integers are treated as relative offsets, unsigned integers as absolute offsets
     • avoids cluttering the UI with many more rows by having each integer row have a dual function (acting as pointer as well as plain integer)
-    
+
     • typed pointers and pointers that use complex adressing schemes (such as using a lookup table, or computing of an address based on parameters instead of a simple immediate value), will follow with structure views
-    
-    
+
+
   * New: added Int24 and UInt24 types to data inspector (useful for wav files)
     • be sure to reset the data inspector row order in the options, if new types appear in the last rows
-  
+
   * New: separate portable and installable versions (also reduces number of wizard pages)
     • portable setup runs with least privileges
     • portable setup defaults to desktop folder
-  
+
   * Enhancement: reduce flickering in data inspector when resizing or during fast selection, especially for the text box
   * Enhancement: unfold a section if a goto command jumps into it
   * Enhancement: implemented new TXmTabControl to enable Ctrl+(Shift+)Tab navigation in Search and Replace windows
@@ -146,8 +146,8 @@ Version 2.3.0.0
   * Change: for more consistency in error messages, the goto dialog always displays the computed target offset, instead of the text in the offset text box (which can contain absolute or relative offsets)
   * Change: rename optical disk to optical disc (used disk for consistency in the past, but disc is just more common)
   * Change: turn all http links into https ones
-  
-  
+
+
   * Fix: data inspector ignores leading and trailing whitespace where not relevant to the data type (e.g., removing for integers, but keeping for character types)
   * Fix: always treat integers as unsigned when displaying them in hexadecimal
   * Fix: physical floppy disk drives would show a too small size (limited like the logical ones)
@@ -160,7 +160,7 @@ Version 2.3.0.0
   * Fix: ensure tab switching with Ctrl+(Shift+)Tab keeps working after a switch, by setting the focus to the first control inside the tab each time a tab switch occurs
   * Fix: selections would unfold sections even if unnecessary
   * Other smaller fixes, many internal enhancements and refactorings
-  
+
   * Lots of work on UTF-8 and handling grapheme cluster boundaries for future UTF-8 support in the hex editing window itself, see https://blog.mh-nexus.de/2019/06/compressing-arrays-of-integers-while-keeping-fast-indexing/
     • details of the general UTF-8 support design: https://forum.mh-nexus.de/viewtopic.php?f=4&t=1004
 
@@ -169,7 +169,7 @@ Version 2.3.0.0
     • Japanese - Airumu
     • Turkish - Koray Duman
 
-  
+
 Version 2.2.1.0
 ---------------
 
@@ -300,13 +300,13 @@ Version 2.0.0.0
   * Enhanced: Windows explorer context menu
     • Option to choose with entries to add, instead of adding both, "Open with HxD (readonly)" and "Open with HxD", by default
   * Enhanced: Update checker supports proxies that require user authentication
-  * Enhanced: Hex Exporter adds number base when outputting offsets, e.g., "StartOffset(h): 12345678" 
-  
+  * Enhanced: Hex Exporter adds number base when outputting offsets, e.g., "StartOffset(h): 12345678"
+
   * Babelfish and related translation tool chain significantly enhanced for easier automation, 64 bit (PE file handling), Unicode, full XML, and new Delphi version support.
-  
+
   * Performance enhancements, flicker reduction
   * Many bug fixes and other refinements of code and GUI (some listed in the forums)
-  
+
   * Rewriting or updating lots of third party libs to x64 and Unicode
   * Patching Delphi RTL/VCL bugs
 
@@ -458,7 +458,7 @@ Version 1.7.6.0
 - Enhancement: The selection of the inactive column is now filled and looks like
                a translucent veil is put upon the data (it is less emphasized
                and thus there is still a clear distinction between the active
-               and the inactive column). 
+               and the inactive column).
 - Enhancement: The sector position is also visible in the hex edit window,
                similar to the offset-column.
 - Enhancement: If a file cannot be opened, a retry/abort-dialog is presented.
@@ -499,7 +499,7 @@ Version 1.7.6.0
        1.7.5 is affected).
 - Fix: Search didn't give any progress feedback and the whole program became
        sluggish when used in the RAM-editor (only version 1.7.5 is affected).
-                          
+
 As usual many small enhancements and fixes aren't listed in detail.
 
 
@@ -515,7 +515,7 @@ Version 1.7.1.0 beta
 - "Edit|Insert bytes" now behaves as "Edit|Paste Insert", i.e. it
   deletes the selected bytes before inserting
 - Option to apply settings of View-tab in options-dialog also to existing
-  windows 
+  windows
 - Update-search now works also through proxies
 
 - Fix: Access violation when using Search/Find-command (if file was opened
@@ -571,7 +571,7 @@ Version 1.7.0.0 beta
 - Enhancement: Progress bar for undo
 - Enhancement: Totally flicker free frame-selection
 - Enhancement: Allow editing of NTFS file streams (using special filename
-               syntax) 
+               syntax)
 - Enhancement: Place filename at the top of recent file list after save/save as
 - Enhancement: MDI and tab handling (Fixes include: Slightly off window
                positioning causing scrollbars to appear, suppressed window
@@ -714,8 +714,8 @@ Version 1.6.0.0 beta
     * Fix: Small memory leak after File|Save
     * Fix: Small memory leak after File|Print
     * Many more small corrections
-    
-    
+
+
 Version 1.5.2.0
 ---------------
 
@@ -733,22 +733,22 @@ Version 1.5.1.0 beta
 - Fix: Wrong caret position after deleting last byte of a row
 - Fix: Formatting for modified data isn't loaded/saved correctly
 - Fix: Exporting to Pascal, C, Java always uses empty file name
-- Fix: Management error of the internal formats list which resulted in some 
+- Fix: Management error of the internal formats list which resulted in some
   painting bugs
 - Fix: Display problems under Asian systems
-- Fix: When typing hex digits at the end of a row, caret doesn't move into 
+- Fix: When typing hex digits at the end of a row, caret doesn't move into
   next row
 - Fix: Caret position not always correct after undo
 - View options can be set globally in the options dialog (vs. locally in the
-  toolbar) 
+  toolbar)
 
 
 Version 1.5.0.0 beta
 --------------------
 
 - Modified data highlighted red and bold (configurable)
-- Major internal optimizations regarding foldable section. This is especially 
-  visible when opening large programs with the RAM-Editor and doing mouse 
+- Major internal optimizations regarding foldable section. This is especially
+  visible when opening large programs with the RAM-Editor and doing mouse
   selections
 - Optimized undo, which uses now far less memory by not saving original data
 - New function "Open Disk-Image" (you can specify the sector-size)
@@ -757,14 +757,14 @@ Version 1.5.0.0 beta
 - Offsets can now be displayed additionally as decimal or octal numbers
 - More precise detection when progress dialog should show
 - Selection-scrolling is more intuitive (also fixed a related bug)
-- Mouse selection is smoother and more precise; a selection can begin inside a 
+- Mouse selection is smoother and more precise; a selection can begin inside a
   hex pair
 - Tooltip window beside the scrollbar showing the top sector when editing disks
   or disk images
 - Page up and page down preserver the caret position
 - Navigating to nibbles when clicking inside hex pairs
 - Order of tabs can be changed through drag&drop
-- Reworked scrollbar: hides when not needed, correctly handles resizing of 
+- Reworked scrollbar: hides when not needed, correctly handles resizing of
   window
 - Tab control draws its background according to the selected theme
 - Tab and hex editor controls are visually united
@@ -772,7 +772,7 @@ Version 1.5.0.0 beta
 - Fix: After a "replace all"-operation the progress dialog sometimes keeps open
 - Fix: Change order of Ctrl+Tab corresponds to the MDI order, not the order as
   seen in the tab control
-- Fix: During a replace-operation the "resized file"-notification pops up 
+- Fix: During a replace-operation the "resized file"-notification pops up
   several times
 
 
@@ -780,22 +780,22 @@ Version 1.4.2.0
 ---------------
 
 - New menu command "Refresh": updates the view and the caches
-- Navigating to Nibbles (= half bytes) can now be done with CTRL+Left 
+- Navigating to Nibbles (= half bytes) can now be done with CTRL+Left
   respectively CTRL+Right
 - Reactivating of HxD after drag&dropping a file onto the program
-- FIX: Error when reading diskettes under Win9X (error did not appear with all 
+- FIX: Error when reading diskettes under Win9X (error did not appear with all
        BIOSes)
-- FIX: The remaining duration in the progress window is displayed as time (pm/am) 
+- FIX: The remaining duration in the progress window is displayed as time (pm/am)
 - FIX: Focus-problems of the progress window
 - FIX: Rotated caption of the checksum-panel is under Win9x very small
-- FIX: Flickering border when changing the window size and Windows-themes are 
+- FIX: Flickering border when changing the window size and Windows-themes are
        active. I fixed the corresponding bug in the VCL.
 - FIX: If hex-editor window is very small an access violation appears
-- FIX: Replace-dialog can be shown, even when in readonly-mode, which stops 
-       replace-operations anyway 
+- FIX: Replace-dialog can be shown, even when in readonly-mode, which stops
+       replace-operations anyway
 - FIX: Replacing with nothing raises an access violation
 - FIX: RAM-Editor tries to show guarded pages
-- FIX: Replace all: the progress window disappears often to reappear shortly 
+- FIX: Replace all: the progress window disappears often to reappear shortly
        after again
 - FIX: Confirmation dialog sometimes outside the screen
 - FIX: New instance does not take over the multiinstance-settings
@@ -805,57 +805,57 @@ Version 1.4.2.0
 Version 1.4.1.0 beta
 --------------------
 
-- FIX: Write error when inserting (due to overwriting of memory) 
-- FIX: Ctrl+Shift+End raises an access violation 
-- FIX: Wrong position of caret after insertion 
-- FIX: A special order of insertion and deletion raises access violations 
-- FIX: Starting HxD multiple times under Win9x raises an OS-exception 
-       (management error with DiskIO.dll) 
-- smaller optimizations 
+- FIX: Write error when inserting (due to overwriting of memory)
+- FIX: Ctrl+Shift+End raises an access violation
+- FIX: Wrong position of caret after insertion
+- FIX: A special order of insertion and deletion raises access violations
+- FIX: Starting HxD multiple times under Win9x raises an OS-exception
+       (management error with DiskIO.dll)
+- smaller optimizations
 - correction of caret-movement in corner cases
 
 
 Version 1.4.0.0 beta
 --------------------
 
-- HxD now support reading/writing onto logical or physical drives also under 
-  Windows9x. All kinds and all sizes are supported (FAT12, FAT16, FAT32, 
-  disk with int13 extensions and without). CDROM support will follow. 
-- Notifications/Warnings can be deactivated (directly in the message window or 
-  in the options) 
-- Ask for user confirmation when deleting or inserting bytes 
-- VB-Exporter removed: There is no reasonable way to define big arrays 
-- Clearly less drive noise and no error message (happened on some NT 4.0 
-  systems) when checking for a inserted disk 
+- HxD now support reading/writing onto logical or physical drives also under
+  Windows9x. All kinds and all sizes are supported (FAT12, FAT16, FAT32,
+  disk with int13 extensions and without). CDROM support will follow.
+- Notifications/Warnings can be deactivated (directly in the message window or
+  in the options)
+- Ask for user confirmation when deleting or inserting bytes
+- VB-Exporter removed: There is no reasonable way to define big arrays
+- Clearly less drive noise and no error message (happened on some NT 4.0
+  systems) when checking for a inserted disk
 - Modal dialog boxes flash when clicking outside the dialog box (as usual under
-  Win98/Win2000+) 
+  Win98/Win2000+)
 - FIX: After "Saving as..." the whole filename is showed in the caption, but it
-       should be without path 
-- FIX: Deleting a selection with DEL does not update the statusbar 
-- FIX: Deleting-function generates new foldable sections, but it should resize 
+       should be without path
+- FIX: Deleting a selection with DEL does not update the statusbar
+- FIX: Deleting-function generates new foldable sections, but it should resize
        the existing ones
-- FIX: Delete with backspace was buggy 
-- FIX: If caret is in a folded line, it doesn't move when scrolling horizontally 
-- FIX: Changing between hex- and text-sections with TAB does not correctly 
-       redraw the selection 
+- FIX: Delete with backspace was buggy
+- FIX: If caret is in a folded line, it doesn't move when scrolling horizontally
+- FIX: Changing between hex- and text-sections with TAB does not correctly
+       redraw the selection
 - other little things
 
 
 Version 1.3.0.0 beta
 --------------------
 
-- New feature: Data-Folding  
-- resizing of bookmark-symbol if text smaller than 16x16, else centering 
-- FIX: Searching of integer numbers in big endian format was incorrect 
-- FIX: Resizing of the window causes sometimes wrong caret repositioning 
-- FIX: Although multiple instances are allowed, the first instance is always 
-       activated 
-- FIX: "Save as" and "Export" aborts without showing the save-dialog, when 
-       default filename contains illegal characters 
+- New feature: Data-Folding
+- resizing of bookmark-symbol if text smaller than 16x16, else centering
+- FIX: Searching of integer numbers in big endian format was incorrect
+- FIX: Resizing of the window causes sometimes wrong caret repositioning
+- FIX: Although multiple instances are allowed, the first instance is always
+       activated
+- FIX: "Save as" and "Export" aborts without showing the save-dialog, when
+       default filename contains illegal characters
 - FIX: With some special fonts: After a restart of HxD another font is displayed
-       than was selected the last time  
-- FIX: Writing into readonly/unassigned memory regions causes drawing errors 
-       (however data is left intact). 
+       than was selected the last time
+- FIX: Writing into readonly/unassigned memory regions causes drawing errors
+       (however data is left intact).
 
 
 Version 1.2.2.0
@@ -879,19 +879,19 @@ Version 1.2.1.0
 - FIX: Detection if a floppy disk is inserted is not always correct and causes
     the DriveOpen dialog to display wrong information
     (necessary checks make again empty floppy drives emit more noise)
-    
+
 
 Version 1.2.0.0
 ---------------
 
 - Buffered reading making navigation more pleasant
-- Sector separators and buttons as well as keyboard shortcuts added for 
+- Sector separators and buttons as well as keyboard shortcuts added for
   drive navigation
-- On WinXP+ the whole drive is viewable/editable even if the driver reports 
+- On WinXP+ the whole drive is viewable/editable even if the driver reports
   faked information
-- Filename, StartOffset, EndOffset, Length and Date information was added to 
+- Filename, StartOffset, EndOffset, Length and Date information was added to
   source code exporters
-- Minimized floppy disk drive noise when checking if a floppy is inserted  
+- Minimized floppy disk drive noise when checking if a floppy is inserted
 - New function: Select block (From-to-selection)
 - Drawing of the offset col and row is synchronous with the drawing of the data
   section, even if source is slow (e.g. floppy disk)
@@ -904,11 +904,11 @@ Version 1.2.0.0
   If there is enough place data overwrites old data instead of being inserted
 - Theme can be changed in options (default or Tristan 2)
 - Checksums/Digests can be copied to clipboard using the contextmenu or keyboard
-  shortcuts    
+  shortcuts
 - FIX: Entering a character in overwrite mode deleted the selection and then
   overwrote the following character, instead of just replacing the character
   at the caret
-- FIX: Big streams (e.g. drives) didn't correctly work with scrollbars  
+- FIX: Big streams (e.g. drives) didn't correctly work with scrollbars
 - more corrections
 
 
@@ -944,7 +944,7 @@ Version 1.0.0.0 beta
 - added replace function and matching dialog
 - new offset header
 - horizontal scrolling
-- added ghost caret: a dotted box that surrounds the character/hex value 
+- added ghost caret: a dotted box that surrounds the character/hex value
   corresponding to the character/hex value under the active caret
 - removed flicker when activating other MDI children
 - basic printing

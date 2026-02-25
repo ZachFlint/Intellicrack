@@ -1,0 +1,5461 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "deptry",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "DEP001",
+              "shortDescription": {
+                "text": "'dev_tools' imported but missing from the dependency definitions"
+              }
+            },
+            {
+              "id": "DEP003",
+              "shortDescription": {
+                "text": "'mcp' imported but it is a transitive dependency"
+              }
+            },
+            {
+              "id": "DEP002",
+              "shortDescription": {
+                "text": "'networkx' defined as a dependency but not used in the codebase"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "DEP001",
+          "level": "warning",
+          "message": {
+            "text": "'dev_tools' imported but missing from the dependency definitions"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".claude/dev_tools/__main__.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'mcp' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".claude/dev_tools/dev_tools_server.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 19,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP001",
+          "level": "warning",
+          "message": {
+            "text": "'dev_tools' imported but missing from the dependency definitions"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".claude/dev_tools/run_dev_tools_mcp.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'mcp' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".claude/dev_tools/tools/formatters.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'mcp' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".claude/dev_tools/tools/python_linting.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'mcp' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".claude/dev_tools/tools/testing.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'mcp' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".claude/dev_tools/tools/vcs.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'networkx' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'flake8-pyproject' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'build' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pyclean' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'black' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pylint' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'autopep8' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'flake8' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'ruff' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'isort' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pycodestyle' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'bandit' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'blinter' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'vulture' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pyupgrade' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pydocstyle' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'sourcery' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'wemake-python-styleguide' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pydoclint' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pip-licenses' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'liccheck' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'validate-pyproject' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'nuitka' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'mutmut' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'syrupy' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pyroma' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'mypy-extensions' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'dead' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'uncalled' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'deadcode' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'skylos' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pygount' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-deadfixtures' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'basedpyright' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'monkeytype' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'ty' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'mccabe' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'xenon' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'safety' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'yamllint' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'jsonlint' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-cov' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-mock' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-asyncio' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-xdist' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-timeout' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-qt' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-benchmark' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-html' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-randomly' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-sugar' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-env' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-instafail' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'hypothesis' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'tox' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'nox' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'coverage' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'freezegun' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'responses' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'faker' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'radon' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'sphinx' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'sphinx-rtd-theme' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'sphinx-autodoc-typehints' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'sphinx-copybutton' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'sphinx-tabs' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'sphinxcontrib-mermaid' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'sphinx-autobuild' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pdoc3' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'mkdocs-material' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pymdown-extensions' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'myst-parser' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'ipdb' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'line-profiler' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'memory-profiler' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'py-spy' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'snakeviz' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pyinstrument' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'scalene' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pre-commit' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'commitizen' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'bumpversion' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pipdeptree' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'rope' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'astor' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'yapf' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pip-audit' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'nodeenv' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'twine' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'setuptools-scm' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'poetry' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pycallgraph2' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pre-commit-hooks' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'interrogate' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'deptry' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'codespell' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'detect-secrets' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'build' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pyclean' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'black' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pylint' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'autopep8' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'flake8' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'flake8-pyproject' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'ruff' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'isort' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pycodestyle' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'bandit' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'blinter' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'vulture' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pyupgrade' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pydocstyle' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'sourcery' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'wemake-python-styleguide' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pydoclint' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pip-licenses' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'liccheck' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'validate-pyproject' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'nuitka' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'mutmut' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'syrupy' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pyroma' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'mypy-extensions' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'dead' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'uncalled' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'deadcode' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'skylos' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pygount' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-deadfixtures' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'basedpyright' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'monkeytype' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'ty' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'mccabe' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'xenon' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'safety' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'yamllint' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'jsonlint' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-cov' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-mock' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-asyncio' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-xdist' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-timeout' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-qt' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-benchmark' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-html' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-randomly' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-sugar' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-env' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pytest-instafail' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'hypothesis' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'tox' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'nox' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'coverage' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'freezegun' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'responses' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'faker' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'radon' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'sphinx' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'sphinx-rtd-theme' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'sphinx-autodoc-typehints' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'sphinx-copybutton' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'sphinx-tabs' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'sphinxcontrib-mermaid' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'sphinx-autobuild' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pdoc3' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'mkdocs-material' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pymdown-extensions' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'myst-parser' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'ipdb' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'line-profiler' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'memory-profiler' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'py-spy' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'snakeviz' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pyinstrument' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'scalene' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pre-commit' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'commitizen' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'bumpversion' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pipdeptree' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'rope' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'astor' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'yapf' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pip-audit' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'nodeenv' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'twine' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'setuptools-scm' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'poetry' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pycallgraph2' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'pre-commit-hooks' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'interrogate' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'deptry' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'codespell' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP002",
+          "level": "warning",
+          "message": {
+            "text": "'detect-secrets' defined as a dependency but not used in the codebase"
+          }
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/__init__.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 27,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/__init__.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 28,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/__main__.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 16,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'capstone' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 16,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'lief' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 17,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'lief' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 18,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'lief' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 19,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'lief' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 20,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'lief' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 21,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'lief' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 22,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'pefile' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 23,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'frida' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 20,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'httpx' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/installer.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 19,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/installer.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 21,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'r2pipe' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/radare2.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'capstone' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 58,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'keystone' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 65,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'pefile' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/license_analyzer.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 30,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'lief' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/license_analyzer.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 37,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'capstone' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/license_analyzer.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 44,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'structlog' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/logging.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 19,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/process_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 24,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/main.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 36,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'anthropic' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/anthropic.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'anthropic' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/anthropic.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'google' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/google.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'google' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/google.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'openai' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/grok.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'httpx' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/huggingface.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'torch' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/local_transformers.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 52,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'torch' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 20,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'transformers' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 25,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'transformers' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 31,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'httpx' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/ollama.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'openai' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/openai.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'openai' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/openai.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'openai' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/openai.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'httpx' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/openrouter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'torch' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/xpu_utils.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 22,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/windows.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 17,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 18,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 19,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 20,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 706,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1308,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/chat.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/chat.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/chat.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/confirmation_dialog.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/dialogs/splash_screen.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 11,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/dialogs/splash_screen.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/dialogs/splash_screen.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/highlighter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 11,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/highlighter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/__init__.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 11,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/__init__.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/__init__.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/__init__.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/__init__.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/__init__.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 16,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/__init__.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 17,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/__init__.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 18,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/__init__.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 19,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/__init__.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 25,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/binary_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/binary_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/binary_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/binary_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 32,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/binary_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 33,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/binary_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 34,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/frida_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 11,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/frida_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/frida_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/frida_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 29,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/frida_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 30,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/frida_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 31,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/frida_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 32,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 35,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 36,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 37,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 45,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/licensing_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/licensing_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/licensing_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/licensing_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 30,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/licensing_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 31,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/process_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/process_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/process_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 30,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/process_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 31,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/process_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 32,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/process_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 509,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/radare2_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/radare2_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/radare2_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 16,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/radare2_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 37,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/radare2_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 38,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/radare2_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 39,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/radare2_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 47,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/sandbox_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/sandbox_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/sandbox_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/sandbox_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 31,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/sandbox_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 32,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/sandbox_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 33,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/sandbox_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 38,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/sandbox_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 39,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/script_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/script_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/script_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/script_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 32,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/script_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 33,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/stack_viewer.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/stack_viewer.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/stack_viewer.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/stack_viewer.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 28,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/stack_viewer.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 29,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/x64dbg_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/x64dbg_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/x64dbg_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/x64dbg_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 33,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/x64dbg_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 34,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/x64dbg_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 35,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/x64dbg_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 36,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/preferences.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/preferences.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/preferences.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 183,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/preferences.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 195,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/preferences.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 242,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'httpx' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 18,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 19,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 20,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 21,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 43,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1105,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/resources/font_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 11,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/resources/icon_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 10,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/resources/icon_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 11,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/resources/theme_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 11,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/sandbox_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 18,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/sandbox_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 19,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/sandbox_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 39,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/sandbox_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 40,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/sandbox_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 41,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/session_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/session_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'httpx' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tool_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 21,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tool_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 22,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tool_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 23,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tool_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 46,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 16,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 17,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 37,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 42,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 49,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 54,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 58,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 64,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 69,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 74,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 84,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 88,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 92,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 96,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 100,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 105,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 109,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 113,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 117,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 138,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 142,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 147,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 151,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 159,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 164,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 179,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 229,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 239,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 249,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'intellicrack' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "vulture_whitelist.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 261,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "columnKind": "utf16CodeUnits",
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "endTimeUtc": "2026-02-24T19:40:47.768893"
+        }
+      ]
+    }
+  ]
+}
