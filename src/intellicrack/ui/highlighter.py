@@ -18,6 +18,12 @@ from PyQt6.QtGui import (
 )
 
 
+_BLOCK_STATE_NORMAL = 0
+_BLOCK_STATE_DOUBLE_QUOTE = 1
+_BLOCK_STATE_SINGLE_QUOTE = 2
+_DELIM_STATE_MAP = (_BLOCK_STATE_DOUBLE_QUOTE, _BLOCK_STATE_SINGLE_QUOTE)
+
+
 class HighlightRule:
     """A syntax highlighting rule.
 
@@ -789,26 +795,26 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
         prev_state = self.previousBlockState()
         offset = 0
 
-        if prev_state == 1:
+        if prev_state == _BLOCK_STATE_DOUBLE_QUOTE:
             end_idx = text.find('"""', offset)
             if end_idx == -1:
                 self.setFormat(0, len(text), self._triple_quote_format)
-                self.setCurrentBlockState(1)
+                self.setCurrentBlockState(_BLOCK_STATE_DOUBLE_QUOTE)
                 return
             length = end_idx + 3
             self.setFormat(0, length, self._triple_quote_format)
             offset = length
-        elif prev_state == 2:
+        elif prev_state == _BLOCK_STATE_SINGLE_QUOTE:
             end_idx = text.find("'''", offset)
             if end_idx == -1:
                 self.setFormat(0, len(text), self._triple_quote_format)
-                self.setCurrentBlockState(2)
+                self.setCurrentBlockState(_BLOCK_STATE_SINGLE_QUOTE)
                 return
             length = end_idx + 3
             self.setFormat(0, length, self._triple_quote_format)
             offset = length
 
-        self.setCurrentBlockState(0)
+        self.setCurrentBlockState(_BLOCK_STATE_NORMAL)
 
         while offset < len(text):
             nearest_pos = -1
@@ -824,7 +830,7 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
                 break
 
             delim = delimiters[nearest_delim_idx]
-            state_value = nearest_delim_idx + 1
+            state_value = _DELIM_STATE_MAP[nearest_delim_idx]
             end_idx = text.find(delim, nearest_pos + 3)
 
             if end_idx == -1:

@@ -11,6 +11,7 @@ import hashlib
 import math
 import re
 from collections import Counter
+from pathlib import Path
 from typing import TYPE_CHECKING, override
 
 import capstone
@@ -39,8 +40,6 @@ from .base import BinaryOperationsBridge, BridgeCapabilities, BridgeState
 
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     _LiefParsedType = lief.PE.Binary | lief.OAT.Binary | lief.ELF.Binary | lief.MachO.Binary | lief.COFF.Binary | None
 
     def _lief_parse_raw(data: bytes) -> _LiefParsedType:

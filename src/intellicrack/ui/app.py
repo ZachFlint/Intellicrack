@@ -617,7 +617,7 @@ class MainWindow(QMainWindow):
             session_text = f" | Session: {session_id}" if session_id else ""
             self._status_label.setText(f"State: {state}{session_text}")
         except Exception:
-            pass
+            _logger.debug("system_status_refresh_failed")
 
     def _connect_signals(self) -> None:
         """Connect Qt signals."""

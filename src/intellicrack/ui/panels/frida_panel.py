@@ -27,9 +27,9 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.resources.font_manager import DEFAULT_CODE_FONT
 from intellicrack.ui.panels._async_bridge import run_bridge_coroutine
 from intellicrack.ui.panels._qt_compat import edit_table_item, set_max_block_count
+from intellicrack.ui.resources.font_manager import DEFAULT_CODE_FONT
 
 
 if TYPE_CHECKING:

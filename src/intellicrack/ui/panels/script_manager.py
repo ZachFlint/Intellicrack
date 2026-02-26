@@ -399,7 +399,8 @@ class ScriptEditor(QPlainTextEdit):
 
         self.textChanged.connect(self.content_changed.emit)
 
-    def set_language(self, language: str) -> None:
+    @staticmethod
+    def set_language(language: str) -> None:
         """Set the syntax highlighting language.
 
         Args:

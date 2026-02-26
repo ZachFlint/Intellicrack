@@ -30,12 +30,12 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.resources.font_manager import DEFAULT_CODE_FONT
 from intellicrack.ui.panels._qt_compat import (
     set_header_labels,
     tree_item_data,
     tree_item_set_data,
 )
+from intellicrack.ui.resources.font_manager import DEFAULT_CODE_FONT
 
 
 _logger = get_logger("ui.panels.binary")

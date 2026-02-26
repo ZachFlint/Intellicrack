@@ -273,8 +273,8 @@ class IntellicrackLogger:
         """
         self.name = name
 
+    @staticmethod
     def configure(
-        self,
         level: str = "INFO",
         log_dir: Path | None = None,
         file_enabled: bool = True,

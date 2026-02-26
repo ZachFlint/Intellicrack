@@ -3247,7 +3247,7 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">configure</data>
-      <data key="d4">['self', 'level', 'log_dir', 'file_enabled', 'console_enabled', 'max_file_size_mb', 'backup_count', 'retention_days', 'json_file']</data>
+      <data key="d4">['level', 'log_dir', 'file_enabled', 'console_enabled', 'max_file_size_mb', 'backup_count', 'retention_days', 'json_file']</data>
     </node>
     <node id="src.intellicrack.core.logging.__enter__">
       <data key="d0">function</data>
@@ -10461,8 +10461,8 @@
       <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\binary_panel.py</data>
       <data key="d3">src.intellicrack.ui.panels.binary_panel</data>
     </node>
-    <node id="intellicrack.ui.resources.font_manager" />
     <node id="intellicrack.ui.panels._qt_compat" />
+    <node id="intellicrack.ui.resources.font_manager" />
     <node id="src.intellicrack.ui.panels.binary_panel.BinaryPanel">
       <data key="d0">class</data>
       <data key="d1">python</data>
@@ -11482,7 +11482,7 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">set_language</data>
-      <data key="d4">['self', 'language']</data>
+      <data key="d4">['language']</data>
     </node>
     <node id="src.intellicrack.ui.panels.script_manager.get_content">
       <data key="d0">function</data>
@@ -13183,6 +13183,9 @@
     <edge source="src.intellicrack.bridges.binary" target="collections">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.bridges.binary" target="pathlib">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.bridges.binary" target="typing">
       <data key="d5">imports</data>
     </edge>
@@ -13221,9 +13224,6 @@
     </edge>
     <edge source="src.intellicrack.bridges.binary" target="src.intellicrack.bridges.binary.BinaryBridge">
       <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.bridges.binary" target="pathlib">
-      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.bridges.binary" target="src.intellicrack.bridges.binary._lief_parse_raw">
       <data key="d5">defines</data>
@@ -20248,10 +20248,10 @@
     <edge source="src.intellicrack.ui.panels.binary_panel" target="intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.panels.binary_panel" target="intellicrack.ui.resources.font_manager">
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="intellicrack.ui.panels._qt_compat">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.panels.binary_panel" target="intellicrack.ui.panels._qt_compat">
+    <edge source="src.intellicrack.ui.panels.binary_panel" target="intellicrack.ui.resources.font_manager">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.binary_panel" target="src.intellicrack.ui.panels.binary_panel.BinaryPanel">
@@ -20335,13 +20335,13 @@
     <edge source="src.intellicrack.ui.panels.frida_panel" target="intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.panels.frida_panel" target="intellicrack.ui.resources.font_manager">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.panels.frida_panel" target="intellicrack.ui.panels._async_bridge">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.frida_panel" target="intellicrack.ui.panels._qt_compat">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.frida_panel" target="intellicrack.ui.resources.font_manager">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.frida_panel" target="src.intellicrack.ui.panels.frida_panel.FridaPanel">

@@ -421,6 +421,7 @@ docker-compose.override.yml
 !pixi.lock
 
 # Linting and testing reports
+reports/ci-jobs/
 bandit-report.json
 rollout-*.json
 .aider*
