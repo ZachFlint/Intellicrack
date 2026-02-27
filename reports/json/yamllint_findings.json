@@ -1,12 +1,12 @@
 {
   "tool": "yamllint",
-  "generated": "2026-02-22T01:47:57.491972",
-  "total_findings": 52,
-  "total_files": 17,
+  "generated": "2026-02-27T00:09:52.217357",
+  "total_findings": 49,
+  "total_files": 16,
   "files": [
     {
       "path": ".\\.serena\\project.yml",
-      "count": 8,
+      "count": 7,
       "findings": [
         {
           "line": 1,
@@ -17,60 +17,52 @@
           "raw": ".\\.serena\\project.yml:1:73: [error] wrong new line character: expected \\n  (new-lines)"
         },
         {
-          "line": 54,
-          "column": 82,
-          "severity": "error",
+          "line": 62,
+          "column": 121,
+          "severity": "warning",
           "code": "",
-          "message": "trailing spaces  (trailing-spaces)",
-          "raw": ".\\.serena\\project.yml:54:82: [error] trailing spaces  (trailing-spaces)"
+          "message": "line too long (125 > 120 characters)  (line-length)",
+          "raw": ".\\.serena\\project.yml:62:121: [warning] line too long (125 > 120 characters)  (line-length)"
+        },
+        {
+          "line": 63,
+          "column": 121,
+          "severity": "warning",
+          "code": "",
+          "message": "line too long (137 > 120 characters)  (line-length)",
+          "raw": ".\\.serena\\project.yml:63:121: [warning] line too long (137 > 120 characters)  (line-length)"
         },
         {
           "line": 64,
           "column": 121,
           "severity": "warning",
           "code": "",
-          "message": "line too long (125 > 120 characters)  (line-length)",
-          "raw": ".\\.serena\\project.yml:64:121: [warning] line too long (125 > 120 characters)  (line-length)"
-        },
-        {
-          "line": 65,
-          "column": 121,
-          "severity": "warning",
-          "code": "",
-          "message": "line too long (137 > 120 characters)  (line-length)",
-          "raw": ".\\.serena\\project.yml:65:121: [warning] line too long (137 > 120 characters)  (line-length)"
-        },
-        {
-          "line": 66,
-          "column": 121,
-          "severity": "warning",
-          "code": "",
           "message": "line too long (146 > 120 characters)  (line-length)",
-          "raw": ".\\.serena\\project.yml:66:121: [warning] line too long (146 > 120 characters)  (line-length)"
+          "raw": ".\\.serena\\project.yml:64:121: [warning] line too long (146 > 120 characters)  (line-length)"
         },
         {
-          "line": 76,
+          "line": 74,
           "column": 121,
           "severity": "warning",
           "code": "",
           "message": "line too long (125 > 120 characters)  (line-length)",
-          "raw": ".\\.serena\\project.yml:76:121: [warning] line too long (125 > 120 characters)  (line-length)"
+          "raw": ".\\.serena\\project.yml:74:121: [warning] line too long (125 > 120 characters)  (line-length)"
         },
         {
-          "line": 77,
+          "line": 75,
           "column": 121,
           "severity": "warning",
           "code": "",
           "message": "line too long (146 > 120 characters)  (line-length)",
-          "raw": ".\\.serena\\project.yml:77:121: [warning] line too long (146 > 120 characters)  (line-length)"
+          "raw": ".\\.serena\\project.yml:75:121: [warning] line too long (146 > 120 characters)  (line-length)"
         },
         {
-          "line": 88,
+          "line": 86,
           "column": 121,
           "severity": "warning",
           "code": "",
           "message": "line too long (123 > 120 characters)  (line-length)",
-          "raw": ".\\.serena\\project.yml:88:121: [warning] line too long (123 > 120 characters)  (line-length)"
+          "raw": ".\\.serena\\project.yml:86:121: [warning] line too long (123 > 120 characters)  (line-length)"
         }
       ]
     },
@@ -175,6 +167,44 @@
       ]
     },
     {
+      "path": ".\\.github\\workflows\\ci.yml",
+      "count": 4,
+      "findings": [
+        {
+          "line": 1,
+          "column": 9,
+          "severity": "error",
+          "code": "",
+          "message": "wrong new line character: expected \\n  (new-lines)",
+          "raw": ".\\.github\\workflows\\ci.yml:1:9: [error] wrong new line character: expected \\n  (new-lines)"
+        },
+        {
+          "line": 29,
+          "column": 121,
+          "severity": "warning",
+          "code": "",
+          "message": "line too long (130 > 120 characters)  (line-length)",
+          "raw": ".\\.github\\workflows\\ci.yml:29:121: [warning] line too long (130 > 120 characters)  (line-length)"
+        },
+        {
+          "line": 74,
+          "column": 121,
+          "severity": "warning",
+          "code": "",
+          "message": "line too long (138 > 120 characters)  (line-length)",
+          "raw": ".\\.github\\workflows\\ci.yml:74:121: [warning] line too long (138 > 120 characters)  (line-length)"
+        },
+        {
+          "line": 138,
+          "column": 121,
+          "severity": "warning",
+          "code": "",
+          "message": "line too long (121 > 120 characters)  (line-length)",
+          "raw": ".\\.github\\workflows\\ci.yml:138:121: [warning] line too long (121 > 120 characters)  (line-length)"
+        }
+      ]
+    },
+    {
       "path": ".\\.github\\workflows\\gemini-triage.yml",
       "count": 4,
       "findings": [
@@ -209,66 +239,6 @@
           "code": "",
           "message": "line too long (127 > 120 characters)  (line-length)",
           "raw": ".\\.github\\workflows\\gemini-triage.yml:163:121: [warning] line too long (127 > 120 characters)  (line-length)"
-        }
-      ]
-    },
-    {
-      "path": ".\\.sourcery.yaml",
-      "count": 3,
-      "findings": [
-        {
-          "line": 1,
-          "column": 56,
-          "severity": "error",
-          "code": "",
-          "message": "wrong new line character: expected \\n  (new-lines)",
-          "raw": ".\\.sourcery.yaml:1:56: [error] wrong new line character: expected \\n  (new-lines)"
-        },
-        {
-          "line": 33,
-          "column": 121,
-          "severity": "warning",
-          "code": "",
-          "message": "line too long (168 > 120 characters)  (line-length)",
-          "raw": ".\\.sourcery.yaml:33:121: [warning] line too long (168 > 120 characters)  (line-length)"
-        },
-        {
-          "line": 1,
-          "column": 17,
-          "severity": "error",
-          "code": "",
-          "message": "wrong new line character: expected \\n  (new-lines)",
-          "raw": ".\\.sourcery.yaml:1:17: [error] wrong new line character: expected \\n  (new-lines)"
-        }
-      ]
-    },
-    {
-      "path": ".\\.github\\workflows\\ci.yml",
-      "count": 3,
-      "findings": [
-        {
-          "line": 1,
-          "column": 9,
-          "severity": "error",
-          "code": "",
-          "message": "wrong new line character: expected \\n  (new-lines)",
-          "raw": ".\\.github\\workflows\\ci.yml:1:9: [error] wrong new line character: expected \\n  (new-lines)"
-        },
-        {
-          "line": 38,
-          "column": 121,
-          "severity": "warning",
-          "code": "",
-          "message": "line too long (130 > 120 characters)  (line-length)",
-          "raw": ".\\.github\\workflows\\ci.yml:38:121: [warning] line too long (130 > 120 characters)  (line-length)"
-        },
-        {
-          "line": 224,
-          "column": 121,
-          "severity": "warning",
-          "code": "",
-          "message": "line too long (138 > 120 characters)  (line-length)",
-          "raw": ".\\.github\\workflows\\ci.yml:224:121: [warning] line too long (138 > 120 characters)  (line-length)"
         }
       ]
     },
@@ -423,24 +393,24 @@
       ]
     },
     {
-      "path": ".\\.github\\workflows\\python-ci.yml",
+      "path": ".\\.sourcery.yaml",
       "count": 2,
       "findings": [
         {
           "line": 1,
-          "column": 16,
+          "column": 56,
           "severity": "error",
           "code": "",
           "message": "wrong new line character: expected \\n  (new-lines)",
-          "raw": ".\\.github\\workflows\\python-ci.yml:1:16: [error] wrong new line character: expected \\n  (new-lines)"
+          "raw": ".\\.sourcery.yaml:1:56: [error] wrong new line character: expected \\n  (new-lines)"
         },
         {
-          "line": 37,
+          "line": 33,
           "column": 121,
           "severity": "warning",
           "code": "",
-          "message": "line too long (121 > 120 characters)  (line-length)",
-          "raw": ".\\.github\\workflows\\python-ci.yml:37:121: [warning] line too long (121 > 120 characters)  (line-length)"
+          "message": "line too long (168 > 120 characters)  (line-length)",
+          "raw": ".\\.sourcery.yaml:33:121: [warning] line too long (168 > 120 characters)  (line-length)"
         }
       ]
     },

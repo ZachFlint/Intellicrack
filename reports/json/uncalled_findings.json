@@ -1,8 +1,8 @@
 {
   "tool": "uncalled",
-  "generated": "2026-02-22T01:48:07.808241",
-  "total_findings": 83,
-  "total_files": 22,
+  "generated": "2026-02-27T00:10:04.057695",
+  "total_findings": 84,
+  "total_files": 23,
   "files": [
     {
       "path": "src\\intellicrack\\ui\\tools.py",
@@ -595,6 +595,18 @@
           "column": null,
           "message": "Unused function: get_provider_registry",
           "raw": "src\\intellicrack\\providers\\registry.py: Unused function get_provider_registry"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\app.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: closeEvent",
+          "raw": "src\\intellicrack\\ui\\app.py: Unused function closeEvent"
         }
       ]
     },

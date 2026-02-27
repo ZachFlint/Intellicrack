@@ -215,6 +215,11 @@ src\intellicrack\providers\model_loader.py: Unused function get_memory_usage
 src\intellicrack\providers\registry.py: Unused function get_provider_registry
 
 
+1 findings in src\intellicrack\ui\app.py
+
+src\intellicrack\ui\app.py: Unused function closeEvent
+
+
 1 findings in src\intellicrack\ui\confirmation_dialog.py
 
 src\intellicrack\ui\confirmation_dialog.py: Unused function remember_similar

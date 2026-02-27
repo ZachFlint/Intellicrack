@@ -6,7 +6,7 @@ messages during application initialization.
 
 from __future__ import annotations
 
-from typing import Final, final
+from typing import Final, final, override
 
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QPainter, QPixmap, QResizeEvent
@@ -88,7 +88,6 @@ class SplashScreen(QSplashScreen):
 
         self._setup_overlay()
         self.progress_updated.connect(self._on_progress_updated)
-        self.resizeEvent = self.resize_event_handler
 
     @staticmethod
     def _compute_dpi_scale() -> float:
@@ -322,7 +321,8 @@ class SplashScreen(QSplashScreen):
         """
         self.set_progress(value, message)
 
-    def resize_event_handler(self, a0: QResizeEvent | None) -> None:
+    @override
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:
         """Handle resize events to adjust overlay.
 
         Args:

@@ -18,11 +18,11 @@ src/intellicrack\providers\local_transformers.py:931:5: C901 'LocalTransformersP
 
 3 findings in src/intellicrack\ui\app.py
 
-src/intellicrack\ui\app.py:1045:5: C901 'MainWindow._apply_tool_settings' is too complex (11)
+src/intellicrack\ui\app.py:1043:5: C901 'MainWindow._apply_tool_settings' is too complex (11)
 
-src/intellicrack\ui\app.py:1117:5: C901 'MainWindow._apply_provider_settings' is too complex (11)
+src/intellicrack\ui\app.py:1115:5: C901 'MainWindow._apply_provider_settings' is too complex (11)
 
-src/intellicrack\ui\app.py:1631:5: C901 'MainWindow.close_event_handler' is too complex (11)
+src/intellicrack\ui\app.py:1625:5: C901 'MainWindow.closeEvent' is too complex (11)
 
 
 3 findings in src/intellicrack\ui\session_manager.py
@@ -71,7 +71,7 @@ src/intellicrack\ui\tools.py:1472:5: C901 'ToolOutputPanel.close_embedded_tools'
 
 1 findings in src/intellicrack\bridges\binary.py
 
-src/intellicrack\bridges\binary.py:556:5: C901 'BinaryBridge._detect_architecture' is too complex (11)
+src/intellicrack\bridges\binary.py:555:5: C901 'BinaryBridge._detect_architecture' is too complex (11)
 
 
 1 findings in src/intellicrack\bridges\frida_bridge.py
@@ -96,7 +96,7 @@ src/intellicrack\providers\grok.py:383:5: C901 'GrokProvider.chat_stream' is too
 
 1 findings in src/intellicrack\providers\huggingface.py
 
-src/intellicrack\providers\huggingface.py:526:5: C901 'HuggingFaceProvider.chat_stream' is too complex (15)
+src/intellicrack\providers\huggingface.py:527:5: C901 'HuggingFaceProvider.chat_stream' is too complex (15)
 
 
 1 findings in src/intellicrack\providers\model_loader.py
@@ -121,7 +121,7 @@ src/intellicrack\providers\openrouter.py:411:5: C901 'OpenRouterProvider.chat_st
 
 1 findings in src/intellicrack\providers\xpu_utils.py
 
-src/intellicrack\providers\xpu_utils.py:217:1: C901 'get_xpu_device_info' is too complex (18)
+src/intellicrack\providers\xpu_utils.py:220:1: C901 'get_xpu_device_info' is too complex (18)
 
 
 1 findings in src/intellicrack\ui\panels\binary_panel.py

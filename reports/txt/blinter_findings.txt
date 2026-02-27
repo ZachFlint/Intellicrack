@@ -1,1 +1,13 @@
-No findings.
+1 findings in D:\Intellicrack\CLI Coding\UpdateTools.cmd
+
+Line 1: Unix line endings detected (E018)
+
+
+1 findings in D:\Intellicrack\Intellicrack.cmd
+
+Line 1: Unix line endings detected (E018)
+
+
+1 findings in D:\Intellicrack\REMOVE_NUL.cmd
+
+Line 1: Unix line endings detected (E018)

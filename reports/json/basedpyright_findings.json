@@ -1,244 +1,570 @@
 {
   "tool": "basedpyright",
-  "generated": "2026-02-22T01:50:12.704882",
-  "total_findings": 29,
-  "total_files": 1,
+  "generated": "2026-02-27T00:11:40.317563",
+  "total_findings": 69,
+  "total_files": 2,
   "files": [
     {
-      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py",
-      "count": 29,
+      "path": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py",
+      "count": 46,
       "findings": [
         {
-          "line": 1581,
-          "column": 30,
+          "line": 163,
+          "column": 12,
           "severity": "error",
-          "rule": "reportArgumentType",
-          "message": "Argument of type \"str\" cannot be assigned to parameter \"tab_name\" of type \"OutputType\" in function \"set_tab_content\"\n\u00a0\u00a0Type \"str\" is not assignable to type \"OutputType\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['ghidra']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['frida']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['radare2']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['x64dbg']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['log']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['licensing']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['scripts']\"\n  ...",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1581:30: [error] Argument of type \"str\" cannot be assigned to parameter \"tab_name\" of type \"OutputType\" in function \"set_tab_content\"\n\u00a0\u00a0Type \"str\" is not assignable to type \"OutputType\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['ghidra']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['frida']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['radare2']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['x64dbg']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['log']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['licensing']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['scripts']\"\n  ..."
+          "rule": "reportUnknownVariableType",
+          "message": "Return type, \"list[Unknown] | list[Any]\", is partially unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:163:12: [error] Return type, \"list[Unknown] | list[Any]\", is partially unknown"
         },
         {
-          "line": 1583,
+          "line": 181,
+          "column": 26,
+          "severity": "error",
+          "rule": "reportAttributeAccessIssue",
+          "message": "\"open_sync\" is not a known attribute of module \"r2pipe\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:181:26: [error] \"open_sync\" is not a known attribute of module \"r2pipe\""
+        },
+        {
+          "line": 208,
+          "column": 12,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:208:12: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
+        },
+        {
+          "line": 211,
           "column": 13,
           "severity": "error",
-          "rule": "reportCallIssue",
-          "message": "Argument missing for parameter \"content\"",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1583:13: [error] Argument missing for parameter \"content\""
+          "rule": "reportUnknownVariableType",
+          "message": "Type of \"result\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:211:13: [error] Type of \"result\" is unknown"
         },
         {
-          "line": 1584,
-          "column": 27,
+          "line": 212,
+          "column": 17,
           "severity": "error",
-          "rule": "reportArgumentType",
-          "message": "Argument of type \"str\" cannot be assigned to parameter \"tab_name\" of type \"OutputType\" in function \"activate_tab\"\n\u00a0\u00a0Type \"str\" is not assignable to type \"OutputType\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['ghidra']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['frida']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['radare2']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['x64dbg']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['log']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['licensing']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['scripts']\"\n  ...",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1584:27: [error] Argument of type \"str\" cannot be assigned to parameter \"tab_name\" of type \"OutputType\" in function \"activate_tab\"\n\u00a0\u00a0Type \"str\" is not assignable to type \"OutputType\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['ghidra']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['frida']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['radare2']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['x64dbg']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['log']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['licensing']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['scripts']\"\n  ..."
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"fut\" in function \"wait_for\"\n\u00a0\u00a0Argument type is \"CoroutineType[Any, Any, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:212:17: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"fut\" in function \"wait_for\"\n\u00a0\u00a0Argument type is \"CoroutineType[Any, Any, Unknown]\""
         },
         {
-          "line": 1592,
+          "line": 212,
+          "column": 35,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:212:35: [error] Type of \"_r2\" is unknown"
+        },
+        {
+          "line": 212,
+          "column": 35,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"cmd\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:212:35: [error] Type of \"cmd\" is unknown"
+        },
+        {
+          "line": 212,
+          "column": 35,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"func\" in function \"to_thread\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:212:35: [error] Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"func\" in function \"to_thread\""
+        },
+        {
+          "line": 222,
+          "column": 16,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Return type, \"Unknown | Literal['']\", is partially unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:222:16: [error] Return type, \"Unknown | Literal['']\", is partially unknown"
+        },
+        {
+          "line": 571,
+          "column": 12,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:571:12: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
+        },
+        {
+          "line": 573,
+          "column": 41,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:573:41: [error] Type of \"_r2\" is unknown"
+        },
+        {
+          "line": 573,
+          "column": 41,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"quit\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:573:41: [error] Type of \"quit\" is unknown"
+        },
+        {
+          "line": 573,
+          "column": 41,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"func\" in function \"to_thread\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:573:41: [error] Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"func\" in function \"to_thread\""
+        },
+        {
+          "line": 595,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"open_sync\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:595:13: [error] Type of \"open_sync\" is unknown"
+        },
+        {
+          "line": 595,
+          "column": 20,
+          "severity": "error",
+          "rule": "reportAttributeAccessIssue",
+          "message": "\"open_sync\" is not a known attribute of module \"r2pipe\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:595:20: [error] \"open_sync\" is not a known attribute of module \"r2pipe\""
+        },
+        {
+          "line": 598,
+          "column": 59,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"cmd\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:598:59: [error] Type of \"cmd\" is unknown"
+        },
+        {
+          "line": 598,
+          "column": 59,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"func\" in function \"to_thread\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:598:59: [error] Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"func\" in function \"to_thread\""
+        },
+        {
+          "line": 598,
+          "column": 62,
+          "severity": "error",
+          "rule": "reportOptionalMemberAccess",
+          "message": "\"cmd\" is not a known attribute of \"None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:598:62: [error] \"cmd\" is not a known attribute of \"None\""
+        },
+        {
+          "line": 607,
+          "column": 45,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"quit\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:607:45: [error] Type of \"quit\" is unknown"
+        },
+        {
+          "line": 607,
+          "column": 45,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"func\" in function \"to_thread\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:607:45: [error] Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"func\" in function \"to_thread\""
+        },
+        {
+          "line": 613,
+          "column": 12,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:613:12: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
+        },
+        {
+          "line": 614,
+          "column": 37,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:614:37: [error] Type of \"_r2\" is unknown"
+        },
+        {
+          "line": 614,
+          "column": 37,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"quit\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:614:37: [error] Type of \"quit\" is unknown"
+        },
+        {
+          "line": 614,
+          "column": 37,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"func\" in function \"to_thread\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:614:37: [error] Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"func\" in function \"to_thread\""
+        },
+        {
+          "line": 626,
           "column": 24,
           "severity": "error",
-          "rule": "reportArgumentType",
-          "message": "Argument of type \"str\" cannot be assigned to parameter \"tab_name\" of type \"OutputType\" in function \"clear_tab\"\n\u00a0\u00a0Type \"str\" is not assignable to type \"OutputType\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['ghidra']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['frida']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['radare2']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['x64dbg']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['log']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['licensing']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['scripts']\"\n  ...",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1592:24: [error] Argument of type \"str\" cannot be assigned to parameter \"tab_name\" of type \"OutputType\" in function \"clear_tab\"\n\u00a0\u00a0Type \"str\" is not assignable to type \"OutputType\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['ghidra']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['frida']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['radare2']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['x64dbg']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['log']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['licensing']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['scripts']\"\n  ..."
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:626:24: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
         },
         {
-          "line": 1603,
-          "column": 39,
+          "line": 626,
+          "column": 24,
           "severity": "error",
-          "rule": "reportArgumentType",
-          "message": "Argument of type \"str\" cannot be assigned to parameter \"tool_id\" of type \"OutputType\" in function \"get_embedded_tool\"\n\u00a0\u00a0Type \"str\" is not assignable to type \"OutputType\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['ghidra']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['frida']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['radare2']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['x64dbg']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['log']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['licensing']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['scripts']\"\n  ...",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1603:39: [error] Argument of type \"str\" cannot be assigned to parameter \"tool_id\" of type \"OutputType\" in function \"get_embedded_tool\"\n\u00a0\u00a0Type \"str\" is not assignable to type \"OutputType\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['ghidra']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['frida']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['radare2']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['x64dbg']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['log']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['licensing']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['scripts']\"\n  ..."
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"obj\" in function \"hasattr\"\n\u00a0\u00a0Argument type is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:626:24: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"obj\" in function \"hasattr\"\n\u00a0\u00a0Argument type is \"Unknown | None\""
         },
         {
-          "line": 1613,
-          "column": 52,
+          "line": 629,
+          "column": 33,
           "severity": "error",
-          "rule": "reportCallIssue",
-          "message": "Expected 1 positional argument",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1613:52: [error] Expected 1 positional argument"
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:629:33: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
         },
         {
-          "line": 1622,
+          "line": 629,
+          "column": 33,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"getattr\"\n\u00a0\u00a0Argument type is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:629:33: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"getattr\"\n\u00a0\u00a0Argument type is \"Unknown | None\""
+        },
+        {
+          "line": 750,
+          "column": 12,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:750:12: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
+        },
+        {
+          "line": 780,
+          "column": 12,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:780:12: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
+        },
+        {
+          "line": 823,
+          "column": 12,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:823:12: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
+        },
+        {
+          "line": 895,
+          "column": 12,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:895:12: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
+        },
+        {
+          "line": 928,
+          "column": 12,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:928:12: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
+        },
+        {
+          "line": 967,
+          "column": 12,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:967:12: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
+        },
+        {
+          "line": 1009,
+          "column": 12,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:1009:12: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
+        },
+        {
+          "line": 1051,
+          "column": 12,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:1051:12: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
+        },
+        {
+          "line": 1098,
+          "column": 12,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:1098:12: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
+        },
+        {
+          "line": 1120,
+          "column": 12,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:1120:12: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
+        },
+        {
+          "line": 1136,
+          "column": 12,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:1136:12: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
+        },
+        {
+          "line": 1160,
+          "column": 12,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:1160:12: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
+        },
+        {
+          "line": 1182,
+          "column": 12,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:1182:12: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
+        },
+        {
+          "line": 1227,
+          "column": 12,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:1227:12: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
+        },
+        {
+          "line": 1256,
+          "column": 12,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:1256:12: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
+        },
+        {
+          "line": 1276,
+          "column": 12,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:1276:12: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
+        },
+        {
+          "line": 1297,
+          "column": 12,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:1297:12: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
+        },
+        {
+          "line": 1331,
+          "column": 12,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\radare2.py:1331:12: [error] Type of \"_r2\" is partially unknown\n\u00a0\u00a0Type of \"_r2\" is \"Unknown | None\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py",
+      "count": 23,
+      "findings": [
+        {
+          "line": 1621,
           "column": 13,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"add_hook_entry\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1622:13: [error] Type of \"add_hook_entry\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1621:13: [error] Type of \"add_hook_entry\" is unknown"
         },
         {
-          "line": 1622,
+          "line": 1621,
           "column": 31,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"add_hook_entry\" for class \"FridaPanelProtocol\"\n\u00a0\u00a0Attribute \"add_hook_entry\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1622:31: [error] Cannot access attribute \"add_hook_entry\" for class \"FridaPanelProtocol\"\n\u00a0\u00a0Attribute \"add_hook_entry\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1621:31: [error] Cannot access attribute \"add_hook_entry\" for class \"FridaPanelProtocol\"\n\u00a0\u00a0Attribute \"add_hook_entry\" is unknown"
         },
         {
-          "line": 1631,
+          "line": 1630,
           "column": 20,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"get_sandbox\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1631:20: [error] Type of \"get_sandbox\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1630:20: [error] Type of \"get_sandbox\" is unknown"
         },
         {
-          "line": 1631,
+          "line": 1630,
           "column": 20,
           "severity": "error",
           "rule": "reportUnknownVariableType",
           "message": "Return type is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1631:20: [error] Return type is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1630:20: [error] Return type is unknown"
         },
         {
-          "line": 1631,
+          "line": 1630,
           "column": 40,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"get_sandbox\" for class \"SandboxPanelProtocol\"\n\u00a0\u00a0Attribute \"get_sandbox\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1631:40: [error] Cannot access attribute \"get_sandbox\" for class \"SandboxPanelProtocol\"\n\u00a0\u00a0Attribute \"get_sandbox\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1630:40: [error] Cannot access attribute \"get_sandbox\" for class \"SandboxPanelProtocol\"\n\u00a0\u00a0Attribute \"get_sandbox\" is unknown"
         },
         {
-          "line": 1641,
+          "line": 1640,
           "column": 13,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"load_execution_report\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1641:13: [error] Type of \"load_execution_report\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1640:13: [error] Type of \"load_execution_report\" is unknown"
         },
         {
-          "line": 1641,
+          "line": 1640,
           "column": 33,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"load_execution_report\" for class \"SandboxPanelProtocol\"\n\u00a0\u00a0Attribute \"load_execution_report\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1641:33: [error] Cannot access attribute \"load_execution_report\" for class \"SandboxPanelProtocol\"\n\u00a0\u00a0Attribute \"load_execution_report\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1640:33: [error] Cannot access attribute \"load_execution_report\" for class \"SandboxPanelProtocol\"\n\u00a0\u00a0Attribute \"load_execution_report\" is unknown"
         },
         {
-          "line": 1653,
+          "line": 1652,
           "column": 17,
           "severity": "error",
           "rule": "reportUnknownVariableType",
           "message": "Type of \"selected_id\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1653:17: [error] Type of \"selected_id\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1652:17: [error] Type of \"selected_id\" is unknown"
         },
         {
-          "line": 1653,
+          "line": 1652,
           "column": 31,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"get_selected_id\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1653:31: [error] Type of \"get_selected_id\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1652:31: [error] Type of \"get_selected_id\" is unknown"
         },
         {
-          "line": 1653,
+          "line": 1652,
           "column": 50,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"get_selected_id\" for class \"QWidget\"\n\u00a0\u00a0Attribute \"get_selected_id\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1653:50: [error] Cannot access attribute \"get_selected_id\" for class \"QWidget\"\n\u00a0\u00a0Attribute \"get_selected_id\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1652:50: [error] Cannot access attribute \"get_selected_id\" for class \"QWidget\"\n\u00a0\u00a0Attribute \"get_selected_id\" is unknown"
         },
         {
-          "line": 1655,
+          "line": 1654,
           "column": 17,
           "severity": "error",
           "rule": "reportUnknownVariableType",
           "message": "Type of \"current_script\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1655:17: [error] Type of \"current_script\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1654:17: [error] Type of \"current_script\" is unknown"
         },
         {
-          "line": 1655,
+          "line": 1654,
           "column": 34,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"get_current_script\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1655:34: [error] Type of \"get_current_script\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1654:34: [error] Type of \"get_current_script\" is unknown"
         },
         {
-          "line": 1655,
+          "line": 1654,
           "column": 53,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"get_current_script\" for class \"QWidget\"\n\u00a0\u00a0Attribute \"get_current_script\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1655:53: [error] Cannot access attribute \"get_current_script\" for class \"QWidget\"\n\u00a0\u00a0Attribute \"get_current_script\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1654:53: [error] Cannot access attribute \"get_current_script\" for class \"QWidget\"\n\u00a0\u00a0Attribute \"get_current_script\" is unknown"
         },
         {
-          "line": 1656,
+          "line": 1655,
           "column": 16,
           "severity": "error",
           "rule": "reportUnknownVariableType",
           "message": "Return type, \"tuple[Unknown | str | None, Unknown | str | None]\", is partially unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1656:16: [error] Return type, \"tuple[Unknown | str | None, Unknown | str | None]\", is partially unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1655:16: [error] Return type, \"tuple[Unknown | str | None, Unknown | str | None]\", is partially unknown"
         },
         {
-          "line": 1664,
+          "line": 1663,
           "column": 16,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"get_highlighter\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1664:16: [error] Type of \"get_highlighter\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1663:16: [error] Type of \"get_highlighter\" is unknown"
         },
         {
-          "line": 1664,
+          "line": 1663,
           "column": 16,
           "severity": "error",
           "rule": "reportUnknownVariableType",
           "message": "Return type is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1664:16: [error] Return type is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1663:16: [error] Return type is unknown"
         },
         {
-          "line": 1664,
+          "line": 1663,
           "column": 21,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"get_highlighter\" for class \"ToolOutputPanel*\"\n\u00a0\u00a0Attribute \"get_highlighter\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1664:21: [error] Cannot access attribute \"get_highlighter\" for class \"ToolOutputPanel*\"\n\u00a0\u00a0Attribute \"get_highlighter\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1663:21: [error] Cannot access attribute \"get_highlighter\" for class \"ToolOutputPanel*\"\n\u00a0\u00a0Attribute \"get_highlighter\" is unknown"
         },
         {
-          "line": 1675,
+          "line": 1674,
           "column": 13,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"set_x64dbg_bridge\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1675:13: [error] Type of \"set_x64dbg_bridge\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1674:13: [error] Type of \"set_x64dbg_bridge\" is unknown"
         },
         {
-          "line": 1675,
+          "line": 1674,
           "column": 31,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"set_x64dbg_bridge\" for class \"QWidget\"\n\u00a0\u00a0Attribute \"set_x64dbg_bridge\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1675:31: [error] Cannot access attribute \"set_x64dbg_bridge\" for class \"QWidget\"\n\u00a0\u00a0Attribute \"set_x64dbg_bridge\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1674:31: [error] Cannot access attribute \"set_x64dbg_bridge\" for class \"QWidget\"\n\u00a0\u00a0Attribute \"set_x64dbg_bridge\" is unknown"
         },
         {
-          "line": 1677,
+          "line": 1676,
           "column": 13,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"set_frida_bridge\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1677:13: [error] Type of \"set_frida_bridge\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1676:13: [error] Type of \"set_frida_bridge\" is unknown"
         },
         {
-          "line": 1677,
+          "line": 1676,
           "column": 31,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"set_frida_bridge\" for class \"QWidget\"\n\u00a0\u00a0Attribute \"set_frida_bridge\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1677:31: [error] Cannot access attribute \"set_frida_bridge\" for class \"QWidget\"\n\u00a0\u00a0Attribute \"set_frida_bridge\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1676:31: [error] Cannot access attribute \"set_frida_bridge\" for class \"QWidget\"\n\u00a0\u00a0Attribute \"set_frida_bridge\" is unknown"
         },
         {
-          "line": 1695,
+          "line": 1694,
           "column": 13,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"set_backend\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1695:13: [error] Type of \"set_backend\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1694:13: [error] Type of \"set_backend\" is unknown"
         },
         {
-          "line": 1695,
+          "line": 1694,
           "column": 32,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"set_backend\" for class \"QWidget\"\n\u00a0\u00a0Attribute \"set_backend\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1695:32: [error] Cannot access attribute \"set_backend\" for class \"QWidget\"\n\u00a0\u00a0Attribute \"set_backend\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1694:32: [error] Cannot access attribute \"set_backend\" for class \"QWidget\"\n\u00a0\u00a0Attribute \"set_backend\" is unknown"
         }
       ]
     }

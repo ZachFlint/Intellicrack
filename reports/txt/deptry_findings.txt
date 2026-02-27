@@ -365,6 +365,65 @@ pyproject.toml: DEP002 'codespell' defined as a dependency but not used in the c
 pyproject.toml: DEP002 'detect-secrets' defined as a dependency but not used in the codebase
 
 
+28 findings in vulture_whitelist.py
+
+vulture_whitelist.py:37:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:42:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:49:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:54:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:58:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:64:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:69:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:74:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:84:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:88:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:92:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:96:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:100:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:105:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:109:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:113:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:117:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:138:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:142:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:147:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:151:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:159:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:164:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:179:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:229:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:239:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:249:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+vulture_whitelist.py:261:1: DEP003 'intellicrack' imported but it is a transitive dependency
+
+
 10 findings in src\intellicrack\ui\panels\__init__.py
 
 src\intellicrack\ui\panels\__init__.py:11:1: DEP003 'intellicrack' imported but it is a transitive dependency
@@ -390,9 +449,7 @@ src\intellicrack\ui\panels\__init__.py:25:1: DEP003 'intellicrack' imported but 
 
 8 findings in src\intellicrack\bridges\binary.py
 
-src\intellicrack\bridges\binary.py:16:8: DEP003 'capstone' imported but it is a transitive dependency
-
-src\intellicrack\bridges\binary.py:17:8: DEP003 'lief' imported but it is a transitive dependency
+src\intellicrack\bridges\binary.py:17:8: DEP003 'capstone' imported but it is a transitive dependency
 
 src\intellicrack\bridges\binary.py:18:8: DEP003 'lief' imported but it is a transitive dependency
 
@@ -404,7 +461,9 @@ src\intellicrack\bridges\binary.py:21:8: DEP003 'lief' imported but it is a tran
 
 src\intellicrack\bridges\binary.py:22:8: DEP003 'lief' imported but it is a transitive dependency
 
-src\intellicrack\bridges\binary.py:23:8: DEP003 'pefile' imported but it is a transitive dependency
+src\intellicrack\bridges\binary.py:23:8: DEP003 'lief' imported but it is a transitive dependency
+
+src\intellicrack\bridges\binary.py:24:8: DEP003 'pefile' imported but it is a transitive dependency
 
 
 7 findings in src\intellicrack\ui\panels\frida_panel.py
@@ -436,7 +495,7 @@ src\intellicrack\ui\panels\binary_panel.py:32:1: DEP003 'intellicrack' imported 
 
 src\intellicrack\ui\panels\binary_panel.py:33:1: DEP003 'intellicrack' imported but it is a transitive dependency
 
-src\intellicrack\ui\panels\binary_panel.py:34:1: DEP003 'intellicrack' imported but it is a transitive dependency
+src\intellicrack\ui\panels\binary_panel.py:38:1: DEP003 'intellicrack' imported but it is a transitive dependency
 
 
 6 findings in src\intellicrack\ui\panels\ghidra_panel.py

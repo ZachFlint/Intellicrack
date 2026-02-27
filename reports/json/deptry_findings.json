@@ -1,8 +1,8 @@
 {
   "tool": "deptry",
-  "generated": "2026-02-22T01:51:53.382084",
-  "total_findings": 333,
-  "total_files": 55,
+  "generated": "2026-02-27T00:15:11.066658",
+  "total_findings": 361,
+  "total_files": 56,
   "files": [
     {
       "path": "pyproject.toml",
@@ -1285,6 +1285,208 @@
       ]
     },
     {
+      "path": "vulture_whitelist.py",
+      "count": 28,
+      "findings": [
+        {
+          "line": 37,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:37:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 42,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:42:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 49,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:49:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 54,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:54:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 58,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:58:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 64,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:64:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 69,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:69:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 74,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:74:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 84,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:84:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 88,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:88:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 92,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:92:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 96,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:96:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 100,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:100:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 105,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:105:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 109,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:109:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 113,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:113:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 117,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:117:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 138,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:138:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 142,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:142:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 147,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:147:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 151,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:151:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 159,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:159:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 164,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:164:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 179,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:179:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 229,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:229:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 239,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:239:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 249,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:249:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        },
+        {
+          "line": 261,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'intellicrack' imported but it is a transitive dependency",
+          "raw": "vulture_whitelist.py:261:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\panels\\__init__.py",
       "count": 10,
       "findings": [
@@ -1365,18 +1567,11 @@
       "count": 8,
       "findings": [
         {
-          "line": 16,
-          "column": 8,
-          "code": "DEP003",
-          "message": "'capstone' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\bridges\\binary.py:16:8: DEP003 'capstone' imported but it is a transitive dependency"
-        },
-        {
           "line": 17,
           "column": 8,
           "code": "DEP003",
-          "message": "'lief' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\bridges\\binary.py:17:8: DEP003 'lief' imported but it is a transitive dependency"
+          "message": "'capstone' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\bridges\\binary.py:17:8: DEP003 'capstone' imported but it is a transitive dependency"
         },
         {
           "line": 18,
@@ -1417,8 +1612,15 @@
           "line": 23,
           "column": 8,
           "code": "DEP003",
+          "message": "'lief' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\bridges\\binary.py:23:8: DEP003 'lief' imported but it is a transitive dependency"
+        },
+        {
+          "line": 24,
+          "column": 8,
+          "code": "DEP003",
           "message": "'pefile' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\bridges\\binary.py:23:8: DEP003 'pefile' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\bridges\\binary.py:24:8: DEP003 'pefile' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1517,11 +1719,11 @@
           "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:33:1: DEP003 'intellicrack' imported but it is a transitive dependency"
         },
         {
-          "line": 34,
+          "line": 38,
           "column": 1,
           "code": "DEP003",
           "message": "'intellicrack' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:34:1: DEP003 'intellicrack' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:38:1: DEP003 'intellicrack' imported but it is a transitive dependency"
         }
       ]
     },

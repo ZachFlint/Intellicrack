@@ -1,20 +1,18 @@
-8 findings in .\.serena\project.yml
+7 findings in .\.serena\project.yml
 
 .\.serena\project.yml:1:73: [error] wrong new line character: expected \n  (new-lines)
 
-.\.serena\project.yml:54:82: [error] trailing spaces  (trailing-spaces)
+.\.serena\project.yml:62:121: [warning] line too long (125 > 120 characters)  (line-length)
 
-.\.serena\project.yml:64:121: [warning] line too long (125 > 120 characters)  (line-length)
+.\.serena\project.yml:63:121: [warning] line too long (137 > 120 characters)  (line-length)
 
-.\.serena\project.yml:65:121: [warning] line too long (137 > 120 characters)  (line-length)
+.\.serena\project.yml:64:121: [warning] line too long (146 > 120 characters)  (line-length)
 
-.\.serena\project.yml:66:121: [warning] line too long (146 > 120 characters)  (line-length)
+.\.serena\project.yml:74:121: [warning] line too long (125 > 120 characters)  (line-length)
 
-.\.serena\project.yml:76:121: [warning] line too long (125 > 120 characters)  (line-length)
+.\.serena\project.yml:75:121: [warning] line too long (146 > 120 characters)  (line-length)
 
-.\.serena\project.yml:77:121: [warning] line too long (146 > 120 characters)  (line-length)
-
-.\.serena\project.yml:88:121: [warning] line too long (123 > 120 characters)  (line-length)
+.\.serena\project.yml:86:121: [warning] line too long (123 > 120 characters)  (line-length)
 
 
 6 findings in .\.github\workflows\gemini-dispatch.yml
@@ -45,6 +43,17 @@
 .\.pre-commit-config.yaml:73:121: [warning] line too long (123 > 120 characters)  (line-length)
 
 
+4 findings in .\.github\workflows\ci.yml
+
+.\.github\workflows\ci.yml:1:9: [error] wrong new line character: expected \n  (new-lines)
+
+.\.github\workflows\ci.yml:29:121: [warning] line too long (130 > 120 characters)  (line-length)
+
+.\.github\workflows\ci.yml:74:121: [warning] line too long (138 > 120 characters)  (line-length)
+
+.\.github\workflows\ci.yml:138:121: [warning] line too long (121 > 120 characters)  (line-length)
+
+
 4 findings in .\.github\workflows\gemini-triage.yml
 
 .\.github\workflows\gemini-triage.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
@@ -54,24 +63,6 @@
 .\.github\workflows\gemini-triage.yml:122:121: [warning] line too long (133 > 120 characters)  (line-length)
 
 .\.github\workflows\gemini-triage.yml:163:121: [warning] line too long (127 > 120 characters)  (line-length)
-
-
-3 findings in .\.sourcery.yaml
-
-.\.sourcery.yaml:1:56: [error] wrong new line character: expected \n  (new-lines)
-
-.\.sourcery.yaml:33:121: [warning] line too long (168 > 120 characters)  (line-length)
-
-.\.sourcery.yaml:1:17: [error] wrong new line character: expected \n  (new-lines)
-
-
-3 findings in .\.github\workflows\ci.yml
-
-.\.github\workflows\ci.yml:1:9: [error] wrong new line character: expected \n  (new-lines)
-
-.\.github\workflows\ci.yml:38:121: [warning] line too long (130 > 120 characters)  (line-length)
-
-.\.github\workflows\ci.yml:224:121: [warning] line too long (138 > 120 characters)  (line-length)
 
 
 3 findings in .\.github\workflows\claude-code-review.yml
@@ -119,11 +110,11 @@
 .\.github\workflows\gemini-scheduled-triage.yml:210:121: [warning] line too long (139 > 120 characters)  (line-length)
 
 
-2 findings in .\.github\workflows\python-ci.yml
+2 findings in .\.sourcery.yaml
 
-.\.github\workflows\python-ci.yml:1:16: [error] wrong new line character: expected \n  (new-lines)
+.\.sourcery.yaml:1:56: [error] wrong new line character: expected \n  (new-lines)
 
-.\.github\workflows\python-ci.yml:37:121: [warning] line too long (121 > 120 characters)  (line-length)
+.\.sourcery.yaml:33:121: [warning] line too long (168 > 120 characters)  (line-length)
 
 
 2 findings in .\.github\workflows\qodana_code_quality.yml

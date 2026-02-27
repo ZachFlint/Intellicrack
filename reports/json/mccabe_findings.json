@@ -1,6 +1,6 @@
 {
   "tool": "mccabe",
-  "generated": "2026-02-22T01:46:59.798163",
+  "generated": "2026-02-27T00:09:23.139241",
   "total_findings": 35,
   "total_files": 22,
   "files": [
@@ -69,28 +69,28 @@
       "count": 3,
       "findings": [
         {
-          "line": 1045,
+          "line": 1043,
           "column": 5,
           "code": "C901",
           "complexity": 11,
           "message": "'MainWindow._apply_tool_settings' is too complex (11)",
-          "raw": "src/intellicrack\\ui\\app.py:1045:5: C901 'MainWindow._apply_tool_settings' is too complex (11)"
+          "raw": "src/intellicrack\\ui\\app.py:1043:5: C901 'MainWindow._apply_tool_settings' is too complex (11)"
         },
         {
-          "line": 1117,
+          "line": 1115,
           "column": 5,
           "code": "C901",
           "complexity": 11,
           "message": "'MainWindow._apply_provider_settings' is too complex (11)",
-          "raw": "src/intellicrack\\ui\\app.py:1117:5: C901 'MainWindow._apply_provider_settings' is too complex (11)"
+          "raw": "src/intellicrack\\ui\\app.py:1115:5: C901 'MainWindow._apply_provider_settings' is too complex (11)"
         },
         {
-          "line": 1631,
+          "line": 1625,
           "column": 5,
           "code": "C901",
           "complexity": 11,
-          "message": "'MainWindow.close_event_handler' is too complex (11)",
-          "raw": "src/intellicrack\\ui\\app.py:1631:5: C901 'MainWindow.close_event_handler' is too complex (11)"
+          "message": "'MainWindow.closeEvent' is too complex (11)",
+          "raw": "src/intellicrack\\ui\\app.py:1625:5: C901 'MainWindow.closeEvent' is too complex (11)"
         }
       ]
     },
@@ -239,12 +239,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 556,
+          "line": 555,
           "column": 5,
           "code": "C901",
           "complexity": 11,
           "message": "'BinaryBridge._detect_architecture' is too complex (11)",
-          "raw": "src/intellicrack\\bridges\\binary.py:556:5: C901 'BinaryBridge._detect_architecture' is too complex (11)"
+          "raw": "src/intellicrack\\bridges\\binary.py:555:5: C901 'BinaryBridge._detect_architecture' is too complex (11)"
         }
       ]
     },
@@ -309,12 +309,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 526,
+          "line": 527,
           "column": 5,
           "code": "C901",
           "complexity": 15,
           "message": "'HuggingFaceProvider.chat_stream' is too complex (15)",
-          "raw": "src/intellicrack\\providers\\huggingface.py:526:5: C901 'HuggingFaceProvider.chat_stream' is too complex (15)"
+          "raw": "src/intellicrack\\providers\\huggingface.py:527:5: C901 'HuggingFaceProvider.chat_stream' is too complex (15)"
         }
       ]
     },
@@ -379,12 +379,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 217,
+          "line": 220,
           "column": 1,
           "code": "C901",
           "complexity": 18,
           "message": "'get_xpu_device_info' is too complex (18)",
-          "raw": "src/intellicrack\\providers\\xpu_utils.py:217:1: C901 'get_xpu_device_info' is too complex (18)"
+          "raw": "src/intellicrack\\providers\\xpu_utils.py:220:1: C901 'get_xpu_device_info' is too complex (18)"
         }
       ]
     },

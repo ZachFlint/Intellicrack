@@ -1843,7 +1843,7 @@ packages:
 - pypi: ./
   name: intellicrack
   version: 1.0.0
-  sha256: 724e966a12434a93bcc2fe04394bd25aa5e1df44145564510583be3312b71852
+  sha256: 9c11f9f3b3a45342377373e53c1e4ab9041dc68cf00143490051fe355faa8675
   requires_dist:
   - networkx
   - markdown-it-py

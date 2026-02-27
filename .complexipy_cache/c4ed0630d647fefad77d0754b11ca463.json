@@ -4365,6 +4365,12 @@
     {
       "complexity": 3,
       "file_name": "anthropic.py",
+      "function_name": "AnthropicProvider::_convert_single_message",
+      "path": "src\\intellicrack\\providers\\anthropic.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "anthropic.py",
       "function_name": "AnthropicProvider::_format_assistant_message",
       "path": "src\\intellicrack\\providers\\anthropic.py"
     },
@@ -4378,12 +4384,6 @@
       "complexity": 3,
       "file_name": "anthropic.py",
       "function_name": "AnthropicProvider::list_models",
-      "path": "src\\intellicrack\\providers\\anthropic.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "anthropic.py",
-      "function_name": "AnthropicProvider::_convert_single_message",
       "path": "src\\intellicrack\\providers\\anthropic.py"
     },
     {
@@ -6741,6 +6741,12 @@
     {
       "complexity": 8,
       "file_name": "app.py",
+      "function_name": "MainWindow::_on_browse_models_result",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "app.py",
       "function_name": "MainWindow::_on_export_analysis",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -6789,12 +6795,6 @@
     {
       "complexity": 11,
       "file_name": "app.py",
-      "function_name": "MainWindow::_on_browse_models_result",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 11,
-      "file_name": "app.py",
       "function_name": "MainWindow::_on_refresh_models",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -6813,7 +6813,7 @@
     {
       "complexity": 15,
       "file_name": "app.py",
-      "function_name": "MainWindow::close_event_handler",
+      "function_name": "MainWindow::closeEvent",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -7065,7 +7065,7 @@
     {
       "complexity": 1,
       "file_name": "splash_screen.py",
-      "function_name": "SplashScreen::resize_event_handler",
+      "function_name": "SplashScreen::resizeEvent",
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
     },
     {

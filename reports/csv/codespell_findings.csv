@@ -1,86 +1,86 @@
-tool,file,line,column,severity,code,rule,message,confidence,complexity,rank,name,entity_type,category,function,variable,crate,vulnerability,misspelling,correction
-codespell,src/intellicrack\bridges\binary.py,4,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,17,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,18,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,19,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,20,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,21,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,22,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,44,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,44,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,44,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,44,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,44,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,47,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,59,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,86,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,91,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,101,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,542,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,543,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,549,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,554,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,574,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,575,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,576,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,578,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,580,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,582,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,1065,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\bridges\binary.py,1087,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,666,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,667,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,668,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,669,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,670,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,671,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,4671,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,4674,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,13033,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,13192,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,13195,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,13198,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,13201,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,13204,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,13207,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,14872,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\core\license_analyzer.py,37,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\core\license_analyzer.py,157,,,SPELL,SPELL,"'LIEF' ==> 'LEAF, LIFE'",,,,,,,,,,,LIEF,"LEAF, LIFE"
-codespell,src/intellicrack\core\license_analyzer.py,160,,,SPELL,SPELL,"'LIEF' ==> 'LEAF, LIFE'",,,,,,,,,,,LIEF,"LEAF, LIFE"
-codespell,src/intellicrack\core\license_analyzer.py,192,,,SPELL,SPELL,"'LIEF' ==> 'LEAF, LIFE'",,,,,,,,,,,LIEF,"LEAF, LIFE"
-codespell,src/intellicrack\core\license_analyzer.py,195,,,SPELL,SPELL,"'LIEF' ==> 'LEAF, LIFE'",,,,,,,,,,,LIEF,"LEAF, LIFE"
-codespell,src/intellicrack\core\license_analyzer.py,790,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\core\license_analyzer.py,859,,,SPELL,SPELL,"'LIEF' ==> 'LEAF, LIFE'",,,,,,,,,,,LIEF,"LEAF, LIFE"
-codespell,src/intellicrack\core\license_analyzer.py,868,,,SPELL,SPELL,"'LIEF' ==> 'LEAF, LIFE'",,,,,,,,,,,LIEF,"LEAF, LIFE"
-codespell,src/intellicrack\bridges\ghidra.py,26,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,src/intellicrack\bridges\ghidra.py,201,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,src/intellicrack\bridges\ghidra.py,214,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,src/intellicrack\bridges\ghidra.py,1080,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,src/intellicrack\bridges\ghidra.py,1110,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,src/intellicrack\bridges\ghidra.py,1124,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,src/intellicrack\bridges\ghidra.py,1154,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,src/intellicrack\bridges\radare2.py,20,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,src/intellicrack\bridges\radare2.py,955,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,src/intellicrack\bridges\radare2.py,974,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,src/intellicrack\bridges\radare2.py,986,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,src/intellicrack\bridges\radare2.py,997,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,src/intellicrack\bridges\radare2.py,1016,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,src/intellicrack\bridges\radare2.py,1028,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,src/intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp,329,,,SPELL,SPELL,"'thirdparty' ==> 'third party, third-party'",,,,,,,,,,,thirdparty,"third party, third-party"
-codespell,src/intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp,11797,,,SPELL,SPELL,"'ND' ==> 'AND, 2ND'",,,,,,,,,,,ND,"AND, 2ND"
-codespell,src/intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp,11798,,,SPELL,SPELL,"'ND' ==> 'AND, 2ND'",,,,,,,,,,,ND,"AND, 2ND"
-codespell,src/intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp,12092,,,SPELL,SPELL,"'ND' ==> 'AND, 2ND'",,,,,,,,,,,ND,"AND, 2ND"
-codespell,src/intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp,25560,,,SPELL,SPELL,"'thirdparty' ==> 'third party, third-party'",,,,,,,,,,,thirdparty,"third party, third-party"
-codespell,scripts/knowledge-graph\visualize_architecture.py,5,,,SPELL,SPELL,"'LOD' ==> 'LOAD, LOUD, LODE'",,,,,,,,,,,LOD,"LOAD, LOUD, LODE"
-codespell,scripts/knowledge-graph\visualize_architecture.py,41,,,SPELL,SPELL,"'LOD' ==> 'LOAD, LOUD, LODE'",,,,,,,,,,,LOD,"LOAD, LOUD, LODE"
-codespell,scripts/knowledge-graph\visualize_architecture.py,858,,,SPELL,SPELL,'connIn' ==> 'conning',,,,,,,,,,,connIn,conning
-codespell,scripts/knowledge-graph\visualize_architecture.py,865,,,SPELL,SPELL,'connIn' ==> 'conning',,,,,,,,,,,connIn,conning
-codespell,src/intellicrack\bridges\base.py,25,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,src/intellicrack\bridges\base.py,437,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,src/intellicrack\bridges\base.py,452,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,src/intellicrack\core\__init__.py,54,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,src/intellicrack\core\__init__.py,89,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,src/intellicrack\core\types.py,27,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,src/intellicrack\core\types.py,534,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
-codespell,docs/source\conf.py,40,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
-codespell,src/intellicrack\ui\panels\script_manager.py,114,,,SPELL,SPELL,'regist' ==> 'register',,,,,,,,,,,regist,register
+tool,file,line,column,severity,code,rule,message,confidence,complexity,rank,name,entity_type,category,function,variable,crate,vulnerability,misspelling,correction
+codespell,src/intellicrack\bridges\binary.py,4,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,17,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,18,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,19,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,20,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,21,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,22,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,44,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,44,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,44,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,44,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,44,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,47,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,59,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,86,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,91,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,101,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,542,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,543,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,549,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,554,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,574,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,575,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,576,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,578,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,580,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,582,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,1065,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\bridges\binary.py,1087,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,666,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,667,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,668,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,669,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,670,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,671,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,4671,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,4674,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,13033,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,13192,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,13195,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,13198,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,13201,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,13204,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,13207,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,scripts/knowledge-graph\IntellicrackKnowledgeGraph.graphml,14872,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\core\license_analyzer.py,37,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\core\license_analyzer.py,157,,,SPELL,SPELL,"'LIEF' ==> 'LEAF, LIFE'",,,,,,,,,,,LIEF,"LEAF, LIFE"
+codespell,src/intellicrack\core\license_analyzer.py,160,,,SPELL,SPELL,"'LIEF' ==> 'LEAF, LIFE'",,,,,,,,,,,LIEF,"LEAF, LIFE"
+codespell,src/intellicrack\core\license_analyzer.py,192,,,SPELL,SPELL,"'LIEF' ==> 'LEAF, LIFE'",,,,,,,,,,,LIEF,"LEAF, LIFE"
+codespell,src/intellicrack\core\license_analyzer.py,195,,,SPELL,SPELL,"'LIEF' ==> 'LEAF, LIFE'",,,,,,,,,,,LIEF,"LEAF, LIFE"
+codespell,src/intellicrack\core\license_analyzer.py,790,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\core\license_analyzer.py,859,,,SPELL,SPELL,"'LIEF' ==> 'LEAF, LIFE'",,,,,,,,,,,LIEF,"LEAF, LIFE"
+codespell,src/intellicrack\core\license_analyzer.py,868,,,SPELL,SPELL,"'LIEF' ==> 'LEAF, LIFE'",,,,,,,,,,,LIEF,"LEAF, LIFE"
+codespell,src/intellicrack\bridges\ghidra.py,26,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,src/intellicrack\bridges\ghidra.py,201,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,src/intellicrack\bridges\ghidra.py,214,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,src/intellicrack\bridges\ghidra.py,1080,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,src/intellicrack\bridges\ghidra.py,1110,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,src/intellicrack\bridges\ghidra.py,1124,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,src/intellicrack\bridges\ghidra.py,1154,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,src/intellicrack\bridges\radare2.py,20,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,src/intellicrack\bridges\radare2.py,955,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,src/intellicrack\bridges\radare2.py,974,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,src/intellicrack\bridges\radare2.py,986,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,src/intellicrack\bridges\radare2.py,997,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,src/intellicrack\bridges\radare2.py,1016,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,src/intellicrack\bridges\radare2.py,1028,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,src/intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp,329,,,SPELL,SPELL,"'thirdparty' ==> 'third party, third-party'",,,,,,,,,,,thirdparty,"third party, third-party"
+codespell,src/intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp,11797,,,SPELL,SPELL,"'ND' ==> 'AND, 2ND'",,,,,,,,,,,ND,"AND, 2ND"
+codespell,src/intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp,11798,,,SPELL,SPELL,"'ND' ==> 'AND, 2ND'",,,,,,,,,,,ND,"AND, 2ND"
+codespell,src/intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp,12092,,,SPELL,SPELL,"'ND' ==> 'AND, 2ND'",,,,,,,,,,,ND,"AND, 2ND"
+codespell,src/intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp,25560,,,SPELL,SPELL,"'thirdparty' ==> 'third party, third-party'",,,,,,,,,,,thirdparty,"third party, third-party"
+codespell,scripts/knowledge-graph\visualize_architecture.py,5,,,SPELL,SPELL,"'LOD' ==> 'LOAD, LOUD, LODE'",,,,,,,,,,,LOD,"LOAD, LOUD, LODE"
+codespell,scripts/knowledge-graph\visualize_architecture.py,41,,,SPELL,SPELL,"'LOD' ==> 'LOAD, LOUD, LODE'",,,,,,,,,,,LOD,"LOAD, LOUD, LODE"
+codespell,scripts/knowledge-graph\visualize_architecture.py,858,,,SPELL,SPELL,'connIn' ==> 'conning',,,,,,,,,,,connIn,conning
+codespell,scripts/knowledge-graph\visualize_architecture.py,865,,,SPELL,SPELL,'connIn' ==> 'conning',,,,,,,,,,,connIn,conning
+codespell,src/intellicrack\bridges\base.py,25,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,src/intellicrack\bridges\base.py,437,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,src/intellicrack\bridges\base.py,452,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,src/intellicrack\core\__init__.py,54,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,src/intellicrack\core\__init__.py,89,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,src/intellicrack\core\types.py,27,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,src/intellicrack\core\types.py,534,,,SPELL,SPELL,'CrossReference' ==> 'cross-reference',,,,,,,,,,,CrossReference,cross-reference
+codespell,docs/source\conf.py,40,,,SPELL,SPELL,"'lief' ==> 'leaf, life'",,,,,,,,,,,lief,"leaf, life"
+codespell,src/intellicrack\ui\panels\script_manager.py,114,,,SPELL,SPELL,'regist' ==> 'register',,,,,,,,,,,regist,register

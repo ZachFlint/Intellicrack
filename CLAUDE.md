@@ -42,7 +42,7 @@ This tool is developed for **defensive security research** to help software
 developers:
 
 - **Identify weaknesses** in their own licensing protection mechanisms by using
-  Intellicrack in a controlled enviornment to crack their software, so they can
+  Intellicrack in a controlled environment to crack their software, so they can
   strengthen the licensing protections to prevent future attacks.
 - **Test robustness** of licensing, registration, and activation systems in
   controlled environments
@@ -123,7 +123,7 @@ licensing systems by their own developers and security teams.
 
 ### Implementation Standards
 
-- **ALL CODE MUST BE WRITTEN FOR FULL COMPATIBLITY WITH WINDOWS PLATFORMS AS A
+- **ALL CODE MUST BE WRITTEN FOR FULL COMPATIBILITY WITH WINDOWS PLATFORMS AS A
   PRIORITY.**
 - **NO STUBS, MOCKS, OR PLACEHOLDERS** - ALL code must be FULLY FUNCTIONAL
 - **NO TODO COMMENTS** - Implement REAL functionality immediately

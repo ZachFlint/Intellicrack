@@ -1,134 +1,9 @@
 {
   "tool": "ty",
-  "generated": "2026-02-22T01:39:58.459133",
-  "total_findings": 144,
-  "total_files": 34,
+  "generated": "2026-02-27T00:07:00.404145",
+  "total_findings": 113,
+  "total_files": 32,
   "files": [
-    {
-      "path": "src\\intellicrack\\ui\\tools.py",
-      "count": 17,
-      "findings": [
-        {
-          "line": 358,
-          "column": 17,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `findBlockByLineNumber` may be missing on object of type `QTextDocument | None`",
-          "raw": "src\\intellicrack\\ui\\tools.py:358:17: warning[possibly-missing-attribute] Attribute `findBlockByLineNumber` may be missing on object of type `QTextDocument | None`"
-        },
-        {
-          "line": 1581,
-          "column": 30,
-          "code": "invalid-argument-type",
-          "message": "Argument to bound method `set_tab_content` is incorrect: Expected `Literal[\"ghidra\", \"frida\", \"radare2\", \"x64dbg\", \"log\", ... omitted 8 literals]`, found `str`",
-          "raw": "src\\intellicrack\\ui\\tools.py:1581:30: error[invalid-argument-type] Argument to bound method `set_tab_content` is incorrect: Expected `Literal[\"ghidra\", \"frida\", \"radare2\", \"x64dbg\", \"log\", ... omitted 8 literals]`, found `str`"
-        },
-        {
-          "line": 1583,
-          "column": 13,
-          "code": "missing-argument",
-          "message": "No argument provided for required parameter `content` of bound method `set_tab_info`",
-          "raw": "src\\intellicrack\\ui\\tools.py:1583:13: error[missing-argument] No argument provided for required parameter `content` of bound method `set_tab_info`"
-        },
-        {
-          "line": 1583,
-          "column": 31,
-          "code": "invalid-argument-type",
-          "message": "Argument to bound method `set_tab_info` is incorrect: Expected `Literal[\"ghidra\", \"frida\", \"radare2\", \"x64dbg\", \"log\", ... omitted 8 literals]`, found `str`",
-          "raw": "src\\intellicrack\\ui\\tools.py:1583:31: error[invalid-argument-type] Argument to bound method `set_tab_info` is incorrect: Expected `Literal[\"ghidra\", \"frida\", \"radare2\", \"x64dbg\", \"log\", ... omitted 8 literals]`, found `str`"
-        },
-        {
-          "line": 1584,
-          "column": 27,
-          "code": "invalid-argument-type",
-          "message": "Argument to bound method `activate_tab` is incorrect: Expected `Literal[\"ghidra\", \"frida\", \"radare2\", \"x64dbg\", \"log\", ... omitted 8 literals]`, found `str`",
-          "raw": "src\\intellicrack\\ui\\tools.py:1584:27: error[invalid-argument-type] Argument to bound method `activate_tab` is incorrect: Expected `Literal[\"ghidra\", \"frida\", \"radare2\", \"x64dbg\", \"log\", ... omitted 8 literals]`, found `str`"
-        },
-        {
-          "line": 1592,
-          "column": 24,
-          "code": "invalid-argument-type",
-          "message": "Argument to bound method `clear_tab` is incorrect: Expected `Literal[\"ghidra\", \"frida\", \"radare2\", \"x64dbg\", \"log\", ... omitted 8 literals]`, found `str`",
-          "raw": "src\\intellicrack\\ui\\tools.py:1592:24: error[invalid-argument-type] Argument to bound method `clear_tab` is incorrect: Expected `Literal[\"ghidra\", \"frida\", \"radare2\", \"x64dbg\", \"log\", ... omitted 8 literals]`, found `str`"
-        },
-        {
-          "line": 1603,
-          "column": 39,
-          "code": "invalid-argument-type",
-          "message": "Argument to bound method `get_embedded_tool` is incorrect: Expected `Literal[\"ghidra\", \"frida\", \"radare2\", \"x64dbg\", \"log\", ... omitted 8 literals]`, found `str`",
-          "raw": "src\\intellicrack\\ui\\tools.py:1603:39: error[invalid-argument-type] Argument to bound method `get_embedded_tool` is incorrect: Expected `Literal[\"ghidra\", \"frida\", \"radare2\", \"x64dbg\", \"log\", ... omitted 8 literals]`, found `str`"
-        },
-        {
-          "line": 1613,
-          "column": 52,
-          "code": "too-many-positional-arguments",
-          "message": "Too many positional arguments to bound method `log_message`: expected 2, got 3",
-          "raw": "src\\intellicrack\\ui\\tools.py:1613:52: error[too-many-positional-arguments] Too many positional arguments to bound method `log_message`: expected 2, got 3"
-        },
-        {
-          "line": 1622,
-          "column": 13,
-          "code": "call-non-callable",
-          "message": "Object of type `object` is not callable",
-          "raw": "src\\intellicrack\\ui\\tools.py:1622:13: error[call-non-callable] Object of type `object` is not callable"
-        },
-        {
-          "line": 1631,
-          "column": 20,
-          "code": "call-non-callable",
-          "message": "Object of type `object` is not callable",
-          "raw": "src\\intellicrack\\ui\\tools.py:1631:20: error[call-non-callable] Object of type `object` is not callable"
-        },
-        {
-          "line": 1641,
-          "column": 13,
-          "code": "call-non-callable",
-          "message": "Object of type `object` is not callable",
-          "raw": "src\\intellicrack\\ui\\tools.py:1641:13: error[call-non-callable] Object of type `object` is not callable"
-        },
-        {
-          "line": 1653,
-          "column": 31,
-          "code": "call-non-callable",
-          "message": "Object of type `object` is not callable",
-          "raw": "src\\intellicrack\\ui\\tools.py:1653:31: error[call-non-callable] Object of type `object` is not callable"
-        },
-        {
-          "line": 1655,
-          "column": 34,
-          "code": "call-non-callable",
-          "message": "Object of type `object` is not callable",
-          "raw": "src\\intellicrack\\ui\\tools.py:1655:34: error[call-non-callable] Object of type `object` is not callable"
-        },
-        {
-          "line": 1664,
-          "column": 16,
-          "code": "unresolved-attribute",
-          "message": "Object of type `Self@get_code_highlighter` has no attribute `get_highlighter`",
-          "raw": "src\\intellicrack\\ui\\tools.py:1664:16: error[unresolved-attribute] Object of type `Self@get_code_highlighter` has no attribute `get_highlighter`"
-        },
-        {
-          "line": 1675,
-          "column": 13,
-          "code": "call-non-callable",
-          "message": "Object of type `object` is not callable",
-          "raw": "src\\intellicrack\\ui\\tools.py:1675:13: error[call-non-callable] Object of type `object` is not callable"
-        },
-        {
-          "line": 1677,
-          "column": 13,
-          "code": "call-non-callable",
-          "message": "Object of type `object` is not callable",
-          "raw": "src\\intellicrack\\ui\\tools.py:1677:13: error[call-non-callable] Object of type `object` is not callable"
-        },
-        {
-          "line": 1695,
-          "column": 13,
-          "code": "call-non-callable",
-          "message": "Object of type `object` is not callable",
-          "raw": "src\\intellicrack\\ui\\tools.py:1695:13: error[call-non-callable] Object of type `object` is not callable"
-        }
-      ]
-    },
     {
       "path": "src\\intellicrack\\providers\\model_loader.py",
       "count": 13,
@@ -310,6 +185,82 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\tools.py",
+      "count": 10,
+      "findings": [
+        {
+          "line": 358,
+          "column": 17,
+          "code": "",
+          "message": "warning[possibly-missing-attribute] Attribute `findBlockByLineNumber` may be missing on object of type `QTextDocument | None`",
+          "raw": "src\\intellicrack\\ui\\tools.py:358:17: warning[possibly-missing-attribute] Attribute `findBlockByLineNumber` may be missing on object of type `QTextDocument | None`"
+        },
+        {
+          "line": 1621,
+          "column": 13,
+          "code": "call-non-callable",
+          "message": "Object of type `object` is not callable",
+          "raw": "src\\intellicrack\\ui\\tools.py:1621:13: error[call-non-callable] Object of type `object` is not callable"
+        },
+        {
+          "line": 1630,
+          "column": 20,
+          "code": "call-non-callable",
+          "message": "Object of type `object` is not callable",
+          "raw": "src\\intellicrack\\ui\\tools.py:1630:20: error[call-non-callable] Object of type `object` is not callable"
+        },
+        {
+          "line": 1640,
+          "column": 13,
+          "code": "call-non-callable",
+          "message": "Object of type `object` is not callable",
+          "raw": "src\\intellicrack\\ui\\tools.py:1640:13: error[call-non-callable] Object of type `object` is not callable"
+        },
+        {
+          "line": 1652,
+          "column": 31,
+          "code": "call-non-callable",
+          "message": "Object of type `object` is not callable",
+          "raw": "src\\intellicrack\\ui\\tools.py:1652:31: error[call-non-callable] Object of type `object` is not callable"
+        },
+        {
+          "line": 1654,
+          "column": 34,
+          "code": "call-non-callable",
+          "message": "Object of type `object` is not callable",
+          "raw": "src\\intellicrack\\ui\\tools.py:1654:34: error[call-non-callable] Object of type `object` is not callable"
+        },
+        {
+          "line": 1663,
+          "column": 16,
+          "code": "unresolved-attribute",
+          "message": "Object of type `Self@get_code_highlighter` has no attribute `get_highlighter`",
+          "raw": "src\\intellicrack\\ui\\tools.py:1663:16: error[unresolved-attribute] Object of type `Self@get_code_highlighter` has no attribute `get_highlighter`"
+        },
+        {
+          "line": 1674,
+          "column": 13,
+          "code": "call-non-callable",
+          "message": "Object of type `object` is not callable",
+          "raw": "src\\intellicrack\\ui\\tools.py:1674:13: error[call-non-callable] Object of type `object` is not callable"
+        },
+        {
+          "line": 1676,
+          "column": 13,
+          "code": "call-non-callable",
+          "message": "Object of type `object` is not callable",
+          "raw": "src\\intellicrack\\ui\\tools.py:1676:13: error[call-non-callable] Object of type `object` is not callable"
+        },
+        {
+          "line": 1694,
+          "column": 13,
+          "code": "call-non-callable",
+          "message": "Object of type `object` is not callable",
+          "raw": "src\\intellicrack\\ui\\tools.py:1694:13: error[call-non-callable] Object of type `object` is not callable"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\bridges\\schemas.py",
       "count": 8,
       "findings": [
@@ -372,123 +323,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\script_manager.py",
-      "count": 8,
-      "findings": [
-        {
-          "line": 565,
-          "column": 38,
-          "code": "invalid-argument-type",
-          "message": "Argument to bound method `set_filter` is incorrect: Expected `str | None`, found `object`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:565:38: error[invalid-argument-type] Argument to bound method `set_filter` is incorrect: Expected `str | None`, found `object`"
-        },
-        {
-          "line": 574,
-          "column": 52,
-          "code": "invalid-argument-type",
-          "message": "Argument to bound method `get_language` is incorrect: Expected `str`, found `~AlwaysFalsy`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:574:52: error[invalid-argument-type] Argument to bound method `get_language` is incorrect: Expected `str`, found `~AlwaysFalsy`"
-        },
-        {
-          "line": 675,
-          "column": 48,
-          "code": "invalid-argument-type",
-          "message": "Argument to bound method `get_template` is incorrect: Expected `str`, found `~AlwaysFalsy`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:675:48: error[invalid-argument-type] Argument to bound method `get_template` is incorrect: Expected `str`, found `~AlwaysFalsy`"
-        },
-        {
-          "line": 692,
-          "column": 47,
-          "code": "invalid-argument-type",
-          "message": "Argument to function `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:692:47: error[invalid-argument-type] Argument to function `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`"
-        },
-        {
-          "line": 696,
-          "column": 62,
-          "code": "invalid-argument-type",
-          "message": "Argument to bound method `add_script` is incorrect: Expected `str`, found `~AlwaysFalsy`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:696:62: error[invalid-argument-type] Argument to bound method `add_script` is incorrect: Expected `str`, found `~AlwaysFalsy`"
-        },
-        {
-          "line": 732,
-          "column": 50,
-          "code": "invalid-argument-type",
-          "message": "Argument to bound method `get_extension` is incorrect: Expected `str`, found `~AlwaysFalsy`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:732:50: error[invalid-argument-type] Argument to bound method `get_extension` is incorrect: Expected `str`, found `~AlwaysFalsy`"
-        },
-        {
-          "line": 764,
-          "column": 43,
-          "code": "invalid-argument-type",
-          "message": "Argument to function `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:764:43: error[invalid-argument-type] Argument to function `_build_script` is incorrect: Expected `str`, found `~AlwaysFalsy`"
-        },
-        {
-          "line": 829,
-          "column": 16,
-          "code": "invalid-return-type",
-          "message": "Return type does not match returned value: expected `tuple[str, str, str] | None`, found `tuple[(Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy), ~AlwaysFalsy, (Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy)]`",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:829:16: error[invalid-return-type] Return type does not match returned value: expected `tuple[str, str, str] | None`, found `tuple[(Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy), ~AlwaysFalsy, (Unknown & ~AlwaysFalsy) | (str & ~AlwaysFalsy)]`"
-        }
-      ]
-    },
-    {
-      "path": "tests\\test_ui\\test_app_embedded_tools.py",
-      "count": 7,
-      "findings": [
-        {
-          "line": 228,
-          "column": 17,
-          "code": "invalid-assignment",
-          "message": "Object of type `MagicMock` is not assignable to attribute `add_x64dbg_tab` on type `Unknown | ToolOutputPanel`",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:228:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `add_x64dbg_tab` on type `Unknown | ToolOutputPanel`"
-        },
-        {
-          "line": 250,
-          "column": 17,
-          "code": "invalid-assignment",
-          "message": "Object of type `MagicMock` is not assignable to attribute `add_x64dbg_tab` on type `Unknown | ToolOutputPanel`",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:250:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `add_x64dbg_tab` on type `Unknown | ToolOutputPanel`"
-        },
-        {
-          "line": 277,
-          "column": 17,
-          "code": "invalid-assignment",
-          "message": "Object of type `MagicMock` is not assignable to attribute `add_cutter_tab` on type `Unknown | ToolOutputPanel`",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:277:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `add_cutter_tab` on type `Unknown | ToolOutputPanel`"
-        },
-        {
-          "line": 302,
-          "column": 17,
-          "code": "invalid-assignment",
-          "message": "Object of type `MagicMock` is not assignable to attribute `add_hxd_tab` on type `Unknown | ToolOutputPanel`",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:302:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `add_hxd_tab` on type `Unknown | ToolOutputPanel`"
-        },
-        {
-          "line": 391,
-          "column": 17,
-          "code": "invalid-assignment",
-          "message": "Object of type `MagicMock` is not assignable to attribute `open_in_x64dbg` on type `Unknown | ToolOutputPanel`",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:391:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `open_in_x64dbg` on type `Unknown | ToolOutputPanel`"
-        },
-        {
-          "line": 415,
-          "column": 17,
-          "code": "invalid-assignment",
-          "message": "Object of type `MagicMock` is not assignable to attribute `open_in_cutter` on type `Unknown | ToolOutputPanel`",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:415:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `open_in_cutter` on type `Unknown | ToolOutputPanel`"
-        },
-        {
-          "line": 439,
-          "column": 17,
-          "code": "invalid-assignment",
-          "message": "Object of type `MagicMock` is not assignable to attribute `open_in_hxd` on type `Unknown | ToolOutputPanel`",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:439:17: error[invalid-assignment] Object of type `MagicMock` is not assignable to attribute `open_in_hxd` on type `Unknown | ToolOutputPanel`"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\panels\\binary_panel.py",
       "count": 6,
       "findings": [
@@ -537,54 +371,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\radare2_panel.py",
-      "count": 6,
-      "findings": [
-        {
-          "line": 197,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:197:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
-        },
-        {
-          "line": 204,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:204:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
-        },
-        {
-          "line": 211,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:211:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
-        },
-        {
-          "line": 218,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:218:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
-        },
-        {
-          "line": 223,
-          "column": 46,
-          "code": "invalid-argument-type",
-          "message": "Argument to function `set_selection_mode` is incorrect: Expected `int`, found `Literal[SelectionMode.SingleSelection]`",
-          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:223:46: error[invalid-argument-type] Argument to function `set_selection_mode` is incorrect: Expected `int`, found `Literal[SelectionMode.SingleSelection]`"
-        },
-        {
-          "line": 260,
-          "column": 45,
-          "code": "invalid-argument-type",
-          "message": "Argument to function `set_selection_mode` is incorrect: Expected `int`, found `Literal[SelectionMode.SingleSelection]`",
-          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:260:45: error[invalid-argument-type] Argument to function `set_selection_mode` is incorrect: Expected `int`, found `Literal[SelectionMode.SingleSelection]`"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\sandbox\\windows.py",
       "count": 5,
       "findings": [
@@ -622,88 +408,6 @@
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`",
           "raw": "src\\intellicrack\\sandbox\\windows.py:217:67: warning[possibly-missing-attribute] Attribute `pid` may be missing on object of type `Popen[bytes] | None`"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\app.py",
-      "count": 5,
-      "findings": [
-        {
-          "line": 171,
-          "column": 9,
-          "code": "invalid-assignment",
-          "message": "Object of type `bound method Self@__init__.close_event_handler(a0: QCloseEvent | None) -> None` is not assignable to attribute `closeEvent` of type `def closeEvent(self, a0: QCloseEvent | None) -> None`",
-          "raw": "src\\intellicrack\\ui\\app.py:171:9: error[invalid-assignment] Object of type `bound method Self@__init__.close_event_handler(a0: QCloseEvent | None) -> None` is not assignable to attribute `closeEvent` of type `def closeEvent(self, a0: QCloseEvent | None) -> None`"
-        },
-        {
-          "line": 335,
-          "column": 9,
-          "code": "unresolved-attribute",
-          "message": "Object of type `Self@_on_view_licensing` has no attribute `tool_output`",
-          "raw": "src\\intellicrack\\ui\\app.py:335:9: error[unresolved-attribute] Object of type `Self@_on_view_licensing` has no attribute `tool_output`"
-        },
-        {
-          "line": 339,
-          "column": 9,
-          "code": "unresolved-attribute",
-          "message": "Object of type `Self@_on_view_scripts` has no attribute `tool_output`",
-          "raw": "src\\intellicrack\\ui\\app.py:339:9: error[unresolved-attribute] Object of type `Self@_on_view_scripts` has no attribute `tool_output`"
-        },
-        {
-          "line": 343,
-          "column": 9,
-          "code": "unresolved-attribute",
-          "message": "Object of type `Self@_on_view_stack` has no attribute `tool_output`",
-          "raw": "src\\intellicrack\\ui\\app.py:343:9: error[unresolved-attribute] Object of type `Self@_on_view_stack` has no attribute `tool_output`"
-        },
-        {
-          "line": 741,
-          "column": 49,
-          "code": "invalid-assignment",
-          "message": "Object of type `Top[dict[Unknown, Unknown]] & ~AlwaysFalsy` is not assignable to `dict[str, object]`",
-          "raw": "src\\intellicrack\\ui\\app.py:741:49: error[invalid-assignment] Object of type `Top[dict[Unknown, Unknown]] & ~AlwaysFalsy` is not assignable to `dict[str, object]`"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py",
-      "count": 5,
-      "findings": [
-        {
-          "line": 176,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:176:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
-        },
-        {
-          "line": 183,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:183:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
-        },
-        {
-          "line": 190,
-          "column": 9,
-          "code": "",
-          "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:190:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
-        },
-        {
-          "line": 195,
-          "column": 46,
-          "code": "invalid-argument-type",
-          "message": "Argument to function `set_selection_mode` is incorrect: Expected `int`, found `Literal[SelectionMode.SingleSelection]`",
-          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:195:46: error[invalid-argument-type] Argument to function `set_selection_mode` is incorrect: Expected `int`, found `Literal[SelectionMode.SingleSelection]`"
-        },
-        {
-          "line": 232,
-          "column": 45,
-          "code": "invalid-argument-type",
-          "message": "Argument to function `set_selection_mode` is incorrect: Expected `int`, found `Literal[SelectionMode.SingleSelection]`",
-          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:232:45: error[invalid-argument-type] Argument to function `set_selection_mode` is incorrect: Expected `int`, found `Literal[SelectionMode.SingleSelection]`"
         }
       ]
     },
@@ -753,32 +457,32 @@
       "count": 4,
       "findings": [
         {
-          "line": 676,
+          "line": 675,
           "column": 26,
           "code": "not-iterable",
           "message": "Object of type `object` is not iterable",
-          "raw": "src\\intellicrack\\bridges\\binary.py:676:26: error[not-iterable] Object of type `object` is not iterable"
+          "raw": "src\\intellicrack\\bridges\\binary.py:675:26: error[not-iterable] Object of type `object` is not iterable"
         },
         {
-          "line": 713,
+          "line": 712,
           "column": 24,
           "code": "unresolved-attribute",
           "message": "Object of type `object` has no attribute `symbols`",
-          "raw": "src\\intellicrack\\bridges\\binary.py:713:24: error[unresolved-attribute] Object of type `object` has no attribute `symbols`"
+          "raw": "src\\intellicrack\\bridges\\binary.py:712:24: error[unresolved-attribute] Object of type `object` has no attribute `symbols`"
         },
         {
-          "line": 1020,
+          "line": 1019,
           "column": 50,
           "code": "missing-argument",
           "message": "No argument provided for required parameter `offset` of function `disasm`",
-          "raw": "src\\intellicrack\\bridges\\binary.py:1020:50: error[missing-argument] No argument provided for required parameter `offset` of function `disasm`"
+          "raw": "src\\intellicrack\\bridges\\binary.py:1019:50: error[missing-argument] No argument provided for required parameter `offset` of function `disasm`"
         },
         {
-          "line": 1020,
+          "line": 1019,
           "column": 60,
           "code": "invalid-argument-type",
           "message": "Argument to function `disasm` is incorrect: Expected `Cs`, found `bytes`",
-          "raw": "src\\intellicrack\\bridges\\binary.py:1020:60: error[invalid-argument-type] Argument to function `disasm` is incorrect: Expected `Cs`, found `bytes`"
+          "raw": "src\\intellicrack\\bridges\\binary.py:1019:60: error[invalid-argument-type] Argument to function `disasm` is incorrect: Expected `Cs`, found `bytes`"
         }
       ]
     },
@@ -821,32 +525,66 @@
       "count": 4,
       "findings": [
         {
-          "line": 210,
+          "line": 216,
           "column": 9,
           "code": "invalid-method-override",
           "message": "Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:210:9: error[invalid-method-override] Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
+          "raw": "src\\intellicrack\\ui\\highlighter.py:216:9: error[invalid-method-override] Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
         },
         {
-          "line": 553,
+          "line": 559,
           "column": 9,
           "code": "invalid-method-override",
           "message": "Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:553:9: error[invalid-method-override] Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
+          "raw": "src\\intellicrack\\ui\\highlighter.py:559:9: error[invalid-method-override] Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
         },
         {
-          "line": 756,
+          "line": 762,
           "column": 9,
           "code": "invalid-method-override",
           "message": "Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:756:9: error[invalid-method-override] Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
+          "raw": "src\\intellicrack\\ui\\highlighter.py:762:9: error[invalid-method-override] Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
         },
         {
-          "line": 983,
+          "line": 989,
           "column": 9,
           "code": "invalid-method-override",
           "message": "Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:983:9: error[invalid-method-override] Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
+          "raw": "src\\intellicrack\\ui\\highlighter.py:989:9: error[invalid-method-override] Invalid override of method `highlightBlock`: Definition is incompatible with `QSyntaxHighlighter.highlightBlock`"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\radare2_panel.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": 197,
+          "column": 9,
+          "code": "",
+          "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:197:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+        },
+        {
+          "line": 204,
+          "column": 9,
+          "code": "",
+          "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:204:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+        },
+        {
+          "line": 211,
+          "column": 9,
+          "code": "",
+          "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:211:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+        },
+        {
+          "line": 218,
+          "column": 9,
+          "code": "",
+          "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:218:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
         }
       ]
     },
@@ -885,6 +623,33 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 176,
+          "column": 9,
+          "code": "",
+          "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:176:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+        },
+        {
+          "line": 183,
+          "column": 9,
+          "code": "",
+          "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:183:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+        },
+        {
+          "line": 190,
+          "column": 9,
+          "code": "",
+          "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:190:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py",
       "count": 3,
       "findings": [
@@ -908,33 +673,6 @@
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`",
           "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:374:9: warning[possibly-missing-attribute] Attribute `setVisible` may be missing on object of type `QHeaderView | None`"
-        }
-      ]
-    },
-    {
-      "path": "tests\\core\\test_process_cleanup.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 213,
-          "column": 5,
-          "code": "invalid-assignment",
-          "message": "Object of type `_BlockingR2` is not assignable to attribute `_r2` of type `open | None`",
-          "raw": "tests\\core\\test_process_cleanup.py:213:5: error[invalid-assignment] Object of type `_BlockingR2` is not assignable to attribute `_r2` of type `open | None`"
-        },
-        {
-          "line": 235,
-          "column": 5,
-          "code": "invalid-assignment",
-          "message": "Object of type `_FastR2` is not assignable to attribute `_r2` of type `open | None`",
-          "raw": "tests\\core\\test_process_cleanup.py:235:5: error[invalid-assignment] Object of type `_FastR2` is not assignable to attribute `_r2` of type `open | None`"
-        },
-        {
-          "line": 245,
-          "column": 5,
-          "code": "invalid-assignment",
-          "message": "Object of type `_NoneR2` is not assignable to attribute `_r2` of type `open | None`",
-          "raw": "tests\\core\\test_process_cleanup.py:245:5: error[invalid-assignment] Object of type `_NoneR2` is not assignable to attribute `_r2` of type `open | None`"
         }
       ]
     },
@@ -989,6 +727,26 @@
           "code": "unresolved-attribute",
           "message": "Object of type `SplashScreen` has no attribute `show_loading_step`",
           "raw": "tests\\test_ui\\test_splash_screen.py:414:13: error[unresolved-attribute] Object of type `SplashScreen` has no attribute `show_loading_step`"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\bridges\\radare2.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 181,
+          "column": 19,
+          "code": "invalid-type-form",
+          "message": "Module `r2pipe.open_sync` is not valid in a type expression",
+          "raw": "src\\intellicrack\\bridges\\radare2.py:181:19: error[invalid-type-form] Module `r2pipe.open_sync` is not valid in a type expression"
+        },
+        {
+          "line": 595,
+          "column": 13,
+          "code": "invalid-type-form",
+          "message": "Module `r2pipe.open_sync` is not valid in a type expression",
+          "raw": "src\\intellicrack\\bridges\\radare2.py:595:13: error[invalid-type-form] Module `r2pipe.open_sync` is not valid in a type expression"
         }
       ]
     },
@@ -1073,42 +831,42 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 91,
-          "column": 9,
-          "code": "invalid-assignment",
-          "message": "Object of type `bound method Self@__init__.resize_event_handler(a0: QResizeEvent | None) -> None` is not assignable to attribute `resizeEvent` of type `def resizeEvent(self, a0: QResizeEvent | None) -> None`",
-          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:91:9: error[invalid-assignment] Object of type `bound method Self@__init__.resize_event_handler(a0: QResizeEvent | None) -> None` is not assignable to attribute `resizeEvent` of type `def resizeEvent(self, a0: QResizeEvent | None) -> None`"
-        },
-        {
-          "line": 103,
-          "column": 18,
-          "code": "unresolved-attribute",
-          "message": "Object of type `QCoreApplication` has no attribute `primaryScreen`",
-          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:103:18: error[unresolved-attribute] Object of type `QCoreApplication` has no attribute `primaryScreen`"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\panels\\process_panel.py",
       "count": 2,
       "findings": [
         {
-          "line": 413,
+          "line": 409,
           "column": 9,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:413:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:409:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
         },
         {
-          "line": 429,
+          "line": 425,
           "column": 9,
           "code": "",
           "message": "warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:429:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:425:9: warning[possibly-missing-attribute] Attribute `setSectionResizeMode` may be missing on object of type `QHeaderView | None`"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_ui\\test_tools_logic.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 98,
+          "column": 29,
+          "code": "invalid-argument-type",
+          "message": "Argument to bound method `__init__` is incorrect: Expected `Config`, found `object`",
+          "raw": "tests\\test_ui\\test_tools_logic.py:98:29: error[invalid-argument-type] Argument to bound method `__init__` is incorrect: Expected `Config`, found `object`"
+        },
+        {
+          "line": 98,
+          "column": 42,
+          "code": "invalid-argument-type",
+          "message": "Argument to bound method `__init__` is incorrect: Expected `Orchestrator`, found `object`",
+          "raw": "tests\\test_ui\\test_tools_logic.py:98:42: error[invalid-argument-type] Argument to bound method `__init__` is incorrect: Expected `Orchestrator`, found `object`"
         }
       ]
     },
@@ -1148,6 +906,19 @@
           "code": "invalid-assignment",
           "message": "Object of type `None` is not assignable to `<module 'torch'>`",
           "raw": "src\\intellicrack\\providers\\xpu_utils.py:24:21: error[invalid-assignment] Object of type `None` is not assignable to `<module 'torch'>`"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 102,
+          "column": 18,
+          "code": "unresolved-attribute",
+          "message": "Object of type `QCoreApplication` has no attribute `primaryScreen`",
+          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:102:18: error[unresolved-attribute] Object of type `QCoreApplication` has no attribute `primaryScreen`"
         }
       ]
     },

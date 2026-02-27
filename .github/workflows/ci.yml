@@ -51,8 +51,8 @@ jobs:
         timeout-minutes: 15
       - name: Lint with ruff
         run: |
-          pixi run ruff check src/intellicrack/ tests/ --output-format=github
-          pixi run ruff format --check src/intellicrack/ tests/
+          pixi run ruff check src/ tests/ --output-format=github
+          pixi run ruff format --check src/ tests/
   python-security:
     runs-on: windows-latest
     needs: [setup]
@@ -93,9 +93,11 @@ jobs:
       - name: Install dependencies
         run: pixi install
         timeout-minutes: 15
-      - name: Type check with mypy
+      - name: Install package in editable mode
+        run: pixi run pip install -e .
+      - name: Type check with basedpyright
         run: |
-          pixi run mypy src/intellicrack/ --ignore-missing-imports --no-strict-optional
+          pixi run basedpyright src/
   python-mock-verify:
     runs-on: windows-latest
     needs: [setup]
@@ -129,6 +131,8 @@ jobs:
       - name: Install dependencies
         run: pixi install
         timeout-minutes: 15
+      - name: Install package in editable mode
+        run: pixi run pip install -e .
       - name: Test with pytest
         run: |
           pixi run pytest tests/ -v --cov=src/intellicrack --cov-report=xml --cov-report=html --junitxml=test-results.xml

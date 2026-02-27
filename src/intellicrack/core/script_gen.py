@@ -652,6 +652,34 @@ class ScriptManager:
             return True
         return False
 
+    def record_execution(self, script_name: str, tool_name: str, result: Any) -> bool:
+        """Record an execution result for a script.
+
+        Forwards to the script's ``add_execution_result`` method to
+        persist tool execution metadata.
+
+        Args:
+            script_name: Name of the script that was executed.
+            tool_name: Name of the tool that executed the script.
+            result: The result object or data from execution.
+
+        Returns:
+            True if the result was recorded, False if script not found.
+        """
+        script = self.scripts.get(script_name)
+        if script is None:
+            _logger.debug(
+                "record_execution_script_not_found",
+                extra={"script": script_name},
+            )
+            return False
+        script.add_execution_result(tool_name, result)
+        _logger.debug(
+            "execution_result_recorded",
+            extra={"script": script_name, "tool_name": tool_name},
+        )
+        return True
+
 
 def get_frida_api_reference() -> dict[str, str]:
     """Get Frida API reference for AI context.

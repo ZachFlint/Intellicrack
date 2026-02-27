@@ -485,7 +485,8 @@ class HuggingFaceProvider(LLMProviderBase):
             )
             raise ProviderError(_ERR_API_ERROR % e) from e
 
-        return response.json()
+        result: dict[str, Any] = response.json()
+        return result
 
     def _parse_hf_tool_calls(
         self,

@@ -24,7 +24,7 @@ src/intellicrack\core\script_gen.py:410: D401: in public method `validate_java`:
 
 1 findings in src/intellicrack\credentials\oauth.py
 
-src/intellicrack\credentials\oauth.py:900: D401: in public function `authorize_google`: - First line should be in imperative mood; try rephrasing (found 'Convenience')
+src/intellicrack\credentials\oauth.py:904: D401: in public function `authorize_google`: - First line should be in imperative mood; try rephrasing (found 'Convenience')
 
 
 1 findings in src/intellicrack\providers\local_transformers.py

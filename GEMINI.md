@@ -26,7 +26,7 @@ This document provides an overview of the Intellicrack project, its setup, and d
 
 This tool is developed for **defensive security research** to help software developers:
 
-- **Identify weaknesses** in their own licensing protection mechanisms by using Intellicrack in a controlled enviornment to crack their software, so they can strengthen the licensing protections to prevent future attacks.
+- **Identify weaknesses** in their own licensing protection mechanisms by using Intellicrack in a controlled environment to crack their software, so they can strengthen the licensing protections to prevent future attacks.
 - **Test robustness** of licensing, registration, and activation systems in controlled environments
 - **Strengthen licensing defenses** against cracking attempts by understanding bypass techniques
 - **Validate protection effectiveness** of their own software's licensing mechanisms before deployment
@@ -84,7 +84,7 @@ intellicrack/
 
 #### Implementation Standards
 
-- **ALL CODE MUST BE WRITTEN FOR FULL COMPATIBLITY WITH WINDOWS PLATFORMS AS A PRIORITY.**
+- **ALL CODE MUST BE WRITTEN FOR FULL COMPATIBILITY WITH WINDOWS PLATFORMS AS A PRIORITY.**
 - **NO STUBS, MOCKS, OR PLACEHOLDERS** - ALL code must be FULLY FUNCTIONAL
 - **NO TODO COMMENTS** - Implement REAL functionality immediately
 - **NO SIMULATION MODES** - Real licensing cracking tool only

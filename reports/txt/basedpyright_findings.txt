@@ -1,104 +1,185 @@
-29 findings in d:\Intellicrack\src\intellicrack\ui\tools.py
+46 findings in d:\Intellicrack\src\intellicrack\bridges\radare2.py
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1581:30: [error] Argument of type "str" cannot be assigned to parameter "tab_name" of type "OutputType" in function "set_tab_content"
-  Type "str" is not assignable to type "OutputType"
-    "str" is not assignable to type "Literal['ghidra']"
-    "str" is not assignable to type "Literal['frida']"
-    "str" is not assignable to type "Literal['radare2']"
-    "str" is not assignable to type "Literal['x64dbg']"
-    "str" is not assignable to type "Literal['log']"
-    "str" is not assignable to type "Literal['licensing']"
-    "str" is not assignable to type "Literal['scripts']"
-  ...
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:163:12: [error] Return type, "list[Unknown] | list[Any]", is partially unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1583:13: [error] Argument missing for parameter "content"
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:181:26: [error] "open_sync" is not a known attribute of module "r2pipe"
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1584:27: [error] Argument of type "str" cannot be assigned to parameter "tab_name" of type "OutputType" in function "activate_tab"
-  Type "str" is not assignable to type "OutputType"
-    "str" is not assignable to type "Literal['ghidra']"
-    "str" is not assignable to type "Literal['frida']"
-    "str" is not assignable to type "Literal['radare2']"
-    "str" is not assignable to type "Literal['x64dbg']"
-    "str" is not assignable to type "Literal['log']"
-    "str" is not assignable to type "Literal['licensing']"
-    "str" is not assignable to type "Literal['scripts']"
-  ...
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:208:12: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1592:24: [error] Argument of type "str" cannot be assigned to parameter "tab_name" of type "OutputType" in function "clear_tab"
-  Type "str" is not assignable to type "OutputType"
-    "str" is not assignable to type "Literal['ghidra']"
-    "str" is not assignable to type "Literal['frida']"
-    "str" is not assignable to type "Literal['radare2']"
-    "str" is not assignable to type "Literal['x64dbg']"
-    "str" is not assignable to type "Literal['log']"
-    "str" is not assignable to type "Literal['licensing']"
-    "str" is not assignable to type "Literal['scripts']"
-  ...
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:211:13: [error] Type of "result" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1603:39: [error] Argument of type "str" cannot be assigned to parameter "tool_id" of type "OutputType" in function "get_embedded_tool"
-  Type "str" is not assignable to type "OutputType"
-    "str" is not assignable to type "Literal['ghidra']"
-    "str" is not assignable to type "Literal['frida']"
-    "str" is not assignable to type "Literal['radare2']"
-    "str" is not assignable to type "Literal['x64dbg']"
-    "str" is not assignable to type "Literal['log']"
-    "str" is not assignable to type "Literal['licensing']"
-    "str" is not assignable to type "Literal['scripts']"
-  ...
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:212:17: [error] Argument type is partially unknown
+  Argument corresponds to parameter "fut" in function "wait_for"
+  Argument type is "CoroutineType[Any, Any, Unknown]"
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1613:52: [error] Expected 1 positional argument
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:212:35: [error] Type of "_r2" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1622:13: [error] Type of "add_hook_entry" is unknown
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:212:35: [error] Type of "cmd" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1622:31: [error] Cannot access attribute "add_hook_entry" for class "FridaPanelProtocol"
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:212:35: [error] Argument type is unknown
+  Argument corresponds to parameter "func" in function "to_thread"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:222:16: [error] Return type, "Unknown | Literal['']", is partially unknown
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:571:12: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:573:41: [error] Type of "_r2" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:573:41: [error] Type of "quit" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:573:41: [error] Argument type is unknown
+  Argument corresponds to parameter "func" in function "to_thread"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:595:13: [error] Type of "open_sync" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:595:20: [error] "open_sync" is not a known attribute of module "r2pipe"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:598:59: [error] Type of "cmd" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:598:59: [error] Argument type is unknown
+  Argument corresponds to parameter "func" in function "to_thread"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:598:62: [error] "cmd" is not a known attribute of "None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:607:45: [error] Type of "quit" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:607:45: [error] Argument type is unknown
+  Argument corresponds to parameter "func" in function "to_thread"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:613:12: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:614:37: [error] Type of "_r2" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:614:37: [error] Type of "quit" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:614:37: [error] Argument type is unknown
+  Argument corresponds to parameter "func" in function "to_thread"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:626:24: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:626:24: [error] Argument type is partially unknown
+  Argument corresponds to parameter "obj" in function "hasattr"
+  Argument type is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:629:33: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:629:33: [error] Argument type is partially unknown
+  Argument corresponds to parameter "o" in function "getattr"
+  Argument type is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:750:12: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:780:12: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:823:12: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:895:12: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:928:12: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:967:12: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:1009:12: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:1051:12: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:1098:12: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:1120:12: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:1136:12: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:1160:12: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:1182:12: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:1227:12: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:1256:12: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:1276:12: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:1297:12: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
+
+d:\Intellicrack\src\intellicrack\bridges\radare2.py:1331:12: [error] Type of "_r2" is partially unknown
+  Type of "_r2" is "Unknown | None"
+
+
+23 findings in d:\Intellicrack\src\intellicrack\ui\tools.py
+
+d:\Intellicrack\src\intellicrack\ui\tools.py:1621:13: [error] Type of "add_hook_entry" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\tools.py:1621:31: [error] Cannot access attribute "add_hook_entry" for class "FridaPanelProtocol"
   Attribute "add_hook_entry" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1631:20: [error] Type of "get_sandbox" is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1630:20: [error] Type of "get_sandbox" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1631:20: [error] Return type is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1630:20: [error] Return type is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1631:40: [error] Cannot access attribute "get_sandbox" for class "SandboxPanelProtocol"
+d:\Intellicrack\src\intellicrack\ui\tools.py:1630:40: [error] Cannot access attribute "get_sandbox" for class "SandboxPanelProtocol"
   Attribute "get_sandbox" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1641:13: [error] Type of "load_execution_report" is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1640:13: [error] Type of "load_execution_report" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1641:33: [error] Cannot access attribute "load_execution_report" for class "SandboxPanelProtocol"
+d:\Intellicrack\src\intellicrack\ui\tools.py:1640:33: [error] Cannot access attribute "load_execution_report" for class "SandboxPanelProtocol"
   Attribute "load_execution_report" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1653:17: [error] Type of "selected_id" is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1652:17: [error] Type of "selected_id" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1653:31: [error] Type of "get_selected_id" is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1652:31: [error] Type of "get_selected_id" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1653:50: [error] Cannot access attribute "get_selected_id" for class "QWidget"
+d:\Intellicrack\src\intellicrack\ui\tools.py:1652:50: [error] Cannot access attribute "get_selected_id" for class "QWidget"
   Attribute "get_selected_id" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1655:17: [error] Type of "current_script" is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1654:17: [error] Type of "current_script" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1655:34: [error] Type of "get_current_script" is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1654:34: [error] Type of "get_current_script" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1655:53: [error] Cannot access attribute "get_current_script" for class "QWidget"
+d:\Intellicrack\src\intellicrack\ui\tools.py:1654:53: [error] Cannot access attribute "get_current_script" for class "QWidget"
   Attribute "get_current_script" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1656:16: [error] Return type, "tuple[Unknown | str | None, Unknown | str | None]", is partially unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1655:16: [error] Return type, "tuple[Unknown | str | None, Unknown | str | None]", is partially unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1664:16: [error] Type of "get_highlighter" is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1663:16: [error] Type of "get_highlighter" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1664:16: [error] Return type is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1663:16: [error] Return type is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1664:21: [error] Cannot access attribute "get_highlighter" for class "ToolOutputPanel*"
+d:\Intellicrack\src\intellicrack\ui\tools.py:1663:21: [error] Cannot access attribute "get_highlighter" for class "ToolOutputPanel*"
   Attribute "get_highlighter" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1675:13: [error] Type of "set_x64dbg_bridge" is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1674:13: [error] Type of "set_x64dbg_bridge" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1675:31: [error] Cannot access attribute "set_x64dbg_bridge" for class "QWidget"
+d:\Intellicrack\src\intellicrack\ui\tools.py:1674:31: [error] Cannot access attribute "set_x64dbg_bridge" for class "QWidget"
   Attribute "set_x64dbg_bridge" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1677:13: [error] Type of "set_frida_bridge" is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1676:13: [error] Type of "set_frida_bridge" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1677:31: [error] Cannot access attribute "set_frida_bridge" for class "QWidget"
+d:\Intellicrack\src\intellicrack\ui\tools.py:1676:31: [error] Cannot access attribute "set_frida_bridge" for class "QWidget"
   Attribute "set_frida_bridge" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1695:13: [error] Type of "set_backend" is unknown
+d:\Intellicrack\src\intellicrack\ui\tools.py:1694:13: [error] Type of "set_backend" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1695:32: [error] Cannot access attribute "set_backend" for class "QWidget"
+d:\Intellicrack\src\intellicrack\ui\tools.py:1694:32: [error] Cannot access attribute "set_backend" for class "QWidget"
   Attribute "set_backend" is unknown

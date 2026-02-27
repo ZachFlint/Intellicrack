@@ -135,6 +135,18 @@
       <data key="d3">main</data>
       <data key="d4">[]</data>
     </node>
+    <node id="src.intellicrack.main._init_script_engine">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_init_script_engine</data>
+      <data key="d4">['config', 'logger']</data>
+    </node>
+    <node id="src.intellicrack.main._init_model_discovery">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_init_model_discovery</data>
+      <data key="d4">['provider_registry', 'config', 'logger']</data>
+    </node>
     <node id="src.intellicrack.main._run_application">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -150,6 +162,7 @@
     <node id="intellicrack.core.session" />
     <node id="intellicrack.core.tools" />
     <node id="intellicrack.credentials.env_loader" />
+    <node id="intellicrack.providers.discovery" />
     <node id="intellicrack.providers.registry" />
     <node id="intellicrack.ui.app" />
     <node id="intellicrack.ui.dialogs" />
@@ -4152,6 +4165,12 @@
       <data key="d3">reload_script</data>
       <data key="d4">['self', 'name']</data>
     </node>
+    <node id="src.intellicrack.core.script_gen.record_execution">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">record_execution</data>
+      <data key="d4">['self', 'script_name', 'tool_name', 'result']</data>
+    </node>
     <node id="src.intellicrack.core.script_gen.prepare_ai_prompt">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -5507,6 +5526,12 @@
       <data key="d3">list_models</data>
       <data key="d4">['self']</data>
     </node>
+    <node id="src.intellicrack.providers.anthropic._get_known_models_fallback">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_get_known_models_fallback</data>
+      <data key="d4">['self']</data>
+    </node>
     <node id="src.intellicrack.providers.anthropic._fetch_all_models">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -5940,6 +5965,12 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">list_models</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.providers.google._get_known_models_fallback">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_get_known_models_fallback</data>
       <data key="d4">['self']</data>
     </node>
     <node id="src.intellicrack.providers.google._is_generative_model">
@@ -7896,6 +7927,18 @@
       <data key="d3">_apply_smart_window_size</data>
       <data key="d4">['self']</data>
     </node>
+    <node id="src.intellicrack.ui.app.wire_script_manager">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">wire_script_manager</data>
+      <data key="d4">['self', 'manager', 'validator']</data>
+    </node>
+    <node id="src.intellicrack.ui.app.set_model_discovery">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_model_discovery</data>
+      <data key="d4">['self', 'discovery']</data>
+    </node>
     <node id="src.intellicrack.ui.app._setup_ui">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -8376,10 +8419,10 @@
       <data key="d3">_on_cancel</data>
       <data key="d4">['self']</data>
     </node>
-    <node id="src.intellicrack.ui.app.close_event_handler">
+    <node id="src.intellicrack.ui.app.closeEvent">
       <data key="d0">function</data>
       <data key="d1">python</data>
-      <data key="d3">close_event_handler</data>
+      <data key="d3">closeEvent</data>
       <data key="d4">['self', 'a0']</data>
     </node>
     <node id="src.intellicrack.ui.app.fetch_status">
@@ -8471,6 +8514,12 @@
       <data key="d1">python</data>
       <data key="d3">load_session</data>
       <data key="d4">[]</data>
+    </node>
+    <node id="src.intellicrack.ui.app._frida_msg_handler">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_frida_msg_handler</data>
+      <data key="d4">['message']</data>
     </node>
     <node id="src.intellicrack.ui.resources.font_manager">
       <data key="d0">module</data>
@@ -8895,7 +8944,6 @@
       <data key="d3">ModelSelectionDialog</data>
     </node>
     <node id="intellicrack.providers.base" />
-    <node id="intellicrack.providers.discovery" />
     <node id="src.intellicrack.ui.provider_config.__init__">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -9685,6 +9733,12 @@
       <data key="d3">log_message</data>
       <data key="d4">['self', 'message']</data>
     </node>
+    <node id="src.intellicrack.ui.tools.add_hook_entry">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">add_hook_entry</data>
+      <data key="d4">['self', 'address', 'module', 'function', 'status', 'hook_id']</data>
+    </node>
     <node id="src.intellicrack.ui.tools.get_selected_pid">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -9697,11 +9751,29 @@
       <data key="d3">set_sandbox</data>
       <data key="d4">['self', 'sandbox']</data>
     </node>
+    <node id="src.intellicrack.ui.tools.get_sandbox">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_sandbox</data>
+      <data key="d4">['self']</data>
+    </node>
     <node id="src.intellicrack.ui.panels.licensing_panel">
       <data key="d0">module</data>
       <data key="d1">python</data>
       <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\licensing_panel.py</data>
       <data key="d3">src.intellicrack.ui.panels.licensing_panel</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.script_manager">
+      <data key="d0">module</data>
+      <data key="d1">python</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\script_manager.py</data>
+      <data key="d3">src.intellicrack.ui.panels.script_manager</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.stack_viewer">
+      <data key="d0">module</data>
+      <data key="d1">python</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\stack_viewer.py</data>
+      <data key="d3">src.intellicrack.ui.panels.stack_viewer</data>
     </node>
     <node id="src.intellicrack.ui.tools.__init__">
       <data key="d0">function</data>
@@ -10043,7 +10115,7 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">log_frida_message</data>
-      <data key="d4">['self', 'message', 'level']</data>
+      <data key="d4">['self', 'message']</data>
     </node>
     <node id="src.intellicrack.ui.tools.add_frida_hook_entry">
       <data key="d0">function</data>
@@ -10091,7 +10163,7 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">wire_script_backend</data>
-      <data key="d4">['self', 'backend']</data>
+      <data key="d4">['self', 'backend', 'validator']</data>
     </node>
     <node id="src.intellicrack.ui.tool_config.ToolInstallWorker">
       <data key="d0">class</data>
@@ -10419,10 +10491,10 @@
       <data key="d3">_on_progress_updated</data>
       <data key="d4">['self', 'value', 'message']</data>
     </node>
-    <node id="src.intellicrack.ui.dialogs.splash_screen.resize_event_handler">
+    <node id="src.intellicrack.ui.dialogs.splash_screen.resizeEvent">
       <data key="d0">function</data>
       <data key="d1">python</data>
-      <data key="d3">resize_event_handler</data>
+      <data key="d3">resizeEvent</data>
       <data key="d4">['self', 'a0']</data>
     </node>
     <node id="src.intellicrack.ui.dialogs.splash_screen.progress">
@@ -11372,12 +11444,6 @@
       <data key="d3">stop_tool</data>
       <data key="d4">['self']</data>
     </node>
-    <node id="src.intellicrack.ui.panels.script_manager">
-      <data key="d0">module</data>
-      <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\script_manager.py</data>
-      <data key="d3">src.intellicrack.ui.panels.script_manager</data>
-    </node>
     <node id="intellicrack.core.script_gen" />
     <node id="src.intellicrack.ui.panels.script_manager.ScriptTypeInfo">
       <data key="d0">class</data>
@@ -11585,12 +11651,6 @@
       <data key="d1">python</data>
       <data key="d3">reset_status</data>
       <data key="d4">[]</data>
-    </node>
-    <node id="src.intellicrack.ui.panels.stack_viewer">
-      <data key="d0">module</data>
-      <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\stack_viewer.py</data>
-      <data key="d3">src.intellicrack.ui.panels.stack_viewer</data>
     </node>
     <node id="src.intellicrack.ui.panels.stack_viewer.StackFrame">
       <data key="d0">class</data>
@@ -12493,6 +12553,12 @@
     <edge source="src.intellicrack.main" target="src.intellicrack.main.main">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.main" target="src.intellicrack.main._init_script_engine">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.main" target="src.intellicrack.main._init_model_discovery">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.main" target="src.intellicrack.main._run_application">
       <data key="d5">defines</data>
     </edge>
@@ -12521,6 +12587,9 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.main" target="intellicrack.credentials.env_loader">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.main" target="intellicrack.providers.discovery">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.main" target="intellicrack.providers.registry">
@@ -15889,6 +15958,9 @@
     <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.reload_script">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.record_execution">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.prepare_ai_prompt">
       <data key="d5">defines</data>
     </edge>
@@ -16498,6 +16570,9 @@
     <edge source="src.intellicrack.providers.anthropic" target="src.intellicrack.providers.anthropic.list_models">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.providers.anthropic" target="src.intellicrack.providers.anthropic._get_known_models_fallback">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.providers.anthropic" target="src.intellicrack.providers.anthropic._fetch_all_models">
       <data key="d5">defines</data>
     </edge>
@@ -16742,6 +16817,9 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.providers.google" target="src.intellicrack.providers.google.list_models">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.google" target="src.intellicrack.providers.google._get_known_models_fallback">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.providers.google" target="src.intellicrack.providers.google._is_generative_model">
@@ -18154,6 +18232,9 @@
     <edge source="src.intellicrack.ui.app" target="importlib">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.ui.app" target="inspect">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.app" target="json">
       <data key="d5">imports</data>
     </edge>
@@ -18233,6 +18314,12 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._apply_smart_window_size">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app.wire_script_manager">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app.set_model_discovery">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._setup_ui">
@@ -18475,7 +18562,7 @@
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._on_cancel">
       <data key="d5">defines</data>
     </edge>
-    <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app.close_event_handler">
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app.closeEvent">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app.fetch_status">
@@ -18521,6 +18608,9 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app.load_session">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._frida_msg_handler">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui._screen_compat" target="__future__">
@@ -19405,16 +19495,34 @@
     <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.log_message">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.add_hook_entry">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.get_selected_pid">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.set_sandbox">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.get_sandbox">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.core.script_gen">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.tools" target="src.intellicrack.core.types">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.sandbox.base">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.panels.licensing_panel">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.panels.script_manager">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.panels.stack_viewer">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.__init__">
@@ -20098,6 +20206,234 @@
     <edge source="src.intellicrack.ui.panels.licensing_panel" target="src.intellicrack.ui.panels.licensing_panel.clear">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="__future__">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="pathlib">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="PyQt6.QtCore">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="PyQt6.QtGui">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="intellicrack.core.logging">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="intellicrack.core.script_gen">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.ScriptTypeInfo">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.ScriptListWidget">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.ScriptEditor">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.ScriptManagerPanel">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.get_types">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.get_display_name">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.get_extension">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.get_language">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.get_template">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.__init__">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._setup_ui">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._on_item_clicked">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.add_script">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.remove_script">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.set_filter">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._refresh_list">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.get_selected_id">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.set_language">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.get_content">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.set_content">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._on_filter_changed">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._on_type_changed">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._build_script">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._on_script_selected">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._load_script">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._on_content_changed">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._on_new">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._on_save">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._on_delete">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._on_load_file">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._on_validate">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._on_execute">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.set_backend">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.get_current_script">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.reset_status">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="__future__">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="datetime">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="dataclasses">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="PyQt6.QtCore">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="PyQt6.QtGui">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="PyQt6.QtWidgets">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="intellicrack.core.logging">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.StackFrame">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.StackDataSource">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.X64DbgStackSource">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.FridaStackSource">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.StackFrameTable">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.StackViewerPanel">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.get_stack_frames">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.is_connected">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.get_source_name">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.__init__">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.set_bridge">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer._setup_ui">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer._on_cell_clicked">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer._on_cell_double_clicked">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.set_frames">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer._setup_default_sources">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer._on_source_changed">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer._on_auto_refresh_toggled">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer._on_frame_double_clicked">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer._update_status">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.refresh">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.set_x64dbg_bridge">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.set_frida_bridge">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.add_source">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.clear">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.tool_config.ToolInstallWorker" target="PyQt6.QtCore.QThread">
       <data key="d5">inherits</data>
     </edge>
@@ -20203,7 +20539,7 @@
     <edge source="src.intellicrack.ui.dialogs.splash_screen" target="src.intellicrack.ui.dialogs.splash_screen._on_progress_updated">
       <data key="d5">defines</data>
     </edge>
-    <edge source="src.intellicrack.ui.dialogs.splash_screen" target="src.intellicrack.ui.dialogs.splash_screen.resize_event_handler">
+    <edge source="src.intellicrack.ui.dialogs.splash_screen" target="src.intellicrack.ui.dialogs.splash_screen.resizeEvent">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.dialogs.splash_screen" target="src.intellicrack.ui.dialogs.splash_screen.progress">
@@ -20827,135 +21163,6 @@
     <edge source="src.intellicrack.ui.panels.sandbox_panel.SandboxPanel" target="PyQt6.QtWidgets.QWidget">
       <data key="d5">inherits</data>
     </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="__future__">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="pathlib">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="typing">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="PyQt6.QtCore">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="PyQt6.QtGui">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="PyQt6.QtWidgets">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="intellicrack.core.logging">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="intellicrack.core.script_gen">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.ScriptTypeInfo">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.ScriptListWidget">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.ScriptEditor">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.ScriptManagerPanel">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.get_types">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.get_display_name">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.get_extension">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.get_language">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.get_template">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.__init__">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._setup_ui">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._on_item_clicked">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.add_script">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.remove_script">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.set_filter">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._refresh_list">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.get_selected_id">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.set_language">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.get_content">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.set_content">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._on_filter_changed">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._on_type_changed">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._build_script">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._on_script_selected">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._load_script">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._on_content_changed">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._on_new">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._on_save">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._on_delete">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._on_load_file">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._on_validate">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager._on_execute">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.set_backend">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.get_current_script">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.script_manager" target="src.intellicrack.ui.panels.script_manager.reset_status">
-      <data key="d5">defines</data>
-    </edge>
     <edge source="src.intellicrack.ui.panels.script_manager.ScriptListWidget" target="PyQt6.QtWidgets.QListWidget">
       <data key="d5">inherits</data>
     </edge>
@@ -20964,105 +21171,6 @@
     </edge>
     <edge source="src.intellicrack.ui.panels.script_manager.ScriptManagerPanel" target="PyQt6.QtWidgets.QWidget">
       <data key="d5">inherits</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="__future__">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="datetime">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="dataclasses">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="typing">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="PyQt6.QtCore">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="PyQt6.QtGui">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="PyQt6.QtWidgets">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="intellicrack.core.logging">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.StackFrame">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.StackDataSource">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.X64DbgStackSource">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.FridaStackSource">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.StackFrameTable">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.StackViewerPanel">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.get_stack_frames">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.is_connected">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.get_source_name">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.__init__">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.set_bridge">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer._setup_ui">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer._on_cell_clicked">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer._on_cell_double_clicked">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.set_frames">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer._setup_default_sources">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer._on_source_changed">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer._on_auto_refresh_toggled">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer._on_frame_double_clicked">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer._update_status">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.refresh">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.set_x64dbg_bridge">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.set_frida_bridge">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.add_source">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.stack_viewer" target="src.intellicrack.ui.panels.stack_viewer.clear">
-      <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.stack_viewer.StackDataSource" target="typing.Protocol">
       <data key="d5">inherits</data>

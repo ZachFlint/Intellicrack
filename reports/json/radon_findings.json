@@ -1,6 +1,6 @@
 {
   "tool": "radon",
-  "generated": "2026-02-22T01:47:10.931894",
+  "generated": "2026-02-27T00:09:28.589248",
   "total_findings": 66,
   "total_files": 32,
   "files": [
@@ -111,14 +111,14 @@
       "count": 4,
       "findings": [
         {
-          "line": 526,
+          "line": 527,
           "column": 4,
           "entity_type": "M",
           "name": "HuggingFaceProvider.chat_stream",
           "rank": "C",
           "complexity": 14,
           "message": "method 'HuggingFaceProvider.chat_stream' - complexity 14 (rank C)",
-          "raw": "src\\intellicrack\\providers\\huggingface.py:526:4: method 'HuggingFaceProvider.chat_stream' - complexity 14 (rank C)"
+          "raw": "src\\intellicrack\\providers\\huggingface.py:527:4: method 'HuggingFaceProvider.chat_stream' - complexity 14 (rank C)"
         },
         {
           "line": 189,
@@ -141,14 +141,14 @@
           "raw": "src\\intellicrack\\providers\\huggingface.py:278:4: method 'HuggingFaceProvider._estimate_context_window' - complexity 12 (rank C)"
         },
         {
-          "line": 649,
+          "line": 650,
           "column": 4,
           "entity_type": "M",
           "name": "HuggingFaceProvider._convert_messages_to_provider_format",
           "rank": "C",
           "complexity": 11,
           "message": "method 'HuggingFaceProvider._convert_messages_to_provider_format' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\providers\\huggingface.py:649:4: method 'HuggingFaceProvider._convert_messages_to_provider_format' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\providers\\huggingface.py:650:4: method 'HuggingFaceProvider._convert_messages_to_provider_format' - complexity 11 (rank C)"
         }
       ]
     },
@@ -347,24 +347,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 556,
+          "line": 555,
           "column": 4,
           "entity_type": "M",
           "name": "BinaryBridge._detect_architecture",
           "rank": "C",
           "complexity": 11,
           "message": "method 'BinaryBridge._detect_architecture' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\binary.py:556:4: method 'BinaryBridge._detect_architecture' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\binary.py:555:4: method 'BinaryBridge._detect_architecture' - complexity 11 (rank C)"
         },
         {
-          "line": 667,
+          "line": 666,
           "column": 4,
           "entity_type": "M",
           "name": "BinaryBridge._get_imports_internal",
           "rank": "C",
           "complexity": 11,
           "message": "method 'BinaryBridge._get_imports_internal' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\binary.py:667:4: method 'BinaryBridge._get_imports_internal' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\binary.py:666:4: method 'BinaryBridge._get_imports_internal' - complexity 11 (rank C)"
         }
       ]
     },
@@ -435,14 +435,14 @@
           "raw": "src\\intellicrack\\bridges\\x64dbg.py:252:0: function '_read_unicode_string_from_params' - complexity 11 (rank C)"
         },
         {
-          "line": 1617,
+          "line": 1618,
           "column": 4,
           "entity_type": "M",
           "name": "X64DbgBridge.get_memory_regions",
           "rank": "C",
           "complexity": 11,
           "message": "method 'X64DbgBridge.get_memory_regions' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1617:4: method 'X64DbgBridge.get_memory_regions' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1618:4: method 'X64DbgBridge.get_memory_regions' - complexity 11 (rank C)"
         }
       ]
     },
@@ -581,24 +581,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 217,
+          "line": 220,
           "column": 0,
           "entity_type": "F",
           "name": "get_xpu_device_info",
           "rank": "D",
           "complexity": 22,
           "message": "function 'get_xpu_device_info' - complexity 22 (rank D)",
-          "raw": "src\\intellicrack\\providers\\xpu_utils.py:217:0: function 'get_xpu_device_info' - complexity 22 (rank D)"
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:220:0: function 'get_xpu_device_info' - complexity 22 (rank D)"
         },
         {
-          "line": 419,
+          "line": 422,
           "column": 0,
           "entity_type": "F",
           "name": "get_xpu_memory_info",
           "rank": "C",
           "complexity": 11,
           "message": "function 'get_xpu_memory_info' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\providers\\xpu_utils.py:419:0: function 'get_xpu_memory_info' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:422:0: function 'get_xpu_memory_info' - complexity 11 (rank C)"
         }
       ]
     },
@@ -633,24 +633,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 724,
+          "line": 722,
           "column": 4,
           "entity_type": "M",
           "name": "MainWindow._on_tool_result",
           "rank": "C",
           "complexity": 11,
           "message": "method 'MainWindow._on_tool_result' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\app.py:724:4: method 'MainWindow._on_tool_result' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\ui\\app.py:722:4: method 'MainWindow._on_tool_result' - complexity 11 (rank C)"
         },
         {
-          "line": 1631,
+          "line": 1625,
           "column": 4,
           "entity_type": "M",
-          "name": "MainWindow.close_event_handler",
+          "name": "MainWindow.closeEvent",
           "rank": "C",
           "complexity": 11,
-          "message": "method 'MainWindow.close_event_handler' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\app.py:1631:4: method 'MainWindow.close_event_handler' - complexity 11 (rank C)"
+          "message": "method 'MainWindow.closeEvent' - complexity 11 (rank C)",
+          "raw": "src\\intellicrack\\ui\\app.py:1625:4: method 'MainWindow.closeEvent' - complexity 11 (rank C)"
         }
       ]
     },
@@ -781,14 +781,14 @@
       "count": 1,
       "findings": [
         {
-          "line": 774,
+          "line": 780,
           "column": 4,
           "entity_type": "M",
           "name": "PythonSyntaxHighlighter._highlight_triple_quotes",
           "rank": "C",
           "complexity": 12,
           "message": "method 'PythonSyntaxHighlighter._highlight_triple_quotes' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:774:4: method 'PythonSyntaxHighlighter._highlight_triple_quotes' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\ui\\highlighter.py:780:4: method 'PythonSyntaxHighlighter._highlight_triple_quotes' - complexity 12 (rank C)"
         }
       ]
     },

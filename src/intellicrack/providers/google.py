@@ -180,13 +180,40 @@ class GoogleProvider(LLMProviderBase):
                 extra={"count": len(sorted_models)},
             )
         except Exception as e:
-            self._logger.exception(
-                "google_list_models_failed",
+            self._logger.warning(
+                "google_list_models_api_failed_using_fallback",
                 extra={"error": str(e)},
             )
-            raise ProviderError(_MSG_REQUEST_FAILED) from e
+            return self._get_known_models_fallback()
         else:
             return sorted_models
+
+    def _get_known_models_fallback(self) -> list[ModelInfo]:
+        """Build ModelInfo list from hardcoded KNOWN_MODELS.
+
+        Used as a fallback when the API is unreachable or returns errors.
+
+        Returns:
+            List of ModelInfo built from KNOWN_MODELS class variable.
+        """
+        models: list[ModelInfo] = []
+        for model_id, display_name, ctx_window, tools, vision in self.KNOWN_MODELS:
+            models.append(ModelInfo(
+                id=model_id,
+                name=display_name,
+                provider=ProviderName.GOOGLE,
+                context_window=ctx_window,
+                supports_tools=tools,
+                supports_vision=vision,
+                supports_streaming=True,
+                input_cost_per_1m_tokens=None,
+                output_cost_per_1m_tokens=None,
+            ))
+        self._logger.info(
+            "google_known_models_fallback",
+            extra={"count": len(models)},
+        )
+        return models
 
     @staticmethod
     def _is_generative_model(model_name: str) -> bool:

@@ -1,3 +1,8 @@
+$_userPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
+$_machinePath = [Environment]::GetEnvironmentVariable('PATH', 'Machine')
+$env:PATH = "$_userPath;$_machinePath"
+Remove-Variable _userPath, _machinePath -ErrorAction SilentlyContinue
+
 Set-Location "C:\Users\zachf"
 
 try {

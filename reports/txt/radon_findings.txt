@@ -24,13 +24,13 @@ src\intellicrack\providers\google.py:536:4: method 'GoogleProvider._convert_mess
 
 4 findings in src\intellicrack\providers\huggingface.py
 
-src\intellicrack\providers\huggingface.py:526:4: method 'HuggingFaceProvider.chat_stream' - complexity 14 (rank C)
+src\intellicrack\providers\huggingface.py:527:4: method 'HuggingFaceProvider.chat_stream' - complexity 14 (rank C)
 
 src\intellicrack\providers\huggingface.py:189:4: method 'HuggingFaceProvider.list_models' - complexity 13 (rank C)
 
 src\intellicrack\providers\huggingface.py:278:4: method 'HuggingFaceProvider._estimate_context_window' - complexity 12 (rank C)
 
-src\intellicrack\providers\huggingface.py:649:4: method 'HuggingFaceProvider._convert_messages_to_provider_format' - complexity 11 (rank C)
+src\intellicrack\providers\huggingface.py:650:4: method 'HuggingFaceProvider._convert_messages_to_provider_format' - complexity 11 (rank C)
 
 
 4 findings in src\intellicrack\ui\session_manager.py
@@ -82,9 +82,9 @@ src\intellicrack\ui\provider_config.py:1248:4: method 'ProviderSettingsWidget._l
 
 2 findings in src\intellicrack\bridges\binary.py
 
-src\intellicrack\bridges\binary.py:556:4: method 'BinaryBridge._detect_architecture' - complexity 11 (rank C)
+src\intellicrack\bridges\binary.py:555:4: method 'BinaryBridge._detect_architecture' - complexity 11 (rank C)
 
-src\intellicrack\bridges\binary.py:667:4: method 'BinaryBridge._get_imports_internal' - complexity 11 (rank C)
+src\intellicrack\bridges\binary.py:666:4: method 'BinaryBridge._get_imports_internal' - complexity 11 (rank C)
 
 
 2 findings in src\intellicrack\bridges\installer.py
@@ -105,7 +105,7 @@ src\intellicrack\bridges\schemas.py:295:0: function 'validate_tool_parameter' - 
 
 src\intellicrack\bridges\x64dbg.py:252:0: function '_read_unicode_string_from_params' - complexity 11 (rank C)
 
-src\intellicrack\bridges\x64dbg.py:1617:4: method 'X64DbgBridge.get_memory_regions' - complexity 11 (rank C)
+src\intellicrack\bridges\x64dbg.py:1618:4: method 'X64DbgBridge.get_memory_regions' - complexity 11 (rank C)
 
 
 2 findings in src\intellicrack\providers\grok.py
@@ -145,9 +145,9 @@ src\intellicrack\providers\openai.py:508:4: method 'OpenAIProvider._convert_mess
 
 2 findings in src\intellicrack\providers\xpu_utils.py
 
-src\intellicrack\providers\xpu_utils.py:217:0: function 'get_xpu_device_info' - complexity 22 (rank D)
+src\intellicrack\providers\xpu_utils.py:220:0: function 'get_xpu_device_info' - complexity 22 (rank D)
 
-src\intellicrack\providers\xpu_utils.py:419:0: function 'get_xpu_memory_info' - complexity 11 (rank C)
+src\intellicrack\providers\xpu_utils.py:422:0: function 'get_xpu_memory_info' - complexity 11 (rank C)
 
 
 2 findings in src\intellicrack\sandbox\windows.py
@@ -159,9 +159,9 @@ src\intellicrack\sandbox\windows.py:548:4: method 'WindowsSandbox.run_binary' - 
 
 2 findings in src\intellicrack\ui\app.py
 
-src\intellicrack\ui\app.py:724:4: method 'MainWindow._on_tool_result' - complexity 11 (rank C)
+src\intellicrack\ui\app.py:722:4: method 'MainWindow._on_tool_result' - complexity 11 (rank C)
 
-src\intellicrack\ui\app.py:1631:4: method 'MainWindow.close_event_handler' - complexity 11 (rank C)
+src\intellicrack\ui\app.py:1625:4: method 'MainWindow.closeEvent' - complexity 11 (rank C)
 
 
 2 findings in src\intellicrack\ui\tools.py
@@ -203,7 +203,7 @@ src\intellicrack\credentials\env_loader.py:283:4: method 'CredentialLoader._vali
 
 1 findings in src\intellicrack\ui\highlighter.py
 
-src\intellicrack\ui\highlighter.py:774:4: method 'PythonSyntaxHighlighter._highlight_triple_quotes' - complexity 12 (rank C)
+src\intellicrack\ui\highlighter.py:780:4: method 'PythonSyntaxHighlighter._highlight_triple_quotes' - complexity 12 (rank C)
 
 
 1 findings in src\intellicrack\ui\sandbox_config.py

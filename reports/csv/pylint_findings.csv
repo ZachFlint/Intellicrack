@@ -1,4 +1,4 @@
-tool,file,line,column,severity,code,rule,message,confidence,complexity,rank,name,entity_type,category,function,variable,crate,vulnerability,misspelling,correction
+tool,file,line,column,severity,code,rule,message,confidence,complexity,rank,name,entity_type,category,function,variable,crate,vulnerability,misspelling,correction
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.ghidra_panel:[193:245]
 ==intellicrack.ui.panels.radare2_panel:[221:273]
@@ -53,7 +53,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         Args:
             bridge: The GhidraBridge to use.
         """"""
-        self._bridge = bridge",,,,,,,,,,,,
+        self._bridge = bridge",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.core._subprocess:[13:44]
 ==intellicrack.core._subprocess:[13:44]
@@ -87,7 +87,7 @@ __all__: list[str] = [
     ""SubprocessError"",
     ""TimeoutExpired"",
     ""run"",
-]",,,,,,,,,,,,
+]",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels._qt_compat:[20:175]
 ==intellicrack.ui.panels._qt_compat:[20:175]
@@ -245,7 +245,7 @@ def tree_item_data(
     Returns:
         The stored data value.
     """"""
-    return _resolve(item, _GET_DATA)(column, role)",,,,,,,,,,,,
+    return _resolve(item, _GET_DATA)(column, role)",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.grok:[274:324]
 ==intellicrack.providers.openai:[298:348]
@@ -298,7 +298,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
-        except openai.RateLimitError as e:",,,,,,,,,,,,
+        except openai.RateLimitError as e:",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.grok:[470:493]
 ==intellicrack.providers.openrouter:[536:559]
@@ -324,7 +324,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                         for tc in msg.tool_calls
                     ]
                     assistant_msg[""tool_calls""] = tool_calls_list
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.huggingface:[672:694]
 ==intellicrack.providers.openai:[512:534]
@@ -349,7 +349,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                         }
                         for tc in msg.tool_calls
                     ]
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui._screen_compat:[18:79]
 ==intellicrack.ui._screen_compat:[18:79]
@@ -413,7 +413,7 @@ def move_widget(widget: QWidget, x: int, y: int) -> None:
         x: X coordinate in screen pixels.
         y: Y coordinate in screen pixels.
     """"""
-    _resolve(widget, _MOVE)(x, y)",,,,,,,,,,,,
+    _resolve(widget, _MOVE)(x, y)",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.ghidra_panel:[162:193]
 ==intellicrack.ui.panels.radare2_panel:[183:214]
@@ -447,7 +447,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         self._exports_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         self._exports_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         tabs.addTab(self._exports_table, ""Exports"")
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.radare2:[447:464]
 ==intellicrack.bridges.x64dbg:[671:688]
@@ -467,7 +467,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                     ],
                     returns=""Assembled bytes"",
                 ),
-                ToolFunction(",,,,,,,,,,,,
+                ToolFunction(",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.highlighter:[372:389]
 ==intellicrack.ui.panels.x64dbg_panel:[53:70]
@@ -487,7 +487,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
     ""r12"",
     ""r13"",
     ""r14"",
-    ""r15"",",,,,,,,,,,,,
+    ""r15"",",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.ghidra_panel:[78:111]
 ==intellicrack.ui.panels.radare2_panel:[82:115]
@@ -523,7 +523,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         toolbar = QToolBar()
         toolbar.setMovable(False)
         toolbar.setFixedHeight(32)
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels._async_bridge:[15:63]
 ==intellicrack.ui.panels._async_bridge:[15:63]
@@ -574,7 +574,7 @@ def _log_task_exception(task: asyncio.Task[object]) -> None:
         return
     exc = task.exception()
     if exc is not None:
-        _logger.error(""bridge_task_failed: %s: %s"", type(exc).__name__, exc)",,,,,,,,,,,,
+        _logger.error(""bridge_task_failed: %s: %s"", type(exc).__name__, exc)",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.ghidra_panel:[380:399]
 ==intellicrack.ui.panels.radare2_panel:[376:395]
@@ -596,7 +596,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
             self._func_tree.addTopLevelItem(item)
 
         set_sorting_enabled(self._func_tree, True)
-        self._func_count_label.setText(f""Functions ({len(functions)})"")",,,,,,,,,,,,
+        self._func_count_label.setText(f""Functions ({len(functions)})"")",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.ghidra_panel:[446:467]
 ==intellicrack.ui.panels.radare2_panel:[442:463]
@@ -620,7 +620,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
 
         try:
             exports = run_bridge_coroutine(self._bridge.get_exports())
-        except Exception:",,,,,,,,,,,,
+        except Exception:",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.ghidra_panel:[514:531]
 ==intellicrack.ui.panels.radare2_panel:[509:526]
@@ -640,7 +640,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                         xref.from_function or """",
                     ])
                     self._xrefs_tree.addTopLevelItem(item)
-        except Exception:",,,,,,,,,,,,
+        except Exception:",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.process:[276:290]
 ==intellicrack.bridges.x64dbg:[613:627]
@@ -657,7 +657,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             description=""Bytes to read"",
                             required=True,
                         ),
-                    ],",,,,,,,,,,,,
+                    ],",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.process:[295:309]
 ==intellicrack.bridges.x64dbg:[632:646]
@@ -674,7 +674,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             description=""Hex data to write"",
                             required=True,
                         ),
-                    ],",,,,,,,,,,,,
+                    ],",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.huggingface:[723:739]
 ==intellicrack.providers.local_transformers:[683:699]
@@ -693,7 +693,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                     properties[param.name] = prop
                     if param.required:
                         required.append(param.name)
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.ollama:[663:679]
 ==intellicrack.providers.openrouter:[589:605]
@@ -712,7 +712,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                     properties[param.name] = prop
                     if param.required:
                         required.append(param.name)
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.ghidra_panel:[137:162]
 ==intellicrack.ui.panels.radare2_panel:[139:164]
@@ -740,7 +740,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         self._disasm_view.setReadOnly(True)
         set_max_block_count(self._disasm_view, 50000)
         tabs.addTab(self._disasm_view, ""Disassembly"")
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.binary:[393:413]
 ==intellicrack.bridges.radare2:[546:566]
@@ -763,7 +763,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
             target_path=None,
             target_pid=None,
             last_error=None,
-        )",,,,,,,,,,,,
+        )",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.grok:[357:397]
 ==intellicrack.providers.huggingface:[514:553]
@@ -806,7 +806,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.openai:[389:429]
 ==intellicrack.providers.openrouter:[398:438]
@@ -849,7 +849,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.radare2:[300:312]
 ==intellicrack.bridges.x64dbg:[651:663]
@@ -864,7 +864,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             name=""count"",
                             type=""integer"",
                             description=""Number of instructions"",
-                            required=False,",,,,,,,,,,,,
+                            required=False,",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.ghidra_panel:[533:545]
 ==intellicrack.ui.panels.radare2_panel:[528:540]
@@ -879,7 +879,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                         xref.to_function or """",
                     ])
                     self._xrefs_tree.addTopLevelItem(item)
-        except Exception:",,,,,,,,,,,,
+        except Exception:",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.binary:[134:145]
 ==intellicrack.bridges.ghidra:[127:138]
@@ -893,7 +893,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                     ],
                     returns=""BinaryInfo object with file details"",
                 ),
-                ToolFunction(",,,,,,,,,,,,
+                ToolFunction(",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.process:[404:415]
 ==intellicrack.bridges.x64dbg:[696:707]
@@ -907,7 +907,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                     ],
                     returns=""List of matching addresses"",
                 ),
-                ToolFunction(",,,,,,,,,,,,
+                ToolFunction(",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.huggingface:[740:752]
 ==intellicrack.providers.local_transformers:[700:712]
@@ -922,7 +922,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                         },
                     },
                 })
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.huggingface:[672:684]
 ==intellicrack.providers.ollama:[617:629]
@@ -937,7 +937,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
 
                 if msg.tool_calls:
                     assistant_msg[""tool_calls""] = [
-                        {",,,,,,,,,,,,
+                        {",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.huggingface:[590:601]
 ==intellicrack.providers.openrouter:[476:487]
@@ -951,7 +951,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             data = json.loads(data_str)
                             if choices := data.get(""choices"", []):
                                 delta = choices[0].get(""delta"", {})
-                                if content := delta.get(""content"", """"):",,,,,,,,,,,,
+                                if content := delta.get(""content"", """"):",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.ollama:[680:692]
 ==intellicrack.providers.openrouter:[606:618]
@@ -966,7 +966,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                         },
                     },
                 })
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.sandbox.qemu:[1013:1028]
 ==intellicrack.sandbox.windows:[285:297]
@@ -984,7 +984,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         self._shared_folder = None
 
     async def _create_guest_agent_script(self) -> None:
-        """"""Create guest agent monitoring scripts.""""""",,,,,,,,,,,,
+        """"""Create guest agent monitoring scripts.""""""",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.chat:[256:272]
 ==intellicrack.ui.resources.theme_manager:[109:124]
@@ -1003,7 +1003,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         self._send_button.clicked.connect(self._on_send)
         layout.addWidget(self._send_button)
 
-        self.setStyleSheet(""""""",,,,,,,,,,,,
+        self.setStyleSheet(""""""",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.process:[63:73]
 ==intellicrack.bridges.x64dbg:[2109:2119]
@@ -1016,7 +1016,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         (""cntThreads"", wintypes.DWORD),
         (""th32ParentProcessID"", wintypes.DWORD),
         (""pcPriClassBase"", wintypes.LONG),
-        (""dwFlags"", wintypes.DWORD),",,,,,,,,,,,,
+        (""dwFlags"", wintypes.DWORD),",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.process:[108:122]
 ==intellicrack.bridges.x64dbg:[1637:1648]
@@ -1033,7 +1033,7 @@ class MemoryBasicInformation(ctypes.Structure):
         (""Type"", wintypes.DWORD),
     ]
 
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.process:[347:357]
 ==intellicrack.bridges.x64dbg:[613:623]
@@ -1046,7 +1046,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                         ),
                         ToolParameter(
                             name=""size"",
-                            type=""integer"",",,,,,,,,,,,,
+                            type=""integer"",",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.schemas:[98:120]
 ==intellicrack.providers.base:[48:70]
@@ -1071,7 +1071,7 @@ class OpenAIFunctionSchema(TypedDict):
 
 class OpenAIToolSchema(TypedDict):
     """"""OpenAI tool schema format.""""""
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.grok:[481:491]
 ==intellicrack.providers.huggingface:[683:694]
@@ -1084,7 +1084,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             },
                         }
                         for tc in msg.tool_calls
-                    ]",,,,,,,,,,,,
+                    ]",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.grok:[357:392]
 ==intellicrack.providers.ollama:[510:546]
@@ -1122,7 +1122,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         Raises:
             ProviderError: If not connected or request fails.
             RateLimitError: If rate limit is exceeded.
-        """"""",,,,,,,,,,,,
+        """"""",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.grok:[419:431]
 ==intellicrack.providers.openai:[448:460]
@@ -1137,7 +1137,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                 if chunk.choices and chunk.choices[0].delta.content:
                     yield chunk.choices[0].delta.content
 
-        except openai.RateLimitError as e:",,,,,,,,,,,,
+        except openai.RateLimitError as e:",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.openai:[523:534]
 ==intellicrack.providers.openrouter:[547:557]
@@ -1150,7 +1150,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             },
                         }
                         for tc in msg.tool_calls
-                    ]",,,,,,,,,,,,
+                    ]",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.ghidra_panel:[363:379]
 ==intellicrack.ui.panels.radare2_panel:[359:375]
@@ -1169,7 +1169,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
 
         try:
             functions = run_bridge_coroutine(self._bridge.get_functions(filter_text))
-        except Exception:",,,,,,,,,,,,
+        except Exception:",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.binary:[152:161]
 ==intellicrack.bridges.frida_bridge:[234:243]
@@ -1181,7 +1181,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             description=""Number of bytes to read"",
                             required=True,
                         ),
-                    ],",,,,,,,,,,,,
+                    ],",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.binary:[404:413]
 ==intellicrack.bridges.frida_bridge:[381:390]
@@ -1193,7 +1193,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
             target_path=None,
             target_pid=None,
             last_error=None,
-        )",,,,,,,,,,,,
+        )",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.frida_bridge:[115:124]
 ==intellicrack.bridges.x64dbg:[474:483]
@@ -1205,7 +1205,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             required=True,
                         ),
                         ToolParameter(
-                            name=""args"",",,,,,,,,,,,,
+                            name=""args"",",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.ghidra:[374:384]
 ==intellicrack.bridges.x64dbg:[839:849]
@@ -1218,7 +1218,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
             target_pid=None,
             last_error=None,
         )
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.process:[453:462]
 ==intellicrack.bridges.radare2:[557:566]
@@ -1230,7 +1230,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
             target_path=None,
             target_pid=None,
             last_error=None,
-        )",,,,,,,,,,,,
+        )",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.process:[80:91]
 ==intellicrack.bridges.x64dbg:[1940:1950]
@@ -1244,7 +1244,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         (""dwFlags"", wintypes.DWORD),
     ]
 
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.anthropic:[312:322]
 ==intellicrack.providers.grok:[357:366]
@@ -1256,7 +1256,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                     ""tool_name"": tool_call.tool_name,
                     ""arguments_count"": len(tool_call.arguments),
                 },
-            )",,,,,,,,,,,,
+            )",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.base:[419:429]
 ==intellicrack.providers.huggingface:[740:750]
@@ -1269,7 +1269,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             ""properties"": properties,
                             ""required"": required,
                         },
-                    },",,,,,,,,,,,,
+                    },",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.grok:[470:480]
 ==intellicrack.providers.huggingface:[672:682]
@@ -1282,7 +1282,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                     ""content"": msg.content,
                 }
 
-                if msg.tool_calls:",,,,,,,,,,,,
+                if msg.tool_calls:",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.ollama:[617:627]
 ==intellicrack.providers.openrouter:[536:546]
@@ -1295,7 +1295,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                     ""content"": msg.content,
                 }
 
-                if msg.tool_calls:",,,,,,,,,,,,
+                if msg.tool_calls:",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.ghidra_panel:[275:298]
 ==intellicrack.ui.panels.radare2_panel:[303:326]
@@ -1321,7 +1321,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         if self._bridge is not None and self._bridge.state.is_ready():
             try:
                 run_bridge_coroutine(self._bridge.shutdown())
-            except Exception:",,,,,,,,,,,,
+            except Exception:",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.ghidra_panel:[407:425]
 ==intellicrack.ui.panels.radare2_panel:[403:421]
@@ -1342,7 +1342,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
             code = run_bridge_coroutine(self._bridge.decompile(address))
             if code is not None:
                 self._decompiled_view.setPlainText(code)
-        except Exception:",,,,,,,,,,,,
+        except Exception:",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.ghidra_panel:[494:505]
 ==intellicrack.ui.panels.radare2_panel:[489:500]
@@ -1356,7 +1356,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
             row = self._strings_table.rowCount()
             self._strings_table.insertRow(row)
             self._strings_table.setItem(row, 0, QTableWidgetItem(f""0x{s.address:X}""))
-            self._strings_table.setItem(row, 1, QTableWidgetItem(s.value))",,,,,,,,,,,,
+            self._strings_table.setItem(row, 1, QTableWidgetItem(s.value))",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.binary:[499:508]
 ==intellicrack.bridges.ghidra:[620:637]
@@ -1376,7 +1376,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
 
         Returns:
             Tuple of (entry_point, sections, imports, exports).
-        """"""",,,,,,,,,,,,
+        """"""",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.frida_bridge:[318:326]
 ==intellicrack.bridges.ghidra:[244:252]
@@ -1387,7 +1387,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             description=""Function address"",
                             required=True,
                         ),
-                        ToolParameter(",,,,,,,,,,,,
+                        ToolParameter(",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.ghidra:[192:200]
 ==intellicrack.bridges.radare2:[320:328]
@@ -1398,7 +1398,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             description=""Target address"",
                             required=True,
                         ),
-                    ],",,,,,,,,,,,,
+                    ],",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.ghidra:[205:213]
 ==intellicrack.bridges.radare2:[333:341]
@@ -1409,7 +1409,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             description=""Source address"",
                             required=True,
                         ),
-                    ],",,,,,,,,,,,,
+                    ],",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.process:[276:284]
 ==intellicrack.bridges.x64dbg:[632:640]
@@ -1420,7 +1420,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             description=""Memory address"",
                             required=True,
                         ),
-                        ToolParameter(",,,,,,,,,,,,
+                        ToolParameter(",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.process:[295:303]
 ==intellicrack.bridges.x64dbg:[613:621]
@@ -1431,7 +1431,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             description=""Memory address"",
                             required=True,
                         ),
-                        ToolParameter(",,,,,,,,,,,,
+                        ToolParameter(",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.sandbox_bridge:[660:668]
 ==intellicrack.sandbox.manager:[390:398]
@@ -1442,7 +1442,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                 ""created_at"": inst.created_at.isoformat(),
                 ""last_used"": inst.last_used.isoformat(),
                 ""binary"": str(inst.binary_path) if inst.binary_path else None,
-            }",,,,,,,,,,,,
+            }",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.anthropic:[36:51]
 ==intellicrack.providers.google:[31:46]
@@ -1460,7 +1460,7 @@ _MSG_REQUEST_FAILED = ""Request failed""
 _MSG_RATE_LIMITED = ""Rate limited""
 _MSG_STREAM_FAILED = ""Stream failed""
 
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.google:[675:684]
 ==intellicrack.providers.local_transformers:[691:700]
@@ -1472,7 +1472,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                     if param.required:
                         required.append(param.name)
 
-                result.append({",,,,,,,,,,,,
+                result.append({",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.grok:[274:309]
 ==intellicrack.providers.huggingface:[427:456]
@@ -1504,7 +1504,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         if self._client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 
-        try:",,,,,,,,,,,,
+        try:",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.grok:[141:151]
 ==intellicrack.providers.openai:[154:164]
@@ -1517,7 +1517,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                 models.append(
                     ModelInfo(
                         id=model_id,
-                        name=model_id,",,,,,,,,,,,,
+                        name=model_id,",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.grok:[152:161]
 ==intellicrack.providers.openai:[165:174]
@@ -1529,7 +1529,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                         output_cost_per_1m_tokens=None,
                     )
                 )
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.huggingface:[569:579]
 ==intellicrack.providers.openrouter:[457:467]
@@ -1542,7 +1542,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                 request_body[""tools""] = self._convert_tools_to_provider_format(tools)
 
             async with self._client.stream(
-                ""POST"",",,,,,,,,,,,,
+                ""POST"",",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.ghidra_panel:[337:346]
 ==intellicrack.ui.panels.radare2_panel:[332:341]
@@ -1554,7 +1554,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         )
         if not file_path:
             return
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.ghidra_panel:[468:478]
 ==intellicrack.ui.panels.radare2_panel:[464:474]
@@ -1567,7 +1567,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         for exp in exports:
             row = self._exports_table.rowCount()
             self._exports_table.insertRow(row)
-            self._exports_table.setItem(row, 0, QTableWidgetItem(exp.name))",,,,,,,,,,,,
+            self._exports_table.setItem(row, 0, QTableWidgetItem(exp.name))",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.binary:[210:217]
 ==intellicrack.bridges.ghidra:[177:184]
@@ -1577,7 +1577,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             name=""count"",
                             type=""integer"",
                             description=""Number of instructions to disassemble"",
-                            required=False,",,,,,,,,,,,,
+                            required=False,",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.binary:[482:491]
 ==intellicrack.bridges.radare2:[710:719]
@@ -1589,7 +1589,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
             self._state.tool_running = True
             self._state.binary_loaded = True
             self._state.target_path = self._binary_path
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.binary:[503:518]
 ==intellicrack.bridges.radare2:[731:749]
@@ -1607,7 +1607,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
 
         Returns:
             The binary format ('pe', 'elf', 'macho', or 'raw').
-        """"""",,,,,,,,,,,,
+        """"""",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.binary:[531:550]
 ==intellicrack.core.license_analyzer:[929:947]
@@ -1629,7 +1629,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
 
         Returns:
             Parsed lief Binary object or None if parsing fails.
-        """"""",,,,,,,,,,,,
+        """"""",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.frida_bridge:[318:325]
 ==intellicrack.bridges.ghidra:[354:361]
@@ -1639,7 +1639,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             type=""integer"",
                             description=""Function address"",
                             required=True,
-                        ),",,,,,,,,,,,,
+                        ),",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.ghidra:[374:381]
 ==intellicrack.bridges.process:[465:472]
@@ -1649,7 +1649,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
             binary_loaded=False,
             process_attached=False,
             target_path=None,
-            target_pid=None,",,,,,,,,,,,,
+            target_pid=None,",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.ghidra:[192:199]
 ==intellicrack.bridges.radare2:[447:454]
@@ -1659,7 +1659,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             type=""integer"",
                             description=""Target address"",
                             required=True,
-                        ),",,,,,,,,,,,,
+                        ),",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.ghidra:[244:251]
 ==intellicrack.bridges.radare2:[479:486]
@@ -1669,7 +1669,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             type=""integer"",
                             description=""Function address"",
                             required=True,
-                        ),",,,,,,,,,,,,
+                        ),",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.ghidra:[413:421]
 ==intellicrack.bridges.x64dbg:[863:871]
@@ -1680,7 +1680,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
             self._process.terminate()
             try:
                 await asyncio.wait_for(
-                    asyncio.to_thread(self._process.wait),",,,,,,,,,,,,
+                    asyncio.to_thread(self._process.wait),",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.radare2:[320:327]
 ==intellicrack.bridges.x64dbg:[671:678]
@@ -1690,7 +1690,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             type=""integer"",
                             description=""Target address"",
                             required=True,
-                        ),",,,,,,,,,,,,
+                        ),",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.radare2:[524:531]
 ==intellicrack.bridges.x64dbg:[800:807]
@@ -1700,7 +1700,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             type=""integer"",
                             description=""Target address"",
                             required=True,
-                        ),",,,,,,,,,,,,
+                        ),",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.x64dbg:[928:936]
 ==intellicrack.sandbox.windows:[193:201]
@@ -1711,7 +1711,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
 
             process_manager = ProcessManager.get_instance()
             process_manager.register(
-                self._process,",,,,,,,,,,,,
+                self._process,",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.base:[266:273]
 ==intellicrack.providers.google:[325:333]
@@ -1722,7 +1722,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                 timestamp=datetime.now(),
             )
 
-            log_provider_response(",,,,,,,,,,,,
+            log_provider_response(",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.google:[168:176]
 ==intellicrack.providers.huggingface:[238:246]
@@ -1733,7 +1733,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                         output_cost_per_1m_tokens=None,
                     )
                 )
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.google:[632:640]
 ==intellicrack.providers.huggingface:[731:739]
@@ -1744,7 +1744,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                     properties[param.name] = prop
                     if param.required:
                         required.append(param.name)
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.google:[666:674]
 ==intellicrack.providers.local_transformers:[681:690]
@@ -1756,7 +1756,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                 required: list[str] = []
 
                 for param in func.parameters:
-                    prop: dict[str, object] = {",,,,,,,,,,,,
+                    prop: dict[str, object] = {",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.google:[675:683]
 ==intellicrack.providers.ollama:[671:679]
@@ -1767,7 +1767,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                     properties[param.name] = prop
                     if param.required:
                         required.append(param.name)
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.google:[170:178]
 ==intellicrack.providers.openai:[168:176]
@@ -1778,7 +1778,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                 )
 
             sorted_models = sorted(models, key=lambda m: m.id, reverse=True)
-            self._logger.info(",,,,,,,,,,,,
+            self._logger.info(",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.grok:[131:140]
 ==intellicrack.providers.openai:[144:153]
@@ -1790,7 +1790,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
             models: list[ModelInfo] = []
 
             for model_data in response.data:
-                model_id = model_data.id",,,,,,,,,,,,
+                model_id = model_data.id",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.provider_config:[786:795]
 ==intellicrack.ui.sandbox_config:[372:381]
@@ -1802,7 +1802,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
 
         if apply_button := button_box.button(QDialogButtonBox.StandardButton.Apply):
             apply_button.clicked.connect(self._on_apply)
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.binary_panel:[77:89]
 ==intellicrack.ui.panels.process_panel:[344:356]
@@ -1817,7 +1817,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         toolbar = QToolBar()
         toolbar.setMovable(False)
         toolbar.setFixedHeight(32)
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.frida_panel:[80:93]
 ==intellicrack.ui.panels.x64dbg_panel:[95:108]
@@ -1833,7 +1833,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
 
         main_splitter = QSplitter(Qt.Orientation.Vertical)
 
-        top_splitter = QSplitter(Qt.Orientation.Horizontal)",,,,,,,,,,,,
+        top_splitter = QSplitter(Qt.Orientation.Horizontal)",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.base:[1036:1057]
 ==intellicrack.bridges.binary:[104:118]
@@ -1857,7 +1857,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         Note:
             Subclasses must override to return BinaryInfo with file details
             including format, architecture, sections, and entry point.
-        """"""",,,,,,,,,,,,
+        """"""",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.__init__:[34:40]
 ==intellicrack.bridges.base:[39:45]
@@ -1866,7 +1866,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
     ""BridgeState"",
     ""DebuggerBridge"",
     ""DisassemblyLine"",
-    ""DynamicAnalysisBridge"",",,,,,,,,,,,,
+    ""DynamicAnalysisBridge"",",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.binary:[407:413]
 ==intellicrack.bridges.ghidra:[377:384]
@@ -1875,7 +1875,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
             target_path=None,
             target_pid=None,
             last_error=None,
-        )",,,,,,,,,,,,
+        )",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.frida_bridge:[384:390]
 ==intellicrack.bridges.x64dbg:[842:849]
@@ -1884,7 +1884,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                 target_path=None,
                 target_pid=None,
                 last_error=None,
-            )",,,,,,,,,,,,
+            )",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.ghidra:[422:430]
 ==intellicrack.bridges.x64dbg:[872:880]
@@ -1895,7 +1895,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
 
             process_manager.unregister(pid)
             self._process = None
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.process:[94:100]
 ==intellicrack.bridges.x64dbg:[2008:2014]
@@ -1904,7 +1904,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                 (""th32ModuleID"", wintypes.DWORD),
                 (""th32ProcessID"", wintypes.DWORD),
                 (""GlblcntUsage"", wintypes.DWORD),
-                (""ProccntUsage"", wintypes.DWORD),",,,,,,,,,,,,
+                (""ProccntUsage"", wintypes.DWORD),",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.process:[1061:1069]
 ==intellicrack.bridges.x64dbg:[1668:1676]
@@ -1915,7 +1915,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
 
                 if result == 0:
                     break
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.process:[1089:1096]
 ==intellicrack.bridges.x64dbg:[1684:1691]
@@ -1925,7 +1925,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                         MemoryRegion(
                             base_address=mbi.BaseAddress or 0,
                             size=mbi.RegionSize,
-                            protection=prot_map.get(mbi.Protect, ""???""),",,,,,,,,,,,,
+                            protection=prot_map.get(mbi.Protect, ""???""),",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.sandbox_bridge:[201:207]
 ==intellicrack.bridges.x64dbg:[710:716]
@@ -1934,7 +1934,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             type=""string"",
                             description=""Command to execute"",
                             required=True,
-                        ),",,,,,,,,,,,,
+                        ),",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.schemas:[67:79]
 ==intellicrack.providers.base:[34:46]
@@ -1949,7 +1949,7 @@ class JSONSchemaProperty(TypedDict, total=False):
 
 class JSONSchemaParameters(TypedDict):
     """"""JSON Schema parameters object for tool functions.""""""
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.core.license_analyzer:[357:363]
 ==intellicrack.ui.highlighter:[290:296]
@@ -1958,7 +1958,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         ""mul"",
         ""imul"",
         ""div"",
-        ""idiv"",",,,,,,,,,,,,
+        ""idiv"",",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.core.license_analyzer:[365:371]
 ==intellicrack.ui.highlighter:[303:309]
@@ -1967,7 +1967,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
     ""sal"",
     ""sar"",
     ""rol"",
-    ""ror"",",,,,,,,,,,,,
+    ""ror"",",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.google:[667:674]
 ==intellicrack.providers.huggingface:[723:730]
@@ -1977,7 +1977,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                 required: list[str] = []
 
                 for param in func.parameters:
-                    prop: dict[str, object] = {",,,,,,,,,,,,
+                    prop: dict[str, object] = {",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.huggingface:[404:412]
 ==intellicrack.providers.openrouter:[329:337]
@@ -1988,7 +1988,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
             raise ProviderError(_ERR_NO_RESPONSE_CHOICES)
 
         response_message = choices[0].get(""message"", {})
-        content = response_message.get(""content"", """") or """"",,,,,,,,,,,,
+        content = response_message.get(""content"", """") or """"",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.confirmation_dialog:[168:184]
 ==intellicrack.ui.preferences:[624:630]
@@ -1997,7 +1997,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                 background-color: #0e639c;
                 color: white;
                 border: none;
-                border-radius: 4px;",,,,,,,,,,,,
+                border-radius: 4px;",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.provider_config:[1913:1920]
 ==intellicrack.ui.tool_config:[1054:1061]
@@ -2007,7 +2007,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         if self._config_path.exists():
             try:
                 with open(self._config_path, encoding=""utf-8"") as f:
-                    all_settings = json.load(f)",,,,,,,,,,,,
+                    all_settings = json.load(f)",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui._screen_compat:[42:59]
 ==intellicrack.ui.panels._qt_compat:[60:75]
@@ -2027,7 +2027,7 @@ def get_screen_geometry(app: QApplication) -> tuple[int, int, int, int] | None:
 
     Returns:
         Tuple of (x, y, width, height) or None if no screen detected.
-    """"""",,,,,,,,,,,,
+    """"""",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui._screen_compat:[42:59]
 ==intellicrack.ui.panels._qt_compat:[60:75]
@@ -2045,7 +2045,7 @@ def set_sorting_enabled(table: QTableWidget | QTreeWidget, enable: bool) -> None
     Args:
         table: The table or tree widget.
         enable: Whether to enable sorting.
-    """"""",,,,,,,,,,,,
+    """"""",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.ghidra_panel:[427:433]
 ==intellicrack.ui.panels.radare2_panel:[423:429]
@@ -2054,7 +2054,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
             if lines:
                 text_lines = [f""0x{dl.address:X}  {dl.bytes_str:<24s}  {dl.mnemonic} {dl.operands}"" for dl in lines]
                 self._disasm_view.setPlainText(""\n"".join(text_lines))
-        except Exception:",,,,,,,,,,,,
+        except Exception:",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.ghidra_panel:[435:445]
 ==intellicrack.ui.panels.radare2_panel:[431:441]
@@ -2067,7 +2067,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
 
         try:
             imports = run_bridge_coroutine(self._bridge.get_imports())
-        except Exception:",,,,,,,,,,,,
+        except Exception:",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.binary:[184:189]
 ==intellicrack.bridges.ghidra:[230:235]
@@ -2075,7 +2075,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                     parameters=[
                         ToolParameter(
                             name=""hex_pattern"",
-                            type=""string"",",,,,,,,,,,,,
+                            type=""string"",",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.ghidra:[217:222]
 ==intellicrack.bridges.radare2:[345:350]
@@ -2083,7 +2083,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                     parameters=[
                         ToolParameter(
                             name=""pattern"",
-                            type=""string"",",,,,,,,,,,,,
+                            type=""string"",",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.ghidra:[243:261]
 ==intellicrack.bridges.radare2:[389:407]
@@ -2104,7 +2104,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                     ],
                     returns=""Success status"",
                 ),
-                ToolFunction(",,,,,,,,,,,,
+                ToolFunction(",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.ghidra:[262:276]
 ==intellicrack.bridges.radare2:[408:422]
@@ -2121,7 +2121,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             type=""string"",
                             description=""Comment text"",
                             required=True,
-                        ),",,,,,,,,,,,,
+                        ),",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.ghidra:[353:364]
 ==intellicrack.bridges.radare2:[478:489]
@@ -2135,7 +2135,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                         ),
                     ],
                     returns=""FunctionInfo or None if not found"",
-                ),",,,,,,,,,,,,
+                ),",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.process:[153:158]
 ==intellicrack.bridges.x64dbg:[91:96]
@@ -2143,7 +2143,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
     PAGE_READONLY = 0x02
     PAGE_READWRITE = 0x04
     PAGE_EXECUTE = 0x10
-    PAGE_EXECUTE_READ = 0x20",,,,,,,,,,,,
+    PAGE_EXECUTE_READ = 0x20",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.radare2:[504:515]
 ==intellicrack.bridges.x64dbg:[670:681]
@@ -2157,7 +2157,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                         ),
                         ToolParameter(
                             name=""instruction"",
-                            type=""string"",",,,,,,,,,,,,
+                            type=""string"",",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.schemas:[516:521]
 ==intellicrack.providers.base:[418:423]
@@ -2165,7 +2165,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
             ""type"": ""function"",
             ""function"": {
                 ""name"": func.name,
-                ""description"": func.description,",,,,,,,,,,,,
+                ""description"": func.description,",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.bridges.x64dbg:[1866:1872]
 ==intellicrack.ui.panels.script_manager:[182:187]
@@ -2173,7 +2173,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         while True:
             idx = data.find(pattern, offset)
             if idx == -1:
-                break",,,,,,,,,,,,
+                break",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.core.license_analyzer:[322:329]
 ==intellicrack.core.types:[616:621]
@@ -2181,7 +2181,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
     time_check_present: bool
     feature_flags: dict[str, int]
     blacklist_present: bool
-    online_validation: bool",,,,,,,,,,,,
+    online_validation: bool",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.grok:[310:315]
 ==intellicrack.providers.openai:[341:346]
@@ -2189,7 +2189,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                     model=model,
                     messages=messages,
                     temperature=temperature,
-                    max_tokens=max_tokens,",,,,,,,,,,,,
+                    max_tokens=max_tokens,",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.grok:[317:322]
 ==intellicrack.providers.openai:[334:339]
@@ -2197,7 +2197,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                 model=model,
                 messages=messages,
                 temperature=temperature,
-                max_tokens=max_tokens,",,,,,,,,,,,,
+                max_tokens=max_tokens,",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.grok:[331:350]
 ==intellicrack.providers.openai:[364:383]
@@ -2219,7 +2219,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         if not response_message.tool_calls:
             return tool_calls
 
-        for tc in response_message.tool_calls:",,,,,,,,,,,,
+        for tc in response_message.tool_calls:",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.huggingface:[295:300]
 ==intellicrack.providers.local_transformers:[949:954]
@@ -2227,7 +2227,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         if ""32k"" in model_lower:
             return 32768
         if ""16k"" in model_lower:
-            return 16384",,,,,,,,,,,,
+            return 16384",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.huggingface:[503:510]
 ==intellicrack.providers.openrouter:[380:386]
@@ -2237,7 +2237,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
             func_data = tc.get(""function"", {})
             func_name = func_data.get(""name"", """")
             args_str = func_data.get(""arguments"", ""{}"")
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.huggingface:[602:608]
 ==intellicrack.providers.openrouter:[488:494]
@@ -2246,7 +2246,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                             self._logger.debug(""stream_json_parse_skipped"", extra={""error"": str(exc)})
                             continue
 
-            self._logger.info(",,,,,,,,,,,,
+            self._logger.info(",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.providers.ollama:[571:576]
 ==intellicrack.providers.openrouter:[468:473]
@@ -2254,7 +2254,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
             ) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():
-                    if self._cancel_requested:",,,,,,,,,,,,
+                    if self._cancel_requested:",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.app:[297:302]
 ==intellicrack.ui.resources.theme_manager:[87:92]
@@ -2262,7 +2262,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
                 background-color: #2d2d30;
                 border: none;
                 border-bottom: 1px solid #3e3e42;
-                spacing: 4px;",,,,,,,,,,,,
+                spacing: 4px;",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.chat:[376:385]
 ==intellicrack.ui.tools:[487:496]
@@ -2274,7 +2274,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        header = QFrame()",,,,,,,,,,,,
+        header = QFrame()",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.chat:[380:386]
 ==intellicrack.ui.tools:[677:683]
@@ -2283,7 +2283,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         layout.setSpacing(0)
 
         header = QFrame()
-        header.setFixedHeight(40)",,,,,,,,,,,,
+        header.setFixedHeight(40)",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.provider_config:[1619:1625]
 ==intellicrack.ui.tool_config:[930:936]
@@ -2292,7 +2292,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
 
         try:
             with open(self._config_path, encoding=""utf-8"") as f:
-                all_settings: dict[str, Any] = json.load(f)",,,,,,,,,,,,
+                all_settings: dict[str, Any] = json.load(f)",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.frida_panel:[80:90]
 ==intellicrack.ui.panels.ghidra_panel:[78:88]
@@ -2305,7 +2305,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         layout.setSpacing(4)
 
         layout.addWidget(self._create_toolbar())
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.ghidra_panel:[129:136]
 ==intellicrack.ui.panels.radare2_panel:[131:138]
@@ -2315,7 +2315,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         toolbar.addWidget(self._analyze_btn)
 
         toolbar.addSeparator()
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.ghidra_panel:[487:493]
 ==intellicrack.ui.panels.radare2_panel:[482:488]
@@ -2324,7 +2324,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
 
         try:
             strings = run_bridge_coroutine(self._bridge.search_strings(pattern))
-        except Exception:",,,,,,,,,,,,
+        except Exception:",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.ghidra_panel:[277:296]
 ==intellicrack.ui.panels.x64dbg_panel:[407:426]
@@ -2346,7 +2346,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
             True if cleanup succeeded.
         """"""
         if self._bridge is not None and self._bridge.state.is_ready():
-            try:",,,,,,,,,,,,
+            try:",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.licensing_panel:[206:212]
 ==intellicrack.ui.panels.stack_viewer:[273:279]
@@ -2355,7 +2355,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         self.setAlternatingRowColors(True)
         self.verticalHeader().setVisible(False)
         self.setShowGrid(False)
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.panels.radare2_panel:[82:92]
 ==intellicrack.ui.panels.x64dbg_panel:[95:105]
@@ -2368,7 +2368,7 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         layout.setSpacing(4)
 
         layout.addWidget(self._create_toolbar())
-",,,,,,,,,,,,
+",,,,,,,,,,,,
 pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-code,"[duplicate-code] Similar lines in 2 files
 ==intellicrack.ui.resources.icon_manager:[197:214]
 ==intellicrack.ui.resources.theme_manager:[1010:1027]
@@ -2388,4 +2388,4 @@ pylint,src\intellicrack\ui\resources\__init__.py,1,0,refactor,R0801,duplicate-co
         Returns:
             True if icons directory exists and contains files.
         """"""
-        try:",,,,,,,,,,,,
+        try:",,,,,,,,,,,,

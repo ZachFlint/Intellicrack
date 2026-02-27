@@ -1,39 +1,26 @@
 {
   "tool": "flake8",
-  "generated": "2026-02-22T01:46:34.872803",
-  "total_findings": 8,
-  "total_files": 7,
+  "generated": "2026-02-27T00:09:06.149058",
+  "total_findings": 7,
+  "total_files": 6,
   "files": [
     {
       "path": "src/intellicrack\\providers\\xpu_utils.py",
       "count": 2,
       "findings": [
         {
-          "line": 530,
+          "line": 533,
           "column": 141,
           "code": "E501",
           "message": "line too long (146 > 140 characters)",
-          "raw": "src/intellicrack\\providers\\xpu_utils.py:530:141: E501 line too long (146 > 140 characters)"
+          "raw": "src/intellicrack\\providers\\xpu_utils.py:533:141: E501 line too long (146 > 140 characters)"
         },
         {
-          "line": 559,
+          "line": 562,
           "column": 141,
           "code": "E501",
           "message": "line too long (179 > 140 characters)",
-          "raw": "src/intellicrack\\providers\\xpu_utils.py:559:141: E501 line too long (179 > 140 characters)"
-        }
-      ]
-    },
-    {
-      "path": "src/intellicrack\\credentials\\env_loader.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 450,
-          "column": 1,
-          "code": "W391",
-          "message": "blank line at end of file",
-          "raw": "src/intellicrack\\credentials\\env_loader.py:450:1: W391 blank line at end of file"
+          "raw": "src/intellicrack\\providers\\xpu_utils.py:562:141: E501 line too long (179 > 140 characters)"
         }
       ]
     },

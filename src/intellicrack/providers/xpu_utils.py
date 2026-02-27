@@ -124,10 +124,12 @@ def get_xpu_device_count() -> int:
     try:
         if not hasattr(torch, "xpu") or not torch.xpu.is_available():
             return 0
-        return torch.xpu.device_count()
+        count: int = torch.xpu.device_count()
     except Exception as exc:
         _logger.debug("xpu_device_count_failed", extra={"error": str(exc)})
         return 0
+    else:
+        return count
 
 
 def _get_device_name_from_sycl(device_index: int) -> str:
@@ -145,7 +147,8 @@ def _get_device_name_from_sycl(device_index: int) -> str:
 
     try:
         if hasattr(torch.xpu, "get_device_name"):
-            return torch.xpu.get_device_name(device_index)
+            name: str = torch.xpu.get_device_name(device_index)
+            return name
         if hasattr(torch.xpu, "get_device_properties"):
             props = torch.xpu.get_device_properties(device_index)
             if hasattr(props, "name"):
@@ -369,25 +372,25 @@ def initialize_xpu(device_index: int = 0) -> torch.device:
     Raises:
         RuntimeError: If XPU initialization fails.
     """
-    torch = _import_torch()
-    if torch is None:
+    torch_mod = _import_torch()
+    if torch_mod is None:
         raise RuntimeError(_ERR_PYTORCH_NOT_INSTALLED)
 
-    if not hasattr(torch, "xpu"):
+    if not hasattr(torch_mod, "xpu"):
         raise RuntimeError(_ERR_XPU_NOT_AVAILABLE)
 
-    if not torch.xpu.is_available():
+    if not torch_mod.xpu.is_available():
         raise RuntimeError(_ERR_NO_XPU_DEVICES)
 
-    device_count = torch.xpu.device_count()
+    device_count = torch_mod.xpu.device_count()
     if device_index >= device_count:
         msg = f"XPU device index {device_index} out of range (0-{device_count - 1})"
         raise RuntimeError(msg)
 
-    torch.xpu.set_device(device_index)
-    device = torch.device(f"xpu:{device_index}")
+    torch_mod.xpu.set_device(device_index)
+    device: torch.device = torch_mod.device(f"xpu:{device_index}")
 
-    _validate_xpu_device(torch, device)
+    _validate_xpu_device(torch_mod, device)
 
     _logger.info("xpu_initialized", extra={"device_index": device_index, "device": str(device)})
     return device

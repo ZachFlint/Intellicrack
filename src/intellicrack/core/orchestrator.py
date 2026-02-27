@@ -621,6 +621,7 @@ class Orchestrator:
                 "tool_count": len(tools),
             },
         )
+        result: tuple[Message, list[ToolCall] | None]
         if use_streaming:
             result = await self._stream_response(
                 provider=provider,
@@ -1217,9 +1218,11 @@ class Orchestrator:
         if getter_name is None:
             return None
         try:
-            return getattr(self._tools, getter_name)()
+            bridge: object | None = getattr(self._tools, getter_name)()
         except Exception:
             return None
+        else:
+            return bridge
 
     async def initialize_tool(self, tool_name: str | ToolName) -> bool:
         """Initialize a specific tool.

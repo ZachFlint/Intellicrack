@@ -1,4 +1,4 @@
-tool,file,line,column,severity,code,rule,message,confidence,complexity,rank,name,entity_type,category,function,variable,crate,vulnerability,misspelling,correction
+tool,file,line,column,severity,code,rule,message,confidence,complexity,rank,name,entity_type,category,function,variable,crate,vulnerability,misspelling,correction
 semgrep,src\intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp,,,error,Syntax error,Syntax error,"Syntax error at line src\intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp:1:
  `//     __ _____ _____ _____
 //  __|  |   __|     |   | |  JSON for Modern C++
@@ -50,6 +50,6 @@ semgrep,src\intellicrack\plugins\x64dbg_plugin\third_party\nlohmann\json.hpp,,,e
 //     __ _____ _____ _____
 //  __|  |   __|     |   | |  JSON for Modern C++
 // |  |  |__   |  |  | | | |  version 3.12.0
-// |_____|_____|_____|_|___|  https://github.com/... (truncated 960680 more characters)",,,,,,,,,,,,
+// |_____|_____|_____|_|___|  https://github.com/... (truncated 960680 more characters)",,,,,,,,,,,,
 semgrep,src\intellicrack\plugins\x64dbg_plugin\intellicrack_x64dbg.cpp,,,error,"['PartialParsing', [{'path': 'src\\intellicrack\\plugins\\x64dbg_plugin\\intellicrack_x64dbg.cpp', 'start': {'line': 33, 'col': 13, 'offset': 0}, 'end': {'line': 33, 'col': 17, 'offset': 4}}, {'path': 'src\\intellicrack\\plugins\\x64dbg_plugin\\intellicrack_x64dbg.cpp', 'start': {'line': 49, 'col': 13, 'offset': 0}, 'end': {'line': 49, 'col': 17, 'offset': 4}}, {'path': 'src\\intellicrack\\plugins\\x64dbg_plugin\\intellicrack_x64dbg.cpp', 'start': {'line': 57, 'col': 13, 'offset': 0}, 'end': {'line': 57, 'col': 17, 'offset': 4}}]]","['PartialParsing', [{'path': 'src\\intellicrack\\plugins\\x64dbg_plugin\\intellicrack_x64dbg.cpp', 'start': {'line': 33, 'col': 13, 'offset': 0}, 'end': {'line': 33, 'col': 17, 'offset': 4}}, {'path': 'src\\intellicrack\\plugins\\x64dbg_plugin\\intellicrack_x64dbg.cpp', 'start': {'line': 49, 'col': 13, 'offset': 0}, 'end': {'line': 49, 'col': 17, 'offset': 4}}, {'path': 'src\\intellicrack\\plugins\\x64dbg_plugin\\intellicrack_x64dbg.cpp', 'start': {'line': 57, 'col': 13, 'offset': 0}, 'end': {'line': 57, 'col': 17, 'offset': 4}}]]","Syntax error at line src\intellicrack\plugins\x64dbg_plugin\intellicrack_x64dbg.cpp:33:
- `bool` was unexpected",,,,,,,,,,,,
+ `bool` was unexpected",,,,,,,,,,,,

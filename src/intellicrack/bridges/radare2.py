@@ -160,7 +160,7 @@ def _get_list(data: dict[str, Any], key: str) -> list[Any]:
         List value or empty list.
     """
     val = data.get(key)
-    return cast("list[Any]", val) if isinstance(val, list) else []
+    return val if isinstance(val, list) else []
 
 
 class Radare2Bridge(StaticAnalysisBridge):
@@ -178,7 +178,7 @@ class Radare2Bridge(StaticAnalysisBridge):
     def __init__(self) -> None:
         """Initialize the radare2 bridge."""
         super().__init__()
-        self._r2: r2pipe.open | None = None
+        self._r2: r2pipe.open_sync | None = None
         self._binary_path: Path | None = None
         self._analyzed: bool = False
         self._r2_pid: int | None = None
@@ -592,7 +592,7 @@ class Radare2Bridge(StaticAnalysisBridge):
         Returns:
             True if radare2 can be used.
         """
-        r2: r2pipe.open | None = None
+        r2: r2pipe.open_sync | None = None
         try:
             r2 = await asyncio.to_thread(r2pipe.open, "-")
             version: str | None = await asyncio.to_thread(r2.cmd, "?V")

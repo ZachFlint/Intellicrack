@@ -6,12 +6,12 @@ creation, and integration of function list and cross-reference panels.
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
 
 from intellicrack.ui.app import MainWindow
 from intellicrack.ui.tools import FunctionListPanel, ToolOutputPanel, ToolTab, XRefPanel
+
+from .conftest import NoOpSandboxManager, SignalRecorder
 
 
 _ADDR_MAIN: int = 0x401000
@@ -26,8 +26,8 @@ class TestFunctionListPanel:
     def test_function_selected_signal() -> None:
         """Verify function_selected signal is emitted on double click."""
         panel = FunctionListPanel()
-        mock_slot = MagicMock()
-        panel.function_selected.connect(mock_slot)
+        recorder = SignalRecorder()
+        panel.function_selected.connect(recorder)
 
         functions = [("main", _ADDR_MAIN), ("test", _ADDR_TEST)]
         panel.set_functions(functions)
@@ -36,7 +36,7 @@ class TestFunctionListPanel:
         assert item is not None
         panel._on_item_double_clicked(item)
 
-        mock_slot.assert_called_once_with("main", _ADDR_MAIN)
+        recorder.verify_single_call("main", _ADDR_MAIN)
 
 
 @pytest.mark.usefixtures("qapp")
@@ -47,8 +47,8 @@ class TestXRefPanel:
     def test_xref_selected_signal() -> None:
         """Verify xref_selected signal is emitted on click."""
         panel = XRefPanel()
-        mock_slot = MagicMock()
-        panel.xref_selected.connect(mock_slot)
+        recorder = SignalRecorder()
+        panel.xref_selected.connect(recorder)
 
         incoming = [(_ADDR_MAIN, "call main")]
         outgoing = [(_ADDR_TEST, "jump test")]
@@ -62,7 +62,7 @@ class TestXRefPanel:
         assert child is not None
         panel._on_item_clicked(child, 0)
 
-        mock_slot.assert_called_once_with(_ADDR_MAIN)
+        recorder.verify_single_call(_ADDR_MAIN)
 
 
 @pytest.mark.usefixtures("qapp")
@@ -73,14 +73,14 @@ class TestToolOutputPanelIntegration:
     def test_address_clicked_propagation() -> None:
         """Verify signals from sub-panels propagate to address_clicked."""
         panel = ToolOutputPanel()
-        mock_slot = MagicMock()
-        panel.address_clicked.connect(mock_slot)
+        recorder = SignalRecorder()
+        panel.address_clicked.connect(recorder)
 
         panel._func_list.function_selected.emit("main", _ADDR_MAIN)
-        mock_slot.assert_any_call(_ADDR_MAIN)
+        recorder.verify_any_call(_ADDR_MAIN)
 
         panel._xref_panel.xref_selected.emit(_ADDR_TEST)
-        mock_slot.assert_any_call(_ADDR_TEST)
+        recorder.verify_any_call(_ADDR_TEST)
 
 
 @pytest.mark.usefixtures("qapp")
@@ -88,19 +88,19 @@ class TestMainWindowIntegration:
     """Tests for MainWindow handling of tool panel signals."""
 
     @staticmethod
-    def test_on_address_clicked_updates_ui() -> None:
+    def test_on_address_clicked_updates_ui(
+        real_config: object,
+        real_orchestrator: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """Verify MainWindow handles address_clicked signal."""
-        mock_config = MagicMock()
-        mock_orchestrator = MagicMock()
-        mock_orchestrator.shutdown = AsyncMock()
+        monkeypatch.setattr("intellicrack.ui.app.SandboxManager", NoOpSandboxManager)
+        window = MainWindow(real_config, real_orchestrator)
 
-        with patch("intellicrack.ui.app.SandboxManager"):
-            window = MainWindow(mock_config, mock_orchestrator)
+        window._tool_panel.address_clicked.emit(_ADDR_MAIN)
 
-            window._tool_panel.address_clicked.emit(_ADDR_MAIN)
-
-            assert "0x00401000" in window._tool_panel._address_label.text()
-            window.close()
+        assert "0x00401000" in window._tool_panel._address_label.text()
+        window.close()
 
 
 @pytest.mark.usefixtures("qapp")

@@ -15,21 +15,15 @@
               }
             },
             {
-              "id": "end-of-file-fixer",
-              "shortDescription": {
-                "text": "[FIXED] Fixed"
-              }
-            },
-            {
               "id": "mixed-line-ending",
               "shortDescription": {
                 "text": "[FIXED] fixed mixed line endings"
               }
             },
             {
-              "id": "fix-byte-order-marker",
+              "id": "end-of-file-fixer",
               "shortDescription": {
-                "text": "[FIXED] removed byte-order marker"
+                "text": "[FIXED] Fixed"
               }
             }
           ]
@@ -44,52 +38,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
-          }
-        },
-        {
           "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
             "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "fix-byte-order-marker",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] removed byte-order marker"
-          }
-        },
-        {
-          "ruleId": "trailing-whitespace",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "fix-byte-order-marker",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] removed byte-order marker"
           }
         },
         {
@@ -156,7 +108,28 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "trailing-whitespace",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] Fixed"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "trailing-whitespace",
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
@@ -443,13 +416,6 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
-          }
-        },
-        {
           "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
@@ -527,7 +493,7 @@
           }
         },
         {
-          "ruleId": "trailing-whitespace",
+          "ruleId": "end-of-file-fixer",
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
@@ -541,7 +507,7 @@
           }
         },
         {
-          "ruleId": "trailing-whitespace",
+          "ruleId": "end-of-file-fixer",
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
@@ -555,7 +521,7 @@
           }
         },
         {
-          "ruleId": "trailing-whitespace",
+          "ruleId": "end-of-file-fixer",
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
@@ -569,7 +535,7 @@
           }
         },
         {
-          "ruleId": "trailing-whitespace",
+          "ruleId": "end-of-file-fixer",
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
@@ -583,7 +549,7 @@
           }
         },
         {
-          "ruleId": "trailing-whitespace",
+          "ruleId": "end-of-file-fixer",
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
@@ -597,7 +563,7 @@
           }
         },
         {
-          "ruleId": "trailing-whitespace",
+          "ruleId": "end-of-file-fixer",
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
@@ -611,7 +577,7 @@
           }
         },
         {
-          "ruleId": "trailing-whitespace",
+          "ruleId": "end-of-file-fixer",
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
@@ -625,7 +591,7 @@
           }
         },
         {
-          "ruleId": "trailing-whitespace",
+          "ruleId": "end-of-file-fixer",
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
@@ -639,7 +605,7 @@
           }
         },
         {
-          "ruleId": "trailing-whitespace",
+          "ruleId": "end-of-file-fixer",
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
@@ -653,7 +619,7 @@
           }
         },
         {
-          "ruleId": "trailing-whitespace",
+          "ruleId": "end-of-file-fixer",
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
@@ -664,17 +630,10 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "fix-byte-order-marker",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] removed byte-order marker"
           }
         },
         {
-          "ruleId": "trailing-whitespace",
+          "ruleId": "end-of-file-fixer",
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
@@ -685,17 +644,10 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "fix-byte-order-marker",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] removed byte-order marker"
           }
         },
         {
-          "ruleId": "trailing-whitespace",
+          "ruleId": "end-of-file-fixer",
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
@@ -706,17 +658,10 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "fix-byte-order-marker",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] removed byte-order marker"
           }
         },
         {
-          "ruleId": "trailing-whitespace",
+          "ruleId": "end-of-file-fixer",
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
@@ -730,7 +675,7 @@
           }
         },
         {
-          "ruleId": "trailing-whitespace",
+          "ruleId": "end-of-file-fixer",
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
@@ -744,7 +689,7 @@
           }
         },
         {
-          "ruleId": "trailing-whitespace",
+          "ruleId": "end-of-file-fixer",
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
@@ -755,13 +700,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "trailing-whitespace",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
           }
         },
         {
@@ -779,7 +717,7 @@
           }
         },
         {
-          "ruleId": "trailing-whitespace",
+          "ruleId": "end-of-file-fixer",
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
@@ -793,13 +731,6 @@
           }
         },
         {
-          "ruleId": "trailing-whitespace",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
-          }
-        },
-        {
           "ruleId": "end-of-file-fixer",
           "level": "warning",
           "message": {
@@ -814,7 +745,7 @@
           }
         },
         {
-          "ruleId": "trailing-whitespace",
+          "ruleId": "end-of-file-fixer",
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
@@ -828,7 +759,7 @@
           }
         },
         {
-          "ruleId": "trailing-whitespace",
+          "ruleId": "end-of-file-fixer",
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
@@ -842,7 +773,7 @@
           }
         },
         {
-          "ruleId": "trailing-whitespace",
+          "ruleId": "end-of-file-fixer",
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
@@ -853,13 +784,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "trailing-whitespace",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
           }
         },
         {
@@ -1056,13 +980,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "fix-byte-order-marker",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] removed byte-order marker"
           }
         },
         {
@@ -1539,13 +1456,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
           }
         },
         {
@@ -1574,20 +1484,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
           }
         },
         {
@@ -1637,13 +1533,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -1654,10 +1543,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -1679,13 +1568,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -1735,13 +1617,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -1752,10 +1627,10 @@
           }
         },
         {
-          "ruleId": "mixed-line-ending",
+          "ruleId": "end-of-file-fixer",
           "level": "warning",
           "message": {
-            "text": "[FIXED] fixed mixed line endings"
+            "text": "[FIXED] Fixed"
           }
         },
         {
@@ -1798,13 +1673,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
           }
         },
         {
@@ -1920,10 +1788,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -1934,10 +1802,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -1955,10 +1823,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -1969,10 +1837,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -1990,10 +1858,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2004,10 +1872,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2018,10 +1886,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2032,10 +1900,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2120,13 +1988,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2134,13 +1995,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2148,13 +2002,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2162,13 +2009,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2176,13 +2016,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2190,13 +2023,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2204,13 +2030,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2218,13 +2037,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2232,13 +2044,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2246,13 +2051,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2274,13 +2072,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2288,13 +2079,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2316,13 +2100,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2330,13 +2107,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2351,13 +2121,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2365,13 +2128,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2379,13 +2135,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2400,13 +2149,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2414,13 +2156,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2438,24 +2173,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
-          }
-        },
-        {
           "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
             "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
           }
         },
         {
@@ -2463,13 +2184,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
           }
         },
         {
@@ -2477,13 +2191,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
           }
         },
         {
@@ -2491,13 +2198,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
           }
         },
         {
@@ -2505,13 +2205,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
           }
         },
         {
@@ -2519,13 +2212,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
           }
         },
         {
@@ -2533,13 +2219,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
           }
         },
         {
@@ -2547,13 +2226,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
           }
         },
         {
@@ -2561,13 +2233,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
           }
         },
         {
@@ -2575,13 +2240,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
           }
         },
         {
@@ -2592,13 +2250,6 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
-          }
-        },
-        {
           "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
@@ -2606,10 +2257,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2620,10 +2271,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2634,10 +2285,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2648,10 +2299,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2662,10 +2313,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2676,10 +2327,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2690,10 +2341,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2704,10 +2355,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2718,10 +2369,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2732,10 +2383,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2746,10 +2397,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -2771,7 +2422,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-02-24T20:35:26.302607"
+          "endTimeUtc": "2026-02-27T00:15:27.746756"
         }
       ]
     }

@@ -156,10 +156,10 @@ X64DbgBridge.binary_loaded
 # 5. Qt patterns (dynamic event binding, setattr/getattr cleanup loops)
 # ===========================================================================
 
-from intellicrack.ui.app import IntellicrackMainWindow
+from intellicrack.ui.app import MainWindow
 
-IntellicrackMainWindow.closeEvent
-IntellicrackMainWindow._model_browse_worker
+MainWindow.closeEvent
+MainWindow._model_browse_worker
 
 from intellicrack.ui.tools import ToolOutputPanel
 
@@ -266,3 +266,239 @@ ToolRegistry.get_ghidra_bridge
 ToolRegistry.get_radare2_bridge
 ToolRegistry.get_x64dbg_bridge
 ToolRegistry.get_sandbox_bridge
+
+# ===========================================================================
+# 8. Test-only API (called from tests/ but not production code)
+# ===========================================================================
+
+from intellicrack.ui.resources.font_manager import FontManager as _FM
+
+_FM.get_code_font_bold
+_FM.get_ui_font_bold
+_FM.get_heading_font
+_FM.get_font_info
+
+from intellicrack.ui.resources.font_manager import DEFAULT_UI_FONT
+
+DEFAULT_UI_FONT
+
+from intellicrack.ui.resources.icon_manager import IconManager as _IM
+
+_IM.get_status_icon
+_IM.get_status_pixmap
+_IM.preload_icons
+_IM.icon_exists
+
+from intellicrack.ui.resources.resource_helper import get_font_path, get_style_path, resource_exists
+
+get_font_path
+get_style_path
+resource_exists
+
+from intellicrack.credentials.env_loader import CredentialLoader
+
+CredentialLoader.reload
+CredentialLoader.list_configured_providers
+CredentialLoader.list_missing_providers
+
+_LTP.get_device_info
+_LTP.unload_model
+
+from intellicrack.core.process_manager import ProcessManager
+
+ProcessManager.get_all_tracked
+ProcessManager.get_running_processes
+
+from intellicrack.providers.model_loader import ModelCache
+
+ModelCache.get_memory_usage
+ModelCache.remove
+
+# ===========================================================================
+# 9. Exported via __init__.py (vulture doesn't follow re-exports)
+# ===========================================================================
+
+from intellicrack.ui.sandbox_config import SandboxMonitorWidget
+
+SandboxMonitorWidget
+
+from intellicrack.providers.model_loader import set_global_cache_size
+
+set_global_cache_size
+
+from intellicrack.providers.xpu_utils import get_optimal_dtype_for_xpu
+
+get_optimal_dtype_for_xpu
+
+from intellicrack.providers.registry import get_provider_registry
+
+get_provider_registry
+
+from intellicrack.ui.panels.stack_viewer import StackDataSource
+
+StackDataSource
+
+# ===========================================================================
+# 12. TypedDict / Enum classes (used as structural type contracts)
+# ===========================================================================
+
+from intellicrack.providers.openai import OpenAIMessage, OpenAIMessageContent
+
+OpenAIMessage
+OpenAIMessageContent
+
+from intellicrack.providers.grok import GrokMessage, GrokMessageContent
+
+GrokMessage
+GrokMessageContent
+
+from intellicrack.credentials.oauth import OAuthFlowType
+
+OAuthFlowType
+OAuthFlowType.AUTHORIZATION_CODE
+
+# ===========================================================================
+# 13. Public API extension points (designed for external callers)
+# ===========================================================================
+
+from intellicrack.bridges.schemas import (
+    build_schema_parameters,
+    get_all_schemas_for_provider,
+    validate_and_convert,
+)
+
+build_schema_parameters
+get_all_schemas_for_provider
+validate_and_convert
+
+from intellicrack.bridges.named_pipe_client import NamedPipeClient
+
+NamedPipeClient.set_event_handler
+
+from intellicrack.bridges.installer import ToolInstaller
+
+ToolInstaller.get_all_tool_status
+
+from intellicrack.core.orchestrator import Orchestrator
+
+Orchestrator.get_available_tool_names
+Orchestrator.get_current_licensing_analysis
+Orchestrator.get_typed_bridge
+Orchestrator.activate_binary_by_name
+
+from intellicrack.core.session import SessionManager
+
+SessionManager.export_current
+
+from intellicrack.providers.discovery import ModelDiscovery
+
+ModelDiscovery.discover_all
+ModelDiscovery.discover_provider
+ModelDiscovery.get_by_id
+ModelDiscovery.get_discovery_events
+ModelDiscovery.get_last_event
+ModelDiscovery.save_cache
+ModelDiscovery.load_cache
+
+from intellicrack.providers.ollama import OllamaProvider
+
+OllamaProvider.pull_model
+
+from intellicrack.providers.openrouter import OpenRouterProvider
+
+OpenRouterProvider.get_generation
+
+from intellicrack.credentials.store import CredentialStore
+
+CredentialStore.list_providers
+CredentialStore.migrate_from_env
+CredentialStore.get_source
+
+from intellicrack.credentials.oauth import OAuthManager, authorize_google
+
+OAuthManager.revoke_token
+OAuthManager.to_provider_credentials
+authorize_google
+
+from intellicrack.credentials.env_loader import create_env_template
+
+create_env_template
+
+from intellicrack.sandbox.qemu import QMPClient, GuestAgentClient, QEMUSandbox
+
+QMPClient.cont
+GuestAgentClient.get_pending_messages
+QEMUSandbox.list_snapshots
+QEMUSandbox.delete_snapshot
+
+from intellicrack.sandbox.manager import SandboxManager
+
+SandboxManager.cleanup_stale
+
+from intellicrack.ui.sandbox_config import SandboxConfigDialog
+
+SandboxConfigDialog.is_sandbox_available
+
+from intellicrack.ui.panels.stack_viewer import StackViewerPanel
+
+StackViewerPanel.add_source
+
+# ===========================================================================
+# 14. ToolOutputPanel delegator methods (called from app.py/orchestrator)
+# ===========================================================================
+
+from intellicrack.ui.tools import ToolOutputPanel as _TOP
+
+_TOP.get_bridge_for_tool
+_TOP.get_active_process_pid
+_TOP.display_analysis_result
+_TOP.clear_analysis_tab
+_TOP.get_active_tool_widget
+_TOP.log_frida_message
+_TOP.add_frida_hook_entry
+_TOP.get_sandbox_backend
+_TOP.load_sandbox_report
+_TOP.get_script_panel_state
+_TOP.get_code_highlighter
+_TOP.wire_stack_viewer_bridges
+_TOP.wire_sandbox_backend
+_TOP.wire_script_backend
+
+# ===========================================================================
+# 15. ScriptGenerator class and ScriptManager methods
+# ===========================================================================
+
+from intellicrack.core.script_gen import ScriptGenerator, ScriptManager as _SM
+
+ScriptGenerator
+
+_SM.ensure_script_saved
+_SM.reload_script
+_SM.record_execution
+
+from intellicrack.core.script_gen import Script as _Script
+
+_Script.add_execution_result
+
+# ===========================================================================
+# 16. RegisterState methods (used by x64dbg/debugger bridge tools)
+# ===========================================================================
+
+RegisterState.get_gpr_dict
+RegisterState.get_segment_registers
+
+# ===========================================================================
+# 17. Instance attributes stored for reference / GC prevention
+# ===========================================================================
+
+MainWindow._script_manager
+MainWindow._script_validator
+MainWindow._model_discovery
+
+# ===========================================================================
+# 18. Code display accessor (public API for CodeDisplay widget)
+# ===========================================================================
+
+from intellicrack.ui.tools import CodeDisplay
+
+CodeDisplay.get_highlighter

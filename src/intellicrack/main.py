@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from intellicrack.core.session import SessionManager, SessionStore
     from intellicrack.core.tools import ToolRegistry
     from intellicrack.credentials.env_loader import CredentialLoader
+    from intellicrack.providers.discovery import ModelDiscovery
     from intellicrack.providers.registry import ProviderRegistry
     from intellicrack.ui.app import MainWindow
     from intellicrack.ui.dialogs import SplashScreen
@@ -419,6 +420,50 @@ def main() -> int:
         loop.close()
 
 
+def _init_script_engine(config: Config, logger: Logger) -> tuple[object, object]:
+    """Initialize the script engine subsystem.
+
+    Args:
+        config: Application configuration.
+        logger: Logger instance.
+
+    Returns:
+        Tuple of (script_manager, script_validator).
+    """
+    script_gen_mod = importlib.import_module("intellicrack.core.script_gen")
+    scripts_dir = config.data_directory / "scripts"
+    scripts_dir.mkdir(parents=True, exist_ok=True)
+    script_gen_mod.ScriptGenerator()
+    logger.info("script_engine_initialized")
+    return script_gen_mod.ScriptManager(scripts_dir), script_gen_mod.ScriptValidator()
+
+
+def _init_model_discovery(
+    provider_registry: ProviderRegistry,
+    config: Config,
+    logger: Logger,
+) -> tuple[object, Path]:
+    """Initialize the model discovery subsystem.
+
+    Args:
+        provider_registry: Provider registry for model queries.
+        config: Application configuration.
+        logger: Logger instance.
+
+    Returns:
+        Tuple of (model_discovery, discovery_cache_path).
+    """
+    discovery_mod = importlib.import_module("intellicrack.providers.discovery")
+    model_discovery = discovery_mod.ModelDiscovery(provider_registry)
+    discovery_cache = config.data_directory / "model_discovery_cache.json"
+    if discovery_cache.exists():
+        load_cache = getattr(model_discovery, "load_cache", None)
+        if callable(load_cache):
+            load_cache(discovery_cache)
+    logger.info("model_discovery_initialized")
+    return model_discovery, discovery_cache
+
+
 def _run_application(
     config: Config,
     app: QApplication,
@@ -443,14 +488,12 @@ def _run_application(
     splash.set_progress(10, "Loading credentials...")
     app.processEvents()
 
-    cred_loader_cls = _import_credential_loader()
-    credential_loader = cred_loader_cls(Path(".env"))
+    credential_loader = _import_credential_loader()(Path(".env"))
 
     splash.set_progress(20, "Initializing providers...")
     app.processEvents()
 
-    prov_reg_cls = _import_provider_registry()
-    provider_registry = prov_reg_cls()
+    provider_registry = _import_provider_registry()()
     logger.info("provider_initialization_started")
     _initialize_providers_sync(loop, provider_registry, credential_loader, logger)
     logger.info("provider_initialization_complete")
@@ -458,32 +501,40 @@ def _run_application(
     splash.set_progress(50, "Initializing tools...")
     app.processEvents()
 
-    tool_reg_cls = _import_tool_registry()
-    tool_registry = tool_reg_cls(config.tools_directory)
+    tool_registry = _import_tool_registry()(config.tools_directory)
     loop.run_until_complete(tool_registry.initialize())
 
     splash.set_progress(70, "Initializing session manager...")
     app.processEvents()
 
     session_mgr_cls, session_store_cls = _import_session_classes()
-    session_store = session_store_cls(config.data_directory / "sessions.db")
-    session_manager = session_mgr_cls(session_store)
+    session_manager = session_mgr_cls(session_store_cls(config.data_directory / "sessions.db"))
 
     splash.set_progress(85, "Creating orchestrator...")
     app.processEvents()
 
-    orch_cls = _import_orchestrator()
-    orchestrator = orch_cls(
+    orchestrator = _import_orchestrator()(
         provider_registry=provider_registry,
         tool_registry=tool_registry,
         session_manager=session_manager,
     )
 
+    splash.set_progress(90, "Initializing script engine...")
+    app.processEvents()
+
+    script_manager, script_validator = _init_script_engine(config, logger)
+
+    splash.set_progress(93, "Initializing model discovery...")
+    app.processEvents()
+
+    model_discovery, discovery_cache = _init_model_discovery(provider_registry, config, logger)
+
     splash.set_progress(95, "Initializing UI...")
     app.processEvents()
 
-    main_window_cls = _import_main_window()
-    window = main_window_cls(config, orchestrator)
+    window = _import_main_window()(config, orchestrator)
+    window.wire_script_manager(script_manager, script_validator)
+    window.set_model_discovery(cast("ModelDiscovery", model_discovery))
 
     splash.set_progress(100, "Ready")
     app.processEvents()
@@ -493,6 +544,9 @@ def _run_application(
     exit_code = app.exec()
 
     logger.info("shutdown_started")
+    save_cache = getattr(model_discovery, "save_cache", None)
+    if callable(save_cache):
+        save_cache(discovery_cache)
     loop.run_until_complete(orchestrator.shutdown())
     loop.run_until_complete(session_manager.close())
     loop.run_until_complete(process_manager.cleanup_all_async())

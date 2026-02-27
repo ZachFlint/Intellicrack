@@ -1,6 +1,6 @@
 {
   "tool": "xenon",
-  "generated": "2026-02-22T01:47:21.504265",
+  "generated": "2026-02-27T00:09:34.648484",
   "total_findings": 73,
   "total_files": 36,
   "files": [
@@ -102,13 +102,13 @@
       "count": 4,
       "findings": [
         {
-          "line": 526,
+          "line": 527,
           "column": null,
           "name": "chat_stream",
           "rank": "C",
           "complexity": 20,
           "message": "'chat_stream' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\huggingface.py:526: 'chat_stream' has rank C"
+          "raw": "src\\intellicrack\\providers\\huggingface.py:527: 'chat_stream' has rank C"
         },
         {
           "line": 189,
@@ -129,13 +129,13 @@
           "raw": "src\\intellicrack\\providers\\huggingface.py:278: '_estimate_context_window' has rank C"
         },
         {
-          "line": 649,
+          "line": 650,
           "column": null,
           "name": "_convert_messages_to_provider_format",
           "rank": "C",
           "complexity": 20,
           "message": "'_convert_messages_to_provider_format' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\huggingface.py:649: '_convert_messages_to_provider_format' has rank C"
+          "raw": "src\\intellicrack\\providers\\huggingface.py:650: '_convert_messages_to_provider_format' has rank C"
         }
       ]
     },
@@ -318,22 +318,22 @@
       "count": 2,
       "findings": [
         {
-          "line": 556,
+          "line": 555,
           "column": null,
           "name": "_detect_architecture",
           "rank": "C",
           "complexity": 20,
           "message": "'_detect_architecture' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\bridges\\binary.py:556: '_detect_architecture' has rank C"
+          "raw": "src\\intellicrack\\bridges\\binary.py:555: '_detect_architecture' has rank C"
         },
         {
-          "line": 667,
+          "line": 666,
           "column": null,
           "name": "_get_imports_internal",
           "rank": "C",
           "complexity": 20,
           "message": "'_get_imports_internal' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\bridges\\binary.py:667: '_get_imports_internal' has rank C"
+          "raw": "src\\intellicrack\\bridges\\binary.py:666: '_get_imports_internal' has rank C"
         }
       ]
     },
@@ -399,13 +399,13 @@
           "raw": "src\\intellicrack\\bridges\\x64dbg.py:252: '_read_unicode_string_from_params' has rank C"
         },
         {
-          "line": 1617,
+          "line": 1618,
           "column": null,
           "name": "get_memory_regions",
           "rank": "C",
           "complexity": 20,
           "message": "'get_memory_regions' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1617: 'get_memory_regions' has rank C"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1618: 'get_memory_regions' has rank C"
         }
       ]
     },
@@ -534,22 +534,22 @@
       "count": 2,
       "findings": [
         {
-          "line": 217,
+          "line": 220,
           "column": null,
           "name": "get_xpu_device_info",
           "rank": "D",
           "complexity": 30,
           "message": "'get_xpu_device_info' has rank D (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\xpu_utils.py:217: 'get_xpu_device_info' has rank D"
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:220: 'get_xpu_device_info' has rank D"
         },
         {
-          "line": 419,
+          "line": 422,
           "column": null,
           "name": "get_xpu_memory_info",
           "rank": "C",
           "complexity": 20,
           "message": "'get_xpu_memory_info' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\xpu_utils.py:419: 'get_xpu_memory_info' has rank C"
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:422: 'get_xpu_memory_info' has rank C"
         }
       ]
     },
@@ -582,22 +582,22 @@
       "count": 2,
       "findings": [
         {
-          "line": 724,
+          "line": 722,
           "column": null,
           "name": "_on_tool_result",
           "rank": "C",
           "complexity": 20,
           "message": "'_on_tool_result' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\app.py:724: '_on_tool_result' has rank C"
+          "raw": "src\\intellicrack\\ui\\app.py:722: '_on_tool_result' has rank C"
         },
         {
-          "line": 1631,
+          "line": 1625,
           "column": null,
-          "name": "close_event_handler",
+          "name": "closeEvent",
           "rank": "C",
           "complexity": 20,
-          "message": "'close_event_handler' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\app.py:1631: 'close_event_handler' has rank C"
+          "message": "'closeEvent' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\ui\\app.py:1625: 'closeEvent' has rank C"
         }
       ]
     },
@@ -678,22 +678,22 @@
       "count": 2,
       "findings": [
         {
-          "line": 114,
+          "line": 79,
           "column": null,
           "name": "test_embedded_tools_menu_actions_count",
           "rank": "C",
           "complexity": 20,
           "message": "'test_embedded_tools_menu_actions_count' has rank C (complexity > threshold)",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:114: 'test_embedded_tools_menu_actions_count' has rank C"
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:79: 'test_embedded_tools_menu_actions_count' has rank C"
         },
         {
-          "line": 83,
+          "line": 54,
           "column": null,
           "name": "TestEmbeddedToolsMenuIntegration",
           "rank": "C",
           "complexity": 20,
           "message": "'TestEmbeddedToolsMenuIntegration' has rank C (complexity > threshold)",
-          "raw": "tests\\test_ui\\test_app_embedded_tools.py:83: 'TestEmbeddedToolsMenuIntegration' has rank C"
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:54: 'TestEmbeddedToolsMenuIntegration' has rank C"
         }
       ]
     },
@@ -792,13 +792,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 774,
+          "line": 780,
           "column": null,
           "name": "_highlight_triple_quotes",
           "rank": "C",
           "complexity": 20,
           "message": "'_highlight_triple_quotes' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:774: '_highlight_triple_quotes' has rank C"
+          "raw": "src\\intellicrack\\ui\\highlighter.py:780: '_highlight_triple_quotes' has rank C"
         }
       ]
     },

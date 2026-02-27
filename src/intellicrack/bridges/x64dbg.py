@@ -1025,7 +1025,8 @@ class X64DbgBridge(DebuggerBridge):
             error = response.get("error", "Command failed")
             msg = str(error)
             raise ToolError(msg)
-        return response.get("data")
+        data: str | int | float | bool | dict[str, object] | list[object] | None = response.get("data")
+        return data
 
     async def _send_command(self, command: str) -> str:
         """Send command to x64dbg and get response.

@@ -213,6 +213,25 @@ class FridaPanelProtocol(ToolWidget, Protocol):
         """
         _ = (self, message)
 
+    def add_hook_entry(
+        self,
+        address: str,
+        module: str,
+        function: str,
+        status: str = "",
+        hook_id: str = "",
+    ) -> None:
+        """Add a hook entry to the table.
+
+        Args:
+            address: Hook address (hex string).
+            module: Module name containing the hook.
+            function: Function name being hooked.
+            status: Current hook status.
+            hook_id: Unique hook identifier.
+        """
+        _ = (self, address, module, function, status, hook_id)
+
 
 @runtime_checkable
 class ProcessPanelProtocol(ToolWidget, Protocol):
@@ -257,10 +276,23 @@ class SandboxPanelProtocol(ToolWidget, Protocol):
         """
         _ = (self, sandbox)
 
+    def get_sandbox(self) -> SandboxBase | None:
+        """Get the current sandbox backend.
+
+        Returns:
+            The attached sandbox or None.
+        """
+        _ = self
+        return None
+
 
 if TYPE_CHECKING:
+    from ..core.script_gen import ScriptManager, ScriptValidator
     from ..core.types import LicensingAnalysis
+    from ..sandbox.base import SandboxBase
     from .panels.licensing_panel import LicensingAnalysisPanel
+    from .panels.script_manager import ScriptManagerPanel
+    from .panels.stack_viewer import StackViewerPanel
 
 _logger = get_logger("ui.tools")
 
@@ -858,8 +890,8 @@ class ToolOutputPanel(QFrame):
     def _setup_embedded_tabs(self) -> None:
         """Set up tabs for embedded tools and analysis panels."""
         self._licensing_panel: LicensingAnalysisPanel | None = None
-        self._script_panel: QWidget | None = None
-        self._stack_panel: QWidget | None = None
+        self._script_panel: ScriptManagerPanel | None = None
+        self._stack_panel: StackViewerPanel | None = None
         self._hxd_widget: HxDWidgetProtocol | None = None
         self._x64dbg_widget: X64DbgWidgetProtocol | None = None
         self._cutter_widget: CutterWidgetProtocol | None = None
@@ -874,6 +906,10 @@ class ToolOutputPanel(QFrame):
         self._ghidra_bridge: object | None = None
         self._radare2_bridge: object | None = None
         self._frida_bridge: object | None = None
+
+        self._pending_sandbox_backend: object | None = None
+        self._pending_script_backend: object | None = None
+        self._pending_script_validator: object | None = None
 
     def add_licensing_panel(self) -> LicensingAnalysisPanel:
         """Add the licensing analysis panel as a tab.
@@ -902,12 +938,22 @@ class ToolOutputPanel(QFrame):
             return self._script_panel
 
         panel_module = importlib.import_module(".panels.script_manager", "intellicrack.ui")
-        panel = cast("QWidget", panel_module.ScriptManagerPanel())
-        self._script_panel = panel
-        self._tab_widget.addTab(panel, "Scripts")
-        self._panels["scripts"] = panel
+        raw_widget = panel_module.ScriptManagerPanel()
+        self._script_panel = cast("ScriptManagerPanel", raw_widget)
+        qwidget = cast("QWidget", raw_widget)
+        self._tab_widget.addTab(qwidget, "Scripts")
+        self._panels["scripts"] = qwidget
+
+        if self._pending_script_backend is not None:
+            self._script_panel.set_backend(
+                cast("ScriptManager", self._pending_script_backend),
+                validator=cast("ScriptValidator | None", self._pending_script_validator),
+            )
+            self._pending_script_backend = None
+            self._pending_script_validator = None
+
         _logger.info("script_panel_added")
-        return panel
+        return qwidget
 
     def add_stack_panel(self) -> QWidget:
         """Add the stack viewer panel as a tab.
@@ -919,12 +965,13 @@ class ToolOutputPanel(QFrame):
             return self._stack_panel
 
         panel_module = importlib.import_module(".panels.stack_viewer", "intellicrack.ui")
-        panel = cast("QWidget", panel_module.StackViewerPanel())
-        self._stack_panel = panel
-        self._tab_widget.addTab(panel, "Stack")
-        self._panels["stack"] = panel
+        raw_widget = panel_module.StackViewerPanel()
+        self._stack_panel = cast("StackViewerPanel", raw_widget)
+        qwidget = cast("QWidget", raw_widget)
+        self._tab_widget.addTab(qwidget, "Stack")
+        self._panels["stack"] = qwidget
         _logger.info("stack_panel_added")
-        return panel
+        return qwidget
 
     def add_hxd_tab(self) -> HxDWidgetProtocol | None:
         """Add a hex editor panel as a tab (redirects to BinaryPanel).
@@ -1182,6 +1229,12 @@ class ToolOutputPanel(QFrame):
             self._sandbox_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("sandbox"))
             self._tab_widget.addTab(qwidget, "Sandbox")
             self._panels["sandbox"] = qwidget
+
+            if self._pending_sandbox_backend is not None:
+                if hasattr(self._sandbox_panel, "set_sandbox"):
+                    self._sandbox_panel.set_sandbox(self._pending_sandbox_backend)
+                self._pending_sandbox_backend = None
+
             _logger.info("sandbox_tab_added")
         except Exception as e:
             _logger.warning("sandbox_tab_add_failed", extra={"error": str(e)})
@@ -1564,7 +1617,7 @@ class ToolOutputPanel(QFrame):
 
     def display_analysis_result(
         self,
-        tab_name: str,
+        tab_name: OutputType,
         content: str,
         info: str = "",
     ) -> None:
@@ -1580,10 +1633,10 @@ class ToolOutputPanel(QFrame):
         """
         self.set_tab_content(tab_name, content)
         if info:
-            self.set_tab_info(tab_name, info)
+            self.set_tab_info(tab_name, tab_name, info)
         self.activate_tab(tab_name)
 
-    def clear_analysis_tab(self, tab_name: str) -> None:
+    def clear_analysis_tab(self, tab_name: OutputType) -> None:
         """Clear a specific analysis tab's content.
 
         Args:
@@ -1591,7 +1644,7 @@ class ToolOutputPanel(QFrame):
         """
         self.clear_tab(tab_name)
 
-    def get_active_tool_widget(self, tool_id: str) -> QWidget | None:
+    def get_active_tool_widget(self, tool_id: OutputType) -> QWidget | None:
         """Get the active embedded tool widget by ID.
 
         Args:
@@ -1602,15 +1655,14 @@ class ToolOutputPanel(QFrame):
         """
         return self.get_embedded_tool(tool_id)
 
-    def log_frida_message(self, message: str, level: str = "info") -> None:
+    def log_frida_message(self, message: str) -> None:
         """Log a message to the Frida panel.
 
         Args:
             message: Message to log.
-            level: Log level (info, warning, error).
         """
         if self._frida_panel is not None and hasattr(self._frida_panel, "log_message"):
-            self._frida_panel.log_message(message, level)
+            self._frida_panel.log_message(message)
 
     def add_frida_hook_entry(self, hook_info: dict[str, object]) -> None:
         """Add a hook entry to the Frida panel.
@@ -1619,7 +1671,13 @@ class ToolOutputPanel(QFrame):
             hook_info: Dictionary with hook details.
         """
         if self._frida_panel is not None and hasattr(self._frida_panel, "add_hook_entry"):
-            self._frida_panel.add_hook_entry(hook_info)
+            self._frida_panel.add_hook_entry(
+                address=str(hook_info.get("address", "")),
+                module=str(hook_info.get("module", "")),
+                function=str(hook_info.get("function", "")),
+                status=str(hook_info.get("status", "Active")),
+                hook_id=str(hook_info.get("hook_id", "")),
+            )
 
     def get_sandbox_backend(self) -> object | None:
         """Get the sandbox backend from the sandbox panel.
@@ -1637,31 +1695,46 @@ class ToolOutputPanel(QFrame):
         Args:
             report_path: Path to the execution report.
         """
-        if self._sandbox_panel is not None and hasattr(self._sandbox_panel, "load_execution_report"):
-            self._sandbox_panel.load_execution_report(report_path)
+        if self._sandbox_panel is not None:
+            loader = getattr(self._sandbox_panel, "load_execution_report", None)
+            if callable(loader):
+                loader(report_path)
 
-    def get_script_panel_state(self) -> tuple[str | None, str | None]:
+    def get_script_panel_state(self) -> tuple[str | None, tuple[str, str, str] | None]:
         """Get the current script panel state.
 
         Returns:
-            Tuple of (selected_script_id, current_script_content).
+            Tuple of (selected_script_id, current_script_data).
+            current_script_data is (name, type, content) or None.
         """
         selected_id: str | None = None
-        current_script: str | None = None
+        current_script: tuple[str, str, str] | None = None
         if self._script_panel is not None:
-            if hasattr(self._script_panel, "get_selected_id"):
-                selected_id = self._script_panel.get_selected_id()
-            if hasattr(self._script_panel, "get_current_script"):
-                current_script = self._script_panel.get_current_script()
+            get_id = getattr(self._script_panel, "get_selected_id", None)
+            if callable(get_id):
+                raw_id = get_id()
+                if isinstance(raw_id, str):
+                    selected_id = raw_id
+            current_script = self._script_panel.get_current_script()
         return selected_id, current_script
 
-    def get_code_highlighter(self) -> object | None:
-        """Get the syntax highlighter from the code display.
+    def get_code_highlighter(self) -> QSyntaxHighlighter | None:
+        """Get the syntax highlighter from the current tab's code display.
+
+        Traverses the active tab widget to find a QPlainTextEdit child
+        and retrieves its document's syntax highlighter.
 
         Returns:
-            Syntax highlighter or None.
+            Syntax highlighter or None if not available.
         """
-        return self.get_highlighter()
+        current_widget = self._tab_widget.currentWidget()
+        if current_widget is None:
+            return None
+        code_display = current_widget.findChild(QPlainTextEdit)
+        if code_display is None:
+            return None
+        doc = code_display.document()
+        return doc.findChild(QSyntaxHighlighter)
 
     def wire_stack_viewer_bridges(self) -> None:
         """Wire bridge instances to the stack viewer panel.
@@ -1679,17 +1752,33 @@ class ToolOutputPanel(QFrame):
     def wire_sandbox_backend(self, sandbox: object) -> None:
         """Wire a sandbox backend to the sandbox panel.
 
+        Stores the backend for deferred wiring if the panel hasn't been
+        created yet. If the panel exists, wires immediately.
+
         Args:
             sandbox: Sandbox backend instance.
         """
+        self._pending_sandbox_backend = sandbox
         if self._sandbox_panel is not None and hasattr(self._sandbox_panel, "set_sandbox"):
             self._sandbox_panel.set_sandbox(sandbox)
+            self._pending_sandbox_backend = None
 
-    def wire_script_backend(self, backend: object) -> None:
+    def wire_script_backend(self, backend: object, validator: object | None = None) -> None:
         """Wire a script generation backend to the script manager.
+
+        Stores the backend for deferred wiring if the panel hasn't been
+        created yet. If the panel exists, wires immediately.
 
         Args:
             backend: Script generation backend instance.
+            validator: Optional script validator instance.
         """
+        self._pending_script_backend = backend
+        self._pending_script_validator = validator
         if self._script_panel is not None and hasattr(self._script_panel, "set_backend"):
-            self._script_panel.set_backend(backend)
+            self._script_panel.set_backend(
+                cast("ScriptManager", backend),
+                validator=cast("ScriptValidator | None", validator),
+            )
+            self._pending_script_backend = None
+            self._pending_script_validator = None

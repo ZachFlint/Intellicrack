@@ -562,8 +562,8 @@ class ScriptManagerPanel(QWidget):
         Args:
             _index: Selected index (unused, data retrieved from combo).
         """
-        script_type = self._filter_combo.currentData()
-        self._script_list.set_filter(script_type)
+        script_type_data = self._filter_combo.currentData()
+        self._script_list.set_filter(str(script_type_data) if script_type_data else None)
 
     def _on_type_changed(self, _index: int) -> None:
         """Handle type combo change.
@@ -571,8 +571,8 @@ class ScriptManagerPanel(QWidget):
         Args:
             _index: Selected index (unused, data retrieved from combo).
         """
-        if script_type := self._type_combo.currentData():
-            language = ScriptTypeInfo.get_language(script_type)
+        if script_type_raw := self._type_combo.currentData():
+            language = ScriptTypeInfo.get_language(str(script_type_raw))
             self._editor.set_language(language)
 
     @staticmethod
@@ -629,11 +629,18 @@ class ScriptManagerPanel(QWidget):
     def _load_script(self, script_id: str) -> None:
         """Load a script into the editor.
 
+        Refreshes the script from disk before loading to pick up
+        any external modifications.
+
         Args:
             script_id: Script ID to load.
         """
         if not self._backend:
             return
+
+        reload_fn = getattr(self._backend, "reload_script", None)
+        if callable(reload_fn):
+            reload_fn(script_id)
 
         script = self._backend.get_script(script_id)
         if not script:
@@ -672,12 +679,12 @@ class ScriptManagerPanel(QWidget):
         self._current_script_id = None
         self._name_edit.clear()
 
-        script_type = self._type_combo.currentData()
-        template = ScriptTypeInfo.get_template(script_type or "frida")
+        script_type = str(self._type_combo.currentData() or "frida")
+        template = ScriptTypeInfo.get_template(script_type)
         self._editor.set_content(template)
         self._modified = False
         self._status_bar.showMessage("New script created")
-        _logger.debug("script_new_created", extra={"script_type": script_type or "frida"})
+        _logger.debug("script_new_created", extra={"script_type": script_type})
 
     def _on_save(self) -> None:
         """Handle save button."""
@@ -686,7 +693,7 @@ class ScriptManagerPanel(QWidget):
             QMessageBox.warning(self, "Error", "Please enter a script name.")
             return
 
-        script_type = self._type_combo.currentData() or "frida"
+        script_type = str(self._type_combo.currentData() or "frida")
         content = self._editor.get_content()
 
         if self._backend:
@@ -700,6 +707,11 @@ class ScriptManagerPanel(QWidget):
                 return
 
         self._modified = False
+
+        ensure_saved = getattr(self._backend, "ensure_script_saved", None)
+        if callable(ensure_saved):
+            ensure_saved(name)
+
         self._status_bar.showMessage(f"Saved: {name}")
         _logger.info("script_saved", extra={"script_name": name, "script_type": script_type})
 
@@ -729,7 +741,7 @@ class ScriptManagerPanel(QWidget):
 
     def _on_load_file(self) -> None:
         """Handle load file button."""
-        script_type = self._type_combo.currentData() or "frida"
+        script_type = str(self._type_combo.currentData() or "frida")
         extension = ScriptTypeInfo.get_extension(script_type)
 
         file_path, _ = QFileDialog.getOpenFileName(
@@ -759,7 +771,7 @@ class ScriptManagerPanel(QWidget):
             return
 
         name = self._name_edit.text().strip() or "Unnamed"
-        script_type = self._type_combo.currentData() or "frida"
+        script_type = str(self._type_combo.currentData() or "frida")
         content = self._editor.get_content()
 
         script = self._build_script(name, script_type, content)
@@ -821,10 +833,10 @@ class ScriptManagerPanel(QWidget):
             Tuple of (name, type, content) or None.
         """
         name = self._name_edit.text().strip()
-        script_type = self._type_combo.currentData()
+        script_type_raw = self._type_combo.currentData()
         content = self._editor.get_content()
 
-        if not name or not script_type or not content:
+        if not name or not script_type_raw or not content:
             return None
 
-        return (name, script_type, content)
+        return (name, str(script_type_raw), content)

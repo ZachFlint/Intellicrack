@@ -413,10 +413,10 @@ class SandboxPanel(QWidget):
                 self._file_changes_tree.addTopLevelItem(item)
 
         if hasattr(report, "registry_changes"):
-            for change in report.registry_changes:
-                op = getattr(change, "operation", "unknown")
-                key = getattr(change, "key", "")
-                value = getattr(change, "value", "")
+            for reg_change in report.registry_changes:
+                op = getattr(reg_change, "operation", "unknown")
+                key = getattr(reg_change, "key", "")
+                value = getattr(reg_change, "value", "")
                 item = QTreeWidgetItem([str(op), str(key), str(value)])
                 self._registry_changes_tree.addTopLevelItem(item)
 

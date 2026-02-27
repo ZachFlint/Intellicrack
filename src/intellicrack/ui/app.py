@@ -9,11 +9,12 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import importlib
+import inspect
 import json
 import os
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, cast, override
 
 from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QAction
@@ -139,6 +140,9 @@ class MainWindow(QMainWindow):
         self._model_browse_worker: AsyncWorker | None = None
 
         self._current_binary: Path | None = None
+        self._script_manager: object | None = None
+        self._script_validator: object | None = None
+        self._model_discovery: ModelDiscovery | None = None
 
         _logger.debug("loading_icon_manager", extra={})
         self._icon_manager = IconManager.get_instance()
@@ -167,8 +171,6 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(self._icon_manager.get_app_icon())
 
         self._apply_smart_window_size()
-
-        self.closeEvent = self.close_event_handler
 
     def _apply_smart_window_size(self) -> None:
         """Size and center the window based on available screen geometry.
@@ -206,6 +208,28 @@ class MainWindow(QMainWindow):
         except Exception:
             _logger.debug("screen_detection_failed_using_default_size")
             self.resize(max_w, max_h)
+
+    def wire_script_manager(self, manager: object, validator: object | None = None) -> None:
+        """Wire a script manager and validator into the UI.
+
+        Stores references and forwards to the tool panel for
+        deferred backend wiring.
+
+        Args:
+            manager: ScriptManager instance.
+            validator: Optional ScriptValidator instance.
+        """
+        self._script_manager = manager
+        self._script_validator = validator
+        self._tool_panel.wire_script_backend(manager, validator)
+
+    def set_model_discovery(self, discovery: ModelDiscovery) -> None:
+        """Set the model discovery instance.
+
+        Args:
+            discovery: ModelDiscovery for provider model enumeration.
+        """
+        self._model_discovery = discovery
 
     def _setup_ui(self) -> None:
         """Set up the main UI layout."""
@@ -919,8 +943,17 @@ class MainWindow(QMainWindow):
         )
         if path:
             session_mgr = getattr(self._orchestrator, "_sessions", None)
-            if session_mgr is not None and hasattr(session_mgr, "export_json"):
-                self._run_async(session_mgr.export_json(session.id, Path(path)))
+            if session_mgr is not None:
+                export_current = getattr(session_mgr, "export_current", None)
+                if callable(export_current):
+                    coro = export_current(Path(path))
+                    self._run_async(cast("Coroutine[object, object, object]", coro))
+                elif hasattr(session_mgr, "export_json"):
+                    coro2 = session_mgr.export_json(session.id, Path(path))
+                    self._run_async(cast("Coroutine[object, object, object]", coro2))
+                else:
+                    QMessageBox.warning(self, "Export", "Session manager unavailable.")
+                    return
                 QMessageBox.information(self, "Export", f"Session exported to {path}")
             else:
                 QMessageBox.warning(self, "Export", "Session manager unavailable.")
@@ -1343,6 +1376,7 @@ class MainWindow(QMainWindow):
                 self.status_update.emit("No sandbox available")
             else:
                 self._sandbox_btn.setChecked(True)
+                self._tool_panel.wire_sandbox_backend(result)
                 self.status_update.emit("Sandbox opened")
 
         def on_sandbox_error(e: Exception) -> None:
@@ -1480,6 +1514,15 @@ class MainWindow(QMainWindow):
                 self._show_tool_error("Frida", "Failed to initialize Frida panel")
                 return
             panel.start_tool()
+
+            frida_bridge = self._tool_panel.get_bridge_for_tool("frida")
+            if frida_bridge is not None:
+                set_handler = getattr(frida_bridge, "set_message_handler", None)
+                if callable(set_handler):
+                    def _frida_msg_handler(message: object) -> None:
+                        text = str(message) if not isinstance(message, str) else message
+                        self._tool_panel.log_frida_message(text)
+                    set_handler(_frida_msg_handler)
         except Exception as e:
             _logger.exception("tool_open_failed", extra={"tool_name": "Frida", "error": str(e)})
             self._show_tool_error("Frida", f"Failed to open Frida panel: {e}")
@@ -1623,7 +1666,8 @@ class MainWindow(QMainWindow):
         self._run_async(cancel())
         self.status_update.emit("Cancelling...")
 
-    def close_event_handler(self, a0: QCloseEvent | None) -> None:
+    @override
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
         """Handle window close event.
 
         Args:
@@ -1655,6 +1699,11 @@ class MainWindow(QMainWindow):
                     disconnect_all()
 
         async def shutdown() -> None:
+            cleanup_stale = getattr(self._sandbox_manager, "cleanup_stale", None)
+            if callable(cleanup_stale):
+                result = cleanup_stale(max_idle_seconds=0)
+                if inspect.isawaitable(result):
+                    await result
             await self._orchestrator.shutdown()
 
         if self._current_worker and self._current_worker.isRunning():

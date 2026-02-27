@@ -509,7 +509,6 @@ module = [
   "transformers.*",
   "accelerate.*",
   "bitsandbytes.*",
-  "PyQt6.*",
 ]
 follow_imports = "skip"
 
@@ -862,5 +861,6 @@ extend_exclude = [
 ]
 
 [tool.codespell]
-skip = ".git,.github,.pixi,build,dist,tools,node_modules,CLI Coding,Screenshots,typings,stubs,*.lock,reports,*.egg-info,*.hta"
+skip = ".git,.github,.pixi,build,dist,tools,node_modules,CLI Coding,Screenshots,typings,stubs,*.lock,reports,*.egg-info,*.hta,*.hpp,*.graphml"
+ignore-words-list = "lief,crossreference,thirdparty,nd,lod,connin,regist"
 count = true

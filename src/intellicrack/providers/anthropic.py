@@ -147,11 +147,41 @@ class AnthropicProvider(LLMProviderBase):
         try:
             models = await self._fetch_all_models()
         except Exception as e:
-            self._logger.warning("anthropic_list_models_failed", extra={"error": str(e)})
-            raise ProviderError(_MSG_REQUEST_FAILED) from e
+            self._logger.warning(
+                "anthropic_list_models_api_failed_using_fallback",
+                extra={"error": str(e)},
+            )
+            return self._get_known_models_fallback()
         else:
             self._logger.info("anthropic_models_listed", extra={"count": len(models)})
             return models
+
+    def _get_known_models_fallback(self) -> list[ModelInfo]:
+        """Build ModelInfo list from hardcoded KNOWN_MODELS.
+
+        Used as a fallback when the API is unreachable or returns errors.
+
+        Returns:
+            List of ModelInfo built from KNOWN_MODELS class variable.
+        """
+        models: list[ModelInfo] = []
+        for model_id, display_name, ctx_window, tools, vision in self.KNOWN_MODELS:
+            models.append(ModelInfo(
+                id=model_id,
+                name=display_name,
+                provider=ProviderName.ANTHROPIC,
+                context_window=ctx_window,
+                supports_tools=tools,
+                supports_vision=vision,
+                supports_streaming=True,
+                input_cost_per_1m_tokens=None,
+                output_cost_per_1m_tokens=None,
+            ))
+        self._logger.info(
+            "anthropic_known_models_fallback",
+            extra={"count": len(models)},
+        )
+        return models
 
     async def _fetch_all_models(self) -> list[ModelInfo]:
         """Paginate through the models endpoint and collect all results.
@@ -475,9 +505,7 @@ class AnthropicProvider(LLMProviderBase):
             return self._format_user_message(msg)
         if msg.role == "assistant":
             return self._format_assistant_message(msg)
-        if msg.role == "tool":
-            return self._format_tool_message(msg)
-        return None
+        return self._format_tool_message(msg)
 
     @staticmethod
     def _format_user_message(msg: Message) -> dict[str, object]:

@@ -1,7 +1,50 @@
 {
   "tool": "blinter",
-  "generated": "2026-02-22T01:39:20.602240",
-  "total_findings": 0,
-  "total_files": 0,
-  "files": []
+  "generated": "2026-02-27T00:06:41.263048",
+  "total_findings": 3,
+  "total_files": 3,
+  "files": [
+    {
+      "path": "D:\\Intellicrack\\CLI Coding\\UpdateTools.cmd",
+      "count": 1,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\Intellicrack.cmd",
+      "count": 1,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\REMOVE_NUL.cmd",
+      "count": 1,
+      "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        }
+      ]
+    }
+  ]
 }

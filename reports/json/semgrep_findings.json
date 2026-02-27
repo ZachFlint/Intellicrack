@@ -1,6 +1,6 @@
 {
   "tool": "semgrep",
-  "generated": "2026-02-22T01:46:08.137107",
+  "generated": "2026-02-27T00:08:48.142091",
   "total_findings": 2,
   "total_files": 2,
   "files": [

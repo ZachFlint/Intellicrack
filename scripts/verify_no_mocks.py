@@ -23,8 +23,8 @@ MOCK_PATTERNS = [
     r"MagicMock\s*\(",
     r"PropertyMock\s*\(",
     r"AsyncMock\s*\(",
-    r"patch\s*\(",
-    r"@patch",
+    r"(?<!\w)patch\s*\(",
+    r"@patch\b",
     # Mock configuration
     r"return_value\s*=",
     r"side_effect\s*=",
@@ -219,29 +219,32 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Verify that tests use real data instead of mocks")
     parser.add_argument("--summary", "-s", action="store_true", help="Show only summary, not detailed violations")
     parser.add_argument("--ci", action="store_true", help="CI mode: exit with code 2 for critical, 1 for high violations")
-    parser.add_argument("--test-dir", type=Path, help="Override test directory path (default: auto-detect)")
+    parser.add_argument("--test-dir", type=Path, help="Override test directory path (default: tests/ + src/)")
 
     args = parser.parse_args()
 
     if args.test_dir:
-        test_dir = args.test_dir
+        scan_dirs = [args.test_dir]
     else:
-        script_dir = Path(__file__).parent
-        test_dir = script_dir.parent
+        project_root = Path(__file__).parent.parent
+        scan_dirs = [project_root / "tests", project_root / "src"]
 
-    if not test_dir.exists():
-        print(f"Error: Test directory not found at {test_dir}")
-        return 1
+    all_violations: dict[str, list[tuple[int, str, str]]] = {}
+    for scan_dir in scan_dirs:
+        if not scan_dir.exists():
+            print(f"Warning: Directory not found at {scan_dir}, skipping")
+            continue
 
-    print(f" Scanning {test_dir} for mock usage...")
+        print(f" Scanning {scan_dir} for mock usage...")
+        violations = scan_test_directory(scan_dir)
+        all_violations.update(violations)
+
     if not args.summary:
-        print("This may take a moment...\n")
-
-    violations = scan_test_directory(test_dir)
+        print()
 
     if args.ci:
-        return print_report(violations, summary_only=True)
-    return print_report(violations, summary_only=args.summary)
+        return print_report(all_violations, summary_only=True)
+    return print_report(all_violations, summary_only=args.summary)
 
 
 if __name__ == "__main__":

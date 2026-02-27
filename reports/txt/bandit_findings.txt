@@ -21,17 +21,12 @@ src/intellicrack/core\script_gen.py:401: [Low] B404:blacklist: Consider possible
 
 1 findings in src/intellicrack/credentials\oauth.py
 
-src/intellicrack/credentials\oauth.py:222: [Low] B106:hardcoded_password_funcarg: Possible hardcoded password: 'https://oauth2.googleapis.com/token'
+src/intellicrack/credentials\oauth.py:220: [Low] B106:hardcoded_password_funcarg: Possible hardcoded password: 'https://oauth2.googleapis.com/token'
 
 
 1 findings in src/intellicrack/sandbox\windows.py
 
 src/intellicrack/sandbox\windows.py:13: [Low] B405:blacklist: Using xml.etree.ElementTree to parse untrusted XML data is known to be vulnerable to XML attacks. Replace xml.etree.ElementTree with the equivalent defusedxml package, or make sure defusedxml.defuse_stdlib() is called.
-
-
-1 findings in src/intellicrack/ui\app.py
-
-src/intellicrack/ui\app.py:619: [Low] B110:try_except_pass: Try, Except, Pass detected.
 
 
 1 findings in src/intellicrack/ui\resources\icon_manager.py

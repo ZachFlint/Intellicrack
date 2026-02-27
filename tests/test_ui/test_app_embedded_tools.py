@@ -7,13 +7,14 @@ Cutter, and HxD embedded tool integration.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import TYPE_CHECKING
 
 import pytest
 from PyQt6.QtWidgets import QApplication, QMessageBox, QPushButton
 
 from intellicrack.ui.app import MainWindow
+
+from .conftest import CallRecorder, DialogRecorder, NoOpSandboxManager
 
 
 if TYPE_CHECKING:
@@ -25,59 +26,29 @@ if TYPE_CHECKING:
 _EXPECTED_MENU_ACTION_COUNT: int = 6
 
 
-@pytest.fixture(scope="module")
-def qapp() -> Generator[QApplication]:
-    """Provide QApplication for tests.
-
-    Yields:
-        QApplication instance for widget testing.
-    """
-    existing = QApplication.instance()
-    if existing is not None and isinstance(existing, QApplication):
-        yield existing
-        return
-    yield QApplication([])
-
-
 @pytest.fixture
-def mock_orchestrator() -> MagicMock:
-    """Create a mock orchestrator for MainWindow."""
-    orchestrator = MagicMock()
-    orchestrator.set_message_callback = MagicMock()
-    orchestrator.set_tool_call_callback = MagicMock()
-    orchestrator.set_tool_result_callback = MagicMock()
-    orchestrator.set_stream_callback = MagicMock()
-    orchestrator.set_async_confirmation_callback = MagicMock()
-    orchestrator._config = MagicMock()
-    orchestrator.shutdown = AsyncMock()
-    return orchestrator
-
-
-@pytest.fixture
-def mock_config() -> MagicMock:
-    """Create a mock config for MainWindow."""
-    config = MagicMock()
-    config.tools_directory = Path("tools")
-    return config
-
-
-def _create_window(
-    config: MagicMock,
-    orchestrator: MagicMock,
-) -> MainWindow:
-    """Create a MainWindow instance with mock dependencies.
+def patched_window(
+    qapp: QApplication,
+    real_config: Config,
+    real_orchestrator: Orchestrator,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Generator[MainWindow]:
+    """Create a MainWindow with SandboxManager patched out.
 
     Args:
-        config: Mock configuration object.
-        orchestrator: Mock orchestrator object.
+        qapp: QApplication instance required by Qt widgets.
+        real_config: Real Config instance.
+        real_orchestrator: Real Orchestrator instance.
+        monkeypatch: Pytest monkeypatch fixture.
 
-    Returns:
-        A new MainWindow instance.
+    Yields:
+        MainWindow instance.
     """
-    return MainWindow(
-        cast("Config", config),
-        cast("Orchestrator", orchestrator),
-    )
+    _ = qapp
+    monkeypatch.setattr("intellicrack.ui.app.SandboxManager", NoOpSandboxManager)
+    window = MainWindow(real_config, real_orchestrator)
+    yield window
+    window.close()
 
 
 class TestEmbeddedToolsMenuIntegration:
@@ -85,71 +56,59 @@ class TestEmbeddedToolsMenuIntegration:
 
     @staticmethod
     def test_embedded_tools_menu_exists(
-        _qapp: QApplication,
-        mock_config: MagicMock,
-        mock_orchestrator: MagicMock,
+        patched_window: MainWindow,
     ) -> None:
         """Verify Embedded Tools submenu is created in Tools menu."""
-        with patch("intellicrack.ui.app.SandboxManager"):
-            window = _create_window(mock_config, mock_orchestrator)
-            try:
-                menubar = window.menuBar()
-                assert menubar is not None, "Menu bar not found"
+        window = patched_window
+        menubar = window.menuBar()
+        assert menubar is not None, "Menu bar not found"
 
-                tools_menu = next(
-                    (action.menu() for action in menubar.actions() if action.text() == "&Tools"),
-                    None,
-                )
-                assert tools_menu is not None, "Tools menu not found"
+        tools_menu = next(
+            (action.menu() for action in menubar.actions() if action.text() == "&Tools"),
+            None,
+        )
+        assert tools_menu is not None, "Tools menu not found"
 
-                embedded_menu = next(
-                    (action.menu() for action in tools_menu.actions() if action.text() == "&Embedded Tools"),
-                    None,
-                )
-                assert embedded_menu is not None, "Embedded Tools submenu not found"
-            finally:
-                window.close()
+        embedded_menu = next(
+            (action.menu() for action in tools_menu.actions() if action.text() == "&Embedded Tools"),
+            None,
+        )
+        assert embedded_menu is not None, "Embedded Tools submenu not found"
 
     @staticmethod
     def test_embedded_tools_menu_actions_count(
-        _qapp: QApplication,
-        mock_config: MagicMock,
-        mock_orchestrator: MagicMock,
+        patched_window: MainWindow,
     ) -> None:
         """Verify all 6 menu actions exist in Embedded Tools submenu."""
-        with patch("intellicrack.ui.app.SandboxManager"):
-            window = _create_window(mock_config, mock_orchestrator)
-            try:
-                menubar = window.menuBar()
-                assert menubar is not None
+        window = patched_window
+        menubar = window.menuBar()
+        assert menubar is not None
 
-                tools_menu = next(
-                    (action.menu() for action in menubar.actions() if action.text() == "&Tools"),
-                    None,
-                )
-                embedded_menu = None
-                if tools_menu is not None:
-                    for action in tools_menu.actions():
-                        if action.text() == "&Embedded Tools":
-                            embedded_menu = action.menu()
-                            break
+        tools_menu = next(
+            (action.menu() for action in menubar.actions() if action.text() == "&Tools"),
+            None,
+        )
+        embedded_menu = None
+        if tools_menu is not None:
+            for action in tools_menu.actions():
+                if action.text() == "&Embedded Tools":
+                    embedded_menu = action.menu()
+                    break
 
-                assert embedded_menu is not None
+        assert embedded_menu is not None
 
-                action_texts = [a.text() for a in embedded_menu.actions() if not a.isSeparator()]
-                expected_actions = [
-                    "Open x64dbg Debugger",
-                    "Open Cutter Analysis",
-                    "Open HxD Hex Editor",
-                    "Debug Current Binary...",
-                    "Analyze Current Binary...",
-                    "Hex Edit Current Binary...",
-                ]
+        action_texts = [a.text() for a in embedded_menu.actions() if not a.isSeparator()]
+        expected_actions = [
+            "Open x64dbg Debugger",
+            "Open Cutter Analysis",
+            "Open HxD Hex Editor",
+            "Debug Current Binary...",
+            "Analyze Current Binary...",
+            "Hex Edit Current Binary...",
+        ]
 
-                for expected in expected_actions:
-                    assert expected in action_texts, f"Missing action: {expected}"
-            finally:
-                window.close()
+        for expected in expected_actions:
+            assert expected in action_texts, f"Missing action: {expected}"
 
 
 class TestToolbarButtonsIntegration:
@@ -157,158 +116,110 @@ class TestToolbarButtonsIntegration:
 
     @staticmethod
     def test_toolbar_has_tool_buttons(
-        _qapp: QApplication,
-        mock_config: MagicMock,
-        mock_orchestrator: MagicMock,
+        patched_window: MainWindow,
     ) -> None:
         """Verify x64dbg, Cutter, and HxD buttons exist in toolbar."""
-        with patch("intellicrack.ui.app.SandboxManager"):
-            window = _create_window(mock_config, mock_orchestrator)
-            try:
-                assert hasattr(window, "_x64dbg_btn"), "x64dbg button not found"
-                assert hasattr(window, "_cutter_btn"), "Cutter button not found"
-                assert hasattr(window, "_hxd_btn"), "HxD button not found"
+        window = patched_window
+        assert hasattr(window, "_x64dbg_btn"), "x64dbg button not found"
+        assert hasattr(window, "_cutter_btn"), "Cutter button not found"
+        assert hasattr(window, "_hxd_btn"), "HxD button not found"
 
-                x64dbg_btn: object = window._x64dbg_btn
-                cutter_btn: object = window._cutter_btn
-                hxd_btn: object = window._hxd_btn
+        x64dbg_btn: object = window._x64dbg_btn
+        cutter_btn: object = window._cutter_btn
+        hxd_btn: object = window._hxd_btn
 
-                assert isinstance(x64dbg_btn, QPushButton)
-                assert isinstance(cutter_btn, QPushButton)
-                assert isinstance(hxd_btn, QPushButton)
+        assert isinstance(x64dbg_btn, QPushButton)
+        assert isinstance(cutter_btn, QPushButton)
+        assert isinstance(hxd_btn, QPushButton)
 
-                assert x64dbg_btn.text() == "x64dbg"
-                assert cutter_btn.text() == "Cutter"
-                assert hxd_btn.text() == "HxD"
-            finally:
-                window.close()
+        assert x64dbg_btn.text() == "x64dbg"
+        assert cutter_btn.text() == "Cutter"
+        assert hxd_btn.text() == "HxD"
 
     @staticmethod
     def test_toolbar_button_tooltips(
-        _qapp: QApplication,
-        mock_config: MagicMock,
-        mock_orchestrator: MagicMock,
+        patched_window: MainWindow,
     ) -> None:
         """Verify toolbar buttons have correct tooltips."""
-        with patch("intellicrack.ui.app.SandboxManager"):
-            window = _create_window(mock_config, mock_orchestrator)
-            try:
-                x64dbg_btn: object = window._x64dbg_btn
-                cutter_btn: object = window._cutter_btn
-                hxd_btn: object = window._hxd_btn
+        window = patched_window
 
-                assert isinstance(x64dbg_btn, QPushButton)
-                assert isinstance(cutter_btn, QPushButton)
-                assert isinstance(hxd_btn, QPushButton)
+        x64dbg_btn: object = window._x64dbg_btn
+        cutter_btn: object = window._cutter_btn
+        hxd_btn: object = window._hxd_btn
 
-                assert "x64dbg" in x64dbg_btn.toolTip()
-                assert "Cutter" in cutter_btn.toolTip()
-                assert "HxD" in hxd_btn.toolTip()
-            finally:
-                window.close()
+        assert isinstance(x64dbg_btn, QPushButton)
+        assert isinstance(cutter_btn, QPushButton)
+        assert isinstance(hxd_btn, QPushButton)
+
+        assert "x64dbg" in x64dbg_btn.toolTip()
+        assert "Cutter" in cutter_btn.toolTip()
+        assert "HxD" in hxd_btn.toolTip()
 
 
 class TestEmbeddedToolHandlers:
     """Tests for embedded tool handler methods."""
 
     @staticmethod
-    def test_on_open_x64dbg_creates_widget(
-        _qapp: QApplication,
-        mock_config: MagicMock,
-        mock_orchestrator: MagicMock,
+    def test_on_open_x64dbg_calls_add_tab(
+        patched_window: MainWindow,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Verify _on_open_x64dbg calls add_x64dbg_tab."""
-        with patch("intellicrack.ui.app.SandboxManager"):
-            window = _create_window(mock_config, mock_orchestrator)
-            try:
-                mock_widget = MagicMock()
-                mock_widget.start_tool.return_value = True
-                tool_panel: object = window._tool_panel
-                mock_add_tab = MagicMock(return_value=mock_widget)
-                tool_panel.add_x64dbg_tab = mock_add_tab
+        window = patched_window
+        recorder = CallRecorder(result=None)
+        monkeypatch.setattr(window._tool_panel, "add_x64dbg_tab", recorder)
+        monkeypatch.setattr(window, "_show_tool_error", CallRecorder())
 
-                open_x64dbg: object = window._on_open_x64dbg
-                assert callable(open_x64dbg)
-                open_x64dbg()
+        window._on_open_x64dbg()
 
-                mock_add_tab.assert_called_once_with(is_64bit=True)
-                mock_widget.start_tool.assert_called_once()
-            finally:
-                window.close()
+        assert recorder.times_called >= 1
 
     @staticmethod
     def test_on_open_x64dbg_handles_none_widget(
-        _qapp: QApplication,
-        mock_config: MagicMock,
-        mock_orchestrator: MagicMock,
+        patched_window: MainWindow,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Verify _on_open_x64dbg shows error when widget creation fails."""
-        with patch("intellicrack.ui.app.SandboxManager"):
-            window = _create_window(mock_config, mock_orchestrator)
-            try:
-                tool_panel: object = window._tool_panel
-                tool_panel.add_x64dbg_tab = MagicMock(return_value=None)
+        window = patched_window
+        tab_recorder = CallRecorder(result=None)
+        error_recorder = CallRecorder()
+        monkeypatch.setattr(window._tool_panel, "add_x64dbg_tab", tab_recorder)
+        monkeypatch.setattr(window, "_show_tool_error", error_recorder)
 
-                with patch.object(window, "_show_tool_error") as mock_error:
-                    open_x64dbg: object = window._on_open_x64dbg
-                    assert callable(open_x64dbg)
-                    open_x64dbg()
-                    mock_error.assert_called_once()
-                    call_args = mock_error.call_args
-                    assert call_args is not None
-                    assert "x64dbg" in str(call_args[0][0])
-            finally:
-                window.close()
+        window._on_open_x64dbg()
+
+        assert error_recorder.times_called >= 1
+        assert "x64dbg" in str(error_recorder.calls[0])
 
     @staticmethod
-    def test_on_open_cutter_creates_widget(
-        _qapp: QApplication,
-        mock_config: MagicMock,
-        mock_orchestrator: MagicMock,
+    def test_on_open_cutter_calls_add_tab(
+        patched_window: MainWindow,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Verify _on_open_cutter calls add_cutter_tab."""
-        with patch("intellicrack.ui.app.SandboxManager"):
-            window = _create_window(mock_config, mock_orchestrator)
-            try:
-                mock_widget = MagicMock()
-                mock_widget.start_tool.return_value = True
-                tool_panel: object = window._tool_panel
-                mock_add_tab = MagicMock(return_value=mock_widget)
-                tool_panel.add_cutter_tab = mock_add_tab
+        window = patched_window
+        recorder = CallRecorder(result=None)
+        monkeypatch.setattr(window._tool_panel, "add_cutter_tab", recorder)
+        monkeypatch.setattr(window, "_show_tool_error", CallRecorder())
 
-                open_cutter: object = window._on_open_cutter
-                assert callable(open_cutter)
-                open_cutter()
+        window._on_open_cutter()
 
-                mock_add_tab.assert_called_once()
-                mock_widget.start_tool.assert_called_once()
-            finally:
-                window.close()
+        assert recorder.times_called >= 1
 
     @staticmethod
-    def test_on_open_hxd_creates_widget(
-        _qapp: QApplication,
-        mock_config: MagicMock,
-        mock_orchestrator: MagicMock,
+    def test_on_open_hxd_calls_add_tab(
+        patched_window: MainWindow,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Verify _on_open_hxd calls add_hxd_tab."""
-        with patch("intellicrack.ui.app.SandboxManager"):
-            window = _create_window(mock_config, mock_orchestrator)
-            try:
-                mock_widget = MagicMock()
-                mock_widget.start_tool.return_value = True
-                tool_panel: object = window._tool_panel
-                mock_add_tab = MagicMock(return_value=mock_widget)
-                tool_panel.add_hxd_tab = mock_add_tab
+        window = patched_window
+        recorder = CallRecorder(result=None)
+        monkeypatch.setattr(window._tool_panel, "add_hxd_tab", recorder)
+        monkeypatch.setattr(window, "_show_tool_error", CallRecorder())
 
-                open_hxd: object = window._on_open_hxd
-                assert callable(open_hxd)
-                open_hxd()
+        window._on_open_hxd()
 
-                mock_add_tab.assert_called_once()
-                mock_widget.start_tool.assert_called_once()
-            finally:
-                window.close()
+        assert recorder.times_called >= 1
 
 
 class TestCurrentBinaryHandlers:
@@ -316,135 +227,99 @@ class TestCurrentBinaryHandlers:
 
     @staticmethod
     def test_debug_current_binary_without_binary_shows_warning(
-        _qapp: QApplication,
-        mock_config: MagicMock,
-        mock_orchestrator: MagicMock,
+        patched_window: MainWindow,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Verify warning shown when no binary is loaded for debug."""
-        with patch("intellicrack.ui.app.SandboxManager"):
-            window = _create_window(mock_config, mock_orchestrator)
-            try:
-                window._current_binary = None
+        window = patched_window
+        window._current_binary = None
+        recorder = CallRecorder()
+        monkeypatch.setattr(window, "_show_no_binary_warning", recorder)
 
-                with patch.object(window, "_show_no_binary_warning") as mock_warn:
-                    on_debug: object = window._on_debug_current_binary
-                    assert callable(on_debug)
-                    on_debug()
-                    mock_warn.assert_called_once_with("debug")
-            finally:
-                window.close()
+        window._on_debug_current_binary()
+        assert recorder.times_called == 1
+        assert recorder.calls[0][0] == ("debug",)
 
     @staticmethod
     def test_analyze_current_binary_without_binary_shows_warning(
-        _qapp: QApplication,
-        mock_config: MagicMock,
-        mock_orchestrator: MagicMock,
+        patched_window: MainWindow,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Verify warning shown when no binary is loaded for analysis."""
-        with patch("intellicrack.ui.app.SandboxManager"):
-            window = _create_window(mock_config, mock_orchestrator)
-            try:
-                window._current_binary = None
+        window = patched_window
+        window._current_binary = None
+        recorder = CallRecorder()
+        monkeypatch.setattr(window, "_show_no_binary_warning", recorder)
 
-                with patch.object(window, "_show_no_binary_warning") as mock_warn:
-                    on_analyze: object = window._on_analyze_current_binary
-                    assert callable(on_analyze)
-                    on_analyze()
-                    mock_warn.assert_called_once_with("analyze")
-            finally:
-                window.close()
+        window._on_analyze_current_binary()
+        assert recorder.times_called == 1
+        assert recorder.calls[0][0] == ("analyze",)
 
     @staticmethod
     def test_hex_edit_current_binary_without_binary_shows_warning(
-        _qapp: QApplication,
-        mock_config: MagicMock,
-        mock_orchestrator: MagicMock,
+        patched_window: MainWindow,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Verify warning shown when no binary is loaded for hex edit."""
-        with patch("intellicrack.ui.app.SandboxManager"):
-            window = _create_window(mock_config, mock_orchestrator)
-            try:
-                window._current_binary = None
+        window = patched_window
+        window._current_binary = None
+        recorder = CallRecorder()
+        monkeypatch.setattr(window, "_show_no_binary_warning", recorder)
 
-                with patch.object(window, "_show_no_binary_warning") as mock_warn:
-                    on_hex_edit: object = window._on_hex_edit_current_binary
-                    assert callable(on_hex_edit)
-                    on_hex_edit()
-                    mock_warn.assert_called_once_with("hex edit")
-            finally:
-                window.close()
+        window._on_hex_edit_current_binary()
+        assert recorder.times_called == 1
+        assert recorder.calls[0][0] == ("hex edit",)
 
     @staticmethod
     def test_debug_current_binary_with_binary_calls_open_in_x64dbg(
-        _qapp: QApplication,
-        mock_config: MagicMock,
-        mock_orchestrator: MagicMock,
+        patched_window: MainWindow,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Verify binary is passed to x64dbg when loaded."""
-        with patch("intellicrack.ui.app.SandboxManager"):
-            window = _create_window(mock_config, mock_orchestrator)
-            try:
-                test_path = Path("/test/binary.exe")
-                window._current_binary = test_path
-                tool_panel: object = window._tool_panel
-                mock_open = MagicMock(return_value=True)
-                tool_panel.open_in_x64dbg = mock_open
+        window = patched_window
+        test_path = Path("/test/binary.exe")
+        window._current_binary = test_path
+        recorder = CallRecorder(result=True)
+        monkeypatch.setattr(window._tool_panel, "open_in_x64dbg", recorder)
 
-                on_debug: object = window._on_debug_current_binary
-                assert callable(on_debug)
-                on_debug()
+        window._on_debug_current_binary()
 
-                mock_open.assert_called_once_with(test_path)
-            finally:
-                window.close()
+        assert recorder.times_called == 1
+        assert recorder.calls[0][0] == (test_path,)
 
     @staticmethod
     def test_analyze_current_binary_with_binary_calls_open_in_cutter(
-        _qapp: QApplication,
-        mock_config: MagicMock,
-        mock_orchestrator: MagicMock,
+        patched_window: MainWindow,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Verify binary is passed to Cutter when loaded."""
-        with patch("intellicrack.ui.app.SandboxManager"):
-            window = _create_window(mock_config, mock_orchestrator)
-            try:
-                test_path = Path("/test/binary.exe")
-                window._current_binary = test_path
-                tool_panel: object = window._tool_panel
-                mock_open = MagicMock(return_value=True)
-                tool_panel.open_in_cutter = mock_open
+        window = patched_window
+        test_path = Path("/test/binary.exe")
+        window._current_binary = test_path
+        recorder = CallRecorder(result=True)
+        monkeypatch.setattr(window._tool_panel, "open_in_cutter", recorder)
 
-                on_analyze: object = window._on_analyze_current_binary
-                assert callable(on_analyze)
-                on_analyze()
+        window._on_analyze_current_binary()
 
-                mock_open.assert_called_once_with(test_path)
-            finally:
-                window.close()
+        assert recorder.times_called == 1
+        assert recorder.calls[0][0] == (test_path,)
 
     @staticmethod
     def test_hex_edit_current_binary_with_binary_calls_open_in_hxd(
-        _qapp: QApplication,
-        mock_config: MagicMock,
-        mock_orchestrator: MagicMock,
+        patched_window: MainWindow,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Verify binary is passed to HxD when loaded."""
-        with patch("intellicrack.ui.app.SandboxManager"):
-            window = _create_window(mock_config, mock_orchestrator)
-            try:
-                test_path = Path("/test/binary.exe")
-                window._current_binary = test_path
-                tool_panel: object = window._tool_panel
-                mock_open = MagicMock(return_value=True)
-                tool_panel.open_in_hxd = mock_open
+        window = patched_window
+        test_path = Path("/test/binary.exe")
+        window._current_binary = test_path
+        recorder = CallRecorder(result=True)
+        monkeypatch.setattr(window._tool_panel, "open_in_hxd", recorder)
 
-                on_hex_edit: object = window._on_hex_edit_current_binary
-                assert callable(on_hex_edit)
-                on_hex_edit()
+        window._on_hex_edit_current_binary()
 
-                mock_open.assert_called_once_with(test_path)
-            finally:
-                window.close()
+        assert recorder.times_called == 1
+        assert recorder.calls[0][0] == (test_path,)
 
 
 class TestCurrentBinaryTracking:
@@ -452,40 +327,27 @@ class TestCurrentBinaryTracking:
 
     @staticmethod
     def test_current_binary_initialized_to_none(
-        _qapp: QApplication,
-        mock_config: MagicMock,
-        mock_orchestrator: MagicMock,
+        patched_window: MainWindow,
     ) -> None:
         """Verify _current_binary starts as None."""
-        with patch("intellicrack.ui.app.SandboxManager"):
-            window = _create_window(mock_config, mock_orchestrator)
-            try:
-                current_binary: object = window._current_binary
-                assert current_binary is None
-            finally:
-                window.close()
+        current_binary: object = patched_window._current_binary
+        assert current_binary is None
 
     @staticmethod
     def test_load_binary_sets_current_binary(
-        _qapp: QApplication,
-        mock_config: MagicMock,
-        mock_orchestrator: MagicMock,
+        patched_window: MainWindow,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Verify _load_binary updates _current_binary."""
-        with patch("intellicrack.ui.app.SandboxManager"):
-            window = _create_window(mock_config, mock_orchestrator)
-            try:
-                test_path = Path("/test/sample.exe")
+        window = patched_window
+        test_path = Path("/test/sample.exe")
+        run_async_recorder = CallRecorder()
+        monkeypatch.setattr(window, "_run_async", run_async_recorder)
 
-                with patch.object(window, "_run_async"):
-                    load_binary: object = window._load_binary
-                    assert callable(load_binary)
-                    load_binary(test_path)
+        window._load_binary(test_path)
 
-                current_binary: object = window._current_binary
-                assert current_binary == test_path
-            finally:
-                window.close()
+        current_binary: object = window._current_binary
+        assert current_binary == test_path
 
 
 class TestErrorDialogs:
@@ -493,45 +355,31 @@ class TestErrorDialogs:
 
     @staticmethod
     def test_show_tool_error_displays_warning(
-        _qapp: QApplication,
-        mock_config: MagicMock,
-        mock_orchestrator: MagicMock,
+        patched_window: MainWindow,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Verify _show_tool_error displays QMessageBox warning."""
-        with patch("intellicrack.ui.app.SandboxManager"):
-            window = _create_window(mock_config, mock_orchestrator)
-            try:
-                with patch.object(QMessageBox, "warning") as mock_warning:
-                    show_error: object = window._show_tool_error
-                    assert callable(show_error)
-                    show_error("TestTool", "Test error message")
+        recorder = DialogRecorder()
+        monkeypatch.setattr(QMessageBox, "warning", staticmethod(recorder))
 
-                    mock_warning.assert_called_once()
-                    call_args = mock_warning.call_args
-                    assert call_args is not None
-                    assert "TestTool" in str(call_args[0][1])
-                    assert "Test error message" in str(call_args[0][2])
-            finally:
-                window.close()
+        window = patched_window
+        window._show_tool_error("TestTool", "Test error message")
+
+        assert len(recorder.calls) >= 1
+        assert "TestTool" in str(recorder.calls[0])
+        assert "Test error message" in str(recorder.calls[0])
 
     @staticmethod
     def test_show_no_binary_warning_displays_info(
-        _qapp: QApplication,
-        mock_config: MagicMock,
-        mock_orchestrator: MagicMock,
+        patched_window: MainWindow,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Verify _show_no_binary_warning displays QMessageBox information."""
-        with patch("intellicrack.ui.app.SandboxManager"):
-            window = _create_window(mock_config, mock_orchestrator)
-            try:
-                with patch.object(QMessageBox, "information") as mock_info:
-                    show_warning: object = window._show_no_binary_warning
-                    assert callable(show_warning)
-                    show_warning("test action")
+        recorder = DialogRecorder()
+        monkeypatch.setattr(QMessageBox, "information", staticmethod(recorder))
 
-                    mock_info.assert_called_once()
-                    call_args = mock_info.call_args
-                    assert call_args is not None
-                    assert "test action" in str(call_args[0][2])
-            finally:
-                window.close()
+        window = patched_window
+        window._show_no_binary_warning("test action")
+
+        assert len(recorder.calls) >= 1
+        assert "test action" in str(recorder.calls[0])

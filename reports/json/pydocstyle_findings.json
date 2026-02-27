@@ -1,6 +1,6 @@
 {
   "tool": "pydocstyle",
-  "generated": "2026-02-22T01:49:29.234526",
+  "generated": "2026-02-27T00:11:10.674387",
   "total_findings": 9,
   "total_files": 7,
   "files": [
@@ -81,12 +81,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 900,
+          "line": 904,
           "column": null,
           "code": "D401",
           "context": "in public function `authorize_google`:",
           "message": "in public function `authorize_google`: - First line should be in imperative mood; try rephrasing (found 'Convenience')",
-          "raw": "src/intellicrack\\credentials\\oauth.py:900: D401: in public function `authorize_google`: - First line should be in imperative mood; try rephrasing (found 'Convenience')"
+          "raw": "src/intellicrack\\credentials\\oauth.py:904: D401: in public function `authorize_google`: - First line should be in imperative mood; try rephrasing (found 'Convenience')"
         }
       ]
     },
