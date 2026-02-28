@@ -532,7 +532,7 @@ function setupVirtualList(type,nodes){
     list.innerHTML=sorted.slice(startIdx,endIdx).map(({id,attrs},i)=>{
       const realIdx=startIdx+i;
       const selectedClass=viewport._selectedIdx===realIdx?' selected':'';
-      return '<li class="connection-item'+selectedClass+'" data-idx="'+realIdx+'" onclick="goToNode(\''+id.replace(/'/g,"\\'")+'\')">'
+      return '<li class="connection-item'+selectedClass+'" data-idx="'+realIdx+'" onclick="goToNode(\''+id.replace(/\\/g,"\\\\").replace(/'/g,"\\'")+'\')">'
         +'<span class="conn-dot" style="background:'+attrs.color+'"></span>'
         +'<span class="conn-name" title="'+id+'">'+attrs.label+'</span>'
         +'<span class="conn-type">'+attrs.nodeType+'</span></li>';
