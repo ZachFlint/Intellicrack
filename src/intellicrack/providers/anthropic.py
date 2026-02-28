@@ -298,7 +298,8 @@ class AnthropicProvider(LLMProviderBase):
         if system_prompt is not None:
             kwargs["system"] = system_prompt
         if tools:
-            kwargs["tools"] = cast("list[ToolParam]", tools)
+            provider_tools: list[ToolParam] = cast("list[ToolParam]", tools)
+            kwargs["tools"] = provider_tools
         return kwargs
 
     def _parse_response_blocks(

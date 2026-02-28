@@ -2587,10 +2587,10 @@
       <data key="d3">_get_modules</data>
       <data key="d4">['self']</data>
     </node>
-    <node id="src.intellicrack.bridges.x64dbg._get_process_info">
+    <node id="src.intellicrack.bridges.x64dbg.get_process_info">
       <data key="d0">function</data>
       <data key="d1">python</data>
-      <data key="d3">_get_process_info</data>
+      <data key="d3">get_process_info</data>
       <data key="d4">['self']</data>
     </node>
     <node id="src.intellicrack.bridges.x64dbg._get_parent_pid">
@@ -14813,7 +14813,7 @@
     <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.x64dbg._get_modules">
       <data key="d5">defines</data>
     </edge>
-    <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.x64dbg._get_process_info">
+    <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.x64dbg.get_process_info">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.x64dbg._get_parent_pid">
