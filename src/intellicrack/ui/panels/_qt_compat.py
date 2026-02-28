@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Qt method compatibility layer for PyQt6 SIP-generated bindings.
 
 Provides snake_case wrapper functions that delegate to PyQt6 camelCase

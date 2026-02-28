@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """x64dbg bridge for Windows debugging.
 
 This module provides integration with x64dbg for dynamic analysis,

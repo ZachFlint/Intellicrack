@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Shared async-to-sync bridge runner for Qt UI panels.
 
 Provides a coroutine runner that safely executes async bridge

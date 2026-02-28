@@ -3,12 +3,12 @@
 An AI-powered reverse engineering orchestration platform that provides a unified interface for controlling multiple reverse engineering tools through natural language interaction.
 
 ![Python](https://img.shields.io/badge/python-3.13%2B-blue)
-![License](https://img.shields.io/badge/license-GPL%20v3-green)
+![License](https://img.shields.io/badge/license-GPL%20v3%2B-green)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
 
 ## Overview
 
-Intellicrack (v1.0.0) is designed for analyzing and defeating software licensing protections. It serves as a unified orchestration layer where an LLM provider acts as central intelligence, coordinating between the user interface, tool bridges, and analysis modules.
+Intellicrack (v0.1.0a1) is designed for analyzing and defeating software licensing protections. It serves as a unified orchestration layer where an LLM provider acts as central intelligence, coordinating between the user interface, tool bridges, and analysis modules.
 
 ### What Intellicrack Does
 

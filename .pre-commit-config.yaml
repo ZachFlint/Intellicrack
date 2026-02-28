@@ -20,7 +20,7 @@ repos:
         stages: [pre-commit]
       - id: generate-requirements
         name: Generate requirements.txt from pixi environment
-        entry: bash -c 'pixi run generate-requirements && git add requirements.txt'
+        entry: bash -c 'pixi run python scripts/generate_requirements.py && git add requirements.txt'
         language: system
         pass_filenames: false
         always_run: true

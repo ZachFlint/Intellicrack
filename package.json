@@ -1,6 +1,7 @@
 {
   "name": "intellicrack",
-  "version": "1.0.0",
+  "version": "0.1.0a1",
+  "license": "GPL-3.0-or-later",
   "private": true,
   "description": "Intellicrack binary analysis platform",
   "dependencies": {

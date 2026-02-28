@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Main application window for Intellicrack.
 
 This module provides the main PyQt6 application window that combines
@@ -36,6 +41,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from .._metadata import __copyright__, __license__, __version__
 from ..core.logging import get_logger
 from ..core.types import Message, ModelInfo, ProviderCredentials, ProviderName, ToolCall, ToolName, ToolResult
 from ..providers.discovery import ModelDiscovery
@@ -1615,7 +1621,9 @@ class MainWindow(QMainWindow):
             "Intellicrack\n\n"
             "AI-powered reverse engineering platform for analyzing\n"
             "software licensing protections.\n\n"
-            "Version 2.0.0\n\n"
+            f"Version {__version__}\n"
+            f"License: {__license__}\n"
+            f"{__copyright__}\n\n"
             f"Code Font: {code_font}\n"
             f"UI Font: {ui_font}\n"
             f"Custom Fonts: {'Yes' if custom_loaded else 'No'}\n"

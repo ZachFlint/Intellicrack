@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Intellicrack: AI-powered reverse engineering orchestration platform.
 
 This package provides a unified interface for controlling reverse engineering tools
@@ -25,7 +30,13 @@ import importlib
 import logging
 from typing import TYPE_CHECKING
 
-from intellicrack._metadata import __author__, __email__, __version__
+from intellicrack._metadata import (
+    __author__,
+    __copyright__,
+    __email__,
+    __license__,
+    __version__,
+)
 
 
 if TYPE_CHECKING:
@@ -83,7 +94,9 @@ __all__: list[str] = [
     "SessionManager",
     "ToolRegistry",
     "__author__",
+    "__copyright__",
     "__email__",
+    "__license__",
     "__version__",
     "main",
 ]
