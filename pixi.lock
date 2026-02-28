@@ -1829,8 +1829,8 @@ packages:
   - intel-cmplr-lib-ur==2025.3.1
 - pypi: ./
   name: intellicrack
-  version: 1.0.0
-  sha256: b1eb174184444ddc8d0cf6dede3e526fdfc4d5d18cbbce52ea20259d58158eb3
+  version: 0.1.0a1
+  sha256: 49a19cf46bfcc5a44918fdfde8f571e4890bf6d6cb3a7ac3da8d957e2f51a176
   requires_dist:
   - psutil
   - pyqt6>=6.10.2,<7

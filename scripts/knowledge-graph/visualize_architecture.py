@@ -878,6 +878,9 @@ function setProgress(p,m){{document.getElementById('progress').style.width=p+'%'
 function chunk(arr,size){{const r=[];for(let i=0;i<arr.length;i+=size)r.push(arr.slice(i,i+size));return r;}}
 async function processChunks(chunks,fn,base,range,label){{for(let i=0;i<chunks.length;i++){{chunks[i].forEach(fn);const pct=base+Math.floor((i+1)/chunks.length*range);setProgress(pct,label+' ('+(i+1)+'/'+chunks.length+')');await new Promise(r=>requestAnimationFrame(r));}}}}
 
+function escHTML(s){{return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}}
+function escJS(s){{return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}}
+
 function searchNodes(q,l=15){{
   if(!q||q.length<2)return[];
   const ql=q.toLowerCase();
@@ -966,7 +969,7 @@ async function init(){{
     const src=graph.source(edge),tgt=graph.target(edge);
     const srcLabel=graph.getNodeAttribute(src,'label');
     const tgtLabel=graph.getNodeAttribute(tgt,'label');
-    tooltip.innerHTML=`<strong>${{srcLabel}}</strong> &#8594; <strong>${{tgtLabel}}</strong>`;
+    tooltip.innerHTML='<strong>'+escHTML(srcLabel)+'</strong> &#8594; <strong>'+escHTML(tgtLabel)+'</strong>';
     tooltip.style.display='block';
     graph.setEdgeAttribute(edge,'color','rgba(102,126,234,0.9)');
     graph.setEdgeAttribute(edge,'size',2);
@@ -1069,12 +1072,12 @@ function showPanel(nodeId){{
 
   let clusterHtml=a.cluster||'N/A';
   if(clusters[a.cluster]){{
-    clusterHtml=`<span style="cursor:pointer;text-decoration:underline" onclick="toggleCluster('${{a.cluster}}')">${{a.cluster}}</span>`;
+    clusterHtml='<span style="cursor:pointer;text-decoration:underline" onclick="toggleCluster(\''+escJS(a.cluster)+'\')">'+escHTML(a.cluster)+'</span>';
   }}
 
   document.getElementById('node-info').innerHTML=
-    '<div class="info-row"><span class="info-label">Type:</span><span class="info-value">'+a.nodeType+'</span></div>'+
-    '<div class="info-row"><span class="info-label">Full Path:</span><span class="info-value">'+nodeId+'</span></div>'+
+    '<div class="info-row"><span class="info-label">Type:</span><span class="info-value">'+escHTML(a.nodeType)+'</span></div>'+
+    '<div class="info-row"><span class="info-label">Full Path:</span><span class="info-value">'+escHTML(nodeId)+'</span></div>'+
     '<div class="info-row"><span class="info-label">Cluster:</span><span class="info-value">'+clusterHtml+'</span></div>';
 
   const outN=connIndex.out[nodeId]||[],inN=connIndex.in[nodeId]||[];
@@ -1130,10 +1133,10 @@ function setupVirtualList(type,nodes){{
     list.innerHTML=sorted.slice(startIdx,endIdx).map(({{id,attrs}},i)=>{{
       const realIdx=startIdx+i;
       const selectedClass=viewport._selectedIdx===realIdx?' selected':'';
-      return '<li class="connection-item'+selectedClass+'" data-idx="'+realIdx+'" onclick="goToNode(\\''+id.replace(/'/g,"\\\\'")+'\\')">'
-        +'<span class="conn-dot" style="background:'+attrs.color+'"></span>'
-        +'<span class="conn-name" title="'+id+'">'+attrs.label+'</span>'
-        +'<span class="conn-type">'+attrs.nodeType+'</span></li>';
+      return '<li class="connection-item'+selectedClass+'" data-idx="'+realIdx+'" onclick="goToNode(\''+escJS(id)+'\')">'
+        +'<span class="conn-dot" style="background:'+escHTML(attrs.color)+'"></span>'
+        +'<span class="conn-name" title="'+escHTML(id)+'">'+escHTML(attrs.label)+'</span>'
+        +'<span class="conn-type">'+escHTML(attrs.nodeType)+'</span></li>';
     }}).join('');
   }};
 
@@ -1230,7 +1233,7 @@ function findPath(){{
     '<div style="margin-bottom:5px;color:var(--success)">Path ('+(path.length-1)+' hops):</div>'+
     path.map((n,i)=>{{
       const a=graph.getNodeAttributes(n);
-      return '<span class="path-step" onclick="goToNode(\\''+n.replace(/'/g,"\\\\'")+'\\')">'+a.label+'</span>'+
+      return '<span class="path-step" onclick="goToNode(\''+escJS(n)+'\')">'+escHTML(a.label)+'</span>'+
         (i<path.length-1?'<span class="path-arrow">&#8594;</span>':'');
     }}).join('');
 }}
@@ -1256,9 +1259,9 @@ function updateSearchResults(){{
   }}
   container.innerHTML=currentSearchResults.map((n,i)=>
     '<div class="search-result'+(i===searchSelectedIdx?' selected':'')+'" data-idx="'+i+'" onclick="selectSearchResult('+i+')">'
-    +'<span class="result-dot" style="background:'+n.color+'"></span>'
-    +'<span class="result-label">'+n.label+'</span>'
-    +'<span class="result-type">'+n.type+'</span></div>'
+    +'<span class="result-dot" style="background:'+escHTML(n.color)+'"></span>'
+    +'<span class="result-label">'+escHTML(n.label)+'</span>'
+    +'<span class="result-type">'+escHTML(n.type)+'</span></div>'
   ).join('');
   container.style.display='block';
 }}

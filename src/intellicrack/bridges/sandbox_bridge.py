@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Sandbox bridge for isolated binary execution environments.
 
 This module provides a tool bridge that wraps the SandboxManager

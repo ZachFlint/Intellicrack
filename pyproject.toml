@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "Intellicrack"
-version = "1.0.0"
+version = "0.1.0a1"
 authors = [ { name = "Zachary Flint", email = "zach.flint2@gmail.com" } ]
 description = "Intellicrack: AI-powered reverse engineering orchestration platform"
 readme = "README.md"
@@ -160,7 +160,7 @@ intellicrack-gui = "intellicrack.main:main"
 
 [tool.pixi.workspace]
 name = "Intellicrack"
-version = "1.0.0"
+version = "0.1.0a1"
 description = "Intellicrack: AI-powered reverse engineering orchestration platform"
 authors = [ "Zachary Flint <zach.flint2@gmail.com>" ]
 channels = [ "conda-forge" ]

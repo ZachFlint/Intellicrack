@@ -11,6 +11,30 @@ from datetime import datetime
 from pathlib import Path
 
 
+def _esc_attr(value: str) -> str:
+    """Escape a string for safe use in an HTML attribute value.
+
+    Args:
+        value: Raw string to escape.
+
+    Returns:
+        HTML-escaped string with quotes escaped.
+    """
+    return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;").replace("'", "&#x27;")
+
+
+def _esc_text(value: str) -> str:
+    """Escape a string for safe use in HTML text content.
+
+    Args:
+        value: Raw string to escape.
+
+    Returns:
+        HTML-escaped string.
+    """
+    return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
 def get_file_icon(file_path: str) -> str:
     """Return appropriate icon based on file extension.
 
@@ -87,9 +111,11 @@ def scan_directory(root_path: str) -> tuple[str, int, int]:
         if Path(path).is_dir():
             folder_count += 1
             icon = "[DIR]"
+            safe_path = _esc_attr(path)
+            safe_name = _esc_text(name)
             html += "<li>"
-            html += f'<span class="item folder expanded" data-path="{path}" data-id="{item_id}" data-type="folder">'
-            html += f"{icon} {name}"
+            html += f'<span class="item folder expanded" data-path="{safe_path}" data-id="{item_id}" data-type="folder">'
+            html += f"{icon} {safe_name}"
             html += "</span>"
 
             try:
@@ -130,9 +156,11 @@ def scan_directory(root_path: str) -> tuple[str, int, int]:
             except (OSError, ValueError, TypeError):
                 size_str = ""
 
+            safe_path = _esc_attr(path)
+            safe_name = _esc_text(name)
             html += "<li>"
-            html += f'<span class="item {file_class}" data-path="{path}" data-id="{item_id}" data-type="file">'
-            html += f"{icon} {name}"
+            html += f'<span class="item {file_class}" data-path="{safe_path}" data-id="{item_id}" data-type="file">'
+            html += f"{icon} {safe_name}"
             if size_str:
                 html += f' <span class="size">({size_str})</span>'
             html += "</span>"

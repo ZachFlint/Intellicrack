@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Screen geometry detection for PyQt6 SIP-generated bindings.
 
 Provides wrapper functions that use dynamic attribute dispatch to access

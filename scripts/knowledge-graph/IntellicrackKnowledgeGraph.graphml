@@ -18278,6 +18278,9 @@
     <edge source="src.intellicrack.ui.app" target="PyQt6.QtWidgets">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack._metadata">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
