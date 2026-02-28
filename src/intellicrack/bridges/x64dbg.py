@@ -845,6 +845,12 @@ class X64DbgBridge(DebuggerBridge):
                     ],
                     returns="List of memory search results with context",
                 ),
+                ToolFunction(
+                    name="x64dbg.get_process_info",
+                    description="Get complete process information including threads, modules, command line, and parent PID",
+                    parameters=[],
+                    returns="ProcessInfo with threads, modules, command line, and parent PID",
+                ),
             ],
         )
 
@@ -1746,15 +1752,16 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             Disassembly lines. Returns empty list on error.
         """
-        if _capstone is None:
+        capstone = get_capstone()
+        if capstone is None:
             _logger.warning("capstone_unavailable")
             return []
 
         try:
             data = await self.read_memory(address, count * 15)
 
-            mode = _capstone.CS_MODE_64 if self._is_64bit else _capstone.CS_MODE_32
-            md = _capstone.Cs(_capstone.CS_ARCH_X86, mode)
+            mode = capstone.CS_MODE_64 if self._is_64bit else capstone.CS_MODE_32
+            md = capstone.Cs(capstone.CS_ARCH_X86, mode)
 
             lines: list[DisassemblyLine] = []
 
@@ -1790,12 +1797,13 @@ class X64DbgBridge(DebuggerBridge):
         Raises:
             ToolError: If assembly fails.
         """
-        if _keystone is None:
+        keystone = get_keystone()
+        if keystone is None:
             msg = "keystone not available"
             raise ToolError(msg)
 
-        mode = _keystone.KS_MODE_64 if self._is_64bit else _keystone.KS_MODE_32
-        ks = _keystone.Ks(_keystone.KS_ARCH_X86, mode)
+        mode = keystone.KS_MODE_64 if self._is_64bit else keystone.KS_MODE_32
+        ks = keystone.Ks(keystone.KS_ARCH_X86, mode)
 
         encoding, _count = ks.asm(instruction, address)
 
@@ -2085,7 +2093,7 @@ class X64DbgBridge(DebuggerBridge):
         _logger.debug("modules_found", extra={"count": len(modules), "pid": self._attached_pid})
         return modules
 
-    async def _get_process_info(self) -> ProcessInfo | None:
+    async def get_process_info(self) -> ProcessInfo | None:
         """Get complete process information including threads and modules.
 
         Aggregates thread and module information along with process details
