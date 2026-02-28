@@ -13,13 +13,13 @@ src\intellicrack\core\license_analyzer.py:1748: '_collect_function_candidates' h
 
 4 findings in src\intellicrack\providers\google.py
 
-src\intellicrack\providers\google.py:499: '_parse_response' has rank C
+src\intellicrack\providers\google.py:528: '_parse_response' has rank C
 
-src\intellicrack\providers\google.py:230: 'chat' has rank C
+src\intellicrack\providers\google.py:259: 'chat' has rank C
 
-src\intellicrack\providers\google.py:351: 'chat_stream' has rank C
+src\intellicrack\providers\google.py:380: 'chat_stream' has rank C
 
-src\intellicrack\providers\google.py:536: '_convert_messages_to_provider_format' has rank C
+src\intellicrack\providers\google.py:565: '_convert_messages_to_provider_format' has rank C
 
 
 4 findings in src\intellicrack\providers\huggingface.py
@@ -31,6 +31,17 @@ src\intellicrack\providers\huggingface.py:189: 'list_models' has rank C
 src\intellicrack\providers\huggingface.py:278: '_estimate_context_window' has rank C
 
 src\intellicrack\providers\huggingface.py:650: '_convert_messages_to_provider_format' has rank C
+
+
+4 findings in src\intellicrack\ui\app.py
+
+src\intellicrack\ui\app.py:1883: 'closeEvent' has rank C
+
+src\intellicrack\ui\app.py:863: '_on_tool_result' has rank C
+
+src\intellicrack\ui\app.py:1369: '_on_refresh_models' has rank C
+
+src\intellicrack\ui\app.py:1453: '_on_browse_models_result' has rank C
 
 
 4 findings in src\intellicrack\ui\session_manager.py
@@ -77,7 +88,7 @@ src\intellicrack\ui\provider_config.py:477: '_fetch_anthropic_models' has rank C
 
 src\intellicrack\ui\provider_config.py:444: '_fetch_models' has rank C
 
-src\intellicrack\ui\provider_config.py:1248: '_load_settings' has rank C
+src\intellicrack\ui\provider_config.py:1552: '_load_settings' has rank C
 
 
 2 findings in src\intellicrack\bridges\binary.py
@@ -91,7 +102,7 @@ src\intellicrack\bridges\binary.py:666: '_get_imports_internal' has rank C
 
 src\intellicrack\bridges\installer.py:231: 'find_tool' has rank C
 
-src\intellicrack\bridges\installer.py:509: '_get_latest_release_url' has rank C
+src\intellicrack\bridges\installer.py:565: '_get_latest_release_url' has rank C
 
 
 2 findings in src\intellicrack\bridges\schemas.py
@@ -103,9 +114,9 @@ src\intellicrack\bridges\schemas.py:295: 'validate_tool_parameter' has rank C
 
 2 findings in src\intellicrack\bridges\x64dbg.py
 
-src\intellicrack\bridges\x64dbg.py:252: '_read_unicode_string_from_params' has rank C
+src\intellicrack\bridges\x64dbg.py:270: '_read_unicode_string_from_params' has rank C
 
-src\intellicrack\bridges\x64dbg.py:1618: 'get_memory_regions' has rank C
+src\intellicrack\bridges\x64dbg.py:1646: 'get_memory_regions' has rank C
 
 
 2 findings in src\intellicrack\providers\grok.py
@@ -157,18 +168,18 @@ src\intellicrack\sandbox\windows.py:301: '_generate_wsb_config' has rank C
 src\intellicrack\sandbox\windows.py:548: 'run_binary' has rank C
 
 
-2 findings in src\intellicrack\ui\app.py
-
-src\intellicrack\ui\app.py:722: '_on_tool_result' has rank C
-
-src\intellicrack\ui\app.py:1625: 'closeEvent' has rank C
-
-
 2 findings in src\intellicrack\ui\tools.py
 
-src\intellicrack\ui\tools.py:1400: '_on_tab_close_requested' has rank D
+src\intellicrack\ui\tools.py:1471: '_on_tab_close_requested' has rank D
 
-src\intellicrack\ui\tools.py:1472: 'close_embedded_tools' has rank C
+src\intellicrack\ui\tools.py:1543: 'close_embedded_tools' has rank C
+
+
+2 findings in src\intellicrack\ui\tool_config.py
+
+src\intellicrack\ui\tool_config.py:356: '_update_radare2_path' has rank C
+
+src\intellicrack\ui\tool_config.py:529: '_check_ghidra' has rank C
 
 
 2 findings in tests\test_core\test_license_analyzer.py
@@ -209,12 +220,17 @@ src\intellicrack\core\logging.py:425: '_sanitize_arguments' has rank C
 
 1 findings in src\intellicrack\core\orchestrator.py
 
-src\intellicrack\core\orchestrator.py:370: '_run_agent_loop' has rank C
+src\intellicrack\core\orchestrator.py:381: '_run_agent_loop' has rank C
 
 
 1 findings in src\intellicrack\core\script_gen.py
 
-src\intellicrack\core\script_gen.py:175: 'to_prompt_context' has rank C
+src\intellicrack\core\script_gen.py:168: 'to_prompt_context' has rank C
+
+
+1 findings in src\intellicrack\core\tools.py
+
+src\intellicrack\core\tools.py:392: 'execute_tool_call' has rank C
 
 
 1 findings in src\intellicrack\credentials\env_loader.py
@@ -230,11 +246,6 @@ src\intellicrack\ui\highlighter.py:780: '_highlight_triple_quotes' has rank C
 1 findings in src\intellicrack\ui\sandbox_config.py
 
 src\intellicrack\ui\sandbox_config.py:91: 'run' has rank C
-
-
-1 findings in src\intellicrack\ui\tool_config.py
-
-src\intellicrack\ui\tool_config.py:356: '_update_radare2_path' has rank C
 
 
 1 findings in src\intellicrack\ui\panels\binary_panel.py

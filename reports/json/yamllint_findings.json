@@ -1,7 +1,7 @@
 {
   "tool": "yamllint",
-  "generated": "2026-02-27T00:09:52.217357",
-  "total_findings": 49,
+  "generated": "2026-02-28T02:24:28.359913",
+  "total_findings": 48,
   "total_files": 16,
   "files": [
     {
@@ -17,52 +17,52 @@
           "raw": ".\\.serena\\project.yml:1:73: [error] wrong new line character: expected \\n  (new-lines)"
         },
         {
-          "line": 62,
-          "column": 121,
-          "severity": "warning",
-          "code": "",
-          "message": "line too long (125 > 120 characters)  (line-length)",
-          "raw": ".\\.serena\\project.yml:62:121: [warning] line too long (125 > 120 characters)  (line-length)"
-        },
-        {
-          "line": 63,
-          "column": 121,
-          "severity": "warning",
-          "code": "",
-          "message": "line too long (137 > 120 characters)  (line-length)",
-          "raw": ".\\.serena\\project.yml:63:121: [warning] line too long (137 > 120 characters)  (line-length)"
-        },
-        {
           "line": 64,
           "column": 121,
           "severity": "warning",
           "code": "",
-          "message": "line too long (146 > 120 characters)  (line-length)",
-          "raw": ".\\.serena\\project.yml:64:121: [warning] line too long (146 > 120 characters)  (line-length)"
+          "message": "line too long (125 > 120 characters)  (line-length)",
+          "raw": ".\\.serena\\project.yml:64:121: [warning] line too long (125 > 120 characters)  (line-length)"
         },
         {
-          "line": 74,
+          "line": 65,
+          "column": 121,
+          "severity": "warning",
+          "code": "",
+          "message": "line too long (137 > 120 characters)  (line-length)",
+          "raw": ".\\.serena\\project.yml:65:121: [warning] line too long (137 > 120 characters)  (line-length)"
+        },
+        {
+          "line": 66,
+          "column": 121,
+          "severity": "warning",
+          "code": "",
+          "message": "line too long (146 > 120 characters)  (line-length)",
+          "raw": ".\\.serena\\project.yml:66:121: [warning] line too long (146 > 120 characters)  (line-length)"
+        },
+        {
+          "line": 76,
           "column": 121,
           "severity": "warning",
           "code": "",
           "message": "line too long (125 > 120 characters)  (line-length)",
-          "raw": ".\\.serena\\project.yml:74:121: [warning] line too long (125 > 120 characters)  (line-length)"
+          "raw": ".\\.serena\\project.yml:76:121: [warning] line too long (125 > 120 characters)  (line-length)"
         },
         {
-          "line": 75,
+          "line": 77,
           "column": 121,
           "severity": "warning",
           "code": "",
           "message": "line too long (146 > 120 characters)  (line-length)",
-          "raw": ".\\.serena\\project.yml:75:121: [warning] line too long (146 > 120 characters)  (line-length)"
+          "raw": ".\\.serena\\project.yml:77:121: [warning] line too long (146 > 120 characters)  (line-length)"
         },
         {
-          "line": 86,
+          "line": 88,
           "column": 121,
           "severity": "warning",
           "code": "",
           "message": "line too long (123 > 120 characters)  (line-length)",
-          "raw": ".\\.serena\\project.yml:86:121: [warning] line too long (123 > 120 characters)  (line-length)"
+          "raw": ".\\.serena\\project.yml:88:121: [warning] line too long (123 > 120 characters)  (line-length)"
         }
       ]
     },
@@ -167,44 +167,6 @@
       ]
     },
     {
-      "path": ".\\.github\\workflows\\ci.yml",
-      "count": 4,
-      "findings": [
-        {
-          "line": 1,
-          "column": 9,
-          "severity": "error",
-          "code": "",
-          "message": "wrong new line character: expected \\n  (new-lines)",
-          "raw": ".\\.github\\workflows\\ci.yml:1:9: [error] wrong new line character: expected \\n  (new-lines)"
-        },
-        {
-          "line": 29,
-          "column": 121,
-          "severity": "warning",
-          "code": "",
-          "message": "line too long (130 > 120 characters)  (line-length)",
-          "raw": ".\\.github\\workflows\\ci.yml:29:121: [warning] line too long (130 > 120 characters)  (line-length)"
-        },
-        {
-          "line": 74,
-          "column": 121,
-          "severity": "warning",
-          "code": "",
-          "message": "line too long (138 > 120 characters)  (line-length)",
-          "raw": ".\\.github\\workflows\\ci.yml:74:121: [warning] line too long (138 > 120 characters)  (line-length)"
-        },
-        {
-          "line": 138,
-          "column": 121,
-          "severity": "warning",
-          "code": "",
-          "message": "line too long (121 > 120 characters)  (line-length)",
-          "raw": ".\\.github\\workflows\\ci.yml:138:121: [warning] line too long (121 > 120 characters)  (line-length)"
-        }
-      ]
-    },
-    {
       "path": ".\\.github\\workflows\\gemini-triage.yml",
       "count": 4,
       "findings": [
@@ -239,6 +201,36 @@
           "code": "",
           "message": "line too long (127 > 120 characters)  (line-length)",
           "raw": ".\\.github\\workflows\\gemini-triage.yml:163:121: [warning] line too long (127 > 120 characters)  (line-length)"
+        }
+      ]
+    },
+    {
+      "path": ".\\.github\\workflows\\ci.yml",
+      "count": 3,
+      "findings": [
+        {
+          "line": 1,
+          "column": 9,
+          "severity": "error",
+          "code": "",
+          "message": "wrong new line character: expected \\n  (new-lines)",
+          "raw": ".\\.github\\workflows\\ci.yml:1:9: [error] wrong new line character: expected \\n  (new-lines)"
+        },
+        {
+          "line": 29,
+          "column": 121,
+          "severity": "warning",
+          "code": "",
+          "message": "line too long (130 > 120 characters)  (line-length)",
+          "raw": ".\\.github\\workflows\\ci.yml:29:121: [warning] line too long (130 > 120 characters)  (line-length)"
+        },
+        {
+          "line": 156,
+          "column": 121,
+          "severity": "warning",
+          "code": "",
+          "message": "line too long (121 > 120 characters)  (line-length)",
+          "raw": ".\\.github\\workflows\\ci.yml:156:121: [warning] line too long (121 > 120 characters)  (line-length)"
         }
       ]
     },

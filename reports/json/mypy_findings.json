@@ -1,8 +1,8 @@
 {
   "tool": "mypy",
-  "generated": "2026-02-27T00:14:59.880874",
-  "total_findings": 88,
-  "total_files": 31,
+  "generated": "2026-02-28T02:28:40.392105",
+  "total_findings": 100,
+  "total_files": 32,
   "files": [
     {
       "path": "src\\intellicrack\\ui\\highlighter.py",
@@ -201,6 +201,92 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\provider_config.py",
+      "count": 10,
+      "findings": [
+        {
+          "line": 1109,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 1 to \"get_env_var\" of \"CredentialLoader\" has incompatible type \"ProviderName\"; expected \"str\"",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1109: error: Argument 1 to \"get_env_var\" of \"CredentialLoader\" has incompatible type \"ProviderName\"; expected \"str\"  [arg-type]"
+        },
+        {
+          "line": 1138,
+          "column": null,
+          "severity": "error",
+          "code": "unused-coroutine",
+          "message": "Value of type \"Coroutine[Any, Any, dict[ProviderName, bool]]\" must be used",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1138: error: Value of type \"Coroutine[Any, Any, dict[ProviderName, bool]]\" must be used  [unused-coroutine]"
+        },
+        {
+          "line": 1138,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Are you missing an await?",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1138: note: Are you missing an await?"
+        },
+        {
+          "line": 1157,
+          "column": null,
+          "severity": "error",
+          "code": "union-attr",
+          "message": "Item \"None\" of \"ModelDiscovery | None\" has no attribute \"discover_provider\"",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1157: error: Item \"None\" of \"ModelDiscovery | None\" has no attribute \"discover_provider\"  [union-attr]"
+        },
+        {
+          "line": 1188,
+          "column": null,
+          "severity": "error",
+          "code": "call-arg",
+          "message": "Missing positional argument \"provider\" in call to \"to_provider_credentials\" of \"OAuthManager\"",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1188: error: Missing positional argument \"provider\" in call to \"to_provider_credentials\" of \"OAuthManager\"  [call-arg]"
+        },
+        {
+          "line": 1208,
+          "column": null,
+          "severity": "error",
+          "code": "call-arg",
+          "message": "Missing positional argument \"provider\" in call to \"revoke_token\" of \"OAuthManager\"",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1208: error: Missing positional argument \"provider\" in call to \"revoke_token\" of \"OAuthManager\"  [call-arg]"
+        },
+        {
+          "line": 1208,
+          "column": null,
+          "severity": "error",
+          "code": "unused-coroutine",
+          "message": "Value of type \"Coroutine[Any, Any, bool]\" must be used",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1208: error: Value of type \"Coroutine[Any, Any, bool]\" must be used  [unused-coroutine]"
+        },
+        {
+          "line": 1208,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Are you missing an await?",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1208: note: Are you missing an await?"
+        },
+        {
+          "line": 1949,
+          "column": null,
+          "severity": "error",
+          "code": "return-value",
+          "message": "Incompatible return value type (got \"Coroutine[Any, Any, dict[str, object]]\", expected \"dict[str, object] | None\")",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1949: error: Incompatible return value type (got \"Coroutine[Any, Any, dict[str, object]]\", expected \"dict[str, object] | None\")  [return-value]"
+        },
+        {
+          "line": 1949,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Maybe you forgot to use \"await\"?",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1949: note: Maybe you forgot to use \"await\"?"
+        }
+      ]
+    },
+    {
       "path": "tests\\test_ui\\test_tools_logic.py",
       "count": 7,
       "findings": [
@@ -317,6 +403,60 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\app.py",
+      "count": 6,
+      "findings": [
+        {
+          "line": 683,
+          "column": null,
+          "severity": "error",
+          "code": "call-arg",
+          "message": "Missing positional argument \"self\" in call to \"get_memory_usage\" of \"ModelCache\"",
+          "raw": "src\\intellicrack\\ui\\app.py:683: error: Missing positional argument \"self\" in call to \"get_memory_usage\" of \"ModelCache\"  [call-arg]"
+        },
+        {
+          "line": 698,
+          "column": null,
+          "severity": "error",
+          "code": "call-arg",
+          "message": "Missing positional argument \"provider\" in call to \"get_last_event\" of \"ModelDiscovery\"",
+          "raw": "src\\intellicrack\\ui\\app.py:698: error: Missing positional argument \"provider\" in call to \"get_last_event\" of \"ModelDiscovery\"  [call-arg]"
+        },
+        {
+          "line": 1412,
+          "column": null,
+          "severity": "error",
+          "code": "unused-coroutine",
+          "message": "Value of type \"Coroutine[Any, Any, dict[ProviderName, list[ModelInfo]]]\" must be used",
+          "raw": "src\\intellicrack\\ui\\app.py:1412: error: Value of type \"Coroutine[Any, Any, dict[ProviderName, list[ModelInfo]]]\" must be used  [unused-coroutine]"
+        },
+        {
+          "line": 1412,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Are you missing an await?",
+          "raw": "src\\intellicrack\\ui\\app.py:1412: note: Are you missing an await?"
+        },
+        {
+          "line": 1472,
+          "column": null,
+          "severity": "error",
+          "code": "call-arg",
+          "message": "Missing positional argument \"model_id\" in call to \"get_by_id\" of \"ModelDiscovery\"",
+          "raw": "src\\intellicrack\\ui\\app.py:1472: error: Missing positional argument \"model_id\" in call to \"get_by_id\" of \"ModelDiscovery\"  [call-arg]"
+        },
+        {
+          "line": 1472,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 1 to \"get_by_id\" of \"ModelDiscovery\" has incompatible type \"str\"; expected \"ProviderName\"",
+          "raw": "src\\intellicrack\\ui\\app.py:1472: error: Argument 1 to \"get_by_id\" of \"ModelDiscovery\" has incompatible type \"str\"; expected \"ProviderName\"  [arg-type]"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py",
       "count": 5,
       "findings": [
@@ -363,44 +503,6 @@
       ]
     },
     {
-      "path": "tests\\test_bridges\\test_x64dbg.py",
-      "count": 4,
-      "findings": [
-        {
-          "line": 26,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "Module \"intellicrack.bridges.x64dbg\" has no attribute \"get_capstone\"",
-          "raw": "tests\\test_bridges\\test_x64dbg.py:26: error: Module \"intellicrack.bridges.x64dbg\" has no attribute \"get_capstone\"  [attr-defined]"
-        },
-        {
-          "line": 26,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "Module \"intellicrack.bridges.x64dbg\" has no attribute \"get_keystone\"",
-          "raw": "tests\\test_bridges\\test_x64dbg.py:26: error: Module \"intellicrack.bridges.x64dbg\" has no attribute \"get_keystone\"  [attr-defined]"
-        },
-        {
-          "line": 165,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"dict[str, object]\", variable has type \"WatchpointInfo\")",
-          "raw": "tests\\test_bridges\\test_x64dbg.py:165: error: Incompatible types in assignment (expression has type \"dict[str, object]\", variable has type \"WatchpointInfo\")  [assignment]"
-        },
-        {
-          "line": 175,
-          "column": null,
-          "severity": "error",
-          "code": "index",
-          "message": "Value of type \"WatchpointInfo\" is not indexable",
-          "raw": "tests\\test_bridges\\test_x64dbg.py:175: error: Value of type \"WatchpointInfo\" is not indexable  [index]"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\panels\\radare2_panel.py",
       "count": 4,
       "findings": [
@@ -435,36 +537,6 @@
           "code": "union-attr",
           "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
           "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:218: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
-        }
-      ]
-    },
-    {
-      "path": "tests\\test_providers\\test_credential_loading.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 183,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"CredentialLoader\" has no attribute \"get_env_var\"; maybe \"set_env_var\" or \"_env_vars\"?",
-          "raw": "tests\\test_providers\\test_credential_loading.py:183: error: \"CredentialLoader\" has no attribute \"get_env_var\"; maybe \"set_env_var\" or \"_env_vars\"?  [attr-defined]"
-        },
-        {
-          "line": 191,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"CredentialLoader\" has no attribute \"get_env_var\"; maybe \"set_env_var\" or \"_env_vars\"?",
-          "raw": "tests\\test_providers\\test_credential_loading.py:191: error: \"CredentialLoader\" has no attribute \"get_env_var\"; maybe \"set_env_var\" or \"_env_vars\"?  [attr-defined]"
-        },
-        {
-          "line": 203,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"CredentialLoader\" has no attribute \"get_env_var\"; maybe \"set_env_var\" or \"_env_vars\"?",
-          "raw": "tests\\test_providers\\test_credential_loading.py:203: error: \"CredentialLoader\" has no attribute \"get_env_var\"; maybe \"set_env_var\" or \"_env_vars\"?  [attr-defined]"
         }
       ]
     },
@@ -529,32 +601,32 @@
       ]
     },
     {
-      "path": "tests\\test_ui\\test_splash_screen.py",
+      "path": "src\\intellicrack\\ui\\tools.py",
       "count": 3,
       "findings": [
         {
-          "line": 227,
+          "line": 390,
           "column": null,
           "severity": "error",
-          "code": "attr-defined",
-          "message": "\"SplashScreen\" has no attribute \"show_loading_step\"",
-          "raw": "tests\\test_ui\\test_splash_screen.py:227: error: \"SplashScreen\" has no attribute \"show_loading_step\"  [attr-defined]"
+          "code": "union-attr",
+          "message": "Item \"None\" of \"QTextDocument | None\" has no attribute \"findBlockByLineNumber\"",
+          "raw": "src\\intellicrack\\ui\\tools.py:390: error: Item \"None\" of \"QTextDocument | None\" has no attribute \"findBlockByLineNumber\"  [union-attr]"
         },
         {
-          "line": 233,
+          "line": 1753,
           "column": null,
           "severity": "error",
-          "code": "attr-defined",
-          "message": "\"SplashScreen\" has no attribute \"show_loading_step\"",
-          "raw": "tests\\test_ui\\test_splash_screen.py:233: error: \"SplashScreen\" has no attribute \"show_loading_step\"  [attr-defined]"
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "src\\intellicrack\\ui\\tools.py:1753: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 414,
+          "line": 1755,
           "column": null,
           "severity": "error",
-          "code": "attr-defined",
-          "message": "\"SplashScreen\" has no attribute \"show_loading_step\"",
-          "raw": "tests\\test_ui\\test_splash_screen.py:414: error: \"SplashScreen\" has no attribute \"show_loading_step\"  [attr-defined]"
+          "code": "union-attr",
+          "message": "Item \"None\" of \"QTextDocument | None\" has no attribute \"findChild\"",
+          "raw": "src\\intellicrack\\ui\\tools.py:1755: error: Item \"None\" of \"QTextDocument | None\" has no attribute \"findChild\"  [union-attr]"
         }
       ]
     },
@@ -677,6 +749,50 @@
       ]
     },
     {
+      "path": "tests\\test_bridges\\test_x64dbg.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 165,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"dict[str, object]\", variable has type \"WatchpointInfo\")",
+          "raw": "tests\\test_bridges\\test_x64dbg.py:165: error: Incompatible types in assignment (expression has type \"dict[str, object]\", variable has type \"WatchpointInfo\")  [assignment]"
+        },
+        {
+          "line": 175,
+          "column": null,
+          "severity": "error",
+          "code": "index",
+          "message": "Value of type \"WatchpointInfo\" is not indexable",
+          "raw": "tests\\test_bridges\\test_x64dbg.py:175: error: Value of type \"WatchpointInfo\" is not indexable  [index]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\bridges\\sandbox_bridge.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 844,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"SandboxBase\" has no attribute \"list_snapshots\"",
+          "raw": "src\\intellicrack\\bridges\\sandbox_bridge.py:844: error: \"SandboxBase\" has no attribute \"list_snapshots\"  [attr-defined]"
+        },
+        {
+          "line": 888,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"SandboxBase\" has no attribute \"delete_snapshot\"; maybe \"take_snapshot\" or \"restore_snapshot\"?",
+          "raw": "src\\intellicrack\\bridges\\sandbox_bridge.py:888: error: \"SandboxBase\" has no attribute \"delete_snapshot\"; maybe \"take_snapshot\" or \"restore_snapshot\"?  [attr-defined]"
+        }
+      ]
+    },
+    {
       "path": "tests\\test_providers\\test_local_transformers_provider.py",
       "count": 2,
       "findings": [
@@ -769,20 +885,6 @@
       ]
     },
     {
-      "path": "tests\\test_bridges\\test_x64dbg_api_coverage.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 102,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"X64DbgBridge\" has no attribute \"_get_register_value\"",
-          "raw": "tests\\test_bridges\\test_x64dbg_api_coverage.py:102: error: \"X64DbgBridge\" has no attribute \"_get_register_value\"  [attr-defined]"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\panels\\frida_panel.py",
       "count": 1,
       "findings": [
@@ -825,20 +927,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\tools.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 358,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QTextDocument | None\" has no attribute \"findBlockByLineNumber\"",
-          "raw": "src\\intellicrack\\ui\\tools.py:358: error: Item \"None\" of \"QTextDocument | None\" has no attribute \"findBlockByLineNumber\"  [union-attr]"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\providers\\local_transformers.py",
       "count": 1,
       "findings": [
@@ -863,6 +951,20 @@
           "code": "no-untyped-def",
           "message": "Function is missing a type annotation for one or more arguments",
           "raw": "tests\\test_providers\\test_anthropic_provider.py:193: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\orchestrator.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 916,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"ToolDefinition\" has no attribute \"name\"",
+          "raw": "src\\intellicrack\\core\\orchestrator.py:916: error: \"ToolDefinition\" has no attribute \"name\"  [attr-defined]"
         }
       ]
     },

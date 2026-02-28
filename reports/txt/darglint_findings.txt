@@ -1,3 +1,3 @@
 1 findings in src\intellicrack\credentials\oauth.py
 
-src\intellicrack\credentials\oauth.py:wait_for_callback:343: DAR401: -r OAuthAuthorizationError
+src\intellicrack\credentials\oauth.py:wait_for_callback:342: DAR401: -r OAuthAuthorizationError

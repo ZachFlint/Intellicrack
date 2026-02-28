@@ -1,12 +1,12 @@
 {
   "tool": "markdownlint",
-  "generated": "2026-02-27T00:09:45.105488",
-  "total_findings": 65,
+  "generated": "2026-02-28T02:24:21.903597",
+  "total_findings": 66,
   "total_files": 5,
   "files": [
     {
       "path": "GEMINI.md",
-      "count": 29,
+      "count": 30,
       "findings": [
         {
           "line": 1,
@@ -168,6 +168,13 @@
           "code": "error",
           "message": "MD013/line-length Line length [Expected: 80; Actual: 722]",
           "raw": "GEMINI.md:48:81 error MD013/line-length Line length [Expected: 80; Actual: 722]"
+        },
+        {
+          "line": 87,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 91]",
+          "raw": "GEMINI.md:87:81 error MD013/line-length Line length [Expected: 80; Actual: 91]"
         },
         {
           "line": 92,

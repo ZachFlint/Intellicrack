@@ -1,8 +1,8 @@
 {
   "tool": "radon",
-  "generated": "2026-02-27T00:09:28.589248",
-  "total_findings": 66,
-  "total_files": 32,
+  "generated": "2026-02-28T02:24:05.703694",
+  "total_findings": 70,
+  "total_files": 33,
   "files": [
     {
       "path": "src\\intellicrack\\core\\license_analyzer.py",
@@ -65,44 +65,44 @@
       "count": 4,
       "findings": [
         {
-          "line": 499,
+          "line": 528,
           "column": 4,
           "entity_type": "M",
           "name": "GoogleProvider._parse_response",
           "rank": "C",
           "complexity": 18,
           "message": "method 'GoogleProvider._parse_response' - complexity 18 (rank C)",
-          "raw": "src\\intellicrack\\providers\\google.py:499:4: method 'GoogleProvider._parse_response' - complexity 18 (rank C)"
+          "raw": "src\\intellicrack\\providers\\google.py:528:4: method 'GoogleProvider._parse_response' - complexity 18 (rank C)"
         },
         {
-          "line": 230,
+          "line": 259,
           "column": 4,
           "entity_type": "M",
           "name": "GoogleProvider.chat",
           "rank": "C",
           "complexity": 14,
           "message": "method 'GoogleProvider.chat' - complexity 14 (rank C)",
-          "raw": "src\\intellicrack\\providers\\google.py:230:4: method 'GoogleProvider.chat' - complexity 14 (rank C)"
+          "raw": "src\\intellicrack\\providers\\google.py:259:4: method 'GoogleProvider.chat' - complexity 14 (rank C)"
         },
         {
-          "line": 351,
+          "line": 380,
           "column": 4,
           "entity_type": "M",
           "name": "GoogleProvider.chat_stream",
           "rank": "C",
           "complexity": 12,
           "message": "method 'GoogleProvider.chat_stream' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\providers\\google.py:351:4: method 'GoogleProvider.chat_stream' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\providers\\google.py:380:4: method 'GoogleProvider.chat_stream' - complexity 12 (rank C)"
         },
         {
-          "line": 536,
+          "line": 565,
           "column": 4,
           "entity_type": "M",
           "name": "GoogleProvider._convert_messages_to_provider_format",
           "rank": "C",
           "complexity": 11,
           "message": "method 'GoogleProvider._convert_messages_to_provider_format' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\providers\\google.py:536:4: method 'GoogleProvider._convert_messages_to_provider_format' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\providers\\google.py:565:4: method 'GoogleProvider._convert_messages_to_provider_format' - complexity 11 (rank C)"
         }
       ]
     },
@@ -149,6 +149,52 @@
           "complexity": 11,
           "message": "method 'HuggingFaceProvider._convert_messages_to_provider_format' - complexity 11 (rank C)",
           "raw": "src\\intellicrack\\providers\\huggingface.py:650:4: method 'HuggingFaceProvider._convert_messages_to_provider_format' - complexity 11 (rank C)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\app.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": 1883,
+          "column": 4,
+          "entity_type": "M",
+          "name": "MainWindow.closeEvent",
+          "rank": "C",
+          "complexity": 14,
+          "message": "method 'MainWindow.closeEvent' - complexity 14 (rank C)",
+          "raw": "src\\intellicrack\\ui\\app.py:1883:4: method 'MainWindow.closeEvent' - complexity 14 (rank C)"
+        },
+        {
+          "line": 863,
+          "column": 4,
+          "entity_type": "M",
+          "name": "MainWindow._on_tool_result",
+          "rank": "C",
+          "complexity": 11,
+          "message": "method 'MainWindow._on_tool_result' - complexity 11 (rank C)",
+          "raw": "src\\intellicrack\\ui\\app.py:863:4: method 'MainWindow._on_tool_result' - complexity 11 (rank C)"
+        },
+        {
+          "line": 1369,
+          "column": 4,
+          "entity_type": "M",
+          "name": "MainWindow._on_refresh_models",
+          "rank": "C",
+          "complexity": 11,
+          "message": "method 'MainWindow._on_refresh_models' - complexity 11 (rank C)",
+          "raw": "src\\intellicrack\\ui\\app.py:1369:4: method 'MainWindow._on_refresh_models' - complexity 11 (rank C)"
+        },
+        {
+          "line": 1453,
+          "column": 4,
+          "entity_type": "M",
+          "name": "MainWindow._on_browse_models_result",
+          "rank": "C",
+          "complexity": 11,
+          "message": "method 'MainWindow._on_browse_models_result' - complexity 11 (rank C)",
+          "raw": "src\\intellicrack\\ui\\app.py:1453:4: method 'MainWindow._on_browse_models_result' - complexity 11 (rank C)"
         }
       ]
     },
@@ -331,14 +377,14 @@
           "raw": "src\\intellicrack\\ui\\provider_config.py:444:4: method 'ModelRefreshWorker._fetch_models' - complexity 12 (rank C)"
         },
         {
-          "line": 1248,
+          "line": 1552,
           "column": 4,
           "entity_type": "M",
           "name": "ProviderSettingsWidget._load_settings",
           "rank": "C",
           "complexity": 12,
           "message": "method 'ProviderSettingsWidget._load_settings' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:1248:4: method 'ProviderSettingsWidget._load_settings' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1552:4: method 'ProviderSettingsWidget._load_settings' - complexity 12 (rank C)"
         }
       ]
     },
@@ -383,14 +429,14 @@
           "raw": "src\\intellicrack\\bridges\\installer.py:231:4: method 'ToolInstaller.find_tool' - complexity 16 (rank C)"
         },
         {
-          "line": 509,
+          "line": 565,
           "column": 4,
           "entity_type": "M",
           "name": "ToolInstaller._get_latest_release_url",
           "rank": "C",
           "complexity": 16,
           "message": "method 'ToolInstaller._get_latest_release_url' - complexity 16 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\installer.py:509:4: method 'ToolInstaller._get_latest_release_url' - complexity 16 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\installer.py:565:4: method 'ToolInstaller._get_latest_release_url' - complexity 16 (rank C)"
         }
       ]
     },
@@ -425,24 +471,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 252,
+          "line": 270,
           "column": 0,
           "entity_type": "F",
           "name": "_read_unicode_string_from_params",
           "rank": "C",
           "complexity": 11,
           "message": "function '_read_unicode_string_from_params' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:252:0: function '_read_unicode_string_from_params' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:270:0: function '_read_unicode_string_from_params' - complexity 11 (rank C)"
         },
         {
-          "line": 1618,
+          "line": 1646,
           "column": 4,
           "entity_type": "M",
           "name": "X64DbgBridge.get_memory_regions",
           "rank": "C",
           "complexity": 11,
           "message": "method 'X64DbgBridge.get_memory_regions' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1618:4: method 'X64DbgBridge.get_memory_regions' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1646:4: method 'X64DbgBridge.get_memory_regions' - complexity 11 (rank C)"
         }
       ]
     },
@@ -629,54 +675,54 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\app.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 722,
-          "column": 4,
-          "entity_type": "M",
-          "name": "MainWindow._on_tool_result",
-          "rank": "C",
-          "complexity": 11,
-          "message": "method 'MainWindow._on_tool_result' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\app.py:722:4: method 'MainWindow._on_tool_result' - complexity 11 (rank C)"
-        },
-        {
-          "line": 1625,
-          "column": 4,
-          "entity_type": "M",
-          "name": "MainWindow.closeEvent",
-          "rank": "C",
-          "complexity": 11,
-          "message": "method 'MainWindow.closeEvent' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\app.py:1625:4: method 'MainWindow.closeEvent' - complexity 11 (rank C)"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\tools.py",
       "count": 2,
       "findings": [
         {
-          "line": 1400,
+          "line": 1471,
           "column": 4,
           "entity_type": "M",
           "name": "ToolOutputPanel._on_tab_close_requested",
           "rank": "D",
           "complexity": 21,
           "message": "method 'ToolOutputPanel._on_tab_close_requested' - complexity 21 (rank D)",
-          "raw": "src\\intellicrack\\ui\\tools.py:1400:4: method 'ToolOutputPanel._on_tab_close_requested' - complexity 21 (rank D)"
+          "raw": "src\\intellicrack\\ui\\tools.py:1471:4: method 'ToolOutputPanel._on_tab_close_requested' - complexity 21 (rank D)"
         },
         {
-          "line": 1472,
+          "line": 1543,
           "column": 4,
           "entity_type": "M",
           "name": "ToolOutputPanel.close_embedded_tools",
           "rank": "C",
           "complexity": 15,
           "message": "method 'ToolOutputPanel.close_embedded_tools' - complexity 15 (rank C)",
-          "raw": "src\\intellicrack\\ui\\tools.py:1472:4: method 'ToolOutputPanel.close_embedded_tools' - complexity 15 (rank C)"
+          "raw": "src\\intellicrack\\ui\\tools.py:1543:4: method 'ToolOutputPanel.close_embedded_tools' - complexity 15 (rank C)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\tool_config.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 356,
+          "column": 4,
+          "entity_type": "M",
+          "name": "ToolInstallWorker._update_radare2_path",
+          "rank": "C",
+          "complexity": 11,
+          "message": "method 'ToolInstallWorker._update_radare2_path' - complexity 11 (rank C)",
+          "raw": "src\\intellicrack\\ui\\tool_config.py:356:4: method 'ToolInstallWorker._update_radare2_path' - complexity 11 (rank C)"
+        },
+        {
+          "line": 529,
+          "column": 4,
+          "entity_type": "M",
+          "name": "ToolStatusCheckWorker._check_ghidra",
+          "rank": "C",
+          "complexity": 11,
+          "message": "method 'ToolStatusCheckWorker._check_ghidra' - complexity 11 (rank C)",
+          "raw": "src\\intellicrack\\ui\\tool_config.py:529:4: method 'ToolStatusCheckWorker._check_ghidra' - complexity 11 (rank C)"
         }
       ]
     },
@@ -733,14 +779,14 @@
       "count": 1,
       "findings": [
         {
-          "line": 370,
+          "line": 381,
           "column": 4,
           "entity_type": "M",
           "name": "Orchestrator._run_agent_loop",
           "rank": "C",
           "complexity": 12,
           "message": "method 'Orchestrator._run_agent_loop' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:370:4: method 'Orchestrator._run_agent_loop' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:381:4: method 'Orchestrator._run_agent_loop' - complexity 12 (rank C)"
         }
       ]
     },
@@ -749,14 +795,30 @@
       "count": 1,
       "findings": [
         {
-          "line": 175,
+          "line": 168,
           "column": 4,
           "entity_type": "M",
           "name": "ScriptContext.to_prompt_context",
           "rank": "C",
           "complexity": 13,
           "message": "method 'ScriptContext.to_prompt_context' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\core\\script_gen.py:175:4: method 'ScriptContext.to_prompt_context' - complexity 13 (rank C)"
+          "raw": "src\\intellicrack\\core\\script_gen.py:168:4: method 'ScriptContext.to_prompt_context' - complexity 13 (rank C)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\tools.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 392,
+          "column": 4,
+          "entity_type": "M",
+          "name": "ToolRegistry.execute_tool_call",
+          "rank": "C",
+          "complexity": 13,
+          "message": "method 'ToolRegistry.execute_tool_call' - complexity 13 (rank C)",
+          "raw": "src\\intellicrack\\core\\tools.py:392:4: method 'ToolRegistry.execute_tool_call' - complexity 13 (rank C)"
         }
       ]
     },
@@ -805,22 +867,6 @@
           "complexity": 14,
           "message": "method 'SandboxTestWorker.run' - complexity 14 (rank C)",
           "raw": "src\\intellicrack\\ui\\sandbox_config.py:91:4: method 'SandboxTestWorker.run' - complexity 14 (rank C)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\tool_config.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 356,
-          "column": 4,
-          "entity_type": "M",
-          "name": "ToolInstallWorker._update_radare2_path",
-          "rank": "C",
-          "complexity": 11,
-          "message": "method 'ToolInstallWorker._update_radare2_path' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\tool_config.py:356:4: method 'ToolInstallWorker._update_radare2_path' - complexity 11 (rank C)"
         }
       ]
     },

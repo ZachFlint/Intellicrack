@@ -208,7 +208,7 @@ class ToolInstallWorker(QThread):
             None,
         )
         if ghidra_root is None:
-            candidate = self._install_path / "ghidraRun.bat"
+            candidate = self._install_path / "support" / "analyzeHeadless.bat"
             if candidate.exists():
                 ghidra_root = self._install_path
 
@@ -529,33 +529,41 @@ class ToolStatusCheckWorker(QThread):
     def _check_ghidra(tool_path: Path) -> tuple[bool, str]:
         """Check Ghidra installation.
 
+        Looks for the headless analyzer script (support/analyzeHeadless)
+        which is the executable used by the Ghidra bridge. Never checks
+        for or launches ghidraRun which is the GUI launcher.
+
         Args:
             tool_path: Path to Ghidra installation.
 
         Returns:
             Tuple of (is_available, status_message).
         """
-        ghidra_run = None
+        headless: Path | None = None
         for item in tool_path.iterdir():
             if item.is_dir() and item.name.startswith("ghidra_"):
-                ghidra_run = item / "ghidraRun.bat"
-                if not ghidra_run.exists():
-                    ghidra_run = item / "ghidraRun"
+                candidate = item / "support" / "analyzeHeadless.bat"
+                if candidate.exists():
+                    headless = candidate
+                else:
+                    candidate = item / "support" / "analyzeHeadless"
+                    if candidate.exists():
+                        headless = candidate
                 break
 
-        if ghidra_run is None:
+        if headless is None:
             for candidate in [
-                tool_path / "ghidraRun.bat",
-                tool_path / "ghidraRun",
+                tool_path / "support" / "analyzeHeadless.bat",
+                tool_path / "support" / "analyzeHeadless",
             ]:
                 if candidate.exists():
-                    ghidra_run = candidate
+                    headless = candidate
                     break
 
-        if ghidra_run and ghidra_run.exists():
+        if headless is not None and headless.exists():
             return True, "Ghidra installed"
 
-        return False, "ghidraRun not found in installation"
+        return False, "analyzeHeadless not found in installation"
 
     @staticmethod
     def _check_x64dbg(tool_path: Path) -> tuple[bool, str]:

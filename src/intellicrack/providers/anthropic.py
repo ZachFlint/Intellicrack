@@ -166,17 +166,19 @@ class AnthropicProvider(LLMProviderBase):
         """
         models: list[ModelInfo] = []
         for model_id, display_name, ctx_window, tools, vision in self.KNOWN_MODELS:
-            models.append(ModelInfo(
-                id=model_id,
-                name=display_name,
-                provider=ProviderName.ANTHROPIC,
-                context_window=ctx_window,
-                supports_tools=tools,
-                supports_vision=vision,
-                supports_streaming=True,
-                input_cost_per_1m_tokens=None,
-                output_cost_per_1m_tokens=None,
-            ))
+            models.append(
+                ModelInfo(
+                    id=model_id,
+                    name=display_name,
+                    provider=ProviderName.ANTHROPIC,
+                    context_window=ctx_window,
+                    supports_tools=tools,
+                    supports_vision=vision,
+                    supports_streaming=True,
+                    input_cost_per_1m_tokens=None,
+                    output_cost_per_1m_tokens=None,
+                )
+            )
         self._logger.info(
             "anthropic_known_models_fallback",
             extra={"count": len(models)},

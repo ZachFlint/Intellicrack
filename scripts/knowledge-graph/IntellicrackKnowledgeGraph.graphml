@@ -1305,6 +1305,12 @@
       <data key="d3">get_version</data>
       <data key="d4">['self', 'tool', 'path']</data>
     </node>
+    <node id="src.intellicrack.bridges.installer._get_ghidra_version">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_get_ghidra_version</data>
+      <data key="d4">['path']</data>
+    </node>
     <node id="src.intellicrack.bridges.installer._parse_version">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -2019,6 +2025,30 @@
       <data key="d3">snapshot_restore</data>
       <data key="d4">['self', 'instance_id', 'snapshot_id']</data>
     </node>
+    <node id="src.intellicrack.bridges.sandbox_bridge.snapshot_list">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">snapshot_list</data>
+      <data key="d4">['self', 'instance_id']</data>
+    </node>
+    <node id="src.intellicrack.bridges.sandbox_bridge.snapshot_delete">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">snapshot_delete</data>
+      <data key="d4">['self', 'instance_id', 'name']</data>
+    </node>
+    <node id="src.intellicrack.bridges.sandbox_bridge.cont">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">cont</data>
+      <data key="d4">['self', 'instance_id']</data>
+    </node>
+    <node id="src.intellicrack.bridges.sandbox_bridge.get_pending_messages">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_pending_messages</data>
+      <data key="d4">['self', 'instance_id']</data>
+    </node>
     <node id="src.intellicrack.bridges.sandbox_bridge._report_to_dict">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -2196,6 +2226,18 @@
       <data key="d1">python</data>
       <data key="d2">D:\Intellicrack\src\intellicrack\bridges\x64dbg.py</data>
       <data key="d3">src.intellicrack.bridges.x64dbg</data>
+    </node>
+    <node id="src.intellicrack.bridges.x64dbg.get_capstone">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_capstone</data>
+      <data key="d4">[]</data>
+    </node>
+    <node id="src.intellicrack.bridges.x64dbg.get_keystone">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_keystone</data>
+      <data key="d4">[]</data>
     </node>
     <node id="src.intellicrack.bridges.x64dbg._read_process_memory_block">
       <data key="d0">function</data>
@@ -3272,7 +3314,7 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">__exit__</data>
-      <data key="d4">['self', 'exc_type', 'exc_val', 'exc_tb']</data>
+      <data key="d4">['self', 'exc_type', 'exc_val', '_exc_tb']</data>
     </node>
     <node id="src.intellicrack.core.orchestrator">
       <data key="d0">module</data>
@@ -3311,6 +3353,12 @@
       <data key="d1">python</data>
       <data key="d2">D:\Intellicrack\src\intellicrack\providers\registry.py</data>
       <data key="d3">src.intellicrack.providers.registry</data>
+    </node>
+    <node id="src.intellicrack.core.script_gen">
+      <data key="d0">module</data>
+      <data key="d1">python</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack\core\script_gen.py</data>
+      <data key="d3">src.intellicrack.core.script_gen</data>
     </node>
     <node id="src.intellicrack.core.session">
       <data key="d0">module</data>
@@ -3365,6 +3413,12 @@
       <data key="d1">python</data>
       <data key="d3">provider_registry</data>
       <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.core.orchestrator.set_script_manager">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_script_manager</data>
+      <data key="d4">['self', 'manager']</data>
     </node>
     <node id="src.intellicrack.core.orchestrator.start_session">
       <data key="d0">function</data>
@@ -3455,6 +3509,12 @@
       <data key="d1">python</data>
       <data key="d3">_execute_single_tool_call</data>
       <data key="d4">['self', 'call']</data>
+    </node>
+    <node id="src.intellicrack.core.orchestrator._validate_tool_schemas">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_validate_tool_schemas</data>
+      <data key="d4">['tools', 'provider']</data>
     </node>
     <node id="src.intellicrack.core.orchestrator._should_confirm">
       <data key="d0">function</data>
@@ -3880,14 +3940,7 @@
       <data key="d3">terminate_external_pid</data>
       <data key="d4">['self', 'pid', 'force']</data>
     </node>
-    <node id="src.intellicrack.core.script_gen">
-      <data key="d0">module</data>
-      <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\script_gen.py</data>
-      <data key="d3">src.intellicrack.core.script_gen</data>
-    </node>
     <node id="ast" />
-    <node id="textwrap" />
     <node id="src.intellicrack.core.script_gen._empty_str_list">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -3966,84 +4019,10 @@
       <data key="d3">get_x64dbg_reference</data>
       <data key="d4">[]</data>
     </node>
-    <node id="src.intellicrack.core.script_gen.GeneratedScript">
-      <data key="d0">class</data>
-      <data key="d1">python</data>
-      <data key="d3">GeneratedScript</data>
-    </node>
     <node id="src.intellicrack.core.script_gen.ScriptGenerator">
       <data key="d0">class</data>
       <data key="d1">python</data>
       <data key="d3">ScriptGenerator</data>
-    </node>
-    <node id="src.intellicrack.core.script_gen._KeygenBuilder">
-      <data key="d0">class</data>
-      <data key="d1">python</data>
-      <data key="d3">_KeygenBuilder</data>
-    </node>
-    <node id="abc.ABC" />
-    <node id="src.intellicrack.core.script_gen._checksum_call_str">
-      <data key="d0">function</data>
-      <data key="d1">python</data>
-      <data key="d3">_checksum_call_str</data>
-      <data key="d4">['analysis']</data>
-    </node>
-    <node id="src.intellicrack.core.script_gen._fmt_call_str">
-      <data key="d0">function</data>
-      <data key="d1">python</data>
-      <data key="d3">_fmt_call_str</data>
-      <data key="d4">['analysis']</data>
-    </node>
-    <node id="src.intellicrack.core.script_gen._MD5KeygenBuilder">
-      <data key="d0">class</data>
-      <data key="d1">python</data>
-      <data key="d3">_MD5KeygenBuilder</data>
-    </node>
-    <node id="_KeygenBuilder" />
-    <node id="src.intellicrack.core.script_gen._SHA1KeygenBuilder">
-      <data key="d0">class</data>
-      <data key="d1">python</data>
-      <data key="d3">_SHA1KeygenBuilder</data>
-    </node>
-    <node id="src.intellicrack.core.script_gen._CRC32KeygenBuilder">
-      <data key="d0">class</data>
-      <data key="d1">python</data>
-      <data key="d3">_CRC32KeygenBuilder</data>
-    </node>
-    <node id="src.intellicrack.core.script_gen._XORKeygenBuilder">
-      <data key="d0">class</data>
-      <data key="d1">python</data>
-      <data key="d3">_XORKeygenBuilder</data>
-    </node>
-    <node id="src.intellicrack.core.script_gen._RSAKeygenBuilder">
-      <data key="d0">class</data>
-      <data key="d1">python</data>
-      <data key="d3">_RSAKeygenBuilder</data>
-    </node>
-    <node id="src.intellicrack.core.script_gen._HWIDKeygenBuilder">
-      <data key="d0">class</data>
-      <data key="d1">python</data>
-      <data key="d3">_HWIDKeygenBuilder</data>
-    </node>
-    <node id="src.intellicrack.core.script_gen._TimeBasedKeygenBuilder">
-      <data key="d0">class</data>
-      <data key="d1">python</data>
-      <data key="d3">_TimeBasedKeygenBuilder</data>
-    </node>
-    <node id="src.intellicrack.core.script_gen._FeatureFlagKeygenBuilder">
-      <data key="d0">class</data>
-      <data key="d1">python</data>
-      <data key="d3">_FeatureFlagKeygenBuilder</data>
-    </node>
-    <node id="src.intellicrack.core.script_gen._CustomHashKeygenBuilder">
-      <data key="d0">class</data>
-      <data key="d1">python</data>
-      <data key="d3">_CustomHashKeygenBuilder</data>
-    </node>
-    <node id="src.intellicrack.core.script_gen._FallbackKeygenBuilder">
-      <data key="d0">class</data>
-      <data key="d1">python</data>
-      <data key="d3">_FallbackKeygenBuilder</data>
     </node>
     <node id="src.intellicrack.core.script_gen.description">
       <data key="d0">function</data>
@@ -4176,48 +4155,6 @@
       <data key="d1">python</data>
       <data key="d3">prepare_ai_prompt</data>
       <data key="d4">['context', 'language']</data>
-    </node>
-    <node id="src.intellicrack.core.script_gen.generate_keygen_from_analysis">
-      <data key="d0">function</data>
-      <data key="d1">python</data>
-      <data key="d3">generate_keygen_from_analysis</data>
-      <data key="d4">['analysis']</data>
-    </node>
-    <node id="src.intellicrack.core.script_gen._algorithm_label">
-      <data key="d0">function</data>
-      <data key="d1">python</data>
-      <data key="d3">_algorithm_label</data>
-      <data key="d4">['self']</data>
-    </node>
-    <node id="src.intellicrack.core.script_gen._generate_imports">
-      <data key="d0">function</data>
-      <data key="d1">python</data>
-      <data key="d3">_generate_imports</data>
-      <data key="d4">['self']</data>
-    </node>
-    <node id="src.intellicrack.core.script_gen._generate_constants">
-      <data key="d0">function</data>
-      <data key="d1">python</data>
-      <data key="d3">_generate_constants</data>
-      <data key="d4">['self', 'analysis']</data>
-    </node>
-    <node id="src.intellicrack.core.script_gen._generate_keygen_body">
-      <data key="d0">function</data>
-      <data key="d1">python</data>
-      <data key="d3">_generate_keygen_body</data>
-      <data key="d4">['self', 'analysis']</data>
-    </node>
-    <node id="src.intellicrack.core.script_gen._generate_format_helpers">
-      <data key="d0">function</data>
-      <data key="d1">python</data>
-      <data key="d3">_generate_format_helpers</data>
-      <data key="d4">['analysis']</data>
-    </node>
-    <node id="src.intellicrack.core.script_gen.build">
-      <data key="d0">function</data>
-      <data key="d1">python</data>
-      <data key="d3">build</data>
-      <data key="d4">['self', 'analysis']</data>
     </node>
     <node id="sqlite3" />
     <node id="src.intellicrack.core.session.SessionMetadata">
@@ -5032,6 +4969,12 @@
       <data key="d3">set_env_var</data>
       <data key="d4">['self', 'name', 'value']</data>
     </node>
+    <node id="src.intellicrack.credentials.env_loader.get_env_var">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_env_var</data>
+      <data key="d4">['self', 'name', 'default']</data>
+    </node>
     <node id="src.intellicrack.credentials.env_loader.save_to_env_file">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -5664,6 +5607,7 @@
       <data key="d1">python</data>
       <data key="d3">GoogleFunctionDeclaration</data>
     </node>
+    <node id="abc.ABC" />
     <node id="src.intellicrack.providers.base._build_schema_property">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -7939,6 +7883,12 @@
       <data key="d3">set_model_discovery</data>
       <data key="d4">['self', 'discovery']</data>
     </node>
+    <node id="src.intellicrack.ui.app._initialize_model_cache">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_initialize_model_cache</data>
+      <data key="d4">['self']</data>
+    </node>
     <node id="src.intellicrack.ui.app._setup_ui">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -8035,6 +7985,18 @@
       <data key="d3">_refresh_system_status</data>
       <data key="d4">['self']</data>
     </node>
+    <node id="src.intellicrack.ui.app._refresh_memory_status">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_refresh_memory_status</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.app._refresh_model_discovery_status">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_refresh_model_discovery_status</data>
+      <data key="d4">['self']</data>
+    </node>
     <node id="src.intellicrack.ui.app._connect_signals">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -8045,6 +8007,12 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_configure_orchestrator</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.app._refresh_tool_status">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_refresh_tool_status</data>
       <data key="d4">['self']</data>
     </node>
     <node id="src.intellicrack.ui.app._on_licensing_analysis_received">
@@ -9058,6 +9026,12 @@
       <data key="d3">_fetch_huggingface_models</data>
       <data key="d4">['self', 'timeout']</data>
     </node>
+    <node id="src.intellicrack.ui.provider_config._load_credential_overview">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_load_credential_overview</data>
+      <data key="d4">['self']</data>
+    </node>
     <node id="src.intellicrack.ui.provider_config._setup_ui">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -9146,6 +9120,90 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">get_settings</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.provider_config._on_discover_selected_provider">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_discover_selected_provider</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.provider_config._on_start_oauth">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_start_oauth</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.provider_config._on_revoke_oauth">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_revoke_oauth</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.provider_config.refresh_credentials">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">refresh_credentials</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.provider_config.create_env_template">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">create_env_template</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.provider_config.migrate_credentials">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">migrate_credentials</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.provider_config.discover_single_provider">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">discover_single_provider</data>
+      <data key="d4">['self', 'provider_name']</data>
+    </node>
+    <node id="src.intellicrack.ui.provider_config.start_oauth_flow">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">start_oauth_flow</data>
+      <data key="d4">['self', 'provider_id']</data>
+    </node>
+    <node id="src.intellicrack.ui.provider_config.revoke_oauth_token">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">revoke_oauth_token</data>
+      <data key="d4">['self', 'provider_id']</data>
+    </node>
+    <node id="src.intellicrack.ui.provider_config._setup_provider_specific_ui">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_setup_provider_specific_ui</data>
+      <data key="d4">['self', 'layout']</data>
+    </node>
+    <node id="src.intellicrack.ui.provider_config._on_pull_model">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_pull_model</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.provider_config._on_show_device_info">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_show_device_info</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.provider_config._on_detect_xpu_dtype">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_detect_xpu_dtype</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.provider_config._on_lookup_generation">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_lookup_generation</data>
       <data key="d4">['self']</data>
     </node>
     <node id="src.intellicrack.ui.provider_config._get_display_name">
@@ -9238,6 +9296,30 @@
       <data key="d3">_persist_api_key_to_env</data>
       <data key="d4">['self']</data>
     </node>
+    <node id="src.intellicrack.ui.provider_config.get_provider_device_info">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_provider_device_info</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.provider_config.pull_ollama_model">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">pull_ollama_model</data>
+      <data key="d4">['self', 'model_name']</data>
+    </node>
+    <node id="src.intellicrack.ui.provider_config.get_openrouter_generation">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_openrouter_generation</data>
+      <data key="d4">['self', 'generation_id']</data>
+    </node>
+    <node id="src.intellicrack.ui.provider_config.get_xpu_optimal_dtype">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_xpu_optimal_dtype</data>
+      <data key="d4">['self']</data>
+    </node>
     <node id="src.intellicrack.ui.provider_config._populate_models">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -9261,6 +9343,12 @@
       <data key="d1">python</data>
       <data key="d3">get_selected_model</data>
       <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.ui.provider_config._discover">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_discover</data>
+      <data key="d4">[]</data>
     </node>
     <node id="intellicrack.core.logging" />
     <node id="src.intellicrack.ui.sandbox_config.SandboxTestWorker">
@@ -13894,6 +13982,9 @@
     <edge source="src.intellicrack.bridges.installer" target="src.intellicrack.bridges.installer.get_version">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.bridges.installer" target="src.intellicrack.bridges.installer._get_ghidra_version">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.bridges.installer" target="src.intellicrack.bridges.installer._parse_version">
       <data key="d5">defines</data>
     </edge>
@@ -14356,6 +14447,18 @@
     <edge source="src.intellicrack.bridges.sandbox_bridge" target="src.intellicrack.bridges.sandbox_bridge.snapshot_restore">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.bridges.sandbox_bridge" target="src.intellicrack.bridges.sandbox_bridge.snapshot_list">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.sandbox_bridge" target="src.intellicrack.bridges.sandbox_bridge.snapshot_delete">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.sandbox_bridge" target="src.intellicrack.bridges.sandbox_bridge.cont">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.sandbox_bridge" target="src.intellicrack.bridges.sandbox_bridge.get_pending_messages">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.bridges.sandbox_bridge" target="src.intellicrack.bridges.sandbox_bridge._report_to_dict">
       <data key="d5">defines</data>
     </edge>
@@ -14514,6 +14617,12 @@
     </edge>
     <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.named_pipe_client">
       <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.x64dbg.get_capstone">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.x64dbg.get_keystone">
+      <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.x64dbg._read_process_memory_block">
       <data key="d5">defines</data>
@@ -15151,6 +15260,9 @@
     <edge source="src.intellicrack.core.orchestrator" target="src.intellicrack.providers.registry">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.core.orchestrator" target="src.intellicrack.core.script_gen">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.core.orchestrator" target="src.intellicrack.core.session">
       <data key="d5">imports</data>
     </edge>
@@ -15176,6 +15288,9 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.core.orchestrator" target="src.intellicrack.core.orchestrator.provider_registry">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.orchestrator" target="src.intellicrack.core.orchestrator.set_script_manager">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.core.orchestrator" target="src.intellicrack.core.orchestrator.start_session">
@@ -15221,6 +15336,9 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.core.orchestrator" target="src.intellicrack.core.orchestrator._execute_single_tool_call">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.orchestrator" target="src.intellicrack.core.orchestrator._validate_tool_schemas">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.core.orchestrator" target="src.intellicrack.core.orchestrator._should_confirm">
@@ -15315,6 +15433,9 @@
     </edge>
     <edge source="src.intellicrack.core.orchestrator" target="src.intellicrack.core.orchestrator.shutdown">
       <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.orchestrator" target="src.intellicrack.bridges.schemas">
+      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.base" target="__future__">
       <data key="d5">imports</data>
@@ -15479,6 +15600,153 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.providers.registry" target="src.intellicrack.providers.registry.has_connected_provider">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="__future__">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="ast">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="importlib">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="tempfile">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="collections.abc">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="dataclasses">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="datetime">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="enum">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="pathlib">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="typing">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.logging">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.process_manager">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._empty_str_list">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._empty_int_list">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._empty_dict_list">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._empty_str_any_dict">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.ScriptLanguage">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.BypassStrategy">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.ScriptContext">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.Script">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.ScriptValidator">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.ScriptManager">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.get_frida_api_reference">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.get_ghidra_api_reference">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.get_radare2_reference">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.get_x64dbg_reference">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.ScriptGenerator">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.description">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.to_prompt_context">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._format_target_functions">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._format_api_reference">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.add_execution_result">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.save">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.get_extension">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.validate_python">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.validate_javascript">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.validate_java">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.validate">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.__init__">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.add_script">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.get_script">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.delete_script">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.list_scripts">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.save_script">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.load_script">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.ensure_script_saved">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.reload_script">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.record_execution">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.prepare_ai_prompt">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.core.session" target="__future__">
@@ -15766,262 +16034,10 @@
     <edge source="src.intellicrack.core.process_manager.ProcessType" target="enum.Enum">
       <data key="d5">inherits</data>
     </edge>
-    <edge source="src.intellicrack.core.script_gen" target="__future__">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="ast">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="importlib">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="tempfile">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="textwrap">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="abc">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="collections.abc">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="dataclasses">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="datetime">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="enum">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="pathlib">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="typing">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.logging">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.process_manager">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.types">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._empty_str_list">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._empty_int_list">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._empty_dict_list">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._empty_str_any_dict">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.ScriptLanguage">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.BypassStrategy">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.ScriptContext">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.Script">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.ScriptValidator">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.ScriptManager">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.get_frida_api_reference">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.get_ghidra_api_reference">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.get_radare2_reference">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.get_x64dbg_reference">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.GeneratedScript">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.ScriptGenerator">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._KeygenBuilder">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._checksum_call_str">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._fmt_call_str">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._MD5KeygenBuilder">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._SHA1KeygenBuilder">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._CRC32KeygenBuilder">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._XORKeygenBuilder">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._RSAKeygenBuilder">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._HWIDKeygenBuilder">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._TimeBasedKeygenBuilder">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._FeatureFlagKeygenBuilder">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._CustomHashKeygenBuilder">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._FallbackKeygenBuilder">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.description">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.to_prompt_context">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._format_target_functions">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._format_api_reference">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.add_execution_result">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.save">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.get_extension">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.validate_python">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.validate_javascript">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.validate_java">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.validate">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.__init__">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.add_script">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.get_script">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.delete_script">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.list_scripts">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.save_script">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.load_script">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.ensure_script_saved">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.reload_script">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.record_execution">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.prepare_ai_prompt">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.generate_keygen_from_analysis">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._algorithm_label">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._generate_imports">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._generate_constants">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._generate_keygen_body">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen._generate_format_helpers">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen" target="src.intellicrack.core.script_gen.build">
-      <data key="d5">defines</data>
-    </edge>
     <edge source="src.intellicrack.core.script_gen.ScriptLanguage" target="enum.Enum">
       <data key="d5">inherits</data>
     </edge>
     <edge source="src.intellicrack.core.script_gen.BypassStrategy" target="enum.Enum">
-      <data key="d5">inherits</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen._KeygenBuilder" target="abc.ABC">
-      <data key="d5">inherits</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen._MD5KeygenBuilder" target="_KeygenBuilder">
-      <data key="d5">inherits</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen._SHA1KeygenBuilder" target="_KeygenBuilder">
-      <data key="d5">inherits</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen._CRC32KeygenBuilder" target="_KeygenBuilder">
-      <data key="d5">inherits</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen._XORKeygenBuilder" target="_KeygenBuilder">
-      <data key="d5">inherits</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen._RSAKeygenBuilder" target="_KeygenBuilder">
-      <data key="d5">inherits</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen._HWIDKeygenBuilder" target="_KeygenBuilder">
-      <data key="d5">inherits</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen._TimeBasedKeygenBuilder" target="_KeygenBuilder">
-      <data key="d5">inherits</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen._FeatureFlagKeygenBuilder" target="_KeygenBuilder">
-      <data key="d5">inherits</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen._CustomHashKeygenBuilder" target="_KeygenBuilder">
-      <data key="d5">inherits</data>
-    </edge>
-    <edge source="src.intellicrack.core.script_gen._FallbackKeygenBuilder" target="_KeygenBuilder">
       <data key="d5">inherits</data>
     </edge>
     <edge source="src.intellicrack.core.types.IntellicrackError" target="Exception">
@@ -16154,6 +16170,9 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.credentials.env_loader" target="src.intellicrack.credentials.env_loader.set_env_var">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.credentials.env_loader" target="src.intellicrack.credentials.env_loader.get_env_var">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.credentials.env_loader" target="src.intellicrack.credentials.env_loader.save_to_env_file">
@@ -18322,6 +18341,9 @@
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app.set_model_discovery">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._initialize_model_cache">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._setup_ui">
       <data key="d5">defines</data>
     </edge>
@@ -18370,10 +18392,19 @@
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._refresh_system_status">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._refresh_memory_status">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._refresh_model_discovery_status">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._connect_signals">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._configure_orchestrator">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._refresh_tool_status">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._on_licensing_analysis_received">
@@ -18601,11 +18632,23 @@
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app.shutdown">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.providers.model_loader">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.core.script_gen">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.bridges.installer">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._reinit_tools">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._reconnect_providers">
       <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.providers.registry">
+      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app.load_session">
       <data key="d5">defines</data>
@@ -18868,6 +18911,9 @@
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._fetch_huggingface_models">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._load_credential_overview">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._setup_ui">
       <data key="d5">defines</data>
     </edge>
@@ -18911,6 +18957,48 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config.get_settings">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._on_discover_selected_provider">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._on_start_oauth">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._on_revoke_oauth">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config.refresh_credentials">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config.create_env_template">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config.migrate_credentials">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config.discover_single_provider">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config.start_oauth_flow">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config.revoke_oauth_token">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._setup_provider_specific_ui">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._on_pull_model">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._on_show_device_info">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._on_detect_xpu_dtype">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._on_lookup_generation">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._get_display_name">
@@ -18958,6 +19046,18 @@
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._persist_api_key_to_env">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config.get_provider_device_info">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config.pull_ollama_model">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config.get_openrouter_generation">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config.get_xpu_optimal_dtype">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._populate_models">
       <data key="d5">defines</data>
     </edge>
@@ -18969,6 +19069,30 @@
     </edge>
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config.get_selected_model">
       <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.credentials.env_loader">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.credentials.store">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._discover">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.credentials.oauth">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.providers.local_transformers">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.providers.ollama">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.providers.openrouter">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.providers.xpu_utils">
+      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.sandbox_config" target="__future__">
       <data key="d5">imports</data>

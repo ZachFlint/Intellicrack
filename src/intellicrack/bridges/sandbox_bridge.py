@@ -44,6 +44,10 @@ _ERR_COPY_FROM_FAILED = "Copy from sandbox failed"
 _ERR_QEMU_ONLY = "Snapshots only supported for QEMU sandboxes"
 _ERR_SNAPSHOT_CREATE_FAILED = "Snapshot creation failed"
 _ERR_SNAPSHOT_RESTORE_FAILED = "Snapshot restore failed"
+_ERR_SNAPSHOT_LIST_FAILED = "Snapshot listing failed"
+_ERR_SNAPSHOT_DELETE_FAILED = "Snapshot deletion failed"
+_ERR_CONT_FAILED = "Failed to resume VM execution"
+_ERR_MESSAGES_FAILED = "Failed to retrieve pending messages"
 
 
 class SandboxBridge(ToolBridgeBase):
@@ -319,6 +323,64 @@ class SandboxBridge(ToolBridgeBase):
                         ),
                     ],
                     returns="Success confirmation",
+                ),
+                ToolFunction(
+                    name="sandbox.snapshot_list",
+                    description="List all available snapshots for a QEMU sandbox.",
+                    parameters=[
+                        ToolParameter(
+                            name="instance_id",
+                            type="string",
+                            description="ID of the QEMU sandbox instance",
+                            required=True,
+                        ),
+                    ],
+                    returns="List of snapshot names",
+                ),
+                ToolFunction(
+                    name="sandbox.snapshot_delete",
+                    description="Delete a snapshot from a QEMU sandbox.",
+                    parameters=[
+                        ToolParameter(
+                            name="instance_id",
+                            type="string",
+                            description="ID of the QEMU sandbox instance",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="name",
+                            type="string",
+                            description="Name of the snapshot to delete",
+                            required=True,
+                        ),
+                    ],
+                    returns="Success confirmation",
+                ),
+                ToolFunction(
+                    name="sandbox.cont",
+                    description=("Resume execution of a paused QEMU sandbox VM. Use after breakpoints or manual pauses."),
+                    parameters=[
+                        ToolParameter(
+                            name="instance_id",
+                            type="string",
+                            description="ID of the QEMU sandbox instance",
+                            required=True,
+                        ),
+                    ],
+                    returns="Command response from QEMU monitor",
+                ),
+                ToolFunction(
+                    name="sandbox.get_pending_messages",
+                    description=("Retrieve pending messages from the QEMU guest agent. Returns queued agent communication messages."),
+                    parameters=[
+                        ToolParameter(
+                            name="instance_id",
+                            type="string",
+                            description="ID of the QEMU sandbox instance",
+                            required=True,
+                        ),
+                    ],
+                    returns="List of pending guest agent messages",
                 ),
             ],
         )
@@ -751,6 +813,188 @@ class SandboxBridge(ToolBridgeBase):
                 "success": True,
                 "instance_id": instance_id,
                 "snapshot_id": snapshot_id,
+            }
+
+    async def snapshot_list(
+        self,
+        instance_id: str,
+    ) -> dict[str, Any]:
+        """List available snapshots for a QEMU sandbox.
+
+        Args:
+            instance_id: ID of the QEMU sandbox instance.
+
+        Returns:
+            Dictionary with list of snapshot names.
+
+        Raises:
+            ToolError: If listing fails or not supported.
+        """
+        manager = self._ensure_manager()
+
+        instance = await manager.get(instance_id)
+        if instance is None:
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
+
+        if instance.sandbox_type != "qemu":
+            raise ToolError(_ERR_QEMU_ONLY)
+
+        try:
+            snapshots = await instance.sandbox.list_snapshots()
+            _logger.info(
+                "snapshots_listed",
+                extra={"instance_id": instance_id, "count": len(snapshots)},
+            )
+        except SandboxError as e:
+            _logger.warning("snapshot_list_failed", extra={"error": str(e)})
+            msg = f"{_ERR_SNAPSHOT_LIST_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
+            return {
+                "instance_id": instance_id,
+                "snapshots": snapshots,
+                "count": len(snapshots),
+            }
+
+    async def snapshot_delete(
+        self,
+        instance_id: str,
+        name: str,
+    ) -> dict[str, Any]:
+        """Delete a snapshot from a QEMU sandbox.
+
+        Args:
+            instance_id: ID of the QEMU sandbox instance.
+            name: Name of the snapshot to delete.
+
+        Returns:
+            Success confirmation.
+
+        Raises:
+            ToolError: If deletion fails or not supported.
+        """
+        manager = self._ensure_manager()
+
+        instance = await manager.get(instance_id)
+        if instance is None:
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
+
+        if instance.sandbox_type != "qemu":
+            raise ToolError(_ERR_QEMU_ONLY)
+
+        try:
+            await instance.sandbox.delete_snapshot(name)
+            instance.touch()
+            _logger.info(
+                "snapshot_deleted",
+                extra={"instance_id": instance_id, "snapshot_name": name},
+            )
+        except SandboxError as e:
+            _logger.warning("snapshot_delete_failed", extra={"error": str(e)})
+            msg = f"{_ERR_SNAPSHOT_DELETE_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
+            return {
+                "success": True,
+                "instance_id": instance_id,
+                "name": name,
+            }
+
+    async def cont(
+        self,
+        instance_id: str,
+    ) -> dict[str, Any]:
+        """Resume execution of a paused QEMU sandbox VM.
+
+        Args:
+            instance_id: ID of the QEMU sandbox instance.
+
+        Returns:
+            Command response dictionary.
+
+        Raises:
+            ToolError: If resume fails or not supported.
+        """
+        manager = self._ensure_manager()
+
+        instance = await manager.get(instance_id)
+        if instance is None:
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
+
+        if instance.sandbox_type != "qemu":
+            raise ToolError(_ERR_QEMU_ONLY)
+
+        try:
+            qmp = getattr(instance.sandbox, "_qmp", None)
+            if qmp is None:
+                msg = f"{_ERR_CONT_FAILED}: QMP client not connected"
+                raise ToolError(msg)
+
+            response = await qmp.cont()
+            instance.touch()
+            _logger.info("vm_resumed", extra={"instance_id": instance_id})
+        except SandboxError as e:
+            _logger.warning("vm_resume_failed", extra={"error": str(e)})
+            msg = f"{_ERR_CONT_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
+            return {
+                "success": response.success,
+                "instance_id": instance_id,
+                "data": response.data,
+            }
+
+    async def get_pending_messages(
+        self,
+        instance_id: str,
+    ) -> dict[str, Any]:
+        """Get pending messages from the QEMU guest agent.
+
+        Args:
+            instance_id: ID of the QEMU sandbox instance.
+
+        Returns:
+            Dictionary with list of pending messages.
+
+        Raises:
+            ToolError: If retrieval fails or not supported.
+        """
+        manager = self._ensure_manager()
+
+        instance = await manager.get(instance_id)
+        if instance is None:
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
+
+        if instance.sandbox_type != "qemu":
+            raise ToolError(_ERR_QEMU_ONLY)
+
+        try:
+            agent = getattr(instance.sandbox, "_agent", None)
+            if agent is None:
+                return {
+                    "instance_id": instance_id,
+                    "messages": [],
+                    "count": 0,
+                }
+
+            messages = await agent.get_pending_messages()
+            _logger.info(
+                "pending_messages_retrieved",
+                extra={"instance_id": instance_id, "count": len(messages)},
+            )
+        except SandboxError as e:
+            _logger.warning("pending_messages_failed", extra={"error": str(e)})
+            msg = f"{_ERR_MESSAGES_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
+            return {
+                "instance_id": instance_id,
+                "messages": [{"type": msg.msg_type, "data": msg.data} for msg in messages],
+                "count": len(messages),
             }
 
     @staticmethod

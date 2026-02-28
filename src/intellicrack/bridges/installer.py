@@ -127,9 +127,9 @@ TOOL_REGISTRY: dict[ToolName, ToolInfo] = {
             Path("D:/Tools/ghidra"),
             Path(os.path.expanduser("~/ghidra")),
         ],
-        executables=["ghidraRun.bat", "ghidraRun"],
+        executables=["support/analyzeHeadless.bat", "support/analyzeHeadless"],
         download_url="https://github.com/NationalSecurityAgency/ghidra/releases/latest",
-        version_command=["ghidraRun.bat", "--version"],
+        version_command=[],
         min_version="11.0",
     ),
     ToolName.X64DBG: ToolInfo(
@@ -316,6 +316,9 @@ class ToolInstaller:
         Returns:
             Parsed version or None if couldn't determine.
         """
+        if tool == ToolName.GHIDRA:
+            return self._get_ghidra_version(path)
+
         tool_info = TOOL_REGISTRY.get(tool)
         if tool_info is None or not tool_info.version_command:
             return None
@@ -350,6 +353,59 @@ class ToolInstaller:
         except (TimeoutExpired, OSError) as e:
             _logger.debug("version_check_failed", extra={"tool": str(tool), "error": str(e)})
 
+        return None
+
+    @staticmethod
+    def _get_ghidra_version(path: Path) -> ToolVersion | None:
+        """Get Ghidra version by parsing Ghidra/application.properties.
+
+        Reads the application.version property from the properties file
+        instead of launching a subprocess, which avoids accidentally
+        opening the Ghidra GUI.
+
+        Args:
+            path: Path to the Ghidra installation root.
+
+        Returns:
+            Parsed ToolVersion or None if the file cannot be read.
+        """
+        props_path = path / "Ghidra" / "application.properties"
+        if not props_path.is_file():
+            _logger.debug(
+                "ghidra_properties_not_found",
+                extra={"path": str(props_path)},
+            )
+            return None
+
+        try:
+            text = props_path.read_text(encoding="utf-8")
+        except OSError as e:
+            _logger.debug(
+                "ghidra_properties_read_failed",
+                extra={"path": str(props_path), "error": str(e)},
+            )
+            return None
+
+        for line in text.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("application.version="):
+                version_str = stripped.split("=", maxsplit=1)[1].strip()
+                version = ToolVersion(raw=version_str)
+                if match := re.search(r"(\d+)\.(\d+)(?:\.(\d+))?", version_str):
+                    version.major = int(match[1])
+                    version.minor = int(match[2])
+                    if match[3]:
+                        version.patch = int(match[3])
+                _logger.debug(
+                    "ghidra_version_detected",
+                    extra={"version": version_str, "path": str(props_path)},
+                )
+                return version
+
+        _logger.debug(
+            "ghidra_version_key_missing",
+            extra={"path": str(props_path)},
+        )
         return None
 
     @staticmethod

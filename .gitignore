@@ -203,6 +203,7 @@ output/
 api_keys.txt
 secrets/
 credentials/
+!src/intellicrack/credentials/
 .secrets/
 
 # Environment files

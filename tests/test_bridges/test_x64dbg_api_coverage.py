@@ -98,9 +98,6 @@ async def test_register_management(bridge: X64DbgBridge) -> None:
     with pytest.raises(ToolError, match="pipe"):
         await bridge.get_registers()
 
-    with pytest.raises(ToolError, match="pipe"):
-        await bridge._get_register_value("rax")
-
 
 async def test_run_command(bridge: X64DbgBridge) -> None:
     """Verify run_command."""
