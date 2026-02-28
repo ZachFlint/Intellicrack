@@ -632,7 +632,7 @@ function findPath(){
     '<div style="margin-bottom:5px;color:var(--success)">Path ('+(path.length-1)+' hops):</div>'+
     path.map((n,i)=>{
       const a=graph.getNodeAttributes(n);
-      return '<span class="path-step" onclick="goToNode(\''+n.replace(/'/g,"\\'")+'\')">'+a.label+'</span>'+
+      return '<span class="path-step" onclick="goToNode(\''+n.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')">'+a.label+'</span>'+
         (i<path.length-1?'<span class="path-arrow">&#8594;</span>':'');
     }).join('');
 }
