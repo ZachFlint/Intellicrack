@@ -11,7 +11,7 @@ from typing import ClassVar, Final
 from PyQt6.QtWidgets import QApplication
 
 from ...core.logging import get_logger
-from .resource_helper import get_assets_path
+from .resource_helper import get_assets_path, get_style_path
 
 
 _logger = get_logger("ui.resources.themes")
@@ -1089,7 +1089,7 @@ class ThemeManager:
         if self._styles_available:
             filename = f"{theme}_theme.qss"
             try:
-                style_path = get_assets_path() / "styles" / filename
+                style_path = get_style_path(filename)
                 if style_path.exists():
                     with open(style_path, encoding="utf-8") as f:
                         content = f.read()

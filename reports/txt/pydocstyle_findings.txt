@@ -1,37 +1,37 @@
-2 findings in src/intellicrack\bridges\base.py
+2 findings in src/intellicrack/bridges\base.py
 
-src/intellicrack\bridges\base.py:927: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')
+src/intellicrack/bridges\base.py:927: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')
 
-src/intellicrack\bridges\base.py:990: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')
-
-
-2 findings in src/intellicrack\bridges\frida_bridge.py
-
-src/intellicrack\bridges\frida_bridge.py:941: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')
-
-src/intellicrack\bridges\frida_bridge.py:1074: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')
+src/intellicrack/bridges\base.py:990: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')
 
 
-1 findings in src/intellicrack\core\process_manager.py
+2 findings in src/intellicrack/bridges\frida_bridge.py
 
-src/intellicrack\core\process_manager.py:259: D401: in private method `_sync_cleanup`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')
+src/intellicrack/bridges\frida_bridge.py:941: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')
 
-
-1 findings in src/intellicrack\core\script_gen.py
-
-src/intellicrack\core\script_gen.py:410: D401: in public method `validate_java`: - First line should be in imperative mood; try rephrasing (found 'Basic')
+src/intellicrack/bridges\frida_bridge.py:1074: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')
 
 
-1 findings in src/intellicrack\credentials\oauth.py
+1 findings in src/intellicrack/core\process_manager.py
 
-src/intellicrack\credentials\oauth.py:904: D401: in public function `authorize_google`: - First line should be in imperative mood; try rephrasing (found 'Convenience')
-
-
-1 findings in src/intellicrack\providers\local_transformers.py
-
-src/intellicrack\providers\local_transformers.py:479: D401: in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')
+src/intellicrack/core\process_manager.py:259: D401: in private method `_sync_cleanup`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')
 
 
-1 findings in src/intellicrack\ui\panels\_async_bridge.py
+1 findings in src/intellicrack/core\script_gen.py
 
-src/intellicrack\ui\panels\_async_bridge.py:22: D103: in public function `run_bridge_coroutine`: - Missing docstring in public function
+src/intellicrack/core\script_gen.py:403: D401: in public method `validate_java`: - First line should be in imperative mood; try rephrasing (found 'Basic')
+
+
+1 findings in src/intellicrack/credentials\oauth.py
+
+src/intellicrack/credentials\oauth.py:903: D401: in public function `authorize_google`: - First line should be in imperative mood; try rephrasing (found 'Convenience')
+
+
+1 findings in src/intellicrack/providers\local_transformers.py
+
+src/intellicrack/providers\local_transformers.py:479: D401: in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')
+
+
+1 findings in src/intellicrack/ui\panels\_async_bridge.py
+
+src/intellicrack/ui\panels\_async_bridge.py:22: D103: in public function `run_bridge_coroutine`: - Missing docstring in public function

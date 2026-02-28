@@ -570,7 +570,7 @@ def _check_rebar_status() -> tuple[bool, str]:
         return (True, "")
     else:
         if result.returncode == 0:
-            count = result.stdout.strip()
+            count = result.stdout.strip().splitlines()[-1].strip() if result.stdout.strip() else ""
             if count and int(count) > 0:
                 _logger.debug("xpu_rebar_enabled", extra={"count": count})
                 return (True, "")

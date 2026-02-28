@@ -154,6 +154,12 @@ class MainWindow(QMainWindow):
         _logger.debug("loading_fonts", extra={})
         self._font_manager.load_fonts()
 
+        self._icon_manager.preload_icons(["app", "binary", "tools", "provider", "sandbox", "process"])
+        if self._icon_manager.icon_exists("app"):
+            _logger.debug("app_icon_verified")
+
+        self._initialize_model_cache()
+
         _logger.info("ui_init_setup_ui", extra={})
         self._setup_ui()
         _logger.info("ui_init_setup_menus", extra={})
@@ -230,6 +236,17 @@ class MainWindow(QMainWindow):
             discovery: ModelDiscovery for provider model enumeration.
         """
         self._model_discovery = discovery
+
+    def _initialize_model_cache(self) -> None:
+        """Initialize model cache settings from configuration."""
+        try:
+            from ..providers.model_loader import set_global_cache_size
+
+            max_cache = getattr(self._config, "max_model_cache_bytes", None)
+            if isinstance(max_cache, int) and max_cache > 0:
+                set_global_cache_size(max_cache)
+        except Exception:
+            _logger.debug("model_cache_init_skipped")
 
     def _setup_ui(self) -> None:
         """Set up the main UI layout."""
@@ -360,6 +377,12 @@ class MainWindow(QMainWindow):
 
     def _on_view_scripts(self) -> None:
         """Show the scripts manager panel."""
+        script_state = self._tool_panel.get_script_panel_state()
+        selected_id, current_script = script_state
+        if selected_id is not None:
+            _logger.debug("scripts_panel_state", extra={"selected": selected_id})
+        if current_script is not None:
+            _logger.debug("current_script", extra={"script_name": current_script[0]})
         self._tool_panel.activate_scripts_tab()
 
     def _on_view_stack(self) -> None:
@@ -618,6 +641,12 @@ class MainWindow(QMainWindow):
         self._binary_label = QLabel()
         self._statusbar.addPermanentWidget(self._binary_label)
 
+        self._memory_label = QLabel()
+        self._statusbar.addPermanentWidget(self._memory_label)
+
+        self._model_status_label = QLabel()
+        self._statusbar.addPermanentWidget(self._model_status_label)
+
         self._token_label = QLabel()
         self._statusbar.addPermanentWidget(self._token_label)
 
@@ -642,6 +671,37 @@ class MainWindow(QMainWindow):
             self._status_label.setText(f"State: {state}{session_text}")
         except Exception:
             _logger.debug("system_status_refresh_failed")
+
+        self._refresh_memory_status()
+        self._refresh_model_discovery_status()
+
+    def _refresh_memory_status(self) -> None:
+        """Update the memory usage display in the status bar."""
+        try:
+            from ..providers.model_loader import ModelCache
+
+            usage = ModelCache.get_memory_usage()
+            total_bytes = usage.get("total_bytes", 0)
+            if isinstance(total_bytes, int | float) and total_bytes > 0:
+                mb = total_bytes / (1024 * 1024)
+                self._memory_label.setText(f"Cache: {mb:.0f}MB")
+            else:
+                self._memory_label.setText("")
+        except Exception:
+            self._memory_label.setText("")
+
+    def _refresh_model_discovery_status(self) -> None:
+        """Update the model discovery status in the status bar."""
+        if self._model_discovery is None:
+            return
+        try:
+            last_event = self._model_discovery.get_last_event()
+            if last_event is not None:
+                provider = last_event.get("provider", "")
+                status = last_event.get("status", "")
+                self._model_status_label.setText(f"Discovery: {provider} {status}")
+        except Exception:
+            _logger.debug("model_discovery_status_refresh_failed")
 
     def _connect_signals(self) -> None:
         """Connect Qt signals."""
@@ -668,6 +728,55 @@ class MainWindow(QMainWindow):
         )
         self.licensing_analysis_received.connect(self._tool_panel.update_licensing_analysis)
 
+        try:
+            from ..core.script_gen import ScriptManager
+
+            scripts_dir = Path.home() / ".intellicrack" / "scripts"
+            scripts_dir.mkdir(parents=True, exist_ok=True)
+            script_mgr = ScriptManager(scripts_dir)
+            self._orchestrator.set_script_manager(script_mgr)
+        except (ImportError, OSError) as e:
+            _logger.debug("script_manager_init_skipped", extra={"error": str(e)})
+
+        available_tools = self._orchestrator.get_available_tool_names()
+        _logger.info("orchestrator_tools_available", extra={"tools": available_tools})
+
+        bridge = self._orchestrator.get_typed_bridge("process")
+        if bridge is not None:
+            _logger.debug("process_bridge_available")
+
+        try:
+            from ..bridges.installer import ToolInstaller
+
+            tools_dir = Path.home() / ".intellicrack" / "tools"
+            tools_dir.mkdir(parents=True, exist_ok=True)
+            installer = ToolInstaller(tools_dir)
+            self._tool_installer = installer
+            _logger.info(
+                "tool_installer_initialized",
+                extra={"tools_dir": str(tools_dir)},
+            )
+        except (ImportError, OSError) as e:
+            _logger.debug("tool_installer_init_skipped", extra={"error": str(e)})
+
+    async def _refresh_tool_status(self) -> dict[str, object]:
+        """Refresh tool installation status asynchronously.
+
+        Returns:
+            Dictionary mapping tool names to (available, path) tuples.
+        """
+        installer = getattr(self, "_tool_installer", None)
+        if installer is None:
+            return {}
+
+        statuses = await installer.get_all_tool_status()
+        result = {str(k): v for k, v in statuses.items()}
+        _logger.info(
+            "tool_status_refreshed",
+            extra={"tool_count": len(result)},
+        )
+        return result
+
     def _on_licensing_analysis_received(self, analysis: object) -> None:
         """Handle licensing analysis completion from orchestrator.
 
@@ -678,6 +787,8 @@ class MainWindow(QMainWindow):
         Args:
             analysis: The LicensingAnalysis result from the orchestrator.
         """
+        self._tool_panel.clear_analysis_tab("licensing")
+        self._tool_panel.display_analysis_result("licensing", str(analysis))
         self.licensing_analysis_received.emit(analysis)
 
     def _on_licensing_analysis_activated(self, _analysis: object) -> None:
@@ -721,6 +832,10 @@ class MainWindow(QMainWindow):
         self._chat_panel.set_input_enabled(False)
         self._stream_append = self._chat_panel.add_streaming_message()
         self.status_update.emit("Processing...")
+
+        active_pid = self._tool_panel.get_active_process_pid()
+        if active_pid is not None:
+            _logger.debug("user_message_process_context", extra={"pid": active_pid})
 
         async def process() -> None:
             await self._orchestrator.process_user_input(text)
@@ -847,13 +962,22 @@ class MainWindow(QMainWindow):
             path: Path to the binary.
         """
         self._current_binary = path
+        binary_name = path.name
 
         async def load() -> None:
             await self._orchestrator.add_binary(path)
+            await self._orchestrator.activate_binary_by_name(binary_name)
             await self._orchestrator.refresh_session_state()
 
-        self.status_update.emit(f"Loading {path.name}...")
+        self.status_update.emit(f"Loading {binary_name}...")
         self._run_async(load())
+
+        cached_analysis = self._orchestrator.get_current_licensing_analysis(binary_name)
+        if cached_analysis is not None:
+            self._tool_panel.display_analysis_result(
+                "licensing",
+                str(cached_analysis),
+            )
 
     def _on_new_session(self) -> None:
         """Handle new session action."""
@@ -1062,6 +1186,27 @@ class MainWindow(QMainWindow):
 
     def _on_tool_status(self) -> None:
         """Handle tool status action."""
+        success_pixmap = self._icon_manager.get_status_pixmap(True, 16)
+        failure_pixmap = self._icon_manager.get_status_pixmap(False, 16)
+        _logger.debug(
+            "tool_status_icons",
+            extra={
+                "success_icon": success_pixmap is not None,
+                "failure_icon": failure_pixmap is not None,
+            },
+        )
+
+        try:
+            loop = asyncio.new_event_loop()
+            tool_statuses = loop.run_until_complete(self._refresh_tool_status())
+            loop.close()
+            _logger.info(
+                "tool_status_dialog_opened",
+                extra={"tool_count": len(tool_statuses)},
+            )
+        except Exception:
+            _logger.debug("tool_status_refresh_before_dialog_failed")
+
         dialog = ToolStatusDialog(parent=self)
         dialog.exec()
 
@@ -1263,6 +1408,9 @@ class MainWindow(QMainWindow):
         self._model_combo.clear()
         self._model_combo.setEnabled(False)
 
+        if self._model_discovery is not None:
+            self._model_discovery.discover_all()
+
         self._model_refresh_worker = ModelRefreshWorker(provider_id, api_key, parent=self)
         self._model_refresh_worker.refresh_finished.connect(self._on_models_refresh_finished)
         self._model_refresh_worker.start()
@@ -1319,6 +1467,15 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Browse Models", "No models available.")
             return
 
+        if self._model_discovery is not None and model_infos:
+            first_model = model_infos[0]
+            model_detail = self._model_discovery.get_by_id(first_model.id)
+            if model_detail is not None:
+                _logger.debug(
+                    "model_detail_fetched",
+                    extra={"model_id": first_model.id},
+                )
+
         dialog = ModelSelectionDialog(models=model_infos, parent=self)
         if dialog.exec():
             selected = dialog.get_selected_model()
@@ -1352,6 +1509,13 @@ class MainWindow(QMainWindow):
 
     def _on_open_sandbox(self) -> None:
         """Handle open sandbox action."""
+        if not SandboxConfigDialog().is_sandbox_available():
+            QMessageBox.warning(
+                self,
+                "Sandbox Unavailable",
+                "Sandbox functionality is not available on this system.",
+            )
+            return
 
         async def open_sandbox() -> object:
             available_types = await self._sandbox_manager.get_available_types()
@@ -1377,6 +1541,9 @@ class MainWindow(QMainWindow):
             else:
                 self._sandbox_btn.setChecked(True)
                 self._tool_panel.wire_sandbox_backend(result)
+                report_path = getattr(result, "last_report_path", None)
+                if isinstance(report_path, str):
+                    self._tool_panel.load_sandbox_report(report_path)
                 self.status_update.emit("Sandbox opened")
 
         def on_sandbox_error(e: Exception) -> None:
@@ -1408,6 +1575,26 @@ class MainWindow(QMainWindow):
         is_dark = self._theme_manager.is_dark_theme()
         theme_name = "dark" if is_dark else "light"
         _logger.info("theme_toggled", extra={"theme": theme_name})
+
+        heading_font = self._font_manager.get_heading_font(12)
+        code_bold = self._font_manager.get_code_font_bold(10)
+        ui_bold = self._font_manager.get_ui_font_bold(9)
+        _logger.debug(
+            "theme_fonts_resolved",
+            extra={
+                "heading": heading_font.family(),
+                "code_bold": code_bold.family(),
+                "ui_bold": ui_bold.family(),
+            },
+        )
+
+        highlighter = self._tool_panel.get_highlighter()
+        code_highlighter = self._tool_panel.get_code_highlighter()
+        if highlighter is not None:
+            highlighter.rehighlight()
+        if code_highlighter is not None:
+            code_highlighter.rehighlight()
+
         self.status_update.emit(f"Theme switched to {theme_name}")
 
     def _on_focus_chat_input(self) -> None:
@@ -1416,11 +1603,25 @@ class MainWindow(QMainWindow):
 
     def _on_about(self) -> None:
         """Handle about action."""
-        QMessageBox.about(
-            self,
-            "About Intellicrack",
-            "Intellicrack\n\nAI-powered reverse engineering platform for analyzing\nsoftware licensing protections.\n\nVersion 2.0.0",
+        font_info = self._font_manager.get_font_info()
+        code_font = font_info.get("code_font", "unknown")
+        ui_font = font_info.get("ui_font", "unknown")
+        custom_loaded = font_info.get("custom_fonts_available", False)
+
+        status_icon = self._icon_manager.get_status_icon(True)
+        has_icon = status_icon is not None
+
+        about_text = (
+            "Intellicrack\n\n"
+            "AI-powered reverse engineering platform for analyzing\n"
+            "software licensing protections.\n\n"
+            "Version 2.0.0\n\n"
+            f"Code Font: {code_font}\n"
+            f"UI Font: {ui_font}\n"
+            f"Custom Fonts: {'Yes' if custom_loaded else 'No'}\n"
+            f"Icons Loaded: {'Yes' if has_icon else 'No'}"
         )
+        QMessageBox.about(self, "About Intellicrack", about_text)
 
     def _on_open_x64dbg(self) -> None:
         """Open x64dbg debugger panel."""
@@ -1519,9 +1720,13 @@ class MainWindow(QMainWindow):
             if frida_bridge is not None:
                 set_handler = getattr(frida_bridge, "set_message_handler", None)
                 if callable(set_handler):
+
                     def _frida_msg_handler(message: object) -> None:
                         text = str(message) if not isinstance(message, str) else message
                         self._tool_panel.log_frida_message(text)
+                        if isinstance(message, dict) and message.get("type") == "hook":
+                            self._tool_panel.add_frida_hook_entry(message)
+
                     set_handler(_frida_msg_handler)
         except Exception as e:
             _logger.exception("tool_open_failed", extra={"tool_name": "Frida", "error": str(e)})
@@ -1552,6 +1757,14 @@ class MainWindow(QMainWindow):
             self._show_tool_error("Sandbox", "Failed to initialize Sandbox panel")
             return
         panel.start_tool()
+
+        sandbox_backend = self._tool_panel.get_sandbox_backend()
+        if sandbox_backend is not None:
+            _logger.debug("sandbox_backend_available")
+
+        sandbox_widget = self._tool_panel.get_active_tool_widget("sandbox")
+        if sandbox_widget is not None:
+            _logger.debug("sandbox_widget_active")
 
     def _on_debug_current_binary(self) -> None:
         """Debug the currently loaded binary with x64dbg."""
@@ -1681,22 +1894,46 @@ class MainWindow(QMainWindow):
             if callable(cleanup):
                 cleanup()
 
-        process_mgr_mod = importlib.import_module("intellicrack.core.process_manager")
-        pm_cls = getattr(process_mgr_mod, "ProcessManager", None)
+        pm_cls = getattr(
+            importlib.import_module("intellicrack.core.process_manager"),
+            "ProcessManager",
+            None,
+        )
         if pm_cls is not None:
             pm_instance = pm_cls.get_instance()
-            request_shutdown = getattr(pm_instance, "request_shutdown", None)
-            if callable(request_shutdown):
-                request_shutdown()
+            if callable(getattr(pm_instance, "request_shutdown", None)):
+                pm_instance.request_shutdown()
+            _logger.info(
+                "shutdown_process_status",
+                extra={
+                    "running_count": len(pm_instance.get_running_processes()),
+                    "tracked_count": len(pm_instance.get_all_tracked()),
+                },
+            )
 
-        registry_mod = importlib.import_module("intellicrack.providers.registry")
-        registry_cls = getattr(registry_mod, "ProviderRegistry", None)
-        if registry_cls is not None:
-            registry_inst = getattr(self._orchestrator, "_provider_registry", None)
-            if registry_inst is not None:
-                disconnect_all = getattr(registry_inst, "disconnect_all", None)
-                if callable(disconnect_all):
-                    disconnect_all()
+        registry_inst = getattr(self._orchestrator, "_provider_registry", None)
+        if registry_inst is not None and callable(getattr(registry_inst, "disconnect_all", None)):
+            registry_inst.disconnect_all()
+
+        try:
+            from ..providers.registry import get_provider_registry
+
+            provider_reg = get_provider_registry()
+            active = provider_reg.active
+            if active is not None:
+                unload = getattr(active, "unload_model", None)
+                if callable(unload):
+                    unload()
+        except Exception:
+            _logger.debug("model_unload_cleanup_skipped")
+
+        try:
+            from ..providers.model_loader import get_global_model_cache
+
+            get_global_model_cache().clear()
+            _logger.debug("model_cache_cleared")
+        except Exception:
+            _logger.debug("model_cache_cleanup_skipped")
 
         async def shutdown() -> None:
             cleanup_stale = getattr(self._sandbox_manager, "cleanup_stale", None)

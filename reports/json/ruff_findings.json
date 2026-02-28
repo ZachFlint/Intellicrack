@@ -1,7 +1,616 @@
 {
   "tool": "ruff",
-  "generated": "2026-02-27T00:05:42.436769",
-  "total_findings": 0,
-  "total_files": 0,
-  "files": []
+  "generated": "2026-02-28T02:19:57.756942",
+  "total_findings": 80,
+  "total_files": 8,
+  "files": [
+    {
+      "path": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py",
+      "count": 30,
+      "findings": [
+        {
+          "line": 225,
+          "column": 9,
+          "code": "S106",
+          "message": "Possible hardcoded password assigned to argument: \"token_url\"",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:225:9: S106 Possible hardcoded password assigned to argument: \"token_url\""
+        },
+        {
+          "line": 285,
+          "column": 46,
+          "code": "PLR2004",
+          "message": "Magic value used in comparison, consider replacing `200` with a constant variable",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:285:46: PLR2004 Magic value used in comparison, consider replacing `200` with a constant variable"
+        },
+        {
+          "line": 289,
+          "column": 33,
+          "code": "PLR2004",
+          "message": "Magic value used in comparison, consider replacing `200` with a constant variable",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:289:33: PLR2004 Magic value used in comparison, consider replacing `200` with a constant variable"
+        },
+        {
+          "line": 295,
+          "column": 9,
+          "code": "PLR6301",
+          "message": "Method `log_message` could be a function, class method, or static method",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:295:9: PLR6301 Method `log_message` could be a function, class method, or static method"
+        },
+        {
+          "line": 295,
+          "column": 27,
+          "code": "A002",
+          "message": "Function argument `format` is shadowing a Python builtin",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:295:27: A002 Function argument `format` is shadowing a Python builtin"
+        },
+        {
+          "line": 352,
+          "column": 19,
+          "code": "TRY003",
+          "message": "Avoid specifying long messages outside the exception class",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:352:19: TRY003 Avoid specifying long messages outside the exception class"
+        },
+        {
+          "line": 357,
+          "column": 23,
+          "code": "TRY003",
+          "message": "Avoid specifying long messages outside the exception class",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:357:23: TRY003 Avoid specifying long messages outside the exception class"
+        },
+        {
+          "line": 358,
+          "column": 19,
+          "code": "TRY003",
+          "message": "Avoid specifying long messages outside the exception class",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:358:19: TRY003 Avoid specifying long messages outside the exception class"
+        },
+        {
+          "line": 364,
+          "column": 19,
+          "code": "TRY003",
+          "message": "Avoid specifying long messages outside the exception class",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:364:19: TRY003 Avoid specifying long messages outside the exception class"
+        },
+        {
+          "line": 424,
+          "column": 9,
+          "code": "PLR6301",
+          "message": "Method `_generate_state` could be a function, class method, or static method",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:424:9: PLR6301 Method `_generate_state` could be a function, class method, or static method"
+        },
+        {
+          "line": 432,
+          "column": 9,
+          "code": "PLR6301",
+          "message": "Method `_generate_pkce_pair` could be a function, class method, or static method",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:432:9: PLR6301 Method `_generate_pkce_pair` could be a function, class method, or static method"
+        },
+        {
+          "line": 456,
+          "column": 19,
+          "code": "TRY003",
+          "message": "Avoid specifying long messages outside the exception class",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:456:19: TRY003 Avoid specifying long messages outside the exception class"
+        },
+        {
+          "line": 543,
+          "column": 19,
+          "code": "TRY003",
+          "message": "Avoid specifying long messages outside the exception class",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:543:19: TRY003 Avoid specifying long messages outside the exception class"
+        },
+        {
+          "line": 546,
+          "column": 19,
+          "code": "TRY003",
+          "message": "Avoid specifying long messages outside the exception class",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:546:19: TRY003 Avoid specifying long messages outside the exception class"
+        },
+        {
+          "line": 618,
+          "column": 13,
+          "code": "TRY300",
+          "message": "Consider moving this statement to an `else` block",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:618:13: TRY300 Consider moving this statement to an `else` block"
+        },
+        {
+          "line": 622,
+          "column": 19,
+          "code": "TRY003",
+          "message": "Avoid specifying long messages outside the exception class",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:622:19: TRY003 Avoid specifying long messages outside the exception class"
+        },
+        {
+          "line": 624,
+          "column": 19,
+          "code": "TRY003",
+          "message": "Avoid specifying long messages outside the exception class",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:624:19: TRY003 Avoid specifying long messages outside the exception class"
+        },
+        {
+          "line": 642,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:642:13: PLC0415 `import` should be at the top-level of a file"
+        },
+        {
+          "line": 650,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:650:13: PLC0415 `import` should be at the top-level of a file"
+        },
+        {
+          "line": 676,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:676:13: PLC0415 `import` should be at the top-level of a file"
+        },
+        {
+          "line": 687,
+          "column": 13,
+          "code": "TRY300",
+          "message": "Consider moving this statement to an `else` block",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:687:13: TRY300 Consider moving this statement to an `else` block"
+        },
+        {
+          "line": 712,
+          "column": 9,
+          "code": "SIM102",
+          "message": "Use a single `if` statement instead of nested `if` statements",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:712:9: SIM102 Use a single `if` statement instead of nested `if` statements"
+        },
+        {
+          "line": 740,
+          "column": 19,
+          "code": "TRY003",
+          "message": "Avoid specifying long messages outside the exception class",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:740:19: TRY003 Avoid specifying long messages outside the exception class"
+        },
+        {
+          "line": 777,
+          "column": 13,
+          "code": "TRY300",
+          "message": "Consider moving this statement to an `else` block",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:777:13: TRY300 Consider moving this statement to an `else` block"
+        },
+        {
+          "line": 780,
+          "column": 19,
+          "code": "TRY003",
+          "message": "Avoid specifying long messages outside the exception class",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:780:19: TRY003 Avoid specifying long messages outside the exception class"
+        },
+        {
+          "line": 782,
+          "column": 19,
+          "code": "TRY003",
+          "message": "Avoid specifying long messages outside the exception class",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:782:19: TRY003 Avoid specifying long messages outside the exception class"
+        },
+        {
+          "line": 810,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:810:13: PLC0415 `import` should be at the top-level of a file"
+        },
+        {
+          "line": 816,
+          "column": 17,
+          "code": "TRY400",
+          "message": "Use `logging.exception` instead of `logging.error`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:816:17: TRY400 Use `logging.exception` instead of `logging.error`"
+        },
+        {
+          "line": 890,
+          "column": 12,
+          "code": "PLW0603",
+          "message": "Using the global statement to update `_oauth_manager` is discouraged",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:890:12: PLW0603 Using the global statement to update `_oauth_manager` is discouraged"
+        },
+        {
+          "line": 892,
+          "column": 9,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\oauth.py:892:9: PLC0415 `import` should be at the top-level of a file"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\src\\intellicrack\\credentials\\store.py",
+      "count": 16,
+      "findings": [
+        {
+          "line": 16,
+          "column": 19,
+          "code": "TC003",
+          "message": "Move standard library import `types.ModuleType` into a type-checking block",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\store.py:16:19: TC003 Move standard library import `types.ModuleType` into a type-checking block"
+        },
+        {
+          "line": 115,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\store.py:115:13: PLC0415 `import` should be at the top-level of a file"
+        },
+        {
+          "line": 129,
+          "column": 13,
+          "code": "TRY300",
+          "message": "Consider moving this statement to an `else` block",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\store.py:129:13: TRY300 Consider moving this statement to an `else` block"
+        },
+        {
+          "line": 158,
+          "column": 9,
+          "code": "PLR6301",
+          "message": "Method `_serialize_credentials` could be a function, class method, or static method",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\store.py:158:9: PLR6301 Method `_serialize_credentials` could be a function, class method, or static method"
+        },
+        {
+          "line": 170,
+          "column": 9,
+          "code": "PLR6301",
+          "message": "Method `_deserialize_credentials` could be a function, class method, or static method",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\store.py:170:9: PLR6301 Method `_deserialize_credentials` could be a function, class method, or static method"
+        },
+        {
+          "line": 191,
+          "column": 19,
+          "code": "TRY003",
+          "message": "Avoid specifying long messages outside the exception class",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\store.py:191:19: TRY003 Avoid specifying long messages outside the exception class"
+        },
+        {
+          "line": 193,
+          "column": 9,
+          "code": "PLR6301",
+          "message": "Method `_serialize_metadata` could be a function, class method, or static method",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\store.py:193:9: PLR6301 Method `_serialize_metadata` could be a function, class method, or static method"
+        },
+        {
+          "line": 211,
+          "column": 9,
+          "code": "PLR6301",
+          "message": "Method `_deserialize_metadata` could be a function, class method, or static method",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\store.py:211:9: PLR6301 Method `_deserialize_metadata` could be a function, class method, or static method"
+        },
+        {
+          "line": 287,
+          "column": 19,
+          "code": "TRY003",
+          "message": "Avoid specifying long messages outside the exception class",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\store.py:287:19: TRY003 Avoid specifying long messages outside the exception class"
+        },
+        {
+          "line": 314,
+          "column": 19,
+          "code": "TRY003",
+          "message": "Avoid specifying long messages outside the exception class",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\store.py:314:19: TRY003 Avoid specifying long messages outside the exception class"
+        },
+        {
+          "line": 376,
+          "column": 19,
+          "code": "TRY003",
+          "message": "Avoid specifying long messages outside the exception class",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\store.py:376:19: TRY003 Avoid specifying long messages outside the exception class"
+        },
+        {
+          "line": 398,
+          "column": 19,
+          "code": "TRY003",
+          "message": "Avoid specifying long messages outside the exception class",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\store.py:398:19: TRY003 Avoid specifying long messages outside the exception class"
+        },
+        {
+          "line": 419,
+          "column": 19,
+          "code": "TRY003",
+          "message": "Avoid specifying long messages outside the exception class",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\store.py:419:19: TRY003 Avoid specifying long messages outside the exception class"
+        },
+        {
+          "line": 490,
+          "column": 19,
+          "code": "TRY003",
+          "message": "Avoid specifying long messages outside the exception class",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\store.py:490:19: TRY003 Avoid specifying long messages outside the exception class"
+        },
+        {
+          "line": 544,
+          "column": 9,
+          "code": "SIM102",
+          "message": "Use a single `if` statement instead of nested `if` statements",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\store.py:544:9: SIM102 Use a single `if` statement instead of nested `if` statements"
+        },
+        {
+          "line": 586,
+          "column": 12,
+          "code": "PLW0603",
+          "message": "Using the global statement to update `_credential_store` is discouraged",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\store.py:586:12: PLW0603 Using the global statement to update `_credential_store` is discouraged"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py",
+      "count": 11,
+      "findings": [
+        {
+          "line": 729,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:729:13: PLC0415 `import` should be at the top-level of a file"
+        },
+        {
+          "line": 730,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:730:13: PLC0415 `import` should be at the top-level of a file"
+        },
+        {
+          "line": 1100,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1100:13: PLC0415 `import` should be at the top-level of a file"
+        },
+        {
+          "line": 1123,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1123:13: PLC0415 `import` should be at the top-level of a file"
+        },
+        {
+          "line": 1135,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1135:13: PLC0415 `import` should be at the top-level of a file"
+        },
+        {
+          "line": 1183,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1183:13: PLC0415 `import` should be at the top-level of a file"
+        },
+        {
+          "line": 1205,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1205:13: PLC0415 `import` should be at the top-level of a file"
+        },
+        {
+          "line": 1910,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1910:13: PLC0415 `import` should be at the top-level of a file"
+        },
+        {
+          "line": 1926,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1926:13: PLC0415 `import` should be at the top-level of a file"
+        },
+        {
+          "line": 1946,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1946:13: PLC0415 `import` should be at the top-level of a file"
+        },
+        {
+          "line": 1960,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1960:13: PLC0415 `import` should be at the top-level of a file"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tests\\test_ui\\test_theme_manager.py",
+      "count": 8,
+      "findings": [
+        {
+          "line": 119,
+          "column": 68,
+          "code": "ARG004",
+          "message": "Unused static method argument: `qapp`",
+          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_theme_manager.py:119:68: ARG004 Unused static method argument: `qapp`"
+        },
+        {
+          "line": 125,
+          "column": 69,
+          "code": "ARG004",
+          "message": "Unused static method argument: `qapp`",
+          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_theme_manager.py:125:69: ARG004 Unused static method argument: `qapp`"
+        },
+        {
+          "line": 131,
+          "column": 70,
+          "code": "ARG004",
+          "message": "Unused static method argument: `qapp`",
+          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_theme_manager.py:131:70: ARG004 Unused static method argument: `qapp`"
+        },
+        {
+          "line": 137,
+          "column": 77,
+          "code": "ARG004",
+          "message": "Unused static method argument: `qapp`",
+          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_theme_manager.py:137:77: ARG004 Unused static method argument: `qapp`"
+        },
+        {
+          "line": 146,
+          "column": 76,
+          "code": "ARG004",
+          "message": "Unused static method argument: `qapp`",
+          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_theme_manager.py:146:76: ARG004 Unused static method argument: `qapp`"
+        },
+        {
+          "line": 161,
+          "column": 69,
+          "code": "ARG004",
+          "message": "Unused static method argument: `qapp`",
+          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_theme_manager.py:161:69: ARG004 Unused static method argument: `qapp`"
+        },
+        {
+          "line": 171,
+          "column": 69,
+          "code": "ARG004",
+          "message": "Unused static method argument: `qapp`",
+          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_theme_manager.py:171:69: ARG004 Unused static method argument: `qapp`"
+        },
+        {
+          "line": 179,
+          "column": 69,
+          "code": "ARG004",
+          "message": "Unused static method argument: `qapp`",
+          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_theme_manager.py:179:69: ARG004 Unused static method argument: `qapp`"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\src\\intellicrack\\ui\\app.py",
+      "count": 6,
+      "findings": [
+        {
+          "line": 243,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\app.py:243:13: PLC0415 `import` should be at the top-level of a file"
+        },
+        {
+          "line": 681,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\app.py:681:13: PLC0415 `import` should be at the top-level of a file"
+        },
+        {
+          "line": 732,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\app.py:732:13: PLC0415 `import` should be at the top-level of a file"
+        },
+        {
+          "line": 749,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\app.py:749:13: PLC0415 `import` should be at the top-level of a file"
+        },
+        {
+          "line": 1919,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\app.py:1919:13: PLC0415 `import` should be at the top-level of a file"
+        },
+        {
+          "line": 1931,
+          "column": 13,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\ui\\app.py:1931:13: PLC0415 `import` should be at the top-level of a file"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tests\\test_ui\\test_font_manager.py",
+      "count": 5,
+      "findings": [
+        {
+          "line": 63,
+          "column": 47,
+          "code": "ARG004",
+          "message": "Unused static method argument: `qapp`",
+          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_font_manager.py:63:47: ARG004 Unused static method argument: `qapp`"
+        },
+        {
+          "line": 72,
+          "column": 46,
+          "code": "ARG004",
+          "message": "Unused static method argument: `qapp`",
+          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_font_manager.py:72:46: ARG004 Unused static method argument: `qapp`"
+        },
+        {
+          "line": 228,
+          "column": 42,
+          "code": "ARG004",
+          "message": "Unused static method argument: `font_manager`",
+          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_font_manager.py:228:42: ARG004 Unused static method argument: `font_manager`"
+        },
+        {
+          "line": 236,
+          "column": 40,
+          "code": "ARG004",
+          "message": "Unused static method argument: `font_manager`",
+          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_font_manager.py:236:40: ARG004 Unused static method argument: `font_manager`"
+        },
+        {
+          "line": 263,
+          "column": 48,
+          "code": "ARG004",
+          "message": "Unused static method argument: `qapp`",
+          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_font_manager.py:263:48: ARG004 Unused static method argument: `qapp`"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\src\\intellicrack\\credentials\\env_loader.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 97,
+          "column": 9,
+          "code": "PLR6301",
+          "message": "Method `_find_env_file` could be a function, class method, or static method",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\env_loader.py:97:9: PLR6301 Method `_find_env_file` could be a function, class method, or static method"
+        },
+        {
+          "line": 283,
+          "column": 9,
+          "code": "PLR6301",
+          "message": "Method `_validate_key_format` could be a function, class method, or static method",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\env_loader.py:283:9: PLR6301 Method `_validate_key_format` could be a function, class method, or static method"
+        },
+        {
+          "line": 462,
+          "column": 12,
+          "code": "PLW0603",
+          "message": "Using the global statement to update `_credential_loader` is discouraged",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\credentials\\env_loader.py:462:12: PLW0603 Using the global statement to update `_credential_loader` is discouraged"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\src\\intellicrack\\core\\orchestrator.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 903,
+          "column": 9,
+          "code": "PLC0415",
+          "message": "`import` should be at the top-level of a file",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\orchestrator.py:903:9: PLC0415 `import` should be at the top-level of a file"
+        }
+      ]
+    }
+  ]
 }

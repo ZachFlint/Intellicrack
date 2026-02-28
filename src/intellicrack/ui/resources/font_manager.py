@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, ClassVar, Final, cast
 from PyQt6.QtGui import QFont, QFontDatabase
 
 from ...core.logging import get_logger
-from .resource_helper import get_assets_path
+from .resource_helper import get_assets_path, get_font_path, resource_exists
 
 
 if TYPE_CHECKING:
@@ -92,11 +92,12 @@ class FontManager:
         self._load_font_config()
 
         try:
-            fonts_dir = get_assets_path() / "fonts"
-            if not fonts_dir.exists():
-                _logger.warning("fonts_directory_not_found", extra={"path": str(fonts_dir)})
+            if not resource_exists("fonts"):
+                _logger.warning("fonts_directory_not_found")
                 self._setup_fallback_fonts()
                 return False
+
+            fonts_dir = get_assets_path() / "fonts"
 
             font_files = list(fonts_dir.glob("*.ttf")) + list(fonts_dir.glob("*.otf"))
 
@@ -121,7 +122,7 @@ class FontManager:
     def _load_font_config(self) -> None:
         """Load font configuration from font_config.json."""
         try:
-            config_path = get_assets_path() / "fonts" / "font_config.json"
+            config_path = get_font_path("font_config.json")
             if config_path.exists():
                 with open(config_path, encoding="utf-8") as f:
                     self._font_config = cast("dict[str, object]", json.load(f))
@@ -171,10 +172,15 @@ class FontManager:
     def _setup_fallback_fonts(self) -> None:
         """Set up fallback fonts when custom fonts are not available."""
         self._code_font_family = FontManager._find_available_font(FALLBACK_CODE_FONTS)
-        self._ui_font_family = FontManager._find_available_font(FALLBACK_UI_FONTS)
+        ui_font = FontManager._find_available_font(FALLBACK_UI_FONTS)
+        self._ui_font_family = ui_font if ui_font != "sans-serif" else DEFAULT_UI_FONT
         _logger.warning(
             "using_fallback_fonts",
-            extra={"code_font": self._code_font_family, "ui_font": self._ui_font_family},
+            extra={
+                "code_font": self._code_font_family,
+                "ui_font": self._ui_font_family,
+                "default_ui_font": DEFAULT_UI_FONT,
+            },
         )
 
     @staticmethod

@@ -1,6 +1,6 @@
 {
   "tool": "psscriptanalyzer",
-  "generated": "2026-02-27T00:10:58.705753",
+  "generated": "2026-02-28T02:25:15.091401",
   "total_findings": 225,
   "total_files": 24,
   "files": [
@@ -1393,14 +1393,6 @@
           "raw": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-agent-lldb\\data\\support\\lldbsetuputils.ps1:110:10: [Warning] The cmdlet 'Compute-Lldb-PipInstall-Args' uses an unapproved verb. (PSUseApprovedVerbs)"
         },
         {
-          "line": 64,
-          "column": 13,
-          "severity": "Warning",
-          "rule": "PSReviewUnusedParameter",
-          "message": "The parameter 'ArgList' has been declared but not used.",
-          "raw": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-agent-lldb\\data\\support\\lldbsetuputils.ps1:64:13: [Warning] The parameter 'ArgList' has been declared but not used. (PSReviewUnusedParameter)"
-        },
-        {
           "line": 18,
           "column": 10,
           "severity": "Warning",
@@ -1455,6 +1447,14 @@
           "rule": "PSUseSingularNouns",
           "message": "The cmdlet 'Compute-Lldb-PipInstall-Args' uses a plural noun. A singular noun should be used instead.",
           "raw": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-agent-lldb\\data\\support\\lldbsetuputils.ps1:110:10: [Warning] The cmdlet 'Compute-Lldb-PipInstall-Args' uses a plural noun. A singular noun should be used instead. (PSUseSingularNouns)"
+        },
+        {
+          "line": 64,
+          "column": 13,
+          "severity": "Warning",
+          "rule": "PSReviewUnusedParameter",
+          "message": "The parameter 'ArgList' has been declared but not used.",
+          "raw": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-agent-lldb\\data\\support\\lldbsetuputils.ps1:64:13: [Warning] The parameter 'ArgList' has been declared but not used. (PSReviewUnusedParameter)"
         }
       ]
     },

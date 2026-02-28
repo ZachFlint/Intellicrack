@@ -16,7 +16,7 @@ src/intellicrack/core\_subprocess.py:14: [Low] B404:blacklist: Consider possible
 
 1 findings in src/intellicrack/core\script_gen.py
 
-src/intellicrack/core\script_gen.py:401: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
+src/intellicrack/core\script_gen.py:394: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
 
 
 1 findings in src/intellicrack/credentials\oauth.py

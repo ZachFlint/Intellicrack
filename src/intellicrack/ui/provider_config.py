@@ -718,8 +718,42 @@ class ProviderConfigDialog(QDialog):
         self._update_status_timer.timeout.connect(self._refresh_provider_status)
         self._update_status_timer.start(30000)
 
+        self._load_credential_overview()
+
         self.setWindowTitle("Provider Settings")
         self.resize(800, 550)
+
+    def _load_credential_overview(self) -> None:
+        """Load credential overview from env_loader and credential store."""
+        try:
+            from ..credentials.env_loader import get_credential_loader
+            from ..credentials.store import CredentialStore
+
+            loader = get_credential_loader()
+            configured = loader.list_configured_providers()
+            missing = loader.list_missing_providers()
+            self._credential_overview: dict[str, object] = {
+                "configured": configured,
+                "missing": missing,
+            }
+            _logger.info(
+                "credential_overview",
+                extra={
+                    "configured_count": len(configured),
+                    "missing_count": len(missing),
+                },
+            )
+
+            store = CredentialStore()
+            store_providers = store.list_providers()
+            for provider in store_providers:
+                source = store.get_source(provider)
+                _logger.debug(
+                    "credential_source",
+                    extra={"provider": provider, "source": source},
+                )
+        except Exception:
+            _logger.debug("credential_overview_load_skipped")
 
     def _setup_ui(self) -> None:
         """Set up the dialog UI layout."""
@@ -755,6 +789,42 @@ class ProviderConfigDialog(QDialog):
         action_layout.addWidget(self._refresh_status_btn)
 
         left_layout.addLayout(action_layout)
+
+        cred_layout = QHBoxLayout()
+        self._refresh_creds_btn = QPushButton("Reload Keys")
+        self._refresh_creds_btn.setToolTip("Reload credentials from .env files and credential store")
+        self._refresh_creds_btn.clicked.connect(self.refresh_credentials)
+        cred_layout.addWidget(self._refresh_creds_btn)
+
+        self._migrate_creds_btn = QPushButton("Migrate")
+        self._migrate_creds_btn.setToolTip("Migrate credentials from .env to secure store")
+        self._migrate_creds_btn.clicked.connect(self.migrate_credentials)
+        cred_layout.addWidget(self._migrate_creds_btn)
+        left_layout.addLayout(cred_layout)
+
+        advanced_layout = QHBoxLayout()
+        self._create_env_btn = QPushButton("Create .env")
+        self._create_env_btn.setToolTip("Create .env template for credential configuration")
+        self._create_env_btn.clicked.connect(self.create_env_template)
+        advanced_layout.addWidget(self._create_env_btn)
+
+        self._discover_models_btn = QPushButton("Discover")
+        self._discover_models_btn.setToolTip("Discover models for selected provider")
+        self._discover_models_btn.clicked.connect(self._on_discover_selected_provider)
+        advanced_layout.addWidget(self._discover_models_btn)
+        left_layout.addLayout(advanced_layout)
+
+        oauth_layout = QHBoxLayout()
+        self._oauth_btn = QPushButton("OAuth Login")
+        self._oauth_btn.setToolTip("Start OAuth flow for selected provider")
+        self._oauth_btn.clicked.connect(self._on_start_oauth)
+        oauth_layout.addWidget(self._oauth_btn)
+
+        self._revoke_btn = QPushButton("Revoke Token")
+        self._revoke_btn.setToolTip("Revoke OAuth token for selected provider")
+        self._revoke_btn.clicked.connect(self._on_revoke_oauth)
+        oauth_layout.addWidget(self._revoke_btn)
+        left_layout.addLayout(oauth_layout)
 
         self._settings_stack = QStackedWidget()
 
@@ -942,11 +1012,14 @@ class ProviderConfigDialog(QDialog):
     def _refresh_provider_status(self) -> None:
         """Refresh the connection status for all providers."""
         active_name = self._get_active_provider_name()
+        overview = getattr(self, "_credential_overview", {})
+        configured_providers: list[str] = list(overview.get("configured", []))
 
         for provider_id, item in self._provider_items.items():
             is_active = provider_id == active_name
             is_connected = self._is_provider_connected(provider_id)
             model_count = self._get_model_count(provider_id)
+            has_credential = provider_id in configured_providers
 
             display_names = {
                 "anthropic": "Anthropic",
@@ -958,7 +1031,7 @@ class ProviderConfigDialog(QDialog):
             }
             display_name = display_names.get(provider_id, provider_id.title())
 
-            self._update_provider_item_display(item, display_name, is_active, is_connected, model_count)
+            self._update_provider_item_display(item, display_name, is_active, is_connected or has_credential, model_count)
 
     def _on_widget_connection_tested(self, success: bool, _message: str) -> None:
         """Handle connection test completion from a widget.
@@ -1004,6 +1077,139 @@ class ProviderConfigDialog(QDialog):
         """
         settings: dict[str, dict[str, Any]] = {provider_id: widget.get_settings() for provider_id, widget in self._provider_widgets.items()}
         return settings
+
+    def _on_discover_selected_provider(self) -> None:
+        """Discover models for the currently selected provider."""
+        if self._current_provider is not None:
+            self.discover_single_provider(self._current_provider)
+            self._refresh_provider_status()
+
+    def _on_start_oauth(self) -> None:
+        """Start OAuth flow for the currently selected provider."""
+        if self._current_provider is not None:
+            self.start_oauth_flow(self._current_provider)
+
+    def _on_revoke_oauth(self) -> None:
+        """Revoke OAuth token for the currently selected provider."""
+        if self._current_provider is not None:
+            self.revoke_oauth_token(self._current_provider)
+
+    def refresh_credentials(self) -> None:
+        """Reload credentials from env files and credential store."""
+        try:
+            from ..credentials.env_loader import get_credential_loader
+
+            loader = get_credential_loader()
+            loader.reload()
+
+            configured = loader.list_configured_providers()
+            missing = loader.list_missing_providers()
+
+            for name in configured:
+                env_var = loader.get_env_var(name)
+                if env_var is not None:
+                    _logger.debug("credential_refreshed", extra={"provider": name})
+            _logger.info(
+                "credentials_reloaded",
+                extra={"configured": len(configured), "missing": len(missing)},
+            )
+        except Exception:
+            _logger.debug("credential_refresh_failed")
+        self._load_credential_overview()
+
+    def create_env_template(self) -> None:
+        """Create a .env template file for credential configuration."""
+        try:
+            from ..credentials.env_loader import get_credential_loader
+
+            loader = get_credential_loader()
+            loader.create_env_template()
+            _logger.info("env_template_created")
+        except Exception:
+            _logger.debug("env_template_creation_failed")
+        self._load_credential_overview()
+
+    def migrate_credentials(self) -> None:
+        """Migrate credentials from env files to credential store."""
+        try:
+            from ..credentials.store import CredentialStore
+
+            store = CredentialStore()
+            store.migrate_from_env()
+            _logger.info("credentials_migrated_from_env")
+        except Exception:
+            _logger.debug("credential_migration_failed")
+        self._load_credential_overview()
+
+    def discover_single_provider(self, provider_name: str) -> None:
+        """Discover models for a specific provider.
+
+        Args:
+            provider_name: Name of the provider to discover models for.
+        """
+        if self._discovery is not None:
+            try:
+                pname = ProviderName(provider_name)
+            except ValueError:
+                return
+
+            async def _discover() -> None:
+                await self._discovery.discover_provider(pname)
+
+            try:
+                loop = asyncio.new_event_loop()
+                loop.run_until_complete(_discover())
+                loop.close()
+            except Exception as exc:
+                _logger.debug(
+                    "provider_discovery_failed",
+                    extra={"provider": provider_name, "error": str(exc)},
+                )
+
+            discovery = self._discovery
+            events = discovery.get_discovery_events() if discovery is not None else []
+            _logger.debug(
+                "provider_discovery_events",
+                extra={"provider": provider_name, "event_count": len(events)},
+            )
+
+    def start_oauth_flow(self, provider_id: str) -> None:
+        """Start an OAuth authorization flow for a provider.
+
+        Args:
+            provider_id: The provider to authorize.
+        """
+        try:
+            from ..credentials.oauth import OAuthFlowType, OAuthManager
+
+            manager = OAuthManager()
+            if provider_id == "google":
+                manager.authorize_google()
+            creds = manager.to_provider_credentials()
+            if creds is not None:
+                _logger.info("oauth_credentials_obtained", extra={"provider": provider_id})
+
+            flow_types = list(OAuthFlowType)
+            _logger.debug("oauth_flow_types_available", extra={"count": len(flow_types)})
+        except Exception:
+            _logger.debug("oauth_flow_failed", extra={"provider": provider_id})
+        self._load_credential_overview()
+
+    def revoke_oauth_token(self, provider_id: str) -> None:
+        """Revoke an OAuth token for a provider.
+
+        Args:
+            provider_id: The provider whose token to revoke.
+        """
+        try:
+            from ..credentials.oauth import OAuthManager
+
+            manager = OAuthManager()
+            manager.revoke_token()
+            _logger.info("oauth_token_revoked", extra={"provider": provider_id})
+        except Exception:
+            _logger.debug("oauth_revoke_failed", extra={"provider": provider_id})
+        self._load_credential_overview()
 
 
 class ProviderSettingsWidget(QFrame):
@@ -1161,7 +1367,105 @@ class ProviderSettingsWidget(QFrame):
         test_layout.addStretch()
 
         layout.addLayout(test_layout)
+
+        self._setup_provider_specific_ui(layout)
+
         layout.addStretch()
+
+    def _setup_provider_specific_ui(self, layout: QVBoxLayout) -> None:
+        """Add provider-specific UI elements.
+
+        Args:
+            layout: Parent layout to add widgets to.
+        """
+        if self._provider_id == "ollama":
+            pull_group = QGroupBox("Model Download")
+            pull_form = QFormLayout()
+            self._pull_model_input = QLineEdit()
+            self._pull_model_input.setToolTip("Enter model name, e.g. llama3.3:latest")
+            pull_btn = QPushButton("Pull Model")
+            pull_btn.setToolTip("Download an Ollama model")
+            pull_btn.clicked.connect(self._on_pull_model)
+            pull_row = QHBoxLayout()
+            pull_row.addWidget(self._pull_model_input)
+            pull_row.addWidget(pull_btn)
+            pull_form.addRow("Model:", pull_row)
+            pull_group.setLayout(pull_form)
+            layout.addWidget(pull_group)
+
+        if self._provider_id == "local_transformers":
+            device_btn = QPushButton("Show Device Info")
+            device_btn.setToolTip("Show available compute device information")
+            device_btn.clicked.connect(self._on_show_device_info)
+            layout.addWidget(device_btn)
+
+            xpu_btn = QPushButton("Detect XPU Dtype")
+            xpu_btn.setToolTip("Auto-detect optimal dtype for XPU inference")
+            xpu_btn.clicked.connect(self._on_detect_xpu_dtype)
+            layout.addWidget(xpu_btn)
+
+        if self._provider_id == "openrouter":
+            gen_group = QGroupBox("Cost Tracking")
+            gen_form = QFormLayout()
+            self._generation_id_input = QLineEdit()
+            self._generation_id_input.setToolTip("Enter generation ID for cost lookup")
+            gen_btn = QPushButton("Lookup Cost")
+            gen_btn.setToolTip("Look up generation cost by ID")
+            gen_btn.clicked.connect(self._on_lookup_generation)
+            gen_row = QHBoxLayout()
+            gen_row.addWidget(self._generation_id_input)
+            gen_row.addWidget(gen_btn)
+            gen_form.addRow("Generation ID:", gen_row)
+            gen_group.setLayout(gen_form)
+            layout.addWidget(gen_group)
+
+    def _on_pull_model(self) -> None:
+        """Handle pull model button click for Ollama."""
+        model_input = getattr(self, "_pull_model_input", None)
+        if model_input is None:
+            return
+        model_name = model_input.text().strip()
+        if model_name:
+            self.pull_ollama_model(model_name)
+
+    def _on_show_device_info(self) -> None:
+        """Handle show device info button click."""
+        info = self.get_provider_device_info()
+        if info is not None:
+            _logger.info("device_info_displayed", extra={"keys": list(info.keys())})
+            QMessageBox.information(self, "Device Info", "\n".join(f"{k}: {v}" for k, v in info.items()))
+
+    def _on_detect_xpu_dtype(self) -> None:
+        """Handle XPU dtype detection button click."""
+        dtype = self.get_xpu_optimal_dtype()
+        cached = getattr(self, "_xpu_dtype", None)
+        display_dtype = cached if cached is not None else dtype
+        if display_dtype is not None:
+            QMessageBox.information(self, "XPU Dtype", f"Optimal dtype: {display_dtype}")
+
+    def _on_lookup_generation(self) -> None:
+        """Handle generation cost lookup button click."""
+        gen_input = getattr(self, "_generation_id_input", None)
+        if gen_input is None:
+            return
+        gen_id = gen_input.text().strip()
+        if not gen_id:
+            return
+        result = self.get_openrouter_generation(gen_id)
+        if result is not None:
+            _logger.info("generation_lookup", extra={"id": gen_id})
+            cost_lines = [f"{k}: {v}" for k, v in result.items()]
+            QMessageBox.information(
+                self,
+                "Generation Cost",
+                f"Generation: {gen_id}\n\n" + "\n".join(cost_lines),
+            )
+        else:
+            QMessageBox.warning(
+                self,
+                "Lookup Failed",
+                f"No data found for generation ID: {gen_id}",
+            )
 
     def _get_display_name(self) -> str:
         """Get the display name for the provider.
@@ -1593,6 +1897,74 @@ class ProviderSettingsWidget(QFrame):
                 "Save Warning",
                 f"Settings saved but failed to update .env file: {e}",
             )
+
+    def get_provider_device_info(self) -> dict[str, object] | None:
+        """Get device info for local transformer providers.
+
+        Returns:
+            Device information dict or None if not applicable.
+        """
+        if self._provider_id != "local_transformers":
+            return None
+        try:
+            from ..providers.local_transformers import LocalTransformersProvider
+
+            provider = LocalTransformersProvider()
+            return provider.get_device_info()
+        except Exception:
+            return None
+
+    def pull_ollama_model(self, model_name: str) -> None:
+        """Pull an Ollama model.
+
+        Args:
+            model_name: Name of the model to pull.
+        """
+        if self._provider_id != "ollama":
+            return
+        try:
+            from ..providers.ollama import OllamaProvider
+
+            provider = OllamaProvider()
+            provider.pull_model(model_name)
+            _logger.info("ollama_model_pulled", extra={"model": model_name})
+        except Exception:
+            _logger.debug("ollama_pull_failed", extra={"model": model_name})
+
+    def get_openrouter_generation(self, generation_id: str) -> dict[str, object] | None:
+        """Get OpenRouter generation info for cost tracking.
+
+        Args:
+            generation_id: The generation ID to look up.
+
+        Returns:
+            Generation info dict or None.
+        """
+        if self._provider_id != "openrouter":
+            return None
+        try:
+            from ..providers.openrouter import OpenRouterProvider
+
+            provider = OpenRouterProvider()
+            return provider.get_generation(generation_id)
+        except Exception:
+            return None
+
+    def get_xpu_optimal_dtype(self) -> str | None:
+        """Get optimal dtype for XPU inference.
+
+        Returns:
+            Optimal dtype string or None.
+        """
+        try:
+            from ..providers.xpu_utils import get_optimal_dtype_for_xpu
+
+            dtype = get_optimal_dtype_for_xpu()
+        except Exception:
+            return None
+        else:
+            self._xpu_dtype: str | None = dtype
+            return dtype
 
 
 class ModelSelectionDialog(QDialog):

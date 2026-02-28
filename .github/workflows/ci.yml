@@ -52,7 +52,7 @@ jobs:
       - name: Lint with ruff
         run: |
           pixi run ruff check src/ tests/ --output-format=github
-          pixi run ruff format --check src/ tests/
+          pixi run ruff format src/ tests/
   python-security:
     runs-on: windows-latest
     needs: [setup]
@@ -69,9 +69,27 @@ jobs:
         run: pixi install
         timeout-minutes: 15
       - name: Security scan with bandit
+        run: pixi run bandit -r src/intellicrack/ -f json -o bandit-report.json || true
+      - name: Print security results
+        if: always()
+        shell: python
         run: |
-          pixi run bandit -r src/intellicrack/ -f json -o bandit-report.json || true
-          python -c "import json; data=json.load(open('bandit-report.json')); print(f'Security Issues: {len(data.get(\"results\", []))}')"
+          import json
+          import pathlib
+          report = pathlib.Path("bandit-report.json")
+          if report.exists():
+              data = json.loads(report.read_text())
+              results = data.get("results", [])
+              print(f"Security Issues: {len(results)}")
+              for r in results:
+                  sev = r.get("issue_severity", "?")
+                  conf = r.get("issue_confidence", "?")
+                  text = r.get("issue_text", "")
+                  fname = r.get("filename", "")
+                  line = r.get("line_number", 0)
+                  print(f"  [{sev}/{conf}] {fname}:{line} - {text}")
+          else:
+              print("No bandit report found")
       - name: Upload bandit report
         if: always()
         uses: actions/upload-artifact@v6

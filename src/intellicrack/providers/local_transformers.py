@@ -1002,6 +1002,9 @@ class LocalTransformersProvider(LLMProviderBase):
         """Unload the currently loaded model to free memory."""
         if self._loaded_model is not None:
             model_id = self._loaded_model.model_id
+            dtype = self._loaded_model.dtype
+            device_type = self._device_type
+            self._model_cache.remove(model_id, dtype, device_type)
             self._loaded_model = None
 
             if self._device_type == "xpu":

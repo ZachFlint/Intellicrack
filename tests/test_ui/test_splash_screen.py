@@ -224,13 +224,13 @@ class TestShowLoadingStep:
     @staticmethod
     def test_show_loading_step_updates_progress(splash_screen: SplashScreen) -> None:
         """show_loading_step updates progress value."""
-        splash_screen.show_loading_step("Loading tools...", _PROGRESS_30)
+        splash_screen.set_progress(_PROGRESS_30, "Loading tools...")
         assert splash_screen.progress == _PROGRESS_30
 
     @staticmethod
     def test_show_loading_step_updates_status(splash_screen: SplashScreen) -> None:
         """show_loading_step updates status message."""
-        splash_screen.show_loading_step("Loading tools...", _PROGRESS_30)
+        splash_screen.set_progress(_PROGRESS_30, "Loading tools...")
         assert splash_screen.status == "Loading tools..."
 
 
@@ -411,7 +411,7 @@ class TestSplashScreenIntegration:
             splash = SplashScreen()
             splash.show()
             splash.set_progress(_PROGRESS_50, "Testing...")
-            splash.show_loading_step("Step 1", _PROGRESS_60)
+            splash.set_progress(_PROGRESS_60, "Step 1")
             _ = splash.progress
             _ = splash.status
             splash.close()

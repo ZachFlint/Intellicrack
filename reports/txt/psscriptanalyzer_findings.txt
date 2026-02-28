@@ -352,8 +352,6 @@ D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbs
 
 D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1:110:10: [Warning] The cmdlet 'Compute-Lldb-PipInstall-Args' uses an unapproved verb. (PSUseApprovedVerbs)
 
-D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1:64:13: [Warning] The parameter 'ArgList' has been declared but not used. (PSReviewUnusedParameter)
-
 D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1:18:10: [Warning] The cmdlet 'Add-Lldb-Init-Args' uses a plural noun. A singular noun should be used instead. (PSUseSingularNouns)
 
 D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1:29:10: [Warning] The cmdlet 'Add-Lldb-Image-And-Args' uses a plural noun. A singular noun should be used instead. (PSUseSingularNouns)
@@ -367,6 +365,8 @@ D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbs
 D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1:96:10: [Warning] The cmdlet 'Compute-Lldb-Remote-Args' uses a plural noun. A singular noun should be used instead. (PSUseSingularNouns)
 
 D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1:110:10: [Warning] The cmdlet 'Compute-Lldb-PipInstall-Args' uses a plural noun. A singular noun should be used instead. (PSUseSingularNouns)
+
+D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1:64:13: [Warning] The parameter 'ArgList' has been declared but not used. (PSReviewUnusedParameter)
 
 
 9 findings in D:\Intellicrack\scripts\test_semgrep.ps1

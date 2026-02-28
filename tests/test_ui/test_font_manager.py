@@ -60,7 +60,7 @@ class TestFontManagerSingleton:
     """Tests for singleton pattern implementation."""
 
     @staticmethod
-    def test_get_instance_returns_same_object(_qapp: QApplication) -> None:
+    def test_get_instance_returns_same_object(qapp: QApplication) -> None:
         """Singleton returns the same instance."""
         FontManager.reset_instance()
         instance1 = FontManager.get_instance()
@@ -69,7 +69,7 @@ class TestFontManagerSingleton:
         FontManager.reset_instance()
 
     @staticmethod
-    def test_reset_instance_clears_singleton(_qapp: QApplication) -> None:
+    def test_reset_instance_clears_singleton(qapp: QApplication) -> None:
         """Reset clears the singleton instance."""
         FontManager.reset_instance()
         instance1 = FontManager.get_instance()
@@ -225,7 +225,7 @@ class TestFontFamilyProperties:
     """Tests for font family properties."""
 
     @staticmethod
-    def test_code_font_family_auto_loads(_font_manager: FontManager) -> None:
+    def test_code_font_family_auto_loads(font_manager: FontManager) -> None:
         """Accessing code_font_family triggers font loading."""
         FontManager.reset_instance()
         manager = FontManager.get_instance()
@@ -233,7 +233,7 @@ class TestFontFamilyProperties:
         assert manager._fonts_loaded
 
     @staticmethod
-    def test_ui_font_family_auto_loads(_font_manager: FontManager) -> None:
+    def test_ui_font_family_auto_loads(font_manager: FontManager) -> None:
         """Accessing ui_font_family triggers font loading."""
         FontManager.reset_instance()
         manager = FontManager.get_instance()
@@ -260,7 +260,7 @@ class TestCustomFontStatus:
         assert font_manager.is_custom_font_loaded()
 
     @staticmethod
-    def test_is_custom_font_loaded_before_load(_qapp: QApplication) -> None:
+    def test_is_custom_font_loaded_before_load(qapp: QApplication) -> None:
         """is_custom_font_loaded returns False before loading."""
         FontManager.reset_instance()
         manager = FontManager()

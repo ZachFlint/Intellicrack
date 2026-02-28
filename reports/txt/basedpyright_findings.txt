@@ -127,59 +127,130 @@ d:\Intellicrack\src\intellicrack\bridges\radare2.py:1331:12: [error] Type of "_r
   Type of "_r2" is "Unknown | None"
 
 
-23 findings in d:\Intellicrack\src\intellicrack\ui\tools.py
+22 findings in d:\Intellicrack\src\intellicrack\ui\app.py
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1621:13: [error] Type of "add_hook_entry" is unknown
+d:\Intellicrack\src\intellicrack\ui\app.py:683:13: [error] Type of "usage" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1621:31: [error] Cannot access attribute "add_hook_entry" for class "FridaPanelProtocol"
-  Attribute "add_hook_entry" is unknown
+d:\Intellicrack\src\intellicrack\ui\app.py:683:21: [error] Argument missing for parameter "self"
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1630:20: [error] Type of "get_sandbox" is unknown
+d:\Intellicrack\src\intellicrack\ui\app.py:684:13: [error] Type of "total_bytes" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1630:20: [error] Return type is unknown
+d:\Intellicrack\src\intellicrack\ui\app.py:684:27: [error] Type of "get" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1630:40: [error] Cannot access attribute "get_sandbox" for class "SandboxPanelProtocol"
-  Attribute "get_sandbox" is unknown
+d:\Intellicrack\src\intellicrack\ui\app.py:698:13: [error] Type of "last_event" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1640:13: [error] Type of "load_execution_report" is unknown
+d:\Intellicrack\src\intellicrack\ui\app.py:698:26: [error] Argument missing for parameter "provider"
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1640:33: [error] Cannot access attribute "load_execution_report" for class "SandboxPanelProtocol"
-  Attribute "load_execution_report" is unknown
+d:\Intellicrack\src\intellicrack\ui\app.py:700:17: [error] Type of "provider" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1652:17: [error] Type of "selected_id" is unknown
+d:\Intellicrack\src\intellicrack\ui\app.py:700:28: [error] Type of "get" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1652:31: [error] Type of "get_selected_id" is unknown
+d:\Intellicrack\src\intellicrack\ui\app.py:701:17: [error] Type of "status" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1652:50: [error] Cannot access attribute "get_selected_id" for class "QWidget"
-  Attribute "get_selected_id" is unknown
+d:\Intellicrack\src\intellicrack\ui\app.py:701:26: [error] Type of "get" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1654:17: [error] Type of "current_script" is unknown
+d:\Intellicrack\src\intellicrack\ui\app.py:1194:33: [error] Condition will always evaluate to True since the types "QPixmap" and "None" have no overlap
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1654:34: [error] Type of "get_current_script" is unknown
+d:\Intellicrack\src\intellicrack\ui\app.py:1195:33: [error] Condition will always evaluate to True since the types "QPixmap" and "None" have no overlap
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1654:53: [error] Cannot access attribute "get_current_script" for class "QWidget"
-  Attribute "get_current_script" is unknown
+d:\Intellicrack\src\intellicrack\ui\app.py:1412:13: [error] Result of async function call is not used; use "await" or assign result to variable
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1655:16: [error] Return type, "tuple[Unknown | str | None, Unknown | str | None]", is partially unknown
+d:\Intellicrack\src\intellicrack\ui\app.py:1472:13: [error] Type of "model_detail" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1663:16: [error] Type of "get_highlighter" is unknown
+d:\Intellicrack\src\intellicrack\ui\app.py:1472:28: [error] Argument missing for parameter "model_id"
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1663:16: [error] Return type is unknown
+d:\Intellicrack\src\intellicrack\ui\app.py:1591:9: [error] Type of "highlighter" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1663:21: [error] Cannot access attribute "get_highlighter" for class "ToolOutputPanel*"
+d:\Intellicrack\src\intellicrack\ui\app.py:1591:23: [error] Type of "get_highlighter" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\app.py:1591:40: [error] Cannot access attribute "get_highlighter" for class "ToolOutputPanel"
   Attribute "get_highlighter" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1674:13: [error] Type of "set_x64dbg_bridge" is unknown
+d:\Intellicrack\src\intellicrack\ui\app.py:1594:13: [error] Type of "rehighlight" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1674:31: [error] Cannot access attribute "set_x64dbg_bridge" for class "QWidget"
-  Attribute "set_x64dbg_bridge" is unknown
+d:\Intellicrack\src\intellicrack\ui\app.py:1612:20: [error] Condition will always evaluate to True since the types "QIcon" and "None" have no overlap
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1676:13: [error] Type of "set_frida_bridge" is unknown
+d:\Intellicrack\src\intellicrack\ui\app.py:1727:58: [error] Type of "get" is partially unknown
+  Type of "get" is "Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]"
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1676:31: [error] Cannot access attribute "set_frida_bridge" for class "QWidget"
-  Attribute "set_frida_bridge" is unknown
+d:\Intellicrack\src\intellicrack\ui\app.py:1728:67: [error] Argument type is partially unknown
+  Argument corresponds to parameter "hook_info" in function "add_frida_hook_entry"
+  Argument type is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1694:13: [error] Type of "set_backend" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\tools.py:1694:32: [error] Cannot access attribute "set_backend" for class "QWidget"
-  Attribute "set_backend" is unknown
+16 findings in d:\Intellicrack\src\intellicrack\ui\provider_config.py
+
+d:\Intellicrack\src\intellicrack\ui\provider_config.py:749:17: [error] Type of "provider" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\provider_config.py:749:29: [error] "CoroutineType[Any, Any, list[StoredCredential]]" is not iterable
+  "__iter__" method not defined
+
+d:\Intellicrack\src\intellicrack\ui\provider_config.py:750:43: [error] Argument type is unknown
+  Argument corresponds to parameter "provider" in function "get_source"
+
+d:\Intellicrack\src\intellicrack\ui\provider_config.py:753:27: [error] Argument type is partially unknown
+  Argument corresponds to parameter "extra" in function "debug"
+  Argument type is "dict[str, Unknown | CoroutineType[Any, Any, CredentialSource | None]]"
+
+d:\Intellicrack\src\intellicrack\ui\provider_config.py:1109:46: [error] Argument of type "ProviderName" cannot be assigned to parameter "name" of type "str" in function "get_env_var"
+  "ProviderName" is not assignable to "str"
+
+d:\Intellicrack\src\intellicrack\ui\provider_config.py:1126:13: [error] Type of "create_env_template" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\provider_config.py:1126:20: [error] Cannot access attribute "create_env_template" for class "CredentialLoader"
+  Attribute "create_env_template" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\provider_config.py:1138:13: [error] Result of async function call is not used; use "await" or assign result to variable
+
+d:\Intellicrack\src\intellicrack\ui\provider_config.py:1157:39: [error] "discover_provider" is not a known attribute of "None"
+
+d:\Intellicrack\src\intellicrack\ui\provider_config.py:1170:58: [error] Condition will always evaluate to True since the types "ModelDiscovery" and "None" have no overlap
+
+d:\Intellicrack\src\intellicrack\ui\provider_config.py:1187:17: [error] Type of "authorize_google" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\provider_config.py:1187:25: [error] Cannot access attribute "authorize_google" for class "OAuthManager"
+  Attribute "authorize_google" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\provider_config.py:1188:13: [error] Type of "creds" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\provider_config.py:1188:21: [error] Argument missing for parameter "provider"
+
+d:\Intellicrack\src\intellicrack\ui\provider_config.py:1208:13: [error] Argument missing for parameter "provider"
+
+d:\Intellicrack\src\intellicrack\ui\provider_config.py:1949:20: [error] Type "CoroutineType[Any, Any, dict[str, object]]" is not assignable to return type "dict[str, object] | None"
+  Type "CoroutineType[Any, Any, dict[str, object]]" is not assignable to type "dict[str, object] | None"
+    "CoroutineType[Any, Any, dict[str, object]]" is not assignable to "dict[str, object]"
+    "CoroutineType[Any, Any, dict[str, object]]" is not assignable to "None"
+
+
+7 findings in d:\Intellicrack\src\intellicrack\bridges\sandbox_bridge.py
+
+d:\Intellicrack\src\intellicrack\bridges\sandbox_bridge.py:844:13: [error] Type of "snapshots" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\sandbox_bridge.py:844:31: [error] Type of "list_snapshots" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\sandbox_bridge.py:844:48: [error] Cannot access attribute "list_snapshots" for class "SandboxBase"
+  Attribute "list_snapshots" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\sandbox_bridge.py:847:65: [error] Argument type is unknown
+  Argument corresponds to parameter "obj" in function "len"
+
+d:\Intellicrack\src\intellicrack\bridges\sandbox_bridge.py:857:30: [error] Argument type is unknown
+  Argument corresponds to parameter "obj" in function "len"
+
+d:\Intellicrack\src\intellicrack\bridges\sandbox_bridge.py:888:19: [error] Type of "delete_snapshot" is unknown
+
+d:\Intellicrack\src\intellicrack\bridges\sandbox_bridge.py:888:36: [error] Cannot access attribute "delete_snapshot" for class "SandboxBase"
+  Attribute "delete_snapshot" is unknown
+
+
+3 findings in d:\Intellicrack\src\intellicrack\core\orchestrator.py
+
+d:\Intellicrack\src\intellicrack\core\orchestrator.py:915:27: [error] Argument type is partially unknown
+  Argument corresponds to parameter "extra" in function "warning"
+  Argument type is "dict[str, Unknown | str]"
+
+d:\Intellicrack\src\intellicrack\core\orchestrator.py:916:33: [error] Type of "name" is unknown
+
+d:\Intellicrack\src\intellicrack\core\orchestrator.py:916:38: [error] Cannot access attribute "name" for class "ToolDefinition"
+  Attribute "name" is unknown

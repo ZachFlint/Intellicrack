@@ -22,6 +22,30 @@ jobs:
         uses: JetBrains/qodana-action@v2025.3
         with:
           pr-mode: false
+          save-report: true
+          artifact-name: qodana-report
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN_2146858828 }}
           QODANA_ENDPOINT: 'https://qodana.cloud'
+      - name: Print Qodana findings summary
+        if: always()
+        shell: python
+        run: |
+          import json
+          import pathlib
+          sarif_path = pathlib.Path("/home/runner/work/_temp/qodana/results/qodana.sarif.json")
+          if not sarif_path.exists():
+              print("No SARIF report found")
+              raise SystemExit(0)
+          data = json.loads(sarif_path.read_text())
+          total = 0
+          by_rule = {}
+          for run in data.get("runs", []):
+              for result in run.get("results", []):
+                  total += 1
+                  rule = result.get("ruleId", "unknown")
+                  by_rule[rule] = by_rule.get(rule, 0) + 1
+          print(f"Qodana Total Findings: {total}")
+          print("-" * 60)
+          for rule, count in sorted(by_rule.items(), key=lambda x: -x[1]):
+              print(f"  {count:5d}  {rule}")

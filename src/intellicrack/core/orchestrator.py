@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 
     from ..providers.base import LLMProvider
     from ..providers.registry import ProviderRegistry
+    from .script_gen import ScriptManager
     from .session import Session, SessionManager
     from .tools import ToolRegistry
     from .types import BinaryInfo, LicensingAnalysis, ToolCall, ToolDefinition
@@ -181,6 +182,8 @@ class Orchestrator:
         self._pending_confirmation: PendingConfirmation | None = None
         self._cancel_event = asyncio.Event()
 
+        self._script_manager: ScriptManager | None = None
+
         self._on_message: Callable[[Message], None] | None = None
         self._on_tool_call: Callable[[ToolCall], None] | None = None
         self._on_tool_result: Callable[[ToolResult], None] | None = None
@@ -224,6 +227,14 @@ class Orchestrator:
             The provider registry instance.
         """
         return self._providers
+
+    def set_script_manager(self, manager: ScriptManager) -> None:
+        """Set the script manager for recording tool execution results.
+
+        Args:
+            manager: The ScriptManager instance.
+        """
+        self._script_manager = manager
 
     async def start_session(
         self,
@@ -387,6 +398,7 @@ class Orchestrator:
             raise RuntimeError(error_message)
 
         tool_definitions = self._tools.get_tool_definitions()
+        self._validate_tool_schemas(tool_definitions, provider)
         iteration = 0
 
         while iteration < self._config.max_iterations:
@@ -841,6 +853,13 @@ class Orchestrator:
                 },
             )
 
+            if self._script_manager is not None:
+                self._script_manager.record_execution(
+                    script_name=call.function_name,
+                    tool_name=call.tool_name,
+                    result=result,
+                )
+
             return ToolResult(
                 call_id=call.id,
                 success=True,
@@ -865,6 +884,61 @@ class Orchestrator:
                 error=str(e),
                 duration_ms=elapsed_ms,
             )
+
+    @staticmethod
+    def _validate_tool_schemas(
+        tools: list[ToolDefinition],
+        provider: LLMProvider,
+    ) -> None:
+        """Validate tool definitions against the provider's schema format.
+
+        Logs warnings for any validation errors found. Uses
+        ``validate_and_convert`` and ``get_all_schemas_for_provider``
+        from the schemas module for provider-specific validation.
+
+        Args:
+            tools: Tool definitions to validate.
+            provider: The LLM provider to validate against.
+        """
+        from ..bridges.schemas import (
+            build_schema_parameters,
+            get_all_schemas_for_provider,
+            validate_and_convert,
+        )
+
+        provider_name = provider.name
+        for tool in tools:
+            _schemas, errors = validate_and_convert(tool, provider_name)
+            for err in errors:
+                _logger.warning(
+                    "tool_schema_validation_error",
+                    extra={
+                        "tool": tool.name,
+                        "error": str(err),
+                        "provider": provider_name.value,
+                    },
+                )
+            for func in tool.functions:
+                param_schema = build_schema_parameters(
+                    func.parameters,
+                    uppercase_types=(provider_name == ProviderName.GOOGLE),
+                )
+                _logger.debug(
+                    "tool_function_params_built",
+                    extra={
+                        "function": func.name,
+                        "param_count": len(func.parameters),
+                        "schema_keys": list(param_schema.keys()),
+                    },
+                )
+        all_schemas = get_all_schemas_for_provider(tools, provider_name)
+        _logger.debug(
+            "tool_schemas_prepared",
+            extra={
+                "provider": provider_name.value,
+                "schema_count": len(all_schemas),
+            },
+        )
 
     async def _should_confirm(self, call: ToolCall) -> bool:
         """Check if tool call requires user confirmation.

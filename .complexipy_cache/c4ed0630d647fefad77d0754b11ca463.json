@@ -991,21 +991,27 @@
       "path": "src\\intellicrack\\bridges\\installer.py"
     },
     {
+      "complexity": 12,
+      "file_name": "installer.py",
+      "function_name": "ToolInstaller::_get_ghidra_version",
+      "path": "src\\intellicrack\\bridges\\installer.py"
+    },
+    {
       "complexity": 14,
       "file_name": "installer.py",
       "function_name": "ToolInstaller::verify_tool",
       "path": "src\\intellicrack\\bridges\\installer.py"
     },
     {
-      "complexity": 15,
+      "complexity": 16,
       "file_name": "installer.py",
-      "function_name": "ToolInstaller::get_version",
+      "function_name": "ToolInstaller::_download_file",
       "path": "src\\intellicrack\\bridges\\installer.py"
     },
     {
       "complexity": 16,
       "file_name": "installer.py",
-      "function_name": "ToolInstaller::_download_file",
+      "function_name": "ToolInstaller::get_version",
       "path": "src\\intellicrack\\bridges\\installer.py"
     },
     {
@@ -1599,6 +1605,18 @@
     {
       "complexity": 3,
       "file_name": "sandbox_bridge.py",
+      "function_name": "SandboxBridge::snapshot_delete",
+      "path": "src\\intellicrack\\bridges\\sandbox_bridge.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "sandbox_bridge.py",
+      "function_name": "SandboxBridge::snapshot_list",
+      "path": "src\\intellicrack\\bridges\\sandbox_bridge.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "sandbox_bridge.py",
       "function_name": "SandboxBridge::snapshot_restore",
       "path": "src\\intellicrack\\bridges\\sandbox_bridge.py"
     },
@@ -1606,6 +1624,18 @@
       "complexity": 4,
       "file_name": "sandbox_bridge.py",
       "function_name": "SandboxBridge::run_binary",
+      "path": "src\\intellicrack\\bridges\\sandbox_bridge.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "sandbox_bridge.py",
+      "function_name": "SandboxBridge::cont",
+      "path": "src\\intellicrack\\bridges\\sandbox_bridge.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "sandbox_bridge.py",
+      "function_name": "SandboxBridge::get_pending_messages",
       "path": "src\\intellicrack\\bridges\\sandbox_bridge.py"
     },
     {
@@ -1857,6 +1887,12 @@
     {
       "complexity": 0,
       "file_name": "x64dbg.py",
+      "function_name": "X64DbgBridge::stop",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::tool_definition",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
@@ -1876,6 +1912,18 @@
       "complexity": 0,
       "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::x64dbg_path",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "x64dbg.py",
+      "function_name": "get_capstone",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "x64dbg.py",
+      "function_name": "get_keystone",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
@@ -1948,12 +1996,6 @@
       "complexity": 2,
       "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::spawn",
-      "path": "src\\intellicrack\\bridges\\x64dbg.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "x64dbg.py",
-      "function_name": "X64DbgBridge::stop",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
@@ -2769,6 +2811,12 @@
     {
       "complexity": 0,
       "file_name": "orchestrator.py",
+      "function_name": "Orchestrator::set_script_manager",
+      "path": "src\\intellicrack\\core\\orchestrator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "orchestrator.py",
       "function_name": "Orchestrator::set_stream_callback",
       "path": "src\\intellicrack\\core\\orchestrator.py"
     },
@@ -2818,12 +2866,6 @@
       "complexity": 1,
       "file_name": "orchestrator.py",
       "function_name": "Orchestrator::_build_messages",
-      "path": "src\\intellicrack\\core\\orchestrator.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "orchestrator.py",
-      "function_name": "Orchestrator::_execute_single_tool_call",
       "path": "src\\intellicrack\\core\\orchestrator.py"
     },
     {
@@ -2913,6 +2955,12 @@
     {
       "complexity": 3,
       "file_name": "orchestrator.py",
+      "function_name": "Orchestrator::_execute_single_tool_call",
+      "path": "src\\intellicrack\\core\\orchestrator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "orchestrator.py",
       "function_name": "Orchestrator::set_active_binary",
       "path": "src\\intellicrack\\core\\orchestrator.py"
     },
@@ -2938,6 +2986,12 @@
       "complexity": 5,
       "file_name": "orchestrator.py",
       "function_name": "Orchestrator::_should_use_streaming",
+      "path": "src\\intellicrack\\core\\orchestrator.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "orchestrator.py",
+      "function_name": "Orchestrator::_validate_tool_schemas",
       "path": "src\\intellicrack\\core\\orchestrator.py"
     },
     {
@@ -3237,12 +3291,6 @@
     {
       "complexity": 0,
       "file_name": "script_gen.py",
-      "function_name": "ScriptGenerator::generate_keygen_from_analysis",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
       "function_name": "ScriptGenerator::prepare_ai_prompt",
       "path": "src\\intellicrack\\core\\script_gen.py"
     },
@@ -3256,198 +3304,6 @@
       "complexity": 0,
       "file_name": "script_gen.py",
       "function_name": "ScriptManager::get_script",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_CRC32KeygenBuilder::_algorithm_label",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_CRC32KeygenBuilder::_generate_imports",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_CRC32KeygenBuilder::_generate_keygen_body",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_CustomHashKeygenBuilder::_algorithm_label",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_CustomHashKeygenBuilder::_generate_imports",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_FallbackKeygenBuilder::_algorithm_label",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_FallbackKeygenBuilder::_generate_imports",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_FallbackKeygenBuilder::_generate_keygen_body",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_FeatureFlagKeygenBuilder::_algorithm_label",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_FeatureFlagKeygenBuilder::_generate_imports",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_FeatureFlagKeygenBuilder::_generate_keygen_body",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_HWIDKeygenBuilder::_algorithm_label",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_HWIDKeygenBuilder::_generate_imports",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_HWIDKeygenBuilder::_generate_keygen_body",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_KeygenBuilder::_algorithm_label",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_KeygenBuilder::_generate_imports",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_KeygenBuilder::_generate_keygen_body",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_MD5KeygenBuilder::_algorithm_label",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_MD5KeygenBuilder::_generate_imports",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_MD5KeygenBuilder::_generate_keygen_body",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_RSAKeygenBuilder::_algorithm_label",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_RSAKeygenBuilder::_generate_imports",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_RSAKeygenBuilder::_generate_keygen_body",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_SHA1KeygenBuilder::_algorithm_label",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_SHA1KeygenBuilder::_generate_imports",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_SHA1KeygenBuilder::_generate_keygen_body",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_TimeBasedKeygenBuilder::_algorithm_label",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_TimeBasedKeygenBuilder::_generate_imports",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_TimeBasedKeygenBuilder::_generate_keygen_body",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_XORKeygenBuilder::_algorithm_label",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_XORKeygenBuilder::_generate_imports",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "script_gen.py",
-      "function_name": "_XORKeygenBuilder::_generate_keygen_body",
       "path": "src\\intellicrack\\core\\script_gen.py"
     },
     {
@@ -3519,6 +3375,12 @@
     {
       "complexity": 1,
       "file_name": "script_gen.py",
+      "function_name": "ScriptManager::record_execution",
+      "path": "src\\intellicrack\\core\\script_gen.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "script_gen.py",
       "function_name": "ScriptValidator::validate",
       "path": "src\\intellicrack\\core\\script_gen.py"
     },
@@ -3526,36 +3388,6 @@
       "complexity": 1,
       "file_name": "script_gen.py",
       "function_name": "ScriptValidator::validate_python",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "script_gen.py",
-      "function_name": "_CustomHashKeygenBuilder::_generate_keygen_body",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "script_gen.py",
-      "function_name": "_KeygenBuilder::_generate_format_helpers",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "script_gen.py",
-      "function_name": "_KeygenBuilder::build",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "script_gen.py",
-      "function_name": "_checksum_call_str",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "script_gen.py",
-      "function_name": "_fmt_call_str",
       "path": "src\\intellicrack\\core\\script_gen.py"
     },
     {
@@ -3589,12 +3421,6 @@
       "path": "src\\intellicrack\\core\\script_gen.py"
     },
     {
-      "complexity": 4,
-      "file_name": "script_gen.py",
-      "function_name": "_RSAKeygenBuilder::_generate_constants",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
       "complexity": 6,
       "file_name": "script_gen.py",
       "function_name": "ScriptContext::_format_target_functions",
@@ -3610,12 +3436,6 @@
       "complexity": 6,
       "file_name": "script_gen.py",
       "function_name": "ScriptValidator::validate_javascript",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 7,
-      "file_name": "script_gen.py",
-      "function_name": "_KeygenBuilder::_generate_constants",
       "path": "src\\intellicrack\\core\\script_gen.py"
     },
     {
@@ -3991,15 +3811,15 @@
       "path": "src\\intellicrack\\core\\tools.py"
     },
     {
-      "complexity": 8,
-      "file_name": "tools.py",
-      "function_name": "ToolRegistry::execute_tool_call",
-      "path": "src\\intellicrack\\core\\tools.py"
-    },
-    {
       "complexity": 9,
       "file_name": "tools.py",
       "function_name": "ToolRegistry::get_status",
+      "path": "src\\intellicrack\\core\\tools.py"
+    },
+    {
+      "complexity": 14,
+      "file_name": "tools.py",
+      "function_name": "ToolRegistry::execute_tool_call",
       "path": "src\\intellicrack\\core\\tools.py"
     },
     {
@@ -4166,6 +3986,402 @@
     },
     {
       "complexity": 0,
+      "file_name": "env_loader.py",
+      "function_name": "CredentialLoader::reload",
+      "path": "src\\intellicrack\\credentials\\env_loader.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "env_loader.py",
+      "function_name": "CredentialLoader::set_env_var",
+      "path": "src\\intellicrack\\credentials\\env_loader.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "env_loader.py",
+      "function_name": "create_env_template",
+      "path": "src\\intellicrack\\credentials\\env_loader.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "env_loader.py",
+      "function_name": "CredentialLoader::__init__",
+      "path": "src\\intellicrack\\credentials\\env_loader.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "env_loader.py",
+      "function_name": "CredentialLoader::_get_var",
+      "path": "src\\intellicrack\\credentials\\env_loader.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "env_loader.py",
+      "function_name": "CredentialLoader::get_env_var",
+      "path": "src\\intellicrack\\credentials\\env_loader.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "env_loader.py",
+      "function_name": "get_credential_loader",
+      "path": "src\\intellicrack\\credentials\\env_loader.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "env_loader.py",
+      "function_name": "CredentialLoader::_find_env_file",
+      "path": "src\\intellicrack\\credentials\\env_loader.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "env_loader.py",
+      "function_name": "CredentialLoader::list_configured_providers",
+      "path": "src\\intellicrack\\credentials\\env_loader.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "env_loader.py",
+      "function_name": "CredentialLoader::list_missing_providers",
+      "path": "src\\intellicrack\\credentials\\env_loader.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "env_loader.py",
+      "function_name": "CredentialLoader::validate_credentials",
+      "path": "src\\intellicrack\\credentials\\env_loader.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "env_loader.py",
+      "function_name": "CredentialLoader::get_credentials",
+      "path": "src\\intellicrack\\credentials\\env_loader.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "env_loader.py",
+      "function_name": "CredentialLoader::_validate_key_format",
+      "path": "src\\intellicrack\\credentials\\env_loader.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "env_loader.py",
+      "function_name": "CredentialLoader::_load_env_file",
+      "path": "src\\intellicrack\\credentials\\env_loader.py"
+    },
+    {
+      "complexity": 13,
+      "file_name": "env_loader.py",
+      "function_name": "CredentialLoader::save_to_env_file",
+      "path": "src\\intellicrack\\credentials\\env_loader.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "oauth.py",
+      "function_name": "OAuthCallbackHandler::log_message",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "oauth.py",
+      "function_name": "OAuthCallbackServer::__init__",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "oauth.py",
+      "function_name": "OAuthManager::__init__",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "oauth.py",
+      "function_name": "OAuthManager::_generate_pkce_pair",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "oauth.py",
+      "function_name": "OAuthManager::_generate_state",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "oauth.py",
+      "function_name": "OAuthState::is_expired",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "oauth.py",
+      "function_name": "authorize_google",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "oauth.py",
+      "function_name": "OAuthManager::_get_http_client",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "oauth.py",
+      "function_name": "OAuthManager::close",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "oauth.py",
+      "function_name": "OAuthManager::run_authorization_flow",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "oauth.py",
+      "function_name": "OAuthManager::start_authorization_flow",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "oauth.py",
+      "function_name": "OAuthManager::to_provider_credentials",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "oauth.py",
+      "function_name": "OAuthToken::from_dict",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "oauth.py",
+      "function_name": "OAuthToken::is_expired",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "oauth.py",
+      "function_name": "OAuthToken::needs_refresh",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "oauth.py",
+      "function_name": "OAuthToken::to_dict",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "oauth.py",
+      "function_name": "get_oauth_manager",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "oauth.py",
+      "function_name": "OAuthCallbackHandler::_send_response",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "oauth.py",
+      "function_name": "OAuthCallbackServer::start",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "oauth.py",
+      "function_name": "OAuthCallbackServer::stop",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "oauth.py",
+      "function_name": "OAuthManager::handle_callback",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "oauth.py",
+      "function_name": "OAuthManager::_store_token",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "oauth.py",
+      "function_name": "OAuthManager::build_authorization_url",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "oauth.py",
+      "function_name": "OAuthCallbackHandler::do_GET",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "oauth.py",
+      "function_name": "OAuthManager::_load_token",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "oauth.py",
+      "function_name": "OAuthManager::_exchange_code_for_token",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "oauth.py",
+      "function_name": "OAuthManager::revoke_token",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "oauth.py",
+      "function_name": "OAuthCallbackServer::wait_for_callback",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "oauth.py",
+      "function_name": "OAuthManager::get_token",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "oauth.py",
+      "function_name": "OAuthManager::refresh_token",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "store.py",
+      "function_name": "CredentialStore::_get_keyring_key",
+      "path": "src\\intellicrack\\credentials\\store.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "store.py",
+      "function_name": "CredentialStore::_serialize_credentials",
+      "path": "src\\intellicrack\\credentials\\store.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "store.py",
+      "function_name": "CredentialStore::_serialize_metadata",
+      "path": "src\\intellicrack\\credentials\\store.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "store.py",
+      "function_name": "CredentialStore::keyring_available",
+      "path": "src\\intellicrack\\credentials\\store.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "store.py",
+      "function_name": "get_credentials",
+      "path": "src\\intellicrack\\credentials\\store.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "store.py",
+      "function_name": "CredentialStore::__init__",
+      "path": "src\\intellicrack\\credentials\\store.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "store.py",
+      "function_name": "CredentialStore::_deserialize_credentials",
+      "path": "src\\intellicrack\\credentials\\store.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "store.py",
+      "function_name": "CredentialStore::_deserialize_metadata",
+      "path": "src\\intellicrack\\credentials\\store.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "store.py",
+      "function_name": "CredentialStore::get_or_raise",
+      "path": "src\\intellicrack\\credentials\\store.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "store.py",
+      "function_name": "CredentialStore::set",
+      "path": "src\\intellicrack\\credentials\\store.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "store.py",
+      "function_name": "get_credential_store",
+      "path": "src\\intellicrack\\credentials\\store.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "store.py",
+      "function_name": "CredentialStore::_set_to_keyring",
+      "path": "src\\intellicrack\\credentials\\store.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "store.py",
+      "function_name": "CredentialStore::_check_keyring",
+      "path": "src\\intellicrack\\credentials\\store.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "store.py",
+      "function_name": "CredentialStore::_get_from_keyring",
+      "path": "src\\intellicrack\\credentials\\store.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "store.py",
+      "function_name": "CredentialStore::_get_metadata",
+      "path": "src\\intellicrack\\credentials\\store.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "store.py",
+      "function_name": "CredentialStore::delete",
+      "path": "src\\intellicrack\\credentials\\store.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "store.py",
+      "function_name": "CredentialStore::get",
+      "path": "src\\intellicrack\\credentials\\store.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "store.py",
+      "function_name": "CredentialStore::list_providers",
+      "path": "src\\intellicrack\\credentials\\store.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "store.py",
+      "function_name": "CredentialStore::validate",
+      "path": "src\\intellicrack\\credentials\\store.py"
+    },
+    {
+      "complexity": 12,
+      "file_name": "store.py",
+      "function_name": "CredentialStore::get_source",
+      "path": "src\\intellicrack\\credentials\\store.py"
+    },
+    {
+      "complexity": 17,
+      "file_name": "store.py",
+      "function_name": "CredentialStore::migrate_from_env",
+      "path": "src\\intellicrack\\credentials\\store.py"
+    },
+    {
+      "complexity": 0,
       "file_name": "main.py",
       "function_name": "_import_config_class",
       "path": "src\\intellicrack\\main.py"
@@ -4239,11 +4455,17 @@
     {
       "complexity": 0,
       "file_name": "main.py",
-      "function_name": "_initialize_providers_sync",
+      "function_name": "_init_script_engine",
       "path": "src\\intellicrack\\main.py"
     },
     {
       "complexity": 0,
+      "file_name": "main.py",
+      "function_name": "_initialize_providers_sync",
+      "path": "src\\intellicrack\\main.py"
+    },
+    {
+      "complexity": 1,
       "file_name": "main.py",
       "function_name": "_run_application",
       "path": "src\\intellicrack\\main.py"
@@ -4258,6 +4480,12 @@
       "complexity": 3,
       "file_name": "main.py",
       "function_name": "_apply_cli_overrides",
+      "path": "src\\intellicrack\\main.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "main.py",
+      "function_name": "_init_model_discovery",
       "path": "src\\intellicrack\\main.py"
     },
     {
@@ -4324,6 +4552,12 @@
       "complexity": 1,
       "file_name": "anthropic.py",
       "function_name": "AnthropicProvider::_format_tool_message",
+      "path": "src\\intellicrack\\providers\\anthropic.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "anthropic.py",
+      "function_name": "AnthropicProvider::_get_known_models_fallback",
       "path": "src\\intellicrack\\providers\\anthropic.py"
     },
     {
@@ -4666,6 +4900,12 @@
       "complexity": 1,
       "file_name": "google.py",
       "function_name": "GoogleProvider::_extract_system_instruction",
+      "path": "src\\intellicrack\\providers\\google.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "google.py",
+      "function_name": "GoogleProvider::_get_known_models_fallback",
       "path": "src\\intellicrack\\providers\\google.py"
     },
     {
@@ -5695,15 +5935,15 @@
       "path": "src\\intellicrack\\providers\\xpu_utils.py"
     },
     {
-      "complexity": 7,
-      "file_name": "xpu_utils.py",
-      "function_name": "_check_rebar_status",
-      "path": "src\\intellicrack\\providers\\xpu_utils.py"
-    },
-    {
       "complexity": 9,
       "file_name": "xpu_utils.py",
       "function_name": "_get_device_name_from_sycl",
+      "path": "src\\intellicrack\\providers\\xpu_utils.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "xpu_utils.py",
+      "function_name": "_check_rebar_status",
       "path": "src\\intellicrack\\providers\\xpu_utils.py"
     },
     {
@@ -6315,37 +6555,13 @@
     {
       "complexity": 0,
       "file_name": "app.py",
-      "function_name": "MainWindow::__init__",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "app.py",
       "function_name": "MainWindow::_apply_sandbox_settings",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
       "complexity": 0,
       "file_name": "app.py",
-      "function_name": "MainWindow::_configure_orchestrator",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "app.py",
       "function_name": "MainWindow::_connect_signals",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "app.py",
-      "function_name": "MainWindow::_load_binary",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "app.py",
-      "function_name": "MainWindow::_on_about",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -6435,25 +6651,7 @@
     {
       "complexity": 0,
       "file_name": "app.py",
-      "function_name": "MainWindow::_on_tool_status",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "app.py",
-      "function_name": "MainWindow::_on_user_message",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "app.py",
       "function_name": "MainWindow::_on_view_licensing",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "app.py",
-      "function_name": "MainWindow::_on_view_scripts",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -6505,9 +6703,33 @@
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
+      "complexity": 0,
+      "file_name": "app.py",
+      "function_name": "MainWindow::set_model_discovery",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "app.py",
+      "function_name": "MainWindow::wire_script_manager",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "app.py",
+      "function_name": "MainWindow::__init__",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
       "complexity": 1,
       "file_name": "app.py",
       "function_name": "MainWindow::_add_menu_action",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_load_binary",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -6549,12 +6771,6 @@
     {
       "complexity": 1,
       "file_name": "app.py",
-      "function_name": "MainWindow::_on_open_sandbox_panel",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "app.py",
       "function_name": "MainWindow::_on_provider_changed",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -6567,7 +6783,19 @@
     {
       "complexity": 1,
       "file_name": "app.py",
-      "function_name": "MainWindow::_on_toggle_theme",
+      "function_name": "MainWindow::_on_tool_status",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_on_user_message",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_refresh_tool_status",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -6621,6 +6849,12 @@
     {
       "complexity": 2,
       "file_name": "app.py",
+      "function_name": "MainWindow::_on_about",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "app.py",
       "function_name": "MainWindow::_on_analyze_current_binary",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -6669,6 +6903,12 @@
     {
       "complexity": 2,
       "file_name": "app.py",
+      "function_name": "MainWindow::_on_view_scripts",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "app.py",
       "function_name": "MainWindow::_setup_tools_menu",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -6676,6 +6916,12 @@
       "complexity": 3,
       "file_name": "app.py",
       "function_name": "AsyncWorker::run",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_configure_orchestrator",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -6705,7 +6951,31 @@
     {
       "complexity": 3,
       "file_name": "app.py",
+      "function_name": "MainWindow::_on_open_sandbox_panel",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_on_toggle_theme",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "app.py",
       "function_name": "MainWindow::_refresh_system_status",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_initialize_model_cache",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_refresh_model_discovery_status",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -6729,19 +6999,7 @@
     {
       "complexity": 5,
       "file_name": "app.py",
-      "function_name": "MainWindow::_on_open_sandbox",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 6,
-      "file_name": "app.py",
-      "function_name": "MainWindow::_on_export_session",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 8,
-      "file_name": "app.py",
-      "function_name": "MainWindow::_on_browse_models_result",
+      "function_name": "MainWindow::_refresh_memory_status",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -6754,12 +7012,6 @@
       "complexity": 8,
       "file_name": "app.py",
       "function_name": "MainWindow::_on_import_session",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 8,
-      "file_name": "app.py",
-      "function_name": "MainWindow::_on_open_frida",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -6783,7 +7035,19 @@
     {
       "complexity": 9,
       "file_name": "app.py",
+      "function_name": "MainWindow::_on_open_sandbox",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "app.py",
       "function_name": "MainWindow::_on_tool_result",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_on_export_session",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -6793,7 +7057,13 @@
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
-      "complexity": 11,
+      "complexity": 12,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_on_browse_models_result",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 12,
       "file_name": "app.py",
       "function_name": "MainWindow::_on_refresh_models",
       "path": "src\\intellicrack\\ui\\app.py"
@@ -6811,7 +7081,13 @@
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
-      "complexity": 15,
+      "complexity": 22,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_on_open_frida",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 23,
       "file_name": "app.py",
       "function_name": "MainWindow::closeEvent",
       "path": "src\\intellicrack\\ui\\app.py"
@@ -8295,12 +8571,6 @@
     {
       "complexity": 3,
       "file_name": "script_manager.py",
-      "function_name": "ScriptManagerPanel::_load_script",
-      "path": "src\\intellicrack\\ui\\panels\\script_manager.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "script_manager.py",
       "function_name": "ScriptManagerPanel::_on_execute",
       "path": "src\\intellicrack\\ui\\panels\\script_manager.py"
     },
@@ -8320,6 +8590,12 @@
       "complexity": 4,
       "file_name": "script_manager.py",
       "function_name": "ScriptListWidget::_refresh_list",
+      "path": "src\\intellicrack\\ui\\panels\\script_manager.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "script_manager.py",
+      "function_name": "ScriptManagerPanel::_load_script",
       "path": "src\\intellicrack\\ui\\panels\\script_manager.py"
     },
     {
@@ -8347,7 +8623,7 @@
       "path": "src\\intellicrack\\ui\\panels\\script_manager.py"
     },
     {
-      "complexity": 9,
+      "complexity": 10,
       "file_name": "script_manager.py",
       "function_name": "ScriptManagerPanel::_on_save",
       "path": "src\\intellicrack\\ui\\panels\\script_manager.py"
@@ -9003,6 +9279,24 @@
     {
       "complexity": 1,
       "file_name": "provider_config.py",
+      "function_name": "ProviderConfigDialog::_on_discover_selected_provider",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "provider_config.py",
+      "function_name": "ProviderConfigDialog::_on_revoke_oauth",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "provider_config.py",
+      "function_name": "ProviderConfigDialog::_on_start_oauth",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "provider_config.py",
       "function_name": "ProviderConfigDialog::_on_widget_connection_tested",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
@@ -9027,13 +9321,43 @@
     {
       "complexity": 1,
       "file_name": "provider_config.py",
+      "function_name": "ProviderConfigDialog::create_env_template",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "provider_config.py",
+      "function_name": "ProviderConfigDialog::migrate_credentials",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "provider_config.py",
+      "function_name": "ProviderConfigDialog::revoke_oauth_token",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "provider_config.py",
       "function_name": "ProviderSettingsWidget::__init__",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
       "complexity": 1,
       "file_name": "provider_config.py",
+      "function_name": "ProviderSettingsWidget::_on_show_device_info",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "provider_config.py",
       "function_name": "ProviderSettingsWidget::_update_credential_source_display",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "provider_config.py",
+      "function_name": "ProviderSettingsWidget::get_xpu_optimal_dtype",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
@@ -9081,7 +9405,31 @@
     {
       "complexity": 2,
       "file_name": "provider_config.py",
+      "function_name": "ProviderSettingsWidget::_on_detect_xpu_dtype",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "provider_config.py",
+      "function_name": "ProviderSettingsWidget::_on_pull_model",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "provider_config.py",
       "function_name": "ProviderSettingsWidget::_toggle_key_visibility",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "provider_config.py",
+      "function_name": "ProviderSettingsWidget::get_openrouter_generation",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "provider_config.py",
+      "function_name": "ProviderSettingsWidget::get_provider_device_info",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
@@ -9091,9 +9439,27 @@
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
+      "complexity": 2,
+      "file_name": "provider_config.py",
+      "function_name": "ProviderSettingsWidget::pull_ollama_model",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
       "complexity": 3,
       "file_name": "provider_config.py",
       "function_name": "ProviderConfigDialog::_is_provider_connected",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "provider_config.py",
+      "function_name": "ProviderConfigDialog::_load_credential_overview",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "provider_config.py",
+      "function_name": "ProviderSettingsWidget::_setup_provider_specific_ui",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
@@ -9135,6 +9501,12 @@
     {
       "complexity": 4,
       "file_name": "provider_config.py",
+      "function_name": "ProviderSettingsWidget::_on_lookup_generation",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "provider_config.py",
       "function_name": "ProviderSettingsWidget::_refresh_models",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
@@ -9160,6 +9532,18 @@
       "complexity": 5,
       "file_name": "provider_config.py",
       "function_name": "ProviderConfigDialog::_update_provider_item_display",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "provider_config.py",
+      "function_name": "ProviderConfigDialog::discover_single_provider",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "provider_config.py",
+      "function_name": "ProviderConfigDialog::start_oauth_flow",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
@@ -9196,6 +9580,12 @@
       "complexity": 6,
       "file_name": "provider_config.py",
       "function_name": "ModelSelectionDialog::_on_model_selected",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "provider_config.py",
+      "function_name": "ProviderConfigDialog::refresh_credentials",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
@@ -9279,12 +9669,6 @@
     {
       "complexity": 0,
       "file_name": "font_manager.py",
-      "function_name": "FontManager::_setup_fallback_fonts",
-      "path": "src\\intellicrack\\ui\\resources\\font_manager.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "font_manager.py",
       "function_name": "FontManager::get_code_font_bold",
       "path": "src\\intellicrack\\ui\\resources\\font_manager.py"
     },
@@ -9322,6 +9706,12 @@
       "complexity": 0,
       "file_name": "font_manager.py",
       "function_name": "FontManager::reset_instance",
+      "path": "src\\intellicrack\\ui\\resources\\font_manager.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "font_manager.py",
+      "function_name": "FontManager::_setup_fallback_fonts",
       "path": "src\\intellicrack\\ui\\resources\\font_manager.py"
     },
     {
@@ -10201,7 +10591,7 @@
       "path": "src\\intellicrack\\ui\\tool_config.py"
     },
     {
-      "complexity": 15,
+      "complexity": 20,
       "file_name": "tool_config.py",
       "function_name": "ToolStatusCheckWorker::_check_ghidra",
       "path": "src\\intellicrack\\ui\\tool_config.py"
@@ -10258,6 +10648,12 @@
       "complexity": 0,
       "file_name": "tools.py",
       "function_name": "CutterWidgetProtocol::set_bridge",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "tools.py",
+      "function_name": "FridaPanelProtocol::add_hook_entry",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
     {
@@ -10329,6 +10725,12 @@
     {
       "complexity": 0,
       "file_name": "tools.py",
+      "function_name": "SandboxPanelProtocol::get_sandbox",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "tools.py",
       "function_name": "SandboxPanelProtocol::set_sandbox",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
@@ -10372,12 +10774,6 @@
       "complexity": 0,
       "file_name": "tools.py",
       "function_name": "ToolOutputPanel::get_active_tool_widget",
-      "path": "src\\intellicrack\\ui\\tools.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "tools.py",
-      "function_name": "ToolOutputPanel::get_code_highlighter",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
     {
@@ -10539,18 +10935,6 @@
     {
       "complexity": 1,
       "file_name": "tools.py",
-      "function_name": "ToolOutputPanel::add_script_panel",
-      "path": "src\\intellicrack\\ui\\tools.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "tools.py",
-      "function_name": "ToolOutputPanel::add_stack_panel",
-      "path": "src\\intellicrack\\ui\\tools.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "tools.py",
       "function_name": "ToolOutputPanel::append_tab_content",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
@@ -10641,7 +11025,13 @@
     {
       "complexity": 2,
       "file_name": "tools.py",
-      "function_name": "ToolOutputPanel::add_sandbox_tab",
+      "function_name": "ToolOutputPanel::add_script_panel",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::add_stack_panel",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
     {
@@ -10653,13 +11043,13 @@
     {
       "complexity": 2,
       "file_name": "tools.py",
-      "function_name": "ToolOutputPanel::get_sandbox_backend",
+      "function_name": "ToolOutputPanel::get_code_highlighter",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
     {
       "complexity": 2,
       "file_name": "tools.py",
-      "function_name": "ToolOutputPanel::load_sandbox_report",
+      "function_name": "ToolOutputPanel::get_sandbox_backend",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
     {
@@ -10717,6 +11107,12 @@
       "path": "src\\intellicrack\\ui\\tools.py"
     },
     {
+      "complexity": 3,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::load_sandbox_report",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
       "complexity": 4,
       "file_name": "tools.py",
       "function_name": "ToolOutputPanel::activate_tab",
@@ -10731,12 +11127,6 @@
     {
       "complexity": 5,
       "file_name": "tools.py",
-      "function_name": "ToolOutputPanel::get_script_panel_state",
-      "path": "src\\intellicrack\\ui\\tools.py"
-    },
-    {
-      "complexity": 5,
-      "file_name": "tools.py",
       "function_name": "ToolOutputPanel::open_in_binary",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
@@ -10744,6 +11134,12 @@
       "complexity": 5,
       "file_name": "tools.py",
       "function_name": "ToolOutputPanel::wire_stack_viewer_bridges",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::get_script_panel_state",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
     {
@@ -10780,6 +11176,12 @@
       "complexity": 6,
       "file_name": "tools.py",
       "function_name": "XRefPanel::set_xrefs",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 15,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::add_sandbox_tab",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
     {

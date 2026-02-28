@@ -69,6 +69,24 @@ except ImportError:
     _logger.debug("keystone_not_available")
 
 
+def get_capstone() -> ModuleType | None:
+    """Get the capstone module if available.
+
+    Returns:
+        The capstone module, or None if not installed.
+    """
+    return _capstone
+
+
+def get_keystone() -> ModuleType | None:
+    """Get the keystone module if available.
+
+    Returns:
+        The keystone module, or None if not installed.
+    """
+    return _keystone
+
+
 # Windows API constants
 WIN_PROCESS_VM_READ = 0x0010
 WIN_PROCESS_VM_WRITE = 0x0020
@@ -957,6 +975,7 @@ class X64DbgBridge(DebuggerBridge):
                     event_handler=self._handle_event,
                 )
             await self._pipe_client.connect()
+            self._pipe_client.set_event_handler(self._handle_event)
             _logger.info("x64dbg_pipe_connected")
         except Exception as e:
             self._pipe_client = None
@@ -1163,10 +1182,7 @@ class X64DbgBridge(DebuggerBridge):
 
     async def stop(self) -> None:
         """Stop debugging and terminate process."""
-        if self._pipe_client is not None and self._pipe_client.is_connected:
-            await self._send_pipe_command("stop")
-            self._state.connected = True
-            self._state.tool_running = True
+        await self._send_pipe_command("stop")
 
         self._attached_pid = None
         self._state.process_attached = False
@@ -1369,7 +1385,7 @@ class X64DbgBridge(DebuggerBridge):
                 return parse_int(result[primary])
             return parse_int(result[alt]) if alt and alt in result else 0
 
-        return RegisterState(
+        state = RegisterState(
             rax=get_reg("rax", "eax"),
             rbx=get_reg("rbx", "ebx"),
             rcx=get_reg("rcx", "ecx"),
@@ -1395,6 +1411,18 @@ class X64DbgBridge(DebuggerBridge):
             gs=get_reg("gs"),
             ss=get_reg("ss"),
         )
+
+        gpr_dict = state.get_gpr_dict()
+        segment_regs = state.get_segment_registers()
+        _logger.debug(
+            "registers_read",
+            extra={
+                "gpr_count": len(gpr_dict),
+                "segment_count": len(segment_regs),
+            },
+        )
+
+        return state
 
     async def set_register(self, register: str, value: int) -> bool:
         """Set a register value.

@@ -970,6 +970,11 @@ class ToolOutputPanel(QFrame):
         qwidget = cast("QWidget", raw_widget)
         self._tab_widget.addTab(qwidget, "Stack")
         self._panels["stack"] = qwidget
+
+        add_source = getattr(self._stack_panel, "add_source", None)
+        if callable(add_source):
+            add_source("orchestrator", self)
+
         _logger.info("stack_panel_added")
         return qwidget
 
@@ -1221,6 +1226,12 @@ class ToolOutputPanel(QFrame):
             return self._sandbox_panel
 
         try:
+            sandbox_config_mod = importlib.import_module(".sandbox_config", "intellicrack.ui")
+            dialog_cls = getattr(sandbox_config_mod, "SandboxConfigDialog", None)
+            if dialog_cls is not None and not dialog_cls().is_sandbox_available():
+                _logger.info("sandbox_not_available_skipping_tab")
+                return None
+
             panel_module = importlib.import_module(".panels.sandbox_panel", "intellicrack.ui")
             raw_widget = panel_module.SandboxPanel()
             self._sandbox_panel = cast("SandboxPanelProtocol", raw_widget)
@@ -1234,6 +1245,13 @@ class ToolOutputPanel(QFrame):
                 if hasattr(self._sandbox_panel, "set_sandbox"):
                     self._sandbox_panel.set_sandbox(self._pending_sandbox_backend)
                 self._pending_sandbox_backend = None
+
+            monitor_cls = getattr(sandbox_config_mod, "SandboxMonitorWidget", None)
+            if monitor_cls is not None:
+                monitor = monitor_cls(parent=qwidget)
+                layout = qwidget.layout()
+                if layout is not None:
+                    layout.addWidget(monitor)
 
             _logger.info("sandbox_tab_added")
         except Exception as e:

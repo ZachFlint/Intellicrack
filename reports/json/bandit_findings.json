@@ -1,6 +1,6 @@
 {
   "tool": "bandit",
-  "generated": "2026-02-27T00:07:08.823339",
+  "generated": "2026-02-28T02:21:28.912268",
   "total_findings": 9,
   "total_files": 6,
   "files": [
@@ -66,13 +66,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 401,
+          "line": 394,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B404:blacklist",
           "message": "Consider possible security implications associated with the subprocess module.",
-          "raw": "src/intellicrack/core\\script_gen.py:401: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
+          "raw": "src/intellicrack/core\\script_gen.py:394: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
         }
       ]
     },

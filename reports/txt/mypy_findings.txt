@@ -50,6 +50,29 @@ src\intellicrack\ui\session_manager.py:548: error: Item "None" of "QItemSelectio
 src\intellicrack\ui\session_manager.py:761: error: Item "None" of "QItemSelectionModel | None" has no attribute "selectedRows"  [union-attr]
 
 
+10 findings in src\intellicrack\ui\provider_config.py
+
+src\intellicrack\ui\provider_config.py:1109: error: Argument 1 to "get_env_var" of "CredentialLoader" has incompatible type "ProviderName"; expected "str"  [arg-type]
+
+src\intellicrack\ui\provider_config.py:1138: error: Value of type "Coroutine[Any, Any, dict[ProviderName, bool]]" must be used  [unused-coroutine]
+
+src\intellicrack\ui\provider_config.py:1138: note: Are you missing an await?
+
+src\intellicrack\ui\provider_config.py:1157: error: Item "None" of "ModelDiscovery | None" has no attribute "discover_provider"  [union-attr]
+
+src\intellicrack\ui\provider_config.py:1188: error: Missing positional argument "provider" in call to "to_provider_credentials" of "OAuthManager"  [call-arg]
+
+src\intellicrack\ui\provider_config.py:1208: error: Missing positional argument "provider" in call to "revoke_token" of "OAuthManager"  [call-arg]
+
+src\intellicrack\ui\provider_config.py:1208: error: Value of type "Coroutine[Any, Any, bool]" must be used  [unused-coroutine]
+
+src\intellicrack\ui\provider_config.py:1208: note: Are you missing an await?
+
+src\intellicrack\ui\provider_config.py:1949: error: Incompatible return value type (got "Coroutine[Any, Any, dict[str, object]]", expected "dict[str, object] | None")  [return-value]
+
+src\intellicrack\ui\provider_config.py:1949: note: Maybe you forgot to use "await"?
+
+
 7 findings in tests\test_ui\test_tools_logic.py
 
 tests\test_ui\test_tools_logic.py:98: error: Argument 1 to "MainWindow" has incompatible type "object"; expected "Config"  [arg-type]
@@ -82,6 +105,21 @@ src\intellicrack\ui\panels\binary_panel.py:194: error: Item "None" of "QHeaderVi
 src\intellicrack\ui\panels\binary_panel.py:201: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
 
+6 findings in src\intellicrack\ui\app.py
+
+src\intellicrack\ui\app.py:683: error: Missing positional argument "self" in call to "get_memory_usage" of "ModelCache"  [call-arg]
+
+src\intellicrack\ui\app.py:698: error: Missing positional argument "provider" in call to "get_last_event" of "ModelDiscovery"  [call-arg]
+
+src\intellicrack\ui\app.py:1412: error: Value of type "Coroutine[Any, Any, dict[ProviderName, list[ModelInfo]]]" must be used  [unused-coroutine]
+
+src\intellicrack\ui\app.py:1412: note: Are you missing an await?
+
+src\intellicrack\ui\app.py:1472: error: Missing positional argument "model_id" in call to "get_by_id" of "ModelDiscovery"  [call-arg]
+
+src\intellicrack\ui\app.py:1472: error: Argument 1 to "get_by_id" of "ModelDiscovery" has incompatible type "str"; expected "ProviderName"  [arg-type]
+
+
 5 findings in src\intellicrack\ui\panels\x64dbg_panel.py
 
 src\intellicrack\ui\panels\x64dbg_panel.py:234: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
@@ -95,17 +133,6 @@ src\intellicrack\ui\panels\x64dbg_panel.py:256: error: Item "None" of "QHeaderVi
 src\intellicrack\ui\panels\x64dbg_panel.py:302: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
 
-4 findings in tests\test_bridges\test_x64dbg.py
-
-tests\test_bridges\test_x64dbg.py:26: error: Module "intellicrack.bridges.x64dbg" has no attribute "get_capstone"  [attr-defined]
-
-tests\test_bridges\test_x64dbg.py:26: error: Module "intellicrack.bridges.x64dbg" has no attribute "get_keystone"  [attr-defined]
-
-tests\test_bridges\test_x64dbg.py:165: error: Incompatible types in assignment (expression has type "dict[str, object]", variable has type "WatchpointInfo")  [assignment]
-
-tests\test_bridges\test_x64dbg.py:175: error: Value of type "WatchpointInfo" is not indexable  [index]
-
-
 4 findings in src\intellicrack\ui\panels\radare2_panel.py
 
 src\intellicrack\ui\panels\radare2_panel.py:197: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
@@ -115,15 +142,6 @@ src\intellicrack\ui\panels\radare2_panel.py:204: error: Item "None" of "QHeaderV
 src\intellicrack\ui\panels\radare2_panel.py:211: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
 src\intellicrack\ui\panels\radare2_panel.py:218: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
-
-
-3 findings in tests\test_providers\test_credential_loading.py
-
-tests\test_providers\test_credential_loading.py:183: error: "CredentialLoader" has no attribute "get_env_var"; maybe "set_env_var" or "_env_vars"?  [attr-defined]
-
-tests\test_providers\test_credential_loading.py:191: error: "CredentialLoader" has no attribute "get_env_var"; maybe "set_env_var" or "_env_vars"?  [attr-defined]
-
-tests\test_providers\test_credential_loading.py:203: error: "CredentialLoader" has no attribute "get_env_var"; maybe "set_env_var" or "_env_vars"?  [attr-defined]
 
 
 3 findings in src\intellicrack\ui\panels\licensing_panel.py
@@ -144,13 +162,13 @@ src\intellicrack\ui\panels\ghidra_panel.py:183: error: Item "None" of "QHeaderVi
 src\intellicrack\ui\panels\ghidra_panel.py:190: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
 
-3 findings in tests\test_ui\test_splash_screen.py
+3 findings in src\intellicrack\ui\tools.py
 
-tests\test_ui\test_splash_screen.py:227: error: "SplashScreen" has no attribute "show_loading_step"  [attr-defined]
+src\intellicrack\ui\tools.py:390: error: Item "None" of "QTextDocument | None" has no attribute "findBlockByLineNumber"  [union-attr]
 
-tests\test_ui\test_splash_screen.py:233: error: "SplashScreen" has no attribute "show_loading_step"  [attr-defined]
+src\intellicrack\ui\tools.py:1753: error: Statement is unreachable  [unreachable]
 
-tests\test_ui\test_splash_screen.py:414: error: "SplashScreen" has no attribute "show_loading_step"  [attr-defined]
+src\intellicrack\ui\tools.py:1755: error: Item "None" of "QTextDocument | None" has no attribute "findChild"  [union-attr]
 
 
 3 findings in tests\core\test_process_cleanup.py
@@ -190,6 +208,20 @@ src\intellicrack\ui\chat.py:517: error: Item "None" of "QScrollBar | None" has n
 src\intellicrack\ui\chat.py:517: error: Item "None" of "QScrollBar | None" has no attribute "maximum"  [union-attr]
 
 
+2 findings in tests\test_bridges\test_x64dbg.py
+
+tests\test_bridges\test_x64dbg.py:165: error: Incompatible types in assignment (expression has type "dict[str, object]", variable has type "WatchpointInfo")  [assignment]
+
+tests\test_bridges\test_x64dbg.py:175: error: Value of type "WatchpointInfo" is not indexable  [index]
+
+
+2 findings in src\intellicrack\bridges\sandbox_bridge.py
+
+src\intellicrack\bridges\sandbox_bridge.py:844: error: "SandboxBase" has no attribute "list_snapshots"  [attr-defined]
+
+src\intellicrack\bridges\sandbox_bridge.py:888: error: "SandboxBase" has no attribute "delete_snapshot"; maybe "take_snapshot" or "restore_snapshot"?  [attr-defined]
+
+
 2 findings in tests\test_providers\test_local_transformers_provider.py
 
 tests\test_providers\test_local_transformers_provider.py:499: error: Argument 1 to "_format_prompt" of "LocalTransformersProvider" has incompatible type "list[dict[str, str]]"; expected "list[dict[str, object]]"  [arg-type]
@@ -222,11 +254,6 @@ tests\test_providers\test_huggingface_provider.py:206: error: Function is missin
 src\intellicrack\providers\model_loader.py:22: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
 
 
-1 findings in tests\test_bridges\test_x64dbg_api_coverage.py
-
-tests\test_bridges\test_x64dbg_api_coverage.py:102: error: "X64DbgBridge" has no attribute "_get_register_value"  [attr-defined]
-
-
 1 findings in src\intellicrack\ui\panels\frida_panel.py
 
 src\intellicrack\ui\panels\frida_panel.py:237: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
@@ -242,11 +269,6 @@ tests\test_providers\test_openai_provider.py:196: error: Function is missing a t
 tests\test_providers\test_grok_provider.py:193: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
 
 
-1 findings in src\intellicrack\ui\tools.py
-
-src\intellicrack\ui\tools.py:358: error: Item "None" of "QTextDocument | None" has no attribute "findBlockByLineNumber"  [union-attr]
-
-
 1 findings in src\intellicrack\providers\local_transformers.py
 
 src\intellicrack\providers\local_transformers.py:53: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
@@ -255,6 +277,11 @@ src\intellicrack\providers\local_transformers.py:53: error: Incompatible types i
 1 findings in tests\test_providers\test_anthropic_provider.py
 
 tests\test_providers\test_anthropic_provider.py:193: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
+
+
+1 findings in src\intellicrack\core\orchestrator.py
+
+src\intellicrack\core\orchestrator.py:916: error: "ToolDefinition" has no attribute "name"  [attr-defined]
 
 
 1 findings in tests\test_providers\test_model_discovery.py

@@ -29,7 +29,6 @@ from .process_manager import (
 )
 from .script_gen import (
     BypassStrategy,
-    GeneratedScript,
     Script,
     ScriptContext,
     ScriptGenerator,
@@ -89,7 +88,6 @@ __all__: list[str] = [
     "CrossReference",
     "ExportInfo",
     "FunctionInfo",
-    "GeneratedScript",
     "HookInfo",
     "ImportInfo",
     "LogConfig",

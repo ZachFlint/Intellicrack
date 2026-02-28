@@ -1,6 +1,6 @@
 {
   "tool": "darglint",
-  "generated": "2026-02-27T00:12:25.675724",
+  "generated": "2026-02-28T02:26:31.212950",
   "total_findings": 1,
   "total_files": 1,
   "files": [
@@ -9,12 +9,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 343,
+          "line": 342,
           "column": null,
           "function": "wait_for_callback",
           "code": "DAR401",
           "message": "[wait_for_callback] -r OAuthAuthorizationError",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:wait_for_callback:343: DAR401: -r OAuthAuthorizationError"
+          "raw": "src\\intellicrack\\credentials\\oauth.py:wait_for_callback:342: DAR401: -r OAuthAuthorizationError"
         }
       ]
     }

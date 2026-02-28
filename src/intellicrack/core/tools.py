@@ -425,11 +425,7 @@ class ToolRegistry:
             raise ToolError(_ERR_NOT_REGISTERED)
 
         capabilities = getattr(bridge, "capabilities", None)
-        if (
-            capabilities is not None
-            and hasattr(capabilities, "has_capability")
-            and not capabilities.has_capability(function_name)
-        ):
+        if capabilities is not None and hasattr(capabilities, "has_capability") and not capabilities.has_capability(function_name):
             _logger.debug(
                 "execute_tool_call_no_capability",
                 extra={"tool_name": tool_enum.value, "function_name": function_name},
