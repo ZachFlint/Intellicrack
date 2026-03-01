@@ -35,6 +35,8 @@ from intellicrack._metadata import (
     __copyright__,
     __email__,
     __license__,
+    __summary__,
+    __url__,
     __version__,
 )
 
@@ -97,6 +99,8 @@ __all__: list[str] = [
     "__copyright__",
     "__email__",
     "__license__",
+    "__summary__",
+    "__url__",
     "__version__",
     "main",
 ]
