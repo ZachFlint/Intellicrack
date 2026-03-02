@@ -98,7 +98,7 @@ intel_cmplr_lib_ur==2025.3.1
 intel_cmplr_lic_rt==2025.3.1
 intel_opencl_rt==2025.3.1
 intel_openmp==2025.3.1
-intel_pti==0.15.0
+intel_pti==0.16.0
 intel_sycl_rt==2025.3.1
 intellicrack==0.1.0a1
 interrogate==1.7.0
