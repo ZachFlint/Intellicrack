@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import importlib
 import json
 import os
 from pathlib import Path
@@ -47,7 +46,31 @@ from PyQt6.QtWidgets import (
 from intellicrack.core.types import ProviderName
 
 from ..core.logging import get_logger
+from ..credentials.env_loader import create_env_template, get_credential_loader
+from ..credentials.oauth import OAUTH_CONFIGS, OAuthFlowType, OAuthManager, OAuthProvider
+from ..credentials.store import CredentialStore
 from .resources import IconManager
+
+
+try:
+    from ..providers.local_transformers import LocalTransformersProvider
+except ImportError:
+    LocalTransformersProvider = None
+
+try:
+    from ..providers.ollama import OllamaProvider
+except ImportError:
+    OllamaProvider = None
+
+try:
+    from ..providers.openrouter import OpenRouterProvider
+except ImportError:
+    OpenRouterProvider = None
+
+try:
+    from ..providers.xpu_utils import get_optimal_dtype_for_xpu
+except ImportError:
+    get_optimal_dtype_for_xpu = None
 
 
 _logger = get_logger("ui.provider_config")
@@ -731,9 +754,6 @@ class ProviderConfigDialog(QDialog):
     def _load_credential_overview(self) -> None:
         """Load credential overview from env_loader and credential store."""
         try:
-            from ..credentials.env_loader import get_credential_loader
-            from ..credentials.store import CredentialStore
-
             loader = get_credential_loader()
             configured = loader.list_configured_providers()
             missing = loader.list_missing_providers()
@@ -750,13 +770,17 @@ class ProviderConfigDialog(QDialog):
             )
 
             store = CredentialStore()
-            store_providers = store.list_providers()
-            for provider in store_providers:
-                source = store.get_source(provider)
-                _logger.debug(
-                    "credential_source",
-                    extra={"provider": provider, "source": source},
-                )
+            loop = asyncio.new_event_loop()
+            try:
+                store_providers = loop.run_until_complete(store.list_providers())
+                for cred in store_providers:
+                    source = loop.run_until_complete(store.get_source(cred.provider))
+                    _logger.debug(
+                        "credential_source",
+                        extra={"provider": cred.provider.value, "source": str(source)},
+                    )
+            finally:
+                loop.close()
         except Exception:
             _logger.debug("credential_overview_load_skipped")
 
@@ -1102,8 +1126,6 @@ class ProviderConfigDialog(QDialog):
     def refresh_credentials(self) -> None:
         """Reload credentials from env files and credential store."""
         try:
-            from ..credentials.env_loader import get_credential_loader
-
             loader = get_credential_loader()
             loader.reload()
 
@@ -1111,7 +1133,7 @@ class ProviderConfigDialog(QDialog):
             missing = loader.list_missing_providers()
 
             for name in configured:
-                env_var = loader.get_env_var(name)
+                env_var = loader.get_env_var(name.value)
                 if env_var is not None:
                     _logger.debug("credential_refreshed", extra={"provider": name})
             _logger.info(
@@ -1125,10 +1147,7 @@ class ProviderConfigDialog(QDialog):
     def create_env_template(self) -> None:
         """Create a .env template file for credential configuration."""
         try:
-            from ..credentials.env_loader import get_credential_loader
-
-            loader = get_credential_loader()
-            loader.create_env_template()
+            create_env_template(Path(".env"))
             _logger.info("env_template_created")
         except Exception:
             _logger.debug("env_template_creation_failed")
@@ -1137,10 +1156,12 @@ class ProviderConfigDialog(QDialog):
     def migrate_credentials(self) -> None:
         """Migrate credentials from env files to credential store."""
         try:
-            from ..credentials.store import CredentialStore
-
             store = CredentialStore()
-            store.migrate_from_env()
+            loop = asyncio.new_event_loop()
+            try:
+                loop.run_until_complete(store.migrate_from_env())
+            finally:
+                loop.close()
             _logger.info("credentials_migrated_from_env")
         except Exception:
             _logger.debug("credential_migration_failed")
@@ -1153,13 +1174,14 @@ class ProviderConfigDialog(QDialog):
             provider_name: Name of the provider to discover models for.
         """
         if self._discovery is not None:
+            discovery = self._discovery
             try:
                 pname = ProviderName(provider_name)
             except ValueError:
                 return
 
             async def _discover() -> None:
-                await self._discovery.discover_provider(pname)
+                await discovery.discover_provider(pname)
 
             try:
                 loop = asyncio.new_event_loop()
@@ -1171,8 +1193,7 @@ class ProviderConfigDialog(QDialog):
                     extra={"provider": provider_name, "error": str(exc)},
                 )
 
-            discovery = self._discovery
-            events = discovery.get_discovery_events() if discovery is not None else []
+            events = discovery.get_discovery_events()
             _logger.debug(
                 "provider_discovery_events",
                 extra={"provider": provider_name, "event_count": len(events)},
@@ -1185,12 +1206,19 @@ class ProviderConfigDialog(QDialog):
             provider_id: The provider to authorize.
         """
         try:
-            from ..credentials.oauth import OAuthFlowType, OAuthManager
-
             manager = OAuthManager()
-            if provider_id == "google":
-                manager.authorize_google()
-            creds = manager.to_provider_credentials()
+            loop = asyncio.new_event_loop()
+            try:
+                if provider_id == "google":
+                    google_config = OAUTH_CONFIGS[OAuthProvider.GOOGLE]
+                    loop.run_until_complete(
+                        manager.run_authorization_flow(google_config)
+                    )
+                creds = loop.run_until_complete(
+                    manager.to_provider_credentials(OAuthProvider.GOOGLE)
+                )
+            finally:
+                loop.close()
             if creds is not None:
                 _logger.info("oauth_credentials_obtained", extra={"provider": provider_id})
 
@@ -1207,10 +1235,17 @@ class ProviderConfigDialog(QDialog):
             provider_id: The provider whose token to revoke.
         """
         try:
-            from ..credentials.oauth import OAuthManager
-
             manager = OAuthManager()
-            manager.revoke_token()
+            try:
+                oauth_provider = OAuthProvider(provider_id)
+            except ValueError:
+                _logger.debug("unknown_oauth_provider", extra={"provider": provider_id})
+                return
+            loop = asyncio.new_event_loop()
+            try:
+                loop.run_until_complete(manager.revoke_token(oauth_provider))
+            finally:
+                loop.close()
             _logger.info("oauth_token_revoked", extra={"provider": provider_id})
         except Exception:
             _logger.debug("oauth_revoke_failed", extra={"provider": provider_id})
@@ -1887,8 +1922,7 @@ class ProviderSettingsWidget(QFrame):
             return
 
         try:
-            creds_mod = importlib.import_module("intellicrack.credentials.env_loader")
-            loader = creds_mod.get_credential_loader()
+            loader = get_credential_loader()
             loader.save_to_env_file(env_var_mapping[self._provider_id], api_key)
 
             if self._provider_id == "ollama" and self._api_base_input:
@@ -1911,9 +1945,9 @@ class ProviderSettingsWidget(QFrame):
         """
         if self._provider_id != "local_transformers":
             return None
+        if LocalTransformersProvider is None:
+            return None
         try:
-            from ..providers.local_transformers import LocalTransformersProvider
-
             provider = LocalTransformersProvider()
             return provider.get_device_info()
         except Exception:
@@ -1927,9 +1961,9 @@ class ProviderSettingsWidget(QFrame):
         """
         if self._provider_id != "ollama":
             return
+        if OllamaProvider is None:
+            return
         try:
-            from ..providers.ollama import OllamaProvider
-
             provider = OllamaProvider()
             provider.pull_model(model_name)
             _logger.info("ollama_model_pulled", extra={"model": model_name})
@@ -1947,11 +1981,15 @@ class ProviderSettingsWidget(QFrame):
         """
         if self._provider_id != "openrouter":
             return None
+        if OpenRouterProvider is None:
+            return None
         try:
-            from ..providers.openrouter import OpenRouterProvider
-
             provider = OpenRouterProvider()
-            return provider.get_generation(generation_id)
+            loop = asyncio.new_event_loop()
+            try:
+                return loop.run_until_complete(provider.get_generation(generation_id))
+            finally:
+                loop.close()
         except Exception:
             return None
 
@@ -1961,9 +1999,9 @@ class ProviderSettingsWidget(QFrame):
         Returns:
             Optimal dtype string or None.
         """
+        if get_optimal_dtype_for_xpu is None:
+            return None
         try:
-            from ..providers.xpu_utils import get_optimal_dtype_for_xpu
-
             dtype = get_optimal_dtype_for_xpu()
         except Exception:
             return None

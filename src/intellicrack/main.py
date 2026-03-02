@@ -45,6 +45,11 @@ from intellicrack._metadata import __version__
 _APP_VERSION: str = __version__
 _VALID_LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 
+_PROVIDER_CONNECT_TIMEOUT: float = 10.0
+_SHUTDOWN_ORCHESTRATOR_TIMEOUT: float = 5.0
+_SHUTDOWN_SESSION_TIMEOUT: float = 3.0
+_SHUTDOWN_PROCESS_TIMEOUT: float = 10.0
+
 
 @dataclass(frozen=True)
 class _CLIOptions:
@@ -293,39 +298,26 @@ def _setup_qt_and_splash(
         logger.warning("install_hint", extra={"command": "pixi install"})
         return None
 
-    app = qt_app_cls(sys.argv)
-    qt_app_cls.setApplicationName("Intellicrack")
-    qt_app_cls.setApplicationVersion(_APP_VERSION)
-    app.setStyle("Fusion")
+    try:
+        app = qt_app_cls(sys.argv)
+        qt_app_cls.setApplicationName("Intellicrack")
+        qt_app_cls.setApplicationVersion(_APP_VERSION)
+        app.setStyle("Fusion")
 
-    theme_manager = theme_mgr_cls.get_instance()
-    theme_manager.apply_theme("dark")
+        theme_manager = theme_mgr_cls.get_instance()
+        theme_manager.apply_theme("dark")
 
-    icon_manager = icon_mgr_cls.get_instance()
-    qt_app_cls.setWindowIcon(icon_manager.get_app_icon())
+        icon_manager = icon_mgr_cls.get_instance()
+        qt_app_cls.setWindowIcon(icon_manager.get_app_icon())
 
-    splash = splash_cls(version=_APP_VERSION)
-    splash.show_animated()
-    app.processEvents()
-
-    return app, splash
-
-
-def _initialize_providers_sync(
-    loop: asyncio.AbstractEventLoop,
-    registry: ProviderRegistry,
-    credentials: CredentialLoader,
-    logger: Logger,
-) -> None:
-    """Initialize providers synchronously using event loop.
-
-    Args:
-        loop: Event loop to run async initialization.
-        registry: Provider registry to populate.
-        credentials: Credential loader for API keys.
-        logger: Logger instance.
-    """
-    loop.run_until_complete(_initialize_providers(registry, credentials, logger))
+        splash = splash_cls(version=_APP_VERSION)
+        splash.show_animated()
+        app.processEvents()
+    except Exception as e:
+        logger.exception("qt_initialization_failed", extra={"error": str(e)})
+        return None
+    else:
+        return app, splash
 
 
 async def _initialize_providers(
@@ -363,8 +355,16 @@ async def _initialize_providers(
         try:
             provider = provider_class()
             if creds := credentials.get_credentials(provider_name):
-                await provider.connect(creds)
-                logger.info("provider_connected", extra={"provider": provider_name.value})
+                try:
+                    await asyncio.wait_for(
+                        provider.connect(creds), timeout=_PROVIDER_CONNECT_TIMEOUT,
+                    )
+                    logger.info("provider_connected", extra={"provider": provider_name.value})
+                except TimeoutError:
+                    logger.warning(
+                        "provider_connect_timeout",
+                        extra={"provider": provider_name.value, "timeout": _PROVIDER_CONNECT_TIMEOUT},
+                    )
             else:
                 logger.debug("no_credentials", extra={"provider": provider_name.value})
 
@@ -403,6 +403,7 @@ def main() -> int:
 
     result = _setup_qt_and_splash(logger)
     if result is None:
+        process_manager.uninstall_handlers()
         return 1
 
     app, splash = result
@@ -415,12 +416,23 @@ def main() -> int:
     asyncio.set_event_loop(loop)
 
     try:
-        return _run_application(config, app, splash, loop, process_manager, logger)
+        return loop.run_until_complete(
+            _run_application(config, app, splash, process_manager, logger),
+        )
     except Exception:
         logger.exception("startup_failed")
         return 1
     finally:
-        loop.run_until_complete(process_manager.cleanup_all_async())
+        try:
+            loop.run_until_complete(
+                asyncio.wait_for(
+                    process_manager.cleanup_all_async(), timeout=_SHUTDOWN_PROCESS_TIMEOUT,
+                ),
+            )
+        except TimeoutError:
+            logger.warning("final_process_cleanup_timeout")
+        except Exception:
+            logger.debug("final_process_cleanup_failed")
         process_manager.uninstall_handlers()
         loop.close()
 
@@ -469,11 +481,29 @@ def _init_model_discovery(
     return model_discovery, discovery_cache
 
 
-def _run_application(
+def _clear_model_cache(logger: Logger) -> None:
+    """Clear the global model cache during shutdown.
+
+    Args:
+        logger: Logger instance.
+    """
+    model_cache_mod = importlib.import_module("intellicrack.providers.model_loader")
+    get_cache = getattr(model_cache_mod, "get_global_model_cache", None)
+    if callable(get_cache):
+        try:
+            cache = get_cache()
+            clear_fn = getattr(cache, "clear", None)
+            if callable(clear_fn):
+                clear_fn()
+            logger.debug("model_cache_cleared")
+        except Exception:
+            logger.debug("model_cache_cleanup_skipped")
+
+
+async def _run_application(
     config: Config,
     app: QApplication,
     splash: SplashScreen,
-    loop: asyncio.AbstractEventLoop,
     process_manager: ProcessManager,
     logger: Logger,
 ) -> int:
@@ -483,7 +513,6 @@ def _run_application(
         config: Application configuration.
         app: Qt application instance.
         splash: Splash screen instance.
-        loop: Asyncio event loop.
         process_manager: Process manager instance.
         logger: Logger instance.
 
@@ -500,14 +529,14 @@ def _run_application(
 
     provider_registry = _import_provider_registry()()
     logger.info("provider_initialization_started")
-    _initialize_providers_sync(loop, provider_registry, credential_loader, logger)
+    await _initialize_providers(provider_registry, credential_loader, logger)
     logger.info("provider_initialization_complete")
 
     splash.set_progress(50, "Initializing tools...")
     app.processEvents()
 
     tool_registry = _import_tool_registry()(config.tools_directory)
-    loop.run_until_complete(tool_registry.initialize())
+    await tool_registry.initialize()
 
     splash.set_progress(70, "Initializing session manager...")
     app.processEvents()
@@ -552,9 +581,33 @@ def _run_application(
     save_cache = getattr(model_discovery, "save_cache", None)
     if callable(save_cache):
         save_cache(discovery_cache)
-    loop.run_until_complete(orchestrator.shutdown())
-    loop.run_until_complete(session_manager.close())
-    loop.run_until_complete(process_manager.cleanup_all_async())
+
+    try:
+        await asyncio.wait_for(
+            provider_registry.disconnect_all(), timeout=_SHUTDOWN_ORCHESTRATOR_TIMEOUT,
+        )
+    except TimeoutError:
+        logger.warning("provider_disconnect_timeout")
+
+    _clear_model_cache(logger)
+
+    try:
+        await asyncio.wait_for(orchestrator.shutdown(), timeout=_SHUTDOWN_ORCHESTRATOR_TIMEOUT)
+    except TimeoutError:
+        logger.warning("orchestrator_shutdown_timeout")
+
+    try:
+        await asyncio.wait_for(session_manager.close(), timeout=_SHUTDOWN_SESSION_TIMEOUT)
+    except TimeoutError:
+        logger.warning("session_close_timeout")
+
+    try:
+        await asyncio.wait_for(
+            process_manager.cleanup_all_async(), timeout=_SHUTDOWN_PROCESS_TIMEOUT,
+        )
+    except TimeoutError:
+        logger.warning("process_cleanup_timeout")
+
     logger.info("shutdown_complete")
 
     return exit_code

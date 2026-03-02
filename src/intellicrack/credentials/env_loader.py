@@ -11,6 +11,7 @@ for various LLM providers.
 
 from __future__ import annotations
 
+import functools
 import os
 import re
 from dataclasses import dataclass
@@ -39,6 +40,60 @@ class ProviderCredentialMapping:
     api_base_var: str | None = None
     organization_var: str | None = None
     project_var: str | None = None
+
+
+def _find_env_file() -> Path:
+    """Find the .env file by searching up the directory tree.
+
+    Returns:
+        Path to the found .env file or default location.
+    """
+    search_paths = [
+        Path.cwd() / ".env",
+        Path("D:/Intellicrack/.env"),
+        Path.home() / ".env",
+    ]
+
+    _logger.debug(
+        "env_file_search",
+        extra={"paths_checked": [str(p) for p in search_paths]},
+    )
+
+    for path in search_paths:
+        if path.exists():
+            _logger.info("env_file_found", extra={"path": str(path)})
+            return path
+
+    _logger.debug("env_file_not_found", extra={"default_path": "D:/Intellicrack/.env"})
+    return Path("D:/Intellicrack/.env")
+
+
+def _validate_key_format(provider: ProviderName, api_key: str) -> str | None:
+    """Validate API key format for a provider.
+
+    Args:
+        provider: The provider the key is for.
+        api_key: The API key to validate.
+
+    Returns:
+        Error message if invalid, None if valid.
+    """
+    if provider == ProviderName.ANTHROPIC and not api_key.startswith("sk-ant-"):
+        return "Anthropic API key should start with 'sk-ant-'"
+
+    if provider == ProviderName.OPENAI and not api_key.startswith("sk-"):
+        return "OpenAI API key should start with 'sk-'"
+
+    if provider == ProviderName.OPENROUTER and not api_key.startswith("sk-or-"):
+        return "OpenRouter API key should start with 'sk-or-'"
+
+    if provider == ProviderName.HUGGINGFACE and not api_key.startswith("hf_"):
+        return "HuggingFace API token should start with 'hf_'"
+
+    if provider == ProviderName.GROK and not api_key.startswith("xai-"):
+        return "Grok API key should start with 'xai-'"
+
+    return None
 
 
 class CredentialLoader:
@@ -94,35 +149,10 @@ class CredentialLoader:
                      in current directory and parent directories.
         """
         if env_path is None:
-            env_path = self._find_env_file()
+            env_path = _find_env_file()
         self.env_path = env_path
         self._env_vars: dict[str, str] = {}
         self._load_env_file()
-
-    def _find_env_file(self) -> Path:
-        """Find the .env file by searching up the directory tree.
-
-        Returns:
-            Path to the found .env file or default location.
-        """
-        search_paths = [
-            Path.cwd() / ".env",
-            Path("D:/Intellicrack/.env"),
-            Path.home() / ".env",
-        ]
-
-        _logger.debug(
-            "env_file_search",
-            extra={"paths_checked": [str(p) for p in search_paths]},
-        )
-
-        for path in search_paths:
-            if path.exists():
-                _logger.info("env_file_found", extra={"path": str(path)})
-                return path
-
-        _logger.debug("env_file_not_found", extra={"default_path": "D:/Intellicrack/.env"})
-        return Path("D:/Intellicrack/.env")
 
     def _load_env_file(self) -> None:
         """Load environment variables from .env file.
@@ -198,7 +228,7 @@ class CredentialLoader:
         if not api_key:
             _logger.debug(
                 "credential_not_found",
-                extra={"provider": provider.value, "env_var": mapping.api_key_var},
+                extra={"provider": provider.value},
             )
             return None
 
@@ -271,7 +301,7 @@ class CredentialLoader:
             )
             return False, f"Missing {mapping.api_key_var}"
 
-        validation_result = self._validate_key_format(provider, api_key)
+        validation_result = _validate_key_format(provider, api_key)
         if validation_result is not None:
             _logger.warning(
                 "credential_validation_failed",
@@ -284,33 +314,6 @@ class CredentialLoader:
             extra={"provider": provider.value, "valid": True},
         )
         return True, None
-
-    def _validate_key_format(self, provider: ProviderName, api_key: str) -> str | None:
-        """Validate API key format for a provider.
-
-        Args:
-            provider: The provider the key is for.
-            api_key: The API key to validate.
-
-        Returns:
-            Error message if invalid, None if valid.
-        """
-        if provider == ProviderName.ANTHROPIC and not api_key.startswith("sk-ant-"):
-            return "Anthropic API key should start with 'sk-ant-'"
-
-        if provider == ProviderName.OPENAI and not api_key.startswith("sk-"):
-            return "OpenAI API key should start with 'sk-'"
-
-        if provider == ProviderName.OPENROUTER and not api_key.startswith("sk-or-"):
-            return "OpenRouter API key should start with 'sk-or-'"
-
-        if provider == ProviderName.HUGGINGFACE and not api_key.startswith("hf_"):
-            return "HuggingFace API token should start with 'hf_'"
-
-        if provider == ProviderName.GROK and not api_key.startswith("xai-"):
-            return "Grok API key should start with 'xai-'"
-
-        return None
 
     def list_configured_providers(self) -> list[ProviderName]:
         """List all providers that have credentials configured.
@@ -455,16 +458,11 @@ OPENROUTER_API_KEY=sk-or-v1-...
     _logger.debug("env_template_created", extra={"path": str(path)})
 
 
-_credential_loader: CredentialLoader | None = None
-
-
+@functools.lru_cache(maxsize=1)
 def get_credential_loader() -> CredentialLoader:
     """Get the global credential loader instance.
 
     Returns:
         The singleton CredentialLoader instance.
     """
-    global _credential_loader
-    if _credential_loader is None:
-        _credential_loader = CredentialLoader()
-    return _credential_loader
+    return CredentialLoader()

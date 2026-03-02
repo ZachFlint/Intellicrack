@@ -117,12 +117,6 @@
       <data key="d3">_setup_qt_and_splash</data>
       <data key="d4">['logger']</data>
     </node>
-    <node id="src.intellicrack.main._initialize_providers_sync">
-      <data key="d0">function</data>
-      <data key="d1">python</data>
-      <data key="d3">_initialize_providers_sync</data>
-      <data key="d4">['loop', 'registry', 'credentials', 'logger']</data>
-    </node>
     <node id="src.intellicrack.main._initialize_providers">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -147,11 +141,17 @@
       <data key="d3">_init_model_discovery</data>
       <data key="d4">['provider_registry', 'config', 'logger']</data>
     </node>
+    <node id="src.intellicrack.main._clear_model_cache">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_clear_model_cache</data>
+      <data key="d4">['logger']</data>
+    </node>
     <node id="src.intellicrack.main._run_application">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_run_application</data>
-      <data key="d4">['config', 'app', 'splash', 'loop', 'process_manager', 'logger']</data>
+      <data key="d4">['config', 'app', 'splash', 'process_manager', 'logger']</data>
     </node>
     <node id="collections.abc" />
     <node id="logging" />
@@ -2650,6 +2650,12 @@
       <data key="d3">src.intellicrack.core.config</data>
     </node>
     <node id="tomllib" />
+    <node id="src.intellicrack.core.config._get_project_root">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_get_project_root</data>
+      <data key="d4">[]</data>
+    </node>
     <node id="src.intellicrack.core.config.ProviderConfig">
       <data key="d0">class</data>
       <data key="d1">python</data>
@@ -4881,10 +4887,23 @@
       <data key="d2">D:\Intellicrack\src\intellicrack\credentials\env_loader.py</data>
       <data key="d3">src.intellicrack.credentials.env_loader</data>
     </node>
+    <node id="functools" />
     <node id="src.intellicrack.credentials.env_loader.ProviderCredentialMapping">
       <data key="d0">class</data>
       <data key="d1">python</data>
       <data key="d3">ProviderCredentialMapping</data>
+    </node>
+    <node id="src.intellicrack.credentials.env_loader._find_env_file">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_find_env_file</data>
+      <data key="d4">[]</data>
+    </node>
+    <node id="src.intellicrack.credentials.env_loader._validate_key_format">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_validate_key_format</data>
+      <data key="d4">['provider', 'api_key']</data>
     </node>
     <node id="src.intellicrack.credentials.env_loader.CredentialLoader">
       <data key="d0">class</data>
@@ -4908,12 +4927,6 @@
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d4">['self', 'env_path']</data>
-    </node>
-    <node id="src.intellicrack.credentials.env_loader._find_env_file">
-      <data key="d0">function</data>
-      <data key="d1">python</data>
-      <data key="d3">_find_env_file</data>
-      <data key="d4">['self']</data>
     </node>
     <node id="src.intellicrack.credentials.env_loader._load_env_file">
       <data key="d0">function</data>
@@ -4944,12 +4957,6 @@
       <data key="d1">python</data>
       <data key="d3">validate_credentials</data>
       <data key="d4">['self', 'provider']</data>
-    </node>
-    <node id="src.intellicrack.credentials.env_loader._validate_key_format">
-      <data key="d0">function</data>
-      <data key="d1">python</data>
-      <data key="d3">_validate_key_format</data>
-      <data key="d4">['self', 'provider', 'api_key']</data>
     </node>
     <node id="src.intellicrack.credentials.env_loader.list_configured_providers">
       <data key="d0">function</data>
@@ -4992,6 +4999,12 @@
     <node id="socketserver" />
     <node id="urllib.parse" />
     <node id="webbrowser" />
+    <node id="src.intellicrack.credentials.store">
+      <data key="d0">module</data>
+      <data key="d1">python</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack\credentials\store.py</data>
+      <data key="d3">src.intellicrack.credentials.store</data>
+    </node>
     <node id="src.intellicrack.credentials.oauth.OAuthError">
       <data key="d0">class</data>
       <data key="d1">python</data>
@@ -5058,6 +5071,11 @@
       <data key="d1">python</data>
       <data key="d3">OAuthManager</data>
     </node>
+    <node id="src.intellicrack.credentials.oauth._OAuthManagerHolder">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">_OAuthManagerHolder</data>
+    </node>
     <node id="src.intellicrack.credentials.oauth.get_oauth_manager">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -5069,12 +5087,6 @@
       <data key="d1">python</data>
       <data key="d3">authorize_google</data>
       <data key="d4">['client_id', 'client_secret', 'scopes']</data>
-    </node>
-    <node id="src.intellicrack.credentials.store">
-      <data key="d0">module</data>
-      <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\credentials\store.py</data>
-      <data key="d3">src.intellicrack.credentials.store</data>
     </node>
     <node id="src.intellicrack.credentials.oauth.is_expired">
       <data key="d0">function</data>
@@ -5112,11 +5124,11 @@
       <data key="d3">_send_response</data>
       <data key="d4">['self', 'status', 'message']</data>
     </node>
-    <node id="src.intellicrack.credentials.oauth.log_message">
+    <node id="src.intellicrack.credentials.oauth.log_request">
       <data key="d0">function</data>
       <data key="d1">python</data>
-      <data key="d3">log_message</data>
-      <data key="d4">['self', 'format']</data>
+      <data key="d3">log_request</data>
+      <data key="d4">['self', 'code', 'size']</data>
     </node>
     <node id="src.intellicrack.credentials.oauth.__init__">
       <data key="d0">function</data>
@@ -5158,13 +5170,13 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_generate_state</data>
-      <data key="d4">['self']</data>
+      <data key="d4">[]</data>
     </node>
     <node id="src.intellicrack.credentials.oauth._generate_pkce_pair">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_generate_pkce_pair</data>
-      <data key="d4">['self']</data>
+      <data key="d4">[]</data>
     </node>
     <node id="src.intellicrack.credentials.oauth.build_authorization_url">
       <data key="d0">function</data>
@@ -5238,7 +5250,6 @@
       <data key="d3">serve</data>
       <data key="d4">[]</data>
     </node>
-    <node id="functools" />
     <node id="src.intellicrack.credentials.store.CredentialStoreError">
       <data key="d0">class</data>
       <data key="d1">python</data>
@@ -5270,6 +5281,11 @@
       <data key="d1">python</data>
       <data key="d3">CredentialStore</data>
     </node>
+    <node id="src.intellicrack.credentials.store._CredentialStoreHolder">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">_CredentialStoreHolder</data>
+    </node>
     <node id="src.intellicrack.credentials.store.get_credential_store">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -5282,6 +5298,7 @@
       <data key="d3">get_credentials</data>
       <data key="d4">['provider']</data>
     </node>
+    <node id="keyring" />
     <node id="src.intellicrack.credentials.store.__init__">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -5310,25 +5327,25 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_serialize_credentials</data>
-      <data key="d4">['self', 'creds']</data>
+      <data key="d4">['creds']</data>
     </node>
     <node id="src.intellicrack.credentials.store._deserialize_credentials">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_deserialize_credentials</data>
-      <data key="d4">['self', 'data']</data>
+      <data key="d4">['data']</data>
     </node>
     <node id="src.intellicrack.credentials.store._serialize_metadata">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_serialize_metadata</data>
-      <data key="d4">['self', 'metadata']</data>
+      <data key="d4">['metadata']</data>
     </node>
     <node id="src.intellicrack.credentials.store._deserialize_metadata">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_deserialize_metadata</data>
-      <data key="d4">['self', 'data', 'provider']</data>
+      <data key="d4">['data', 'provider']</data>
     </node>
     <node id="src.intellicrack.credentials.store._get_from_keyring">
       <data key="d0">function</data>
@@ -5414,7 +5431,6 @@
       <data key="d3">_delete</data>
       <data key="d4">[]</data>
     </node>
-    <node id="keyring" />
     <node id="src.intellicrack.credentials.__init__">
       <data key="d0">module</data>
       <data key="d1">python</data>
@@ -7283,6 +7299,18 @@
       <data key="d3">restore_snapshot</data>
       <data key="d4">['self', 'snapshot_id']</data>
     </node>
+    <node id="src.intellicrack.sandbox.base.list_snapshots">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">list_snapshots</data>
+      <data key="d4">['self']</data>
+    </node>
+    <node id="src.intellicrack.sandbox.base.delete_snapshot">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">delete_snapshot</data>
+      <data key="d4">['self', 'name']</data>
+    </node>
     <node id="src.intellicrack.sandbox.manager">
       <data key="d0">module</data>
       <data key="d1">python</data>
@@ -8457,12 +8485,6 @@
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">cancel</data>
-      <data key="d4">[]</data>
-    </node>
-    <node id="src.intellicrack.ui.app.shutdown">
-      <data key="d0">function</data>
-      <data key="d1">python</data>
-      <data key="d3">shutdown</data>
       <data key="d4">[]</data>
     </node>
     <node id="src.intellicrack.ui.app._reinit_tools">
@@ -12632,9 +12654,6 @@
     <edge source="src.intellicrack.main" target="src.intellicrack.main._setup_qt_and_splash">
       <data key="d5">defines</data>
     </edge>
-    <edge source="src.intellicrack.main" target="src.intellicrack.main._initialize_providers_sync">
-      <data key="d5">defines</data>
-    </edge>
     <edge source="src.intellicrack.main" target="src.intellicrack.main._initialize_providers">
       <data key="d5">defines</data>
     </edge>
@@ -12645,6 +12664,9 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.main" target="src.intellicrack.main._init_model_discovery">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.main" target="src.intellicrack.main._clear_model_cache">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.main" target="src.intellicrack.main._run_application">
@@ -14897,6 +14919,9 @@
     <edge source="src.intellicrack.core.config" target="src.intellicrack.core.types">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.core.config" target="src.intellicrack.core.config._get_project_root">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.core.config" target="src.intellicrack.core.config.ProviderConfig">
       <data key="d5">defines</data>
     </edge>
@@ -15230,6 +15255,9 @@
     <edge source="src.intellicrack.core.orchestrator" target="typing">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.core.orchestrator" target="src.intellicrack.bridges.schemas">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.core.orchestrator" target="src.intellicrack.core.license_analyzer">
       <data key="d5">imports</data>
     </edge>
@@ -15433,9 +15461,6 @@
     </edge>
     <edge source="src.intellicrack.core.orchestrator" target="src.intellicrack.core.orchestrator.shutdown">
       <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.orchestrator" target="src.intellicrack.bridges.schemas">
-      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.base" target="__future__">
       <data key="d5">imports</data>
@@ -16106,6 +16131,9 @@
     <edge source="src.intellicrack.credentials.env_loader" target="__future__">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.credentials.env_loader" target="functools">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.credentials.env_loader" target="os">
       <data key="d5">imports</data>
     </edge>
@@ -16130,6 +16158,12 @@
     <edge source="src.intellicrack.credentials.env_loader" target="src.intellicrack.credentials.env_loader.ProviderCredentialMapping">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.credentials.env_loader" target="src.intellicrack.credentials.env_loader._find_env_file">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.credentials.env_loader" target="src.intellicrack.credentials.env_loader._validate_key_format">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.credentials.env_loader" target="src.intellicrack.credentials.env_loader.CredentialLoader">
       <data key="d5">defines</data>
     </edge>
@@ -16140,9 +16174,6 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.credentials.env_loader" target="src.intellicrack.credentials.env_loader.__init__">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.credentials.env_loader" target="src.intellicrack.credentials.env_loader._find_env_file">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.credentials.env_loader" target="src.intellicrack.credentials.env_loader._load_env_file">
@@ -16158,9 +16189,6 @@
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.credentials.env_loader" target="src.intellicrack.credentials.env_loader.validate_credentials">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.credentials.env_loader" target="src.intellicrack.credentials.env_loader._validate_key_format">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.credentials.env_loader" target="src.intellicrack.credentials.env_loader.list_configured_providers">
@@ -16232,6 +16260,9 @@
     <edge source="src.intellicrack.credentials.oauth" target="src.intellicrack.core.types">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.credentials.oauth" target="src.intellicrack.credentials.store">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.credentials.oauth" target="src.intellicrack.credentials.oauth.OAuthError">
       <data key="d5">defines</data>
     </edge>
@@ -16271,14 +16302,14 @@
     <edge source="src.intellicrack.credentials.oauth" target="src.intellicrack.credentials.oauth.OAuthManager">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.credentials.oauth" target="src.intellicrack.credentials.oauth._OAuthManagerHolder">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.credentials.oauth" target="src.intellicrack.credentials.oauth.get_oauth_manager">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.credentials.oauth" target="src.intellicrack.credentials.oauth.authorize_google">
       <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.credentials.oauth" target="src.intellicrack.credentials.store">
-      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.credentials.oauth" target="src.intellicrack.credentials.oauth.is_expired">
       <data key="d5">defines</data>
@@ -16298,7 +16329,7 @@
     <edge source="src.intellicrack.credentials.oauth" target="src.intellicrack.credentials.oauth._send_response">
       <data key="d5">defines</data>
     </edge>
-    <edge source="src.intellicrack.credentials.oauth" target="src.intellicrack.credentials.oauth.log_message">
+    <edge source="src.intellicrack.credentials.oauth" target="src.intellicrack.credentials.oauth.log_request">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.credentials.oauth" target="src.intellicrack.credentials.oauth.__init__">
@@ -16361,27 +16392,6 @@
     <edge source="src.intellicrack.credentials.oauth" target="src.intellicrack.credentials.oauth.serve">
       <data key="d5">defines</data>
     </edge>
-    <edge source="src.intellicrack.credentials.oauth.OAuthError" target="src.intellicrack.core.types.IntellicrackError">
-      <data key="d5">inherits</data>
-    </edge>
-    <edge source="src.intellicrack.credentials.oauth.OAuthConfigurationError" target="OAuthError">
-      <data key="d5">inherits</data>
-    </edge>
-    <edge source="src.intellicrack.credentials.oauth.OAuthAuthorizationError" target="OAuthError">
-      <data key="d5">inherits</data>
-    </edge>
-    <edge source="src.intellicrack.credentials.oauth.OAuthTokenError" target="OAuthError">
-      <data key="d5">inherits</data>
-    </edge>
-    <edge source="src.intellicrack.credentials.oauth.OAuthCallbackError" target="OAuthError">
-      <data key="d5">inherits</data>
-    </edge>
-    <edge source="src.intellicrack.credentials.oauth.OAuthFlowType" target="enum.Enum">
-      <data key="d5">inherits</data>
-    </edge>
-    <edge source="src.intellicrack.credentials.oauth.OAuthProvider" target="enum.Enum">
-      <data key="d5">inherits</data>
-    </edge>
     <edge source="src.intellicrack.credentials.store" target="__future__">
       <data key="d5">imports</data>
     </edge>
@@ -16401,9 +16411,6 @@
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.credentials.store" target="functools">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.credentials.store" target="types">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.credentials.store" target="typing">
@@ -16436,11 +16443,20 @@
     <edge source="src.intellicrack.credentials.store" target="src.intellicrack.credentials.store.CredentialStore">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.credentials.store" target="src.intellicrack.credentials.store._CredentialStoreHolder">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.credentials.store" target="src.intellicrack.credentials.store.get_credential_store">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.credentials.store" target="src.intellicrack.credentials.store.get_credentials">
       <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.credentials.store" target="types">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.credentials.store" target="keyring">
+      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.credentials.store" target="src.intellicrack.credentials.store.__init__">
       <data key="d5">defines</data>
@@ -16508,8 +16524,26 @@
     <edge source="src.intellicrack.credentials.store" target="src.intellicrack.credentials.store._delete">
       <data key="d5">defines</data>
     </edge>
-    <edge source="src.intellicrack.credentials.store" target="keyring">
-      <data key="d5">imports</data>
+    <edge source="src.intellicrack.credentials.oauth.OAuthError" target="src.intellicrack.core.types.IntellicrackError">
+      <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.credentials.oauth.OAuthConfigurationError" target="OAuthError">
+      <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.credentials.oauth.OAuthAuthorizationError" target="OAuthError">
+      <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.credentials.oauth.OAuthTokenError" target="OAuthError">
+      <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.credentials.oauth.OAuthCallbackError" target="OAuthError">
+      <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.credentials.oauth.OAuthFlowType" target="enum.Enum">
+      <data key="d5">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.credentials.oauth.OAuthProvider" target="enum.Enum">
+      <data key="d5">inherits</data>
     </edge>
     <edge source="src.intellicrack.credentials.store.CredentialStoreError" target="src.intellicrack.core.types.IntellicrackError">
       <data key="d5">inherits</data>
@@ -17828,6 +17862,12 @@
     <edge source="src.intellicrack.sandbox.base" target="src.intellicrack.sandbox.base.restore_snapshot">
       <data key="d5">defines</data>
     </edge>
+    <edge source="src.intellicrack.sandbox.base" target="src.intellicrack.sandbox.base.list_snapshots">
+      <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.sandbox.base" target="src.intellicrack.sandbox.base.delete_snapshot">
+      <data key="d5">defines</data>
+    </edge>
     <edge source="src.intellicrack.sandbox.base.FileChange" target="typing.TypedDict">
       <data key="d5">inherits</data>
     </edge>
@@ -18251,9 +18291,6 @@
     <edge source="src.intellicrack.ui.app" target="importlib">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.app" target="inspect">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.app" target="json">
       <data key="d5">imports</data>
     </edge>
@@ -18281,7 +18318,13 @@
     <edge source="src.intellicrack.ui.app" target="src.intellicrack._metadata">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.bridges.installer">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.core.logging">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.core.script_gen">
       <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.core.types">
@@ -18322,6 +18365,9 @@
     </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app.MainWindow">
       <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.providers.model_loader">
+      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.core.config">
       <data key="d5">imports</data>
@@ -18632,26 +18678,11 @@
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app.cancel">
       <data key="d5">defines</data>
     </edge>
-    <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app.shutdown">
-      <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.app" target="src.intellicrack.providers.model_loader">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.app" target="src.intellicrack.core.script_gen">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.app" target="src.intellicrack.bridges.installer">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._reinit_tools">
       <data key="d5">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._reconnect_providers">
       <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.app" target="src.intellicrack.providers.registry">
-      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app.load_session">
       <data key="d5">defines</data>
@@ -18791,9 +18822,6 @@
     <edge source="src.intellicrack.ui.provider_config" target="contextlib">
       <data key="d5">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.provider_config" target="importlib">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.provider_config" target="json">
       <data key="d5">imports</data>
     </edge>
@@ -18824,6 +18852,15 @@
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.core.logging">
       <data key="d5">imports</data>
     </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.credentials.env_loader">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.credentials.oauth">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.credentials.store">
+      <data key="d5">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.resources">
       <data key="d5">imports</data>
     </edge>
@@ -18847,6 +18884,18 @@
     </edge>
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config.ModelSelectionDialog">
       <data key="d5">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.providers.local_transformers">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.providers.ollama">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.providers.openrouter">
+      <data key="d5">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.providers.xpu_utils">
+      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.provider_config" target="intellicrack.providers.base">
       <data key="d5">imports</data>
@@ -19073,29 +19122,8 @@
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config.get_selected_model">
       <data key="d5">defines</data>
     </edge>
-    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.credentials.env_loader">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.credentials.store">
-      <data key="d5">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._discover">
       <data key="d5">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.credentials.oauth">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.providers.local_transformers">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.providers.ollama">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.providers.openrouter">
-      <data key="d5">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.providers.xpu_utils">
-      <data key="d5">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.sandbox_config" target="__future__">
       <data key="d5">imports</data>

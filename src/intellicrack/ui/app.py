@@ -14,7 +14,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import importlib
-import inspect
 import json
 import os
 from collections.abc import Callable
@@ -42,7 +41,9 @@ from PyQt6.QtWidgets import (
 )
 
 from .._metadata import __copyright__, __license__, __version__
+from ..bridges.installer import ToolInstaller
 from ..core.logging import get_logger
+from ..core.script_gen import ScriptManager
 from ..core.types import Message, ModelInfo, ProviderCredentials, ProviderName, ToolCall, ToolName, ToolResult
 from ..providers.discovery import ModelDiscovery
 from ..sandbox import SandboxManager
@@ -54,6 +55,13 @@ from .sandbox_config import SandboxConfigDialog
 from .session_manager import SessionManagerDialog
 from .tool_config import ToolConfigDialog, ToolStatusDialog
 from .tools import ToolOutputPanel
+
+
+try:
+    from ..providers.model_loader import get_global_model_cache, set_global_cache_size
+except ImportError:
+    get_global_model_cache = None
+    set_global_cache_size = None
 
 
 if TYPE_CHECKING:
@@ -245,9 +253,9 @@ class MainWindow(QMainWindow):
 
     def _initialize_model_cache(self) -> None:
         """Initialize model cache settings from configuration."""
+        if set_global_cache_size is None:
+            return
         try:
-            from ..providers.model_loader import set_global_cache_size
-
             max_cache = getattr(self._config, "max_model_cache_bytes", None)
             if isinstance(max_cache, int) and max_cache > 0:
                 set_global_cache_size(max_cache)
@@ -683,12 +691,12 @@ class MainWindow(QMainWindow):
 
     def _refresh_memory_status(self) -> None:
         """Update the memory usage display in the status bar."""
+        if get_global_model_cache is None:
+            self._memory_label.setText("")
+            return
         try:
-            from ..providers.model_loader import ModelCache
-
-            usage = ModelCache.get_memory_usage()
-            total_bytes = usage.get("total_bytes", 0)
-            if isinstance(total_bytes, int | float) and total_bytes > 0:
+            total_bytes = get_global_model_cache().get_memory_usage()
+            if total_bytes > 0:
                 mb = total_bytes / (1024 * 1024)
                 self._memory_label.setText(f"Cache: {mb:.0f}MB")
             else:
@@ -701,11 +709,12 @@ class MainWindow(QMainWindow):
         if self._model_discovery is None:
             return
         try:
-            last_event = self._model_discovery.get_last_event()
-            if last_event is not None:
-                provider = last_event.get("provider", "")
-                status = last_event.get("status", "")
-                self._model_status_label.setText(f"Discovery: {provider} {status}")
+            events = self._model_discovery.get_discovery_events()
+            if events:
+                last_event = events[-1]
+                provider_str = last_event.provider.value
+                status_str = "OK" if last_event.success else (last_event.error_message or "failed")
+                self._model_status_label.setText(f"Discovery: {provider_str} {status_str}")
         except Exception:
             _logger.debug("model_discovery_status_refresh_failed")
 
@@ -735,13 +744,11 @@ class MainWindow(QMainWindow):
         self.licensing_analysis_received.connect(self._tool_panel.update_licensing_analysis)
 
         try:
-            from ..core.script_gen import ScriptManager
-
             scripts_dir = Path.home() / ".intellicrack" / "scripts"
             scripts_dir.mkdir(parents=True, exist_ok=True)
             script_mgr = ScriptManager(scripts_dir)
             self._orchestrator.set_script_manager(script_mgr)
-        except (ImportError, OSError) as e:
+        except OSError as e:
             _logger.debug("script_manager_init_skipped", extra={"error": str(e)})
 
         available_tools = self._orchestrator.get_available_tool_names()
@@ -752,8 +759,6 @@ class MainWindow(QMainWindow):
             _logger.debug("process_bridge_available")
 
         try:
-            from ..bridges.installer import ToolInstaller
-
             tools_dir = Path.home() / ".intellicrack" / "tools"
             tools_dir.mkdir(parents=True, exist_ok=True)
             installer = ToolInstaller(tools_dir)
@@ -762,7 +767,7 @@ class MainWindow(QMainWindow):
                 "tool_installer_initialized",
                 extra={"tools_dir": str(tools_dir)},
             )
-        except (ImportError, OSError) as e:
+        except OSError as e:
             _logger.debug("tool_installer_init_skipped", extra={"error": str(e)})
 
     async def _refresh_tool_status(self) -> dict[str, object]:
@@ -1197,8 +1202,8 @@ class MainWindow(QMainWindow):
         _logger.debug(
             "tool_status_icons",
             extra={
-                "success_icon": success_pixmap is not None,
-                "failure_icon": failure_pixmap is not None,
+                "success_icon": not success_pixmap.isNull(),
+                "failure_icon": not failure_pixmap.isNull(),
             },
         )
 
@@ -1415,7 +1420,12 @@ class MainWindow(QMainWindow):
         self._model_combo.setEnabled(False)
 
         if self._model_discovery is not None:
-            self._model_discovery.discover_all()
+            try:
+                loop = asyncio.new_event_loop()
+                loop.run_until_complete(self._model_discovery.discover_all())
+                loop.close()
+            except Exception:
+                _logger.debug("model_discovery_refresh_failed")
 
         self._model_refresh_worker = ModelRefreshWorker(provider_id, api_key, parent=self)
         self._model_refresh_worker.refresh_finished.connect(self._on_models_refresh_finished)
@@ -1475,7 +1485,7 @@ class MainWindow(QMainWindow):
 
         if self._model_discovery is not None and model_infos:
             first_model = model_infos[0]
-            model_detail = self._model_discovery.get_by_id(first_model.id)
+            model_detail = self._model_discovery.get_by_id(first_model.provider, first_model.id)
             if model_detail is not None:
                 _logger.debug(
                     "model_detail_fetched",
@@ -1594,10 +1604,7 @@ class MainWindow(QMainWindow):
             },
         )
 
-        highlighter = self._tool_panel.get_highlighter()
         code_highlighter = self._tool_panel.get_code_highlighter()
-        if highlighter is not None:
-            highlighter.rehighlight()
         if code_highlighter is not None:
             code_highlighter.rehighlight()
 
@@ -1615,7 +1622,7 @@ class MainWindow(QMainWindow):
         custom_loaded = font_info.get("custom_fonts_available", False)
 
         status_icon = self._icon_manager.get_status_icon(True)
-        has_icon = status_icon is not None
+        has_icon = not status_icon.isNull()
 
         about_text = (
             "Intellicrack\n\n"
@@ -1732,8 +1739,10 @@ class MainWindow(QMainWindow):
                     def _frida_msg_handler(message: object) -> None:
                         text = str(message) if not isinstance(message, str) else message
                         self._tool_panel.log_frida_message(text)
-                        if isinstance(message, dict) and message.get("type") == "hook":
-                            self._tool_panel.add_frida_hook_entry(message)
+                        if isinstance(message, dict):
+                            msg_dict = cast("dict[str, object]", message)
+                            if msg_dict.get("type") == "hook":
+                                self._tool_panel.add_frida_hook_entry(msg_dict)
 
                     set_handler(_frida_msg_handler)
         except Exception as e:
@@ -1896,68 +1905,8 @@ class MainWindow(QMainWindow):
         """
         self._tool_panel.close_embedded_tools()
 
-        session_mgr = getattr(self._orchestrator, "_session_manager", None)
-        if session_mgr is not None:
-            cleanup = getattr(session_mgr, "cleanup", None)
-            if callable(cleanup):
-                cleanup()
-
-        pm_cls = getattr(
-            importlib.import_module("intellicrack.core.process_manager"),
-            "ProcessManager",
-            None,
-        )
-        if pm_cls is not None:
-            pm_instance = pm_cls.get_instance()
-            if callable(getattr(pm_instance, "request_shutdown", None)):
-                pm_instance.request_shutdown()
-            _logger.info(
-                "shutdown_process_status",
-                extra={
-                    "running_count": len(pm_instance.get_running_processes()),
-                    "tracked_count": len(pm_instance.get_all_tracked()),
-                },
-            )
-
-        registry_inst = getattr(self._orchestrator, "_provider_registry", None)
-        if registry_inst is not None and callable(getattr(registry_inst, "disconnect_all", None)):
-            registry_inst.disconnect_all()
-
-        try:
-            from ..providers.registry import get_provider_registry
-
-            provider_reg = get_provider_registry()
-            active = provider_reg.active
-            if active is not None:
-                unload = getattr(active, "unload_model", None)
-                if callable(unload):
-                    unload()
-        except Exception:
-            _logger.debug("model_unload_cleanup_skipped")
-
-        try:
-            from ..providers.model_loader import get_global_model_cache
-
-            get_global_model_cache().clear()
-            _logger.debug("model_cache_cleared")
-        except Exception:
-            _logger.debug("model_cache_cleanup_skipped")
-
-        async def shutdown() -> None:
-            cleanup_stale = getattr(self._sandbox_manager, "cleanup_stale", None)
-            if callable(cleanup_stale):
-                result = cleanup_stale(max_idle_seconds=0)
-                if inspect.isawaitable(result):
-                    await result
-            await self._orchestrator.shutdown()
-
         if self._current_worker and self._current_worker.isRunning():
             self._current_worker.wait()
-
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(shutdown())
-        loop.close()
 
         if a0 is not None:
             a0.accept()
