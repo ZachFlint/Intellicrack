@@ -65,7 +65,7 @@ execnet==2.1.2
 executing==2.2.1
 faker==40.5.1
 fastjsonschema==2.21.2
-filelock==3.24.3
+filelock==3.25.0
 findpython==0.7.1
 flake8==7.3.0
 flake8_pyproject==1.2.4
