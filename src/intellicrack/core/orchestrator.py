@@ -19,6 +19,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
+from ..bridges.schemas import (
+    build_schema_parameters,
+    get_all_schemas_for_provider,
+    validate_and_convert,
+)
 from .license_analyzer import LicenseAnalyzer
 from .logging import get_logger, log_analysis_operation
 from .types import (
@@ -188,6 +193,7 @@ class Orchestrator:
         self._cancel_event = asyncio.Event()
 
         self._script_manager: ScriptManager | None = None
+        self._shutdown_called: bool = False
 
         self._on_message: Callable[[Message], None] | None = None
         self._on_tool_call: Callable[[ToolCall], None] | None = None
@@ -905,12 +911,6 @@ class Orchestrator:
             tools: Tool definitions to validate.
             provider: The LLM provider to validate against.
         """
-        from ..bridges.schemas import (
-            build_schema_parameters,
-            get_all_schemas_for_provider,
-            validate_and_convert,
-        )
-
         provider_name = provider.name
         for tool in tools:
             _schemas, errors = validate_and_convert(tool, provider_name)
@@ -918,7 +918,7 @@ class Orchestrator:
                 _logger.warning(
                     "tool_schema_validation_error",
                     extra={
-                        "tool": tool.name,
+                        "tool": tool.tool_name.value,
                         "error": str(err),
                         "provider": provider_name.value,
                     },
@@ -1421,6 +1421,10 @@ class Orchestrator:
 
     async def shutdown(self) -> None:
         """Shutdown the orchestrator and cleanup resources."""
+        if self._shutdown_called:
+            _logger.debug("orchestrator_shutdown_already_called")
+            return
+        self._shutdown_called = True
         _logger.info("orchestrator_shutdown_started")
 
         try:

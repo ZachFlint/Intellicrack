@@ -445,3 +445,33 @@ class SandboxBase:
             extra={"class_name": type(self).__name__, "snapshot_id": snapshot_id},
         )
         raise SandboxError(_ERR_SNAPSHOTS_NOT_SUPPORTED)
+
+    async def list_snapshots(self) -> list[str]:
+        """List available snapshots.
+
+        Returns:
+            List of snapshot names.
+
+        Raises:
+            SandboxError: If not supported.
+        """
+        _logger.debug(
+            "base_sandbox_list_snapshots_called",
+            extra={"class_name": type(self).__name__},
+        )
+        raise SandboxError(_ERR_SNAPSHOTS_NOT_SUPPORTED)
+
+    async def delete_snapshot(self, name: str) -> None:
+        """Delete a snapshot.
+
+        Args:
+            name: Snapshot name to delete.
+
+        Raises:
+            SandboxError: If not supported.
+        """
+        _logger.debug(
+            "base_sandbox_delete_snapshot_called",
+            extra={"class_name": type(self).__name__, "snapshot_name": name},
+        )
+        raise SandboxError(_ERR_SNAPSHOTS_NOT_SUPPORTED)

@@ -18,13 +18,20 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from enum import Enum
 from functools import cached_property
-from types import ModuleType
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 from ..core.logging import get_logger
 from ..core.types import IntellicrackError, ProviderCredentials, ProviderName
 from .env_loader import CredentialLoader, get_credential_loader
 
+
+if TYPE_CHECKING:
+    from types import ModuleType
+
+try:
+    import keyring as _keyring_module
+except ImportError:
+    _keyring_module = None
 
 _logger = get_logger("credentials.store")
 
@@ -116,29 +123,28 @@ class CredentialStore:
 
         self._keyring_checked = True
 
-        try:
-            import keyring
-
-            test_key = f"{self.SERVICE_NAME}_test"
-            keyring.set_password(self.SERVICE_NAME, test_key, "test_value")
-            result = keyring.get_password(self.SERVICE_NAME, test_key)
-            keyring.delete_password(self.SERVICE_NAME, test_key)
-
-            if result == "test_value":
-                self._keyring = keyring
-                self._keyring_available = True
-                _logger.info("keyring_backend_available", extra={"backend": keyring.get_keyring().__class__.__name__})
-                return True
-
-            _logger.warning("keyring_test_failed", extra={"reason": "value_mismatch"})
-            return False
-
-        except ImportError:
+        if _keyring_module is None:
             _logger.warning("keyring_unavailable", extra={"reason": "library_not_installed"})
             return False
+
+        try:
+            test_key = f"{self.SERVICE_NAME}_test"
+            _keyring_module.set_password(self.SERVICE_NAME, test_key, "test_value")
+            result = _keyring_module.get_password(self.SERVICE_NAME, test_key)
+            _keyring_module.delete_password(self.SERVICE_NAME, test_key)
+
+            if result == "test_value":
+                self._keyring = _keyring_module
+                self._keyring_available = True
+                _logger.info("keyring_backend_available", extra={"backend": _keyring_module.get_keyring().__class__.__name__})
         except Exception as e:
             _logger.warning("keyring_unavailable", extra={"error": str(e)})
             return False
+        else:
+            if self._keyring_available:
+                return True
+            _logger.warning("keyring_test_failed", extra={"reason": "value_mismatch"})
+        return False
 
     @cached_property
     def keyring_available(self) -> bool:
@@ -160,7 +166,8 @@ class CredentialStore:
         """
         return f"{self.SERVICE_NAME}_{provider.value}"
 
-    def _serialize_credentials(self, creds: ProviderCredentials) -> str:
+    @staticmethod
+    def _serialize_credentials(creds: ProviderCredentials) -> str:
         """Serialize credentials to JSON for storage.
 
         Args:
@@ -172,7 +179,8 @@ class CredentialStore:
         data = asdict(creds)
         return json.dumps(data, ensure_ascii=False)
 
-    def _deserialize_credentials(self, data: str) -> ProviderCredentials:
+    @staticmethod
+    def _deserialize_credentials(data: str) -> ProviderCredentials:
         """Deserialize credentials from JSON.
 
         Args:
@@ -193,9 +201,11 @@ class CredentialStore:
                 project_id=parsed.get("project_id"),
             )
         except (json.JSONDecodeError, TypeError, KeyError) as e:
-            raise CredentialStoreError(f"Failed to deserialize credentials: {e}") from e
+            msg = f"Failed to deserialize credentials: {e}"
+            raise CredentialStoreError(msg) from e
 
-    def _serialize_metadata(self, metadata: StoredCredential) -> str:
+    @staticmethod
+    def _serialize_metadata(metadata: StoredCredential) -> str:
         """Serialize credential metadata to JSON.
 
         Args:
@@ -213,7 +223,8 @@ class CredentialStore:
         }
         return json.dumps(data, ensure_ascii=False)
 
-    def _deserialize_metadata(self, data: str, provider: ProviderName) -> StoredCredential:
+    @staticmethod
+    def _deserialize_metadata(data: str, provider: ProviderName) -> StoredCredential:
         """Deserialize credential metadata from JSON.
 
         Args:
@@ -289,7 +300,8 @@ class CredentialStore:
             CredentialStoreError: If storage fails.
         """
         if self._keyring is None:
-            raise KeyringUnavailableError("Keyring is not available")
+            msg = "Keyring is not available"
+            raise KeyringUnavailableError(msg)
 
         key = self._get_keyring_key(provider)
         metadata_key = f"{key}{self.METADATA_KEY}"
@@ -316,7 +328,8 @@ class CredentialStore:
             await asyncio.to_thread(_store)
             _logger.info("credentials_stored", extra={"provider": provider.value, "store": "keyring"})
         except Exception as e:
-            raise CredentialStoreError(f"Failed to store credentials: {e}") from e
+            msg = f"Failed to store credentials: {e}"
+            raise CredentialStoreError(msg) from e
 
     async def _get_metadata(self, provider: ProviderName) -> StoredCredential | None:
         """Get credential metadata from keyring.
@@ -378,7 +391,8 @@ class CredentialStore:
         """
         creds = await self.get(provider)
         if creds is None:
-            raise CredentialNotFoundError(f"No credentials found for {provider.value}")
+            msg = f"No credentials found for {provider.value}"
+            raise CredentialNotFoundError(msg)
         return creds
 
     async def set(
@@ -400,10 +414,11 @@ class CredentialStore:
             KeyringUnavailableError: If keyring is not available.
         """
         if not self.keyring_available:
-            raise KeyringUnavailableError(
+            msg = (
                 "Keyring is not available. Install keyring package and ensure "
                 "a backend is available (Windows Credential Manager, macOS Keychain, etc.)"
             )
+            raise KeyringUnavailableError(msg)
 
         async with self._lock:
             await self._set_to_keyring(provider, credentials, key_name, source)
@@ -421,7 +436,8 @@ class CredentialStore:
             KeyringUnavailableError: If keyring is not available.
         """
         if not self.keyring_available or self._keyring is None:
-            raise KeyringUnavailableError("Keyring is not available")
+            msg = "Keyring is not available"
+            raise KeyringUnavailableError(msg)
 
         key = self._get_keyring_key(provider)
         metadata_key = f"{key}{self.METADATA_KEY}"
@@ -492,7 +508,8 @@ class CredentialStore:
             KeyringUnavailableError: If keyring is not available.
         """
         if not self.keyring_available:
-            raise KeyringUnavailableError("Keyring is not available for migration")
+            msg = "Keyring is not available for migration"
+            raise KeyringUnavailableError(msg)
 
         target_providers = providers or list(ProviderName)
         results: dict[ProviderName, bool] = {}
@@ -546,9 +563,8 @@ class CredentialStore:
             if not creds.api_key.startswith("sk-"):
                 return False, "OpenAI API key should start with 'sk-'"
 
-        elif provider == ProviderName.OPENROUTER:
-            if not creds.api_key.startswith("sk-or-"):
-                return False, "OpenRouter API key should start with 'sk-or-'"
+        elif provider == ProviderName.OPENROUTER and not creds.api_key.startswith("sk-or-"):
+            return False, "OpenRouter API key should start with 'sk-or-'"
 
         return True, None
 
@@ -579,7 +595,11 @@ class CredentialStore:
         return None
 
 
-_credential_store: CredentialStore | None = None
+class _CredentialStoreHolder:
+    instance: CredentialStore | None = None
+
+
+_store_holder = _CredentialStoreHolder()
 
 
 def get_credential_store() -> CredentialStore:
@@ -588,10 +608,9 @@ def get_credential_store() -> CredentialStore:
     Returns:
         The singleton CredentialStore instance.
     """
-    global _credential_store
-    if _credential_store is None:
-        _credential_store = CredentialStore()
-    return _credential_store
+    if _store_holder.instance is None:
+        _store_holder.instance = CredentialStore()
+    return _store_holder.instance
 
 
 async def get_credentials(provider: ProviderName) -> ProviderCredentials | None:

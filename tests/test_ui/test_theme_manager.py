@@ -6,8 +6,6 @@ using real stylesheet assets.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import pytest
 
 from intellicrack.ui.resources.resource_helper import get_assets_path
@@ -20,9 +18,6 @@ from intellicrack.ui.resources.theme_manager import (
     ThemeManager,
 )
 
-
-if TYPE_CHECKING:
-    from PyQt6.QtWidgets import QApplication
 
 _MIN_STYLESHEET_LENGTH: int = 100
 
@@ -116,25 +111,29 @@ class TestApplyTheme:
     """Tests for apply_theme method."""
 
     @staticmethod
-    def test_apply_theme_returns_bool(theme_manager: ThemeManager, qapp: QApplication) -> None:
+    @pytest.mark.usefixtures("qapp")
+    def test_apply_theme_returns_bool(theme_manager: ThemeManager) -> None:
         """apply_theme returns a boolean."""
         result = theme_manager.apply_theme(THEME_DARK)
         assert isinstance(result, bool)
 
     @staticmethod
-    def test_apply_dark_theme_succeeds(theme_manager: ThemeManager, qapp: QApplication) -> None:
+    @pytest.mark.usefixtures("qapp")
+    def test_apply_dark_theme_succeeds(theme_manager: ThemeManager) -> None:
         """Applying dark theme succeeds."""
         result = theme_manager.apply_theme(THEME_DARK)
         assert result
 
     @staticmethod
-    def test_apply_light_theme_succeeds(theme_manager: ThemeManager, qapp: QApplication) -> None:
+    @pytest.mark.usefixtures("qapp")
+    def test_apply_light_theme_succeeds(theme_manager: ThemeManager) -> None:
         """Applying light theme succeeds."""
         result = theme_manager.apply_theme(THEME_LIGHT)
         assert result
 
     @staticmethod
-    def test_apply_theme_updates_current_theme(theme_manager: ThemeManager, qapp: QApplication) -> None:
+    @pytest.mark.usefixtures("qapp")
+    def test_apply_theme_updates_current_theme(theme_manager: ThemeManager) -> None:
         """apply_theme updates _current_theme."""
         theme_manager.apply_theme(THEME_LIGHT)
         assert theme_manager._current_theme == THEME_LIGHT
@@ -143,7 +142,8 @@ class TestApplyTheme:
         assert theme_manager._current_theme == THEME_DARK
 
     @staticmethod
-    def test_apply_invalid_theme_uses_default(theme_manager: ThemeManager, qapp: QApplication) -> None:
+    @pytest.mark.usefixtures("qapp")
+    def test_apply_invalid_theme_uses_default(theme_manager: ThemeManager) -> None:
         """Invalid theme name falls back to default."""
         theme_manager.apply_theme("invalid_theme_name")
         assert theme_manager._current_theme == DEFAULT_THEME
@@ -158,7 +158,8 @@ class TestCurrentTheme:
         assert theme_manager.current_theme == DEFAULT_THEME
 
     @staticmethod
-    def test_current_theme_after_apply(theme_manager: ThemeManager, qapp: QApplication) -> None:
+    @pytest.mark.usefixtures("qapp")
+    def test_current_theme_after_apply(theme_manager: ThemeManager) -> None:
         """current_theme reflects applied theme."""
         theme_manager.apply_theme(THEME_LIGHT)
         assert theme_manager.current_theme == THEME_LIGHT
@@ -168,7 +169,8 @@ class TestToggleTheme:
     """Tests for toggle_theme method."""
 
     @staticmethod
-    def test_toggle_from_dark_to_light(theme_manager: ThemeManager, qapp: QApplication) -> None:
+    @pytest.mark.usefixtures("qapp")
+    def test_toggle_from_dark_to_light(theme_manager: ThemeManager) -> None:
         """Toggling from dark goes to light."""
         theme_manager.apply_theme(THEME_DARK)
         result = theme_manager.toggle_theme()
@@ -176,7 +178,8 @@ class TestToggleTheme:
         assert theme_manager.current_theme == THEME_LIGHT
 
     @staticmethod
-    def test_toggle_from_light_to_dark(theme_manager: ThemeManager, qapp: QApplication) -> None:
+    @pytest.mark.usefixtures("qapp")
+    def test_toggle_from_light_to_dark(theme_manager: ThemeManager) -> None:
         """Toggling from light goes to dark."""
         theme_manager.apply_theme(THEME_LIGHT)
         result = theme_manager.toggle_theme()

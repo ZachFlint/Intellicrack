@@ -29,13 +29,17 @@ from typing import TYPE_CHECKING, Any, Final
 import httpx
 
 from ..core.logging import get_logger
-from ..core.types import IntellicrackError, ProviderCredentials
+from ..core.types import IntellicrackError, ProviderCredentials, ProviderName
+from .store import CredentialSource, get_credential_store
 
 
 if TYPE_CHECKING:
     from .store import CredentialStore
 
 _logger = get_logger("credentials.oauth")
+
+_GOOGLE_OAUTH_ENDPOINT: Final = "https://oauth2.googleapis.com/token"
+_HTTP_OK: Final = 200
 
 
 class OAuthError(IntellicrackError):
@@ -227,7 +231,7 @@ OAUTH_CONFIGS: dict[OAuthProvider, OAuthConfig] = {
         client_id="",
         client_secret=None,
         authorization_url="https://accounts.google.com/o/oauth2/v2/auth",
-        token_url="https://oauth2.googleapis.com/token",
+        token_url=_GOOGLE_OAUTH_ENDPOINT,
         scopes=(
             "https://www.googleapis.com/auth/generative-language.retriever",
             "https://www.googleapis.com/auth/cloud-platform",
@@ -287,24 +291,24 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
     <title>Intellicrack OAuth</title>
     <style>
         body {{ font-family: system-ui, sans-serif; text-align: center; padding: 50px; }}
-        h1 {{ color: {"#22c55e" if status == 200 else "#ef4444"}; }}
+        h1 {{ color: {"#22c55e" if status == _HTTP_OK else "#ef4444"}; }}
     </style>
 </head>
 <body>
-    <h1>{"Success" if status == 200 else "Error"}</h1>
+    <h1>{"Success" if status == _HTTP_OK else "Error"}</h1>
     <p>{message}</p>
 </body>
 </html>"""
         self.wfile.write(html.encode("utf-8"))
 
-    def log_message(self, format: str, *args: Any) -> None:
-        """Suppress default HTTP logging.
+    def log_request(self, code: int | str = "-", size: int | str = "-") -> None:
+        """Suppress default HTTP request logging.
 
         Args:
-            format: The format string (unused).
-            *args: Format arguments (unused).
+            code: HTTP status code (unused).
+            size: Response size (unused).
         """
-        del format, args
+        del self, code, size
 
 
 class OAuthCallbackServer:
@@ -354,19 +358,23 @@ class OAuthCallbackServer:
             OAuthCallbackError: If timeout or error occurs.
         """
         if not self._event.wait(timeout=self._timeout):
-            raise OAuthCallbackError("Timeout waiting for OAuth callback")
+            msg = "Timeout waiting for OAuth callback"
+            raise OAuthCallbackError(msg)
 
         if OAuthCallbackHandler.callback_error:
             error_msg = OAuthCallbackHandler.callback_error
             if "denied" in error_msg.lower() or "access_denied" in error_msg.lower():
-                raise OAuthAuthorizationError(f"Authorization denied: {error_msg}")
-            raise OAuthCallbackError(f"OAuth error: {error_msg}")
+                msg = f"Authorization denied: {error_msg}"
+                raise OAuthAuthorizationError(msg)
+            msg = f"OAuth error: {error_msg}"
+            raise OAuthCallbackError(msg)
 
         code = OAuthCallbackHandler.callback_code
         state = OAuthCallbackHandler.callback_state
 
         if not code or not state:
-            raise OAuthCallbackError("Invalid callback: missing code or state")
+            msg = "Invalid callback: missing code or state"
+            raise OAuthCallbackError(msg)
 
         return code, state
 
@@ -426,7 +434,8 @@ class OAuthManager:
             await self._http_client.aclose()
             self._http_client = None
 
-    def _generate_state(self) -> str:
+    @staticmethod
+    def _generate_state() -> str:
         """Generate a cryptographically secure state parameter.
 
         Returns:
@@ -434,7 +443,8 @@ class OAuthManager:
         """
         return secrets.token_urlsafe(32)
 
-    def _generate_pkce_pair(self) -> tuple[str, str]:
+    @staticmethod
+    def _generate_pkce_pair() -> tuple[str, str]:
         """Generate PKCE code verifier and challenge.
 
         Returns:
@@ -458,7 +468,8 @@ class OAuthManager:
             OAuthConfigurationError: If configuration is invalid.
         """
         if not config.client_id:
-            raise OAuthConfigurationError("client_id is required")
+            msg = "client_id is required"
+            raise OAuthConfigurationError(msg)
 
         state = self._generate_state()
         code_verifier: str | None = None
@@ -545,10 +556,12 @@ class OAuthManager:
             oauth_state = self._pending_states.pop(state, None)
 
         if oauth_state is None:
-            raise OAuthCallbackError(f"Unknown state parameter: {state}")
+            msg = f"Unknown state parameter: {state}"
+            raise OAuthCallbackError(msg)
 
         if oauth_state.is_expired:
-            raise OAuthCallbackError("Authorization flow expired")
+            msg = "Authorization flow expired"
+            raise OAuthCallbackError(msg)
 
         token = await self._exchange_code_for_token(
             oauth_state.config,
@@ -620,13 +633,15 @@ class OAuthManager:
                 "oauth_code_exchange_success",
                 extra={"has_refresh_token": token.refresh_token is not None},
             )
-            return token
-
         except httpx.HTTPStatusError as e:
             error_body = e.response.text
-            raise OAuthTokenError(f"Token exchange failed: {e.response.status_code} - {error_body}") from e
+            msg = f"Token exchange failed: {e.response.status_code} - {error_body}"
+            raise OAuthTokenError(msg) from e
         except Exception as e:
-            raise OAuthTokenError(f"Token exchange failed: {e}") from e
+            msg = f"Token exchange failed: {e}"
+            raise OAuthTokenError(msg) from e
+        else:
+            return token
 
     async def _store_token(self, provider: OAuthProvider, token: OAuthToken) -> None:
         """Store OAuth token in credential store.
@@ -644,15 +659,11 @@ class OAuthManager:
             return
 
         try:
-            from ..core.types import ProviderName
-
             creds = ProviderCredentials(
                 api_key=json.dumps(token.to_dict()),
             )
 
             provider_name = ProviderName.GOOGLE
-
-            from .store import CredentialSource
 
             await self._credential_store.set(
                 provider_name,
@@ -678,8 +689,6 @@ class OAuthManager:
             return None
 
         try:
-            from ..core.types import ProviderName
-
             provider_name = ProviderName.GOOGLE
 
             creds = await self._credential_store.get(provider_name)
@@ -689,10 +698,11 @@ class OAuthManager:
             token_data = json.loads(creds.api_key)
             token = OAuthToken.from_dict(token_data)
             _logger.debug("oauth_token_load_success", extra={"provider": provider.value})
-            return token
         except Exception:
             _logger.exception("oauth_token_load_failed")
             return None
+        else:
+            return token
 
     async def get_token(
         self,
@@ -714,12 +724,16 @@ class OAuthManager:
         if token is None:
             return None
 
-        if effective_config := config or OAUTH_CONFIGS.get(provider):
-            if token.is_expired and auto_refresh and token.refresh_token:
-                try:
-                    token = await self.refresh_token(provider, effective_config)
-                except OAuthTokenError:
-                    return None
+        if (
+            (effective_config := config or OAUTH_CONFIGS.get(provider))
+            and token.is_expired
+            and auto_refresh
+            and token.refresh_token
+        ):
+            try:
+                token = await self.refresh_token(provider, effective_config)
+            except OAuthTokenError:
+                return None
 
         return None if token.is_expired else token
 
@@ -742,7 +756,8 @@ class OAuthManager:
         """
         current_token = await self._load_token(provider)
         if current_token is None or current_token.refresh_token is None:
-            raise OAuthTokenError("No refresh token available")
+            msg = "No refresh token available"
+            raise OAuthTokenError(msg)
 
         data: dict[str, str] = {
             "client_id": config.client_id,
@@ -779,12 +794,14 @@ class OAuthManager:
 
             await self._store_token(provider, new_token)
             _logger.info("oauth_token_refreshed", extra={"provider": provider.value})
-            return new_token
-
         except httpx.HTTPStatusError as e:
-            raise OAuthTokenError(f"Token refresh failed: {e.response.status_code}") from e
+            msg = f"Token refresh failed: {e.response.status_code}"
+            raise OAuthTokenError(msg) from e
         except Exception as e:
-            raise OAuthTokenError(f"Token refresh failed: {e}") from e
+            msg = f"Token refresh failed: {e}"
+            raise OAuthTokenError(msg) from e
+        else:
+            return new_token
 
     async def revoke_token(self, provider: OAuthProvider) -> bool:
         """Revoke and delete OAuth token.
@@ -812,13 +829,11 @@ class OAuthManager:
                 _logger.warning("oauth_token_revocation_failed", extra={"error": str(e)})
 
         if self._credential_store:
-            from ..core.types import ProviderName
-
             provider_name = ProviderName.GOOGLE
             try:
                 await self._credential_store.delete(provider_name)
             except Exception:
-                _logger.error("oauth_token_delete_failed", extra={"provider": provider.value})
+                _logger.exception("oauth_token_delete_failed", extra={"provider": provider.value})
 
         return True
 
@@ -883,7 +898,11 @@ class OAuthManager:
             server.stop()
 
 
-_oauth_manager: OAuthManager | None = None
+class _OAuthManagerHolder:
+    instance: OAuthManager | None = None
+
+
+_oauth_holder = _OAuthManagerHolder()
 
 
 def get_oauth_manager() -> OAuthManager:
@@ -892,12 +911,9 @@ def get_oauth_manager() -> OAuthManager:
     Returns:
         The singleton OAuthManager instance.
     """
-    global _oauth_manager
-    if _oauth_manager is None:
-        from .store import get_credential_store
-
-        _oauth_manager = OAuthManager(credential_store=get_credential_store())
-    return _oauth_manager
+    if _oauth_holder.instance is None:
+        _oauth_holder.instance = OAuthManager(credential_store=get_credential_store())
+    return _oauth_holder.instance
 
 
 async def authorize_google(

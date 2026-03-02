@@ -23,8 +23,16 @@ from .types import ConfirmationLevel, ProviderName, ToolName
 
 _logger = get_logger("core.config")
 
-
 _ERR_TOMLI_W_REQUIRED = "tomli_w is required for saving config"
+
+
+def _get_project_root() -> Path:
+    """Compute the project root directory from this file's location.
+
+    Returns:
+        Path to the repository root (parent of ``src/``).
+    """
+    return Path(__file__).resolve().parents[2]
 
 
 @dataclass
@@ -239,9 +247,9 @@ class Config:
         log: Logging configuration.
     """
 
-    tools_directory: Path = field(default_factory=lambda: Path("D:/Intellicrack/tools"))
-    logs_directory: Path = field(default_factory=lambda: Path("D:/Intellicrack/logs"))
-    data_directory: Path = field(default_factory=lambda: Path("D:/Intellicrack/data"))
+    tools_directory: Path = field(default_factory=lambda: _get_project_root() / "tools")
+    logs_directory: Path = field(default_factory=lambda: _get_project_root() / "logs")
+    data_directory: Path = field(default_factory=lambda: _get_project_root() / "data")
 
     default_provider: ProviderName = ProviderName.ANTHROPIC
     confirmation_level: ConfirmationLevel = ConfirmationLevel.DESTRUCTIVE
@@ -288,9 +296,10 @@ class Config:
         Returns:
             Tuple of (tools_dir, logs_dir, data_dir, default_provider, confirmation_level).
         """
-        tools_dir = Path(general.get("tools_directory", "D:/Intellicrack/tools"))
-        logs_dir = Path(general.get("logs_directory", "D:/Intellicrack/logs"))
-        data_dir = Path(general.get("data_directory", "D:/Intellicrack/data"))
+        root = _get_project_root()
+        tools_dir = Path(general.get("tools_directory", str(root / "tools")))
+        logs_dir = Path(general.get("logs_directory", str(root / "logs")))
+        data_dir = Path(general.get("data_directory", str(root / "data")))
 
         default_provider_str = general.get("default_provider", "anthropic")
         try:

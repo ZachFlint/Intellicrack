@@ -60,7 +60,8 @@ class TestFontManagerSingleton:
     """Tests for singleton pattern implementation."""
 
     @staticmethod
-    def test_get_instance_returns_same_object(qapp: QApplication) -> None:
+    @pytest.mark.usefixtures("qapp")
+    def test_get_instance_returns_same_object() -> None:
         """Singleton returns the same instance."""
         FontManager.reset_instance()
         instance1 = FontManager.get_instance()
@@ -69,7 +70,8 @@ class TestFontManagerSingleton:
         FontManager.reset_instance()
 
     @staticmethod
-    def test_reset_instance_clears_singleton(qapp: QApplication) -> None:
+    @pytest.mark.usefixtures("qapp")
+    def test_reset_instance_clears_singleton() -> None:
         """Reset clears the singleton instance."""
         FontManager.reset_instance()
         instance1 = FontManager.get_instance()
@@ -225,7 +227,8 @@ class TestFontFamilyProperties:
     """Tests for font family properties."""
 
     @staticmethod
-    def test_code_font_family_auto_loads(font_manager: FontManager) -> None:
+    @pytest.mark.usefixtures("font_manager")
+    def test_code_font_family_auto_loads() -> None:
         """Accessing code_font_family triggers font loading."""
         FontManager.reset_instance()
         manager = FontManager.get_instance()
@@ -233,7 +236,8 @@ class TestFontFamilyProperties:
         assert manager._fonts_loaded
 
     @staticmethod
-    def test_ui_font_family_auto_loads(font_manager: FontManager) -> None:
+    @pytest.mark.usefixtures("font_manager")
+    def test_ui_font_family_auto_loads() -> None:
         """Accessing ui_font_family triggers font loading."""
         FontManager.reset_instance()
         manager = FontManager.get_instance()
@@ -260,7 +264,8 @@ class TestCustomFontStatus:
         assert font_manager.is_custom_font_loaded()
 
     @staticmethod
-    def test_is_custom_font_loaded_before_load(qapp: QApplication) -> None:
+    @pytest.mark.usefixtures("qapp")
+    def test_is_custom_font_loaded_before_load() -> None:
         """is_custom_font_loaded returns False before loading."""
         FontManager.reset_instance()
         manager = FontManager()

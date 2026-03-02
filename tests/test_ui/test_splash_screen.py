@@ -434,7 +434,7 @@ class TestFadeAnimation:
         """show_animated targets opacity 1.0."""
         splash_screen.show_animated()
         assert splash_screen._fade_animation is not None
-        assert splash_screen._fade_animation.endValue() == 1.0
+        assert splash_screen._fade_animation.endValue() == pytest.approx(1.0)
 
     @staticmethod
     def test_show_animated_correct_duration(splash_screen: SplashScreen) -> None:
@@ -460,7 +460,7 @@ class TestFadeAnimation:
         target = QWidget()
         splash_screen.finish_animated(target)
         assert splash_screen._fade_animation is not None
-        assert splash_screen._fade_animation.endValue() == 0.0
+        assert splash_screen._fade_animation.endValue() == pytest.approx(0.0)
         target.close()
 
 
@@ -546,4 +546,4 @@ class TestDpiScaling:
     @staticmethod
     def test_default_dpi_scale_constant() -> None:
         """DEFAULT_DPI_SCALE constant is 1.0."""
-        assert DEFAULT_DPI_SCALE == 1.0
+        assert pytest.approx(1.0) == DEFAULT_DPI_SCALE
