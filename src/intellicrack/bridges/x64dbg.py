@@ -16,7 +16,13 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
-from intellicrack.core._subprocess import CREATE_NEW_CONSOLE, PIPE, Popen
+from intellicrack.core._subprocess import (
+    CREATE_NO_WINDOW,
+    PIPE,
+    STARTF_USESHOWWINDOW,
+    STARTUPINFO,
+    Popen,
+)
 
 from ..core.logging import get_logger
 from ..core.process_manager import ProcessManager, ProcessType
@@ -50,7 +56,7 @@ if sys.platform == "win32":
     from ctypes import wintypes
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
     from types import ModuleType
 
 _logger = get_logger("bridges.x64dbg")
@@ -337,6 +343,7 @@ class X64DbgBridge(DebuggerBridge):
         self._next_bp_id: int = 1
         self._watchpoints: dict[int, WatchpointInfo] = {}
         self._next_wp_id: int = 1
+        self._event_callbacks: list[Callable[[str, dict[str, Any]], None]] = []
         self._capabilities = BridgeCapabilities(
             supports_debugging=True,
             supports_dynamic_analysis=True,
@@ -952,12 +959,17 @@ class X64DbgBridge(DebuggerBridge):
         self._is_64bit = is_64bit
         _logger.info("x64dbg_starting", extra={"path": str(exe_path)})
 
+        si = STARTUPINFO()
+        si.dwFlags |= STARTF_USESHOWWINDOW
+        si.wShowWindow = 7
+
         self._process = await asyncio.to_thread(
             Popen,
             [str(exe_path)],
             stdout=PIPE,
             stderr=PIPE,
-            creationflags=CREATE_NEW_CONSOLE,
+            creationflags=CREATE_NO_WINDOW,
+            startupinfo=si,
         )
 
         process_manager = ProcessManager.get_instance()
@@ -999,6 +1011,34 @@ class X64DbgBridge(DebuggerBridge):
             await self._pipe_client.close()
             self._pipe_client = None
 
+    def register_event_callback(
+        self,
+        callback: Callable[[str, dict[str, Any]], None],
+    ) -> None:
+        """Register a callback for debug events.
+
+        The callback receives ``(event_type, message)`` and is
+        invoked synchronously from the event-handling thread.
+
+        Args:
+            callback: Function to call on debug events.
+        """
+        self._event_callbacks.append(callback)
+
+    def unregister_event_callback(
+        self,
+        callback: Callable[[str, dict[str, Any]], None],
+    ) -> None:
+        """Remove a previously registered event callback.
+
+        Args:
+            callback: The callback to remove.
+        """
+        try:
+            self._event_callbacks.remove(callback)
+        except ValueError:
+            _logger.debug("event_callback_not_found_for_removal")
+
     def _handle_event(self, message: dict[str, Any]) -> None:
         """Handle asynchronous debug events from x64dbg.
 
@@ -1017,6 +1057,12 @@ class X64DbgBridge(DebuggerBridge):
                 if wp.address == addr:
                     wp.hit_count += 1
                     break
+
+        for cb in self._event_callbacks:
+            try:
+                cb(event_type, message)
+            except Exception:
+                _logger.debug("event_callback_error", extra={"event_type": event_type})
 
     async def _send_pipe_command(
         self,
@@ -1153,11 +1199,16 @@ class X64DbgBridge(DebuggerBridge):
     async def attach(self, pid: int) -> None:
         """Attach to a running process.
 
+        Detects the target process architecture and starts the
+        matching debugger variant (x64dbg or x32dbg).
+
         Args:
             pid: Process ID.
         """
+        is_64 = await asyncio.to_thread(self._detect_process_arch, pid)
+
         if self._process is None:
-            await self._start_debugger(True)
+            await self._start_debugger(is_64)
 
         await self._send_command(f"attach {pid}")
         self._attached_pid = pid
@@ -1167,7 +1218,33 @@ class X64DbgBridge(DebuggerBridge):
         self._state.process_attached = True
         self._state.target_pid = pid
 
-        _logger.info("x64dbg_process_attached", extra={"pid": pid})
+    @staticmethod
+    def _detect_process_arch(pid: int) -> bool:
+        """Detect whether a process is 64-bit.
+
+        Args:
+            pid: Process ID.
+
+        Returns:
+            True if 64-bit, False if 32-bit. Defaults to True on error.
+        """
+        if sys.platform != "win32":
+            return True
+        try:
+            kernel32 = ctypes.windll.kernel32
+            handle = kernel32.OpenProcess(0x0400, False, pid)
+            if not handle:
+                return True
+            try:
+                is_wow64 = ctypes.c_int(0)
+                ok: int = kernel32.IsWow64Process(handle, ctypes.byref(is_wow64))
+                if ok:
+                    return not bool(is_wow64.value)
+                return True
+            finally:
+                kernel32.CloseHandle(handle)
+        except (OSError, AttributeError):
+            return True
 
     async def detach(self) -> None:
         """Detach from current process."""
@@ -2097,6 +2174,22 @@ class X64DbgBridge(DebuggerBridge):
 
         _logger.debug("modules_found", extra={"count": len(modules), "pid": self._attached_pid})
         return modules
+
+    async def get_modules(self) -> list[ModuleInfo]:
+        """Get loaded modules for the attached process.
+
+        Returns:
+            List of loaded module information.
+        """
+        return await self._get_modules()
+
+    async def get_threads(self) -> list[ThreadInfo]:
+        """Get thread information for the attached process.
+
+        Returns:
+            List of thread information.
+        """
+        return await self._get_threads()
 
     async def get_process_info(self) -> ProcessInfo | None:
         """Get complete process information including threads and modules.

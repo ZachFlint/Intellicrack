@@ -169,8 +169,6 @@ class MainWindow(QMainWindow):
         self._font_manager.load_fonts()
 
         self._icon_manager.preload_icons(["app", "binary", "tools", "provider", "sandbox", "process"])
-        if self._icon_manager.icon_exists("app"):
-            _logger.debug("app_icon_verified")
 
         self._initialize_model_cache()
 
@@ -753,6 +751,11 @@ class MainWindow(QMainWindow):
 
         available_tools = self._orchestrator.get_available_tool_names()
         _logger.info("orchestrator_tools_available", extra={"tools": available_tools})
+
+        tool_reg = getattr(self._orchestrator, "_tool_registry", None)
+        if tool_reg is not None:
+            self._tool_panel.set_tool_registry(tool_reg)
+            _logger.info("tool_registry_wired_to_panel")
 
         bridge = self._orchestrator.get_typed_bridge("process")
         if bridge is not None:
@@ -1773,6 +1776,7 @@ class MainWindow(QMainWindow):
         if panel is None:
             self._show_tool_error("Sandbox", "Failed to initialize Sandbox panel")
             return
+        self._tool_panel.wire_sandbox_backend(self._sandbox_manager, manager=self._sandbox_manager)
         panel.start_tool()
 
         sandbox_backend = self._tool_panel.get_sandbox_backend()
@@ -1904,6 +1908,14 @@ class MainWindow(QMainWindow):
             a0: Close event.
         """
         self._tool_panel.close_embedded_tools()
+
+        shutdown_fn = getattr(
+            importlib.import_module(".panels.async_bridge", "intellicrack.ui"),
+            "shutdown_bridge_loop",
+            None,
+        )
+        if callable(shutdown_fn):
+            shutdown_fn()
 
         if self._current_worker and self._current_worker.isRunning():
             self._current_worker.wait()

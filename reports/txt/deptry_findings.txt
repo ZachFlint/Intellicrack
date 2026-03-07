@@ -1,3 +1,522 @@
+90 findings in pyproject.toml
+
+pyproject.toml: DEP002 'flake8-pyproject' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pytest' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'build' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pyclean' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'black' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pylint' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'autopep8' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'flake8' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'ruff' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'isort' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pycodestyle' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'bandit' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'blinter' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'vulture' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pyupgrade' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pydocstyle' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'sourcery' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'wemake-python-styleguide' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'darglint' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pyroma' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'mypy-extensions' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'dead' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'uncalled' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'deadcode' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pygount' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pytest-deadfixtures' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'basedpyright' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'monkeytype' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'ty' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'mccabe' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'xenon' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'safety' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'yamllint' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'jsonlint' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pytest-cov' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pytest-mock' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pytest-asyncio' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pytest-xdist' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pytest-timeout' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pytest-qt' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pytest-benchmark' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pytest-html' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pytest-randomly' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pytest-sugar' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pytest-env' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pytest-instafail' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'hypothesis' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'tox' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'nox' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'coverage' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'freezegun' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'responses' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'faker' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'radon' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'sphinx' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'sphinx-rtd-theme' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'sphinx-autodoc-typehints' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'sphinx-copybutton' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'sphinx-tabs' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'sphinxcontrib-mermaid' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'sphinx-autobuild' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pdoc3' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'mkdocs-material' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pymdown-extensions' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'myst-parser' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'ipdb' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'line-profiler' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'memory-profiler' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'py-spy' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'snakeviz' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pyinstrument' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'scalene' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pre-commit' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'commitizen' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'bumpversion' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pipdeptree' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'rope' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'astor' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'yapf' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pip-audit' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'nodeenv' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'twine' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'setuptools-scm' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'poetry' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pycallgraph2' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pre-commit-hooks' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'interrogate' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'deptry' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'codespell' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'detect-secrets' defined as a dependency but not used in the codebase
+
+
+8 findings in src\intellicrack\bridges\binary.py
+
+src\intellicrack\bridges\binary.py:22:8: DEP003 'capstone' imported but it is a transitive dependency
+
+src\intellicrack\bridges\binary.py:23:8: DEP003 'lief' imported but it is a transitive dependency
+
+src\intellicrack\bridges\binary.py:24:8: DEP003 'lief' imported but it is a transitive dependency
+
+src\intellicrack\bridges\binary.py:25:8: DEP003 'lief' imported but it is a transitive dependency
+
+src\intellicrack\bridges\binary.py:26:8: DEP003 'lief' imported but it is a transitive dependency
+
+src\intellicrack\bridges\binary.py:27:8: DEP003 'lief' imported but it is a transitive dependency
+
+src\intellicrack\bridges\binary.py:28:8: DEP003 'lief' imported but it is a transitive dependency
+
+src\intellicrack\bridges\binary.py:29:8: DEP003 'pefile' imported but it is a transitive dependency
+
+
+4 findings in src\intellicrack\ui\panels\binary_panel.py
+
+src\intellicrack\ui\panels\binary_panel.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\binary_panel.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\binary_panel.py:22:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\binary_panel.py:42:12: DEP003 'lief' imported but it is a transitive dependency
+
+
+4 findings in src\intellicrack\ui\provider_config.py
+
+src\intellicrack\ui\provider_config.py:21:8: DEP003 'httpx' imported but it is a transitive dependency
+
+src\intellicrack\ui\provider_config.py:22:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\provider_config.py:23:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\provider_config.py:24:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\core\license_analyzer.py
+
+src\intellicrack\core\license_analyzer.py:35:12: DEP003 'pefile' imported but it is a transitive dependency
+
+src\intellicrack\core\license_analyzer.py:42:12: DEP003 'lief' imported but it is a transitive dependency
+
+src\intellicrack\core\license_analyzer.py:49:12: DEP003 'capstone' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\providers\google.py
+
+src\intellicrack\providers\google.py:19:1: DEP003 'google' imported but it is a transitive dependency
+
+src\intellicrack\providers\google.py:20:1: DEP003 'google' imported but it is a transitive dependency
+
+src\intellicrack\providers\google.py:21:1: DEP003 'google' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\providers\openai.py
+
+src\intellicrack\providers\openai.py:17:8: DEP003 'openai' imported but it is a transitive dependency
+
+src\intellicrack\providers\openai.py:18:1: DEP003 'openai' imported but it is a transitive dependency
+
+src\intellicrack\providers\openai.py:19:1: DEP003 'openai' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\ui\app.py
+
+src\intellicrack\ui\app.py:23:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\app.py:24:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\app.py:25:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\ui\chat.py
+
+src\intellicrack\ui\chat.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\chat.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\chat.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\ui\dialogs\splash_screen.py
+
+src\intellicrack\ui\dialogs\splash_screen.py:16:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\dialogs\splash_screen.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\dialogs\splash_screen.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\ui\panels\frida_panel.py
+
+src\intellicrack\ui\panels\frida_panel.py:16:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\frida_panel.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\frida_panel.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\ui\panels\ghidra_panel.py
+
+src\intellicrack\ui\panels\ghidra_panel.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\ghidra_panel.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\ghidra_panel.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\ui\panels\licensing_panel.py
+
+src\intellicrack\ui\panels\licensing_panel.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\licensing_panel.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\licensing_panel.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\ui\panels\process_panel.py
+
+src\intellicrack\ui\panels\process_panel.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\process_panel.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\process_panel.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\ui\panels\radare2_panel.py
+
+src\intellicrack\ui\panels\radare2_panel.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\radare2_panel.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\radare2_panel.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\ui\panels\sandbox_panel.py
+
+src\intellicrack\ui\panels\sandbox_panel.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\sandbox_panel.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\sandbox_panel.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\ui\panels\script_manager.py
+
+src\intellicrack\ui\panels\script_manager.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\script_manager.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\script_manager.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\ui\panels\stack_viewer.py
+
+src\intellicrack\ui\panels\stack_viewer.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\stack_viewer.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\stack_viewer.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\ui\panels\x64dbg_panel.py
+
+src\intellicrack\ui\panels\x64dbg_panel.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\x64dbg_panel.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\x64dbg_panel.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\ui\preferences.py
+
+src\intellicrack\ui\preferences.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\preferences.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\preferences.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\ui\tool_config.py
+
+src\intellicrack\ui\tool_config.py:25:8: DEP003 'httpx' imported but it is a transitive dependency
+
+src\intellicrack\ui\tool_config.py:26:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\tool_config.py:27:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\ui\tools.py
+
+src\intellicrack\ui\tools.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\tools.py:22:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\tools.py:23:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+2 findings in src\intellicrack\bridges\x64dbg.py
+
+src\intellicrack\bridges\x64dbg.py:69:12: DEP003 'capstone' imported but it is a transitive dependency
+
+src\intellicrack\bridges\x64dbg.py:76:12: DEP003 'keystone' imported but it is a transitive dependency
+
+
+2 findings in src\intellicrack\providers\anthropic.py
+
+src\intellicrack\providers\anthropic.py:17:8: DEP003 'anthropic' imported but it is a transitive dependency
+
+src\intellicrack\providers\anthropic.py:18:1: DEP003 'anthropic' imported but it is a transitive dependency
+
+
+2 findings in src\intellicrack\providers\model_loader.py
+
+src\intellicrack\providers\model_loader.py:30:5: DEP003 'transformers' imported but it is a transitive dependency
+
+src\intellicrack\providers\model_loader.py:36:5: DEP003 'transformers' imported but it is a transitive dependency
+
+
+2 findings in src\intellicrack\ui\highlighter.py
+
+src\intellicrack\ui\highlighter.py:16:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\highlighter.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+2 findings in src\intellicrack\ui\panels\base_panel.py
+
+src\intellicrack\ui\panels\base_panel.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\base_panel.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+2 findings in src\intellicrack\ui\panels\qt_compat.py
+
+src\intellicrack\ui\panels\qt_compat.py:221:5: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\qt_compat.py:232:5: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+2 findings in src\intellicrack\ui\resources\icon_manager.py
+
+src\intellicrack\ui\resources\icon_manager.py:15:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\resources\icon_manager.py:16:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+2 findings in src\intellicrack\ui\sandbox_config.py
+
+src\intellicrack\ui\sandbox_config.py:23:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\sandbox_config.py:24:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+2 findings in src\intellicrack\ui\session_manager.py
+
+src\intellicrack\ui\session_manager.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\session_manager.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\bridges\frida_bridge.py
+
+src\intellicrack\bridges\frida_bridge.py:19:8: DEP003 'frida' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\bridges\installer.py
+
+src\intellicrack\bridges\installer.py:24:8: DEP003 'httpx' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\bridges\radare2.py
+
+src\intellicrack\bridges\radare2.py:19:8: DEP003 'r2pipe' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\core\logging.py
+
+src\intellicrack\core\logging.py:24:8: DEP003 'structlog' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\credentials\oauth.py
+
+src\intellicrack\credentials\oauth.py:30:8: DEP003 'httpx' imported but it is a transitive dependency
+
+
 1 findings in src\intellicrack\credentials\store.py
 
-src\intellicrack\credentials\store.py:115:20: DEP003 'keyring' imported but it is a transitive dependency
+src\intellicrack\credentials\store.py:32:12: DEP003 'keyring' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\providers\grok.py
+
+src\intellicrack\providers\grok.py:18:8: DEP003 'openai' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\providers\huggingface.py
+
+src\intellicrack\providers\huggingface.py:18:8: DEP003 'httpx' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\providers\local_transformers.py
+
+src\intellicrack\providers\local_transformers.py:24:8: DEP003 'httpx' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\providers\ollama.py
+
+src\intellicrack\providers\ollama.py:21:8: DEP003 'httpx' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\providers\openrouter.py
+
+src\intellicrack\providers\openrouter.py:20:8: DEP003 'httpx' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\ui\confirmation_dialog.py
+
+src\intellicrack\ui\confirmation_dialog.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\ui\panels\async_bridge.py
+
+src\intellicrack\ui\panels\async_bridge.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\ui\resources\font_manager.py
+
+src\intellicrack\ui\resources\font_manager.py:16:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\ui\resources\theme_manager.py
+
+src\intellicrack\ui\resources\theme_manager.py:16:1: DEP003 'PyQt6' imported but it is a transitive dependency

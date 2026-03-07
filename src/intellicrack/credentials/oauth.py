@@ -16,6 +16,7 @@ import base64
 import hashlib
 import http.server
 import json
+import os
 import secrets
 import socketserver
 import threading
@@ -82,6 +83,29 @@ class OAuthProvider(Enum):
     """Providers that support OAuth authentication."""
 
     GOOGLE = "google"
+
+
+_OAUTH_TO_PROVIDER_NAME: dict[OAuthProvider, ProviderName] = {
+    OAuthProvider.GOOGLE: ProviderName.GOOGLE,
+}
+
+
+def _oauth_provider_to_name(provider: OAuthProvider) -> ProviderName:
+    """Map an OAuthProvider to the corresponding ProviderName.
+
+    Args:
+        provider: The OAuth provider enum value.
+
+    Returns:
+        The matching ProviderName.
+
+    Raises:
+        KeyError: If the provider has no mapping.
+    """
+    if provider not in _OAUTH_TO_PROVIDER_NAME:
+        msg = f"No provider name mapping for {provider!r}"
+        raise KeyError(msg)
+    return _OAUTH_TO_PROVIDER_NAME[provider]
 
 
 @dataclass(frozen=True)
@@ -228,8 +252,8 @@ class OAuthState:
 OAUTH_CONFIGS: dict[OAuthProvider, OAuthConfig] = {
     OAuthProvider.GOOGLE: OAuthConfig(
         provider=OAuthProvider.GOOGLE,
-        client_id="",
-        client_secret=None,
+        client_id=os.environ.get("GOOGLE_OAUTH_CLIENT_ID", ""),
+        client_secret=os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET"),
         authorization_url="https://accounts.google.com/o/oauth2/v2/auth",
         token_url=_GOOGLE_OAUTH_ENDPOINT,
         scopes=(
@@ -355,7 +379,8 @@ class OAuthCallbackServer:
             Tuple of (code, state) from callback.
 
         Raises:
-            OAuthCallbackError: If timeout or error occurs.
+            OAuthCallbackError: If timeout or a non-denial error occurs.
+            OAuthAuthorizationError: If the user denied authorization.
         """
         if not self._event.wait(timeout=self._timeout):
             msg = "Timeout waiting for OAuth callback"
@@ -663,7 +688,7 @@ class OAuthManager:
                 api_key=json.dumps(token.to_dict()),
             )
 
-            provider_name = ProviderName.GOOGLE
+            provider_name = _oauth_provider_to_name(provider)
 
             await self._credential_store.set(
                 provider_name,
@@ -689,7 +714,7 @@ class OAuthManager:
             return None
 
         try:
-            provider_name = ProviderName.GOOGLE
+            provider_name = _oauth_provider_to_name(provider)
 
             creds = await self._credential_store.get(provider_name)
             if creds is None or not creds.api_key:
@@ -724,12 +749,7 @@ class OAuthManager:
         if token is None:
             return None
 
-        if (
-            (effective_config := config or OAUTH_CONFIGS.get(provider))
-            and token.is_expired
-            and auto_refresh
-            and token.refresh_token
-        ):
+        if (effective_config := config or OAUTH_CONFIGS.get(provider)) and token.is_expired and auto_refresh and token.refresh_token:
             try:
                 token = await self.refresh_token(provider, effective_config)
             except OAuthTokenError:
@@ -829,7 +849,7 @@ class OAuthManager:
                 _logger.warning("oauth_token_revocation_failed", extra={"error": str(e)})
 
         if self._credential_store:
-            provider_name = ProviderName.GOOGLE
+            provider_name = _oauth_provider_to_name(provider)
             try:
                 await self._credential_store.delete(provider_name)
             except Exception:

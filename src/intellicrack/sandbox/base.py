@@ -449,9 +449,6 @@ class SandboxBase:
     async def list_snapshots(self) -> list[str]:
         """List available snapshots.
 
-        Returns:
-            List of snapshot names.
-
         Raises:
             SandboxError: If not supported.
         """

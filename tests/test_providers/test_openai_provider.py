@@ -116,16 +116,16 @@ class TestOpenAIModelListing:
 
     @pytest.mark.asyncio
     @staticmethod
-    async def test_models_are_chat_models(
+    async def test_models_have_valid_provider(
         openai_provider: OpenAIProvider,
     ) -> None:
-        """Test that returned models are chat-capable models."""
+        """Test that all returned models have the correct provider set."""
         models = await openai_provider.list_models()
 
-        chat_prefixes = ("gpt-4", "gpt-3.5", "o1", "o3", "chatgpt")
         for model in models:
-            has_chat_prefix = any(model.id.startswith(prefix) for prefix in chat_prefixes)
-            assert has_chat_prefix, f"Model {model.id} doesn't appear to be a chat model"
+            assert model.provider == ProviderName.OPENAI, f"Model {model.id} has wrong provider {model.provider}"
+            assert model.id, "Model has empty id"
+            assert model.context_window > 0, f"Model {model.id} has invalid context window"
 
     @pytest.mark.asyncio
     @staticmethod

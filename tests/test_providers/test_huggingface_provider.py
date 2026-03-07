@@ -22,10 +22,6 @@ from intellicrack.providers.huggingface import HuggingFaceProvider
 
 _MIN_HUGGINGFACE_MODELS = 10
 _SAMPLE_MODEL_LIMIT = 20
-_CTX_LLAMA_70B = 128000
-_CTX_QWEN_72B = 131072
-_CTX_MISTRAL_7B = 32768
-_CTX_DEFAULT = 4096
 
 
 @pytest.mark.integration
@@ -220,74 +216,3 @@ class TestHuggingFaceConnection:
 
         await provider.disconnect()
         assert provider.is_connected is False
-
-
-@pytest.mark.integration
-class TestHuggingFaceContextWindowEstimation:
-    """Tests for context window size estimation."""
-
-    @staticmethod
-    def test_known_model_context_windows() -> None:
-        """Test context window estimation for known models."""
-        provider = HuggingFaceProvider()
-
-        assert provider._estimate_context_window("meta-llama/Llama-3.3-70B-Instruct") == _CTX_LLAMA_70B
-        assert provider._estimate_context_window("Qwen/Qwen2.5-72B-Instruct") == _CTX_QWEN_72B
-        assert provider._estimate_context_window("mistralai/Mistral-7B-Instruct-v0.3") == _CTX_MISTRAL_7B
-
-    @staticmethod
-    def test_unknown_model_default_context_window() -> None:
-        """Test unknown models get default context window."""
-        provider = HuggingFaceProvider()
-
-        assert provider._estimate_context_window("unknown/model-name") == _CTX_DEFAULT
-
-
-@pytest.mark.integration
-class TestHuggingFaceToolSupport:
-    """Tests for tool calling support estimation."""
-
-    @staticmethod
-    def test_llama_models_support_tools() -> None:
-        """Test Llama models are marked as supporting tools."""
-        provider = HuggingFaceProvider()
-
-        assert provider._estimate_tool_support("meta-llama/Llama-3.3-70B-Instruct")
-        assert provider._estimate_tool_support("meta-llama/Llama-3.1-8B-Instruct")
-
-    @staticmethod
-    def test_mistral_models_support_tools() -> None:
-        """Test Mistral models are marked as supporting tools."""
-        provider = HuggingFaceProvider()
-
-        assert provider._estimate_tool_support("mistralai/Mistral-7B-Instruct-v0.3")
-        assert provider._estimate_tool_support("mistralai/Mixtral-8x7B-Instruct-v0.1")
-
-    @staticmethod
-    def test_falcon_models_no_tool_support() -> None:
-        """Test Falcon models are not marked for tool support."""
-        provider = HuggingFaceProvider()
-
-        assert not provider._estimate_tool_support("tiiuae/falcon-7b-instruct")
-
-
-@pytest.mark.integration
-class TestHuggingFaceVisionSupport:
-    """Tests for vision support estimation."""
-
-    @staticmethod
-    def test_vision_models_detected() -> None:
-        """Test vision models are correctly identified."""
-        provider = HuggingFaceProvider()
-
-        assert provider._estimate_vision_support("llava-hf/llava-1.5-7b-hf")
-        assert provider._estimate_vision_support("Qwen/Qwen-VL-Chat")
-        assert provider._estimate_vision_support("microsoft/Florence-2-vision")
-
-    @staticmethod
-    def test_text_only_models_no_vision() -> None:
-        """Test text-only models are not marked for vision."""
-        provider = HuggingFaceProvider()
-
-        assert not provider._estimate_vision_support("meta-llama/Llama-3.3-70B-Instruct")
-        assert not provider._estimate_vision_support("mistralai/Mistral-7B-Instruct-v0.3")

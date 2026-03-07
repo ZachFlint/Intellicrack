@@ -1,12 +1,12 @@
 {
   "tool": "complexipy",
-  "generated": "2026-02-28T02:24:16.878771",
-  "total_findings": 53,
-  "total_files": 27,
+  "generated": "2026-03-06T22:51:32.383492",
+  "total_findings": 56,
+  "total_files": 31,
   "files": [
     {
       "path": "src\\intellicrack\\bridges\\installer.py",
-      "count": 3,
+      "count": 4,
       "findings": [
         {
           "line": null,
@@ -15,6 +15,14 @@
           "complexity": 16,
           "message": "ToolInstaller::_download_file - cognitive complexity 16 (exceeds threshold)",
           "raw": "src\\intellicrack\\bridges\\installer.py: ToolInstaller::_download_file - cognitive complexity 16 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "ToolInstaller::get_version",
+          "complexity": 16,
+          "message": "ToolInstaller::get_version - cognitive complexity 16 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\installer.py: ToolInstaller::get_version - cognitive complexity 16 (exceeds threshold)"
         },
         {
           "line": null,
@@ -31,6 +39,44 @@
           "complexity": 34,
           "message": "ToolInstaller::find_tool - cognitive complexity 34 (exceeds threshold)",
           "raw": "src\\intellicrack\\bridges\\installer.py: ToolInstaller::find_tool - cognitive complexity 34 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\binary_panel.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "BinaryPanel::_extract_strings",
+          "complexity": 16,
+          "message": "BinaryPanel::_extract_strings - cognitive complexity 16 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_extract_strings - cognitive complexity 16 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "BinaryPanel::_parse_pe_ilt_entries",
+          "complexity": 18,
+          "message": "BinaryPanel::_parse_pe_ilt_entries - cognitive complexity 18 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_parse_pe_ilt_entries - cognitive complexity 18 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "BinaryPanel::_parse_pe_sections",
+          "complexity": 23,
+          "message": "BinaryPanel::_parse_pe_sections - cognitive complexity 23 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_parse_pe_sections - cognitive complexity 23 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "BinaryPanel::_parse_elf_sections",
+          "complexity": 25,
+          "message": "BinaryPanel::_parse_elf_sections - cognitive complexity 25 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_parse_elf_sections - cognitive complexity 25 (exceeds threshold)"
         }
       ]
     },
@@ -155,62 +201,32 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\providers\\huggingface.py",
+      "path": "src\\intellicrack\\providers\\google.py",
       "count": 3,
       "findings": [
         {
           "line": null,
           "column": null,
-          "name": "HuggingFaceProvider::_convert_messages_to_provider_format",
-          "complexity": 17,
-          "message": "HuggingFaceProvider::_convert_messages_to_provider_format - cognitive complexity 17 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\huggingface.py: HuggingFaceProvider::_convert_messages_to_provider_format - cognitive complexity 17 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "HuggingFaceProvider::list_models",
-          "complexity": 17,
-          "message": "HuggingFaceProvider::list_models - cognitive complexity 17 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\huggingface.py: HuggingFaceProvider::list_models - cognitive complexity 17 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "HuggingFaceProvider::chat_stream",
-          "complexity": 38,
-          "message": "HuggingFaceProvider::chat_stream - cognitive complexity 38 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\huggingface.py: HuggingFaceProvider::chat_stream - cognitive complexity 38 (exceeds threshold)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\ollama.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "OllamaProvider::_convert_messages_to_provider_format",
-          "complexity": 17,
-          "message": "OllamaProvider::_convert_messages_to_provider_format - cognitive complexity 17 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\ollama.py: OllamaProvider::_convert_messages_to_provider_format - cognitive complexity 17 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "OllamaProvider::pull_model",
+          "name": "GoogleProvider::_parse_response",
           "complexity": 18,
-          "message": "OllamaProvider::pull_model - cognitive complexity 18 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\ollama.py: OllamaProvider::pull_model - cognitive complexity 18 (exceeds threshold)"
+          "message": "GoogleProvider::_parse_response - cognitive complexity 18 (exceeds threshold)",
+          "raw": "src\\intellicrack\\providers\\google.py: GoogleProvider::_parse_response - cognitive complexity 18 (exceeds threshold)"
         },
         {
           "line": null,
           "column": null,
-          "name": "OllamaProvider::chat_stream",
-          "complexity": 24,
-          "message": "OllamaProvider::chat_stream - cognitive complexity 24 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\ollama.py: OllamaProvider::chat_stream - cognitive complexity 24 (exceeds threshold)"
+          "name": "GoogleProvider::_convert_messages_to_provider_format",
+          "complexity": 21,
+          "message": "GoogleProvider::_convert_messages_to_provider_format - cognitive complexity 21 (exceeds threshold)",
+          "raw": "src\\intellicrack\\providers\\google.py: GoogleProvider::_convert_messages_to_provider_format - cognitive complexity 21 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "GoogleProvider::chat_stream",
+          "complexity": 39,
+          "message": "GoogleProvider::chat_stream - cognitive complexity 39 (exceeds threshold)",
+          "raw": "src\\intellicrack\\providers\\google.py: GoogleProvider::chat_stream - cognitive complexity 39 (exceeds threshold)"
         }
       ]
     },
@@ -267,50 +283,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\providers\\google.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "GoogleProvider::chat_stream",
-          "complexity": 17,
-          "message": "GoogleProvider::chat_stream - cognitive complexity 17 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\google.py: GoogleProvider::chat_stream - cognitive complexity 17 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "GoogleProvider::_parse_response",
-          "complexity": 18,
-          "message": "GoogleProvider::_parse_response - cognitive complexity 18 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\google.py: GoogleProvider::_parse_response - cognitive complexity 18 (exceeds threshold)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\grok.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "GrokProvider::_convert_messages_to_provider_format",
-          "complexity": 17,
-          "message": "GrokProvider::_convert_messages_to_provider_format - cognitive complexity 17 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\grok.py: GrokProvider::_convert_messages_to_provider_format - cognitive complexity 17 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "GrokProvider::chat_stream",
-          "complexity": 20,
-          "message": "GrokProvider::chat_stream - cognitive complexity 20 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\grok.py: GrokProvider::chat_stream - cognitive complexity 20 (exceeds threshold)"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\providers\\local_transformers.py",
       "count": 2,
       "findings": [
@@ -333,46 +305,24 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\providers\\openai.py",
+      "path": "src\\intellicrack\\providers\\ollama.py",
       "count": 2,
       "findings": [
         {
           "line": null,
           "column": null,
-          "name": "OpenAIProvider::_convert_messages_to_provider_format",
-          "complexity": 17,
-          "message": "OpenAIProvider::_convert_messages_to_provider_format - cognitive complexity 17 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\openai.py: OpenAIProvider::_convert_messages_to_provider_format - cognitive complexity 17 (exceeds threshold)"
+          "name": "OllamaProvider::pull_model",
+          "complexity": 18,
+          "message": "OllamaProvider::pull_model - cognitive complexity 18 (exceeds threshold)",
+          "raw": "src\\intellicrack\\providers\\ollama.py: OllamaProvider::pull_model - cognitive complexity 18 (exceeds threshold)"
         },
         {
           "line": null,
           "column": null,
-          "name": "OpenAIProvider::chat_stream",
-          "complexity": 20,
-          "message": "OpenAIProvider::chat_stream - cognitive complexity 20 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\openai.py: OpenAIProvider::chat_stream - cognitive complexity 20 (exceeds threshold)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\openrouter.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "OpenRouterProvider::_convert_messages_to_provider_format",
-          "complexity": 17,
-          "message": "OpenRouterProvider::_convert_messages_to_provider_format - cognitive complexity 17 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\openrouter.py: OpenRouterProvider::_convert_messages_to_provider_format - cognitive complexity 17 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "OpenRouterProvider::chat_stream",
-          "complexity": 38,
-          "message": "OpenRouterProvider::chat_stream - cognitive complexity 38 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\openrouter.py: OpenRouterProvider::chat_stream - cognitive complexity 38 (exceeds threshold)"
+          "name": "OllamaProvider::chat_stream",
+          "complexity": 27,
+          "message": "OllamaProvider::chat_stream - cognitive complexity 27 (exceeds threshold)",
+          "raw": "src\\intellicrack\\providers\\ollama.py: OllamaProvider::chat_stream - cognitive complexity 27 (exceeds threshold)"
         }
       ]
     },
@@ -399,31 +349,17 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\binary_panel.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "BinaryPanel::_extract_strings",
-          "complexity": 16,
-          "message": "BinaryPanel::_extract_strings - cognitive complexity 16 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_extract_strings - cognitive complexity 16 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "BinaryPanel::_parse_sections",
-          "complexity": 24,
-          "message": "BinaryPanel::_parse_sections - cognitive complexity 24 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_parse_sections - cognitive complexity 24 (exceeds threshold)"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\provider_config.py",
       "count": 2,
       "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "CredentialSourceDetector::_load_env_file_vars",
+          "complexity": 24,
+          "message": "CredentialSourceDetector::_load_env_file_vars - cognitive complexity 24 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\provider_config.py: CredentialSourceDetector::_load_env_file_vars - cognitive complexity 24 (exceeds threshold)"
+        },
         {
           "line": null,
           "column": null,
@@ -431,14 +367,6 @@
           "complexity": 28,
           "message": "ModelRefreshWorker::_fetch_anthropic_models - cognitive complexity 28 (exceeds threshold)",
           "raw": "src\\intellicrack\\ui\\provider_config.py: ModelRefreshWorker::_fetch_anthropic_models - cognitive complexity 28 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "CredentialSourceDetector::_load_env_file_vars",
-          "complexity": 30,
-          "message": "CredentialSourceDetector::_load_env_file_vars - cognitive complexity 30 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\provider_config.py: CredentialSourceDetector::_load_env_file_vars - cognitive complexity 30 (exceeds threshold)"
         }
       ]
     },
@@ -461,6 +389,28 @@
           "complexity": 24,
           "message": "SessionManagerDialog::_load_sessions - cognitive complexity 24 (exceeds threshold)",
           "raw": "src\\intellicrack\\ui\\session_manager.py: SessionManagerDialog::_load_sessions - cognitive complexity 24 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\tool_config.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "ToolStatusCheckWorker::_check_ghidra",
+          "complexity": 20,
+          "message": "ToolStatusCheckWorker::_check_ghidra - cognitive complexity 20 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\tool_config.py: ToolStatusCheckWorker::_check_ghidra - cognitive complexity 20 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "ToolInstallWorker::_install_tool",
+          "complexity": 22,
+          "message": "ToolInstallWorker::_install_tool - cognitive complexity 22 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\tool_config.py: ToolInstallWorker::_install_tool - cognitive complexity 22 (exceeds threshold)"
         }
       ]
     },
@@ -500,9 +450,79 @@
           "line": null,
           "column": null,
           "name": "Orchestrator::_run_agent_loop",
-          "complexity": 16,
-          "message": "Orchestrator::_run_agent_loop - cognitive complexity 16 (exceeds threshold)",
-          "raw": "src\\intellicrack\\core\\orchestrator.py: Orchestrator::_run_agent_loop - cognitive complexity 16 (exceeds threshold)"
+          "complexity": 17,
+          "message": "Orchestrator::_run_agent_loop - cognitive complexity 17 (exceeds threshold)",
+          "raw": "src\\intellicrack\\core\\orchestrator.py: Orchestrator::_run_agent_loop - cognitive complexity 17 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\credentials\\store.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "CredentialStore::migrate_from_env",
+          "complexity": 17,
+          "message": "CredentialStore::migrate_from_env - cognitive complexity 17 (exceeds threshold)",
+          "raw": "src\\intellicrack\\credentials\\store.py: CredentialStore::migrate_from_env - cognitive complexity 17 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\anthropic.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "AnthropicProvider::chat_stream",
+          "complexity": 26,
+          "message": "AnthropicProvider::chat_stream - cognitive complexity 26 (exceeds threshold)",
+          "raw": "src\\intellicrack\\providers\\anthropic.py: AnthropicProvider::chat_stream - cognitive complexity 26 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\base.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "LLMProviderBase::_convert_messages_to_openai_format",
+          "complexity": 23,
+          "message": "LLMProviderBase::_convert_messages_to_openai_format - cognitive complexity 23 (exceeds threshold)",
+          "raw": "src\\intellicrack\\providers\\base.py: LLMProviderBase::_convert_messages_to_openai_format - cognitive complexity 23 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\grok.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "GrokProvider::chat_stream",
+          "complexity": 29,
+          "message": "GrokProvider::chat_stream - cognitive complexity 29 (exceeds threshold)",
+          "raw": "src\\intellicrack\\providers\\grok.py: GrokProvider::chat_stream - cognitive complexity 29 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\huggingface.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "HuggingFaceProvider::chat_stream",
+          "complexity": 38,
+          "message": "HuggingFaceProvider::chat_stream - cognitive complexity 38 (exceeds threshold)",
+          "raw": "src\\intellicrack\\providers\\huggingface.py: HuggingFaceProvider::chat_stream - cognitive complexity 38 (exceeds threshold)"
         }
       ]
     },
@@ -521,6 +541,34 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\providers\\openai.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "OpenAIProvider::chat_stream",
+          "complexity": 29,
+          "message": "OpenAIProvider::chat_stream - cognitive complexity 29 (exceeds threshold)",
+          "raw": "src\\intellicrack\\providers\\openai.py: OpenAIProvider::chat_stream - cognitive complexity 29 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\openrouter.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "OpenRouterProvider::chat_stream",
+          "complexity": 54,
+          "message": "OpenRouterProvider::chat_stream - cognitive complexity 54 (exceeds threshold)",
+          "raw": "src\\intellicrack\\providers\\openrouter.py: OpenRouterProvider::chat_stream - cognitive complexity 54 (exceeds threshold)"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\sandbox\\manager.py",
       "count": 1,
       "findings": [
@@ -531,6 +579,20 @@
           "complexity": 16,
           "message": "SandboxManager::create - cognitive complexity 16 (exceeds threshold)",
           "raw": "src\\intellicrack\\sandbox\\manager.py: SandboxManager::create - cognitive complexity 16 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\app.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "MainWindow::_on_open_frida",
+          "complexity": 26,
+          "message": "MainWindow::_on_open_frida - cognitive complexity 26 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\app.py: MainWindow::_on_open_frida - cognitive complexity 26 (exceeds threshold)"
         }
       ]
     },
@@ -563,20 +625,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\tool_config.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "ToolInstallWorker::_install_tool",
-          "complexity": 22,
-          "message": "ToolInstallWorker::_install_tool - cognitive complexity 22 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\tool_config.py: ToolInstallWorker::_install_tool - cognitive complexity 22 (exceeds threshold)"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\tools.py",
       "count": 1,
       "findings": [
@@ -584,9 +632,9 @@
           "line": null,
           "column": null,
           "name": "ToolOutputPanel::_on_tab_close_requested",
-          "complexity": 39,
-          "message": "ToolOutputPanel::_on_tab_close_requested - cognitive complexity 39 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\tools.py: ToolOutputPanel::_on_tab_close_requested - cognitive complexity 39 (exceeds threshold)"
+          "complexity": 27,
+          "message": "ToolOutputPanel::_on_tab_close_requested - cognitive complexity 27 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\tools.py: ToolOutputPanel::_on_tab_close_requested - cognitive complexity 27 (exceeds threshold)"
         }
       ]
     }

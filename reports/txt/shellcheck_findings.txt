@@ -136,9 +136,9 @@ D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\data\support\setupu
 
 D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\data\support\setuputils.sh:33:8: warning: Declare and assign separately to avoid masking return values. [SC2155]
 
-D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\data\support\setuputils.sh:34:8: warning: Declare and assign separately to avoid masking return values. [SC2155]
+D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\data\support\setuputils.sh:33:16: error: This function is only defined later. Move the definition up. [SC2218]
 
-D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\data\support\setuputils.sh:34:22: note: Useless cat. Consider 'cmd < file | ..' or 'cmd file | ..' instead. [SC2002]
+D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\data\support\setuputils.sh:34:8: warning: Declare and assign separately to avoid masking return values. [SC2155]
 
 D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\data\support\setuputils.sh:34:39: note: read without -r will mangle backslashes. [SC2162]
 

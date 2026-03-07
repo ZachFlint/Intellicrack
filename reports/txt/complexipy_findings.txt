@@ -1,10 +1,23 @@
-3 findings in src\intellicrack\bridges\installer.py
+4 findings in src\intellicrack\bridges\installer.py
 
 src\intellicrack\bridges\installer.py: ToolInstaller::_download_file - cognitive complexity 16 (exceeds threshold)
+
+src\intellicrack\bridges\installer.py: ToolInstaller::get_version - cognitive complexity 16 (exceeds threshold)
 
 src\intellicrack\bridges\installer.py: ToolInstaller::_get_latest_release_url - cognitive complexity 23 (exceeds threshold)
 
 src\intellicrack\bridges\installer.py: ToolInstaller::find_tool - cognitive complexity 34 (exceeds threshold)
+
+
+4 findings in src\intellicrack\ui\panels\binary_panel.py
+
+src\intellicrack\ui\panels\binary_panel.py: BinaryPanel::_extract_strings - cognitive complexity 16 (exceeds threshold)
+
+src\intellicrack\ui\panels\binary_panel.py: BinaryPanel::_parse_pe_ilt_entries - cognitive complexity 18 (exceeds threshold)
+
+src\intellicrack\ui\panels\binary_panel.py: BinaryPanel::_parse_pe_sections - cognitive complexity 23 (exceeds threshold)
+
+src\intellicrack\ui\panels\binary_panel.py: BinaryPanel::_parse_elf_sections - cognitive complexity 25 (exceeds threshold)
 
 
 3 findings in src\intellicrack\bridges\process.py
@@ -43,22 +56,13 @@ src\intellicrack\providers\discovery.py: ModelDiscovery::discover_all - cognitiv
 src\intellicrack\providers\discovery.py: ModelDiscovery::filter - cognitive complexity 32 (exceeds threshold)
 
 
-3 findings in src\intellicrack\providers\huggingface.py
+3 findings in src\intellicrack\providers\google.py
 
-src\intellicrack\providers\huggingface.py: HuggingFaceProvider::_convert_messages_to_provider_format - cognitive complexity 17 (exceeds threshold)
+src\intellicrack\providers\google.py: GoogleProvider::_parse_response - cognitive complexity 18 (exceeds threshold)
 
-src\intellicrack\providers\huggingface.py: HuggingFaceProvider::list_models - cognitive complexity 17 (exceeds threshold)
+src\intellicrack\providers\google.py: GoogleProvider::_convert_messages_to_provider_format - cognitive complexity 21 (exceeds threshold)
 
-src\intellicrack\providers\huggingface.py: HuggingFaceProvider::chat_stream - cognitive complexity 38 (exceeds threshold)
-
-
-3 findings in src\intellicrack\providers\ollama.py
-
-src\intellicrack\providers\ollama.py: OllamaProvider::_convert_messages_to_provider_format - cognitive complexity 17 (exceeds threshold)
-
-src\intellicrack\providers\ollama.py: OllamaProvider::pull_model - cognitive complexity 18 (exceeds threshold)
-
-src\intellicrack\providers\ollama.py: OllamaProvider::chat_stream - cognitive complexity 24 (exceeds threshold)
+src\intellicrack\providers\google.py: GoogleProvider::chat_stream - cognitive complexity 39 (exceeds threshold)
 
 
 3 findings in src\intellicrack\sandbox\qemu.py
@@ -77,20 +81,6 @@ src\intellicrack\bridges\binary.py: BinaryBridge::_detect_architecture - cogniti
 src\intellicrack\bridges\binary.py: BinaryBridge::_get_imports_internal - cognitive complexity 18 (exceeds threshold)
 
 
-2 findings in src\intellicrack\providers\google.py
-
-src\intellicrack\providers\google.py: GoogleProvider::chat_stream - cognitive complexity 17 (exceeds threshold)
-
-src\intellicrack\providers\google.py: GoogleProvider::_parse_response - cognitive complexity 18 (exceeds threshold)
-
-
-2 findings in src\intellicrack\providers\grok.py
-
-src\intellicrack\providers\grok.py: GrokProvider::_convert_messages_to_provider_format - cognitive complexity 17 (exceeds threshold)
-
-src\intellicrack\providers\grok.py: GrokProvider::chat_stream - cognitive complexity 20 (exceeds threshold)
-
-
 2 findings in src\intellicrack\providers\local_transformers.py
 
 src\intellicrack\providers\local_transformers.py: LocalTransformersProvider::_stream_generate - cognitive complexity 17 (exceeds threshold)
@@ -98,18 +88,11 @@ src\intellicrack\providers\local_transformers.py: LocalTransformersProvider::_st
 src\intellicrack\providers\local_transformers.py: LocalTransformersProvider::_parse_tool_calls - cognitive complexity 23 (exceeds threshold)
 
 
-2 findings in src\intellicrack\providers\openai.py
+2 findings in src\intellicrack\providers\ollama.py
 
-src\intellicrack\providers\openai.py: OpenAIProvider::_convert_messages_to_provider_format - cognitive complexity 17 (exceeds threshold)
+src\intellicrack\providers\ollama.py: OllamaProvider::pull_model - cognitive complexity 18 (exceeds threshold)
 
-src\intellicrack\providers\openai.py: OpenAIProvider::chat_stream - cognitive complexity 20 (exceeds threshold)
-
-
-2 findings in src\intellicrack\providers\openrouter.py
-
-src\intellicrack\providers\openrouter.py: OpenRouterProvider::_convert_messages_to_provider_format - cognitive complexity 17 (exceeds threshold)
-
-src\intellicrack\providers\openrouter.py: OpenRouterProvider::chat_stream - cognitive complexity 38 (exceeds threshold)
+src\intellicrack\providers\ollama.py: OllamaProvider::chat_stream - cognitive complexity 27 (exceeds threshold)
 
 
 2 findings in src\intellicrack\providers\xpu_utils.py
@@ -119,18 +102,11 @@ src\intellicrack\providers\xpu_utils.py: get_xpu_memory_info - cognitive complex
 src\intellicrack\providers\xpu_utils.py: get_xpu_device_info - cognitive complexity 47 (exceeds threshold)
 
 
-2 findings in src\intellicrack\ui\panels\binary_panel.py
-
-src\intellicrack\ui\panels\binary_panel.py: BinaryPanel::_extract_strings - cognitive complexity 16 (exceeds threshold)
-
-src\intellicrack\ui\panels\binary_panel.py: BinaryPanel::_parse_sections - cognitive complexity 24 (exceeds threshold)
-
-
 2 findings in src\intellicrack\ui\provider_config.py
 
-src\intellicrack\ui\provider_config.py: ModelRefreshWorker::_fetch_anthropic_models - cognitive complexity 28 (exceeds threshold)
+src\intellicrack\ui\provider_config.py: CredentialSourceDetector::_load_env_file_vars - cognitive complexity 24 (exceeds threshold)
 
-src\intellicrack\ui\provider_config.py: CredentialSourceDetector::_load_env_file_vars - cognitive complexity 30 (exceeds threshold)
+src\intellicrack\ui\provider_config.py: ModelRefreshWorker::_fetch_anthropic_models - cognitive complexity 28 (exceeds threshold)
 
 
 2 findings in src\intellicrack\ui\session_manager.py
@@ -138,6 +114,13 @@ src\intellicrack\ui\provider_config.py: CredentialSourceDetector::_load_env_file
 src\intellicrack\ui\session_manager.py: SessionManagerDialog::_load_sessions_from_disk - cognitive complexity 19 (exceeds threshold)
 
 src\intellicrack\ui\session_manager.py: SessionManagerDialog::_load_sessions - cognitive complexity 24 (exceeds threshold)
+
+
+2 findings in src\intellicrack\ui\tool_config.py
+
+src\intellicrack\ui\tool_config.py: ToolStatusCheckWorker::_check_ghidra - cognitive complexity 20 (exceeds threshold)
+
+src\intellicrack\ui\tool_config.py: ToolInstallWorker::_install_tool - cognitive complexity 22 (exceeds threshold)
 
 
 1 findings in src\intellicrack\bridges\frida_bridge.py
@@ -152,7 +135,32 @@ src\intellicrack\core\logging.py: _sanitize_arguments - cognitive complexity 21 
 
 1 findings in src\intellicrack\core\orchestrator.py
 
-src\intellicrack\core\orchestrator.py: Orchestrator::_run_agent_loop - cognitive complexity 16 (exceeds threshold)
+src\intellicrack\core\orchestrator.py: Orchestrator::_run_agent_loop - cognitive complexity 17 (exceeds threshold)
+
+
+1 findings in src\intellicrack\credentials\store.py
+
+src\intellicrack\credentials\store.py: CredentialStore::migrate_from_env - cognitive complexity 17 (exceeds threshold)
+
+
+1 findings in src\intellicrack\providers\anthropic.py
+
+src\intellicrack\providers\anthropic.py: AnthropicProvider::chat_stream - cognitive complexity 26 (exceeds threshold)
+
+
+1 findings in src\intellicrack\providers\base.py
+
+src\intellicrack\providers\base.py: LLMProviderBase::_convert_messages_to_openai_format - cognitive complexity 23 (exceeds threshold)
+
+
+1 findings in src\intellicrack\providers\grok.py
+
+src\intellicrack\providers\grok.py: GrokProvider::chat_stream - cognitive complexity 29 (exceeds threshold)
+
+
+1 findings in src\intellicrack\providers\huggingface.py
+
+src\intellicrack\providers\huggingface.py: HuggingFaceProvider::chat_stream - cognitive complexity 38 (exceeds threshold)
 
 
 1 findings in src\intellicrack\providers\model_loader.py
@@ -160,9 +168,24 @@ src\intellicrack\core\orchestrator.py: Orchestrator::_run_agent_loop - cognitive
 src\intellicrack\providers\model_loader.py: load_model_for_xpu - cognitive complexity 17 (exceeds threshold)
 
 
+1 findings in src\intellicrack\providers\openai.py
+
+src\intellicrack\providers\openai.py: OpenAIProvider::chat_stream - cognitive complexity 29 (exceeds threshold)
+
+
+1 findings in src\intellicrack\providers\openrouter.py
+
+src\intellicrack\providers\openrouter.py: OpenRouterProvider::chat_stream - cognitive complexity 54 (exceeds threshold)
+
+
 1 findings in src\intellicrack\sandbox\manager.py
 
 src\intellicrack\sandbox\manager.py: SandboxManager::create - cognitive complexity 16 (exceeds threshold)
+
+
+1 findings in src\intellicrack\ui\app.py
+
+src\intellicrack\ui\app.py: MainWindow::_on_open_frida - cognitive complexity 26 (exceeds threshold)
 
 
 1 findings in src\intellicrack\ui\highlighter.py
@@ -175,11 +198,6 @@ src\intellicrack\ui\highlighter.py: PythonSyntaxHighlighter::_highlight_triple_q
 src\intellicrack\ui\sandbox_config.py: SandboxTestWorker::run - cognitive complexity 20 (exceeds threshold)
 
 
-1 findings in src\intellicrack\ui\tool_config.py
-
-src\intellicrack\ui\tool_config.py: ToolInstallWorker::_install_tool - cognitive complexity 22 (exceeds threshold)
-
-
 1 findings in src\intellicrack\ui\tools.py
 
-src\intellicrack\ui\tools.py: ToolOutputPanel::_on_tab_close_requested - cognitive complexity 39 (exceeds threshold)
+src\intellicrack\ui\tools.py: ToolOutputPanel::_on_tab_close_requested - cognitive complexity 27 (exceeds threshold)

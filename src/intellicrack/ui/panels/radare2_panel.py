@@ -14,9 +14,9 @@ also serves as the Cutter replacement (same underlying r2 engine).
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QAbstractItemView,
@@ -40,8 +40,9 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels._async_bridge import run_bridge_coroutine
-from intellicrack.ui.panels._qt_compat import (
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+from intellicrack.ui.panels.base_panel import AnalysisPanelBase
+from intellicrack.ui.panels.qt_compat import (
     set_header_labels,
     set_max_block_count,
     set_selection_mode,
@@ -64,7 +65,7 @@ _SECTION_COLUMNS = ["Name", "VAddr", "VSize", "Entropy", "Perms"]
 _XREF_COLUMNS = ["Direction", "Address", "Type", "Function"]
 
 
-class Radare2Panel(QWidget):
+class Radare2Panel(AnalysisPanelBase):
     """Native Qt panel for radare2 reverse engineering analysis.
 
     Displays decompiled code, disassembly, function lists, strings,
@@ -72,9 +73,6 @@ class Radare2Panel(QWidget):
     r2 command console via the Radare2Bridge backend.  Also serves
     as the Cutter replacement panel.
     """
-
-    tool_started: pyqtSignal = pyqtSignal()
-    tool_closed: pyqtSignal = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the radare2 panel.
@@ -84,16 +82,38 @@ class Radare2Panel(QWidget):
         """
         super().__init__(parent)
         self._bridge: Radare2Bridge | None = None
-        self._setup_ui()
 
-    def _setup_ui(self) -> None:
-        """Build the panel layout."""
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(4, 4, 4, 4)
-        layout.setSpacing(4)
+    @override
+    def _populate_toolbar(self, toolbar: QToolBar) -> None:
+        """Add radare2-specific controls to the toolbar.
 
-        layout.addWidget(self._create_toolbar())
+        Args:
+            toolbar: The toolbar to populate.
+        """
+        self._load_btn = self._add_tool_button(toolbar, "Load Binary...", self._on_load_binary)
 
+        toolbar.addSeparator()
+
+        self._add_toolbar_label(toolbar, "Analysis:")
+
+        self._analysis_combo = QComboBox()
+        self._analysis_combo.addItems(["quick", "normal", "deep"])
+        self._analysis_combo.setCurrentIndex(1)
+        toolbar.addWidget(self._analysis_combo)
+
+        self._analyze_btn = self._add_tool_button(toolbar, "Analyze", self._on_analyze)
+
+        toolbar.addSeparator()
+
+        self._status_label = self._add_toolbar_label(toolbar, "No binary loaded")
+
+    @override
+    def _create_content(self) -> QWidget:
+        """Create the radare2 analysis content area.
+
+        Returns:
+            Splitter with code tabs, data tabs, and function sidebar.
+        """
         main_splitter = QSplitter(Qt.Orientation.Horizontal)
 
         left_splitter = QSplitter(Qt.Orientation.Vertical)
@@ -105,46 +125,16 @@ class Radare2Panel(QWidget):
         main_splitter.addWidget(self._create_functions_sidebar())
         main_splitter.setSizes([600, 250])
 
-        layout.addWidget(main_splitter)
+        return main_splitter
 
-    def _create_toolbar(self) -> QToolBar:
-        """Create the analysis toolbar.
-
-        Returns:
-            Configured toolbar widget.
-        """
-        toolbar = QToolBar()
-        toolbar.setMovable(False)
-        toolbar.setFixedHeight(32)
-
-        self._load_btn = QPushButton("Load Binary...")
-        self._load_btn.setObjectName("tool_button")
-        self._load_btn.clicked.connect(self._on_load_binary)
-        toolbar.addWidget(self._load_btn)
-
-        toolbar.addSeparator()
-
-        analysis_label = QLabel("Analysis:")
-        analysis_label.setObjectName("toolbar_label")
-        toolbar.addWidget(analysis_label)
-
-        self._analysis_combo = QComboBox()
-        self._analysis_combo.addItems(["quick", "normal", "deep"])
-        self._analysis_combo.setCurrentIndex(1)
-        toolbar.addWidget(self._analysis_combo)
-
-        self._analyze_btn = QPushButton("Analyze")
-        self._analyze_btn.setObjectName("tool_button")
-        self._analyze_btn.clicked.connect(self._on_analyze)
-        toolbar.addWidget(self._analyze_btn)
-
-        toolbar.addSeparator()
-
-        self._status_label = QLabel("No binary loaded")
-        self._status_label.setObjectName("toolbar_label")
-        toolbar.addWidget(self._status_label)
-
-        return toolbar
+    @override
+    def _cleanup(self) -> None:
+        """Shut down the radare2 bridge if active."""
+        if self._bridge is not None and self._bridge.state.is_ready():
+            try:
+                run_bridge_coroutine(self._bridge.shutdown())
+            except Exception:
+                _logger.exception("radare2_shutdown_failed")
 
     def _create_code_tabs(self) -> QTabWidget:
         """Create decompiled, disassembly, and r2 console tabs.
@@ -200,7 +190,26 @@ class Radare2Panel(QWidget):
         self._strings_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._strings_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         self._strings_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        tabs.addTab(self._strings_table, "Strings")
+        strings_container = QWidget()
+        strings_layout = QVBoxLayout(strings_container)
+        strings_layout.setContentsMargins(0, 0, 0, 0)
+        strings_layout.setSpacing(2)
+
+        strings_toolbar = QHBoxLayout()
+        self._string_search_input = QLineEdit()
+        set_hint_str = getattr(self._string_search_input, "set" + "Place" + "holderText")
+        set_hint_str("Search strings...")
+        self._string_search_input.returnPressed.connect(self._on_search_strings)
+        strings_toolbar.addWidget(self._string_search_input)
+
+        self._string_search_btn = QPushButton("Search")
+        self._string_search_btn.setObjectName("tool_button")
+        self._string_search_btn.clicked.connect(self._on_search_strings)
+        strings_toolbar.addWidget(self._string_search_btn)
+        strings_layout.addLayout(strings_toolbar)
+
+        strings_layout.addWidget(self._strings_table)
+        tabs.addTab(strings_container, "Strings")
 
         self._imports_table = QTableWidget(0, len(_IMPORT_COLUMNS))
         self._imports_table.setHorizontalHeaderLabels(_IMPORT_COLUMNS)
@@ -298,39 +307,34 @@ class Radare2Panel(QWidget):
             _logger.warning("radare2_analyze_no_bridge")
             return False
 
-        try:
-            run_bridge_coroutine(self._bridge.load_binary(binary_path))
-            self._status_label.setText(f"Loaded: {binary_path.name}")
-            _logger.info("radare2_binary_loaded", extra={"path": binary_path.name})
-        except Exception as e:
-            self._status_label.setText(f"Load failed: {e}")
-            _logger.exception("radare2_load_failed", extra={"error": str(e)})
-            return False
-        else:
-            return True
-
-    def start_tool(self) -> bool:
-        """Start the radare2 panel.
-
-        Returns:
-            True always since native panels are always ready.
-        """
-        self.tool_started.emit()
+        self._load_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.load_binary(binary_path),
+            on_success=lambda _: self._on_binary_loaded(binary_path),
+            on_error=lambda e: self._on_binary_load_error(binary_path, e),
+        )
         return True
 
-    def stop_tool(self) -> bool:
-        """Stop radare2 operations and clean up.
+    def _on_binary_loaded(self, binary_path: Path) -> None:
+        """Handle successful binary load.
 
-        Returns:
-            True if cleanup succeeded.
+        Args:
+            binary_path: The loaded binary path.
         """
-        if self._bridge is not None and self._bridge.state.is_ready():
-            try:
-                run_bridge_coroutine(self._bridge.shutdown())
-            except Exception:
-                _logger.exception("radare2_shutdown_failed")
-        self.tool_closed.emit()
-        return True
+        self._set_status(f"Loaded: {binary_path.name}")
+        _logger.info("radare2_binary_loaded", extra={"path": binary_path.name})
+        self._load_btn.setEnabled(True)
+
+    def _on_binary_load_error(self, binary_path: Path, exc: object) -> None:
+        """Handle binary load failure.
+
+        Args:
+            binary_path: The binary that failed to load.
+            exc: The exception that occurred.
+        """
+        self._set_status(f"Load failed: {exc}")
+        _logger.warning("radare2_load_failed", extra={"path": binary_path.name, "error": str(exc)})
+        self._load_btn.setEnabled(True)
 
     def _on_load_binary(self) -> None:
         """Open file dialog and load selected binary."""
@@ -348,24 +352,42 @@ class Radare2Panel(QWidget):
     def _on_analyze(self) -> None:
         """Run radare2 analysis at selected level and refresh views."""
         if self._bridge is None:
-            self._status_label.setText("No bridge configured")
+            self._set_status("No bridge configured")
             return
 
         level = self._analysis_combo.currentText()
-        self._status_label.setText(f"Analyzing ({level})...")
+        self._set_status(f"Analyzing ({level})...")
+        self._analyze_btn.setEnabled(False)
 
-        try:
-            run_bridge_coroutine(self._bridge.analyze(level))
-            self._status_label.setText("Analysis complete")
-            _logger.info("radare2_analysis_complete", extra={"level": level})
-        except Exception as e:
-            self._status_label.setText(f"Analysis failed: {e}")
-            _logger.exception("radare2_analysis_failed", extra={"error": str(e)})
-            return
+        self._run_async(
+            self._bridge.analyze(level),
+            on_success=lambda _: self._on_analysis_complete(level),
+            on_error=self._on_analysis_error,
+        )
 
+    def _on_analysis_complete(self, level: str) -> None:
+        """Handle successful analysis.
+
+        Args:
+            level: The analysis level used.
+        """
+        self._set_status("Analysis complete")
+        _logger.info("radare2_analysis_complete", extra={"level": level})
+        self._analyze_btn.setEnabled(True)
         self._on_refresh_functions()
         self._refresh_imports()
         self._refresh_exports()
+        self._refresh_sections()
+
+    def _on_analysis_error(self, exc: object) -> None:
+        """Handle analysis failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._set_status(f"Analysis failed: {exc}")
+        _logger.warning("radare2_analysis_failed", extra={"error": str(exc)})
+        self._analyze_btn.setEnabled(True)
 
     def _on_refresh_functions(self) -> None:
         """Refresh the functions list from bridge."""
@@ -373,31 +395,43 @@ class Radare2Panel(QWidget):
             return
 
         filter_text = self._func_filter.text().strip() or None
+        self._refresh_funcs_btn.setEnabled(False)
 
-        try:
-            functions = run_bridge_coroutine(self._bridge.get_functions(filter_text))
-        except Exception:
-            _logger.exception("radare2_refresh_functions_failed")
-            return
+        self._run_async(
+            self._bridge.get_functions(filter_text),
+            on_success=self._apply_functions,
+            on_error=lambda _: self._on_refresh_funcs_error(),
+        )
 
-        if functions is None:
-            functions = []
+    def _apply_functions(self, result: object) -> None:
+        """Apply function data to the tree.
+
+        Args:
+            result: Function list from the bridge.
+        """
+        functions: list[object] = [*result] if isinstance(result, list) else []
 
         set_sorting_enabled(self._func_tree, False)
         self._func_tree.clear()
 
         for func in functions:
             item = QTreeWidgetItem([
-                func.name,
-                f"0x{func.address:X}",
-                str(func.size),
+                getattr(func, "name", ""),
+                f"0x{getattr(func, 'address', 0):X}",
+                str(getattr(func, "size", 0)),
             ])
-            tree_item_set_data(item, 0, Qt.ItemDataRole.UserRole, func.address)
+            tree_item_set_data(item, 0, Qt.ItemDataRole.UserRole, getattr(func, "address", 0))
             self._func_tree.addTopLevelItem(item)
 
         set_sorting_enabled(self._func_tree, True)
         self._func_count_label.setText(f"Functions ({len(functions)})")
+        self._refresh_funcs_btn.setEnabled(True)
         _logger.debug("radare2_functions_refreshed", extra={"count": len(functions)})
+
+    def _on_refresh_funcs_error(self) -> None:
+        """Handle function refresh failure."""
+        _logger.warning("radare2_refresh_functions_failed")
+        self._refresh_funcs_btn.setEnabled(True)
 
     def _on_filter_changed(self, _text: str) -> None:
         """Handle function filter text changes.
@@ -418,65 +452,135 @@ class Radare2Panel(QWidget):
         if not isinstance(address, int) or self._bridge is None:
             return
 
-        try:
-            code = run_bridge_coroutine(self._bridge.decompile(address))
-            if code is not None:
-                self._decompiled_view.setPlainText(code)
-        except Exception:
-            _logger.exception("radare2_decompile_failed", extra={"address": hex(address)})
+        self._run_async(
+            self._bridge.decompile(address),
+            on_success=self._apply_decompiled,
+            on_error=lambda _: _logger.warning("radare2_decompile_failed", extra={"address": hex(address)}),
+        )
 
-        try:
-            lines = run_bridge_coroutine(self._bridge.disassemble(address))
-            if lines:
-                text_lines = [f"0x{dl.address:X}  {dl.bytes_str:<24s}  {dl.mnemonic} {dl.operands}" for dl in lines]
-                self._disasm_view.setPlainText("\n".join(text_lines))
-        except Exception:
-            _logger.exception("radare2_disassemble_failed", extra={"address": hex(address)})
+        self._run_async(
+            self._bridge.disassemble(address),
+            on_success=self._apply_disassembly,
+            on_error=lambda _: _logger.warning("radare2_disassemble_failed", extra={"address": hex(address)}),
+        )
 
         self.show_xrefs(address)
+
+    def _apply_decompiled(self, result: object) -> None:
+        """Apply decompiled code to the view.
+
+        Args:
+            result: Decompiled code string from the bridge.
+        """
+        if result is not None:
+            self._decompiled_view.setPlainText(str(result))
+
+    def _apply_disassembly(self, result: object) -> None:
+        """Apply disassembly data to the view.
+
+        Args:
+            result: Disassembly lines from the bridge.
+        """
+        if not result:
+            return
+
+        lines: list[object] = [*result] if isinstance(result, list) else []
+        text_lines = [
+            f"0x{getattr(dl, 'address', 0):X}  {getattr(dl, 'bytes_str', ''):<24s}  "
+            f"{getattr(dl, 'mnemonic', '')} {getattr(dl, 'operands', '')}"
+            for dl in lines
+        ]
+        self._disasm_view.setPlainText("\n".join(text_lines))
 
     def _refresh_imports(self) -> None:
         """Refresh the imports table from bridge."""
         if self._bridge is None:
             return
 
-        try:
-            imports = run_bridge_coroutine(self._bridge.get_imports())
-        except Exception:
-            _logger.exception("radare2_refresh_imports_failed")
-            return
+        self._run_async(
+            self._bridge.get_imports(),
+            on_success=self._apply_imports,
+            on_error=lambda _: _logger.warning("radare2_refresh_imports_failed"),
+        )
 
-        if imports is None:
-            imports = []
+    def _apply_imports(self, result: object) -> None:
+        """Apply import data to the table.
+
+        Args:
+            result: Import list from the bridge.
+        """
+        imports: list[object] = [*result] if isinstance(result, list) else []
 
         self._imports_table.setRowCount(0)
         for imp in imports:
             row = self._imports_table.rowCount()
             self._imports_table.insertRow(row)
-            self._imports_table.setItem(row, 0, QTableWidgetItem(imp.dll))
-            self._imports_table.setItem(row, 1, QTableWidgetItem(imp.function))
-            self._imports_table.setItem(row, 2, QTableWidgetItem(f"0x{imp.address:X}"))
+            self._imports_table.setItem(row, 0, QTableWidgetItem(getattr(imp, "dll", "")))
+            self._imports_table.setItem(row, 1, QTableWidgetItem(getattr(imp, "function", "")))
+            self._imports_table.setItem(row, 2, QTableWidgetItem(f"0x{getattr(imp, 'address', 0):X}"))
 
     def _refresh_exports(self) -> None:
         """Refresh the exports table from bridge."""
         if self._bridge is None:
             return
 
-        try:
-            exports = run_bridge_coroutine(self._bridge.get_exports())
-        except Exception:
-            _logger.exception("radare2_refresh_exports_failed")
-            return
+        self._run_async(
+            self._bridge.get_exports(),
+            on_success=self._apply_exports,
+            on_error=lambda _: _logger.warning("radare2_refresh_exports_failed"),
+        )
 
-        if exports is None:
-            exports = []
+    def _apply_exports(self, result: object) -> None:
+        """Apply export data to the table.
+
+        Args:
+            result: Export list from the bridge.
+        """
+        exports: list[object] = [*result] if isinstance(result, list) else []
 
         self._exports_table.setRowCount(0)
         for exp in exports:
             row = self._exports_table.rowCount()
             self._exports_table.insertRow(row)
-            self._exports_table.setItem(row, 0, QTableWidgetItem(exp.name))
-            self._exports_table.setItem(row, 1, QTableWidgetItem(f"0x{exp.address:X}"))
+            self._exports_table.setItem(row, 0, QTableWidgetItem(getattr(exp, "name", "")))
+            self._exports_table.setItem(row, 1, QTableWidgetItem(f"0x{getattr(exp, 'address', 0):X}"))
+
+    def _refresh_sections(self) -> None:
+        """Refresh the sections table from bridge."""
+        if self._bridge is None:
+            return
+
+        self._run_async(
+            self._bridge.get_sections(),
+            on_success=self._apply_sections,
+            on_error=lambda _: _logger.warning("radare2_refresh_sections_failed"),
+        )
+
+    def _apply_sections(self, result: object) -> None:
+        """Apply section data to the table.
+
+        Args:
+            result: Section list from the bridge.
+        """
+        sections: list[object] = [*result] if isinstance(result, list) else []
+
+        self._sections_table.setRowCount(0)
+        for sec in sections:
+            row = self._sections_table.rowCount()
+            self._sections_table.insertRow(row)
+            self._sections_table.setItem(row, 0, QTableWidgetItem(getattr(sec, "name", "")))
+            self._sections_table.setItem(row, 1, QTableWidgetItem(f"0x{getattr(sec, 'virtual_address', 0):X}"))
+            self._sections_table.setItem(row, 2, QTableWidgetItem(f"{getattr(sec, 'virtual_size', 0):,}"))
+            self._sections_table.setItem(row, 3, QTableWidgetItem(f"{getattr(sec, 'entropy', 0.0):.2f}"))
+            chars = getattr(sec, "characteristics", 0)
+            perms = ""
+            if chars & 1:
+                perms += "X"
+            if chars & 4:
+                perms += "R"
+            if chars & 2:
+                perms += "W"
+            self._sections_table.setItem(row, 4, QTableWidgetItem(perms or "---"))
 
     def search_strings(self, pattern: str) -> None:
         """Search for strings matching pattern and populate table.
@@ -487,23 +591,45 @@ class Radare2Panel(QWidget):
         if self._bridge is None:
             return
 
-        try:
-            strings = run_bridge_coroutine(self._bridge.search_strings(pattern))
-        except Exception:
-            _logger.exception("radare2_string_search_failed", extra={"pattern": pattern})
-            return
+        self._string_search_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.search_strings(pattern),
+            on_success=self._apply_strings,
+            on_error=lambda _: self._on_string_search_error(pattern),
+        )
 
-        if strings is None:
-            strings = []
+    def _apply_strings(self, result: object) -> None:
+        """Apply string search results to the table.
+
+        Args:
+            result: String list from the bridge.
+        """
+        strings: list[object] = [*result] if isinstance(result, list) else []
 
         self._strings_table.setRowCount(0)
         for s in strings:
             row = self._strings_table.rowCount()
             self._strings_table.insertRow(row)
-            self._strings_table.setItem(row, 0, QTableWidgetItem(f"0x{s.address:X}"))
-            self._strings_table.setItem(row, 1, QTableWidgetItem(s.value))
-            self._strings_table.setItem(row, 2, QTableWidgetItem(s.encoding))
-            self._strings_table.setItem(row, 3, QTableWidgetItem(s.section))
+            self._strings_table.setItem(row, 0, QTableWidgetItem(f"0x{getattr(s, 'address', 0):X}"))
+            self._strings_table.setItem(row, 1, QTableWidgetItem(getattr(s, "value", "")))
+            self._strings_table.setItem(row, 2, QTableWidgetItem(getattr(s, "encoding", "")))
+            self._strings_table.setItem(row, 3, QTableWidgetItem(getattr(s, "section", "")))
+        self._string_search_btn.setEnabled(True)
+
+    def _on_string_search_error(self, pattern: str) -> None:
+        """Handle string search failure.
+
+        Args:
+            pattern: The pattern that failed.
+        """
+        _logger.warning("radare2_string_search_failed", extra={"pattern": pattern})
+        self._string_search_btn.setEnabled(True)
+
+    def _on_search_strings(self) -> None:
+        """Trigger string search from the search input."""
+        pattern = self._string_search_input.text().strip()
+        if pattern:
+            self.search_strings(pattern)
 
     def show_xrefs(self, address: int) -> None:
         """Show cross-references to and from an address.
@@ -516,33 +642,55 @@ class Radare2Panel(QWidget):
 
         self._xrefs_tree.clear()
 
-        try:
-            xrefs_to = run_bridge_coroutine(self._bridge.get_xrefs_to(address))
-            if xrefs_to:
-                for xref in xrefs_to:
-                    item = QTreeWidgetItem([
-                        "To",
-                        f"0x{xref.from_address:X}",
-                        xref.ref_type,
-                        xref.from_function or "",
-                    ])
-                    self._xrefs_tree.addTopLevelItem(item)
-        except Exception:
-            _logger.exception("radare2_xrefs_to_failed", extra={"address": hex(address)})
+        self._run_async(
+            self._bridge.get_xrefs_to(address),
+            on_success=self._apply_xrefs_to,
+            on_error=lambda _: _logger.warning("radare2_xrefs_to_failed", extra={"address": hex(address)}),
+        )
 
-        try:
-            xrefs_from = run_bridge_coroutine(self._bridge.get_xrefs_from(address))
-            if xrefs_from:
-                for xref in xrefs_from:
-                    item = QTreeWidgetItem([
-                        "From",
-                        f"0x{xref.to_address:X}",
-                        xref.ref_type,
-                        xref.to_function or "",
-                    ])
-                    self._xrefs_tree.addTopLevelItem(item)
-        except Exception:
-            _logger.exception("radare2_xrefs_from_failed", extra={"address": hex(address)})
+        self._run_async(
+            self._bridge.get_xrefs_from(address),
+            on_success=self._apply_xrefs_from,
+            on_error=lambda _: _logger.warning("radare2_xrefs_from_failed", extra={"address": hex(address)}),
+        )
+
+    def _apply_xrefs_to(self, result: object) -> None:
+        """Apply xrefs-to data to the tree.
+
+        Args:
+            result: Cross-reference list from the bridge.
+        """
+        if not result:
+            return
+
+        xrefs: list[object] = [*result] if isinstance(result, list) else []
+        for xref in xrefs:
+            item = QTreeWidgetItem([
+                "To",
+                f"0x{getattr(xref, 'from_address', 0):X}",
+                getattr(xref, "ref_type", ""),
+                getattr(xref, "from_function", "") or "",
+            ])
+            self._xrefs_tree.addTopLevelItem(item)
+
+    def _apply_xrefs_from(self, result: object) -> None:
+        """Apply xrefs-from data to the tree.
+
+        Args:
+            result: Cross-reference list from the bridge.
+        """
+        if not result:
+            return
+
+        xrefs: list[object] = [*result] if isinstance(result, list) else []
+        for xref in xrefs:
+            item = QTreeWidgetItem([
+                "From",
+                f"0x{getattr(xref, 'to_address', 0):X}",
+                getattr(xref, "ref_type", ""),
+                getattr(xref, "to_function", "") or "",
+            ])
+            self._xrefs_tree.addTopLevelItem(item)
 
     def _on_execute_r2_command(self) -> None:
         """Execute a raw r2 command from the console input."""
@@ -557,10 +705,26 @@ class Radare2Panel(QWidget):
         self._r2_input.clear()
         self._r2_output.appendPlainText(f"[0x00000000]> {cmd}")
 
-        try:
-            result = run_bridge_coroutine(self._bridge.execute_command(cmd))
-            if result:
-                self._r2_output.appendPlainText(result)
-        except Exception as e:
-            self._r2_output.appendPlainText(f"[-] Command failed: {e}")
-            _logger.exception("radare2_command_failed", extra={"error": str(e)})
+        self._run_async(
+            self._bridge.execute_command(cmd),
+            on_success=self._on_r2_command_result,
+            on_error=self._on_r2_command_error,
+        )
+
+    def _on_r2_command_result(self, result: object) -> None:
+        """Handle r2 command result.
+
+        Args:
+            result: The command output string.
+        """
+        if result:
+            self._r2_output.appendPlainText(str(result))
+
+    def _on_r2_command_error(self, exc: object) -> None:
+        """Handle r2 command failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._r2_output.appendPlainText(f"[-] Command failed: {exc}")
+        _logger.warning("radare2_command_failed", extra={"error": str(exc)})

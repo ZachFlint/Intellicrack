@@ -14,10 +14,11 @@ from __future__ import annotations
 import asyncio
 import time
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, ClassVar, cast, override
+from typing import TYPE_CHECKING, Any, Final, cast, override
 
 from google import genai
 from google.genai import types
+from google.genai.errors import ClientError
 
 from ..core.logging import get_logger, log_provider_request, log_provider_response
 from ..core.types import (
@@ -31,7 +32,7 @@ from ..core.types import (
     ToolCall,
     ToolDefinition,
 )
-from .base import LLMProviderBase
+from .base import LLMProviderBase, create_google_tool_schema
 
 
 if TYPE_CHECKING:
@@ -45,8 +46,11 @@ _MSG_NOT_CONNECTED = "Not connected"
 _MSG_INVALID_API_KEY = "Invalid API key"
 _MSG_CONNECTION_FAILED = "Connection failed"
 _MSG_REQUEST_FAILED = "Request failed"
+_MSG_FETCH_MODELS_FAILED = "Failed to fetch models from Google API"
 _MSG_RATE_LIMITED = "Rate limited"
 _MSG_STREAM_FAILED = "Stream failed"
+
+_STREAM_SENTINEL: Final = object()
 
 
 class GoogleProvider(LLMProviderBase):
@@ -59,14 +63,6 @@ class GoogleProvider(LLMProviderBase):
         _client: The Gemini API client.
         _current_task: Reference to any in-flight async task.
     """
-
-    KNOWN_MODELS: ClassVar[list[tuple[str, str, int, bool, bool]]] = [
-        ("gemini-2.0-flash", "Gemini 2.0 Flash", 1048576, True, True),
-        ("gemini-2.0-flash-thinking", "Gemini 2.0 Flash Thinking", 32767, True, True),
-        ("gemini-1.5-pro", "Gemini 1.5 Pro", 2097152, True, True),
-        ("gemini-1.5-flash", "Gemini 1.5 Flash", 1048576, True, True),
-        ("gemini-1.5-flash-8b", "Gemini 1.5 Flash 8B", 1048576, True, True),
-    ]
 
     def __init__(self) -> None:
         """Initialize the Google provider."""
@@ -100,8 +96,8 @@ class GoogleProvider(LLMProviderBase):
         try:
             self._client = genai.Client(api_key=credentials.api_key)
 
-            models_list = await asyncio.to_thread(self._client.models.list)
-            _ = list(models_list)
+            models_iter = await asyncio.to_thread(self._client.models.list)
+            _ = next(iter(models_iter), None)
 
             self._credentials = credentials
             self._connected = True
@@ -110,18 +106,19 @@ class GoogleProvider(LLMProviderBase):
                 extra={"has_custom_base": credentials.api_base is not None},
             )
 
+        except ClientError as e:
+            self._logger.exception(
+                "google_connect_failed",
+                extra={"error": str(e), "code": e.code},
+            )
+            if e.code in {401, 403}:
+                raise AuthenticationError(_MSG_INVALID_API_KEY) from e
+            raise ProviderError(_MSG_CONNECTION_FAILED) from e
         except Exception as e:
             self._logger.exception(
                 "google_connect_failed",
                 extra={"error": str(e)},
             )
-            error_msg = str(e).lower()
-            if "api key" in error_msg or "authentication" in error_msg:
-                raise AuthenticationError(_MSG_INVALID_API_KEY) from e
-            if "invalid" in error_msg and "key" in error_msg:
-                raise AuthenticationError(_MSG_INVALID_API_KEY) from e
-            if "api_key" in error_msg or "401" in error_msg:
-                raise AuthenticationError(_MSG_INVALID_API_KEY) from e
             raise ProviderError(_MSG_CONNECTION_FAILED) from e
 
     async def disconnect(self) -> None:
@@ -129,10 +126,14 @@ class GoogleProvider(LLMProviderBase):
 
         Cleans up the client instance and resets connection state.
         """
-        await super().disconnect()
-        self._client = None
-        self._current_task = None
-        self._logger.info("google_disconnected", extra={})
+        try:
+            await super().disconnect()
+            self._client = None
+            self._current_task = None
+            self._logger.info("google_disconnected", extra={})
+        except Exception as exc:
+            self._logger.warning("disconnect_cleanup_error", extra={"error": str(exc)})
+            self._connected = False
 
     async def list_models(self) -> list[ModelInfo]:
         """Dynamically fetch available Gemini models from Google AI API.
@@ -155,15 +156,25 @@ class GoogleProvider(LLMProviderBase):
             models: list[ModelInfo] = []
             for model_data in models_response:
                 model_name = getattr(model_data, "name", "")
-                if not self._is_generative_model(model_name):
+                name_lower = model_name.lower()
+                if "gemini" not in name_lower or "embedding" in name_lower:
                     continue
 
                 display_name = getattr(model_data, "display_name", model_name)
-                input_limit = getattr(model_data, "input_token_limit", 1048576)
+                input_limit: int = getattr(model_data, "input_token_limit", 1048576)
 
                 model_id = model_name
                 if model_id.startswith("models/"):
                     model_id = model_id[7:]
+
+                gen_methods: list[str] = getattr(
+                    model_data,
+                    "supported_generation_methods",
+                    [],
+                )
+                supports_tools = "generateContent" in gen_methods
+                supports_streaming = "streamGenerateContent" in gen_methods
+                supports_vision = supports_tools
 
                 models.append(
                     ModelInfo(
@@ -171,9 +182,9 @@ class GoogleProvider(LLMProviderBase):
                         name=display_name or model_id,
                         provider=ProviderName.GOOGLE,
                         context_window=input_limit,
-                        supports_tools=self._estimate_tool_support(model_id),
-                        supports_vision=self._estimate_vision_support(model_id),
-                        supports_streaming=True,
+                        supports_tools=supports_tools,
+                        supports_vision=supports_vision,
+                        supports_streaming=supports_streaming,
                         input_cost_per_1m_tokens=None,
                         output_cost_per_1m_tokens=None,
                     )
@@ -186,80 +197,12 @@ class GoogleProvider(LLMProviderBase):
             )
         except Exception as e:
             self._logger.warning(
-                "google_list_models_api_failed_using_fallback",
+                "google_list_models_api_failed",
                 extra={"error": str(e)},
             )
-            return self._get_known_models_fallback()
+            raise ProviderError(_MSG_FETCH_MODELS_FAILED) from e
         else:
             return sorted_models
-
-    def _get_known_models_fallback(self) -> list[ModelInfo]:
-        """Build ModelInfo list from hardcoded KNOWN_MODELS.
-
-        Used as a fallback when the API is unreachable or returns errors.
-
-        Returns:
-            List of ModelInfo built from KNOWN_MODELS class variable.
-        """
-        models: list[ModelInfo] = []
-        for model_id, display_name, ctx_window, tools, vision in self.KNOWN_MODELS:
-            models.append(
-                ModelInfo(
-                    id=model_id,
-                    name=display_name,
-                    provider=ProviderName.GOOGLE,
-                    context_window=ctx_window,
-                    supports_tools=tools,
-                    supports_vision=vision,
-                    supports_streaming=True,
-                    input_cost_per_1m_tokens=None,
-                    output_cost_per_1m_tokens=None,
-                )
-            )
-        self._logger.info(
-            "google_known_models_fallback",
-            extra={"count": len(models)},
-        )
-        return models
-
-    @staticmethod
-    def _is_generative_model(model_name: str) -> bool:
-        """Check if model is a generative text model.
-
-        Args:
-            model_name: The model name/ID.
-
-        Returns:
-            True if model is a generative text model.
-        """
-        name_lower = model_name.lower()
-        return "gemini" in name_lower and "embedding" not in name_lower
-
-    @staticmethod
-    def _estimate_tool_support(model_id: str) -> bool:
-        """Estimate if model supports function calling.
-
-        Args:
-            model_id: The model identifier.
-
-        Returns:
-            True if model likely supports tools.
-        """
-        name_lower = model_id.lower()
-        return ("gemini" in name_lower and "flash" in name_lower) or "pro" in name_lower
-
-    @staticmethod
-    def _estimate_vision_support(model_id: str) -> bool:
-        """Estimate if model supports vision input.
-
-        Args:
-            model_id: The model identifier.
-
-        Returns:
-            True if model likely supports vision.
-        """
-        name_lower = model_id.lower()
-        return "gemini" in name_lower
 
     async def chat(
         self,
@@ -443,20 +386,42 @@ class GoogleProvider(LLMProviderBase):
                     config=config,
                 )
 
-            response_stream = await asyncio.to_thread(_start_stream)
+            response_stream = iter(await asyncio.to_thread(_start_stream))
 
-            for chunk in response_stream:
+            last_chunk: GenerateContentResponse | None = None
+            while True:
+                raw_chunk = await asyncio.to_thread(next, response_stream, _STREAM_SENTINEL)
+                if raw_chunk is _STREAM_SENTINEL:
+                    break
+                chunk = cast("GenerateContentResponse", raw_chunk)
                 if self._cancel_requested:
                     self._logger.info(
                         "google_chat_stream_cancelled",
                         extra={"model": model, "chunks_received": chunk_count},
                     )
                     break
+                last_chunk = chunk
                 if hasattr(chunk, "text") and chunk.text:
                     chunk_count += 1
                     yield chunk.text
 
             if not self._cancel_requested:
+                if last_chunk is not None and hasattr(last_chunk, "function_calls") and last_chunk.function_calls:
+                    tool_calls: list[ToolCall] = []
+                    for idx, fc in enumerate(last_chunk.function_calls):
+                        func_name = fc.name or ""
+                        args = dict(fc.args) if fc.args else {}
+                        tool_name = func_name.split(".")[0] if "." in func_name else func_name
+                        tool_calls.append(
+                            ToolCall(
+                                id=f"call_{idx}",
+                                tool_name=tool_name,
+                                function_name=func_name,
+                                arguments=args,
+                            )
+                        )
+                    self._pending_tool_calls = tool_calls
+
                 self._logger.info(
                     "google_chat_stream_completed",
                     extra={"model": model, "chunks_received": chunk_count},
@@ -576,12 +541,22 @@ class GoogleProvider(LLMProviderBase):
         System messages are excluded here because they are passed separately
         via the native system_instruction parameter in GenerateContentConfig.
 
+        Builds a call_id-to-function_name mapping from assistant messages so
+        that tool result ``function_response.name`` fields contain the actual
+        function name (required by Google's API), not the opaque call ID.
+
         Args:
             messages: List of Message objects to convert.
 
         Returns:
             List of content dictionaries in Gemini's expected format.
         """
+        call_id_to_name: dict[str, str] = {}
+        for msg in messages:
+            if msg.role == "assistant" and msg.tool_calls:
+                for tc in msg.tool_calls:
+                    call_id_to_name[tc.id] = tc.function_name
+
         contents: list[dict[str, object]] = []
 
         for msg in messages:
@@ -616,7 +591,7 @@ class GoogleProvider(LLMProviderBase):
                 parts_list: list[dict[str, object]] = [
                     {
                         "function_response": {
-                            "name": tr.call_id,
+                            "name": call_id_to_name.get(tr.call_id, tr.call_id),
                             "response": {"result": tr.result},
                         }
                     }
@@ -643,34 +618,20 @@ class GoogleProvider(LLMProviderBase):
             List of Gemini Tool objects for function calling.
         """
         function_declarations: list[types.FunctionDeclaration] = []
-
         for tool in tools:
-            for func in tool.functions:
-                properties: dict[str, Any] = {}
-                required: list[str] = []
-
-                for param in func.parameters:
-                    prop: dict[str, Any] = {
-                        "type": param.type.upper(),
-                        "description": param.description,
-                    }
-                    if param.enum:
-                        prop["enum"] = param.enum
-                    properties[param.name] = prop
-                    if param.required:
-                        required.append(param.name)
-
+            google_schemas = create_google_tool_schema(tool)
+            for decl in google_schemas:
+                params = decl["parameters"]
                 func_decl = types.FunctionDeclaration(
-                    name=func.name,
-                    description=func.description,
+                    name=decl["name"],
+                    description=decl["description"],
                     parameters=types.Schema(
                         type=types.Type.OBJECT,
-                        properties={k: types.Schema(**v) for k, v in properties.items()},
-                        required=required,
+                        properties={k: types.Schema(**cast("dict[str, Any]", dict(v))) for k, v in params["properties"].items()},
+                        required=params["required"],
                     ),
                 )
                 function_declarations.append(func_decl)
-
         return [types.Tool(function_declarations=function_declarations)]
 
     @override
@@ -688,29 +649,6 @@ class GoogleProvider(LLMProviderBase):
         """
         result: list[dict[str, object]] = []
         for tool in tools:
-            for func in tool.functions:
-                properties: dict[str, dict[str, object]] = {}
-                required: list[str] = []
-
-                for param in func.parameters:
-                    prop: dict[str, object] = {
-                        "type": param.type.upper(),
-                        "description": param.description,
-                    }
-                    if param.enum:
-                        prop["enum"] = param.enum
-                    properties[param.name] = prop
-                    if param.required:
-                        required.append(param.name)
-
-                result.append({
-                    "name": func.name,
-                    "description": func.description,
-                    "parameters": {
-                        "type": "OBJECT",
-                        "properties": properties,
-                        "required": required,
-                    },
-                })
-
+            google_schemas = create_google_tool_schema(tool)
+            result.extend(dict(schema) for schema in google_schemas)
         return result

@@ -1075,6 +1075,59 @@ class FridaBridge(InstrumentationBridge):
 
         return str(result)
 
+    async def execute_persistent_script(self, script_code: str) -> str:
+        """Execute a Frida script that persists until explicitly unloaded.
+
+        Unlike execute_script which runs and immediately unloads,
+        this keeps the script active for persistent hooks like
+        Interceptor.attach.
+
+        Args:
+            script_code: JavaScript code to execute.
+
+        Returns:
+            Script ID for later unloading via unload_script.
+
+        Raises:
+            ToolError: If not attached or script fails to load.
+        """
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        script_id = str(uuid.uuid4())[:8]
+
+        script = await asyncio.to_thread(self._session.create_script, script_code)
+
+        def on_message(message: ScriptMessage, data: bytes | None) -> None:
+            del data
+            if self._message_handler:
+                raw: dict[str, object] = dict(cast("dict[str, object]", message))
+                self._message_handler(raw)
+
+        script.on("message", on_message)
+        await asyncio.to_thread(script.load)
+
+        self._scripts[script_id] = script
+        _logger.info("persistent_script_loaded", extra={"script_id": script_id})
+        return script_id
+
+    async def unload_script(self, script_id: str) -> bool:
+        """Unload a specific script by ID.
+
+        Args:
+            script_id: Script ID returned by execute_persistent_script.
+
+        Returns:
+            True if unloaded, False if script not found.
+        """
+        if script_id not in self._scripts:
+            _logger.warning("script_not_found_for_unload", extra={"script_id": script_id})
+            return False
+
+        await self._unload_script(script_id)
+        _logger.info("script_unloaded", extra={"script_id": script_id})
+        return True
+
     async def intercept_return(self, target: str, return_value: int) -> HookInfo:
         """Hook a function and modify its return value.
 
@@ -1190,6 +1243,11 @@ class FridaBridge(InstrumentationBridge):
             except Exception:
                 _logger.exception("script_unload_failed", extra={"script_id": script_id})
             del self._scripts[script_id]
+
+    async def unload_all_scripts(self) -> None:
+        """Unload all active scripts."""
+        for script_id in list(self._scripts.keys()):
+            await self._unload_script(script_id)
 
     def set_message_handler(
         self,

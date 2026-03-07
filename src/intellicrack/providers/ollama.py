@@ -11,7 +11,9 @@ and the Ollama cloud API for chat completion and tool/function calling.
 
 from __future__ import annotations
 
+import asyncio
 import json
+import os
 import time
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, cast, override
@@ -32,7 +34,7 @@ from ..core.types import (
     ToolCall,
     ToolDefinition,
 )
-from .base import LLMProviderBase
+from .base import LLMProviderBase, create_openai_tool_schema
 
 
 _MSG_NOT_CONNECTED = "Not connected"
@@ -64,7 +66,7 @@ class OllamaProvider(LLMProviderBase):
     """
 
     DEFAULT_LOCAL_URL = "http://localhost:11434"
-    CLOUD_API_URL = "https://ollama.com/api"
+    CLOUD_API_URL = os.environ.get("INTELLICRACK_OLLAMA_CLOUD_URL", "https://ollama.com/api")
 
     def __init__(self) -> None:
         """Initialize the Ollama provider with dual-client support."""
@@ -75,6 +77,7 @@ class OllamaProvider(LLMProviderBase):
         self._cloud_api_key: str | None = None
         self._local_available: bool = False
         self._cloud_available: bool = False
+        self._connect_timeout: float = 300.0
         self._logger = get_logger("providers.ollama")
 
     @property
@@ -119,9 +122,10 @@ class OllamaProvider(LLMProviderBase):
         self._cloud_api_key = credentials.api_key
         if credentials.api_base:
             self._local_url = credentials.api_base.rstrip("/")
+        if credentials.timeout is not None:
+            self._connect_timeout = credentials.timeout
 
-        await self._connect_local()
-        await self._connect_cloud()
+        await asyncio.gather(self._connect_local(), self._connect_cloud())
 
         if not self._local_available and not self._cloud_available:
             raise ProviderError(_ERR_CONNECT_BOTH_FAILED)
@@ -132,7 +136,7 @@ class OllamaProvider(LLMProviderBase):
     async def _connect_local(self) -> None:
         """Attempt to connect to local Ollama instance."""
         try:
-            self._local_client = httpx.AsyncClient(timeout=httpx.Timeout(300.0))
+            self._local_client = httpx.AsyncClient(timeout=httpx.Timeout(self._connect_timeout))
             response = await self._local_client.get(f"{self._local_url}/api/tags")
             response.raise_for_status()
             self._local_available = True
@@ -151,7 +155,7 @@ class OllamaProvider(LLMProviderBase):
 
         try:
             self._cloud_client = httpx.AsyncClient(
-                timeout=httpx.Timeout(300.0),
+                timeout=httpx.Timeout(self._connect_timeout),
                 headers={"Authorization": f"Bearer {self._cloud_api_key}"},
             )
             response = await self._cloud_client.get(f"{self.CLOUD_API_URL}/tags")
@@ -163,29 +167,47 @@ class OllamaProvider(LLMProviderBase):
             if e.response.status_code == HTTPStatus.UNAUTHORIZED:
                 self._logger.warning("cloud_api_key_invalid")
             else:
-                self._logger.debug("cloud_ollama_unavailable", extra={"error": str(e)})
+                self._logger.warning(
+                    "cloud_ollama_unavailable",
+                    extra={
+                        "error": str(e),
+                        "url": self.CLOUD_API_URL,
+                        "hint": "Set INTELLICRACK_OLLAMA_CLOUD_URL to a valid remote Ollama endpoint",
+                    },
+                )
             if self._cloud_client:
                 await self._cloud_client.aclose()
                 self._cloud_client = None
         except Exception as e:
             self._cloud_available = False
-            self._logger.debug("cloud_ollama_unavailable", extra={"error": str(e)})
+            self._logger.warning(
+                "cloud_ollama_unavailable",
+                extra={
+                    "error": str(e),
+                    "url": self.CLOUD_API_URL,
+                    "hint": "Set INTELLICRACK_OLLAMA_CLOUD_URL to a valid remote Ollama endpoint",
+                },
+            )
             if self._cloud_client:
                 await self._cloud_client.aclose()
                 self._cloud_client = None
 
     async def disconnect(self) -> None:
         """Disconnect from both local and cloud Ollama."""
-        await super().disconnect()
-        if self._local_client:
-            await self._local_client.aclose()
-            self._local_client = None
-        if self._cloud_client:
-            await self._cloud_client.aclose()
-            self._cloud_client = None
-        self._local_available = False
-        self._cloud_available = False
-        self._logger.info("ollama_disconnected")
+        try:
+            await super().disconnect()
+            if self._local_client:
+                await self._local_client.aclose()
+                self._local_client = None
+            if self._cloud_client:
+                await self._cloud_client.aclose()
+                self._cloud_client = None
+            self._local_available = False
+            self._cloud_available = False
+            self._logger.info("ollama_disconnected")
+        except Exception as exc:
+            self._logger.warning("disconnect_cleanup_error", extra={"error": str(exc)})
+            self._connected = False
 
     async def list_models(self) -> list[ModelInfo]:
         """Fetch available models from both local and cloud Ollama.
@@ -228,23 +250,27 @@ class OllamaProvider(LLMProviderBase):
             response.raise_for_status()
             data = response.json()
 
-            for model_data in data.get("models", []):
-                model_name = model_data.get("name", "")
-                model_details = model_data.get("details", {})
+            model_names = [m.get("name", "") for m in data.get("models", []) if m.get("name")]
+            ctx_windows = await self._fetch_context_windows(
+                self._local_client,
+                self._local_url,
+                model_names,
+            )
 
-                models.append(
-                    ModelInfo(
-                        id=f"local/{model_name}",
-                        name=f"[Local] {model_name}",
-                        provider=ProviderName.OLLAMA,
-                        context_window=self._estimate_context_window(model_name, model_details),
-                        supports_tools=self._estimate_tool_support(model_name),
-                        supports_vision=self._estimate_vision_support(model_name),
-                        supports_streaming=True,
-                        input_cost_per_1m_tokens=None,
-                        output_cost_per_1m_tokens=None,
-                    )
+            models.extend(
+                ModelInfo(
+                    id=f"local/{model_name}",
+                    name=f"[Local] {model_name}",
+                    provider=ProviderName.OLLAMA,
+                    context_window=ctx_windows.get(model_name, 4096),
+                    supports_tools=True,
+                    supports_vision=True,
+                    supports_streaming=True,
+                    input_cost_per_1m_tokens=None,
+                    output_cost_per_1m_tokens=None,
                 )
+                for model_name in model_names
+            )
         except Exception as e:
             self._logger.warning("local_models_list_failed", extra={"error": str(e)})
 
@@ -265,23 +291,27 @@ class OllamaProvider(LLMProviderBase):
             response.raise_for_status()
             data = response.json()
 
-            for model_data in data.get("models", []):
-                model_name = model_data.get("name", "")
-                model_details = model_data.get("details", {})
+            model_names = [m.get("name", "") for m in data.get("models", []) if m.get("name")]
+            ctx_windows = await self._fetch_context_windows(
+                self._cloud_client,
+                self.CLOUD_API_URL,
+                model_names,
+            )
 
-                models.append(
-                    ModelInfo(
-                        id=f"cloud/{model_name}",
-                        name=f"[Cloud] {model_name}",
-                        provider=ProviderName.OLLAMA,
-                        context_window=self._estimate_context_window(model_name, model_details),
-                        supports_tools=self._estimate_tool_support(model_name),
-                        supports_vision=self._estimate_vision_support(model_name),
-                        supports_streaming=True,
-                        input_cost_per_1m_tokens=None,
-                        output_cost_per_1m_tokens=None,
-                    )
+            models.extend(
+                ModelInfo(
+                    id=f"cloud/{model_name}",
+                    name=f"[Cloud] {model_name}",
+                    provider=ProviderName.OLLAMA,
+                    context_window=ctx_windows.get(model_name, 4096),
+                    supports_tools=True,
+                    supports_vision=True,
+                    supports_streaming=True,
+                    input_cost_per_1m_tokens=None,
+                    output_cost_per_1m_tokens=None,
                 )
+                for model_name in model_names
+            )
         except Exception as e:
             self._logger.warning("cloud_models_list_failed", extra={"error": str(e)})
 
@@ -316,67 +346,48 @@ class OllamaProvider(LLMProviderBase):
 
         raise ProviderError(_ERR_NO_CLIENT)
 
-    @staticmethod
-    def _estimate_context_window(model_name: str, _details: dict[str, object]) -> int:
-        """Estimate context window for a model.
+    async def _fetch_context_windows(
+        self,
+        client: httpx.AsyncClient,
+        base_url: str,
+        model_names: list[str],
+    ) -> dict[str, int]:
+        """Fetch context window sizes from /api/show for each model.
+
+        Uses ``asyncio.gather`` to query models in parallel.
 
         Args:
-            model_name: The model name.
-            _details: Model details from Ollama (reserved for future use).
+            client: The httpx client to use.
+            base_url: The Ollama API base URL.
+            model_names: List of model names to query.
 
         Returns:
-            Estimated context window in tokens.
+            Mapping of model name to context window size.
         """
-        name_lower = model_name.lower()
-        if "128k" in name_lower:
-            return 128000
-        if "32k" in name_lower:
-            return 32768
-        if "llama3" in name_lower or "llama-3" in name_lower:
-            return 8192
-        if "mistral" in name_lower:
-            return 32768
-        if "qwen" in name_lower:
-            return 32768
-        return 16384 if "deepseek" in name_lower else 4096
 
-    @staticmethod
-    def _estimate_tool_support(model_name: str) -> bool:
-        """Estimate if model supports tool calling.
+        async def _query_single(name: str) -> tuple[str, int]:
+            try:
+                resp = await client.post(
+                    f"{base_url}/api/show",
+                    json={"name": name},
+                )
+                resp.raise_for_status()
+                show_data = resp.json()
+                params_str: str = show_data.get("parameters", "")
+                for line in params_str.splitlines():
+                    parts = line.strip().split()
+                    min_parts = 2
+                    if len(parts) >= min_parts and parts[0] == "num_ctx":
+                        return name, int(parts[1])
+            except Exception:
+                self._logger.debug(
+                    "ollama_show_failed",
+                    extra={"model": name},
+                )
+            return name, 4096
 
-        Args:
-            model_name: The model name.
-
-        Returns:
-            True if model likely supports tools.
-        """
-        name_lower = model_name.lower()
-        tool_capable = [
-            "llama3",
-            "llama-3",
-            "mistral",
-            "mixtral",
-            "qwen",
-            "deepseek",
-            "codellama",
-            "code-llama",
-            "wizard",
-            "openchat",
-        ]
-        return any(cap in name_lower for cap in tool_capable)
-
-    @staticmethod
-    def _estimate_vision_support(model_name: str) -> bool:
-        """Estimate if model supports vision.
-
-        Args:
-            model_name: The model name.
-
-        Returns:
-            True if model likely supports vision.
-        """
-        name_lower = model_name.lower()
-        return "vision" in name_lower or "llava" in name_lower
+        results = await asyncio.gather(*[_query_single(n) for n in model_names])
+        return dict(results)
 
     async def chat(
         self,
@@ -571,6 +582,7 @@ class OllamaProvider(LLMProviderBase):
             if tools:
                 request_body["tools"] = self._convert_tools_to_provider_format(tools)
 
+            last_chunk_data: dict[str, object] = {}
             async with client.stream(
                 "POST",
                 f"{base_url}/api/chat",
@@ -583,11 +595,17 @@ class OllamaProvider(LLMProviderBase):
                     if line:
                         try:
                             chunk_data = json.loads(line)
+                            last_chunk_data = chunk_data
                             if content := chunk_data.get("message", {}).get("content", ""):
                                 yield content
                         except json.JSONDecodeError as exc:
                             self._logger.debug("stream_json_parse_skipped", extra={"error": str(exc)})
                             continue
+
+            if not self._cancel_requested and last_chunk_data:
+                self._pending_tool_calls = self._parse_ollama_tool_calls(
+                    cast("dict[str, Any]", last_chunk_data),
+                )
 
         except Exception as e:
             if not self._cancel_requested:
@@ -610,46 +628,11 @@ class OllamaProvider(LLMProviderBase):
         Returns:
             List of messages in Ollama's format.
         """
-        ollama_messages: list[dict[str, object]] = []
-
-        for msg in messages:
-            if msg.role == "system":
-                ollama_messages.append({
-                    "role": "system",
-                    "content": msg.content,
-                })
-            elif msg.role == "user":
-                ollama_messages.append({
-                    "role": "user",
-                    "content": msg.content,
-                })
-            elif msg.role == "assistant":
-                assistant_msg: dict[str, object] = {
-                    "role": "assistant",
-                    "content": msg.content,
-                }
-
-                if msg.tool_calls:
-                    assistant_msg["tool_calls"] = [
-                        {
-                            "function": {
-                                "name": tc.function_name,
-                                "arguments": tc.arguments,
-                            },
-                        }
-                        for tc in msg.tool_calls
-                    ]
-
-                ollama_messages.append(assistant_msg)
-            elif msg.role == "tool" and msg.tool_results:
-                for tr in msg.tool_results:
-                    result_content = tr.result if isinstance(tr.result, str) else json.dumps(tr.result)
-                    ollama_messages.append({
-                        "role": "tool",
-                        "content": result_content,
-                    })
-
-        return ollama_messages
+        return self._convert_messages_to_openai_format(
+            messages,
+            serialize_tool_arguments=False,
+            include_tool_call_type=False,
+        )
 
     @override
     def _convert_tools_to_provider_format(
@@ -665,36 +648,9 @@ class OllamaProvider(LLMProviderBase):
             List of tools in Ollama's format.
         """
         ollama_tools: list[dict[str, object]] = []
-
         for tool in tools:
-            for func in tool.functions:
-                properties: dict[str, dict[str, object]] = {}
-                required: list[str] = []
-
-                for param in func.parameters:
-                    prop: dict[str, object] = {
-                        "type": param.type,
-                        "description": param.description,
-                    }
-                    if param.enum:
-                        prop["enum"] = param.enum
-                    properties[param.name] = prop
-                    if param.required:
-                        required.append(param.name)
-
-                ollama_tools.append({
-                    "type": "function",
-                    "function": {
-                        "name": func.name,
-                        "description": func.description,
-                        "parameters": {
-                            "type": "object",
-                            "properties": properties,
-                            "required": required,
-                        },
-                    },
-                })
-
+            tool_schemas = create_openai_tool_schema(tool)
+            ollama_tools.extend(dict(schema) for schema in tool_schemas)
         return ollama_tools
 
     async def pull_model(self, model_name: str) -> AsyncIterator[str]:

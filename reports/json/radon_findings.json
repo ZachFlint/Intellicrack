@@ -1,62 +1,62 @@
 {
   "tool": "radon",
-  "generated": "2026-02-28T02:24:05.703694",
-  "total_findings": 70,
-  "total_files": 33,
+  "generated": "2026-03-06T22:51:07.661907",
+  "total_findings": 68,
+  "total_files": 35,
   "files": [
     {
       "path": "src\\intellicrack\\core\\license_analyzer.py",
       "count": 5,
       "findings": [
         {
-          "line": 1897,
+          "line": 1902,
           "column": 4,
           "entity_type": "M",
           "name": "LicenseAnalyzer._detect_algorithms",
           "rank": "D",
           "complexity": 22,
           "message": "method 'LicenseAnalyzer._detect_algorithms' - complexity 22 (rank D)",
-          "raw": "src\\intellicrack\\core\\license_analyzer.py:1897:4: method 'LicenseAnalyzer._detect_algorithms' - complexity 22 (rank D)"
+          "raw": "src\\intellicrack\\core\\license_analyzer.py:1902:4: method 'LicenseAnalyzer._detect_algorithms' - complexity 22 (rank D)"
         },
         {
-          "line": 1957,
+          "line": 1962,
           "column": 4,
           "entity_type": "M",
           "name": "LicenseAnalyzer._detect_key_format",
           "rank": "C",
           "complexity": 13,
           "message": "method 'LicenseAnalyzer._detect_key_format' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\core\\license_analyzer.py:1957:4: method 'LicenseAnalyzer._detect_key_format' - complexity 13 (rank C)"
+          "raw": "src\\intellicrack\\core\\license_analyzer.py:1962:4: method 'LicenseAnalyzer._detect_key_format' - complexity 13 (rank C)"
         },
         {
-          "line": 2022,
+          "line": 2027,
           "column": 4,
           "entity_type": "M",
           "name": "LicenseAnalyzer._detect_checksum_info",
           "rank": "C",
           "complexity": 12,
           "message": "method 'LicenseAnalyzer._detect_checksum_info' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\core\\license_analyzer.py:2022:4: method 'LicenseAnalyzer._detect_checksum_info' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\core\\license_analyzer.py:2027:4: method 'LicenseAnalyzer._detect_checksum_info' - complexity 12 (rank C)"
         },
         {
-          "line": 1635,
+          "line": 1640,
           "column": 4,
           "entity_type": "M",
           "name": "LicenseAnalyzer._update_context_for_instruction",
           "rank": "C",
           "complexity": 11,
           "message": "method 'LicenseAnalyzer._update_context_for_instruction' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\core\\license_analyzer.py:1635:4: method 'LicenseAnalyzer._update_context_for_instruction' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\core\\license_analyzer.py:1640:4: method 'LicenseAnalyzer._update_context_for_instruction' - complexity 11 (rank C)"
         },
         {
-          "line": 1748,
+          "line": 1753,
           "column": 4,
           "entity_type": "M",
           "name": "LicenseAnalyzer._collect_function_candidates",
           "rank": "C",
           "complexity": 11,
           "message": "method 'LicenseAnalyzer._collect_function_candidates' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\core\\license_analyzer.py:1748:4: method 'LicenseAnalyzer._collect_function_candidates' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\core\\license_analyzer.py:1753:4: method 'LicenseAnalyzer._collect_function_candidates' - complexity 11 (rank C)"
         }
       ]
     },
@@ -65,136 +65,44 @@
       "count": 4,
       "findings": [
         {
-          "line": 528,
+          "line": 328,
+          "column": 4,
+          "entity_type": "M",
+          "name": "GoogleProvider.chat_stream",
+          "rank": "C",
+          "complexity": 20,
+          "message": "method 'GoogleProvider.chat_stream' - complexity 20 (rank C)",
+          "raw": "src\\intellicrack\\providers\\google.py:328:4: method 'GoogleProvider.chat_stream' - complexity 20 (rank C)"
+        },
+        {
+          "line": 498,
           "column": 4,
           "entity_type": "M",
           "name": "GoogleProvider._parse_response",
           "rank": "C",
           "complexity": 18,
           "message": "method 'GoogleProvider._parse_response' - complexity 18 (rank C)",
-          "raw": "src\\intellicrack\\providers\\google.py:528:4: method 'GoogleProvider._parse_response' - complexity 18 (rank C)"
+          "raw": "src\\intellicrack\\providers\\google.py:498:4: method 'GoogleProvider._parse_response' - complexity 18 (rank C)"
         },
         {
-          "line": 259,
+          "line": 535,
+          "column": 4,
+          "entity_type": "M",
+          "name": "GoogleProvider._convert_messages_to_provider_format",
+          "rank": "C",
+          "complexity": 15,
+          "message": "method 'GoogleProvider._convert_messages_to_provider_format' - complexity 15 (rank C)",
+          "raw": "src\\intellicrack\\providers\\google.py:535:4: method 'GoogleProvider._convert_messages_to_provider_format' - complexity 15 (rank C)"
+        },
+        {
+          "line": 207,
           "column": 4,
           "entity_type": "M",
           "name": "GoogleProvider.chat",
           "rank": "C",
           "complexity": 14,
           "message": "method 'GoogleProvider.chat' - complexity 14 (rank C)",
-          "raw": "src\\intellicrack\\providers\\google.py:259:4: method 'GoogleProvider.chat' - complexity 14 (rank C)"
-        },
-        {
-          "line": 380,
-          "column": 4,
-          "entity_type": "M",
-          "name": "GoogleProvider.chat_stream",
-          "rank": "C",
-          "complexity": 12,
-          "message": "method 'GoogleProvider.chat_stream' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\providers\\google.py:380:4: method 'GoogleProvider.chat_stream' - complexity 12 (rank C)"
-        },
-        {
-          "line": 565,
-          "column": 4,
-          "entity_type": "M",
-          "name": "GoogleProvider._convert_messages_to_provider_format",
-          "rank": "C",
-          "complexity": 11,
-          "message": "method 'GoogleProvider._convert_messages_to_provider_format' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\providers\\google.py:565:4: method 'GoogleProvider._convert_messages_to_provider_format' - complexity 11 (rank C)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\huggingface.py",
-      "count": 4,
-      "findings": [
-        {
-          "line": 527,
-          "column": 4,
-          "entity_type": "M",
-          "name": "HuggingFaceProvider.chat_stream",
-          "rank": "C",
-          "complexity": 14,
-          "message": "method 'HuggingFaceProvider.chat_stream' - complexity 14 (rank C)",
-          "raw": "src\\intellicrack\\providers\\huggingface.py:527:4: method 'HuggingFaceProvider.chat_stream' - complexity 14 (rank C)"
-        },
-        {
-          "line": 189,
-          "column": 4,
-          "entity_type": "M",
-          "name": "HuggingFaceProvider.list_models",
-          "rank": "C",
-          "complexity": 13,
-          "message": "method 'HuggingFaceProvider.list_models' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\providers\\huggingface.py:189:4: method 'HuggingFaceProvider.list_models' - complexity 13 (rank C)"
-        },
-        {
-          "line": 278,
-          "column": 4,
-          "entity_type": "M",
-          "name": "HuggingFaceProvider._estimate_context_window",
-          "rank": "C",
-          "complexity": 12,
-          "message": "method 'HuggingFaceProvider._estimate_context_window' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\providers\\huggingface.py:278:4: method 'HuggingFaceProvider._estimate_context_window' - complexity 12 (rank C)"
-        },
-        {
-          "line": 650,
-          "column": 4,
-          "entity_type": "M",
-          "name": "HuggingFaceProvider._convert_messages_to_provider_format",
-          "rank": "C",
-          "complexity": 11,
-          "message": "method 'HuggingFaceProvider._convert_messages_to_provider_format' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\providers\\huggingface.py:650:4: method 'HuggingFaceProvider._convert_messages_to_provider_format' - complexity 11 (rank C)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\app.py",
-      "count": 4,
-      "findings": [
-        {
-          "line": 1883,
-          "column": 4,
-          "entity_type": "M",
-          "name": "MainWindow.closeEvent",
-          "rank": "C",
-          "complexity": 14,
-          "message": "method 'MainWindow.closeEvent' - complexity 14 (rank C)",
-          "raw": "src\\intellicrack\\ui\\app.py:1883:4: method 'MainWindow.closeEvent' - complexity 14 (rank C)"
-        },
-        {
-          "line": 863,
-          "column": 4,
-          "entity_type": "M",
-          "name": "MainWindow._on_tool_result",
-          "rank": "C",
-          "complexity": 11,
-          "message": "method 'MainWindow._on_tool_result' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\app.py:863:4: method 'MainWindow._on_tool_result' - complexity 11 (rank C)"
-        },
-        {
-          "line": 1369,
-          "column": 4,
-          "entity_type": "M",
-          "name": "MainWindow._on_refresh_models",
-          "rank": "C",
-          "complexity": 11,
-          "message": "method 'MainWindow._on_refresh_models' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\app.py:1369:4: method 'MainWindow._on_refresh_models' - complexity 11 (rank C)"
-        },
-        {
-          "line": 1453,
-          "column": 4,
-          "entity_type": "M",
-          "name": "MainWindow._on_browse_models_result",
-          "rank": "C",
-          "complexity": 11,
-          "message": "method 'MainWindow._on_browse_models_result' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\app.py:1453:4: method 'MainWindow._on_browse_models_result' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\providers\\google.py:207:4: method 'GoogleProvider.chat' - complexity 14 (rank C)"
         }
       ]
     },
@@ -203,44 +111,44 @@
       "count": 4,
       "findings": [
         {
-          "line": 229,
+          "line": 234,
           "column": 4,
           "entity_type": "M",
           "name": "SessionManagerDialog._load_sessions",
           "rank": "C",
           "complexity": 12,
           "message": "method 'SessionManagerDialog._load_sessions' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:229:4: method 'SessionManagerDialog._load_sessions' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\ui\\session_manager.py:234:4: method 'SessionManagerDialog._load_sessions' - complexity 12 (rank C)"
         },
         {
-          "line": 284,
+          "line": 289,
           "column": 4,
           "entity_type": "M",
           "name": "SessionManagerDialog._load_sessions_from_disk",
           "rank": "C",
           "complexity": 12,
           "message": "method 'SessionManagerDialog._load_sessions_from_disk' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:284:4: method 'SessionManagerDialog._load_sessions_from_disk' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\ui\\session_manager.py:289:4: method 'SessionManagerDialog._load_sessions_from_disk' - complexity 12 (rank C)"
         },
         {
-          "line": 546,
+          "line": 551,
           "column": 4,
           "entity_type": "M",
           "name": "SessionManagerDialog._export_session",
           "rank": "C",
           "complexity": 11,
           "message": "method 'SessionManagerDialog._export_session' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:546:4: method 'SessionManagerDialog._export_session' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\ui\\session_manager.py:551:4: method 'SessionManagerDialog._export_session' - complexity 11 (rank C)"
         },
         {
-          "line": 609,
+          "line": 614,
           "column": 4,
           "entity_type": "M",
           "name": "SessionManagerDialog._prepare_export_data",
           "rank": "C",
           "complexity": 11,
           "message": "method 'SessionManagerDialog._prepare_export_data' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:609:4: method 'SessionManagerDialog._prepare_export_data' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\ui\\session_manager.py:614:4: method 'SessionManagerDialog._prepare_export_data' - complexity 11 (rank C)"
         }
       ]
     },
@@ -249,70 +157,34 @@
       "count": 3,
       "findings": [
         {
-          "line": 575,
+          "line": 580,
           "column": 4,
           "entity_type": "M",
           "name": "ModelDiscovery.filter",
           "rank": "C",
           "complexity": 20,
           "message": "method 'ModelDiscovery.filter' - complexity 20 (rank C)",
-          "raw": "src\\intellicrack\\providers\\discovery.py:575:4: method 'ModelDiscovery.filter' - complexity 20 (rank C)"
+          "raw": "src\\intellicrack\\providers\\discovery.py:580:4: method 'ModelDiscovery.filter' - complexity 20 (rank C)"
         },
         {
-          "line": 683,
+          "line": 688,
           "column": 4,
           "entity_type": "M",
           "name": "ModelDiscovery.get_recommended_model",
           "rank": "C",
           "complexity": 16,
           "message": "method 'ModelDiscovery.get_recommended_model' - complexity 16 (rank C)",
-          "raw": "src\\intellicrack\\providers\\discovery.py:683:4: method 'ModelDiscovery.get_recommended_model' - complexity 16 (rank C)"
+          "raw": "src\\intellicrack\\providers\\discovery.py:688:4: method 'ModelDiscovery.get_recommended_model' - complexity 16 (rank C)"
         },
         {
-          "line": 484,
+          "line": 489,
           "column": 4,
           "entity_type": "M",
           "name": "ModelDiscovery.discover_provider",
           "rank": "C",
           "complexity": 11,
           "message": "method 'ModelDiscovery.discover_provider' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\providers\\discovery.py:484:4: method 'ModelDiscovery.discover_provider' - complexity 11 (rank C)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\openrouter.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 411,
-          "column": 4,
-          "entity_type": "M",
-          "name": "OpenRouterProvider.chat_stream",
-          "rank": "C",
-          "complexity": 14,
-          "message": "method 'OpenRouterProvider.chat_stream' - complexity 14 (rank C)",
-          "raw": "src\\intellicrack\\providers\\openrouter.py:411:4: method 'OpenRouterProvider.chat_stream' - complexity 14 (rank C)"
-        },
-        {
-          "line": 239,
-          "column": 4,
-          "entity_type": "M",
-          "name": "OpenRouterProvider.chat",
-          "rank": "C",
-          "complexity": 12,
-          "message": "method 'OpenRouterProvider.chat' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\providers\\openrouter.py:239:4: method 'OpenRouterProvider.chat' - complexity 12 (rank C)"
-        },
-        {
-          "line": 513,
-          "column": 4,
-          "entity_type": "M",
-          "name": "OpenRouterProvider._convert_messages_to_provider_format",
-          "rank": "C",
-          "complexity": 11,
-          "message": "method 'OpenRouterProvider._convert_messages_to_provider_format' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\providers\\openrouter.py:513:4: method 'OpenRouterProvider._convert_messages_to_provider_format' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\providers\\discovery.py:489:4: method 'ModelDiscovery.discover_provider' - complexity 11 (rank C)"
         }
       ]
     },
@@ -321,34 +193,70 @@
       "count": 3,
       "findings": [
         {
-          "line": 766,
+          "line": 771,
           "column": 4,
           "entity_type": "M",
           "name": "QEMUSandbox._build_qemu_command",
           "rank": "C",
           "complexity": 15,
           "message": "method 'QEMUSandbox._build_qemu_command' - complexity 15 (rank C)",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:766:4: method 'QEMUSandbox._build_qemu_command' - complexity 15 (rank C)"
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:771:4: method 'QEMUSandbox._build_qemu_command' - complexity 15 (rank C)"
         },
         {
-          "line": 1559,
+          "line": 1564,
           "column": 4,
           "entity_type": "M",
           "name": "QEMUSandbox.run_binary",
           "rank": "C",
           "complexity": 13,
           "message": "method 'QEMUSandbox.run_binary' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:1559:4: method 'QEMUSandbox.run_binary' - complexity 13 (rank C)"
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:1564:4: method 'QEMUSandbox.run_binary' - complexity 13 (rank C)"
         },
         {
-          "line": 1711,
+          "line": 1716,
           "column": 4,
           "entity_type": "M",
           "name": "QEMUSandbox._parse_network_log",
           "rank": "C",
           "complexity": 12,
           "message": "method 'QEMUSandbox._parse_network_log' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:1711:4: method 'QEMUSandbox._parse_network_log' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:1716:4: method 'QEMUSandbox._parse_network_log' - complexity 12 (rank C)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\app.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 1383,
+          "column": 4,
+          "entity_type": "M",
+          "name": "MainWindow._on_refresh_models",
+          "rank": "C",
+          "complexity": 12,
+          "message": "method 'MainWindow._on_refresh_models' - complexity 12 (rank C)",
+          "raw": "src\\intellicrack\\ui\\app.py:1383:4: method 'MainWindow._on_refresh_models' - complexity 12 (rank C)"
+        },
+        {
+          "line": 877,
+          "column": 4,
+          "entity_type": "M",
+          "name": "MainWindow._on_tool_result",
+          "rank": "C",
+          "complexity": 11,
+          "message": "method 'MainWindow._on_tool_result' - complexity 11 (rank C)",
+          "raw": "src\\intellicrack\\ui\\app.py:877:4: method 'MainWindow._on_tool_result' - complexity 11 (rank C)"
+        },
+        {
+          "line": 1472,
+          "column": 4,
+          "entity_type": "M",
+          "name": "MainWindow._on_browse_models_result",
+          "rank": "C",
+          "complexity": 11,
+          "message": "method 'MainWindow._on_browse_models_result' - complexity 11 (rank C)",
+          "raw": "src\\intellicrack\\ui\\app.py:1472:4: method 'MainWindow._on_browse_models_result' - complexity 11 (rank C)"
         }
       ]
     },
@@ -357,34 +265,70 @@
       "count": 3,
       "findings": [
         {
-          "line": 477,
+          "line": 508,
           "column": 4,
           "entity_type": "M",
           "name": "ModelRefreshWorker._fetch_anthropic_models",
           "rank": "C",
           "complexity": 14,
           "message": "method 'ModelRefreshWorker._fetch_anthropic_models' - complexity 14 (rank C)",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:477:4: method 'ModelRefreshWorker._fetch_anthropic_models' - complexity 14 (rank C)"
+          "raw": "src\\intellicrack\\ui\\provider_config.py:508:4: method 'ModelRefreshWorker._fetch_anthropic_models' - complexity 14 (rank C)"
         },
         {
-          "line": 444,
+          "line": 475,
           "column": 4,
           "entity_type": "M",
           "name": "ModelRefreshWorker._fetch_models",
           "rank": "C",
           "complexity": 12,
           "message": "method 'ModelRefreshWorker._fetch_models' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:444:4: method 'ModelRefreshWorker._fetch_models' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\ui\\provider_config.py:475:4: method 'ModelRefreshWorker._fetch_models' - complexity 12 (rank C)"
         },
         {
-          "line": 1552,
+          "line": 1602,
           "column": 4,
           "entity_type": "M",
           "name": "ProviderSettingsWidget._load_settings",
           "rank": "C",
           "complexity": 12,
           "message": "method 'ProviderSettingsWidget._load_settings' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:1552:4: method 'ProviderSettingsWidget._load_settings' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1602:4: method 'ProviderSettingsWidget._load_settings' - complexity 12 (rank C)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\binary_panel.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 793,
+          "column": 4,
+          "entity_type": "M",
+          "name": "BinaryPanel._parse_elf_sections",
+          "rank": "C",
+          "complexity": 13,
+          "message": "method 'BinaryPanel._parse_elf_sections' - complexity 13 (rank C)",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:793:4: method 'BinaryPanel._parse_elf_sections' - complexity 13 (rank C)"
+        },
+        {
+          "line": 562,
+          "column": 4,
+          "entity_type": "M",
+          "name": "BinaryPanel._parse_pe_sections",
+          "rank": "C",
+          "complexity": 11,
+          "message": "method 'BinaryPanel._parse_pe_sections' - complexity 11 (rank C)",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:562:4: method 'BinaryPanel._parse_pe_sections' - complexity 11 (rank C)"
+        },
+        {
+          "line": 749,
+          "column": 4,
+          "entity_type": "M",
+          "name": "BinaryPanel._parse_pe_ilt_entries",
+          "rank": "C",
+          "complexity": 11,
+          "message": "method 'BinaryPanel._parse_pe_ilt_entries' - complexity 11 (rank C)",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:749:4: method 'BinaryPanel._parse_pe_ilt_entries' - complexity 11 (rank C)"
         }
       ]
     },
@@ -393,24 +337,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 555,
+          "line": 560,
           "column": 4,
           "entity_type": "M",
           "name": "BinaryBridge._detect_architecture",
           "rank": "C",
           "complexity": 11,
           "message": "method 'BinaryBridge._detect_architecture' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\binary.py:555:4: method 'BinaryBridge._detect_architecture' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\binary.py:560:4: method 'BinaryBridge._detect_architecture' - complexity 11 (rank C)"
         },
         {
-          "line": 666,
+          "line": 671,
           "column": 4,
           "entity_type": "M",
           "name": "BinaryBridge._get_imports_internal",
           "rank": "C",
           "complexity": 11,
           "message": "method 'BinaryBridge._get_imports_internal' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\binary.py:666:4: method 'BinaryBridge._get_imports_internal' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\binary.py:671:4: method 'BinaryBridge._get_imports_internal' - complexity 11 (rank C)"
         }
       ]
     },
@@ -419,24 +363,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 231,
+          "line": 236,
           "column": 4,
           "entity_type": "M",
           "name": "ToolInstaller.find_tool",
           "rank": "C",
           "complexity": 16,
           "message": "method 'ToolInstaller.find_tool' - complexity 16 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\installer.py:231:4: method 'ToolInstaller.find_tool' - complexity 16 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\installer.py:236:4: method 'ToolInstaller.find_tool' - complexity 16 (rank C)"
         },
         {
-          "line": 565,
+          "line": 570,
           "column": 4,
           "entity_type": "M",
           "name": "ToolInstaller._get_latest_release_url",
           "rank": "C",
           "complexity": 16,
           "message": "method 'ToolInstaller._get_latest_release_url' - complexity 16 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\installer.py:565:4: method 'ToolInstaller._get_latest_release_url' - complexity 16 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\installer.py:570:4: method 'ToolInstaller._get_latest_release_url' - complexity 16 (rank C)"
         }
       ]
     },
@@ -445,24 +389,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 569,
+          "line": 574,
           "column": 0,
           "entity_type": "F",
           "name": "get_schema_for_provider",
           "rank": "C",
           "complexity": 17,
           "message": "function 'get_schema_for_provider' - complexity 17 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\schemas.py:569:0: function 'get_schema_for_provider' - complexity 17 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\schemas.py:574:0: function 'get_schema_for_provider' - complexity 17 (rank C)"
         },
         {
-          "line": 295,
+          "line": 300,
           "column": 0,
           "entity_type": "F",
           "name": "validate_tool_parameter",
           "rank": "C",
           "complexity": 11,
           "message": "function 'validate_tool_parameter' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\schemas.py:295:0: function 'validate_tool_parameter' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\schemas.py:300:0: function 'validate_tool_parameter' - complexity 11 (rank C)"
         }
       ]
     },
@@ -471,50 +415,50 @@
       "count": 2,
       "findings": [
         {
-          "line": 270,
+          "line": 281,
           "column": 0,
           "entity_type": "F",
           "name": "_read_unicode_string_from_params",
           "rank": "C",
           "complexity": 11,
           "message": "function '_read_unicode_string_from_params' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:270:0: function '_read_unicode_string_from_params' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:281:0: function '_read_unicode_string_from_params' - complexity 11 (rank C)"
         },
         {
-          "line": 1646,
+          "line": 1734,
           "column": 4,
           "entity_type": "M",
           "name": "X64DbgBridge.get_memory_regions",
           "rank": "C",
           "complexity": 11,
           "message": "method 'X64DbgBridge.get_memory_regions' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1646:4: method 'X64DbgBridge.get_memory_regions' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1734:4: method 'X64DbgBridge.get_memory_regions' - complexity 11 (rank C)"
         }
       ]
     },
     {
-      "path": "src\\intellicrack\\providers\\grok.py",
+      "path": "src\\intellicrack\\providers\\huggingface.py",
       "count": 2,
       "findings": [
         {
-          "line": 383,
+          "line": 428,
           "column": 4,
           "entity_type": "M",
-          "name": "GrokProvider.chat_stream",
+          "name": "HuggingFaceProvider.chat_stream",
           "rank": "C",
-          "complexity": 13,
-          "message": "method 'GrokProvider.chat_stream' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\providers\\grok.py:383:4: method 'GrokProvider.chat_stream' - complexity 13 (rank C)"
+          "complexity": 14,
+          "message": "method 'HuggingFaceProvider.chat_stream' - complexity 14 (rank C)",
+          "raw": "src\\intellicrack\\providers\\huggingface.py:428:4: method 'HuggingFaceProvider.chat_stream' - complexity 14 (rank C)"
         },
         {
-          "line": 460,
+          "line": 162,
           "column": 4,
           "entity_type": "M",
-          "name": "GrokProvider._convert_messages_to_provider_format",
+          "name": "HuggingFaceProvider.list_models",
           "rank": "C",
-          "complexity": 11,
-          "message": "method 'GrokProvider._convert_messages_to_provider_format' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\providers\\grok.py:460:4: method 'GrokProvider._convert_messages_to_provider_format' - complexity 11 (rank C)"
+          "complexity": 12,
+          "message": "method 'HuggingFaceProvider.list_models' - complexity 12 (rank C)",
+          "raw": "src\\intellicrack\\providers\\huggingface.py:162:4: method 'HuggingFaceProvider.list_models' - complexity 12 (rank C)"
         }
       ]
     },
@@ -523,24 +467,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 831,
+          "line": 890,
           "column": 4,
           "entity_type": "M",
           "name": "LocalTransformersProvider._parse_tool_calls",
           "rank": "C",
           "complexity": 16,
           "message": "method 'LocalTransformersProvider._parse_tool_calls' - complexity 16 (rank C)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:831:4: method 'LocalTransformersProvider._parse_tool_calls' - complexity 16 (rank C)"
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:890:4: method 'LocalTransformersProvider._parse_tool_calls' - complexity 16 (rank C)"
         },
         {
-          "line": 931,
+          "line": 298,
           "column": 4,
           "entity_type": "M",
-          "name": "LocalTransformersProvider._estimate_context_window",
+          "name": "LocalTransformersProvider.list_models",
           "rank": "C",
-          "complexity": 12,
-          "message": "method 'LocalTransformersProvider._estimate_context_window' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:931:4: method 'LocalTransformersProvider._estimate_context_window' - complexity 12 (rank C)"
+          "complexity": 11,
+          "message": "method 'LocalTransformersProvider.list_models' - complexity 11 (rank C)",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:298:4: method 'LocalTransformersProvider.list_models' - complexity 11 (rank C)"
         }
       ]
     },
@@ -549,24 +493,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 469,
+          "line": 474,
           "column": 0,
           "entity_type": "F",
           "name": "load_model_for_xpu",
           "rank": "C",
           "complexity": 14,
           "message": "function 'load_model_for_xpu' - complexity 14 (rank C)",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:469:0: function 'load_model_for_xpu' - complexity 14 (rank C)"
+          "raw": "src\\intellicrack\\providers\\model_loader.py:474:0: function 'load_model_for_xpu' - complexity 14 (rank C)"
         },
         {
-          "line": 581,
+          "line": 586,
           "column": 0,
           "entity_type": "F",
           "name": "load_model_for_cpu",
           "rank": "C",
           "complexity": 12,
           "message": "function 'load_model_for_cpu' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:581:0: function 'load_model_for_cpu' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\providers\\model_loader.py:586:0: function 'load_model_for_cpu' - complexity 12 (rank C)"
         }
       ]
     },
@@ -575,50 +519,50 @@
       "count": 2,
       "findings": [
         {
-          "line": 285,
+          "line": 538,
+          "column": 4,
+          "entity_type": "M",
+          "name": "OllamaProvider.chat_stream",
+          "rank": "C",
+          "complexity": 12,
+          "message": "method 'OllamaProvider.chat_stream' - complexity 12 (rank C)",
+          "raw": "src\\intellicrack\\providers\\ollama.py:538:4: method 'OllamaProvider.chat_stream' - complexity 12 (rank C)"
+        },
+        {
+          "line": 320,
           "column": 4,
           "entity_type": "M",
           "name": "OllamaProvider._get_client_and_model",
           "rank": "C",
           "complexity": 11,
           "message": "method 'OllamaProvider._get_client_and_model' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\providers\\ollama.py:285:4: method 'OllamaProvider._get_client_and_model' - complexity 11 (rank C)"
-        },
-        {
-          "line": 596,
-          "column": 4,
-          "entity_type": "M",
-          "name": "OllamaProvider._convert_messages_to_provider_format",
-          "rank": "C",
-          "complexity": 11,
-          "message": "method 'OllamaProvider._convert_messages_to_provider_format' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\providers\\ollama.py:596:4: method 'OllamaProvider._convert_messages_to_provider_format' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\providers\\ollama.py:320:4: method 'OllamaProvider._get_client_and_model' - complexity 11 (rank C)"
         }
       ]
     },
     {
-      "path": "src\\intellicrack\\providers\\openai.py",
+      "path": "src\\intellicrack\\providers\\openrouter.py",
       "count": 2,
       "findings": [
         {
-          "line": 418,
+          "line": 368,
           "column": 4,
           "entity_type": "M",
-          "name": "OpenAIProvider.chat_stream",
+          "name": "OpenRouterProvider.chat_stream",
           "rank": "C",
-          "complexity": 13,
-          "message": "method 'OpenAIProvider.chat_stream' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\providers\\openai.py:418:4: method 'OpenAIProvider.chat_stream' - complexity 13 (rank C)"
+          "complexity": 17,
+          "message": "method 'OpenRouterProvider.chat_stream' - complexity 17 (rank C)",
+          "raw": "src\\intellicrack\\providers\\openrouter.py:368:4: method 'OpenRouterProvider.chat_stream' - complexity 17 (rank C)"
         },
         {
-          "line": 508,
+          "line": 213,
           "column": 4,
           "entity_type": "M",
-          "name": "OpenAIProvider._convert_messages_to_provider_format",
+          "name": "OpenRouterProvider.chat",
           "rank": "C",
-          "complexity": 11,
-          "message": "method 'OpenAIProvider._convert_messages_to_provider_format' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\providers\\openai.py:508:4: method 'OpenAIProvider._convert_messages_to_provider_format' - complexity 11 (rank C)"
+          "complexity": 12,
+          "message": "method 'OpenRouterProvider.chat' - complexity 12 (rank C)",
+          "raw": "src\\intellicrack\\providers\\openrouter.py:213:4: method 'OpenRouterProvider.chat' - complexity 12 (rank C)"
         }
       ]
     },
@@ -627,24 +571,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 220,
+          "line": 225,
           "column": 0,
           "entity_type": "F",
           "name": "get_xpu_device_info",
           "rank": "D",
           "complexity": 22,
           "message": "function 'get_xpu_device_info' - complexity 22 (rank D)",
-          "raw": "src\\intellicrack\\providers\\xpu_utils.py:220:0: function 'get_xpu_device_info' - complexity 22 (rank D)"
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:225:0: function 'get_xpu_device_info' - complexity 22 (rank D)"
         },
         {
-          "line": 422,
+          "line": 427,
           "column": 0,
           "entity_type": "F",
           "name": "get_xpu_memory_info",
           "rank": "C",
           "complexity": 11,
           "message": "function 'get_xpu_memory_info' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\providers\\xpu_utils.py:422:0: function 'get_xpu_memory_info' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:427:0: function 'get_xpu_memory_info' - complexity 11 (rank C)"
         }
       ]
     },
@@ -653,24 +597,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 301,
+          "line": 306,
           "column": 4,
           "entity_type": "M",
           "name": "WindowsSandbox._generate_wsb_config",
           "rank": "C",
           "complexity": 12,
           "message": "method 'WindowsSandbox._generate_wsb_config' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\sandbox\\windows.py:301:4: method 'WindowsSandbox._generate_wsb_config' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\sandbox\\windows.py:306:4: method 'WindowsSandbox._generate_wsb_config' - complexity 12 (rank C)"
         },
         {
-          "line": 548,
+          "line": 553,
           "column": 4,
           "entity_type": "M",
           "name": "WindowsSandbox.run_binary",
           "rank": "C",
           "complexity": 12,
           "message": "method 'WindowsSandbox.run_binary' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\sandbox\\windows.py:548:4: method 'WindowsSandbox.run_binary' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\sandbox\\windows.py:553:4: method 'WindowsSandbox.run_binary' - complexity 12 (rank C)"
         }
       ]
     },
@@ -679,24 +623,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 1471,
+          "line": 1569,
           "column": 4,
           "entity_type": "M",
           "name": "ToolOutputPanel._on_tab_close_requested",
-          "rank": "D",
-          "complexity": 21,
-          "message": "method 'ToolOutputPanel._on_tab_close_requested' - complexity 21 (rank D)",
-          "raw": "src\\intellicrack\\ui\\tools.py:1471:4: method 'ToolOutputPanel._on_tab_close_requested' - complexity 21 (rank D)"
+          "rank": "C",
+          "complexity": 18,
+          "message": "method 'ToolOutputPanel._on_tab_close_requested' - complexity 18 (rank C)",
+          "raw": "src\\intellicrack\\ui\\tools.py:1569:4: method 'ToolOutputPanel._on_tab_close_requested' - complexity 18 (rank C)"
         },
         {
-          "line": 1543,
+          "line": 1633,
           "column": 4,
           "entity_type": "M",
           "name": "ToolOutputPanel.close_embedded_tools",
           "rank": "C",
           "complexity": 15,
           "message": "method 'ToolOutputPanel.close_embedded_tools' - complexity 15 (rank C)",
-          "raw": "src\\intellicrack\\ui\\tools.py:1543:4: method 'ToolOutputPanel.close_embedded_tools' - complexity 15 (rank C)"
+          "raw": "src\\intellicrack\\ui\\tools.py:1633:4: method 'ToolOutputPanel.close_embedded_tools' - complexity 15 (rank C)"
         }
       ]
     },
@@ -705,24 +649,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 356,
+          "line": 361,
           "column": 4,
           "entity_type": "M",
           "name": "ToolInstallWorker._update_radare2_path",
           "rank": "C",
           "complexity": 11,
           "message": "method 'ToolInstallWorker._update_radare2_path' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\tool_config.py:356:4: method 'ToolInstallWorker._update_radare2_path' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\ui\\tool_config.py:361:4: method 'ToolInstallWorker._update_radare2_path' - complexity 11 (rank C)"
         },
         {
-          "line": 529,
+          "line": 534,
           "column": 4,
           "entity_type": "M",
           "name": "ToolStatusCheckWorker._check_ghidra",
           "rank": "C",
           "complexity": 11,
           "message": "method 'ToolStatusCheckWorker._check_ghidra' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\tool_config.py:529:4: method 'ToolStatusCheckWorker._check_ghidra' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\ui\\tool_config.py:534:4: method 'ToolStatusCheckWorker._check_ghidra' - complexity 11 (rank C)"
         }
       ]
     },
@@ -731,14 +675,14 @@
       "count": 1,
       "findings": [
         {
-          "line": 935,
+          "line": 940,
           "column": 4,
           "entity_type": "M",
           "name": "FridaBridge.hook_function",
           "rank": "C",
           "complexity": 12,
           "message": "method 'FridaBridge.hook_function' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:935:4: method 'FridaBridge.hook_function' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:940:4: method 'FridaBridge.hook_function' - complexity 12 (rank C)"
         }
       ]
     },
@@ -747,14 +691,14 @@
       "count": 1,
       "findings": [
         {
-          "line": 1110,
+          "line": 1115,
           "column": 4,
           "entity_type": "M",
           "name": "ProcessBridge.search_pattern",
           "rank": "C",
           "complexity": 14,
           "message": "method 'ProcessBridge.search_pattern' - complexity 14 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\process.py:1110:4: method 'ProcessBridge.search_pattern' - complexity 14 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\process.py:1115:4: method 'ProcessBridge.search_pattern' - complexity 14 (rank C)"
         }
       ]
     },
@@ -763,14 +707,14 @@
       "count": 1,
       "findings": [
         {
-          "line": 425,
+          "line": 430,
           "column": 0,
           "entity_type": "F",
           "name": "_sanitize_arguments",
           "rank": "C",
           "complexity": 11,
           "message": "function '_sanitize_arguments' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\core\\logging.py:425:0: function '_sanitize_arguments' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\core\\logging.py:430:0: function '_sanitize_arguments' - complexity 11 (rank C)"
         }
       ]
     },
@@ -779,14 +723,14 @@
       "count": 1,
       "findings": [
         {
-          "line": 381,
+          "line": 396,
           "column": 4,
           "entity_type": "M",
           "name": "Orchestrator._run_agent_loop",
           "rank": "C",
-          "complexity": 12,
-          "message": "method 'Orchestrator._run_agent_loop' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:381:4: method 'Orchestrator._run_agent_loop' - complexity 12 (rank C)"
+          "complexity": 13,
+          "message": "method 'Orchestrator._run_agent_loop' - complexity 13 (rank C)",
+          "raw": "src\\intellicrack\\core\\orchestrator.py:396:4: method 'Orchestrator._run_agent_loop' - complexity 13 (rank C)"
         }
       ]
     },
@@ -795,14 +739,14 @@
       "count": 1,
       "findings": [
         {
-          "line": 168,
+          "line": 173,
           "column": 4,
           "entity_type": "M",
           "name": "ScriptContext.to_prompt_context",
           "rank": "C",
           "complexity": 13,
           "message": "method 'ScriptContext.to_prompt_context' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\core\\script_gen.py:168:4: method 'ScriptContext.to_prompt_context' - complexity 13 (rank C)"
+          "raw": "src\\intellicrack\\core\\script_gen.py:173:4: method 'ScriptContext.to_prompt_context' - complexity 13 (rank C)"
         }
       ]
     },
@@ -811,14 +755,14 @@
       "count": 1,
       "findings": [
         {
-          "line": 392,
+          "line": 424,
           "column": 4,
           "entity_type": "M",
           "name": "ToolRegistry.execute_tool_call",
           "rank": "C",
           "complexity": 13,
           "message": "method 'ToolRegistry.execute_tool_call' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\core\\tools.py:392:4: method 'ToolRegistry.execute_tool_call' - complexity 13 (rank C)"
+          "raw": "src\\intellicrack\\core\\tools.py:424:4: method 'ToolRegistry.execute_tool_call' - complexity 13 (rank C)"
         }
       ]
     },
@@ -827,14 +771,78 @@
       "count": 1,
       "findings": [
         {
-          "line": 283,
-          "column": 4,
-          "entity_type": "M",
-          "name": "CredentialLoader._validate_key_format",
+          "line": 71,
+          "column": 0,
+          "entity_type": "F",
+          "name": "_validate_key_format",
           "rank": "C",
           "complexity": 11,
-          "message": "method 'CredentialLoader._validate_key_format' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\credentials\\env_loader.py:283:4: method 'CredentialLoader._validate_key_format' - complexity 11 (rank C)"
+          "message": "function '_validate_key_format' - complexity 11 (rank C)",
+          "raw": "src\\intellicrack\\credentials\\env_loader.py:71:0: function '_validate_key_format' - complexity 11 (rank C)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\anthropic.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 344,
+          "column": 4,
+          "entity_type": "M",
+          "name": "AnthropicProvider.chat_stream",
+          "rank": "C",
+          "complexity": 13,
+          "message": "method 'AnthropicProvider.chat_stream' - complexity 13 (rank C)",
+          "raw": "src\\intellicrack\\providers\\anthropic.py:344:4: method 'AnthropicProvider.chat_stream' - complexity 13 (rank C)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\base.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 448,
+          "column": 4,
+          "entity_type": "M",
+          "name": "LLMProviderBase._convert_messages_to_openai_format",
+          "rank": "C",
+          "complexity": 11,
+          "message": "method 'LLMProviderBase._convert_messages_to_openai_format' - complexity 11 (rank C)",
+          "raw": "src\\intellicrack\\providers\\base.py:448:4: method 'LLMProviderBase._convert_messages_to_openai_format' - complexity 11 (rank C)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\grok.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 383,
+          "column": 4,
+          "entity_type": "M",
+          "name": "GrokProvider.chat_stream",
+          "rank": "C",
+          "complexity": 17,
+          "message": "method 'GrokProvider.chat_stream' - complexity 17 (rank C)",
+          "raw": "src\\intellicrack\\providers\\grok.py:383:4: method 'GrokProvider.chat_stream' - complexity 17 (rank C)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\openai.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 427,
+          "column": 4,
+          "entity_type": "M",
+          "name": "OpenAIProvider.chat_stream",
+          "rank": "C",
+          "complexity": 17,
+          "message": "method 'OpenAIProvider.chat_stream' - complexity 17 (rank C)",
+          "raw": "src\\intellicrack\\providers\\openai.py:427:4: method 'OpenAIProvider.chat_stream' - complexity 17 (rank C)"
         }
       ]
     },
@@ -843,14 +851,14 @@
       "count": 1,
       "findings": [
         {
-          "line": 780,
+          "line": 785,
           "column": 4,
           "entity_type": "M",
           "name": "PythonSyntaxHighlighter._highlight_triple_quotes",
           "rank": "C",
           "complexity": 12,
           "message": "method 'PythonSyntaxHighlighter._highlight_triple_quotes' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:780:4: method 'PythonSyntaxHighlighter._highlight_triple_quotes' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\ui\\highlighter.py:785:4: method 'PythonSyntaxHighlighter._highlight_triple_quotes' - complexity 12 (rank C)"
         }
       ]
     },
@@ -859,30 +867,14 @@
       "count": 1,
       "findings": [
         {
-          "line": 91,
+          "line": 96,
           "column": 4,
           "entity_type": "M",
           "name": "SandboxTestWorker.run",
           "rank": "C",
           "complexity": 14,
           "message": "method 'SandboxTestWorker.run' - complexity 14 (rank C)",
-          "raw": "src\\intellicrack\\ui\\sandbox_config.py:91:4: method 'SandboxTestWorker.run' - complexity 14 (rank C)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\binary_panel.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 282,
-          "column": 4,
-          "entity_type": "M",
-          "name": "BinaryPanel._parse_sections",
-          "rank": "C",
-          "complexity": 12,
-          "message": "method 'BinaryPanel._parse_sections' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:282:4: method 'BinaryPanel._parse_sections' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\ui\\sandbox_config.py:96:4: method 'SandboxTestWorker.run' - complexity 14 (rank C)"
         }
       ]
     },
@@ -891,14 +883,14 @@
       "count": 1,
       "findings": [
         {
-          "line": 135,
+          "line": 140,
           "column": 4,
           "entity_type": "M",
           "name": "SummaryCard.update_from_analysis",
           "rank": "C",
           "complexity": 12,
           "message": "method 'SummaryCard.update_from_analysis' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:135:4: method 'SummaryCard.update_from_analysis' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\ui\\panels\\licensing_panel.py:140:4: method 'SummaryCard.update_from_analysis' - complexity 12 (rank C)"
         }
       ]
     }

@@ -1,76 +1,162 @@
+32 findings in src\intellicrack\bridges\radare2.py
+
+src\intellicrack\bridges\radare2.py:169: error: Redundant cast to "list[Any]"  [redundant-cast]
+
+src\intellicrack\bridges\radare2.py:188: error: Function "r2pipe.open" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\radare2.py:188: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\radare2.py:217: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\radare2.py:579: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\radare2.py:602: error: Function "r2pipe.open" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\radare2.py:602: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\radare2.py:604: error: Function does not return a value (it only ever returns None)  [func-returns-value]
+
+src\intellicrack\bridges\radare2.py:604: error: Argument 1 to "to_thread" has incompatible type "Callable[[str, list[str] | None], open_sync]"; expected "Callable[[str, list[str] | None], None]"  [arg-type]
+
+src\intellicrack\bridges\radare2.py:605: error: "None" has no attribute "cmd"  [attr-defined]
+
+src\intellicrack\bridges\radare2.py:613: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\radare2.py:621: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\radare2.py:708: error: Function does not return a value (it only ever returns None)  [func-returns-value]
+
+src\intellicrack\bridges\radare2.py:708: error: Argument 1 to "to_thread" has incompatible type "Callable[[str, list[str] | None], open_sync]"; expected "Callable[[str, list[str] | None], None]"  [arg-type]
+
+src\intellicrack\bridges\radare2.py:760: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\radare2.py:789: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\radare2.py:832: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\radare2.py:904: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\radare2.py:937: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\radare2.py:976: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\radare2.py:1018: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\radare2.py:1060: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\radare2.py:1107: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\radare2.py:1129: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\radare2.py:1147: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\radare2.py:1171: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\radare2.py:1193: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\radare2.py:1244: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\radare2.py:1273: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\radare2.py:1294: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\radare2.py:1314: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\radare2.py:1350: error: Statement is unreachable  [unreachable]
+
+
 12 findings in src\intellicrack\ui\highlighter.py
 
-src\intellicrack\ui\highlighter.py:216: error: Argument 1 of "highlightBlock" is incompatible with supertype "PyQt6.QtGui.QSyntaxHighlighter"; supertype defines the argument type as "str | None"  [override]
+src\intellicrack\ui\highlighter.py:221: error: Argument 1 of "highlightBlock" is incompatible with supertype "PyQt6.QtGui.QSyntaxHighlighter"; supertype defines the argument type as "str | None"  [override]
 
-src\intellicrack\ui\highlighter.py:216: note: This violates the Liskov substitution principle
+src\intellicrack\ui\highlighter.py:221: note: This violates the Liskov substitution principle
 
-src\intellicrack\ui\highlighter.py:216: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
+src\intellicrack\ui\highlighter.py:221: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
 
-src\intellicrack\ui\highlighter.py:559: error: Argument 1 of "highlightBlock" is incompatible with supertype "PyQt6.QtGui.QSyntaxHighlighter"; supertype defines the argument type as "str | None"  [override]
+src\intellicrack\ui\highlighter.py:564: error: Argument 1 of "highlightBlock" is incompatible with supertype "PyQt6.QtGui.QSyntaxHighlighter"; supertype defines the argument type as "str | None"  [override]
 
-src\intellicrack\ui\highlighter.py:559: note: This violates the Liskov substitution principle
+src\intellicrack\ui\highlighter.py:564: note: This violates the Liskov substitution principle
 
-src\intellicrack\ui\highlighter.py:559: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
+src\intellicrack\ui\highlighter.py:564: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
 
-src\intellicrack\ui\highlighter.py:762: error: Argument 1 of "highlightBlock" is incompatible with supertype "PyQt6.QtGui.QSyntaxHighlighter"; supertype defines the argument type as "str | None"  [override]
+src\intellicrack\ui\highlighter.py:767: error: Argument 1 of "highlightBlock" is incompatible with supertype "PyQt6.QtGui.QSyntaxHighlighter"; supertype defines the argument type as "str | None"  [override]
 
-src\intellicrack\ui\highlighter.py:762: note: This violates the Liskov substitution principle
+src\intellicrack\ui\highlighter.py:767: note: This violates the Liskov substitution principle
 
-src\intellicrack\ui\highlighter.py:762: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
+src\intellicrack\ui\highlighter.py:767: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
 
-src\intellicrack\ui\highlighter.py:989: error: Argument 1 of "highlightBlock" is incompatible with supertype "PyQt6.QtGui.QSyntaxHighlighter"; supertype defines the argument type as "str | None"  [override]
+src\intellicrack\ui\highlighter.py:994: error: Argument 1 of "highlightBlock" is incompatible with supertype "PyQt6.QtGui.QSyntaxHighlighter"; supertype defines the argument type as "str | None"  [override]
 
-src\intellicrack\ui\highlighter.py:989: note: This violates the Liskov substitution principle
+src\intellicrack\ui\highlighter.py:994: note: This violates the Liskov substitution principle
 
-src\intellicrack\ui\highlighter.py:989: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
+src\intellicrack\ui\highlighter.py:994: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
 
 
 11 findings in src\intellicrack\ui\session_manager.py
 
-src\intellicrack\ui\session_manager.py:125: error: Item "None" of "QHeaderView | None" has no attribute "setVisible"  [union-attr]
+src\intellicrack\ui\session_manager.py:130: error: Item "None" of "QHeaderView | None" has no attribute "setVisible"  [union-attr]
 
-src\intellicrack\ui\session_manager.py:126: error: Item "None" of "QHeaderView | None" has no attribute "setStretchLastSection"  [union-attr]
+src\intellicrack\ui\session_manager.py:131: error: Item "None" of "QHeaderView | None" has no attribute "setStretchLastSection"  [union-attr]
 
-src\intellicrack\ui\session_manager.py:128: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
+src\intellicrack\ui\session_manager.py:133: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
-src\intellicrack\ui\session_manager.py:129: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
+src\intellicrack\ui\session_manager.py:134: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
-src\intellicrack\ui\session_manager.py:130: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
+src\intellicrack\ui\session_manager.py:135: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
-src\intellicrack\ui\session_manager.py:131: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
+src\intellicrack\ui\session_manager.py:136: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
-src\intellicrack\ui\session_manager.py:366: error: Item "None" of "QItemSelectionModel | None" has no attribute "selectedRows"  [union-attr]
+src\intellicrack\ui\session_manager.py:371: error: Item "None" of "QItemSelectionModel | None" has no attribute "selectedRows"  [union-attr]
 
-src\intellicrack\ui\session_manager.py:455: error: Item "None" of "QItemSelectionModel | None" has no attribute "selectedRows"  [union-attr]
+src\intellicrack\ui\session_manager.py:460: error: Item "None" of "QItemSelectionModel | None" has no attribute "selectedRows"  [union-attr]
 
-src\intellicrack\ui\session_manager.py:487: error: Item "None" of "QItemSelectionModel | None" has no attribute "selectedRows"  [union-attr]
+src\intellicrack\ui\session_manager.py:492: error: Item "None" of "QItemSelectionModel | None" has no attribute "selectedRows"  [union-attr]
 
-src\intellicrack\ui\session_manager.py:548: error: Item "None" of "QItemSelectionModel | None" has no attribute "selectedRows"  [union-attr]
+src\intellicrack\ui\session_manager.py:553: error: Item "None" of "QItemSelectionModel | None" has no attribute "selectedRows"  [union-attr]
 
-src\intellicrack\ui\session_manager.py:761: error: Item "None" of "QItemSelectionModel | None" has no attribute "selectedRows"  [union-attr]
+src\intellicrack\ui\session_manager.py:766: error: Item "None" of "QItemSelectionModel | None" has no attribute "selectedRows"  [union-attr]
 
 
-10 findings in src\intellicrack\ui\provider_config.py
+10 findings in src\intellicrack\ui\panels\binary_panel.py
 
-src\intellicrack\ui\provider_config.py:1109: error: Argument 1 to "get_env_var" of "CredentialLoader" has incompatible type "ProviderName"; expected "str"  [arg-type]
+src\intellicrack\ui\panels\binary_panel.py:44: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
 
-src\intellicrack\ui\provider_config.py:1138: error: Value of type "Coroutine[Any, Any, dict[ProviderName, bool]]" must be used  [unused-coroutine]
+src\intellicrack\ui\panels\binary_panel.py:273: error: Item "None" of "QHeaderView | None" has no attribute "setVisible"  [union-attr]
 
-src\intellicrack\ui\provider_config.py:1138: note: Are you missing an await?
+src\intellicrack\ui\panels\binary_panel.py:275: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
-src\intellicrack\ui\provider_config.py:1157: error: Item "None" of "ModelDiscovery | None" has no attribute "discover_provider"  [union-attr]
+src\intellicrack\ui\panels\binary_panel.py:276: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
-src\intellicrack\ui\provider_config.py:1188: error: Missing positional argument "provider" in call to "to_provider_credentials" of "OAuthManager"  [call-arg]
+src\intellicrack\ui\panels\binary_panel.py:277: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
-src\intellicrack\ui\provider_config.py:1208: error: Missing positional argument "provider" in call to "revoke_token" of "OAuthManager"  [call-arg]
+src\intellicrack\ui\panels\binary_panel.py:304: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
-src\intellicrack\ui\provider_config.py:1208: error: Value of type "Coroutine[Any, Any, bool]" must be used  [unused-coroutine]
+src\intellicrack\ui\panels\binary_panel.py:311: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
-src\intellicrack\ui\provider_config.py:1208: note: Are you missing an await?
+src\intellicrack\ui\panels\binary_panel.py:620: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\provider_config.py:1949: error: Incompatible return value type (got "Coroutine[Any, Any, dict[str, object]]", expected "dict[str, object] | None")  [return-value]
+src\intellicrack\ui\panels\binary_panel.py:796: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\provider_config.py:1949: note: Maybe you forgot to use "await"?
+src\intellicrack\ui\panels\binary_panel.py:850: error: Statement is unreachable  [unreachable]
+
+
+8 findings in src\intellicrack\ui\provider_config.py
+
+src\intellicrack\ui\provider_config.py:62: error: Incompatible types in assignment (expression has type "None", variable has type "type[LocalTransformersProvider]")  [assignment]
+
+src\intellicrack\ui\provider_config.py:67: error: Incompatible types in assignment (expression has type "None", variable has type "type[OllamaProvider]")  [assignment]
+
+src\intellicrack\ui\provider_config.py:72: error: Incompatible types in assignment (expression has type "None", variable has type "type[OpenRouterProvider]")  [assignment]
+
+src\intellicrack\ui\provider_config.py:77: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], str]")  [assignment]
+
+src\intellicrack\ui\provider_config.py:1967: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\ui\provider_config.py:1983: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\ui\provider_config.py:2003: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\ui\provider_config.py:2027: error: Statement is unreachable  [unreachable]
 
 
 7 findings in tests\test_ui\test_tools_logic.py
@@ -90,122 +176,101 @@ tests\test_ui\test_tools_logic.py:281: error: Statement is unreachable  [unreach
 tests\test_ui\test_tools_logic.py:343: error: Statement is unreachable  [unreachable]
 
 
-6 findings in src\intellicrack\ui\panels\binary_panel.py
-
-src\intellicrack\ui\panels\binary_panel.py:164: error: Item "None" of "QHeaderView | None" has no attribute "setVisible"  [union-attr]
-
-src\intellicrack\ui\panels\binary_panel.py:166: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
-
-src\intellicrack\ui\panels\binary_panel.py:167: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
-
-src\intellicrack\ui\panels\binary_panel.py:168: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
-
-src\intellicrack\ui\panels\binary_panel.py:194: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
-
-src\intellicrack\ui\panels\binary_panel.py:201: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
-
-
-6 findings in src\intellicrack\ui\app.py
-
-src\intellicrack\ui\app.py:683: error: Missing positional argument "self" in call to "get_memory_usage" of "ModelCache"  [call-arg]
-
-src\intellicrack\ui\app.py:698: error: Missing positional argument "provider" in call to "get_last_event" of "ModelDiscovery"  [call-arg]
-
-src\intellicrack\ui\app.py:1412: error: Value of type "Coroutine[Any, Any, dict[ProviderName, list[ModelInfo]]]" must be used  [unused-coroutine]
-
-src\intellicrack\ui\app.py:1412: note: Are you missing an await?
-
-src\intellicrack\ui\app.py:1472: error: Missing positional argument "model_id" in call to "get_by_id" of "ModelDiscovery"  [call-arg]
-
-src\intellicrack\ui\app.py:1472: error: Argument 1 to "get_by_id" of "ModelDiscovery" has incompatible type "str"; expected "ProviderName"  [arg-type]
-
-
 5 findings in src\intellicrack\ui\panels\x64dbg_panel.py
 
-src\intellicrack\ui\panels\x64dbg_panel.py:234: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
+src\intellicrack\ui\panels\x64dbg_panel.py:206: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
-src\intellicrack\ui\panels\x64dbg_panel.py:242: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
+src\intellicrack\ui\panels\x64dbg_panel.py:214: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
-src\intellicrack\ui\panels\x64dbg_panel.py:249: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
+src\intellicrack\ui\panels\x64dbg_panel.py:221: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
-src\intellicrack\ui\panels\x64dbg_panel.py:256: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
+src\intellicrack\ui\panels\x64dbg_panel.py:228: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
-src\intellicrack\ui\panels\x64dbg_panel.py:302: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
+src\intellicrack\ui\panels\x64dbg_panel.py:274: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
 
 4 findings in src\intellicrack\ui\panels\radare2_panel.py
 
-src\intellicrack\ui\panels\radare2_panel.py:197: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
-
-src\intellicrack\ui\panels\radare2_panel.py:204: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
-
-src\intellicrack\ui\panels\radare2_panel.py:211: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
+src\intellicrack\ui\panels\radare2_panel.py:192: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
 src\intellicrack\ui\panels\radare2_panel.py:218: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
+
+src\intellicrack\ui\panels\radare2_panel.py:225: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
+
+src\intellicrack\ui\panels\radare2_panel.py:232: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
+
+
+4 findings in src\intellicrack\ui\app.py
+
+src\intellicrack\ui\app.py:63: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], ModelCache]")  [assignment]
+
+src\intellicrack\ui\app.py:64: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], None]")  [assignment]
+
+src\intellicrack\ui\app.py:255: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\ui\app.py:693: error: Statement is unreachable  [unreachable]
 
 
 3 findings in src\intellicrack\ui\panels\licensing_panel.py
 
-src\intellicrack\ui\panels\licensing_panel.py:210: error: Item "None" of "QHeaderView | None" has no attribute "setVisible"  [union-attr]
+src\intellicrack\ui\panels\licensing_panel.py:215: error: Item "None" of "QHeaderView | None" has no attribute "setVisible"  [union-attr]
 
-src\intellicrack\ui\panels\licensing_panel.py:297: error: Item "None" of "QHeaderView | None" has no attribute "setVisible"  [union-attr]
+src\intellicrack\ui\panels\licensing_panel.py:302: error: Item "None" of "QHeaderView | None" has no attribute "setVisible"  [union-attr]
 
-src\intellicrack\ui\panels\licensing_panel.py:374: error: Item "None" of "QHeaderView | None" has no attribute "setVisible"  [union-attr]
+src\intellicrack\ui\panels\licensing_panel.py:379: error: Item "None" of "QHeaderView | None" has no attribute "setVisible"  [union-attr]
 
 
 3 findings in src\intellicrack\ui\panels\ghidra_panel.py
 
-src\intellicrack\ui\panels\ghidra_panel.py:176: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
-
-src\intellicrack\ui\panels\ghidra_panel.py:183: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
+src\intellicrack\ui\panels\ghidra_panel.py:164: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
 src\intellicrack\ui\panels\ghidra_panel.py:190: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
+
+src\intellicrack\ui\panels\ghidra_panel.py:197: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
 
 3 findings in src\intellicrack\ui\tools.py
 
-src\intellicrack\ui\tools.py:390: error: Item "None" of "QTextDocument | None" has no attribute "findBlockByLineNumber"  [union-attr]
+src\intellicrack\ui\tools.py:404: error: Item "None" of "QTextDocument | None" has no attribute "findBlockByLineNumber"  [union-attr]
 
-src\intellicrack\ui\tools.py:1753: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\tools.py:1843: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\tools.py:1755: error: Item "None" of "QTextDocument | None" has no attribute "findChild"  [union-attr]
-
-
-3 findings in tests\core\test_process_cleanup.py
-
-tests\core\test_process_cleanup.py:213: error: Incompatible types in assignment (expression has type "_BlockingR2", variable has type "open_sync | None")  [assignment]
-
-tests\core\test_process_cleanup.py:235: error: Incompatible types in assignment (expression has type "_FastR2", variable has type "open_sync | None")  [assignment]
-
-tests\core\test_process_cleanup.py:245: error: Incompatible types in assignment (expression has type "_NoneR2", variable has type "open_sync | None")  [assignment]
+src\intellicrack\ui\tools.py:1845: error: Item "None" of "QTextDocument | None" has no attribute "findChild"  [union-attr]
 
 
 2 findings in src\intellicrack\ui\panels\process_panel.py
 
-src\intellicrack\ui\panels\process_panel.py:409: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
+src\intellicrack\ui\panels\process_panel.py:429: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
-src\intellicrack\ui\panels\process_panel.py:425: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
+src\intellicrack\ui\panels\process_panel.py:445: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
+
+
+2 findings in src\intellicrack\credentials\store.py
+
+src\intellicrack\credentials\store.py:34: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
+
+src\intellicrack\credentials\store.py:127: error: Statement is unreachable  [unreachable]
 
 
 2 findings in src\intellicrack\providers\xpu_utils.py
 
-src\intellicrack\providers\xpu_utils.py:24: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
+src\intellicrack\providers\xpu_utils.py:29: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
 
-src\intellicrack\providers\xpu_utils.py:81: error: Statement is unreachable  [unreachable]
+src\intellicrack\providers\xpu_utils.py:86: error: Statement is unreachable  [unreachable]
 
 
 2 findings in tests\test_ui\test_font_manager.py
 
-tests\test_ui\test_font_manager.py:139: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
+tests\test_ui\test_font_manager.py:141: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
 
-tests\test_ui\test_font_manager.py:180: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
+tests\test_ui\test_font_manager.py:182: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
 
 
 2 findings in src\intellicrack\ui\chat.py
 
-src\intellicrack\ui\chat.py:517: error: Item "None" of "QScrollBar | None" has no attribute "setValue"  [union-attr]
+src\intellicrack\ui\chat.py:522: error: Item "None" of "QScrollBar | None" has no attribute "setValue"  [union-attr]
 
-src\intellicrack\ui\chat.py:517: error: Item "None" of "QScrollBar | None" has no attribute "maximum"  [union-attr]
+src\intellicrack\ui\chat.py:522: error: Item "None" of "QScrollBar | None" has no attribute "maximum"  [union-attr]
 
 
 2 findings in tests\test_bridges\test_x64dbg.py
@@ -215,28 +280,21 @@ tests\test_bridges\test_x64dbg.py:165: error: Incompatible types in assignment (
 tests\test_bridges\test_x64dbg.py:175: error: Value of type "WatchpointInfo" is not indexable  [index]
 
 
-2 findings in src\intellicrack\bridges\sandbox_bridge.py
-
-src\intellicrack\bridges\sandbox_bridge.py:844: error: "SandboxBase" has no attribute "list_snapshots"  [attr-defined]
-
-src\intellicrack\bridges\sandbox_bridge.py:888: error: "SandboxBase" has no attribute "delete_snapshot"; maybe "take_snapshot" or "restore_snapshot"?  [attr-defined]
-
-
 2 findings in tests\test_providers\test_local_transformers_provider.py
 
-tests\test_providers\test_local_transformers_provider.py:499: error: Argument 1 to "_format_prompt" of "LocalTransformersProvider" has incompatible type "list[dict[str, str]]"; expected "list[dict[str, object]]"  [arg-type]
+tests\test_providers\test_local_transformers_provider.py:496: error: Argument 1 to "_format_prompt" of "LocalTransformersProvider" has incompatible type "list[dict[str, str]]"; expected "list[dict[str, object]]"  [arg-type]
 
-tests\test_providers\test_local_transformers_provider.py:512: error: Argument 1 to "_format_prompt" of "LocalTransformersProvider" has incompatible type "list[dict[str, str]]"; expected "list[dict[str, object]]"  [arg-type]
+tests\test_providers\test_local_transformers_provider.py:509: error: Argument 1 to "_format_prompt" of "LocalTransformersProvider" has incompatible type "list[dict[str, str]]"; expected "list[dict[str, object]]"  [arg-type]
 
 
 1 findings in src\intellicrack\ui\panels\stack_viewer.py
 
-src\intellicrack\ui\panels\stack_viewer.py:276: error: Item "None" of "QHeaderView | None" has no attribute "setVisible"  [union-attr]
+src\intellicrack\ui\panels\stack_viewer.py:281: error: Item "None" of "QHeaderView | None" has no attribute "setVisible"  [union-attr]
 
 
 1 findings in src\intellicrack\sandbox\qemu.py
 
-src\intellicrack\sandbox\qemu.py:200: error: Item "None" of "StreamReader | None" has no attribute "readline"  [union-attr]
+src\intellicrack\sandbox\qemu.py:205: error: Item "None" of "StreamReader | None" has no attribute "readline"  [union-attr]
 
 
 1 findings in tests\test_providers\test_openrouter_provider.py
@@ -246,17 +304,22 @@ tests\test_providers\test_openrouter_provider.py:217: error: Function is missing
 
 1 findings in tests\test_providers\test_huggingface_provider.py
 
-tests\test_providers\test_huggingface_provider.py:206: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
+tests\test_providers\test_huggingface_provider.py:202: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
 
 
 1 findings in src\intellicrack\providers\model_loader.py
 
-src\intellicrack\providers\model_loader.py:22: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
+src\intellicrack\providers\model_loader.py:27: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
+
+
+1 findings in tests\test_bridges\test_x64dbg_api_coverage.py
+
+tests\test_bridges\test_x64dbg_api_coverage.py:134: error: "X64DbgBridge" has no attribute "_get_process_info"; maybe "get_process_info"?  [attr-defined]
 
 
 1 findings in src\intellicrack\ui\panels\frida_panel.py
 
-src\intellicrack\ui\panels\frida_panel.py:237: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
+src\intellicrack\ui\panels\frida_panel.py:217: error: Item "None" of "QHeaderView | None" has no attribute "setSectionResizeMode"  [union-attr]
 
 
 1 findings in tests\test_providers\test_openai_provider.py
@@ -271,7 +334,7 @@ tests\test_providers\test_grok_provider.py:193: error: Function is missing a typ
 
 1 findings in src\intellicrack\providers\local_transformers.py
 
-src\intellicrack\providers\local_transformers.py:53: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
+src\intellicrack\providers\local_transformers.py:62: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
 
 
 1 findings in tests\test_providers\test_anthropic_provider.py
@@ -279,9 +342,9 @@ src\intellicrack\providers\local_transformers.py:53: error: Incompatible types i
 tests\test_providers\test_anthropic_provider.py:193: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
 
 
-1 findings in src\intellicrack\core\orchestrator.py
+1 findings in tests\test_ui\test_sandbox_panel_fixes.py
 
-src\intellicrack\core\orchestrator.py:916: error: "ToolDefinition" has no attribute "name"  [attr-defined]
+tests\test_ui\test_sandbox_panel_fixes.py:75: error: Argument 1 to "set_sandbox_manager" of "SandboxPanel" has incompatible type "object"; expected "SandboxManager"  [arg-type]
 
 
 1 findings in tests\test_providers\test_model_discovery.py

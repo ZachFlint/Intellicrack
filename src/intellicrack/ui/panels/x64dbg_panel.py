@@ -13,9 +13,9 @@ debugging via the X64DbgBridge backend.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -36,8 +36,9 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels._async_bridge import run_bridge_coroutine
-from intellicrack.ui.panels._qt_compat import connect_cell_changed, set_max_block_count
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+from intellicrack.ui.panels.base_panel import AnalysisPanelBase
+from intellicrack.ui.panels.qt_compat import connect_cell_changed, set_max_block_count
 
 
 if TYPE_CHECKING:
@@ -77,16 +78,13 @@ _FLAG_REG = "rflags"
 _SEGMENT_REGS = ["cs", "ds", "es", "fs", "gs", "ss"]
 
 
-class X64DbgPanel(QWidget):
+class X64DbgPanel(AnalysisPanelBase):
     """Native Qt panel for x64dbg interactive debugging.
 
     Displays disassembly, registers, breakpoints, memory dumps,
     stack traces, and a command console for controlling x64dbg
     via the X64DbgBridge backend.
     """
-
-    tool_started: pyqtSignal = pyqtSignal()
-    tool_closed: pyqtSignal = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the x64dbg panel.
@@ -97,16 +95,54 @@ class X64DbgPanel(QWidget):
         super().__init__(parent)
         self._bridge: X64DbgBridge | None = None
         self._is_64bit: bool = True
-        self._setup_ui()
 
-    def _setup_ui(self) -> None:
-        """Build the panel layout."""
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(4, 4, 4, 4)
-        layout.setSpacing(4)
+    @override
+    def _populate_toolbar(self, toolbar: QToolBar) -> None:
+        """Add x64dbg-specific controls to the toolbar.
 
-        layout.addWidget(self._create_toolbar())
+        Args:
+            toolbar: The toolbar to populate.
+        """
+        self._load_btn = self._add_tool_button(toolbar, "Load...", self._on_load)
 
+        toolbar.addSeparator()
+
+        self._add_toolbar_label(toolbar, "PID:")
+
+        self._pid_input = self._add_toolbar_input(toolbar, "PID", max_width=80)
+
+        self._attach_btn = self._add_tool_button(toolbar, "Attach", self._on_attach)
+
+        toolbar.addSeparator()
+
+        self._run_btn = self._add_tool_button(toolbar, "Run", self._on_run)
+        self._pause_btn = self._add_tool_button(toolbar, "Pause", self._on_pause)
+        self._stop_btn = self._add_tool_button(toolbar, "Stop", self._on_stop)
+
+        toolbar.addSeparator()
+
+        self._step_into_btn = self._add_tool_button(toolbar, "Step Into", self._on_step_into)
+        self._step_over_btn = self._add_tool_button(toolbar, "Step Over", self._on_step_over)
+        self._step_out_btn = self._add_tool_button(toolbar, "Step Out", self._on_step_out)
+
+        toolbar.addSeparator()
+
+        self._64bit_toggle = QCheckBox("64-bit")
+        self._64bit_toggle.setChecked(True)
+        self._64bit_toggle.toggled.connect(self._on_toggle_64bit)
+        toolbar.addWidget(self._64bit_toggle)
+
+        toolbar.addSeparator()
+
+        self._status_label = self._add_toolbar_label(toolbar, "Not loaded")
+
+    @override
+    def _create_content(self) -> QWidget:
+        """Create the x64dbg debugging content area.
+
+        Returns:
+            Splitter with disassembly, inspection tabs, and bottom tabs.
+        """
         main_splitter = QSplitter(Qt.Orientation.Vertical)
 
         top_splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -118,88 +154,19 @@ class X64DbgPanel(QWidget):
         main_splitter.addWidget(self._create_bottom_tabs())
         main_splitter.setSizes([450, 250])
 
-        layout.addWidget(main_splitter)
+        return main_splitter
 
-    def _create_toolbar(self) -> QToolBar:
-        """Create the debugger toolbar.
-
-        Returns:
-            Configured toolbar widget.
-        """
-        toolbar = QToolBar()
-        toolbar.setMovable(False)
-        toolbar.setFixedHeight(32)
-
-        self._load_btn = QPushButton("Load...")
-        self._load_btn.setObjectName("tool_button")
-        self._load_btn.clicked.connect(self._on_load)
-        toolbar.addWidget(self._load_btn)
-
-        toolbar.addSeparator()
-
-        attach_label = QLabel("PID:")
-        attach_label.setObjectName("toolbar_label")
-        toolbar.addWidget(attach_label)
-
-        self._pid_input = QLineEdit()
-        self._pid_input.setMaximumWidth(80)
-        set_hint = getattr(self._pid_input, "set" + "Place" + "holderText")
-        set_hint("PID")
-        toolbar.addWidget(self._pid_input)
-
-        self._attach_btn = QPushButton("Attach")
-        self._attach_btn.setObjectName("tool_button")
-        self._attach_btn.clicked.connect(self._on_attach)
-        toolbar.addWidget(self._attach_btn)
-
-        toolbar.addSeparator()
-
-        self._run_btn = QPushButton("Run")
-        self._run_btn.setObjectName("tool_button")
-        self._run_btn.clicked.connect(self._on_run)
-        toolbar.addWidget(self._run_btn)
-
-        self._pause_btn = QPushButton("Pause")
-        self._pause_btn.setObjectName("tool_button")
-        self._pause_btn.clicked.connect(self._on_pause)
-        toolbar.addWidget(self._pause_btn)
-
-        self._stop_btn = QPushButton("Stop")
-        self._stop_btn.setObjectName("tool_button")
-        self._stop_btn.clicked.connect(self._on_stop)
-        toolbar.addWidget(self._stop_btn)
-
-        toolbar.addSeparator()
-
-        self._step_into_btn = QPushButton("Step Into")
-        self._step_into_btn.setObjectName("tool_button")
-        self._step_into_btn.clicked.connect(self._on_step_into)
-        toolbar.addWidget(self._step_into_btn)
-
-        self._step_over_btn = QPushButton("Step Over")
-        self._step_over_btn.setObjectName("tool_button")
-        self._step_over_btn.clicked.connect(self._on_step_over)
-        toolbar.addWidget(self._step_over_btn)
-
-        self._step_out_btn = QPushButton("Step Out")
-        self._step_out_btn.setObjectName("tool_button")
-        self._step_out_btn.clicked.connect(self._on_step_out)
-        toolbar.addWidget(self._step_out_btn)
-
-        toolbar.addSeparator()
-
-        self._64bit_toggle = QCheckBox("64-bit")
-        self._64bit_toggle.setChecked(True)
-        self._64bit_toggle.toggled.connect(self._on_toggle_64bit)
-        toolbar.addWidget(self._64bit_toggle)
-
-        toolbar.addSeparator()
-
-        self._status_label = QLabel("Not loaded")
-        self._status_label.setObjectName("toolbar_label")
-        toolbar.addWidget(self._status_label)
-
-        return toolbar
+    @override
+    def _cleanup(self) -> None:
+        """Unregister event callback and stop the x64dbg bridge."""
+        if self._bridge is not None:
+            if hasattr(self._bridge, "unregister_event_callback"):
+                self._bridge.unregister_event_callback(self._on_debug_event)
+            if self._bridge.state.is_ready():
+                try:
+                    run_bridge_coroutine(self._bridge.stop())
+                except Exception:
+                    _logger.exception("x64dbg_stop_failed")
 
     def _create_disasm_section(self) -> QWidget:
         """Create the disassembly display section.
@@ -372,10 +339,17 @@ class X64DbgPanel(QWidget):
     def set_bridge(self, bridge: X64DbgBridge) -> None:
         """Set the X64DbgBridge instance for debugging.
 
+        Registers an event callback so breakpoint and watchpoint
+        hits automatically refresh the panel state.
+
         Args:
             bridge: The X64DbgBridge to use.
         """
+        if self._bridge is not None and hasattr(self._bridge, "unregister_event_callback"):
+            self._bridge.unregister_event_callback(self._on_debug_event)
         self._bridge = bridge
+        if hasattr(bridge, "register_event_callback"):
+            bridge.register_event_callback(self._on_debug_event)
         _logger.info("x64dbg_bridge_set")
 
     def get_bridge(self) -> X64DbgBridge | None:
@@ -399,40 +373,49 @@ class X64DbgPanel(QWidget):
             _logger.warning("x64dbg_debug_no_bridge")
             return False
 
-        try:
-            run_bridge_coroutine(self._bridge.load(file_path))
-            self._status_label.setText(f"Loaded: {file_path.name}")
-            _logger.info("x64dbg_file_loaded", extra={"path": file_path.name})
-        except Exception as e:
-            self._status_label.setText(f"Load failed: {e}")
-            _logger.exception("x64dbg_load_failed", extra={"error": str(e)})
-            return False
+        self._load_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.load(file_path),
+            on_success=lambda _: self._on_load_success(file_path),
+            on_error=lambda e: self._on_load_error(file_path, e),
+        )
+        return True
 
+    def _on_load_success(self, file_path: Path) -> None:
+        """Handle successful file load.
+
+        Args:
+            file_path: The loaded file path.
+        """
+        self._set_status(f"Loaded: {file_path.name}")
+        _logger.info("x64dbg_file_loaded", extra={"path": file_path.name})
+        self._load_btn.setEnabled(True)
+        self._sync_64bit_toggle()
         self._refresh_state()
-        return True
 
-    def start_tool(self) -> bool:
-        """Start the x64dbg panel.
+    def _on_load_error(self, file_path: Path, exc: object) -> None:
+        """Handle file load failure.
 
-        Returns:
-            True always since native panels are always ready.
+        Args:
+            file_path: The file that failed to load.
+            exc: The exception that occurred.
         """
-        self.tool_started.emit()
-        return True
+        self._set_status(f"Load failed: {exc}")
+        _logger.warning("x64dbg_load_failed", extra={"path": file_path.name, "error": str(exc)})
+        self._load_btn.setEnabled(True)
 
-    def stop_tool(self) -> bool:
-        """Stop debugging and clean up.
+    def _on_debug_event(self, event_type: str, _message: dict[str, object]) -> None:
+        """Handle debug events from the bridge for auto-refresh.
 
-        Returns:
-            True if cleanup succeeded.
+        Called from the bridge event thread; schedules a refresh
+        on the Qt main thread via ``QTimer.singleShot``.
+
+        Args:
+            event_type: Type of debug event.
+            _message: Event payload (unused).
         """
-        if self._bridge is not None and self._bridge.state.is_ready():
-            try:
-                run_bridge_coroutine(self._bridge.stop())
-            except Exception:
-                _logger.exception("x64dbg_stop_failed")
-        self.tool_closed.emit()
-        return True
+        if event_type in {"breakpoint", "watchpoint", "step"}:
+            QTimer.singleShot(0, self._refresh_state)
 
     def _on_load(self) -> None:
         """Open file dialog and load selected executable."""
@@ -464,103 +447,193 @@ class X64DbgPanel(QWidget):
             self._console_output.appendPlainText(f"[!] Invalid PID: {pid_text}")
             return
 
-        try:
-            run_bridge_coroutine(self._bridge.attach(pid))
-            self._status_label.setText(f"Attached: PID {pid}")
-            self._console_output.appendPlainText(f"[+] Attached to PID {pid}")
-            _logger.info("x64dbg_attached", extra={"pid": pid})
-        except Exception as e:
-            self._console_output.appendPlainText(f"[-] Attach failed: {e}")
-            _logger.exception("x64dbg_attach_failed", extra={"error": str(e)})
-            return
+        self._attach_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.attach(pid),
+            on_success=lambda _: self._on_attach_success(pid),
+            on_error=self._on_attach_error,
+        )
 
+    def _on_attach_success(self, pid: int) -> None:
+        """Handle successful attach.
+
+        Args:
+            pid: The attached process ID.
+        """
+        self._set_status(f"Attached: PID {pid}")
+        self._console_output.appendPlainText(f"[+] Attached to PID {pid}")
+        _logger.info("x64dbg_attached", extra={"pid": pid})
+        self._attach_btn.setEnabled(True)
+        self._sync_64bit_toggle()
         self._refresh_state()
+
+    def _on_attach_error(self, exc: object) -> None:
+        """Handle attach failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console_output.appendPlainText(f"[-] Attach failed: {exc}")
+        _logger.warning("x64dbg_attach_failed", extra={"error": str(exc)})
+        self._attach_btn.setEnabled(True)
 
     def _on_run(self) -> None:
         """Continue execution."""
         if self._bridge is None:
             return
 
-        try:
-            run_bridge_coroutine(self._bridge.run())
-            self._status_label.setText("Running")
-            self._console_output.appendPlainText("[+] Execution continued")
-        except Exception as e:
-            self._console_output.appendPlainText(f"[-] Run failed: {e}")
-            _logger.exception("x64dbg_run_failed", extra={"error": str(e)})
+        self._run_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.run(),
+            on_success=lambda _: self._on_run_success(),
+            on_error=self._on_run_error,
+        )
+
+    def _on_run_success(self) -> None:
+        """Handle successful run."""
+        self._set_status("Running")
+        self._console_output.appendPlainText("[+] Execution continued")
+        self._run_btn.setEnabled(True)
+
+    def _on_run_error(self, exc: object) -> None:
+        """Handle run failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console_output.appendPlainText(f"[-] Run failed: {exc}")
+        _logger.warning("x64dbg_run_failed", extra={"error": str(exc)})
+        self._run_btn.setEnabled(True)
 
     def _on_pause(self) -> None:
         """Pause execution."""
         if self._bridge is None:
             return
 
-        try:
-            run_bridge_coroutine(self._bridge.pause())
-            self._status_label.setText("Paused")
-            self._console_output.appendPlainText("[+] Execution paused")
-        except Exception as e:
-            self._console_output.appendPlainText(f"[-] Pause failed: {e}")
-            _logger.exception("x64dbg_pause_failed", extra={"error": str(e)})
+        self._pause_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.pause(),
+            on_success=lambda _: self._on_pause_success(),
+            on_error=self._on_pause_error,
+        )
 
+    def _on_pause_success(self) -> None:
+        """Handle successful pause."""
+        self._set_status("Paused")
+        self._console_output.appendPlainText("[+] Execution paused")
+        self._pause_btn.setEnabled(True)
         self._refresh_state()
+
+    def _on_pause_error(self, exc: object) -> None:
+        """Handle pause failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console_output.appendPlainText(f"[-] Pause failed: {exc}")
+        _logger.warning("x64dbg_pause_failed", extra={"error": str(exc)})
+        self._pause_btn.setEnabled(True)
 
     def _on_stop(self) -> None:
         """Stop debugging."""
         if self._bridge is None:
             return
 
-        try:
-            run_bridge_coroutine(self._bridge.stop())
-            self._status_label.setText("Stopped")
-            self._console_output.appendPlainText("[+] Debugging stopped")
-        except Exception as e:
-            self._console_output.appendPlainText(f"[-] Stop failed: {e}")
-            _logger.exception("x64dbg_stop_failed", extra={"error": str(e)})
+        self._stop_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.stop(),
+            on_success=lambda _: self._on_stop_success(),
+            on_error=self._on_stop_error,
+        )
+
+    def _on_stop_success(self) -> None:
+        """Handle successful stop."""
+        self._set_status("Stopped")
+        self._console_output.appendPlainText("[+] Debugging stopped")
+        self._stop_btn.setEnabled(True)
+
+    def _on_stop_error(self, exc: object) -> None:
+        """Handle stop failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console_output.appendPlainText(f"[-] Stop failed: {exc}")
+        _logger.warning("x64dbg_stop_failed", extra={"error": str(exc)})
+        self._stop_btn.setEnabled(True)
 
     def _on_step_into(self) -> None:
         """Single step into."""
         if self._bridge is None:
             return
 
-        try:
-            new_ip = run_bridge_coroutine(self._bridge.step_into())
-            if new_ip is not None:
-                self._console_output.appendPlainText(f"[+] Step into -> 0x{new_ip:X}")
-        except Exception as e:
-            self._console_output.appendPlainText(f"[-] Step into failed: {e}")
-            _logger.exception("x64dbg_step_into_failed", extra={"error": str(e)})
-
-        self._refresh_state()
+        self._step_into_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.step_into(),
+            on_success=lambda r: self._on_step_success("into", r),
+            on_error=lambda e: self._on_step_error("into", e),
+        )
 
     def _on_step_over(self) -> None:
         """Single step over."""
         if self._bridge is None:
             return
 
-        try:
-            new_ip = run_bridge_coroutine(self._bridge.step_over())
-            if new_ip is not None:
-                self._console_output.appendPlainText(f"[+] Step over -> 0x{new_ip:X}")
-        except Exception as e:
-            self._console_output.appendPlainText(f"[-] Step over failed: {e}")
-            _logger.exception("x64dbg_step_over_failed", extra={"error": str(e)})
-
-        self._refresh_state()
+        self._step_over_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.step_over(),
+            on_success=lambda r: self._on_step_success("over", r),
+            on_error=lambda e: self._on_step_error("over", e),
+        )
 
     def _on_step_out(self) -> None:
         """Step out of current function."""
         if self._bridge is None:
             return
 
-        try:
-            new_ip = run_bridge_coroutine(self._bridge.step_out())
-            if new_ip is not None:
-                self._console_output.appendPlainText(f"[+] Step out -> 0x{new_ip:X}")
-        except Exception as e:
-            self._console_output.appendPlainText(f"[-] Step out failed: {e}")
-            _logger.exception("x64dbg_step_out_failed", extra={"error": str(e)})
+        self._step_out_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.step_out(),
+            on_success=lambda r: self._on_step_success("out", r),
+            on_error=lambda e: self._on_step_error("out", e),
+        )
 
+    def _on_step_success(self, direction: str, result: object) -> None:
+        """Handle successful step operation.
+
+        Args:
+            direction: Step direction ("into", "over", or "out").
+            result: New instruction pointer or None.
+        """
+        if isinstance(result, int):
+            self._console_output.appendPlainText(f"[+] Step {direction} -> 0x{result:X}")
+        self._step_into_btn.setEnabled(True)
+        self._step_over_btn.setEnabled(True)
+        self._step_out_btn.setEnabled(True)
         self._refresh_state()
+
+    def _on_step_error(self, direction: str, exc: object) -> None:
+        """Handle step failure.
+
+        Args:
+            direction: Step direction that failed.
+            exc: The exception that occurred.
+        """
+        self._console_output.appendPlainText(f"[-] Step {direction} failed: {exc}")
+        _logger.warning("x64dbg_step_%s_failed", direction, extra={"error": str(exc)})
+        self._step_into_btn.setEnabled(True)
+        self._step_over_btn.setEnabled(True)
+        self._step_out_btn.setEnabled(True)
+
+    def _sync_64bit_toggle(self) -> None:
+        """Sync the 64-bit checkbox with the bridge's detected architecture."""
+        if self._bridge is None:
+            return
+        bridge_64: bool = getattr(self._bridge, "is_64bit", True)
+        self._is_64bit = bridge_64
+        self._64bit_toggle.blockSignals(True)
+        self._64bit_toggle.setChecked(self._is_64bit)
+        self._64bit_toggle.blockSignals(False)
 
     def _on_toggle_64bit(self, checked: bool) -> None:
         """Handle 64-bit toggle.
@@ -586,15 +659,34 @@ class X64DbgPanel(QWidget):
             self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
             return
 
-        try:
-            bp_id = run_bridge_coroutine(self._bridge.set_breakpoint(address))
-            self._console_output.appendPlainText(f"[+] Breakpoint #{bp_id} set at 0x{address:X}")
-            _logger.info("x64dbg_bp_set", extra={"address": hex(address)})
-        except Exception as e:
-            self._console_output.appendPlainText(f"[-] Failed to set breakpoint: {e}")
-            _logger.exception("x64dbg_bp_set_failed", extra={"error": str(e)})
+        self._add_bp_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.set_breakpoint(address),
+            on_success=lambda r: self._on_bp_added(address, r),
+            on_error=self._on_bp_add_error,
+        )
 
+    def _on_bp_added(self, address: int, result: object) -> None:
+        """Handle successful breakpoint addition.
+
+        Args:
+            address: The breakpoint address.
+            result: The breakpoint ID from the bridge.
+        """
+        self._console_output.appendPlainText(f"[+] Breakpoint #{result} set at 0x{address:X}")
+        _logger.info("x64dbg_bp_set", extra={"address": hex(address)})
+        self._add_bp_btn.setEnabled(True)
         self._refresh_breakpoints()
+
+    def _on_bp_add_error(self, exc: object) -> None:
+        """Handle breakpoint addition failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console_output.appendPlainText(f"[-] Failed to set breakpoint: {exc}")
+        _logger.warning("x64dbg_bp_set_failed", extra={"error": str(exc)})
+        self._add_bp_btn.setEnabled(True)
 
     def _on_remove_breakpoint(self) -> None:
         """Remove the selected breakpoint."""
@@ -614,15 +706,33 @@ class X64DbgPanel(QWidget):
         if self._bridge is None:
             return
 
-        try:
-            run_bridge_coroutine(self._bridge.remove_breakpoint(address))
-            self._console_output.appendPlainText(f"[+] Breakpoint removed at 0x{address:X}")
-            _logger.info("x64dbg_bp_removed", extra={"address": hex(address)})
-        except Exception as e:
-            self._console_output.appendPlainText(f"[-] Failed to remove breakpoint: {e}")
-            _logger.exception("x64dbg_bp_remove_failed", extra={"error": str(e)})
+        self._remove_bp_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.remove_breakpoint(address),
+            on_success=lambda _: self._on_bp_removed(address),
+            on_error=self._on_bp_remove_error,
+        )
 
+    def _on_bp_removed(self, address: int) -> None:
+        """Handle successful breakpoint removal.
+
+        Args:
+            address: The removed breakpoint address.
+        """
+        self._console_output.appendPlainText(f"[+] Breakpoint removed at 0x{address:X}")
+        _logger.info("x64dbg_bp_removed", extra={"address": hex(address)})
+        self._remove_bp_btn.setEnabled(True)
         self._refresh_breakpoints()
+
+    def _on_bp_remove_error(self, exc: object) -> None:
+        """Handle breakpoint removal failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console_output.appendPlainText(f"[-] Failed to remove breakpoint: {exc}")
+        _logger.warning("x64dbg_bp_remove_failed", extra={"error": str(exc)})
+        self._remove_bp_btn.setEnabled(True)
 
     def _on_register_edited(self, row: int, column: int) -> None:
         """Handle register value edit in table.
@@ -648,12 +758,33 @@ class X64DbgPanel(QWidget):
             self._console_output.appendPlainText(f"[!] Invalid value for {reg_name}: {val_text}")
             return
 
-        try:
-            run_bridge_coroutine(self._bridge.set_register(reg_name, value))
-            self._console_output.appendPlainText(f"[+] {reg_name} = 0x{value:X}")
-        except Exception as e:
-            self._console_output.appendPlainText(f"[-] Failed to set {reg_name}: {e}")
-            _logger.exception("x64dbg_set_register_failed", extra={"register": reg_name, "error": str(e)})
+        self._reg_table.setEnabled(False)
+        self._run_async(
+            self._bridge.set_register(reg_name, value),
+            on_success=lambda _: self._on_reg_set_success(reg_name, value),
+            on_error=lambda e: self._on_reg_set_error(reg_name, e),
+        )
+
+    def _on_reg_set_success(self, reg_name: str, value: int) -> None:
+        """Handle successful register set.
+
+        Args:
+            reg_name: The register name.
+            value: The new register value.
+        """
+        self._console_output.appendPlainText(f"[+] {reg_name} = 0x{value:X}")
+        self._reg_table.setEnabled(True)
+
+    def _on_reg_set_error(self, reg_name: str, exc: object) -> None:
+        """Handle register set failure.
+
+        Args:
+            reg_name: The register that failed to set.
+            exc: The exception that occurred.
+        """
+        self._console_output.appendPlainText(f"[-] Failed to set {reg_name}: {exc}")
+        _logger.warning("x64dbg_set_register_failed", extra={"register": reg_name, "error": str(exc)})
+        self._reg_table.setEnabled(True)
 
     def _on_read_memory(self) -> None:
         """Read memory at the specified address and display hex dump."""
@@ -678,17 +809,33 @@ class X64DbgPanel(QWidget):
         except ValueError:
             size = 256
 
-        try:
-            data = run_bridge_coroutine(self._bridge.read_memory(address, size))
-        except Exception as e:
-            self._console_output.appendPlainText(f"[-] Memory read failed: {e}")
-            _logger.exception("x64dbg_mem_read_failed", extra={"error": str(e)})
-            return
+        self._mem_read_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.read_memory(address, size),
+            on_success=lambda r: self._on_mem_read_success(address, r),
+            on_error=self._on_mem_read_error,
+        )
 
-        if data is None:
-            data = b""
+    def _on_mem_read_success(self, address: int, result: object) -> None:
+        """Handle successful memory read.
 
+        Args:
+            address: The read address.
+            result: The memory data bytes.
+        """
+        data: bytes = result if isinstance(result, bytes) else b""
         self._mem_dump.setPlainText(self._format_hex_dump(address, data))
+        self._mem_read_btn.setEnabled(True)
+
+    def _on_mem_read_error(self, exc: object) -> None:
+        """Handle memory read failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console_output.appendPlainText(f"[-] Memory read failed: {exc}")
+        _logger.warning("x64dbg_mem_read_failed", extra={"error": str(exc)})
+        self._mem_read_btn.setEnabled(True)
 
     def _on_execute_command(self) -> None:
         """Execute a raw x64dbg command."""
@@ -703,34 +850,59 @@ class X64DbgPanel(QWidget):
         self._console_input.clear()
         self._console_output.appendPlainText(f"> {cmd}")
 
-        try:
-            result = run_bridge_coroutine(self._bridge.run_command(cmd))
-            if result:
-                self._console_output.appendPlainText(result)
-        except Exception as e:
-            self._console_output.appendPlainText(f"[-] Command failed: {e}")
-            _logger.exception("x64dbg_command_failed", extra={"error": str(e)})
+        self._run_async(
+            self._bridge.run_command(cmd),
+            on_success=self._on_command_result,
+            on_error=self._on_command_error,
+        )
+
+    def _on_command_result(self, result: object) -> None:
+        """Handle command execution result.
+
+        Args:
+            result: The command output string.
+        """
+        if result:
+            self._console_output.appendPlainText(str(result))
+
+    def _on_command_error(self, exc: object) -> None:
+        """Handle command execution failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console_output.appendPlainText(f"[-] Command failed: {exc}")
+        _logger.warning("x64dbg_command_failed", extra={"error": str(exc)})
 
     def _refresh_state(self) -> None:
-        """Refresh registers and disassembly after state change."""
+        """Refresh registers, modules, threads, and state after change."""
         self._refresh_registers()
         self._refresh_breakpoints()
         self._refresh_stack()
+        self._refresh_modules()
+        self._refresh_threads()
 
     def _refresh_registers(self) -> None:
         """Refresh the register table from bridge."""
         if self._bridge is None:
             return
 
-        try:
-            regs = run_bridge_coroutine(self._bridge.get_registers())
-        except Exception:
-            _logger.exception("x64dbg_refresh_registers_failed")
+        self._run_async(
+            self._bridge.get_registers(),
+            on_success=self._apply_registers,
+            on_error=lambda _: _logger.warning("x64dbg_refresh_registers_failed"),
+        )
+
+    def _apply_registers(self, result: object) -> None:
+        """Apply register data to the table.
+
+        Args:
+            result: Register state from the bridge.
+        """
+        if result is None:
             return
 
-        if regs is None:
-            return
-
+        regs = result
         self._reg_table.blockSignals(True)
         self._reg_table.setRowCount(0)
 
@@ -763,19 +935,30 @@ class X64DbgPanel(QWidget):
         if self._bridge is None:
             return
 
-        try:
-            lines = run_bridge_coroutine(self._bridge.disassemble_at(address, 30))
-        except Exception:
-            _logger.exception("x64dbg_refresh_disasm_failed", extra={"address": hex(address)})
+        self._run_async(
+            self._bridge.disassemble_at(address, 30),
+            on_success=self._apply_disassembly,
+            on_error=lambda _: _logger.warning("x64dbg_refresh_disasm_failed", extra={"address": hex(address)}),
+        )
+
+    def _apply_disassembly(self, result: object) -> None:
+        """Apply disassembly data to the view.
+
+        Args:
+            result: Disassembly lines from the bridge.
+        """
+        if not result:
             return
 
-        if not lines:
-            return
-
+        lines: list[object] = [*result] if isinstance(result, list) else []
         text_lines: list[str] = []
         for dl in lines:
-            addr_str = f"0x{dl.address:016X}" if self._is_64bit else f"0x{dl.address:08X}"
-            text_lines.append(f"{addr_str}  {dl.bytes_str:<24s}  {dl.mnemonic} {dl.operands}")
+            addr = getattr(dl, "address", 0)
+            addr_str = f"0x{addr:016X}" if self._is_64bit else f"0x{addr:08X}"
+            bytes_str = getattr(dl, "bytes_str", "")
+            mnemonic = getattr(dl, "mnemonic", "")
+            operands = getattr(dl, "operands", "")
+            text_lines.append(f"{addr_str}  {bytes_str:<24s}  {mnemonic} {operands}")
 
         self._disasm_view.setPlainText("\n".join(text_lines))
 
@@ -784,51 +967,118 @@ class X64DbgPanel(QWidget):
         if self._bridge is None:
             return
 
-        try:
-            bps = run_bridge_coroutine(self._bridge.get_breakpoints())
-        except Exception:
-            _logger.exception("x64dbg_refresh_breakpoints_failed")
-            return
+        self._run_async(
+            self._bridge.get_breakpoints(),
+            on_success=self._apply_breakpoints,
+            on_error=lambda _: _logger.warning("x64dbg_refresh_breakpoints_failed"),
+        )
 
-        if bps is None:
-            bps = []
+    def _apply_breakpoints(self, result: object) -> None:
+        """Apply breakpoint data to the table.
+
+        Args:
+            result: Breakpoint list from the bridge.
+        """
+        bps: list[object] = [*result] if isinstance(result, list) else []
 
         self._bp_table.setRowCount(0)
         for bp in bps:
             row = self._bp_table.rowCount()
             self._bp_table.insertRow(row)
-            self._bp_table.setItem(row, 0, QTableWidgetItem(f"0x{bp.address:X}"))
-            self._bp_table.setItem(row, 1, QTableWidgetItem(bp.bp_type))
-            self._bp_table.setItem(row, 2, QTableWidgetItem(bp.condition or ""))
-            self._bp_table.setItem(row, 3, QTableWidgetItem(str(bp.hit_count)))
-            self._bp_table.setItem(row, 4, QTableWidgetItem("Yes" if bp.enabled else "No"))
+            self._bp_table.setItem(row, 0, QTableWidgetItem(f"0x{getattr(bp, 'address', 0):X}"))
+            self._bp_table.setItem(row, 1, QTableWidgetItem(getattr(bp, "bp_type", "")))
+            self._bp_table.setItem(row, 2, QTableWidgetItem(getattr(bp, "condition", "") or ""))
+            self._bp_table.setItem(row, 3, QTableWidgetItem(str(getattr(bp, "hit_count", 0))))
+            self._bp_table.setItem(row, 4, QTableWidgetItem("Yes" if getattr(bp, "enabled", False) else "No"))
 
     def _refresh_stack(self) -> None:
         """Refresh the stack trace table from bridge."""
         if self._bridge is None:
             return
 
-        try:
-            frames = run_bridge_coroutine(self._bridge.get_stack_trace())
-        except Exception:
-            _logger.exception("x64dbg_refresh_stack_failed")
-            return
+        self._run_async(
+            self._bridge.get_stack_trace(),
+            on_success=self._apply_stack,
+            on_error=lambda _: _logger.warning("x64dbg_refresh_stack_failed"),
+        )
 
-        if frames is None:
-            frames = []
+    def _apply_stack(self, result: object) -> None:
+        """Apply stack trace data to the table.
+
+        Args:
+            result: Stack frame list from the bridge.
+        """
+        frames: list[object] = [*result] if isinstance(result, list) else []
 
         self._stack_table.setRowCount(0)
         for frame in frames:
             row = self._stack_table.rowCount()
             self._stack_table.insertRow(row)
-            self._stack_table.setItem(row, 0, QTableWidgetItem(f"0x{frame.address:X}"))
-            self._stack_table.setItem(row, 1, QTableWidgetItem(f"0x{frame.return_address:X}"))
+            self._stack_table.setItem(row, 0, QTableWidgetItem(f"0x{getattr(frame, 'address', 0):X}"))
+            self._stack_table.setItem(row, 1, QTableWidgetItem(f"0x{getattr(frame, 'return_address', 0):X}"))
             info_parts: list[str] = []
-            if frame.function_name:
-                info_parts.append(frame.function_name)
-            if frame.module_name:
-                info_parts.append(f"[{frame.module_name}]")
+            fn = getattr(frame, "function_name", "")
+            mod = getattr(frame, "module_name", "")
+            if fn:
+                info_parts.append(fn)
+            if mod:
+                info_parts.append(f"[{mod}]")
             self._stack_table.setItem(row, 2, QTableWidgetItem(" ".join(info_parts)))
+
+    def _refresh_modules(self) -> None:
+        """Refresh the modules table from bridge."""
+        if self._bridge is None:
+            return
+
+        self._run_async(
+            self._bridge.get_modules(),
+            on_success=self._apply_modules,
+            on_error=lambda _: _logger.warning("x64dbg_refresh_modules_failed"),
+        )
+
+    def _apply_modules(self, result: object) -> None:
+        """Apply module data to the table.
+
+        Args:
+            result: Module list from the bridge.
+        """
+        modules: list[object] = [*result] if isinstance(result, list) else []
+
+        self._module_table.setRowCount(0)
+        for mod in modules:
+            row = self._module_table.rowCount()
+            self._module_table.insertRow(row)
+            self._module_table.setItem(row, 0, QTableWidgetItem(getattr(mod, "name", "")))
+            self._module_table.setItem(row, 1, QTableWidgetItem(f"0x{getattr(mod, 'base_address', 0):X}"))
+            self._module_table.setItem(row, 2, QTableWidgetItem(f"0x{getattr(mod, 'size', 0):X}"))
+            self._module_table.setItem(row, 3, QTableWidgetItem(str(getattr(mod, "path", ""))))
+
+    def _refresh_threads(self) -> None:
+        """Refresh the threads table from bridge."""
+        if self._bridge is None:
+            return
+
+        self._run_async(
+            self._bridge.get_threads(),
+            on_success=self._apply_threads,
+            on_error=lambda _: _logger.warning("x64dbg_refresh_threads_failed"),
+        )
+
+    def _apply_threads(self, result: object) -> None:
+        """Apply thread data to the table.
+
+        Args:
+            result: Thread list from the bridge.
+        """
+        threads: list[object] = [*result] if isinstance(result, list) else []
+
+        self._thread_table.setRowCount(0)
+        for thr in threads:
+            row = self._thread_table.rowCount()
+            self._thread_table.insertRow(row)
+            self._thread_table.setItem(row, 0, QTableWidgetItem(str(getattr(thr, "tid", 0))))
+            self._thread_table.setItem(row, 1, QTableWidgetItem(str(getattr(thr, "priority", 0))))
+            self._thread_table.setItem(row, 2, QTableWidgetItem(getattr(thr, "state", "")))
 
     @staticmethod
     def _format_hex_dump(address: int, data: bytes) -> str:

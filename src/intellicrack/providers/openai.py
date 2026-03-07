@@ -11,7 +11,6 @@ chat completion and tool/function calling.
 
 from __future__ import annotations
 
-import json
 import time
 from typing import TYPE_CHECKING, TypedDict, cast, override
 
@@ -46,7 +45,7 @@ from ..core.types import (
     ToolCall,
     ToolDefinition,
 )
-from .base import LLMProviderBase, create_openai_tool_schema
+from .base import LLMProviderBase, ToolCallBufferManager, create_openai_tool_schema
 
 
 _ERR_NOT_CONNECTED = "Not connected to OpenAI API"
@@ -150,10 +149,77 @@ class OpenAIProvider(LLMProviderBase):
 
     async def disconnect(self) -> None:
         """Disconnect from OpenAI API."""
-        await super().disconnect()
-        self._client = None
-        self._current_task = None
-        self._logger.info("openai_disconnected", extra={"success": True})
+        try:
+            await super().disconnect()
+            self._client = None
+            self._current_task = None
+            self._logger.info("openai_disconnected", extra={"success": True})
+        except Exception as exc:
+            self._logger.warning("disconnect_cleanup_error", extra={"error": str(exc)})
+            self._connected = False
+
+    @staticmethod
+    def _is_chat_model(model_id: str) -> bool:
+        """Determine if a model ID corresponds to a chat-capable model.
+
+        Args:
+            model_id: OpenAI model identifier.
+
+        Returns:
+            True if the model supports chat completions.
+        """
+        non_chat_prefixes = (
+            "text-embedding-",
+            "dall-e-",
+            "whisper-",
+            "tts-",
+            "text-moderation-",
+            "davinci-",
+            "babbage-",
+            "canary-",
+            "codex-",
+            "text-davinci-",
+            "text-babbage-",
+            "text-curie-",
+            "text-ada-",
+            "code-davinci-",
+            "code-cushman-",
+        )
+        return not model_id.startswith(non_chat_prefixes)
+
+    @staticmethod
+    def _infer_context_window(model_id: str) -> int:
+        """Infer context window size from model ID prefix patterns.
+
+        Args:
+            model_id: OpenAI model identifier.
+
+        Returns:
+            Estimated context window in tokens.
+        """
+        if model_id.startswith(("o1", "o3", "o4")):
+            return 200000
+        if model_id.startswith(("gpt-4o", "gpt-4-turbo", "gpt-4.1", "gpt-4.5")):
+            return 128000
+        if model_id.startswith("gpt-4-") and "turbo" not in model_id:
+            return 8192
+        if model_id.startswith("gpt-3.5"):
+            return 16385
+        return 128000
+
+    @staticmethod
+    def _infer_supports_vision(model_id: str) -> bool:
+        """Infer vision support from model ID prefix patterns.
+
+        Args:
+            model_id: OpenAI model identifier.
+
+        Returns:
+            True if the model likely supports image inputs.
+        """
+        if model_id.startswith(("gpt-4o", "o1", "o3", "o4", "gpt-4-turbo", "gpt-4.1", "gpt-4.5")):
+            return True
+        return "vision" in model_id
 
     async def list_models(self) -> list[ModelInfo]:
         """Dynamically fetch available models from OpenAI.
@@ -175,19 +241,14 @@ class OpenAIProvider(LLMProviderBase):
                 model_id = model_data.id
                 if not self._is_chat_model(model_id):
                     continue
-
-                context_window = self._get_context_window(model_id)
-                supports_tools = self._supports_tools(model_id)
-                supports_vision = self._supports_vision(model_id)
-
                 models.append(
                     ModelInfo(
                         id=model_id,
                         name=model_id,
                         provider=ProviderName.OPENAI,
-                        context_window=context_window,
-                        supports_tools=supports_tools,
-                        supports_vision=supports_vision,
+                        context_window=self._infer_context_window(model_id),
+                        supports_tools=True,
+                        supports_vision=self._infer_supports_vision(model_id),
                         supports_streaming=True,
                         input_cost_per_1m_tokens=None,
                         output_cost_per_1m_tokens=None,
@@ -207,63 +268,6 @@ class OpenAIProvider(LLMProviderBase):
             raise ProviderError(_ERR_LIST_MODELS_FAILED % e) from e
         else:
             return sorted_models
-
-    @staticmethod
-    def _is_chat_model(model_id: str) -> bool:
-        """Check if model supports chat completions.
-
-        Args:
-            model_id: The model identifier.
-
-        Returns:
-            True if model supports chat.
-        """
-        chat_prefixes = ("gpt-4", "gpt-3.5", "o1", "o3", "chatgpt")
-        return any(model_id.startswith(prefix) for prefix in chat_prefixes)
-
-    @staticmethod
-    def _get_context_window(model_id: str) -> int:
-        """Get context window size for a model.
-
-        Args:
-            model_id: The model identifier.
-
-        Returns:
-            Context window size in tokens.
-        """
-        if "128k" in model_id or "gpt-4o" in model_id or "gpt-4-turbo" in model_id:
-            return 128000
-        if "32k" in model_id:
-            return 32768
-        if "16k" in model_id:
-            return 16384
-        if "gpt-4" in model_id:
-            return 8192
-        return 4096 if "gpt-3.5" in model_id else 8192
-
-    @staticmethod
-    def _supports_tools(model_id: str) -> bool:
-        """Check if model supports function calling.
-
-        Args:
-            model_id: The model identifier.
-
-        Returns:
-            True if model supports tools.
-        """
-        return "gpt-4" in model_id or "gpt-3.5-turbo" in model_id
-
-    @staticmethod
-    def _supports_vision(model_id: str) -> bool:
-        """Check if model supports image input.
-
-        Args:
-            model_id: The model identifier.
-
-        Returns:
-            True if model supports vision.
-        """
-        return "vision" in model_id or "gpt-4o" in model_id or "gpt-4-turbo" in model_id
 
     async def chat(
         self,
@@ -473,11 +477,26 @@ class OpenAIProvider(LLMProviderBase):
                     stream=True,
                 )
 
+            tc_buffer = ToolCallBufferManager()
+
             async for chunk in stream:
                 if self._cancel_requested:
                     break
-                if chunk.choices and chunk.choices[0].delta.content:
-                    yield chunk.choices[0].delta.content
+                if not chunk.choices:
+                    continue
+                delta = chunk.choices[0].delta
+                if delta.content:
+                    yield delta.content
+                if delta.tool_calls:
+                    for tc_delta in delta.tool_calls:
+                        tc_buffer.accumulate(
+                            index=tc_delta.index,
+                            call_id=tc_delta.id,
+                            name=tc_delta.function.name if tc_delta.function else None,
+                            arguments=tc_delta.function.arguments if tc_delta.function else None,
+                        )
+
+            self._pending_tool_calls = tc_buffer.finalize()
 
         except openai.RateLimitError as e:
             self._logger.exception(
@@ -522,49 +541,7 @@ class OpenAIProvider(LLMProviderBase):
         Returns:
             List of messages in OpenAI's format.
         """
-        openai_messages: list[dict[str, object]] = []
-
-        for msg in messages:
-            if msg.role == "system":
-                openai_messages.append({
-                    "role": "system",
-                    "content": msg.content,
-                })
-            elif msg.role == "user":
-                openai_messages.append({
-                    "role": "user",
-                    "content": msg.content,
-                })
-            elif msg.role == "assistant":
-                assistant_msg: dict[str, object] = {
-                    "role": "assistant",
-                    "content": msg.content,
-                }
-
-                if msg.tool_calls:
-                    assistant_msg["tool_calls"] = [
-                        {
-                            "id": tc.id,
-                            "type": "function",
-                            "function": {
-                                "name": tc.function_name,
-                                "arguments": json.dumps(tc.arguments),
-                            },
-                        }
-                        for tc in msg.tool_calls
-                    ]
-
-                openai_messages.append(assistant_msg)
-            elif msg.role == "tool" and msg.tool_results:
-                for tr in msg.tool_results:
-                    result_content = tr.result if isinstance(tr.result, str) else json.dumps(tr.result)
-                    openai_messages.append({
-                        "role": "tool",
-                        "tool_call_id": tr.call_id,
-                        "content": result_content,
-                    })
-
-        return openai_messages
+        return self._convert_messages_to_openai_format(messages)
 
     @override
     def _convert_tools_to_provider_format(

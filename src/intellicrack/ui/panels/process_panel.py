@@ -11,9 +11,8 @@ and memory map inspection for target process analysis.
 
 from __future__ import annotations
 
-import ctypes
-import ctypes.wintypes
 import struct
+import sys
 
 from PyQt6.QtCore import QModelIndex, Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QFont
@@ -34,10 +33,12 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels._qt_compat import set_header_labels, set_sorting_enabled
+from intellicrack.ui.panels.qt_compat import set_header_labels, set_sorting_enabled
 
 
 _logger = get_logger("ui.panels.process")
+
+_WINDOWS = sys.platform == "win32"
 
 _BITS_PER_BYTE = 8
 _POINTER_BITS_64 = 64
@@ -53,71 +54,70 @@ _TH32CS_SNAPPROCESS = 0x00000002
 _TH32CS_SNAPMODULE = 0x00000008
 _TH32CS_SNAPMODULE32 = 0x00000010
 _TH32CS_SNAPTHREAD = 0x00000004
-_INVALID_HANDLE_VALUE = ctypes.c_void_p(-1).value or 0
 _PROCESS_QUERY_INFORMATION = 0x0400
 _PROCESS_VM_READ = 0x0010
 _PROCESS_TERMINATE = 0x0001
 
+if sys.platform == "win32":
+    import ctypes.wintypes
 
-class _PROCESSENTRY32(ctypes.Structure):
-    _fields_ = [
-        ("dwSize", ctypes.wintypes.DWORD),
-        ("cntUsage", ctypes.wintypes.DWORD),
-        ("th32ProcessID", ctypes.wintypes.DWORD),
-        ("th32DefaultHeapID", ctypes.POINTER(ctypes.c_ulong)),
-        ("th32ModuleID", ctypes.wintypes.DWORD),
-        ("cntThreads", ctypes.wintypes.DWORD),
-        ("th32ParentProcessID", ctypes.wintypes.DWORD),
-        ("pcPriClassBase", ctypes.c_long),
-        ("dwFlags", ctypes.wintypes.DWORD),
-        ("szExeFile", ctypes.c_char * 260),
-    ]
+    _INVALID_HANDLE_VALUE: int = ctypes.c_void_p(-1).value or 0
 
+    class _PROCESSENTRY32(ctypes.Structure):
+        _fields_ = [
+            ("dwSize", ctypes.wintypes.DWORD),
+            ("cntUsage", ctypes.wintypes.DWORD),
+            ("th32ProcessID", ctypes.wintypes.DWORD),
+            ("th32DefaultHeapID", ctypes.POINTER(ctypes.c_ulong)),
+            ("th32ModuleID", ctypes.wintypes.DWORD),
+            ("cntThreads", ctypes.wintypes.DWORD),
+            ("th32ParentProcessID", ctypes.wintypes.DWORD),
+            ("pcPriClassBase", ctypes.c_long),
+            ("dwFlags", ctypes.wintypes.DWORD),
+            ("szExeFile", ctypes.c_char * 260),
+        ]
 
-class _MODULEENTRY32(ctypes.Structure):
-    _fields_ = [
-        ("dwSize", ctypes.wintypes.DWORD),
-        ("th32ModuleID", ctypes.wintypes.DWORD),
-        ("th32ProcessID", ctypes.wintypes.DWORD),
-        ("GlblcntUsage", ctypes.wintypes.DWORD),
-        ("ProccntUsage", ctypes.wintypes.DWORD),
-        ("modBaseAddr", ctypes.POINTER(ctypes.c_byte)),
-        ("modBaseSize", ctypes.wintypes.DWORD),
-        ("hModule", ctypes.wintypes.HMODULE),
-        ("szModule", ctypes.c_char * 256),
-        ("szExePath", ctypes.c_char * 260),
-    ]
+    class _MODULEENTRY32(ctypes.Structure):
+        _fields_ = [
+            ("dwSize", ctypes.wintypes.DWORD),
+            ("th32ModuleID", ctypes.wintypes.DWORD),
+            ("th32ProcessID", ctypes.wintypes.DWORD),
+            ("GlblcntUsage", ctypes.wintypes.DWORD),
+            ("ProccntUsage", ctypes.wintypes.DWORD),
+            ("modBaseAddr", ctypes.POINTER(ctypes.c_byte)),
+            ("modBaseSize", ctypes.wintypes.DWORD),
+            ("hModule", ctypes.wintypes.HMODULE),
+            ("szModule", ctypes.c_char * 256),
+            ("szExePath", ctypes.c_char * 260),
+        ]
 
+    class _THREADENTRY32(ctypes.Structure):
+        _fields_ = [
+            ("dwSize", ctypes.wintypes.DWORD),
+            ("cntUsage", ctypes.wintypes.DWORD),
+            ("th32ThreadID", ctypes.wintypes.DWORD),
+            ("th32OwnerProcessID", ctypes.wintypes.DWORD),
+            ("tpBasePri", ctypes.c_long),
+            ("tpDeltaPri", ctypes.c_long),
+            ("dwFlags", ctypes.wintypes.DWORD),
+        ]
 
-class _THREADENTRY32(ctypes.Structure):
-    _fields_ = [
-        ("dwSize", ctypes.wintypes.DWORD),
-        ("cntUsage", ctypes.wintypes.DWORD),
-        ("th32ThreadID", ctypes.wintypes.DWORD),
-        ("th32OwnerProcessID", ctypes.wintypes.DWORD),
-        ("tpBasePri", ctypes.c_long),
-        ("tpDeltaPri", ctypes.c_long),
-        ("dwFlags", ctypes.wintypes.DWORD),
-    ]
+    class _ProcessMemoryCounters(ctypes.Structure):
+        _fields_ = [
+            ("cb", ctypes.wintypes.DWORD),
+            ("PageFaultCount", ctypes.wintypes.DWORD),
+            ("PeakWorkingSetSize", ctypes.c_size_t),
+            ("WorkingSetSize", ctypes.c_size_t),
+            ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
+            ("QuotaPagedPoolUsage", ctypes.c_size_t),
+            ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
+            ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+            ("PagefileUsage", ctypes.c_size_t),
+            ("PeakPagefileUsage", ctypes.c_size_t),
+        ]
 
-
-class _ProcessMemoryCounters(ctypes.Structure):
-    _fields_ = [
-        ("cb", ctypes.wintypes.DWORD),
-        ("PageFaultCount", ctypes.wintypes.DWORD),
-        ("PeakWorkingSetSize", ctypes.c_size_t),
-        ("WorkingSetSize", ctypes.c_size_t),
-        ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
-        ("QuotaPagedPoolUsage", ctypes.c_size_t),
-        ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
-        ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
-        ("PagefileUsage", ctypes.c_size_t),
-        ("PeakPagefileUsage", ctypes.c_size_t),
-    ]
-
-
-_kernel32 = ctypes.windll.kernel32
-_psapi = ctypes.windll.psapi
+    _kernel32 = ctypes.windll.kernel32
+    _psapi = ctypes.windll.psapi
 
 
 def _enumerate_processes() -> list[dict[str, int | str]]:
@@ -126,6 +126,9 @@ def _enumerate_processes() -> list[dict[str, int | str]]:
     Returns:
         List of process info dicts with pid, name, thread_count fields.
     """
+    if not _WINDOWS:
+        return []
+
     results: list[dict[str, int | str]] = []
     snapshot = _kernel32.CreateToolhelp32Snapshot(_TH32CS_SNAPPROCESS, 0)
     if snapshot == _INVALID_HANDLE_VALUE:
@@ -160,6 +163,9 @@ def _get_process_memory_mb(pid: int) -> float:
     Returns:
         Working set size in MB, or 0.0 on failure.
     """
+    if not _WINDOWS:
+        return 0.0
+
     handle = _kernel32.OpenProcess(_PROCESS_QUERY_INFORMATION | _PROCESS_VM_READ, False, pid)
     if not handle:
         return 0.0
@@ -184,6 +190,9 @@ def _detect_process_architecture(pid: int) -> str:
     Returns:
         One of 'x64', 'x86', or 'Unknown'.
     """
+    if not _WINDOWS:
+        return "Unknown"
+
     handle = _kernel32.OpenProcess(_PROCESS_QUERY_INFORMATION, False, pid)
     if not handle:
         return "Unknown"
@@ -210,6 +219,9 @@ def _enumerate_modules(pid: int) -> list[dict[str, str | int]]:
     Returns:
         List of module info dicts with name, path, base_addr, size fields.
     """
+    if not _WINDOWS:
+        return []
+
     results: list[dict[str, str | int]] = []
     flags = _TH32CS_SNAPMODULE | _TH32CS_SNAPMODULE32
     snapshot = _kernel32.CreateToolhelp32Snapshot(flags, pid)
@@ -248,6 +260,9 @@ def _enumerate_threads(pid: int) -> list[dict[str, int]]:
     Returns:
         List of thread info dicts with thread_id and priority fields.
     """
+    if not _WINDOWS:
+        return []
+
     results: list[dict[str, int]] = []
     snapshot = _kernel32.CreateToolhelp32Snapshot(_TH32CS_SNAPTHREAD, 0)
     if snapshot == _INVALID_HANDLE_VALUE:
@@ -608,7 +623,7 @@ class ProcessPanel(QWidget):
 
     def _on_terminate(self) -> None:
         """Terminate the selected process."""
-        if self._selected_pid is None:
+        if self._selected_pid is None or not _WINDOWS:
             return
 
         try:

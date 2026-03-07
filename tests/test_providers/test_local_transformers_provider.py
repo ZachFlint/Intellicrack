@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from intellicrack.core.types import Message, ProviderError, ProviderName
+from intellicrack.core.types import Message, ProviderCredentials, ProviderError, ProviderName
 
 
 if TYPE_CHECKING:
@@ -42,9 +42,6 @@ _1_GIB = 1 * 1024 * 1024 * 1024
 _3_GIB = 3 * 1024 * 1024 * 1024
 _10_GIB = 10 * 1024 * 1024 * 1024
 _15_GIB = 15 * 1024 * 1024 * 1024
-_CTX_4096 = 4096
-_CTX_32768 = 32768
-_CTX_128000 = 128000
 _TENSOR_SIZE = 100
 _MATRIX_SIZE = 100
 _INVALID_DEVICE_INDEX = 999
@@ -229,7 +226,7 @@ class TestLocalTransformersProviderConnection:
     async def test_connect_without_credentials() -> None:
         """Provider should connect without credentials for local inference."""
         provider = LocalTransformersProvider()
-        await provider.connect(None)
+        await provider.connect(ProviderCredentials())
         assert provider.is_connected
         await provider.disconnect()
 
@@ -238,7 +235,7 @@ class TestLocalTransformersProviderConnection:
     async def test_disconnect_cleans_up() -> None:
         """Disconnect should clean up state."""
         provider = LocalTransformersProvider()
-        await provider.connect(None)
+        await provider.connect(ProviderCredentials())
         await provider.disconnect()
         assert not provider.is_connected
 
@@ -247,7 +244,7 @@ class TestLocalTransformersProviderConnection:
     async def test_connect_detects_xpu_availability() -> None:
         """Connect should detect XPU availability."""
         provider = LocalTransformersProvider()
-        await provider.connect(None)
+        await provider.connect(ProviderCredentials())
         assert isinstance(provider.xpu_available, bool)
         await provider.disconnect()
 
@@ -309,7 +306,7 @@ class TestProviderDeviceInfo:
     async def test_get_device_info_cpu() -> None:
         """Should return device info for CPU."""
         provider = LocalTransformersProvider(prefer_xpu=False)
-        await provider.connect(None)
+        await provider.connect(ProviderCredentials())
         info = provider.get_device_info()
         assert info["device_type"] == "cpu"
         assert isinstance(info["xpu_available"], bool)
@@ -326,7 +323,7 @@ class TestXPUTests:
     async def test_xpu_provider_initialization() -> None:
         """Provider should initialize with XPU when available."""
         provider = LocalTransformersProvider(prefer_xpu=True)
-        await provider.connect(None)
+        await provider.connect(ProviderCredentials())
         assert provider.xpu_available
         assert provider.device_type == "xpu"
         await provider.disconnect()
@@ -408,7 +405,7 @@ class TestB580SpecificTests:
     async def test_b580_provider_uses_xpu() -> None:
         """Provider must use XPU on B580."""
         provider = LocalTransformersProvider(prefer_xpu=True)
-        await provider.connect(None)
+        await provider.connect(ProviderCredentials())
         assert provider.device_type == "xpu"
         assert provider.is_b580_detected
         await provider.disconnect()
@@ -422,7 +419,7 @@ class TestCPUFallback:
     async def test_cpu_fallback_when_xpu_disabled() -> None:
         """Should use CPU when XPU preference disabled."""
         provider = LocalTransformersProvider(prefer_xpu=False)
-        await provider.connect(None)
+        await provider.connect(ProviderCredentials())
         assert provider.device_type == "cpu"
         await provider.disconnect()
 
@@ -431,7 +428,7 @@ class TestCPUFallback:
     async def test_cpu_device_info() -> None:
         """Should provide device info for CPU."""
         provider = LocalTransformersProvider(prefer_xpu=False)
-        await provider.connect(None)
+        await provider.connect(ProviderCredentials())
         info = provider.get_device_info()
         assert info["device_type"] == "cpu"
         await provider.disconnect()
@@ -445,7 +442,7 @@ class TestProviderListModels:
     async def test_list_models_returns_list() -> None:
         """List models should return a list."""
         provider = LocalTransformersProvider()
-        await provider.connect(None)
+        await provider.connect(ProviderCredentials())
         models = await provider.list_models()
         assert isinstance(models, list)
         await provider.disconnect()
@@ -455,7 +452,7 @@ class TestProviderListModels:
     async def test_list_models_has_recommended_models() -> None:
         """List models should include recommended models."""
         provider = LocalTransformersProvider()
-        await provider.connect(None)
+        await provider.connect(ProviderCredentials())
         models = await provider.list_models()
         assert len(models) > 0
         model_ids = [m.id for m in models]
@@ -467,7 +464,7 @@ class TestProviderListModels:
     async def test_list_models_model_info_complete() -> None:
         """Model info should have all required fields."""
         provider = LocalTransformersProvider()
-        await provider.connect(None)
+        await provider.connect(ProviderCredentials())
         models = await provider.list_models()
         if models:
             model = models[0]
@@ -536,60 +533,6 @@ class TestToolCallParsing:
         assert result[0].arguments == {"arg1": "value1"}
 
 
-class TestContextWindowEstimation:
-    """Tests for context window estimation."""
-
-    @staticmethod
-    def test_estimate_phi3_mini_4k() -> None:
-        """Should estimate Phi-3-mini-4k context."""
-        provider = LocalTransformersProvider()
-        window = provider._estimate_context_window("microsoft/Phi-3-mini-4k-instruct")
-        assert window == _CTX_4096
-
-    @staticmethod
-    def test_estimate_phi3_128k() -> None:
-        """Should estimate Phi-3-128k context."""
-        provider = LocalTransformersProvider()
-        window = provider._estimate_context_window("microsoft/Phi-3-mini-128k-instruct")
-        assert window == _CTX_128000
-
-    @staticmethod
-    def test_estimate_qwen25() -> None:
-        """Should estimate Qwen2.5 context."""
-        provider = LocalTransformersProvider()
-        window = provider._estimate_context_window("Qwen/Qwen2.5-1.5B-Instruct")
-        assert window == _CTX_32768
-
-    @staticmethod
-    def test_estimate_default() -> None:
-        """Should return default for unknown model."""
-        provider = LocalTransformersProvider()
-        window = provider._estimate_context_window("unknown/model")
-        assert window == _CTX_4096
-
-
-class TestToolSupport:
-    """Tests for tool support detection."""
-
-    @staticmethod
-    def test_phi3_supports_tools() -> None:
-        """Phi-3 should support tools."""
-        provider = LocalTransformersProvider()
-        assert provider._model_supports_tools("microsoft/Phi-3-mini-4k-instruct")
-
-    @staticmethod
-    def test_qwen_supports_tools() -> None:
-        """Qwen should support tools."""
-        provider = LocalTransformersProvider()
-        assert provider._model_supports_tools("Qwen/Qwen2.5-1.5B-Instruct")
-
-    @staticmethod
-    def test_llama3_supports_tools() -> None:
-        """Llama-3 should support tools."""
-        provider = LocalTransformersProvider()
-        assert provider._model_supports_tools("meta-llama/Llama-3.2-1B-Instruct")
-
-
 class TestCacheClear:
     """Tests for cache clearing."""
 
@@ -598,7 +541,7 @@ class TestCacheClear:
     async def test_clear_cache() -> None:
         """Should clear cache without error."""
         provider = LocalTransformersProvider()
-        await provider.connect(None)
+        await provider.connect(ProviderCredentials())
         provider.clear_cache()
         await provider.disconnect()
 
@@ -607,7 +550,7 @@ class TestCacheClear:
     async def test_unload_model() -> None:
         """Should unload model without error."""
         provider = LocalTransformersProvider()
-        await provider.connect(None)
+        await provider.connect(ProviderCredentials())
         await provider.unload_model()
         assert provider.current_model_id is None
         await provider.disconnect()

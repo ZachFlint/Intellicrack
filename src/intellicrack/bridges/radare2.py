@@ -1218,6 +1218,14 @@ class Radare2Bridge(StaticAnalysisBridge):
         """
         return await self._get_exports_internal() if self._analyzed else []
 
+    async def get_sections(self) -> list[SectionInfo]:
+        """Get binary section information.
+
+        Returns:
+            List of section info.
+        """
+        return await self._get_sections_internal() if self._analyzed else []
+
     async def rename_function(self, address: int, new_name: str) -> bool:
         """Rename a function.
 

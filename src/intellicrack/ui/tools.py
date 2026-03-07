@@ -14,6 +14,7 @@ Frida, Binary) and specialized panels (Licensing, Scripts, Stack).
 from __future__ import annotations
 
 import importlib
+import inspect
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Protocol, cast, runtime_checkable
 
@@ -289,6 +290,14 @@ class SandboxPanelProtocol(ToolWidget, Protocol):
         """
         _ = self
         return None
+
+    def set_sandbox_manager(self, manager: object) -> None:
+        """Set the sandbox manager for type-aware sandbox creation.
+
+        Args:
+            manager: SandboxManager instance.
+        """
+        _ = (self, manager)
 
 
 if TYPE_CHECKING:
@@ -912,9 +921,20 @@ class ToolOutputPanel(QFrame):
         self._radare2_bridge: object | None = None
         self._frida_bridge: object | None = None
 
+        self._tool_registry: object | None = None
+
         self._pending_sandbox_backend: object | None = None
         self._pending_script_backend: object | None = None
         self._pending_script_validator: object | None = None
+
+    def set_tool_registry(self, registry: object) -> None:
+        """Set the shared tool registry for bridge reuse.
+
+        Args:
+            registry: ToolRegistry instance providing bridge accessors.
+        """
+        self._tool_registry = registry
+        _logger.info("tool_registry_set")
 
     def add_licensing_panel(self) -> LicensingAnalysisPanel:
         """Add the licensing analysis panel as a tab.
@@ -1031,15 +1051,27 @@ class ToolOutputPanel(QFrame):
             self._tab_widget.addTab(qwidget, tab_name)
             self._embedded_tools["x64dbg"] = qwidget
 
-            try:
-                bridge_module = importlib.import_module("intellicrack.bridges.x64dbg")
-                bridge = bridge_module.X64DbgBridge()
+            bridge: object | None = None
+            reg_getter = getattr(self._tool_registry, "get_x64dbg_bridge", None)
+            if callable(reg_getter):
+                try:
+                    bridge = reg_getter()
+                    _logger.info("x64dbg_bridge_from_registry")
+                except Exception:
+                    _logger.debug("x64dbg_bridge_registry_fallback")
+
+            if bridge is None:
+                try:
+                    bridge_module = importlib.import_module("intellicrack.bridges.x64dbg")
+                    bridge = bridge_module.X64DbgBridge()
+                except Exception as bridge_err:
+                    _logger.warning("x64dbg_bridge_create_failed", extra={"error": str(bridge_err)})
+
+            if bridge is not None:
                 self._x64dbg_widget.set_bridge(bridge)
                 self._x64dbg_bridge = bridge
-                self.wire_stack_viewer_bridges()
+                self._wire_stack_viewer_bridges()
                 _logger.info("x64dbg_bridge_set")
-            except Exception as bridge_err:
-                _logger.warning("x64dbg_bridge_set_failed", extra={"error": str(bridge_err)})
 
             _logger.info("x64dbg_tab_added", extra={"is_64bit": is_64bit})
         except Exception as e:
@@ -1084,14 +1116,26 @@ class ToolOutputPanel(QFrame):
             self._tab_widget.addTab(qwidget, "Ghidra")
             self._embedded_tools["ghidra"] = qwidget
 
-            try:
-                bridge_module = importlib.import_module("intellicrack.bridges.ghidra")
-                bridge = bridge_module.GhidraBridge()
+            bridge: object | None = None
+            reg_getter = getattr(self._tool_registry, "get_ghidra_bridge", None)
+            if callable(reg_getter):
+                try:
+                    bridge = reg_getter()
+                    _logger.info("ghidra_bridge_from_registry")
+                except Exception:
+                    _logger.debug("ghidra_bridge_registry_fallback")
+
+            if bridge is None:
+                try:
+                    bridge_module = importlib.import_module("intellicrack.bridges.ghidra")
+                    bridge = bridge_module.GhidraBridge()
+                except Exception as bridge_err:
+                    _logger.warning("ghidra_bridge_create_failed", extra={"error": str(bridge_err)})
+
+            if bridge is not None:
                 self._ghidra_widget.set_bridge(bridge)
                 self._ghidra_bridge = bridge
                 _logger.info("ghidra_bridge_set")
-            except Exception as bridge_err:
-                _logger.warning("ghidra_bridge_set_failed", extra={"error": str(bridge_err)})
 
             _logger.info("ghidra_tab_added")
         except Exception as e:
@@ -1119,14 +1163,26 @@ class ToolOutputPanel(QFrame):
             self._tab_widget.addTab(qwidget, "radare2")
             self._embedded_tools["radare2"] = qwidget
 
-            try:
-                bridge_module = importlib.import_module("intellicrack.bridges.radare2")
-                bridge = bridge_module.Radare2Bridge()
+            bridge: object | None = None
+            reg_getter = getattr(self._tool_registry, "get_radare2_bridge", None)
+            if callable(reg_getter):
+                try:
+                    bridge = reg_getter()
+                    _logger.info("radare2_bridge_from_registry")
+                except Exception:
+                    _logger.debug("radare2_bridge_registry_fallback")
+
+            if bridge is None:
+                try:
+                    bridge_module = importlib.import_module("intellicrack.bridges.radare2")
+                    bridge = bridge_module.Radare2Bridge()
+                except Exception as bridge_err:
+                    _logger.warning("radare2_bridge_create_failed", extra={"error": str(bridge_err)})
+
+            if bridge is not None:
                 self._radare2_widget.set_bridge(bridge)
                 self._radare2_bridge = bridge
                 _logger.info("radare2_bridge_set")
-            except Exception as bridge_err:
-                _logger.warning("radare2_bridge_set_failed", extra={"error": str(bridge_err)})
 
             _logger.info("radare2_tab_added")
         except Exception as e:
@@ -1154,15 +1210,27 @@ class ToolOutputPanel(QFrame):
             self._tab_widget.addTab(qwidget, "Frida")
             self._panels["frida"] = qwidget
 
-            try:
-                bridge_module = importlib.import_module("intellicrack.bridges.frida_bridge")
-                bridge = bridge_module.FridaBridge()
+            bridge: object | None = None
+            reg_getter = getattr(self._tool_registry, "get_frida_bridge", None)
+            if callable(reg_getter):
+                try:
+                    bridge = reg_getter()
+                    _logger.info("frida_bridge_from_registry")
+                except Exception:
+                    _logger.debug("frida_bridge_registry_fallback")
+
+            if bridge is None:
+                try:
+                    bridge_module = importlib.import_module("intellicrack.bridges.frida_bridge")
+                    bridge = bridge_module.FridaBridge()
+                except Exception as bridge_err:
+                    _logger.warning("frida_bridge_create_failed", extra={"error": str(bridge_err)})
+
+            if bridge is not None:
                 self._frida_panel.set_bridge(bridge)
                 self._frida_bridge = bridge
-                self.wire_stack_viewer_bridges()
+                self._wire_stack_viewer_bridges()
                 _logger.info("frida_bridge_set")
-            except Exception as bridge_err:
-                _logger.warning("frida_bridge_set_failed", extra={"error": str(bridge_err)})
 
             _logger.info("frida_tab_added")
         except Exception as e:
@@ -1473,6 +1541,31 @@ class ToolOutputPanel(QFrame):
         if self._stack_panel is not None:
             self._activate_tab_by_widget(self._stack_panel)
 
+    @staticmethod
+    def _cleanup_bridge(bridge: object, bridge_attr: str) -> None:
+        """Safely clean up a bridge, handling both sync and async methods.
+
+        Args:
+            bridge: The bridge instance to clean up.
+            bridge_attr: Attribute name for logging.
+        """
+        async_mod = importlib.import_module(".panels.async_bridge", "intellicrack.ui")
+        run_coro = async_mod.run_bridge_coroutine
+
+        for method_name in ("detach", "shutdown", "stop"):
+            method = getattr(bridge, method_name, None)
+            if method is not None and callable(method):
+                try:
+                    if inspect.iscoroutinefunction(method):
+                        run_coro(method())
+                    else:
+                        method()
+                except Exception:
+                    _logger.debug(
+                        "bridge_cleanup_error",
+                        extra={"bridge": bridge_attr, "method": method_name},
+                    )
+
     def _on_tab_close_requested(self, index: int) -> None:
         """Handle a tab close request.
 
@@ -1519,15 +1612,7 @@ class ToolOutputPanel(QFrame):
                 if bridge_attr is not None:
                     bridge = getattr(self, bridge_attr, None)
                     if bridge is not None:
-                        for method in ("detach", "shutdown", "stop"):
-                            if hasattr(bridge, method):
-                                try:
-                                    getattr(bridge, method)()
-                                except Exception:
-                                    _logger.debug(
-                                        "bridge_cleanup_error",
-                                        extra={"bridge": bridge_attr, "method": method},
-                                    )
+                        self._cleanup_bridge(bridge, bridge_attr)
                         setattr(self, bridge_attr, None)
 
                 setattr(self, attr_name, None)
@@ -1759,7 +1844,7 @@ class ToolOutputPanel(QFrame):
         doc = code_display.document()
         return doc.findChild(QSyntaxHighlighter)
 
-    def wire_stack_viewer_bridges(self) -> None:
+    def _wire_stack_viewer_bridges(self) -> None:
         """Wire bridge instances to the stack viewer panel.
 
         Connects x64dbg and Frida bridges to the stack viewer
@@ -1772,19 +1857,23 @@ class ToolOutputPanel(QFrame):
         if hasattr(self._stack_panel, "set_frida_bridge") and self._frida_bridge is not None:
             self._stack_panel.set_frida_bridge(self._frida_bridge)
 
-    def wire_sandbox_backend(self, sandbox: object) -> None:
-        """Wire a sandbox backend to the sandbox panel.
+    def wire_sandbox_backend(self, sandbox: object, manager: object | None = None) -> None:
+        """Wire a sandbox backend and optional manager to the sandbox panel.
 
         Stores the backend for deferred wiring if the panel hasn't been
-        created yet. If the panel exists, wires immediately.
+        created yet. If the panel exists, wires immediately. When a
+        manager is provided, it is also forwarded to the panel.
 
         Args:
             sandbox: Sandbox backend instance.
+            manager: Optional SandboxManager instance for type-aware creation.
         """
         self._pending_sandbox_backend = sandbox
         if self._sandbox_panel is not None and hasattr(self._sandbox_panel, "set_sandbox"):
             self._sandbox_panel.set_sandbox(sandbox)
             self._pending_sandbox_backend = None
+        if manager is not None and self._sandbox_panel is not None and hasattr(self._sandbox_panel, "set_sandbox_manager"):
+            self._sandbox_panel.set_sandbox_manager(manager)
 
     def wire_script_backend(self, backend: object, validator: object | None = None) -> None:
         """Wire a script generation backend to the script manager.
