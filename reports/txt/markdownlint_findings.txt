@@ -65,7 +65,7 @@ GEMINI.md:133:81 error MD013/line-length Line length [Expected: 80; Actual: 92]
 
 README.md:3:81 error MD013/line-length Line length [Expected: 80; Actual: 179]
 
-README.md:11:81 error MD013/line-length Line length [Expected: 80; Actual: 265]
+README.md:11:81 error MD013/line-length Line length [Expected: 80; Actual: 267]
 
 README.md:15:81 error MD013/line-length Line length [Expected: 80; Actual: 161]
 

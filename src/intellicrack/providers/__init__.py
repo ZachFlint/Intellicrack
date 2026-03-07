@@ -22,7 +22,9 @@ from .base import (
     LLMProviderBase,
     OpenAIFunctionSchema,
     OpenAIToolSchema,
+    ToolCallBufferManager,
     create_anthropic_tool_schema,
+    create_google_tool_schema,
     create_openai_tool_schema,
 )
 from .discovery import DiscoveryCache, DiscoveryEvent, DiscoveryFilter, ModelDiscovery
@@ -86,11 +88,13 @@ __all__: list[str] = [
     "OpenAIToolSchema",
     "OpenRouterProvider",
     "ProviderRegistry",
+    "ToolCallBufferManager",
     "XPUDeviceInfo",
     "check_windows_requirements",
     "clear_global_cache",
     "clear_xpu_cache",
     "create_anthropic_tool_schema",
+    "create_google_tool_schema",
     "create_openai_tool_schema",
     "estimate_model_memory",
     "get_global_model_cache",

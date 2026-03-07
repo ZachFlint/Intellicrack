@@ -12,16 +12,21 @@ Ollama, and OpenRouter.
 
 from __future__ import annotations
 
+import asyncio
 import json
+import random
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict, TypeVar
 
 from ..core.logging import get_logger, log_provider_response
 from ..core.types import (
+    AuthenticationError,
     Message,
     ModelInfo,
     ProviderCredentials,
+    ProviderError,
+    RateLimitError,
     ToolCall,
     ToolDefinition,
 )
@@ -29,9 +34,12 @@ from ..core.types import (
 
 if TYPE_CHECKING:
     import logging
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Awaitable, Callable
 
     from ..core.types import ProviderName
+
+
+_T = TypeVar("_T")
 
 
 _logger = get_logger("providers.base")
@@ -85,6 +93,43 @@ class GoogleFunctionDeclaration(TypedDict):
     parameters: JSONSchemaParameters
 
 
+def parse_tool_call(
+    *,
+    call_id: str,
+    function_name: str,
+    raw_arguments: str | dict[str, object],
+) -> ToolCall:
+    """Parse a tool call from provider-specific data into a ToolCall.
+
+    Handles JSON argument parsing and tool name extraction from
+    dotted function names.
+
+    Args:
+        call_id: Unique identifier for the tool call.
+        function_name: Function name from the provider response.
+        raw_arguments: Arguments as a JSON string or pre-parsed dict.
+
+    Returns:
+        Parsed ToolCall instance.
+    """
+    parsed_args: dict[str, Any]
+    if isinstance(raw_arguments, str):
+        try:
+            parsed_args = json.loads(raw_arguments)
+        except json.JSONDecodeError:
+            parsed_args = {}
+    else:
+        parsed_args = dict(raw_arguments)
+
+    tool_name = function_name.split(".", maxsplit=1)[0] if "." in function_name else function_name
+    return ToolCall(
+        id=call_id,
+        tool_name=tool_name,
+        function_name=function_name,
+        arguments=parsed_args,
+    )
+
+
 class LLMProviderBase(ABC):
     """Abstract base class for LLM providers.
 
@@ -103,6 +148,7 @@ class LLMProviderBase(ABC):
         self._credentials: ProviderCredentials | None = None
         self._connected: bool = False
         self._cancel_requested: bool = False
+        self._pending_tool_calls: list[ToolCall] = []
         self._logger: logging.Logger = get_logger("providers.base")
 
     @property
@@ -143,6 +189,7 @@ class LLMProviderBase(ABC):
         self._connected = False
         self._credentials = None
         self._cancel_requested = False
+        self._pending_tool_calls.clear()
         self._logger.debug("provider_base_disconnected", extra={})
 
     @abstractmethod
@@ -212,6 +259,21 @@ class LLMProviderBase(ABC):
         # Abstract async generator - yield required for type checker
         yield ""
 
+    def get_pending_tool_calls(self) -> list[ToolCall]:
+        """Retrieve tool calls accumulated during the last streaming call.
+
+        After a ``chat_stream()`` call completes, providers store any tool
+        calls that were signalled in the stream deltas.  Consumers call
+        this method once to collect them.  The internal buffer is cleared
+        on each call so results are never returned twice.
+
+        Returns:
+            List of ToolCall objects accumulated during streaming.
+        """
+        calls = list(self._pending_tool_calls)
+        self._pending_tool_calls.clear()
+        return calls
+
     async def cancel_request(self) -> None:
         """Cancel any in-flight request.
 
@@ -219,6 +281,61 @@ class LLMProviderBase(ABC):
         raising exceptions.
         """
         self._cancel_requested = True
+
+    async def _retry_with_backoff(
+        self,
+        coro_factory: Callable[[], Awaitable[_T]],
+        max_retries: int = 3,
+        base_delay: float = 1.0,
+        max_delay: float = 30.0,
+        retryable_exceptions: tuple[type[Exception], ...] = (RateLimitError,),
+    ) -> _T:
+        """Execute an async operation with exponential backoff retry.
+
+        Retries on transient failures using exponential backoff with jitter.
+        ``AuthenticationError`` is never retried regardless of the
+        ``retryable_exceptions`` parameter.
+
+        Args:
+            coro_factory: Zero-argument callable that creates the awaitable
+                to execute on each attempt.
+            max_retries: Maximum number of retry attempts after the initial
+                try.
+            base_delay: Initial delay in seconds before the first retry.
+            max_delay: Upper bound on the delay between retries.
+            retryable_exceptions: Tuple of exception types that should
+                trigger a retry.
+
+        Returns:
+            The result of the awaitable produced by *coro_factory*.
+
+        Raises:
+            AuthenticationError: Always re-raised immediately.
+            ProviderError: The last retryable exception if all retries are
+                exhausted, or if the retry loop exits without a result.
+        """
+        for attempt in range(max_retries + 1):
+            try:
+                return await coro_factory()
+            except AuthenticationError:
+                raise
+            except retryable_exceptions as exc:
+                if attempt >= max_retries:
+                    raise
+                delay = min(base_delay * (2**attempt), max_delay)
+                jitter = random.uniform(0, delay * 0.1)  # noqa: S311
+                self._logger.warning(
+                    "provider_retry_backoff",
+                    extra={
+                        "attempt": attempt + 1,
+                        "max_retries": max_retries,
+                        "delay": delay + jitter,
+                        "error": str(exc),
+                    },
+                )
+                await asyncio.sleep(delay + jitter)
+        msg = "retry_with_backoff exhausted without capturing an exception"
+        raise ProviderError(msg)
 
     @abstractmethod
     def _convert_tools_to_provider_format(
@@ -303,22 +420,153 @@ class LLMProviderBase(ABC):
         Returns:
             Parsed ToolCall instance.
         """
-        parsed_args: dict[str, Any]
-        if isinstance(raw_arguments, str):
-            try:
-                parsed_args = json.loads(raw_arguments)
-            except json.JSONDecodeError:
-                parsed_args = {}
-        else:
-            parsed_args = dict(raw_arguments)
-
-        tool_name = function_name.split(".", maxsplit=1)[0] if "." in function_name else function_name
-        return ToolCall(
-            id=call_id,
-            tool_name=tool_name,
+        return parse_tool_call(
+            call_id=call_id,
             function_name=function_name,
-            arguments=parsed_args,
+            raw_arguments=raw_arguments,
         )
+
+    @staticmethod
+    def _serialize_tool_result(result: object) -> str:
+        """Serialize a tool result to a string for API consumption.
+
+        Args:
+            result: The tool result value, either a string or a
+                JSON-serializable object.
+
+        Returns:
+            The result as a string, JSON-encoded if not already a string.
+        """
+        if isinstance(result, str):
+            return result
+        return json.dumps(result)
+
+    @staticmethod
+    def _convert_messages_to_openai_format(
+        messages: list[Message],
+        *,
+        serialize_tool_arguments: bool = True,
+        include_tool_call_type: bool = True,
+    ) -> list[dict[str, object]]:
+        """Convert internal messages to OpenAI-compatible format.
+
+        Shared conversion logic for providers that use the OpenAI message
+        schema (OpenAI, Grok, HuggingFace, OpenRouter, Ollama).
+
+        Args:
+            messages: List of Message objects to convert.
+            serialize_tool_arguments: When True, tool call arguments are
+                JSON-serialized to a string. When False, the dict is
+                passed through as-is (Ollama).
+            include_tool_call_type: When True, each tool call dict
+                includes ``"type": "function"``. When False, the key
+                is omitted (Ollama).
+
+        Returns:
+            List of message dicts in OpenAI-compatible format.
+        """
+        converted: list[dict[str, object]] = []
+
+        for msg in messages:
+            if msg.role in {"system", "user"}:
+                converted.append({
+                    "role": msg.role,
+                    "content": msg.content,
+                })
+            elif msg.role == "assistant":
+                assistant_msg: dict[str, object] = {
+                    "role": "assistant",
+                    "content": msg.content,
+                }
+
+                if msg.tool_calls:
+                    tc_list: list[dict[str, object]] = []
+                    for tc in msg.tool_calls:
+                        tc_dict: dict[str, object] = {
+                            "id": tc.id,
+                            "function": {
+                                "name": tc.function_name,
+                                "arguments": json.dumps(tc.arguments) if serialize_tool_arguments else tc.arguments,
+                            },
+                        }
+                        if include_tool_call_type:
+                            tc_dict["type"] = "function"
+                        tc_list.append(tc_dict)
+                    assistant_msg["tool_calls"] = tc_list
+
+                converted.append(assistant_msg)
+            elif msg.role == "tool" and msg.tool_results:
+                converted.extend(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tr.call_id,
+                        "content": LLMProviderBase._serialize_tool_result(tr.result),
+                    }
+                    for tr in msg.tool_results
+                )
+
+        return converted
+
+
+class ToolCallBufferManager:
+    """Accumulates streaming tool call deltas into complete ToolCall objects.
+
+    Used by providers that consume OpenAI-compatible SSE streams where tool
+    call fragments arrive incrementally across multiple chunks.
+
+    Attributes:
+        _buffers: Mapping from tool-call index to accumulated fields.
+    """
+
+    def __init__(self) -> None:
+        """Initialize with empty buffers."""
+        self._buffers: dict[int, dict[str, str]] = {}
+
+    def accumulate(
+        self,
+        *,
+        index: int,
+        call_id: str | None = None,
+        name: str | None = None,
+        arguments: str | None = None,
+    ) -> None:
+        """Merge a single streaming delta into the buffer.
+
+        Args:
+            index: Tool-call index from the SSE delta.
+            call_id: Unique identifier for the tool call (first chunk only).
+            name: Function name (first chunk only).
+            arguments: Partial JSON argument fragment to append.
+        """
+        if index not in self._buffers:
+            self._buffers[index] = {"id": "", "name": "", "arguments": ""}
+        buf = self._buffers[index]
+        if call_id:
+            buf["id"] = call_id
+        if name:
+            buf["name"] = name
+        if arguments:
+            buf["arguments"] += arguments
+
+    def finalize(self) -> list[ToolCall]:
+        """Convert all complete buffered entries to ToolCall objects and reset.
+
+        Entries missing an ``id`` or ``name`` are silently discarded.
+
+        Returns:
+            List of parsed ToolCall instances.
+        """
+        results = [
+            parse_tool_call(
+                call_id=buf["id"],
+                function_name=buf["name"],
+                raw_arguments=buf["arguments"],
+            )
+            for buf in self._buffers.values()
+            if buf["id"] and buf["name"]
+        ]
+        self._buffers.clear()
+        return results
 
 
 def _build_schema_property(
@@ -436,6 +684,49 @@ def create_openai_tool_schema(
         tools.append(tool_schema)
 
     _logger.debug("create_openai_tool_schema_complete", extra={"tools_created": len(tools)})
+    return tools
+
+
+def create_google_tool_schema(
+    tool: ToolDefinition,
+) -> list[GoogleFunctionDeclaration]:
+    """Convert ToolDefinition to Google Gemini's function declaration format.
+
+    Args:
+        tool: The tool definition to convert.
+
+    Returns:
+        List of function declarations in Google's format with uppercase types.
+    """
+    _logger.debug("create_google_tool_schema", extra={"function_count": len(tool.functions)})
+    tools: list[GoogleFunctionDeclaration] = []
+
+    for func in tool.functions:
+        properties: dict[str, JSONSchemaProperty] = {}
+        required: list[str] = []
+
+        for param in func.parameters:
+            properties[param.name] = _build_schema_property(
+                param_type=param.type.upper(),
+                description=param.description,
+                enum_values=param.enum,
+                default=param.default,
+            )
+            if param.required:
+                required.append(param.name)
+
+        tool_schema: GoogleFunctionDeclaration = {
+            "name": func.name,
+            "description": func.description,
+            "parameters": {
+                "type": "OBJECT",
+                "properties": properties,
+                "required": required,
+            },
+        }
+        tools.append(tool_schema)
+
+    _logger.debug("create_google_tool_schema_complete", extra={"tools_created": len(tools)})
     return tools
 
 

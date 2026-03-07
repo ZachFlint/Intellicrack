@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import time
+import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, cast, override
 
@@ -30,7 +31,7 @@ from ..core.types import (
     ToolCall,
     ToolDefinition,
 )
-from .base import LLMProviderBase
+from .base import LLMProviderBase, ToolCallBufferManager, create_openai_tool_schema
 
 
 if TYPE_CHECKING:
@@ -97,10 +98,10 @@ class OpenRouterProvider(LLMProviderBase):
         try:
             self._api_key = credentials.api_key
             self._client = httpx.AsyncClient(
-                timeout=httpx.Timeout(120.0),
+                timeout=httpx.Timeout(credentials.timeout or 120.0),
                 headers={
                     "Authorization": f"Bearer {credentials.api_key}",
-                    "HTTP-Referer": "https://intellicrack.local",
+                    "HTTP-Referer": credentials.api_base or "http://localhost",
                     "X-Title": "Intellicrack",
                 },
             )
@@ -128,12 +129,16 @@ class OpenRouterProvider(LLMProviderBase):
 
     async def disconnect(self) -> None:
         """Disconnect from OpenRouter API."""
-        await super().disconnect()
-        if self._client:
-            await self._client.aclose()
-            self._client = None
-        self._api_key = None
-        self._logger.info("openrouter_disconnected", extra={"was_connected": True})
+        try:
+            await super().disconnect()
+            if self._client:
+                await self._client.aclose()
+                self._client = None
+            self._api_key = None
+            self._logger.info("openrouter_disconnected", extra={"was_connected": True})
+        except Exception as exc:
+            self._logger.warning("disconnect_cleanup_error", extra={"error": str(exc)})
+            self._connected = False
 
     async def list_models(self) -> list[ModelInfo]:
         """Dynamically fetch available models from OpenRouter.
@@ -163,9 +168,19 @@ class OpenRouterProvider(LLMProviderBase):
                 output_cost = pricing.get("completion")
 
                 if input_cost is not None:
-                    input_cost = float(input_cost) * 1000000
+                    try:
+                        input_cost = float(input_cost) * 1000000
+                    except (ValueError, TypeError):
+                        input_cost = None
                 if output_cost is not None:
-                    output_cost = float(output_cost) * 1000000
+                    try:
+                        output_cost = float(output_cost) * 1000000
+                    except (ValueError, TypeError):
+                        output_cost = None
+
+                architecture: dict[str, object] = model_data.get("architecture", {})
+                modality = str(architecture.get("modality", ""))
+                supports_vision = "image" in modality
 
                 models.append(
                     ModelInfo(
@@ -173,8 +188,8 @@ class OpenRouterProvider(LLMProviderBase):
                         name=name,
                         provider=ProviderName.OPENROUTER,
                         context_window=context_length,
-                        supports_tools=self._estimate_tool_support(model_id),
-                        supports_vision=self._estimate_vision_support(model_id),
+                        supports_tools=True,
+                        supports_vision=supports_vision,
                         supports_streaming=True,
                         input_cost_per_1m_tokens=input_cost,
                         output_cost_per_1m_tokens=output_cost,
@@ -194,52 +209,6 @@ class OpenRouterProvider(LLMProviderBase):
             raise ProviderError(_ERR_LIST_MODELS_FAILED % e) from e
         else:
             return sorted_models
-
-    @staticmethod
-    def _estimate_tool_support(model_id: str) -> bool:
-        """Estimate if model supports tool calling.
-
-        Args:
-            model_id: The model identifier.
-
-        Returns:
-            True if model likely supports tools.
-        """
-        model_lower = model_id.lower()
-        tool_capable_patterns = [
-            "gpt-4",
-            "gpt-3.5",
-            "claude-3",
-            "claude-2",
-            "gemini",
-            "mistral",
-            "mixtral",
-            "llama-3",
-            "llama3",
-            "command-r",
-        ]
-        return any(pattern in model_lower for pattern in tool_capable_patterns)
-
-    @staticmethod
-    def _estimate_vision_support(model_id: str) -> bool:
-        """Estimate if model supports vision.
-
-        Args:
-            model_id: The model identifier.
-
-        Returns:
-            True if model likely supports vision.
-        """
-        model_lower = model_id.lower()
-        vision_patterns = [
-            "vision",
-            "gpt-4o",
-            "gpt-4-turbo",
-            "claude-3",
-            "gemini",
-            "llava",
-        ]
-        return any(pattern in model_lower for pattern in vision_patterns)
 
     async def chat(
         self,
@@ -308,10 +277,10 @@ class OpenRouterProvider(LLMProviderBase):
                 f"{self.BASE_URL}/chat/completions",
                 json=request_body,
             )
-        except httpx.HTTPStatusError as e:
+        except httpx.RequestError as e:
             self._logger.warning(
-                "openrouter_chat_http_error",
-                extra={"model": model, "status_code": e.response.status_code},
+                "openrouter_chat_request_error",
+                extra={"model": model, "error": str(e)},
             )
             raise ProviderError(_ERR_API_ERROR % e) from e
 
@@ -387,29 +356,12 @@ class OpenRouterProvider(LLMProviderBase):
 
         for tc in response_message["tool_calls"]:
             func_data = tc.get("function", {})
-            func_name = func_data.get("name", "")
-            args_str = func_data.get("arguments", "{}")
-            parsed_args: dict[str, Any]
-            try:
-                parsed_args = json.loads(str(args_str))
-            except json.JSONDecodeError:
-                self._logger.debug("tool_argument_parse_failed", extra={"raw_args": str(args_str)[:200]})
-                parsed_args = {}
-
-            tool_call = ToolCall(
-                id=tc.get("id", f"call_{len(tool_calls)}"),
-                tool_name=func_name.split(".")[0] if "." in func_name else func_name,
-                function_name=func_name,
-                arguments=parsed_args,
+            tool_call = self._parse_tool_call_common(
+                call_id=tc.get("id", f"call_{uuid.uuid4().hex}"),
+                function_name=func_data.get("name", ""),
+                raw_arguments=func_data.get("arguments", "{}"),
             )
             tool_calls.append(tool_call)
-            self._logger.debug(
-                "tool_call_parsed",
-                extra={
-                    "tool_name": tool_call.tool_name,
-                    "arguments_count": len(tool_call.arguments),
-                },
-            )
 
         return tool_calls
 
@@ -456,6 +408,7 @@ class OpenRouterProvider(LLMProviderBase):
         )
 
         chunks_yielded = 0
+        tc_buffer = ToolCallBufferManager()
         try:
             request_body: dict[str, object] = {
                 "model": model,
@@ -492,9 +445,20 @@ class OpenRouterProvider(LLMProviderBase):
                                 if content := delta.get("content", ""):
                                     chunks_yielded += 1
                                     yield content
+                                if tc_deltas := delta.get("tool_calls"):
+                                    for tc_d in tc_deltas:
+                                        fn = cast("dict[str, Any]", tc_d.get("function") or {})
+                                        tc_buffer.accumulate(
+                                            index=cast("int", tc_d.get("index", 0)),
+                                            call_id=cast("str | None", tc_d.get("id")),
+                                            name=cast("str | None", fn.get("name")),
+                                            arguments=cast("str | None", fn.get("arguments")),
+                                        )
                         except json.JSONDecodeError as exc:
                             self._logger.debug("stream_json_parse_skipped", extra={"error": str(exc)})
                             continue
+
+            self._pending_tool_calls = tc_buffer.finalize()
 
             self._logger.info(
                 "openrouter_chat_stream_completed",
@@ -529,51 +493,7 @@ class OpenRouterProvider(LLMProviderBase):
         Returns:
             List of messages in OpenRouter's format.
         """
-        openrouter_messages: list[dict[str, object]] = []
-
-        for msg in messages:
-            if msg.role == "system":
-                openrouter_messages.append({
-                    "role": "system",
-                    "content": msg.content,
-                })
-            elif msg.role == "user":
-                openrouter_messages.append({
-                    "role": "user",
-                    "content": msg.content,
-                })
-            elif msg.role == "assistant":
-                assistant_msg: dict[str, object] = {
-                    "role": "assistant",
-                    "content": msg.content,
-                }
-
-                if msg.tool_calls:
-                    tool_calls_list: list[dict[str, object]] = [
-                        {
-                            "id": tc.id,
-                            "type": "function",
-                            "function": {
-                                "name": tc.function_name,
-                                "arguments": json.dumps(tc.arguments),
-                            },
-                        }
-                        for tc in msg.tool_calls
-                    ]
-                    assistant_msg["tool_calls"] = tool_calls_list
-
-                openrouter_messages.append(assistant_msg)
-            elif msg.role == "tool" and msg.tool_results:
-                for tr in msg.tool_results:
-                    result_content = tr.result if isinstance(tr.result, str) else json.dumps(tr.result)
-
-                    openrouter_messages.append({
-                        "role": "tool",
-                        "tool_call_id": tr.call_id,
-                        "content": result_content,
-                    })
-
-        return openrouter_messages
+        return self._convert_messages_to_openai_format(messages)
 
     @override
     def _convert_tools_to_provider_format(
@@ -591,36 +511,9 @@ class OpenRouterProvider(LLMProviderBase):
             List of tools in OpenRouter's format.
         """
         openrouter_tools: list[dict[str, object]] = []
-
         for tool in tools:
-            for func in tool.functions:
-                properties: dict[str, dict[str, object]] = {}
-                required: list[str] = []
-
-                for param in func.parameters:
-                    prop: dict[str, object] = {
-                        "type": param.type,
-                        "description": param.description,
-                    }
-                    if param.enum:
-                        prop["enum"] = param.enum
-                    properties[param.name] = prop
-                    if param.required:
-                        required.append(param.name)
-
-                openrouter_tools.append({
-                    "type": "function",
-                    "function": {
-                        "name": func.name,
-                        "description": func.description,
-                        "parameters": {
-                            "type": "object",
-                            "properties": properties,
-                            "required": required,
-                        },
-                    },
-                })
-
+            tool_schemas = create_openai_tool_schema(tool)
+            openrouter_tools.extend(dict(schema) for schema in tool_schemas)
         return openrouter_tools
 
     async def get_generation(self, generation_id: str) -> dict[str, object]:

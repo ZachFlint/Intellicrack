@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -108,10 +109,13 @@ class OrchestratorStats:
     failed_tool_calls: int = 0
     total_tokens_used: int = 0
     average_response_time_ms: float = 0.0
-    _response_times: list[float] = field(default_factory=list)
+    _response_times: deque[float] = field(default_factory=lambda: deque(maxlen=1000))
 
     def record_response_time(self, time_ms: float) -> None:
-        """Record a response time and update average.
+        """Record a response time and update rolling average.
+
+        Maintains a bounded window of the last 1000 response times to
+        prevent unbounded memory growth.
 
         Args:
             time_ms: Response time in milliseconds.
@@ -404,8 +408,8 @@ class Orchestrator:
             raise RuntimeError(error_message)
 
         provider = self._providers.get(self._current_session.provider)
-        if provider is None:
-            error_message = "Provider not available"
+        if provider is None or not provider.is_connected:
+            error_message = f"Provider not available or disconnected: {self._current_session.provider.value}"
             raise RuntimeError(error_message)
 
         tool_definitions = self._tools.get_tool_definitions()
@@ -701,8 +705,12 @@ class Orchestrator:
         provider: LLMProvider,
         messages: list[Message],
         tools: list[ToolDefinition],
-    ) -> tuple[Message, None]:
+    ) -> tuple[Message, list[ToolCall] | None]:
         """Stream a response from the LLM.
+
+        After the stream completes, any tool calls accumulated by the
+        provider during streaming are retrieved via
+        ``provider.get_pending_tool_calls()``.
 
         Args:
             provider: LLM provider to use.
@@ -710,7 +718,7 @@ class Orchestrator:
             tools: Available tool definitions.
 
         Returns:
-            Tuple of (response message, None).
+            Tuple of (response message, tool calls if any).
 
         Raises:
             RuntimeError: If no active session.
@@ -737,15 +745,24 @@ class Orchestrator:
                 self._on_stream_chunk(chunk)
 
         content = "".join(content_parts)
+
+        pending_calls = provider.get_pending_tool_calls()
+        tool_calls: list[ToolCall] | None = pending_calls if pending_calls else None
+
         _logger.debug(
             "llm_stream_completed",
-            extra={"chunk_count": len(content_parts), "content_length": len(content)},
+            extra={
+                "chunk_count": len(content_parts),
+                "content_length": len(content),
+                "tool_calls_count": len(pending_calls),
+            },
         )
         return Message(
             role="assistant",
             content=content,
+            tool_calls=tool_calls,
             timestamp=datetime.now(),
-        ), None
+        ), tool_calls
 
     async def _non_stream_response(
         self,

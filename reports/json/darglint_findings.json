@@ -1,20 +1,72 @@
 {
   "tool": "darglint",
-  "generated": "2026-02-28T02:26:31.212950",
-  "total_findings": 1,
-  "total_files": 1,
+  "generated": "2026-03-06T22:55:29.721734",
+  "total_findings": 6,
+  "total_files": 3,
   "files": [
     {
-      "path": "src\\intellicrack\\credentials\\oauth.py",
-      "count": 1,
+      "path": "src\\intellicrack\\providers\\base.py",
+      "count": 3,
       "findings": [
         {
-          "line": 342,
+          "line": 291,
+          "column": null,
+          "function": "_retry_with_backoff",
+          "code": "DAR401",
+          "message": "[_retry_with_backoff] -r ProviderError",
+          "raw": "src\\intellicrack\\providers\\base.py:_retry_with_backoff:291: DAR401: -r ProviderError"
+        },
+        {
+          "line": 291,
+          "column": null,
+          "function": "_retry_with_backoff",
+          "code": "DAR401",
+          "message": "[_retry_with_backoff] -r last_exc",
+          "raw": "src\\intellicrack\\providers\\base.py:_retry_with_backoff:291: DAR401: -r last_exc"
+        },
+        {
+          "line": 313,
+          "column": null,
+          "function": "_retry_with_backoff",
+          "code": "DAR402",
+          "message": "[_retry_with_backoff] +r Exception",
+          "raw": "src\\intellicrack\\providers\\base.py:_retry_with_backoff:313: DAR402: +r Exception"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\credentials\\oauth.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 103,
+          "column": null,
+          "function": "_oauth_provider_to_name",
+          "code": "DAR402",
+          "message": "[_oauth_provider_to_name] +r KeyError",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:_oauth_provider_to_name:103: DAR402: +r KeyError"
+        },
+        {
+          "line": 372,
           "column": null,
           "function": "wait_for_callback",
           "code": "DAR401",
           "message": "[wait_for_callback] -r OAuthAuthorizationError",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:wait_for_callback:342: DAR401: -r OAuthAuthorizationError"
+          "raw": "src\\intellicrack\\credentials\\oauth.py:wait_for_callback:372: DAR401: -r OAuthAuthorizationError"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\sandbox\\base.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 452,
+          "column": null,
+          "function": "list_snapshots",
+          "code": "DAR202",
+          "message": "[list_snapshots] + return",
+          "raw": "src\\intellicrack\\sandbox\\base.py:list_snapshots:452: DAR202: + return"
         }
       ]
     }

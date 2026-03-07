@@ -11,9 +11,8 @@ chat completion and tool/function calling.
 
 from __future__ import annotations
 
-import json
 import time
-from typing import TYPE_CHECKING, Any, ClassVar, cast, override
+from typing import TYPE_CHECKING, Any, cast, override
 
 import anthropic
 from anthropic.types import (
@@ -52,6 +51,8 @@ _MSG_CONNECTION_FAILED = "Connection failed"
 _MSG_REQUEST_FAILED = "Request failed"
 _MSG_RATE_LIMITED = "Rate limited"
 _MSG_STREAM_FAILED = "Stream failed"
+_MSG_NO_MODELS_AVAILABLE = "No models available from Anthropic API"
+_MSG_FETCH_MODELS_FAILED = "Failed to fetch models from Anthropic API"
 
 
 class AnthropicProvider(LLMProviderBase):
@@ -64,17 +65,6 @@ class AnthropicProvider(LLMProviderBase):
         _client: The async Anthropic client instance.
         _current_task: Reference to any in-flight async task.
     """
-
-    KNOWN_MODELS: ClassVar[list[tuple[str, str, int, bool, bool]]] = [
-        ("claude-sonnet-4-20250514", "Claude Sonnet 4", 200000, True, True),
-        ("claude-opus-4-20250514", "Claude Opus 4", 200000, True, True),
-        ("claude-3-7-sonnet-20250219", "Claude 3.7 Sonnet", 200000, True, True),
-        ("claude-3-5-sonnet-20241022", "Claude 3.5 Sonnet", 200000, True, True),
-        ("claude-3-5-haiku-20241022", "Claude 3.5 Haiku", 200000, True, True),
-        ("claude-3-opus-20240229", "Claude 3 Opus", 200000, True, True),
-        ("claude-3-sonnet-20240229", "Claude 3 Sonnet", 200000, True, True),
-        ("claude-3-haiku-20240307", "Claude 3 Haiku", 200000, True, True),
-    ]
 
     def __init__(self) -> None:
         """Initialize the Anthropic provider."""
@@ -110,11 +100,7 @@ class AnthropicProvider(LLMProviderBase):
                 api_key=credentials.api_key,
                 base_url=credentials.api_base,
             )
-            await self._client.messages.create(
-                model="claude-3-haiku-20240307",
-                max_tokens=1,
-                messages=[{"role": "user", "content": "test"}],
-            )
+            await self._client.models.list(limit=1)
         except anthropic.AuthenticationError as e:
             raise AuthenticationError(_MSG_INVALID_API_KEY) from e
         except Exception as e:
@@ -129,10 +115,14 @@ class AnthropicProvider(LLMProviderBase):
 
     async def disconnect(self) -> None:
         """Disconnect from Anthropic API."""
-        await super().disconnect()
-        self._client = None
-        self._current_task = None
-        self._logger.info("anthropic_disconnected", extra={})
+        try:
+            await super().disconnect()
+            self._client = None
+            self._current_task = None
+            self._logger.info("anthropic_disconnected", extra={})
+        except Exception as exc:
+            self._logger.warning("disconnect_cleanup_error", extra={"error": str(exc)})
+            self._connected = False
 
     async def list_models(self) -> list[ModelInfo]:
         """Dynamically fetch available Claude models from Anthropic API.
@@ -153,42 +143,13 @@ class AnthropicProvider(LLMProviderBase):
             models = await self._fetch_all_models()
         except Exception as e:
             self._logger.warning(
-                "anthropic_list_models_api_failed_using_fallback",
+                "anthropic_list_models_api_failed",
                 extra={"error": str(e)},
             )
-            return self._get_known_models_fallback()
+            raise ProviderError(_MSG_FETCH_MODELS_FAILED) from e
         else:
             self._logger.info("anthropic_models_listed", extra={"count": len(models)})
             return models
-
-    def _get_known_models_fallback(self) -> list[ModelInfo]:
-        """Build ModelInfo list from hardcoded KNOWN_MODELS.
-
-        Used as a fallback when the API is unreachable or returns errors.
-
-        Returns:
-            List of ModelInfo built from KNOWN_MODELS class variable.
-        """
-        models: list[ModelInfo] = []
-        for model_id, display_name, ctx_window, tools, vision in self.KNOWN_MODELS:
-            models.append(
-                ModelInfo(
-                    id=model_id,
-                    name=display_name,
-                    provider=ProviderName.ANTHROPIC,
-                    context_window=ctx_window,
-                    supports_tools=tools,
-                    supports_vision=vision,
-                    supports_streaming=True,
-                    input_cost_per_1m_tokens=None,
-                    output_cost_per_1m_tokens=None,
-                )
-            )
-        self._logger.info(
-            "anthropic_known_models_fallback",
-            extra={"count": len(models)},
-        )
-        return models
 
     async def _fetch_all_models(self) -> list[ModelInfo]:
         """Paginate through the models endpoint and collect all results.
@@ -212,8 +173,13 @@ class AnthropicProvider(LLMProviderBase):
 
         return models
 
-    def _build_model_info(self, model_id: str, display_name_raw: object) -> ModelInfo:
+    @staticmethod
+    def _build_model_info(model_id: str, display_name_raw: object) -> ModelInfo:
         """Construct a ModelInfo from API model data.
+
+        All Anthropic chat models support tools, vision, and streaming with
+        a 200k token context window.  No hardcoded model-name checks are
+        used; capabilities default to permissive values.
 
         Args:
             model_id: The model identifier string.
@@ -227,49 +193,13 @@ class AnthropicProvider(LLMProviderBase):
             id=model_id,
             name=display_name,
             provider=ProviderName.ANTHROPIC,
-            context_window=self._get_context_window(model_id),
-            supports_tools=self._supports_tools(model_id),
-            supports_vision=self._supports_vision(model_id),
+            context_window=200000,
+            supports_tools=True,
+            supports_vision=True,
             supports_streaming=True,
             input_cost_per_1m_tokens=None,
             output_cost_per_1m_tokens=None,
         )
-
-    @staticmethod
-    def _get_context_window(_model_id: str) -> int:
-        """Get context window size for a model.
-
-        Args:
-            _model_id: The model identifier.
-
-        Returns:
-            Context window size in tokens.
-        """
-        return 200000
-
-    @staticmethod
-    def _supports_tools(model_id: str) -> bool:
-        """Check if model supports function calling.
-
-        Args:
-            model_id: The model identifier.
-
-        Returns:
-            True if model supports tools.
-        """
-        return "claude-3" in model_id or "claude-sonnet" in model_id or "claude-opus" in model_id
-
-    @staticmethod
-    def _supports_vision(model_id: str) -> bool:
-        """Check if model supports image input.
-
-        Args:
-            model_id: The model identifier.
-
-        Returns:
-            True if model supports vision.
-        """
-        return "claude-3" in model_id or "claude-sonnet" in model_id or "claude-opus" in model_id
 
     @staticmethod
     def _build_api_kwargs(
@@ -463,6 +393,23 @@ class AnthropicProvider(LLMProviderBase):
                     if self._cancel_requested:
                         break
                     yield text
+
+                if not self._cancel_requested:
+                    final_message = await stream.get_final_message()
+                    tool_calls: list[ToolCall] = []
+                    for block in final_message.content:
+                        if block.type == "tool_use":
+                            args: dict[str, object] = dict(block.input)
+                            tool_calls.append(
+                                ToolCall(
+                                    id=block.id,
+                                    tool_name=block.name.split(".")[0] if "." in block.name else block.name,
+                                    function_name=block.name,
+                                    arguments=args,
+                                )
+                            )
+                    self._pending_tool_calls = tool_calls
+
         except anthropic.RateLimitError as e:
             raise RateLimitError(_MSG_RATE_LIMITED) from e
         except Exception as e:
@@ -568,7 +515,7 @@ class AnthropicProvider(LLMProviderBase):
             {
                 "type": "tool_result",
                 "tool_use_id": tr.call_id,
-                "content": tr.result if isinstance(tr.result, str) else json.dumps(tr.result),
+                "content": LLMProviderBase._serialize_tool_result(tr.result),
                 "is_error": not tr.success,
             }
             for tr in msg.tool_results

@@ -1,3 +1,19 @@
-1 findings in src\intellicrack\credentials\oauth.py
+3 findings in src\intellicrack\providers\base.py
 
-src\intellicrack\credentials\oauth.py:wait_for_callback:342: DAR401: -r OAuthAuthorizationError
+src\intellicrack\providers\base.py:_retry_with_backoff:291: DAR401: -r ProviderError
+
+src\intellicrack\providers\base.py:_retry_with_backoff:291: DAR401: -r last_exc
+
+src\intellicrack\providers\base.py:_retry_with_backoff:313: DAR402: +r Exception
+
+
+2 findings in src\intellicrack\credentials\oauth.py
+
+src\intellicrack\credentials\oauth.py:_oauth_provider_to_name:103: DAR402: +r KeyError
+
+src\intellicrack\credentials\oauth.py:wait_for_callback:372: DAR401: -r OAuthAuthorizationError
+
+
+1 findings in src\intellicrack\sandbox\base.py
+
+src\intellicrack\sandbox\base.py:list_snapshots:452: DAR202: + return

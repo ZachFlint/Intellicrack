@@ -13,6 +13,7 @@ panels (Ghidra, x64dbg, radare2) within the main application.
 
 from __future__ import annotations
 
+from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.binary_panel import BinaryPanel
 from intellicrack.ui.panels.frida_panel import FridaPanel
 from intellicrack.ui.panels.ghidra_panel import GhidraPanel
@@ -31,6 +32,7 @@ from intellicrack.ui.panels.x64dbg_panel import X64DbgPanel
 
 
 __all__ = [
+    "AnalysisPanelBase",
     "BinaryPanel",
     "FridaPanel",
     "FridaStackSource",

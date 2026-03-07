@@ -1,6 +1,6 @@
 {
   "tool": "pydocstyle",
-  "generated": "2026-02-28T02:25:30.049565",
+  "generated": "2026-03-06T22:53:22.250066",
   "total_findings": 9,
   "total_files": 7,
   "files": [
@@ -9,20 +9,20 @@
       "count": 2,
       "findings": [
         {
-          "line": 927,
+          "line": 932,
           "column": null,
           "code": "D401",
           "context": "in public method `hook_function`:",
           "message": "in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')",
-          "raw": "src/intellicrack/bridges\\base.py:927: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
+          "raw": "src/intellicrack/bridges\\base.py:932: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
         },
         {
-          "line": 990,
+          "line": 995,
           "column": null,
           "code": "D401",
           "context": "in public method `intercept_return`:",
           "message": "in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')",
-          "raw": "src/intellicrack/bridges\\base.py:990: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
+          "raw": "src/intellicrack/bridges\\base.py:995: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
         }
       ]
     },
@@ -31,20 +31,20 @@
       "count": 2,
       "findings": [
         {
-          "line": 941,
+          "line": 946,
           "column": null,
           "code": "D401",
           "context": "in public method `hook_function`:",
           "message": "in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')",
-          "raw": "src/intellicrack/bridges\\frida_bridge.py:941: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
+          "raw": "src/intellicrack/bridges\\frida_bridge.py:946: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
         },
         {
-          "line": 1074,
+          "line": 1132,
           "column": null,
           "code": "D401",
           "context": "in public method `intercept_return`:",
           "message": "in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')",
-          "raw": "src/intellicrack/bridges\\frida_bridge.py:1074: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
+          "raw": "src/intellicrack/bridges\\frida_bridge.py:1132: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
         }
       ]
     },
@@ -53,12 +53,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 259,
+          "line": 264,
           "column": null,
           "code": "D401",
           "context": "in private method `_sync_cleanup`:",
           "message": "in private method `_sync_cleanup`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')",
-          "raw": "src/intellicrack/core\\process_manager.py:259: D401: in private method `_sync_cleanup`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')"
+          "raw": "src/intellicrack/core\\process_manager.py:264: D401: in private method `_sync_cleanup`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')"
         }
       ]
     },
@@ -67,12 +67,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 403,
+          "line": 408,
           "column": null,
           "code": "D401",
           "context": "in public method `validate_java`:",
           "message": "in public method `validate_java`: - First line should be in imperative mood; try rephrasing (found 'Basic')",
-          "raw": "src/intellicrack/core\\script_gen.py:403: D401: in public method `validate_java`: - First line should be in imperative mood; try rephrasing (found 'Basic')"
+          "raw": "src/intellicrack/core\\script_gen.py:408: D401: in public method `validate_java`: - First line should be in imperative mood; try rephrasing (found 'Basic')"
         }
       ]
     },
@@ -81,12 +81,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 903,
+          "line": 940,
           "column": null,
           "code": "D401",
           "context": "in public function `authorize_google`:",
           "message": "in public function `authorize_google`: - First line should be in imperative mood; try rephrasing (found 'Convenience')",
-          "raw": "src/intellicrack/credentials\\oauth.py:903: D401: in public function `authorize_google`: - First line should be in imperative mood; try rephrasing (found 'Convenience')"
+          "raw": "src/intellicrack/credentials\\oauth.py:940: D401: in public function `authorize_google`: - First line should be in imperative mood; try rephrasing (found 'Convenience')"
         }
       ]
     },
@@ -95,26 +95,26 @@
       "count": 1,
       "findings": [
         {
-          "line": 479,
+          "line": 565,
           "column": null,
           "code": "D401",
           "context": "in private method `_generate_sync`:",
           "message": "in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')",
-          "raw": "src/intellicrack/providers\\local_transformers.py:479: D401: in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')"
+          "raw": "src/intellicrack/providers\\local_transformers.py:565: D401: in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')"
         }
       ]
     },
     {
-      "path": "src/intellicrack/ui\\panels\\_async_bridge.py",
+      "path": "src/intellicrack/ui\\panels\\async_bridge.py",
       "count": 1,
       "findings": [
         {
-          "line": 22,
+          "line": 126,
           "column": null,
           "code": "D103",
           "context": "in public function `run_bridge_coroutine`:",
           "message": "in public function `run_bridge_coroutine`: - Missing docstring in public function",
-          "raw": "src/intellicrack/ui\\panels\\_async_bridge.py:22: D103: in public function `run_bridge_coroutine`: - Missing docstring in public function"
+          "raw": "src/intellicrack/ui\\panels\\async_bridge.py:126: D103: in public function `run_bridge_coroutine`: - Missing docstring in public function"
         }
       ]
     }

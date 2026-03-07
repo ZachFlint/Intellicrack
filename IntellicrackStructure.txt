@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Mon, Mar 02, 2026 09:05:58 PM
+Generated: Fri, Mar 06, 2026 11:22:12 PM
 Directory: D:\Intellicrack\src
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -150,6 +150,8 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   ├── icon.ico
 │   │   └── splash.png
 │   ├── bridges/
+│   │   ├── __pycache__/
+│   │   │   └── x64dbg.cpython-313.pyc
 │   │   ├── __init__.py
 │   │   ├── base.py
 │   │   ├── binary.py
@@ -222,16 +224,22 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   │   ├── __init__.py
 │   │   │   └── splash_screen.py
 │   │   ├── panels/
+│   │   │   ├── __pycache__/
+│   │   │   │   ├── _async_bridge.cpython-313.pyc
+│   │   │   │   ├── binary_panel.cpython-313.pyc
+│   │   │   │   ├── sandbox_panel.cpython-313.pyc
+│   │   │   │   └── x64dbg_panel.cpython-313.pyc
 │   │   │   ├── __init__.py
-│   │   │   ├── _async_bridge.py
 │   │   │   ├── _async_bridge.pyi
-│   │   │   ├── _qt_compat.py
 │   │   │   ├── _qt_compat.pyi
+│   │   │   ├── async_bridge.py
+│   │   │   ├── base_panel.py
 │   │   │   ├── binary_panel.py
 │   │   │   ├── frida_panel.py
 │   │   │   ├── ghidra_panel.py
 │   │   │   ├── licensing_panel.py
 │   │   │   ├── process_panel.py
+│   │   │   ├── qt_compat.py
 │   │   │   ├── radare2_panel.py
 │   │   │   ├── sandbox_panel.py
 │   │   │   ├── script_manager.py

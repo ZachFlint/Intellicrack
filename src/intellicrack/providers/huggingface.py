@@ -33,7 +33,7 @@ from ..core.types import (
     ToolCall,
     ToolDefinition,
 )
-from .base import LLMProviderBase
+from .base import LLMProviderBase, create_openai_tool_schema
 
 
 _ERR_NOT_CONNECTED = "Not connected to HuggingFace"
@@ -66,42 +66,6 @@ class HuggingFaceProvider(LLMProviderBase):
 
     BASE_URL: ClassVar[str] = "https://api-inference.huggingface.co"
     MODELS_API_URL: ClassVar[str] = "https://huggingface.co/api/models"
-
-    RECOMMENDED_MODELS: ClassVar[list[str]] = [
-        "meta-llama/Llama-3.3-70B-Instruct",
-        "meta-llama/Llama-3.1-8B-Instruct",
-        "mistralai/Mistral-7B-Instruct-v0.3",
-        "mistralai/Mixtral-8x7B-Instruct-v0.1",
-        "microsoft/Phi-3-mini-4k-instruct",
-        "Qwen/Qwen2.5-72B-Instruct",
-        "Qwen/Qwen2.5-7B-Instruct",
-        "google/gemma-2-9b-it",
-        "google/gemma-2-2b-it",
-        "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
-        "HuggingFaceH4/zephyr-7b-beta",
-        "tiiuae/falcon-7b-instruct",
-    ]
-
-    MODEL_CONTEXT_WINDOWS: ClassVar[dict[str, int]] = {
-        "meta-llama/Llama-3.3-70B-Instruct": 128000,
-        "meta-llama/Llama-3.1-8B-Instruct": 128000,
-        "meta-llama/Llama-3.1-70B-Instruct": 128000,
-        "mistralai/Mistral-7B-Instruct-v0.3": 32768,
-        "mistralai/Mixtral-8x7B-Instruct-v0.1": 32768,
-        "microsoft/Phi-3-mini-4k-instruct": 4096,
-        "microsoft/Phi-3-medium-4k-instruct": 4096,
-        "Qwen/Qwen2.5-72B-Instruct": 131072,
-        "Qwen/Qwen2.5-7B-Instruct": 131072,
-        "Qwen/Qwen2.5-32B-Instruct": 131072,
-        "google/gemma-2-9b-it": 8192,
-        "google/gemma-2-2b-it": 8192,
-        "google/gemma-2-27b-it": 8192,
-        "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B": 131072,
-        "deepseek-ai/DeepSeek-V3": 131072,
-        "HuggingFaceH4/zephyr-7b-beta": 8192,
-        "tiiuae/falcon-7b-instruct": 2048,
-        "tiiuae/falcon-40b-instruct": 2048,
-    }
 
     def __init__(self) -> None:
         """Initialize the HuggingFace provider."""
@@ -141,7 +105,7 @@ class HuggingFaceProvider(LLMProviderBase):
                 self._base_url = self.BASE_URL
 
             self._client = httpx.AsyncClient(
-                timeout=httpx.Timeout(120.0),
+                timeout=httpx.Timeout(credentials.timeout or 120.0),
                 headers={
                     "Authorization": f"Bearer {credentials.api_key}",
                 },
@@ -179,17 +143,21 @@ class HuggingFaceProvider(LLMProviderBase):
 
     async def disconnect(self) -> None:
         """Disconnect from HuggingFace API and clean up resources."""
-        was_connected = self._connected
-        await super().disconnect()
-        if self._client:
-            await self._client.aclose()
-            self._client = None
-        self._api_token = None
-        self._base_url = self.BASE_URL
-        self._logger.info(
-            "huggingface_disconnected",
-            extra={"was_connected": was_connected},
-        )
+        try:
+            was_connected = self._connected
+            await super().disconnect()
+            if self._client:
+                await self._client.aclose()
+                self._client = None
+            self._api_token = None
+            self._base_url = self.BASE_URL
+            self._logger.info(
+                "huggingface_disconnected",
+                extra={"was_connected": was_connected},
+            )
+        except Exception as exc:
+            self._logger.warning("disconnect_cleanup_error", extra={"error": str(exc)})
+            self._connected = False
 
     async def list_models(self) -> list[ModelInfo]:
         """Dynamically fetch available text-generation models from HuggingFace.
@@ -228,48 +196,47 @@ class HuggingFaceProvider(LLMProviderBase):
                 if not model_id or model_id in seen_ids:
                     continue
 
-                pipeline_tag = model_data.get("pipeline_tag", "")
+                pipeline_tag: str = model_data.get("pipeline_tag", "")
                 if pipeline_tag not in {"text-generation", "conversational"}:
                     continue
 
                 seen_ids.add(model_id)
-                context_window = self._estimate_context_window(model_id)
+
+                tags: list[str] = [str(t).lower() for t in model_data.get("tags", [])]
+
+                tool_indicators = frozenset({
+                    "function-calling",
+                    "tool-use",
+                    "tool_use",
+                    "function_calling",
+                })
+                supports_tools = bool(tool_indicators & set(tags))
+
+                vision_indicators = frozenset({
+                    "vision",
+                    "image-text-to-text",
+                    "multimodal",
+                    "visual-question-answering",
+                })
+                supports_vision = bool(vision_indicators & set(tags)) or pipeline_tag in {"image-text-to-text", "visual-question-answering"}
 
                 models.append(
                     ModelInfo(
                         id=model_id,
                         name=model_id.split("/")[-1] if "/" in model_id else model_id,
                         provider=ProviderName.HUGGINGFACE,
-                        context_window=context_window,
-                        supports_tools=self._estimate_tool_support(model_id),
-                        supports_vision=self._estimate_vision_support(model_id),
+                        context_window=4096,
+                        supports_tools=supports_tools,
+                        supports_vision=supports_vision,
                         supports_streaming=True,
                         input_cost_per_1m_tokens=None,
                         output_cost_per_1m_tokens=None,
                     )
                 )
 
-            for recommended_id in self.RECOMMENDED_MODELS:
-                if recommended_id not in seen_ids:
-                    seen_ids.add(recommended_id)
-                    models.insert(
-                        0,
-                        ModelInfo(
-                            id=recommended_id,
-                            name=(recommended_id.split("/")[-1] if "/" in recommended_id else recommended_id),
-                            provider=ProviderName.HUGGINGFACE,
-                            context_window=self._estimate_context_window(recommended_id),
-                            supports_tools=self._estimate_tool_support(recommended_id),
-                            supports_vision=self._estimate_vision_support(recommended_id),
-                            supports_streaming=True,
-                            input_cost_per_1m_tokens=None,
-                            output_cost_per_1m_tokens=None,
-                        ),
-                    )
-
             self._logger.info(
                 "huggingface_models_listed",
-                extra={"count": len(models), "recommended_count": len(self.RECOMMENDED_MODELS)},
+                extra={"count": len(models)},
             )
         except Exception as e:
             self._logger.warning(
@@ -279,84 +246,6 @@ class HuggingFaceProvider(LLMProviderBase):
             raise ProviderError(_ERR_LIST_MODELS_FAILED % e) from e
         else:
             return models
-
-    def _estimate_context_window(self, model_id: str) -> int:
-        """Estimate context window size for a model.
-
-        Uses known context windows for common models and pattern matching
-        for models with size indicators in their names.
-
-        Args:
-            model_id: The model identifier.
-
-        Returns:
-            Estimated context window size in tokens.
-        """
-        if model_id in self.MODEL_CONTEXT_WINDOWS:
-            return self.MODEL_CONTEXT_WINDOWS[model_id]
-
-        model_lower = model_id.lower()
-
-        if "128k" in model_lower or "llama-3" in model_lower or "llama3" in model_lower:
-            return 128000
-        if "32k" in model_lower:
-            return 32768
-        if "16k" in model_lower:
-            return 16384
-        if "qwen2.5" in model_lower or "qwen2" in model_lower:
-            return 131072
-        if "deepseek" in model_lower:
-            return 131072
-        return 32768 if "mistral" in model_lower or "mixtral" in model_lower else 4096
-
-    @staticmethod
-    def _estimate_tool_support(model_id: str) -> bool:
-        """Estimate if model supports tool/function calling.
-
-        Args:
-            model_id: The model identifier.
-
-        Returns:
-            True if the model likely supports tool calling.
-        """
-        model_lower = model_id.lower()
-        tool_capable_patterns = [
-            "llama-3",
-            "llama3",
-            "mistral",
-            "mixtral",
-            "qwen",
-            "deepseek",
-            "hermes",
-            "nous",
-            "command-r",
-            "functionary",
-        ]
-        return any(pattern in model_lower for pattern in tool_capable_patterns)
-
-    @staticmethod
-    def _estimate_vision_support(model_id: str) -> bool:
-        """Estimate if model supports vision/image inputs.
-
-        Args:
-            model_id: The model identifier.
-
-        Returns:
-            True if the model likely supports vision inputs.
-        """
-        model_lower = model_id.lower()
-        vision_patterns = [
-            "vision",
-            "vlm",
-            "vl-",
-            "llava",
-            "cogvlm",
-            "qwen-vl",
-            "internvl",
-            "idefics",
-            "pixtral",
-        ]
-        return any(pattern in model_lower for pattern in vision_patterns)
 
     async def chat(
         self,
@@ -490,7 +379,14 @@ class HuggingFaceProvider(LLMProviderBase):
             )
             raise ProviderError(_ERR_API_ERROR % e) from e
 
-        result: dict[str, Any] = response.json()
+        try:
+            result: dict[str, Any] = response.json()
+        except (json.JSONDecodeError, ValueError) as e:
+            self._logger.warning(
+                "huggingface_json_decode_error",
+                extra={"model": model, "status_code": response.status_code},
+            )
+            raise ProviderError(_ERR_API_ERROR % f"Invalid JSON response: {e}") from e
         return result
 
     def _parse_hf_tool_calls(
@@ -666,49 +562,7 @@ class HuggingFaceProvider(LLMProviderBase):
         Returns:
             List of messages in HuggingFace's OpenAI-compatible format.
         """
-        hf_messages: list[dict[str, object]] = []
-
-        for msg in messages:
-            if msg.role == "system":
-                hf_messages.append({
-                    "role": "system",
-                    "content": msg.content,
-                })
-            elif msg.role == "user":
-                hf_messages.append({
-                    "role": "user",
-                    "content": msg.content,
-                })
-            elif msg.role == "assistant":
-                assistant_msg: dict[str, object] = {
-                    "role": "assistant",
-                    "content": msg.content,
-                }
-
-                if msg.tool_calls:
-                    assistant_msg["tool_calls"] = [
-                        {
-                            "id": tc.id,
-                            "type": "function",
-                            "function": {
-                                "name": tc.function_name,
-                                "arguments": json.dumps(tc.arguments),
-                            },
-                        }
-                        for tc in msg.tool_calls
-                    ]
-
-                hf_messages.append(assistant_msg)
-            elif msg.role == "tool" and msg.tool_results:
-                for tr in msg.tool_results:
-                    result_content = tr.result if isinstance(tr.result, str) else json.dumps(tr.result)
-                    hf_messages.append({
-                        "role": "tool",
-                        "tool_call_id": tr.call_id,
-                        "content": result_content,
-                    })
-
-        return hf_messages
+        return self._convert_messages_to_openai_format(messages)
 
     @override
     def _convert_tools_to_provider_format(
@@ -726,34 +580,7 @@ class HuggingFaceProvider(LLMProviderBase):
             List of tools in HuggingFace's OpenAI-compatible format.
         """
         hf_tools: list[dict[str, object]] = []
-
         for tool in tools:
-            for func in tool.functions:
-                properties: dict[str, dict[str, object]] = {}
-                required: list[str] = []
-
-                for param in func.parameters:
-                    prop: dict[str, object] = {
-                        "type": param.type,
-                        "description": param.description,
-                    }
-                    if param.enum:
-                        prop["enum"] = param.enum
-                    properties[param.name] = prop
-                    if param.required:
-                        required.append(param.name)
-
-                hf_tools.append({
-                    "type": "function",
-                    "function": {
-                        "name": func.name,
-                        "description": func.description,
-                        "parameters": {
-                            "type": "object",
-                            "properties": properties,
-                            "required": required,
-                        },
-                    },
-                })
-
+            tool_schemas = create_openai_tool_schema(tool)
+            hf_tools.extend(dict(schema) for schema in tool_schemas)
         return hf_tools

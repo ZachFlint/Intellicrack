@@ -49,7 +49,7 @@ Analyze (python)	Checkout repository	2026-02-28T07:51:59.7053487Z   submodules: 
 Analyze (python)	Checkout repository	2026-02-28T07:51:59.7053928Z   set-safe-directory: true
 Analyze (python)	Checkout repository	2026-02-28T07:51:59.7054673Z env:
 Analyze (python)	Checkout repository	2026-02-28T07:51:59.7055261Z   CODE_SCANNING_REF: refs/heads/main
-Analyze (python)	Checkout repository	2026-02-28T07:51:59.7055792Z   CODE_SCANNING_BASE_BRANCH: 
+Analyze (python)	Checkout repository	2026-02-28T07:51:59.7055792Z   CODE_SCANNING_BASE_BRANCH:
 Analyze (python)	Checkout repository	2026-02-28T07:51:59.7056325Z   CODE_SCANNING_IS_ANALYZING_DEFAULT_BRANCH: true
 Analyze (python)	Checkout repository	2026-02-28T07:51:59.7056989Z   CODE_SCANNING_IS_STEADY_STATE_DEFAULT_SETUP: true
 Analyze (python)	Checkout repository	2026-02-28T07:51:59.7066994Z   CODE_SCANNING_WORKFLOW_FILE: H4sIAAAAAAAA/6xV32/bNhB+919x8AakfZDzsicBBaY4cuLNsFNLQZcVBUFTJ5mNTKr84VTt8r8PFKVYWuI5w+on6/jdx7v77o6C7jCE8VRm+H4xHikrAm/6+ft3KLjZ2s0E9yjMhIvKGj1hMkOiGRWCi4IoK4jDw+PjSIoQslrQHWejEYp9OAKYri5jkkyj5XK+vCLrePZqYswd5z8ZLqIkJhfraDm9fi3ThmokG0UF277EOE9ItIwWd3+6j8t4Ft0u0v94A9eEClrW39xHhjm1pfn3G5M0ji7vSJJGafx0aRKntzchGGXxmc+H1fr32WL1gczmi/i1cT1IdZ+X8oHkvGwUGn2WG+1k8eGi+wvg9Y68Cd447h01in+dlFQUlhbO920DVVbowOnsQLmSu9+S1fJNi1ZWCFRvfcoAFaod15pLof09AJSZ5hMU0qy1MSkMCjM0VpTd0wKHRo3MKm7qoElZh/CguMFRR8KFxUCKAJWSKoScltofaqOowaLuosgpL4OcatMHQZtzBwLggpU2w4MBIICuImGXS+8UgLl7pKpDOH8CvoTbWF5mwU5mGIKQAgeHvowhnH0c240VxgYlNajN+NPZkVA+0z3VTPHKBKau0P89Gdhprx8cZlWbrRQn43oB9r8C0QartgODttenW2T30hpQWEnNjVR1S2m1a7pWs3PW4n7d/zIaEMwFN5yW/BuC35wDdz+Z524Yv5SBJzvngjc8HvjAzfbQWc04aq6Dey4yHYLzDLoxfkJ1FdJ+/J7P6OilevWgB3MfnGGFIkPB6oBRtuWi8E6+rhMUe66k2KEw8O4dnPnkgq3UBrOzPtEXi4q76MZj+Aku/R5srDVo240q+HHNeRHCXz0h270ZaDS2CgcKS1UMDQAuiTJwa0KH8PGV+9ALQhoveHyETz1Ss1VITVOcsqFsTzvFExcWVEp+rSGXChQWXBuXb0vCs9Afn24FbagyQQM+1hEHesIUZihcu7XCa2QKjZ5czdPr2wuyjq/mSbqexwm5Wa/+uOtLchi+Ix0zbOsbVLlUu7an/ZOguT6dUfueHLJpn3//c0/Z+4WPjlyvkrTNww3mpCnDRFrTCNZ8Eddc/TQGBDer9UmCSqrjBNOITON1Op/Np1Ean6JilDBUhufcLaujpLfrRXKKyqpSHwiGgh82YU+pzuic/g4AAP//ig1umKkJAAA=
@@ -120,7 +120,7 @@ Analyze (python)	Initialize CodeQL	2026-02-28T07:52:02.1380229Z   config: defaul
 Analyze (python)	Initialize CodeQL	  org:
 Analyze (python)	Initialize CodeQL	    model-packs: [  ]
 Analyze (python)	Initialize CodeQL	threat-models: [  ]
-Analyze (python)	Initialize CodeQL	
+Analyze (python)	Initialize CodeQL
 Analyze (python)	Initialize CodeQL	2026-02-28T07:52:02.1380895Z   token: ***
 Analyze (python)	Initialize CodeQL	2026-02-28T07:52:02.1381376Z   matrix: {
 Analyze (python)	Initialize CodeQL	  "language": "python",
@@ -131,7 +131,7 @@ Analyze (python)	Initialize CodeQL	}
 Analyze (python)	Initialize CodeQL	2026-02-28T07:52:02.1381929Z   debug: false
 Analyze (python)	Initialize CodeQL	2026-02-28T07:52:02.1382136Z env:
 Analyze (python)	Initialize CodeQL	2026-02-28T07:52:02.1382360Z   CODE_SCANNING_REF: refs/heads/main
-Analyze (python)	Initialize CodeQL	2026-02-28T07:52:02.1382650Z   CODE_SCANNING_BASE_BRANCH: 
+Analyze (python)	Initialize CodeQL	2026-02-28T07:52:02.1382650Z   CODE_SCANNING_BASE_BRANCH:
 Analyze (python)	Initialize CodeQL	2026-02-28T07:52:02.1382948Z   CODE_SCANNING_IS_ANALYZING_DEFAULT_BRANCH: true
 Analyze (python)	Initialize CodeQL	2026-02-28T07:52:02.1383338Z   CODE_SCANNING_IS_STEADY_STATE_DEFAULT_SETUP: true
 Analyze (python)	Initialize CodeQL	2026-02-28T07:52:02.1389408Z   CODE_SCANNING_WORKFLOW_FILE: H4sIAAAAAAAA/6xV32/bNhB+919x8AakfZDzsicBBaY4cuLNsFNLQZcVBUFTJ5mNTKr84VTt8r8PFKVYWuI5w+on6/jdx7v77o6C7jCE8VRm+H4xHikrAm/6+ft3KLjZ2s0E9yjMhIvKGj1hMkOiGRWCi4IoK4jDw+PjSIoQslrQHWejEYp9OAKYri5jkkyj5XK+vCLrePZqYswd5z8ZLqIkJhfraDm9fi3ThmokG0UF277EOE9ItIwWd3+6j8t4Ft0u0v94A9eEClrW39xHhjm1pfn3G5M0ji7vSJJGafx0aRKntzchGGXxmc+H1fr32WL1gczmi/i1cT1IdZ+X8oHkvGwUGn2WG+1k8eGi+wvg9Y68Cd447h01in+dlFQUlhbO920DVVbowOnsQLmSu9+S1fJNi1ZWCFRvfcoAFaod15pLof09AJSZ5hMU0qy1MSkMCjM0VpTd0wKHRo3MKm7qoElZh/CguMFRR8KFxUCKAJWSKoScltofaqOowaLuosgpL4OcatMHQZtzBwLggpU2w4MBIICuImGXS+8UgLl7pKpDOH8CvoTbWF5mwU5mGIKQAgeHvowhnH0c240VxgYlNajN+NPZkVA+0z3VTPHKBKau0P89Gdhprx8cZlWbrRQn43oB9r8C0QartgODttenW2T30hpQWEnNjVR1S2m1a7pWs3PW4n7d/zIaEMwFN5yW/BuC35wDdz+Z524Yv5SBJzvngjc8HvjAzfbQWc04aq6Dey4yHYLzDLoxfkJ1FdJ+/J7P6OilevWgB3MfnGGFIkPB6oBRtuWi8E6+rhMUe66k2KEw8O4dnPnkgq3UBrOzPtEXi4q76MZj+Aku/R5srDVo240q+HHNeRHCXz0h270ZaDS2CgcKS1UMDQAuiTJwa0KH8PGV+9ALQhoveHyETz1Ss1VITVOcsqFsTzvFExcWVEp+rSGXChQWXBuXb0vCs9Afn24FbagyQQM+1hEHesIUZihcu7XCa2QKjZ5czdPr2wuyjq/mSbqexwm5Wa/+uOtLchi+Ix0zbOsbVLlUu7an/ZOguT6dUfueHLJpn3//c0/Z+4WPjlyvkrTNww3mpCnDRFrTCNZ8Eddc/TQGBDer9UmCSqrjBNOITON1Op/Np1Ean6JilDBUhufcLaujpLfrRXKKyqpSHwiGgh82YU+pzuic/g4AAP//ig1umKkJAAA=
@@ -144,7 +144,7 @@ Analyze (python)	Initialize CodeQL	2026-02-28T07:52:02.9764006Z Copyright (C) 20
 Analyze (python)	Initialize CodeQL	2026-02-28T07:52:02.9764460Z License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.
 Analyze (python)	Initialize CodeQL	2026-02-28T07:52:02.9765289Z This is free software: you are free to change and redistribute it.
 Analyze (python)	Initialize CodeQL	2026-02-28T07:52:02.9765684Z There is NO WARRANTY, to the extent permitted by law.
-Analyze (python)	Initialize CodeQL	2026-02-28T07:52:02.9766225Z 
+Analyze (python)	Initialize CodeQL	2026-02-28T07:52:02.9766225Z
 Analyze (python)	Initialize CodeQL	2026-02-28T07:52:02.9766345Z Written by John Gilmore and Jay Fenlason.
 Analyze (python)	Initialize CodeQL	2026-02-28T07:52:02.9774318Z Found gnu tar version 1.35.
 Analyze (python)	Initialize CodeQL	2026-02-28T07:52:02.9805070Z Found CodeQL tools version 2.24.2 in the toolcache.
@@ -984,7 +984,7 @@ Analyze (python)	Initialize CodeQL	2026-02-28T07:52:06.6344606Z default-setup:
 Analyze (python)	Initialize CodeQL	2026-02-28T07:52:06.6345080Z   org:
 Analyze (python)	Initialize CodeQL	2026-02-28T07:52:06.6345359Z     model-packs: []
 Analyze (python)	Initialize CodeQL	2026-02-28T07:52:06.6345685Z threat-models: []
-Analyze (python)	Initialize CodeQL	2026-02-28T07:52:06.6345874Z 
+Analyze (python)	Initialize CodeQL	2026-02-28T07:52:06.6345874Z
 Analyze (python)	Initialize CodeQL	2026-02-28T07:52:06.6346256Z ##[endgroup]
 Analyze (python)	Initialize CodeQL	2026-02-28T07:52:06.6349905Z [command]/opt/hostedtoolcache/CodeQL/2.24.2/x64/codeql/codeql database init --force-overwrite --db-cluster /home/runner/work/_temp/codeql_databases --source-root=/home/runner/work/Intellicrack/Intellicrack --calculate-language-specific-baseline --sublanguage-file-coverage --extractor-include-aliases --language=python --codescanning-config=/home/runner/work/_temp/user-config.yaml --build-mode=none --overlay-base
 Analyze (python)	Initialize CodeQL	2026-02-28T07:52:07.9736036Z Package install location: /home/runner/.codeql/packages
@@ -1010,7 +1010,7 @@ Analyze (python)	Setup proxy for registries	  "runner": "[\"ubuntu-latest\"]"
 Analyze (python)	Setup proxy for registries	}
 Analyze (python)	Setup proxy for registries	2026-02-28T07:52:14.4915921Z env:
 Analyze (python)	Setup proxy for registries	2026-02-28T07:52:14.4916085Z   CODE_SCANNING_REF: refs/heads/main
-Analyze (python)	Setup proxy for registries	2026-02-28T07:52:14.4916328Z   CODE_SCANNING_BASE_BRANCH: 
+Analyze (python)	Setup proxy for registries	2026-02-28T07:52:14.4916328Z   CODE_SCANNING_BASE_BRANCH:
 Analyze (python)	Setup proxy for registries	2026-02-28T07:52:14.4916570Z   CODE_SCANNING_IS_ANALYZING_DEFAULT_BRANCH: true
 Analyze (python)	Setup proxy for registries	2026-02-28T07:52:14.4916870Z   CODE_SCANNING_IS_STEADY_STATE_DEFAULT_SETUP: true
 Analyze (python)	Setup proxy for registries	2026-02-28T07:52:14.4922652Z   CODE_SCANNING_WORKFLOW_FILE: H4sIAAAAAAAA/6xV32/bNhB+919x8AakfZDzsicBBaY4cuLNsFNLQZcVBUFTJ5mNTKr84VTt8r8PFKVYWuI5w+on6/jdx7v77o6C7jCE8VRm+H4xHikrAm/6+ft3KLjZ2s0E9yjMhIvKGj1hMkOiGRWCi4IoK4jDw+PjSIoQslrQHWejEYp9OAKYri5jkkyj5XK+vCLrePZqYswd5z8ZLqIkJhfraDm9fi3ThmokG0UF277EOE9ItIwWd3+6j8t4Ft0u0v94A9eEClrW39xHhjm1pfn3G5M0ji7vSJJGafx0aRKntzchGGXxmc+H1fr32WL1gczmi/i1cT1IdZ+X8oHkvGwUGn2WG+1k8eGi+wvg9Y68Cd447h01in+dlFQUlhbO920DVVbowOnsQLmSu9+S1fJNi1ZWCFRvfcoAFaod15pLof09AJSZ5hMU0qy1MSkMCjM0VpTd0wKHRo3MKm7qoElZh/CguMFRR8KFxUCKAJWSKoScltofaqOowaLuosgpL4OcatMHQZtzBwLggpU2w4MBIICuImGXS+8UgLl7pKpDOH8CvoTbWF5mwU5mGIKQAgeHvowhnH0c240VxgYlNajN+NPZkVA+0z3VTPHKBKau0P89Gdhprx8cZlWbrRQn43oB9r8C0QartgODttenW2T30hpQWEnNjVR1S2m1a7pWs3PW4n7d/zIaEMwFN5yW/BuC35wDdz+Z524Yv5SBJzvngjc8HvjAzfbQWc04aq6Dey4yHYLzDLoxfkJ1FdJ+/J7P6OilevWgB3MfnGGFIkPB6oBRtuWi8E6+rhMUe66k2KEw8O4dnPnkgq3UBrOzPtEXi4q76MZj+Aku/R5srDVo240q+HHNeRHCXz0h270ZaDS2CgcKS1UMDQAuiTJwa0KH8PGV+9ALQhoveHyETz1Ss1VITVOcsqFsTzvFExcWVEp+rSGXChQWXBuXb0vCs9Afn24FbagyQQM+1hEHesIUZihcu7XCa2QKjZ5czdPr2wuyjq/mSbqexwm5Wa/+uOtLchi+Ix0zbOsbVLlUu7an/ZOguT6dUfueHLJpn3//c0/Z+4WPjlyvkrTNww3mpCnDRFrTCNZ8Eddc/TQGBDer9UmCSqrjBNOITON1Op/Np1Ean6JilDBUhufcLaujpLfrRXKKyqpSHwiGgh82YU+pzuic/g4AAP//ig1umKkJAAA=
@@ -1047,7 +1047,7 @@ Analyze (python)	Perform CodeQL Analysis	}
 Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:14.6986577Z   expect-error: false
 Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:14.6986764Z env:
 Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:14.6986944Z   CODE_SCANNING_REF: refs/heads/main
-Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:14.6987180Z   CODE_SCANNING_BASE_BRANCH: 
+Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:14.6987180Z   CODE_SCANNING_BASE_BRANCH:
 Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:14.6987428Z   CODE_SCANNING_IS_ANALYZING_DEFAULT_BRANCH: true
 Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:14.6987741Z   CODE_SCANNING_IS_STEADY_STATE_DEFAULT_SETUP: true
 Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:14.6993582Z   CODE_SCANNING_WORKFLOW_FILE: H4sIAAAAAAAA/6xV32/bNhB+919x8AakfZDzsicBBaY4cuLNsFNLQZcVBUFTJ5mNTKr84VTt8r8PFKVYWuI5w+on6/jdx7v77o6C7jCE8VRm+H4xHikrAm/6+ft3KLjZ2s0E9yjMhIvKGj1hMkOiGRWCi4IoK4jDw+PjSIoQslrQHWejEYp9OAKYri5jkkyj5XK+vCLrePZqYswd5z8ZLqIkJhfraDm9fi3ThmokG0UF277EOE9ItIwWd3+6j8t4Ft0u0v94A9eEClrW39xHhjm1pfn3G5M0ji7vSJJGafx0aRKntzchGGXxmc+H1fr32WL1gczmi/i1cT1IdZ+X8oHkvGwUGn2WG+1k8eGi+wvg9Y68Cd447h01in+dlFQUlhbO920DVVbowOnsQLmSu9+S1fJNi1ZWCFRvfcoAFaod15pLof09AJSZ5hMU0qy1MSkMCjM0VpTd0wKHRo3MKm7qoElZh/CguMFRR8KFxUCKAJWSKoScltofaqOowaLuosgpL4OcatMHQZtzBwLggpU2w4MBIICuImGXS+8UgLl7pKpDOH8CvoTbWF5mwU5mGIKQAgeHvowhnH0c240VxgYlNajN+NPZkVA+0z3VTPHKBKau0P89Gdhprx8cZlWbrRQn43oB9r8C0QartgODttenW2T30hpQWEnNjVR1S2m1a7pWs3PW4n7d/zIaEMwFN5yW/BuC35wDdz+Z524Yv5SBJzvngjc8HvjAzfbQWc04aq6Dey4yHYLzDLoxfkJ1FdJ+/J7P6OilevWgB3MfnGGFIkPB6oBRtuWi8E6+rhMUe66k2KEw8O4dnPnkgq3UBrOzPtEXi4q76MZj+Aku/R5srDVo240q+HHNeRHCXz0h270ZaDS2CgcKS1UMDQAuiTJwa0KH8PGV+9ALQhoveHyETz1Ss1VITVOcsqFsTzvFExcWVEp+rSGXChQWXBuXb0vCs9Afn24FbagyQQM+1hEHesIUZihcu7XCa2QKjZ5czdPr2wuyjq/mSbqexwm5Wa/+uOtLchi+Ix0zbOsbVLlUu7an/ZOguT6dUfueHLJpn3//c0/Z+4WPjlyvkrTNww3mpCnDRFrTCNZ8Eddc/TQGBDer9UmCSqrjBNOITON1Op/Np1Ean6JilDBUhufcLaujpLfrRXKKyqpSHwiGgh82YU+pzuic/g4AAP//ig1umKkJAAA=
@@ -1062,10 +1062,10 @@ Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:14.7001697Z   CODEQL_A
 Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:14.7002090Z   CODEQL_WORKFLOW_STARTED_AT: 2026-02-28T07:52:02.318Z
 Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:14.7002362Z   CODEQL_RAM: 14576
 Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:14.7002550Z   CODEQL_THREADS: 4
-Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:14.7002719Z   CODEQL_PROXY_HOST: 
-Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:14.7002906Z   CODEQL_PROXY_PORT: 
-Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:14.7003091Z   CODEQL_PROXY_CA_CERTIFICATE: 
-Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:14.7003304Z   CODEQL_PROXY_URLS: 
+Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:14.7002719Z   CODEQL_PROXY_HOST:
+Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:14.7002906Z   CODEQL_PROXY_PORT:
+Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:14.7003091Z   CODEQL_PROXY_CA_CERTIFICATE:
+Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:14.7003304Z   CODEQL_PROXY_URLS:
 Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:14.7003478Z ##[endgroup]
 Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:15.7466255Z While resolving threads, found a cgroup CPUs file with 4 CPUs in /sys/fs/cgroup/cpuset.cpus.effective.
 Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:52:15.7504637Z Not performing diff-informed analysis because we are not analyzing a pull request.
@@ -1662,7 +1662,7 @@ Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:53:03.2111807Z Exporting 
 Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:53:03.4468109Z Exported results to SARIF (236ms).
 Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:53:03.4811320Z ##[endgroup]
 Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:53:03.4812887Z CodeQL scanned 151 out of 181 Python files and 9 out of 9 GitHub Actions files in this invocation. Check the status page for overall coverage information: https://github.com/ZachFlint/Intellicrack/security/code-scanning/tools/CodeQL/status/
-Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:53:03.4814441Z 
+Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:53:03.4814441Z
 Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:53:03.4824171Z Post-processing sarif files: ["/home/runner/work/Intellicrack/results/python.sarif"]
 Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:53:03.4877772Z Adding fingerprints to SARIF file. See https://docs.github.com/en/enterprise-cloud@latest/code-security/code-scanning/integrating-with-code-scanning/sarif-support-for-code-scanning#providing-data-to-track-code-scanning-alerts-across-runs for more information.
 Analyze (python)	Perform CodeQL Analysis	2026-02-28T07:53:03.4880458Z ##[group]Uploading code scanning results
@@ -1768,7 +1768,7 @@ Analyze (actions)	Checkout repository	2026-02-28T07:52:01.1205202Z   submodules:
 Analyze (actions)	Checkout repository	2026-02-28T07:52:01.1205648Z   set-safe-directory: true
 Analyze (actions)	Checkout repository	2026-02-28T07:52:01.1206310Z env:
 Analyze (actions)	Checkout repository	2026-02-28T07:52:01.1206714Z   CODE_SCANNING_REF: refs/heads/main
-Analyze (actions)	Checkout repository	2026-02-28T07:52:01.1207228Z   CODE_SCANNING_BASE_BRANCH: 
+Analyze (actions)	Checkout repository	2026-02-28T07:52:01.1207228Z   CODE_SCANNING_BASE_BRANCH:
 Analyze (actions)	Checkout repository	2026-02-28T07:52:01.1207740Z   CODE_SCANNING_IS_ANALYZING_DEFAULT_BRANCH: true
 Analyze (actions)	Checkout repository	2026-02-28T07:52:01.1208383Z   CODE_SCANNING_IS_STEADY_STATE_DEFAULT_SETUP: true
 Analyze (actions)	Checkout repository	2026-02-28T07:52:01.1217998Z   CODE_SCANNING_WORKFLOW_FILE: H4sIAAAAAAAA/6xV32/bNhB+919x8AakfZDzsicBBaY4cuLNsFNLQZcVBUFTJ5mNTKr84VTt8r8PFKVYWuI5w+on6/jdx7v77o6C7jCE8VRm+H4xHikrAm/6+ft3KLjZ2s0E9yjMhIvKGj1hMkOiGRWCi4IoK4jDw+PjSIoQslrQHWejEYp9OAKYri5jkkyj5XK+vCLrePZqYswd5z8ZLqIkJhfraDm9fi3ThmokG0UF277EOE9ItIwWd3+6j8t4Ft0u0v94A9eEClrW39xHhjm1pfn3G5M0ji7vSJJGafx0aRKntzchGGXxmc+H1fr32WL1gczmi/i1cT1IdZ+X8oHkvGwUGn2WG+1k8eGi+wvg9Y68Cd447h01in+dlFQUlhbO920DVVbowOnsQLmSu9+S1fJNi1ZWCFRvfcoAFaod15pLof09AJSZ5hMU0qy1MSkMCjM0VpTd0wKHRo3MKm7qoElZh/CguMFRR8KFxUCKAJWSKoScltofaqOowaLuosgpL4OcatMHQZtzBwLggpU2w4MBIICuImGXS+8UgLl7pKpDOH8CvoTbWF5mwU5mGIKQAgeHvowhnH0c240VxgYlNajN+NPZkVA+0z3VTPHKBKau0P89Gdhprx8cZlWbrRQn43oB9r8C0QartgODttenW2T30hpQWEnNjVR1S2m1a7pWs3PW4n7d/zIaEMwFN5yW/BuC35wDdz+Z524Yv5SBJzvngjc8HvjAzfbQWc04aq6Dey4yHYLzDLoxfkJ1FdJ+/J7P6OilevWgB3MfnGGFIkPB6oBRtuWi8E6+rhMUe66k2KEw8O4dnPnkgq3UBrOzPtEXi4q76MZj+Aku/R5srDVo240q+HHNeRHCXz0h270ZaDS2CgcKS1UMDQAuiTJwa0KH8PGV+9ALQhoveHyETz1Ss1VITVOcsqFsTzvFExcWVEp+rSGXChQWXBuXb0vCs9Afn24FbagyQQM+1hEHesIUZihcu7XCa2QKjZ5czdPr2wuyjq/mSbqexwm5Wa/+uOtLchi+Ix0zbOsbVLlUu7an/ZOguT6dUfueHLJpn3//c0/Z+4WPjlyvkrTNww3mpCnDRFrTCNZ8Eddc/TQGBDer9UmCSqrjBNOITON1Op/Np1Ean6JilDBUhufcLaujpLfrRXKKyqpSHwiGgh82YU+pzuic/g4AAP//ig1umKkJAAA=
@@ -1839,7 +1839,7 @@ Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:04.0636406Z   config: defau
 Analyze (actions)	Initialize CodeQL	  org:
 Analyze (actions)	Initialize CodeQL	    model-packs: [  ]
 Analyze (actions)	Initialize CodeQL	threat-models: [  ]
-Analyze (actions)	Initialize CodeQL	
+Analyze (actions)	Initialize CodeQL
 Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:04.0636928Z   token: ***
 Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:04.0637375Z   matrix: {
 Analyze (actions)	Initialize CodeQL	  "language": "actions",
@@ -1850,7 +1850,7 @@ Analyze (actions)	Initialize CodeQL	}
 Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:04.0637897Z   debug: false
 Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:04.0638072Z env:
 Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:04.0638253Z   CODE_SCANNING_REF: refs/heads/main
-Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:04.0638715Z   CODE_SCANNING_BASE_BRANCH: 
+Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:04.0638715Z   CODE_SCANNING_BASE_BRANCH:
 Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:04.0638996Z   CODE_SCANNING_IS_ANALYZING_DEFAULT_BRANCH: true
 Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:04.0639342Z   CODE_SCANNING_IS_STEADY_STATE_DEFAULT_SETUP: true
 Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:04.0645139Z   CODE_SCANNING_WORKFLOW_FILE: H4sIAAAAAAAA/6xV32/bNhB+919x8AakfZDzsicBBaY4cuLNsFNLQZcVBUFTJ5mNTKr84VTt8r8PFKVYWuI5w+on6/jdx7v77o6C7jCE8VRm+H4xHikrAm/6+ft3KLjZ2s0E9yjMhIvKGj1hMkOiGRWCi4IoK4jDw+PjSIoQslrQHWejEYp9OAKYri5jkkyj5XK+vCLrePZqYswd5z8ZLqIkJhfraDm9fi3ThmokG0UF277EOE9ItIwWd3+6j8t4Ft0u0v94A9eEClrW39xHhjm1pfn3G5M0ji7vSJJGafx0aRKntzchGGXxmc+H1fr32WL1gczmi/i1cT1IdZ+X8oHkvGwUGn2WG+1k8eGi+wvg9Y68Cd447h01in+dlFQUlhbO920DVVbowOnsQLmSu9+S1fJNi1ZWCFRvfcoAFaod15pLof09AJSZ5hMU0qy1MSkMCjM0VpTd0wKHRo3MKm7qoElZh/CguMFRR8KFxUCKAJWSKoScltofaqOowaLuosgpL4OcatMHQZtzBwLggpU2w4MBIICuImGXS+8UgLl7pKpDOH8CvoTbWF5mwU5mGIKQAgeHvowhnH0c240VxgYlNajN+NPZkVA+0z3VTPHKBKau0P89Gdhprx8cZlWbrRQn43oB9r8C0QartgODttenW2T30hpQWEnNjVR1S2m1a7pWs3PW4n7d/zIaEMwFN5yW/BuC35wDdz+Z524Yv5SBJzvngjc8HvjAzfbQWc04aq6Dey4yHYLzDLoxfkJ1FdJ+/J7P6OilevWgB3MfnGGFIkPB6oBRtuWi8E6+rhMUe66k2KEw8O4dnPnkgq3UBrOzPtEXi4q76MZj+Aku/R5srDVo240q+HHNeRHCXz0h270ZaDS2CgcKS1UMDQAuiTJwa0KH8PGV+9ALQhoveHyETz1Ss1VITVOcsqFsTzvFExcWVEp+rSGXChQWXBuXb0vCs9Afn24FbagyQQM+1hEHesIUZihcu7XCa2QKjZ5czdPr2wuyjq/mSbqexwm5Wa/+uOtLchi+Ix0zbOsbVLlUu7an/ZOguT6dUfueHLJpn3//c0/Z+4WPjlyvkrTNww3mpCnDRFrTCNZ8Eddc/TQGBDer9UmCSqrjBNOITON1Op/Np1Ean6JilDBUhufcLaujpLfrRXKKyqpSHwiGgh82YU+pzuic/g4AAP//ig1umKkJAAA=
@@ -1863,7 +1863,7 @@ Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:05.2979922Z Copyright (C) 2
 Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:05.2980687Z License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.
 Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:05.2981257Z This is free software: you are free to change and redistribute it.
 Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:05.2981653Z There is NO WARRANTY, to the extent permitted by law.
-Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:05.2982169Z 
+Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:05.2982169Z
 Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:05.2982276Z Written by John Gilmore and Jay Fenlason.
 Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:05.2990697Z Found gnu tar version 1.35.
 Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:05.3142303Z Found CodeQL tools version 2.24.2 in the toolcache.
@@ -2702,7 +2702,7 @@ Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:11.5593672Z default-setup:
 Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:11.5593972Z   org:
 Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:11.5594276Z     model-packs: []
 Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:11.5594590Z threat-models: []
-Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:11.5594784Z 
+Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:11.5594784Z
 Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:11.5595142Z ##[endgroup]
 Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:11.5599122Z [command]/opt/hostedtoolcache/CodeQL/2.24.2/x64/codeql/codeql database init --force-overwrite --db-cluster /home/runner/work/_temp/codeql_databases --source-root=/home/runner/work/Intellicrack/Intellicrack --calculate-language-specific-baseline --sublanguage-file-coverage --extractor-include-aliases --language=actions --codescanning-config=/home/runner/work/_temp/user-config.yaml --build-mode=none
 Analyze (actions)	Initialize CodeQL	2026-02-28T07:52:13.0819932Z Package install location: /home/runner/.codeql/packages
@@ -2727,7 +2727,7 @@ Analyze (actions)	Setup proxy for registries	  "runner": "[\"ubuntu-latest\"]"
 Analyze (actions)	Setup proxy for registries	}
 Analyze (actions)	Setup proxy for registries	2026-02-28T07:52:17.8998347Z env:
 Analyze (actions)	Setup proxy for registries	2026-02-28T07:52:17.8998678Z   CODE_SCANNING_REF: refs/heads/main
-Analyze (actions)	Setup proxy for registries	2026-02-28T07:52:17.8998923Z   CODE_SCANNING_BASE_BRANCH: 
+Analyze (actions)	Setup proxy for registries	2026-02-28T07:52:17.8998923Z   CODE_SCANNING_BASE_BRANCH:
 Analyze (actions)	Setup proxy for registries	2026-02-28T07:52:17.8999175Z   CODE_SCANNING_IS_ANALYZING_DEFAULT_BRANCH: true
 Analyze (actions)	Setup proxy for registries	2026-02-28T07:52:17.8999478Z   CODE_SCANNING_IS_STEADY_STATE_DEFAULT_SETUP: true
 Analyze (actions)	Setup proxy for registries	2026-02-28T07:52:17.9005239Z   CODE_SCANNING_WORKFLOW_FILE: H4sIAAAAAAAA/6xV32/bNhB+919x8AakfZDzsicBBaY4cuLNsFNLQZcVBUFTJ5mNTKr84VTt8r8PFKVYWuI5w+on6/jdx7v77o6C7jCE8VRm+H4xHikrAm/6+ft3KLjZ2s0E9yjMhIvKGj1hMkOiGRWCi4IoK4jDw+PjSIoQslrQHWejEYp9OAKYri5jkkyj5XK+vCLrePZqYswd5z8ZLqIkJhfraDm9fi3ThmokG0UF277EOE9ItIwWd3+6j8t4Ft0u0v94A9eEClrW39xHhjm1pfn3G5M0ji7vSJJGafx0aRKntzchGGXxmc+H1fr32WL1gczmi/i1cT1IdZ+X8oHkvGwUGn2WG+1k8eGi+wvg9Y68Cd447h01in+dlFQUlhbO920DVVbowOnsQLmSu9+S1fJNi1ZWCFRvfcoAFaod15pLof09AJSZ5hMU0qy1MSkMCjM0VpTd0wKHRo3MKm7qoElZh/CguMFRR8KFxUCKAJWSKoScltofaqOowaLuosgpL4OcatMHQZtzBwLggpU2w4MBIICuImGXS+8UgLl7pKpDOH8CvoTbWF5mwU5mGIKQAgeHvowhnH0c240VxgYlNajN+NPZkVA+0z3VTPHKBKau0P89Gdhprx8cZlWbrRQn43oB9r8C0QartgODttenW2T30hpQWEnNjVR1S2m1a7pWs3PW4n7d/zIaEMwFN5yW/BuC35wDdz+Z524Yv5SBJzvngjc8HvjAzfbQWc04aq6Dey4yHYLzDLoxfkJ1FdJ+/J7P6OilevWgB3MfnGGFIkPB6oBRtuWi8E6+rhMUe66k2KEw8O4dnPnkgq3UBrOzPtEXi4q76MZj+Aku/R5srDVo240q+HHNeRHCXz0h270ZaDS2CgcKS1UMDQAuiTJwa0KH8PGV+9ALQhoveHyETz1Ss1VITVOcsqFsTzvFExcWVEp+rSGXChQWXBuXb0vCs9Afn24FbagyQQM+1hEHesIUZihcu7XCa2QKjZ5czdPr2wuyjq/mSbqexwm5Wa/+uOtLchi+Ix0zbOsbVLlUu7an/ZOguT6dUfueHLJpn3//c0/Z+4WPjlyvkrTNww3mpCnDRFrTCNZ8Eddc/TQGBDer9UmCSqrjBNOITON1Op/Np1Ean6JilDBUhufcLaujpLfrRXKKyqpSHwiGgh82YU+pzuic/g4AAP//ig1umKkJAAA=
@@ -2764,7 +2764,7 @@ Analyze (actions)	Perform CodeQL Analysis	}
 Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:18.1003407Z   expect-error: false
 Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:18.1003596Z env:
 Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:18.1003755Z   CODE_SCANNING_REF: refs/heads/main
-Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:18.1003998Z   CODE_SCANNING_BASE_BRANCH: 
+Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:18.1003998Z   CODE_SCANNING_BASE_BRANCH:
 Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:18.1004248Z   CODE_SCANNING_IS_ANALYZING_DEFAULT_BRANCH: true
 Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:18.1004551Z   CODE_SCANNING_IS_STEADY_STATE_DEFAULT_SETUP: true
 Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:18.1010752Z   CODE_SCANNING_WORKFLOW_FILE: H4sIAAAAAAAA/6xV32/bNhB+919x8AakfZDzsicBBaY4cuLNsFNLQZcVBUFTJ5mNTKr84VTt8r8PFKVYWuI5w+on6/jdx7v77o6C7jCE8VRm+H4xHikrAm/6+ft3KLjZ2s0E9yjMhIvKGj1hMkOiGRWCi4IoK4jDw+PjSIoQslrQHWejEYp9OAKYri5jkkyj5XK+vCLrePZqYswd5z8ZLqIkJhfraDm9fi3ThmokG0UF277EOE9ItIwWd3+6j8t4Ft0u0v94A9eEClrW39xHhjm1pfn3G5M0ji7vSJJGafx0aRKntzchGGXxmc+H1fr32WL1gczmi/i1cT1IdZ+X8oHkvGwUGn2WG+1k8eGi+wvg9Y68Cd447h01in+dlFQUlhbO920DVVbowOnsQLmSu9+S1fJNi1ZWCFRvfcoAFaod15pLof09AJSZ5hMU0qy1MSkMCjM0VpTd0wKHRo3MKm7qoElZh/CguMFRR8KFxUCKAJWSKoScltofaqOowaLuosgpL4OcatMHQZtzBwLggpU2w4MBIICuImGXS+8UgLl7pKpDOH8CvoTbWF5mwU5mGIKQAgeHvowhnH0c240VxgYlNajN+NPZkVA+0z3VTPHKBKau0P89Gdhprx8cZlWbrRQn43oB9r8C0QartgODttenW2T30hpQWEnNjVR1S2m1a7pWs3PW4n7d/zIaEMwFN5yW/BuC35wDdz+Z524Yv5SBJzvngjc8HvjAzfbQWc04aq6Dey4yHYLzDLoxfkJ1FdJ+/J7P6OilevWgB3MfnGGFIkPB6oBRtuWi8E6+rhMUe66k2KEw8O4dnPnkgq3UBrOzPtEXi4q76MZj+Aku/R5srDVo240q+HHNeRHCXz0h270ZaDS2CgcKS1UMDQAuiTJwa0KH8PGV+9ALQhoveHyETz1Ss1VITVOcsqFsTzvFExcWVEp+rSGXChQWXBuXb0vCs9Afn24FbagyQQM+1hEHesIUZihcu7XCa2QKjZ5czdPr2wuyjq/mSbqexwm5Wa/+uOtLchi+Ix0zbOsbVLlUu7an/ZOguT6dUfueHLJpn3//c0/Z+4WPjlyvkrTNww3mpCnDRFrTCNZ8Eddc/TQGBDer9UmCSqrjBNOITON1Op/Np1Ean6JilDBUhufcLaujpLfrRXKKyqpSHwiGgh82YU+pzuic/g4AAP//ig1umKkJAAA=
@@ -2779,10 +2779,10 @@ Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:18.1018823Z   CODEQL_
 Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:18.1019225Z   CODEQL_WORKFLOW_STARTED_AT: 2026-02-28T07:52:04.236Z
 Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:18.1019630Z   CODEQL_RAM: 14580
 Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:18.1019923Z   CODEQL_THREADS: 4
-Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:18.1020102Z   CODEQL_PROXY_HOST: 
-Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:18.1020307Z   CODEQL_PROXY_PORT: 
-Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:18.1020494Z   CODEQL_PROXY_CA_CERTIFICATE: 
-Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:18.1020709Z   CODEQL_PROXY_URLS: 
+Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:18.1020102Z   CODEQL_PROXY_HOST:
+Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:18.1020307Z   CODEQL_PROXY_PORT:
+Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:18.1020494Z   CODEQL_PROXY_CA_CERTIFICATE:
+Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:18.1020709Z   CODEQL_PROXY_URLS:
 Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:18.1020887Z ##[endgroup]
 Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:19.2687547Z While resolving threads, found a cgroup CPUs file with 4 CPUs in /sys/fs/cgroup/cpuset.cpus.effective.
 Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:19.2724054Z Not performing diff-informed analysis because we are not analyzing a pull request.
@@ -2952,7 +2952,7 @@ Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:37.3173030Z Exporting
 Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:37.5350872Z Exported results to SARIF (217ms).
 Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:37.5571905Z ##[endgroup]
 Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:37.5573292Z CodeQL scanned 9 out of 9 GitHub Actions files in this invocation. Check the status page for overall coverage information: https://github.com/ZachFlint/Intellicrack/security/code-scanning/tools/CodeQL/status/
-Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:37.5574726Z 
+Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:37.5574726Z
 Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:37.5584745Z Post-processing sarif files: ["/home/runner/work/Intellicrack/results/actions.sarif"]
 Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:37.5628827Z Adding fingerprints to SARIF file. See https://docs.github.com/en/enterprise-cloud@latest/code-security/code-scanning/integrating-with-code-scanning/sarif-support-for-code-scanning#providing-data-to-track-code-scanning-alerts-across-runs for more information.
 Analyze (actions)	Perform CodeQL Analysis	2026-02-28T07:52:37.5631501Z ##[group]Uploading code scanning results
@@ -3046,7 +3046,7 @@ Analyze (javascript-typescript)	Checkout repository	2026-02-28T07:52:00.5894176Z
 Analyze (javascript-typescript)	Checkout repository	2026-02-28T07:52:00.5894998Z   set-safe-directory: true
 Analyze (javascript-typescript)	Checkout repository	2026-02-28T07:52:00.5896106Z env:
 Analyze (javascript-typescript)	Checkout repository	2026-02-28T07:52:00.5896821Z   CODE_SCANNING_REF: refs/heads/main
-Analyze (javascript-typescript)	Checkout repository	2026-02-28T07:52:00.5897771Z   CODE_SCANNING_BASE_BRANCH: 
+Analyze (javascript-typescript)	Checkout repository	2026-02-28T07:52:00.5897771Z   CODE_SCANNING_BASE_BRANCH:
 Analyze (javascript-typescript)	Checkout repository	2026-02-28T07:52:00.5898754Z   CODE_SCANNING_IS_ANALYZING_DEFAULT_BRANCH: true
 Analyze (javascript-typescript)	Checkout repository	2026-02-28T07:52:00.5899972Z   CODE_SCANNING_IS_STEADY_STATE_DEFAULT_SETUP: true
 Analyze (javascript-typescript)	Checkout repository	2026-02-28T07:52:00.5921034Z   CODE_SCANNING_WORKFLOW_FILE: H4sIAAAAAAAA/6xV32/bNhB+919x8AakfZDzsicBBaY4cuLNsFNLQZcVBUFTJ5mNTKr84VTt8r8PFKVYWuI5w+on6/jdx7v77o6C7jCE8VRm+H4xHikrAm/6+ft3KLjZ2s0E9yjMhIvKGj1hMkOiGRWCi4IoK4jDw+PjSIoQslrQHWejEYp9OAKYri5jkkyj5XK+vCLrePZqYswd5z8ZLqIkJhfraDm9fi3ThmokG0UF277EOE9ItIwWd3+6j8t4Ft0u0v94A9eEClrW39xHhjm1pfn3G5M0ji7vSJJGafx0aRKntzchGGXxmc+H1fr32WL1gczmi/i1cT1IdZ+X8oHkvGwUGn2WG+1k8eGi+wvg9Y68Cd447h01in+dlFQUlhbO920DVVbowOnsQLmSu9+S1fJNi1ZWCFRvfcoAFaod15pLof09AJSZ5hMU0qy1MSkMCjM0VpTd0wKHRo3MKm7qoElZh/CguMFRR8KFxUCKAJWSKoScltofaqOowaLuosgpL4OcatMHQZtzBwLggpU2w4MBIICuImGXS+8UgLl7pKpDOH8CvoTbWF5mwU5mGIKQAgeHvowhnH0c240VxgYlNajN+NPZkVA+0z3VTPHKBKau0P89Gdhprx8cZlWbrRQn43oB9r8C0QartgODttenW2T30hpQWEnNjVR1S2m1a7pWs3PW4n7d/zIaEMwFN5yW/BuC35wDdz+Z524Yv5SBJzvngjc8HvjAzfbQWc04aq6Dey4yHYLzDLoxfkJ1FdJ+/J7P6OilevWgB3MfnGGFIkPB6oBRtuWi8E6+rhMUe66k2KEw8O4dnPnkgq3UBrOzPtEXi4q76MZj+Aku/R5srDVo240q+HHNeRHCXz0h270ZaDS2CgcKS1UMDQAuiTJwa0KH8PGV+9ALQhoveHyETz1Ss1VITVOcsqFsTzvFExcWVEp+rSGXChQWXBuXb0vCs9Afn24FbagyQQM+1hEHesIUZihcu7XCa2QKjZ5czdPr2wuyjq/mSbqexwm5Wa/+uOtLchi+Ix0zbOsbVLlUu7an/ZOguT6dUfueHLJpn3//c0/Z+4WPjlyvkrTNww3mpCnDRFrTCNZ8Eddc/TQGBDer9UmCSqrjBNOITON1Op/Np1Ean6JilDBUhufcLaujpLfrRXKKyqpSHwiGgh82YU+pzuic/g4AAP//ig1umKkJAAA=
@@ -3117,7 +3117,7 @@ Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:02.9790587Z  
 Analyze (javascript-typescript)	Initialize CodeQL	  org:
 Analyze (javascript-typescript)	Initialize CodeQL	    model-packs: [  ]
 Analyze (javascript-typescript)	Initialize CodeQL	threat-models: [  ]
-Analyze (javascript-typescript)	Initialize CodeQL	
+Analyze (javascript-typescript)	Initialize CodeQL
 Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:02.9791140Z   token: ***
 Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:02.9791707Z   matrix: {
 Analyze (javascript-typescript)	Initialize CodeQL	  "language": "javascript-typescript",
@@ -3128,7 +3128,7 @@ Analyze (javascript-typescript)	Initialize CodeQL	}
 Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:02.9792387Z   debug: false
 Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:02.9792556Z env:
 Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:02.9792733Z   CODE_SCANNING_REF: refs/heads/main
-Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:02.9793007Z   CODE_SCANNING_BASE_BRANCH: 
+Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:02.9793007Z   CODE_SCANNING_BASE_BRANCH:
 Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:02.9793273Z   CODE_SCANNING_IS_ANALYZING_DEFAULT_BRANCH: true
 Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:02.9793756Z   CODE_SCANNING_IS_STEADY_STATE_DEFAULT_SETUP: true
 Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:02.9799622Z   CODE_SCANNING_WORKFLOW_FILE: H4sIAAAAAAAA/6xV32/bNhB+919x8AakfZDzsicBBaY4cuLNsFNLQZcVBUFTJ5mNTKr84VTt8r8PFKVYWuI5w+on6/jdx7v77o6C7jCE8VRm+H4xHikrAm/6+ft3KLjZ2s0E9yjMhIvKGj1hMkOiGRWCi4IoK4jDw+PjSIoQslrQHWejEYp9OAKYri5jkkyj5XK+vCLrePZqYswd5z8ZLqIkJhfraDm9fi3ThmokG0UF277EOE9ItIwWd3+6j8t4Ft0u0v94A9eEClrW39xHhjm1pfn3G5M0ji7vSJJGafx0aRKntzchGGXxmc+H1fr32WL1gczmi/i1cT1IdZ+X8oHkvGwUGn2WG+1k8eGi+wvg9Y68Cd447h01in+dlFQUlhbO920DVVbowOnsQLmSu9+S1fJNi1ZWCFRvfcoAFaod15pLof09AJSZ5hMU0qy1MSkMCjM0VpTd0wKHRo3MKm7qoElZh/CguMFRR8KFxUCKAJWSKoScltofaqOowaLuosgpL4OcatMHQZtzBwLggpU2w4MBIICuImGXS+8UgLl7pKpDOH8CvoTbWF5mwU5mGIKQAgeHvowhnH0c240VxgYlNajN+NPZkVA+0z3VTPHKBKau0P89Gdhprx8cZlWbrRQn43oB9r8C0QartgODttenW2T30hpQWEnNjVR1S2m1a7pWs3PW4n7d/zIaEMwFN5yW/BuC35wDdz+Z524Yv5SBJzvngjc8HvjAzfbQWc04aq6Dey4yHYLzDLoxfkJ1FdJ+/J7P6OilevWgB3MfnGGFIkPB6oBRtuWi8E6+rhMUe66k2KEw8O4dnPnkgq3UBrOzPtEXi4q76MZj+Aku/R5srDVo240q+HHNeRHCXz0h270ZaDS2CgcKS1UMDQAuiTJwa0KH8PGV+9ALQhoveHyETz1Ss1VITVOcsqFsTzvFExcWVEp+rSGXChQWXBuXb0vCs9Afn24FbagyQQM+1hEHesIUZihcu7XCa2QKjZ5czdPr2wuyjq/mSbqexwm5Wa/+uOtLchi+Ix0zbOsbVLlUu7an/ZOguT6dUfueHLJpn3//c0/Z+4WPjlyvkrTNww3mpCnDRFrTCNZ8Eddc/TQGBDer9UmCSqrjBNOITON1Op/Np1Ean6JilDBUhufcLaujpLfrRXKKyqpSHwiGgh82YU+pzuic/g4AAP//ig1umKkJAAA=
@@ -3141,7 +3141,7 @@ Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:03.9484123Z C
 Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:03.9484837Z License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.
 Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:03.9485654Z This is free software: you are free to change and redistribute it.
 Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:03.9486691Z There is NO WARRANTY, to the extent permitted by law.
-Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:03.9487064Z 
+Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:03.9487064Z
 Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:03.9487229Z Written by John Gilmore and Jay Fenlason.
 Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:03.9496683Z Found gnu tar version 1.35.
 Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:03.9599993Z Found CodeQL tools version 2.24.2 in the toolcache.
@@ -3981,7 +3981,7 @@ Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:11.1680013Z d
 Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:11.1680646Z   org:
 Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:11.1681214Z     model-packs: []
 Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:11.1681897Z threat-models: []
-Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:11.1682368Z 
+Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:11.1682368Z
 Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:11.1683103Z ##[endgroup]
 Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:11.1686373Z [command]/opt/hostedtoolcache/CodeQL/2.24.2/x64/codeql/codeql database init --force-overwrite --db-cluster /home/runner/work/_temp/codeql_databases --source-root=/home/runner/work/Intellicrack/Intellicrack --calculate-language-specific-baseline --sublanguage-file-coverage --extractor-include-aliases --language=javascript --codescanning-config=/home/runner/work/_temp/user-config.yaml --build-mode=none --overlay-base
 Analyze (javascript-typescript)	Initialize CodeQL	2026-02-28T07:52:12.7779386Z Package install location: /home/runner/.codeql/packages
@@ -4007,7 +4007,7 @@ Analyze (javascript-typescript)	Setup proxy for registries	  "runner": "[\"ubunt
 Analyze (javascript-typescript)	Setup proxy for registries	}
 Analyze (javascript-typescript)	Setup proxy for registries	2026-02-28T07:52:20.0378850Z env:
 Analyze (javascript-typescript)	Setup proxy for registries	2026-02-28T07:52:20.0379019Z   CODE_SCANNING_REF: refs/heads/main
-Analyze (javascript-typescript)	Setup proxy for registries	2026-02-28T07:52:20.0379257Z   CODE_SCANNING_BASE_BRANCH: 
+Analyze (javascript-typescript)	Setup proxy for registries	2026-02-28T07:52:20.0379257Z   CODE_SCANNING_BASE_BRANCH:
 Analyze (javascript-typescript)	Setup proxy for registries	2026-02-28T07:52:20.0379514Z   CODE_SCANNING_IS_ANALYZING_DEFAULT_BRANCH: true
 Analyze (javascript-typescript)	Setup proxy for registries	2026-02-28T07:52:20.0379820Z   CODE_SCANNING_IS_STEADY_STATE_DEFAULT_SETUP: true
 Analyze (javascript-typescript)	Setup proxy for registries	2026-02-28T07:52:20.0385800Z   CODE_SCANNING_WORKFLOW_FILE: H4sIAAAAAAAA/6xV32/bNhB+919x8AakfZDzsicBBaY4cuLNsFNLQZcVBUFTJ5mNTKr84VTt8r8PFKVYWuI5w+on6/jdx7v77o6C7jCE8VRm+H4xHikrAm/6+ft3KLjZ2s0E9yjMhIvKGj1hMkOiGRWCi4IoK4jDw+PjSIoQslrQHWejEYp9OAKYri5jkkyj5XK+vCLrePZqYswd5z8ZLqIkJhfraDm9fi3ThmokG0UF277EOE9ItIwWd3+6j8t4Ft0u0v94A9eEClrW39xHhjm1pfn3G5M0ji7vSJJGafx0aRKntzchGGXxmc+H1fr32WL1gczmi/i1cT1IdZ+X8oHkvGwUGn2WG+1k8eGi+wvg9Y68Cd447h01in+dlFQUlhbO920DVVbowOnsQLmSu9+S1fJNi1ZWCFRvfcoAFaod15pLof09AJSZ5hMU0qy1MSkMCjM0VpTd0wKHRo3MKm7qoElZh/CguMFRR8KFxUCKAJWSKoScltofaqOowaLuosgpL4OcatMHQZtzBwLggpU2w4MBIICuImGXS+8UgLl7pKpDOH8CvoTbWF5mwU5mGIKQAgeHvowhnH0c240VxgYlNajN+NPZkVA+0z3VTPHKBKau0P89Gdhprx8cZlWbrRQn43oB9r8C0QartgODttenW2T30hpQWEnNjVR1S2m1a7pWs3PW4n7d/zIaEMwFN5yW/BuC35wDdz+Z524Yv5SBJzvngjc8HvjAzfbQWc04aq6Dey4yHYLzDLoxfkJ1FdJ+/J7P6OilevWgB3MfnGGFIkPB6oBRtuWi8E6+rhMUe66k2KEw8O4dnPnkgq3UBrOzPtEXi4q76MZj+Aku/R5srDVo240q+HHNeRHCXz0h270ZaDS2CgcKS1UMDQAuiTJwa0KH8PGV+9ALQhoveHyETz1Ss1VITVOcsqFsTzvFExcWVEp+rSGXChQWXBuXb0vCs9Afn24FbagyQQM+1hEHesIUZihcu7XCa2QKjZ5czdPr2wuyjq/mSbqexwm5Wa/+uOtLchi+Ix0zbOsbVLlUu7an/ZOguT6dUfueHLJpn3//c0/Z+4WPjlyvkrTNww3mpCnDRFrTCNZ8Eddc/TQGBDer9UmCSqrjBNOITON1Op/Np1Ean6JilDBUhufcLaujpLfrRXKKyqpSHwiGgh82YU+pzuic/g4AAP//ig1umKkJAAA=
@@ -4044,7 +4044,7 @@ Analyze (javascript-typescript)	Perform CodeQL Analysis	}
 Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:20.2427714Z   expect-error: false
 Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:20.2427901Z env:
 Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:20.2428080Z   CODE_SCANNING_REF: refs/heads/main
-Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:20.2428324Z   CODE_SCANNING_BASE_BRANCH: 
+Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:20.2428324Z   CODE_SCANNING_BASE_BRANCH:
 Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:20.2428565Z   CODE_SCANNING_IS_ANALYZING_DEFAULT_BRANCH: true
 Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:20.2428897Z   CODE_SCANNING_IS_STEADY_STATE_DEFAULT_SETUP: true
 Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:20.2434746Z   CODE_SCANNING_WORKFLOW_FILE: H4sIAAAAAAAA/6xV32/bNhB+919x8AakfZDzsicBBaY4cuLNsFNLQZcVBUFTJ5mNTKr84VTt8r8PFKVYWuI5w+on6/jdx7v77o6C7jCE8VRm+H4xHikrAm/6+ft3KLjZ2s0E9yjMhIvKGj1hMkOiGRWCi4IoK4jDw+PjSIoQslrQHWejEYp9OAKYri5jkkyj5XK+vCLrePZqYswd5z8ZLqIkJhfraDm9fi3ThmokG0UF277EOE9ItIwWd3+6j8t4Ft0u0v94A9eEClrW39xHhjm1pfn3G5M0ji7vSJJGafx0aRKntzchGGXxmc+H1fr32WL1gczmi/i1cT1IdZ+X8oHkvGwUGn2WG+1k8eGi+wvg9Y68Cd447h01in+dlFQUlhbO920DVVbowOnsQLmSu9+S1fJNi1ZWCFRvfcoAFaod15pLof09AJSZ5hMU0qy1MSkMCjM0VpTd0wKHRo3MKm7qoElZh/CguMFRR8KFxUCKAJWSKoScltofaqOowaLuosgpL4OcatMHQZtzBwLggpU2w4MBIICuImGXS+8UgLl7pKpDOH8CvoTbWF5mwU5mGIKQAgeHvowhnH0c240VxgYlNajN+NPZkVA+0z3VTPHKBKau0P89Gdhprx8cZlWbrRQn43oB9r8C0QartgODttenW2T30hpQWEnNjVR1S2m1a7pWs3PW4n7d/zIaEMwFN5yW/BuC35wDdz+Z524Yv5SBJzvngjc8HvjAzfbQWc04aq6Dey4yHYLzDLoxfkJ1FdJ+/J7P6OilevWgB3MfnGGFIkPB6oBRtuWi8E6+rhMUe66k2KEw8O4dnPnkgq3UBrOzPtEXi4q76MZj+Aku/R5srDVo240q+HHNeRHCXz0h270ZaDS2CgcKS1UMDQAuiTJwa0KH8PGV+9ALQhoveHyETz1Ss1VITVOcsqFsTzvFExcWVEp+rSGXChQWXBuXb0vCs9Afn24FbagyQQM+1hEHesIUZihcu7XCa2QKjZ5czdPr2wuyjq/mSbqexwm5Wa/+uOtLchi+Ix0zbOsbVLlUu7an/ZOguT6dUfueHLJpn3//c0/Z+4WPjlyvkrTNww3mpCnDRFrTCNZ8Eddc/TQGBDer9UmCSqrjBNOITON1Op/Np1Ean6JilDBUhufcLaujpLfrRXKKyqpSHwiGgh82YU+pzuic/g4AAP//ig1umKkJAAA=
@@ -4059,10 +4059,10 @@ Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:20.2442
 Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:20.2442999Z   CODEQL_WORKFLOW_STARTED_AT: 2026-02-28T07:52:03.159Z
 Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:20.2443272Z   CODEQL_RAM: 14576
 Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:20.2443668Z   CODEQL_THREADS: 4
-Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:20.2443970Z   CODEQL_PROXY_HOST: 
-Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:20.2444167Z   CODEQL_PROXY_PORT: 
-Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:20.2444364Z   CODEQL_PROXY_CA_CERTIFICATE: 
-Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:20.2444572Z   CODEQL_PROXY_URLS: 
+Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:20.2443970Z   CODEQL_PROXY_HOST:
+Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:20.2444167Z   CODEQL_PROXY_PORT:
+Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:20.2444364Z   CODEQL_PROXY_CA_CERTIFICATE:
+Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:20.2444572Z   CODEQL_PROXY_URLS:
 Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:20.2444755Z ##[endgroup]
 Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:21.3379273Z While resolving threads, found a cgroup CPUs file with 4 CPUs in /sys/fs/cgroup/cpuset.cpus.effective.
 Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:52:21.3417677Z Not performing diff-informed analysis because we are not analyzing a pull request.
@@ -4892,7 +4892,7 @@ Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:53:27.6158
 Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:53:27.8574933Z Exported results to SARIF (242ms).
 Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:53:27.8900497Z ##[endgroup]
 Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:53:27.8901598Z CodeQL scanned 9 out of 9 GitHub Actions files in this invocation. Check the status page for overall coverage information: https://github.com/ZachFlint/Intellicrack/security/code-scanning/tools/CodeQL/status/
-Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:53:27.8902727Z 
+Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:53:27.8902727Z
 Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:53:27.8912120Z Post-processing sarif files: ["/home/runner/work/Intellicrack/results/javascript.sarif"]
 Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:53:27.8978186Z Adding fingerprints to SARIF file. See https://docs.github.com/en/enterprise-cloud@latest/code-security/code-scanning/integrating-with-code-scanning/sarif-support-for-code-scanning#providing-data-to-track-code-scanning-alerts-across-runs for more information.
 Analyze (javascript-typescript)	Perform CodeQL Analysis	2026-02-28T07:53:27.9191757Z ##[group]Uploading code scanning results

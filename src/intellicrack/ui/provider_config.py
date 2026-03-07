@@ -16,7 +16,7 @@ import contextlib
 import json
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import httpx
 from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
@@ -43,11 +43,15 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from intellicrack.core.types import ProviderName
+from intellicrack.core.types import ProviderCredentials, ProviderName
 
 from ..core.logging import get_logger
 from ..credentials.env_loader import create_env_template, get_credential_loader
-from ..credentials.oauth import OAUTH_CONFIGS, OAuthFlowType, OAuthManager, OAuthProvider
+from ..credentials.oauth import (
+    OAUTH_CONFIGS,
+    OAuthProvider,
+    get_oauth_manager,
+)
 from ..credentials.store import CredentialStore
 from .resources import IconManager
 
@@ -126,26 +130,25 @@ class CredentialSourceDetector:
         """Load variable names present in .env file."""
         env_paths = [
             Path.cwd() / ".env",
-            Path("D:/Intellicrack/.env"),
+            Path(__file__).resolve().parents[3] / ".env",
             Path.home() / ".env",
         ]
 
         for env_path in env_paths:
-            if env_path.exists():
-                try:
-                    with env_path.open("r", encoding="utf-8") as f:
-                        for line in f:
-                            stripped = line.strip()
-                            if stripped and not stripped.startswith("#") and "=" in stripped:
-                                key = stripped.split("=", 1)[0].strip()
-                                if key.startswith("export "):
-                                    key = key[7:].strip()
-                                if key:
-                                    self._env_file_vars.add(key)
-                    break
-                except OSError as e:
-                    _logger.debug("env_file_read_failed", extra={"path": str(env_path), "error": str(e)})
-                    continue
+            try:
+                with env_path.open("r", encoding="utf-8") as f:
+                    for line in f:
+                        stripped = line.strip()
+                        if stripped and not stripped.startswith("#") and "=" in stripped:
+                            key = stripped.split("=", 1)[0].strip()
+                            if key.startswith("export "):
+                                key = key[7:].strip()
+                            if key:
+                                self._env_file_vars.add(key)
+                break
+            except OSError as e:
+                _logger.debug("env_file_read_failed", extra={"path": str(env_path), "error": str(e)})
+                continue
 
     def detect_source(self, provider_id: str, current_key: str) -> str:
         """Detect the source of credentials for a provider.
@@ -545,9 +548,9 @@ class ModelRefreshWorker(QThread):
                         params=params,
                     )
                     if resp.status_code == HTTP_UNAUTHORIZED:
-                        return True, fallback_models, "Invalid API key, showing defaults"
+                        return False, [], "Invalid API key"
                     if resp.status_code >= HTTP_BAD_REQUEST:
-                        return True, fallback_models, f"API error {resp.status_code}, showing defaults"
+                        return False, [], f"API error {resp.status_code}"
 
                     data = resp.json()
                     all_models.extend(model_id for model_entry in data.get("data", []) if (model_id := model_entry.get("id", "")))
@@ -561,12 +564,12 @@ class ModelRefreshWorker(QThread):
                         break
         except Exception as e:
             _logger.debug("anthropic_models_api_unavailable", extra={"error": str(e)})
-            return True, fallback_models, "API unavailable, showing defaults"
+            return False, [], f"API unavailable: {e}"
         else:
             if all_models:
                 all_models.sort()
                 return True, all_models, f"Found {len(all_models)} Anthropic models"
-            return True, fallback_models, "No models returned, showing defaults"
+            return False, [], "No models returned"
 
     def _fetch_openai_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
         """Fetch OpenAI models from API.
@@ -973,7 +976,7 @@ class ProviderConfigDialog(QDialog):
         if self._registry is None:
             return False
         try:
-            provider_name = ProviderName(provider_id.upper())
+            provider_name = ProviderName(provider_id)
             provider = self._registry.get(provider_name)
             return provider is not None and getattr(provider, "is_connected", False)
         except Exception:
@@ -991,7 +994,7 @@ class ProviderConfigDialog(QDialog):
         if self._discovery is None:
             return 0
         try:
-            provider_name = ProviderName(provider_id.upper())
+            provider_name = ProviderName(provider_id)
             counts = self._discovery.get_provider_model_count()
             return counts.get(provider_name, 0)
         except Exception:
@@ -1024,7 +1027,7 @@ class ProviderConfigDialog(QDialog):
             return
 
         try:
-            provider_name = ProviderName(self._current_provider.upper())
+            provider_name = ProviderName(self._current_provider)
             self._registry.set_active(provider_name)
             self._update_active_label()
             self._refresh_provider_status()
@@ -1206,26 +1209,33 @@ class ProviderConfigDialog(QDialog):
             provider_id: The provider to authorize.
         """
         try:
-            manager = OAuthManager()
+            oauth_provider = OAuthProvider(provider_id)
+        except ValueError:
+            _logger.warning("oauth_unknown_provider", extra={"provider": provider_id})
+            return
+
+        oauth_config = OAUTH_CONFIGS.get(oauth_provider)
+        if oauth_config is None:
+            _logger.warning("oauth_no_config", extra={"provider": provider_id})
+            return
+
+        try:
+            manager = get_oauth_manager()
             loop = asyncio.new_event_loop()
             try:
-                if provider_id == "google":
-                    google_config = OAUTH_CONFIGS[OAuthProvider.GOOGLE]
-                    loop.run_until_complete(
-                        manager.run_authorization_flow(google_config)
-                    )
+                loop.run_until_complete(manager.run_authorization_flow(oauth_config))
                 creds = loop.run_until_complete(
-                    manager.to_provider_credentials(OAuthProvider.GOOGLE)
+                    manager.to_provider_credentials(oauth_provider),
                 )
             finally:
                 loop.close()
-            if creds is not None:
+            if creds is not None and creds.api_key:
                 _logger.info("oauth_credentials_obtained", extra={"provider": provider_id})
-
-            flow_types = list(OAuthFlowType)
-            _logger.debug("oauth_flow_types_available", extra={"count": len(flow_types)})
+                widget = self._provider_widgets.get(provider_id)
+                if widget is not None:
+                    widget.set_api_key(creds.api_key)
         except Exception:
-            _logger.debug("oauth_flow_failed", extra={"provider": provider_id})
+            _logger.warning("oauth_flow_failed", extra={"provider": provider_id})
         self._load_credential_overview()
 
     def revoke_oauth_token(self, provider_id: str) -> None:
@@ -1235,7 +1245,7 @@ class ProviderConfigDialog(QDialog):
             provider_id: The provider whose token to revoke.
         """
         try:
-            manager = OAuthManager()
+            manager = get_oauth_manager()
             try:
                 oauth_provider = OAuthProvider(provider_id)
             except ValueError:
@@ -1841,6 +1851,14 @@ class ProviderSettingsWidget(QFrame):
 
         self.connection_tested.emit(success, message)
 
+    def set_api_key(self, api_key: str) -> None:
+        """Set the API key input text.
+
+        Args:
+            api_key: The API key value to set.
+        """
+        self._api_key_input.setText(api_key)
+
     def get_settings(self) -> dict[str, Any]:
         """Get current settings as a dictionary.
 
@@ -1983,12 +2001,18 @@ class ProviderSettingsWidget(QFrame):
             return None
         if OpenRouterProvider is None:
             return None
+        api_key = self._api_key_input.text().strip()
+        if not api_key:
+            return None
         try:
             provider = OpenRouterProvider()
+            creds = ProviderCredentials(api_key=api_key)
             loop = asyncio.new_event_loop()
             try:
+                loop.run_until_complete(provider.connect(cast("Any", creds)))
                 return loop.run_until_complete(provider.get_generation(generation_id))
             finally:
+                loop.run_until_complete(provider.disconnect())
                 loop.close()
         except Exception:
             return None

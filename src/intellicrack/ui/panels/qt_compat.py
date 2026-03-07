@@ -18,7 +18,7 @@ missing, ensuring failures are immediately identifiable.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from ...core.logging import get_logger
 
@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from typing import Any
 
     from PyQt6.QtCore import Qt
+    from PyQt6.QtGui import QKeyEvent, QWheelEvent
     from PyQt6.QtWidgets import (
         QAbstractItemView,
         QPlainTextEdit,
@@ -63,12 +64,13 @@ def _resolve(obj: object, method_name: str) -> Callable[..., Any]:
     Raises:
         AttributeError: If the method does not exist on the object.
     """
-    if not hasattr(obj, method_name):
+    sentinel: object = object()
+    method: object = getattr(obj, method_name, sentinel)
+    if method is sentinel:
         cls_name = type(obj).__name__
         msg = f"{cls_name} has no method '{method_name}'; PyQt6 binding may be incompatible"
         raise AttributeError(msg)
-    method: Callable[..., Any] = getattr(obj, method_name)
-    return method
+    return cast("Callable[..., Any]", method)
 
 
 def set_sorting_enabled(table: QTableWidget | QTreeWidget, enable: bool) -> None:
@@ -178,3 +180,65 @@ def tree_item_data(
         The stored data value.
     """
     return _resolve(item, _GET_DATA)(column, role)
+
+
+def wheel_angle_delta_y(event: QWheelEvent) -> int:
+    """Get the vertical scroll angle delta from a wheel event.
+
+    Args:
+        event: The wheel event.
+
+    Returns:
+        Vertical scroll angle delta in eighths of a degree.
+    """
+    point: object = _resolve(event, "angleDelta")()
+    return _resolve(point, "y")()
+
+
+def key_event_key(event: QKeyEvent) -> int:
+    """Get the key code from a key event.
+
+    Args:
+        event: The key event.
+
+    Returns:
+        Integer key code matching Qt.Key enum values.
+    """
+    return _resolve(event, "key")()
+
+
+_KEY_PAGE_UP = "Key_PageUp"
+_KEY_PAGE_DOWN = "Key_PageDown"
+_KEY_ENUM = "Key"
+
+
+def qt_key_page_up() -> int:
+    """Return Qt.Key.Key_PageUp constant value.
+
+    Returns:
+        Integer value of Qt.Key.Key_PageUp.
+    """
+    from PyQt6.QtCore import Qt as _Qt  # noqa: PLC0415
+
+    return int(getattr(getattr(_Qt, _KEY_ENUM), _KEY_PAGE_UP))
+
+
+def qt_key_page_down() -> int:
+    """Return Qt.Key.Key_PageDown constant value.
+
+    Returns:
+        Integer value of Qt.Key.Key_PageDown.
+    """
+    from PyQt6.QtCore import Qt as _Qt  # noqa: PLC0415
+
+    return int(getattr(getattr(_Qt, _KEY_ENUM), _KEY_PAGE_DOWN))
+
+
+def tree_add_child(parent: QTreeWidgetItem, child: QTreeWidgetItem) -> None:
+    """Add a child item to a QTreeWidgetItem.
+
+    Args:
+        parent: The parent tree item.
+        child: The child item to add.
+    """
+    _resolve(parent, "addChild")(child)

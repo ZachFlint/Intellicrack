@@ -1,6 +1,6 @@
 {
   "tool": "bandit",
-  "generated": "2026-02-28T02:21:28.912268",
+  "generated": "2026-03-06T22:45:43.023299",
   "total_findings": 9,
   "total_files": 6,
   "files": [
@@ -9,40 +9,40 @@
       "count": 4,
       "findings": [
         {
-          "line": 522,
+          "line": 527,
           "column": null,
           "severity": "Medium",
           "confidence": "High",
           "code": "B615:huggingface_unsafe_download",
           "message": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()",
-          "raw": "src/intellicrack/providers\\model_loader.py:522: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+          "raw": "src/intellicrack/providers\\model_loader.py:527: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
         },
         {
-          "line": 541,
+          "line": 546,
           "column": null,
           "severity": "Medium",
           "confidence": "High",
           "code": "B615:huggingface_unsafe_download",
           "message": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()",
-          "raw": "src/intellicrack/providers\\model_loader.py:541: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+          "raw": "src/intellicrack/providers\\model_loader.py:546: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
         },
         {
-          "line": 625,
+          "line": 630,
           "column": null,
           "severity": "Medium",
           "confidence": "High",
           "code": "B615:huggingface_unsafe_download",
           "message": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()",
-          "raw": "src/intellicrack/providers\\model_loader.py:625: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+          "raw": "src/intellicrack/providers\\model_loader.py:630: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
         },
         {
-          "line": 644,
+          "line": 649,
           "column": null,
           "severity": "Medium",
           "confidence": "High",
           "code": "B615:huggingface_unsafe_download",
           "message": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()",
-          "raw": "src/intellicrack/providers\\model_loader.py:644: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+          "raw": "src/intellicrack/providers\\model_loader.py:649: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
         }
       ]
     },
@@ -51,13 +51,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 14,
+          "line": 19,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B404:blacklist",
           "message": "Consider possible security implications associated with the subprocess module.",
-          "raw": "src/intellicrack/core\\_subprocess.py:14: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
+          "raw": "src/intellicrack/core\\_subprocess.py:19: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
         }
       ]
     },
@@ -66,28 +66,28 @@
       "count": 1,
       "findings": [
         {
-          "line": 394,
+          "line": 399,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B404:blacklist",
           "message": "Consider possible security implications associated with the subprocess module.",
-          "raw": "src/intellicrack/core\\script_gen.py:394: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
+          "raw": "src/intellicrack/core\\script_gen.py:399: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
         }
       ]
     },
     {
-      "path": "src/intellicrack/credentials\\oauth.py",
+      "path": "src/intellicrack/providers\\base.py",
       "count": 1,
       "findings": [
         {
-          "line": 220,
+          "line": 327,
           "column": null,
           "severity": "Low",
-          "confidence": "Medium",
-          "code": "B106:hardcoded_password_funcarg",
-          "message": "Possible hardcoded password: 'https://oauth2.googleapis.com/token'",
-          "raw": "src/intellicrack/credentials\\oauth.py:220: [Low] B106:hardcoded_password_funcarg: Possible hardcoded password: 'https://oauth2.googleapis.com/token'"
+          "confidence": "High",
+          "code": "B311:blacklist",
+          "message": "Standard pseudo-random generators are not suitable for security/cryptographic purposes.",
+          "raw": "src/intellicrack/providers\\base.py:327: [Low] B311:blacklist: Standard pseudo-random generators are not suitable for security/cryptographic purposes."
         }
       ]
     },
@@ -96,13 +96,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 13,
+          "line": 18,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B405:blacklist",
           "message": "Using xml.etree.ElementTree to parse untrusted XML data is known to be vulnerable to XML attacks. Replace xml.etree.ElementTree with the equivalent defusedxml package, or make sure defusedxml.defuse_stdlib() is called.",
-          "raw": "src/intellicrack/sandbox\\windows.py:13: [Low] B405:blacklist: Using xml.etree.ElementTree to parse untrusted XML data is known to be vulnerable to XML attacks. Replace xml.etree.ElementTree with the equivalent defusedxml package, or make sure defusedxml.defuse_stdlib() is called."
+          "raw": "src/intellicrack/sandbox\\windows.py:18: [Low] B405:blacklist: Using xml.etree.ElementTree to parse untrusted XML data is known to be vulnerable to XML attacks. Replace xml.etree.ElementTree with the equivalent defusedxml package, or make sure defusedxml.defuse_stdlib() is called."
         }
       ]
     },
@@ -111,13 +111,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 99,
+          "line": 104,
           "column": null,
           "severity": "Low",
           "confidence": "Medium",
           "code": "B105:hardcoded_password_string",
           "message": "Possible hardcoded password: 'dialog-password.png'",
-          "raw": "src/intellicrack/ui\\resources\\icon_manager.py:99: [Low] B105:hardcoded_password_string: Possible hardcoded password: 'dialog-password.png'"
+          "raw": "src/intellicrack/ui\\resources\\icon_manager.py:104: [Low] B105:hardcoded_password_string: Possible hardcoded password: 'dialog-password.png'"
         }
       ]
     }

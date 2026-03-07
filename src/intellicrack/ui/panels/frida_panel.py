@@ -11,7 +11,7 @@ for interacting with Frida dynamic instrumentation framework.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QFontMetrics
@@ -19,8 +19,8 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
     QHeaderView,
+    QInputDialog,
     QLabel,
-    QLineEdit,
     QPlainTextEdit,
     QPushButton,
     QSplitter,
@@ -32,8 +32,9 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels._async_bridge import run_bridge_coroutine
-from intellicrack.ui.panels._qt_compat import edit_table_item, set_max_block_count
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+from intellicrack.ui.panels.base_panel import AnalysisPanelBase
+from intellicrack.ui.panels.qt_compat import set_max_block_count
 from intellicrack.ui.resources.font_manager import DEFAULT_CODE_FONT
 
 
@@ -60,7 +61,7 @@ _HOOK_COL_FUNCTION = 2
 _HOOK_COL_STATUS = 3
 
 
-class FridaPanel(QWidget):
+class FridaPanel(AnalysisPanelBase):
     """Panel for Frida dynamic instrumentation and hooking.
 
     Provides a script editor for writing Frida JavaScript,
@@ -68,8 +69,6 @@ class FridaPanel(QWidget):
     for managing active function hooks.
     """
 
-    tool_started: pyqtSignal = pyqtSignal()
-    tool_closed: pyqtSignal = pyqtSignal()
     hook_added: pyqtSignal = pyqtSignal(str)
     script_executed: pyqtSignal = pyqtSignal()
 
@@ -83,16 +82,39 @@ class FridaPanel(QWidget):
         self._bridge: FridaBridge | None = None
         self._attached_pid: int | None = None
         self._hook_ids: list[str] = []
-        self._setup_ui()
+        self._active_script_id: str | None = None
 
-    def _setup_ui(self) -> None:
-        """Set up the panel layout with script editor, hooks, and console."""
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(4, 4, 4, 4)
-        layout.setSpacing(4)
+    @override
+    def _populate_toolbar(self, toolbar: QToolBar) -> None:
+        """Add Frida-specific controls to the toolbar.
 
-        layout.addWidget(self._create_toolbar())
+        Args:
+            toolbar: The toolbar to populate.
+        """
+        self._add_toolbar_label(toolbar, "Target:")
 
+        self._target_input = self._add_toolbar_input(toolbar, "PID or process name")
+
+        self._attach_btn = self._add_tool_button(toolbar, "Attach", self._on_attach)
+        self._detach_btn = self._add_tool_button(toolbar, "Detach", self._on_detach, enabled=False)
+
+        toolbar.addSeparator()
+
+        self._run_btn = self._add_tool_button(toolbar, "Run Script", self._on_run_script)
+        self._stop_btn = self._add_tool_button(toolbar, "Stop", self._on_stop_script, enabled=False)
+        self._clear_btn = self._add_secondary_button(toolbar, "Clear Console", self._on_clear_console)
+
+        toolbar.addSeparator()
+
+        self._status_label = self._add_toolbar_label(toolbar, "Not attached")
+
+    @override
+    def _create_content(self) -> QWidget:
+        """Create the Frida instrumentation content area.
+
+        Returns:
+            Splitter with script editor, hooks table, and console.
+        """
         main_splitter = QSplitter(Qt.Orientation.Vertical)
 
         top_splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -118,64 +140,17 @@ class FridaPanel(QWidget):
         main_splitter.addWidget(console_container)
 
         main_splitter.setSizes([400, 200])
-        layout.addWidget(main_splitter)
+        return main_splitter
 
-    def _create_toolbar(self) -> QToolBar:
-        """Create the instrumentation toolbar.
-
-        Returns:
-            Configured toolbar widget.
-        """
-        toolbar = QToolBar()
-        toolbar.setMovable(False)
-        toolbar.setFixedHeight(32)
-
-        target_label = QLabel("Target:")
-        target_label.setObjectName("toolbar_label")
-        toolbar.addWidget(target_label)
-
-        self._target_input = QLineEdit()
-        set_hint = getattr(self._target_input, "set" + "Place" + "holderText")
-        set_hint("PID or process name")
-        self._target_input.setMaximumWidth(200)
-        toolbar.addWidget(self._target_input)
-
-        self._attach_btn = QPushButton("Attach")
-        self._attach_btn.setObjectName("tool_button")
-        self._attach_btn.clicked.connect(self._on_attach)
-        toolbar.addWidget(self._attach_btn)
-
-        self._detach_btn = QPushButton("Detach")
-        self._detach_btn.setObjectName("tool_button")
-        self._detach_btn.setEnabled(False)
-        self._detach_btn.clicked.connect(self._on_detach)
-        toolbar.addWidget(self._detach_btn)
-
-        toolbar.addSeparator()
-
-        self._run_btn = QPushButton("Run Script")
-        self._run_btn.setObjectName("tool_button")
-        self._run_btn.clicked.connect(self._on_run_script)
-        toolbar.addWidget(self._run_btn)
-
-        self._stop_btn = QPushButton("Stop")
-        self._stop_btn.setObjectName("tool_button")
-        self._stop_btn.setEnabled(False)
-        self._stop_btn.clicked.connect(self._on_stop_script)
-        toolbar.addWidget(self._stop_btn)
-
-        self._clear_btn = QPushButton("Clear Console")
-        self._clear_btn.setObjectName("secondary_button")
-        self._clear_btn.clicked.connect(self._on_clear_console)
-        toolbar.addWidget(self._clear_btn)
-
-        toolbar.addSeparator()
-
-        self._status_label = QLabel("Not attached")
-        self._status_label.setObjectName("toolbar_label")
-        toolbar.addWidget(self._status_label)
-
-        return toolbar
+    @override
+    def _cleanup(self) -> None:
+        """Detach from the target process if attached."""
+        if self._bridge is not None and self._bridge.state.process_attached:
+            try:
+                run_bridge_coroutine(self._bridge.detach())
+            except Exception:
+                _logger.debug("frida_detach_skipped")
+        self._attached_pid = None
 
     def _create_editor_section(self) -> QWidget:
         """Create the script editor section.
@@ -298,25 +273,61 @@ class FridaPanel(QWidget):
             return
 
         _logger.debug("frida_attach_started", extra={"target": target})
+        self._attach_btn.setEnabled(False)
+
         try:
             pid = int(target)
-            run_bridge_coroutine(self._bridge.attach(pid))
-            self._attached_pid = pid
-            self._console.appendPlainText(f"[+] Attached to PID {pid}")
-            _logger.info("frida_attached_pid", extra={"pid": pid})
         except ValueError:
-            run_bridge_coroutine(self._bridge.attach_by_name(target))
-            self._console.appendPlainText(f"[+] Attached to '{target}'")
-            _logger.info("frida_attached_name", extra={"process_name": target})
-        except Exception as e:
-            self._console.appendPlainText(f"[-] Attach failed: {e}")
-            _logger.exception("frida_attach_failed", extra={"target": target, "error": str(e)})
+            self._run_async(
+                self._bridge.attach_by_name(target),
+                on_success=lambda _: self._on_attach_name_success(target),
+                on_error=lambda e: self._on_attach_failed(target, e),
+            )
             return
 
-        self._status_label.setText("Attached")
+        self._run_async(
+            self._bridge.attach(pid),
+            on_success=lambda _: self._on_attach_pid_success(pid),
+            on_error=lambda e: self._on_attach_failed(target, e),
+        )
+
+    def _on_attach_pid_success(self, pid: int) -> None:
+        """Handle successful PID-based attach.
+
+        Args:
+            pid: The attached process ID.
+        """
+        self._attached_pid = pid
+        self._console.appendPlainText(f"[+] Attached to PID {pid}")
+        _logger.info("frida_attached_pid", extra={"pid": pid})
+        self._set_status("Attached")
         self._attach_btn.setEnabled(False)
         self._detach_btn.setEnabled(True)
         self.tool_started.emit()
+
+    def _on_attach_name_success(self, target: str) -> None:
+        """Handle successful name-based attach.
+
+        Args:
+            target: The process name attached to.
+        """
+        self._console.appendPlainText(f"[+] Attached to '{target}'")
+        _logger.info("frida_attached_name", extra={"process_name": target})
+        self._set_status("Attached")
+        self._attach_btn.setEnabled(False)
+        self._detach_btn.setEnabled(True)
+        self.tool_started.emit()
+
+    def _on_attach_failed(self, target: str, exc: object) -> None:
+        """Handle attach failure.
+
+        Args:
+            target: The target that failed to attach.
+            exc: The exception that occurred.
+        """
+        self._console.appendPlainText(f"[-] Attach failed: {exc}")
+        _logger.warning("frida_attach_failed", extra={"target": target, "error": str(exc)})
+        self._attach_btn.setEnabled(True)
 
     def _on_detach(self) -> None:
         """Detach from the current target process."""
@@ -324,22 +335,40 @@ class FridaPanel(QWidget):
             return
 
         _logger.debug("frida_detach_started", extra={"pid": self._attached_pid})
-        try:
-            run_bridge_coroutine(self._bridge.detach())
-            self._console.appendPlainText("[+] Detached")
-            _logger.info("frida_detached", extra={"pid": self._attached_pid})
-        except Exception as e:
-            self._console.appendPlainText(f"[-] Detach failed: {e}")
-            _logger.exception("frida_detach_failed", extra={"error": str(e)})
+        self._detach_btn.setEnabled(False)
 
+        self._run_async(
+            self._bridge.detach(),
+            on_success=lambda _: self._on_detach_success(),
+            on_error=self._on_detach_error,
+        )
+
+    def _on_detach_success(self) -> None:
+        """Handle successful detach."""
+        self._console.appendPlainText("[+] Detached")
+        _logger.info("frida_detached", extra={"pid": self._attached_pid})
         self._attached_pid = None
-        self._status_label.setText("Not attached")
+        self._set_status("Not attached")
+        self._attach_btn.setEnabled(True)
+        self._detach_btn.setEnabled(False)
+        self.tool_closed.emit()
+
+    def _on_detach_error(self, exc: object) -> None:
+        """Handle detach failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console.appendPlainText(f"[-] Detach failed: {exc}")
+        _logger.warning("frida_detach_failed", extra={"error": str(exc)})
+        self._attached_pid = None
+        self._set_status("Not attached")
         self._attach_btn.setEnabled(True)
         self._detach_btn.setEnabled(False)
         self.tool_closed.emit()
 
     def _on_run_script(self) -> None:
-        """Execute the current script in the editor."""
+        """Execute the current script persistently in the editor."""
         if self._bridge is None:
             self._console.appendPlainText("[!] No Frida bridge available")
             return
@@ -350,40 +379,158 @@ class FridaPanel(QWidget):
             return
 
         _logger.debug("frida_script_execution_started", extra={"script_size": len(source)})
-        try:
-            run_bridge_coroutine(self._bridge.execute_script(source))
-            self._console.appendPlainText("[+] Script executed")
-            self._run_btn.setEnabled(False)
-            self._stop_btn.setEnabled(True)
-            self.script_executed.emit()
-            _logger.info("frida_script_executed", extra={"script_size": len(source)})
-        except Exception as e:
-            self._console.appendPlainText(f"[-] Script execution failed: {e}")
-            _logger.exception("frida_script_execution_failed", extra={"error": str(e)})
+        self._run_btn.setEnabled(False)
+
+        self._run_async(
+            self._bridge.execute_persistent_script(source),
+            on_success=lambda r: self._on_run_script_success(len(source), r),
+            on_error=self._on_run_script_error,
+        )
+
+    def _on_run_script_success(self, script_size: int, result: object) -> None:
+        """Handle successful persistent script load.
+
+        Args:
+            script_size: Size of the executed script in characters.
+            result: Script ID from the bridge.
+        """
+        self._active_script_id = str(result) if result else None
+        self._console.appendPlainText("[+] Script loaded (persistent)")
+        self._run_btn.setEnabled(False)
+        self._stop_btn.setEnabled(True)
+        self.script_executed.emit()
+        _logger.info("frida_script_executed", extra={"script_size": script_size})
+
+    def _on_run_script_error(self, exc: object) -> None:
+        """Handle script execution failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console.appendPlainText(f"[-] Script execution failed: {exc}")
+        _logger.warning("frida_script_execution_failed", extra={"error": str(exc)})
+        self._run_btn.setEnabled(True)
 
     def _on_stop_script(self) -> None:
         """Stop the currently running script."""
-        self._run_btn.setEnabled(True)
+        if self._bridge is None:
+            return
+
         self._stop_btn.setEnabled(False)
+        if self._active_script_id is not None:
+            self._run_async(
+                self._bridge.unload_script(self._active_script_id),
+                on_success=lambda _: self._on_stop_script_success(),
+                on_error=self._on_stop_script_error,
+            )
+        else:
+            self._run_async(
+                self._bridge.unload_all_scripts(),
+                on_success=lambda _: self._on_stop_script_success(),
+                on_error=self._on_stop_script_error,
+            )
+
+    def _on_stop_script_success(self) -> None:
+        """Handle successful script stop."""
+        self._active_script_id = None
+        self._run_btn.setEnabled(True)
         self._console.appendPlainText("[+] Script stopped")
+
+    def _on_stop_script_error(self, exc: object) -> None:
+        """Handle script stop failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console.appendPlainText(f"[-] Stop failed: {exc}")
+        _logger.warning("frida_script_stop_failed", extra={"error": str(exc)})
+        self._stop_btn.setEnabled(True)
 
     def _on_clear_console(self) -> None:
         """Clear the console output."""
         self._console.clear()
 
     def _on_add_hook(self) -> None:
-        """Add a new function hook via dialog or bridge."""
+        """Add a new function hook via dialog and bridge."""
         if self._bridge is None:
             self._console.appendPlainText("[!] No Frida bridge - cannot add hook")
             return
 
+        target, accepted = QInputDialog.getText(
+            self,
+            "Add Hook",
+            "Enter target (address like 0x401000 or module!function):",
+        )
+        if not accepted or not target.strip():
+            return
+
+        target = target.strip()
+
         row = self._hooks_table.rowCount()
         self._hooks_table.insertRow(row)
-        self._hooks_table.setItem(row, _HOOK_COL_ADDRESS, QTableWidgetItem("0x0"))
+        self._hooks_table.setItem(row, _HOOK_COL_ADDRESS, QTableWidgetItem("Resolving..."))
         self._hooks_table.setItem(row, _HOOK_COL_MODULE, QTableWidgetItem(""))
-        self._hooks_table.setItem(row, _HOOK_COL_FUNCTION, QTableWidgetItem(""))
-        self._hooks_table.setItem(row, _HOOK_COL_STATUS, QTableWidgetItem("Pending"))
-        edit_table_item(self._hooks_table, self._hooks_table.item(row, _HOOK_COL_ADDRESS))
+        self._hooks_table.setItem(row, _HOOK_COL_FUNCTION, QTableWidgetItem(target))
+        self._hooks_table.setItem(row, _HOOK_COL_STATUS, QTableWidgetItem("Installing..."))
+
+        self._add_hook_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.hook_function(target),
+            on_success=lambda result: self._on_hook_installed(row, target, result),
+            on_error=lambda exc: self._on_hook_install_error(row, exc),
+        )
+
+    def _on_hook_installed(self, row: int, target: str, result: object) -> None:
+        """Handle successful hook installation.
+
+        Args:
+            row: Table row index for the hook.
+            target: The original hook target string.
+            result: HookInfo from the bridge.
+        """
+        hook_id = str(getattr(result, "id", ""))
+        address = getattr(result, "address", None)
+        addr_str = f"0x{address:X}" if isinstance(address, int) and address else "0x0"
+
+        module_str = ""
+        func_str = target
+        if "!" in target:
+            parts = target.split("!", 1)
+            module_str = parts[0]
+            func_str = parts[1]
+
+        addr_item = self._hooks_table.item(row, _HOOK_COL_ADDRESS)
+        if addr_item is not None:
+            addr_item.setText(addr_str)
+        mod_item = self._hooks_table.item(row, _HOOK_COL_MODULE)
+        if mod_item is not None:
+            mod_item.setText(module_str)
+        func_item = self._hooks_table.item(row, _HOOK_COL_FUNCTION)
+        if func_item is not None:
+            func_item.setText(func_str)
+        status_item = self._hooks_table.item(row, _HOOK_COL_STATUS)
+        if status_item is not None:
+            status_item.setText("Active")
+
+        self._hook_ids.append(hook_id)
+        self._add_hook_btn.setEnabled(True)
+        self._console.appendPlainText(f"[+] Hook installed: {target} at {addr_str}")
+        self.hook_added.emit(addr_str)
+        _logger.info("frida_hook_installed", extra={"target": target, "hook_id": hook_id})
+
+    def _on_hook_install_error(self, row: int, exc: object) -> None:
+        """Handle hook installation failure.
+
+        Args:
+            row: Table row for the failed hook.
+            exc: The exception that occurred.
+        """
+        status_item = self._hooks_table.item(row, _HOOK_COL_STATUS)
+        if status_item is not None:
+            status_item.setText("Failed")
+        self._add_hook_btn.setEnabled(True)
+        self._console.appendPlainText(f"[-] Hook installation failed: {exc}")
+        _logger.warning("frida_hook_install_failed", extra={"error": str(exc)})
 
     def _on_remove_hook(self) -> None:
         """Remove the selected hook."""
@@ -393,16 +540,40 @@ class FridaPanel(QWidget):
 
         if selected < len(self._hook_ids) and self._bridge is not None:
             hook_id = self._hook_ids[selected]
-            try:
-                run_bridge_coroutine(self._bridge.remove_hook(hook_id))
-                self._console.appendPlainText(f"[+] Removed hook {hook_id}")
-                _logger.info("frida_hook_removed", extra={"hook_id": hook_id})
-            except Exception as e:
-                self._console.appendPlainText(f"[-] Failed to remove hook: {e}")
-                _logger.exception("frida_hook_remove_failed", extra={"hook_id": hook_id, "error": str(e)})
-            self._hook_ids.pop(selected)
+            self._remove_hook_btn.setEnabled(False)
+            self._run_async(
+                self._bridge.remove_hook(hook_id),
+                on_success=lambda _: self._on_hook_removed(selected, hook_id),
+                on_error=lambda e: self._on_hook_remove_error(hook_id, e),
+            )
+            return
 
         self._hooks_table.removeRow(selected)
+
+    def _on_hook_removed(self, row_index: int, hook_id: str) -> None:
+        """Handle successful hook removal.
+
+        Args:
+            row_index: Table row to remove.
+            hook_id: The removed hook identifier.
+        """
+        self._console.appendPlainText(f"[+] Removed hook {hook_id}")
+        _logger.info("frida_hook_removed", extra={"hook_id": hook_id})
+        if row_index < len(self._hook_ids):
+            self._hook_ids.pop(row_index)
+        self._hooks_table.removeRow(row_index)
+        self._remove_hook_btn.setEnabled(True)
+
+    def _on_hook_remove_error(self, hook_id: str, exc: object) -> None:
+        """Handle hook removal failure.
+
+        Args:
+            hook_id: The hook that failed to remove.
+            exc: The exception that occurred.
+        """
+        self._console.appendPlainText(f"[-] Failed to remove hook: {exc}")
+        _logger.warning("frida_hook_remove_failed", extra={"hook_id": hook_id, "error": str(exc)})
+        self._remove_hook_btn.setEnabled(True)
 
     def add_hook_entry(
         self,
@@ -430,27 +601,3 @@ class FridaPanel(QWidget):
         self._hook_ids.append(hook_id)
         self.hook_added.emit(address)
         _logger.debug("frida_hook_entry_added", extra={"address": address, "target_module": module, "function": function})
-
-    def start_tool(self) -> bool:
-        """Start the Frida panel (no-op for native panels).
-
-        Returns:
-            True always since native panels are always ready.
-        """
-        self.tool_started.emit()
-        return True
-
-    def stop_tool(self) -> bool:
-        """Stop Frida operations and detach.
-
-        Returns:
-            True if cleanup succeeded.
-        """
-        if self._bridge is not None and self._bridge.state.process_attached:
-            try:
-                run_bridge_coroutine(self._bridge.detach())
-            except Exception:
-                _logger.debug("frida_detach_skipped")
-        self._attached_pid = None
-        self.tool_closed.emit()
-        return True

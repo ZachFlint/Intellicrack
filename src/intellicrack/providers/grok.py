@@ -12,7 +12,6 @@ API, so this implementation leverages the OpenAI SDK with a custom base URL.
 
 from __future__ import annotations
 
-import json
 import time
 from typing import TYPE_CHECKING, TypedDict, cast, override
 
@@ -30,7 +29,7 @@ from ..core.types import (
     ToolCall,
     ToolDefinition,
 )
-from .base import LLMProviderBase, create_openai_tool_schema
+from .base import LLMProviderBase, ToolCallBufferManager, create_openai_tool_schema
 
 
 _ERR_KEY_REQUIRED = "Grok API key is required"
@@ -137,10 +136,61 @@ class GrokProvider(LLMProviderBase):
 
     async def disconnect(self) -> None:
         """Disconnect from Grok API."""
-        await super().disconnect()
-        self._client = None
-        self._current_task = None
-        self._logger.info("Disconnected from Grok API")
+        try:
+            await super().disconnect()
+            self._client = None
+            self._current_task = None
+            self._logger.info("grok_disconnected")
+        except Exception as exc:
+            self._logger.warning("disconnect_cleanup_error", extra={"error": str(exc)})
+            self._connected = False
+
+    @staticmethod
+    def _is_chat_model(model_id: str) -> bool:
+        """Determine if a model ID corresponds to a chat-capable model.
+
+        Args:
+            model_id: Grok model identifier.
+
+        Returns:
+            True if the model supports chat completions.
+        """
+        non_chat_prefixes = (
+            "embed-",
+            "embedding-",
+            "moderation-",
+        )
+        return not model_id.startswith(non_chat_prefixes)
+
+    @staticmethod
+    def _infer_context_window(model_id: str) -> int:
+        """Infer context window size from model ID prefix patterns.
+
+        Args:
+            model_id: Grok model identifier.
+
+        Returns:
+            Estimated context window in tokens.
+        """
+        if "grok-3" in model_id:
+            return 131072
+        if "grok-2" in model_id:
+            return 131072
+        if "grok-1" in model_id:
+            return 8192
+        return 131072
+
+    @staticmethod
+    def _infer_supports_vision(model_id: str) -> bool:
+        """Infer vision support from model ID.
+
+        Args:
+            model_id: Grok model identifier.
+
+        Returns:
+            True if the model likely supports image inputs.
+        """
+        return "vision" in model_id or "image" in model_id
 
     async def list_models(self) -> list[ModelInfo]:
         """Dynamically fetch available models from Grok.
@@ -160,21 +210,16 @@ class GrokProvider(LLMProviderBase):
 
             for model_data in response.data:
                 model_id = model_data.id
-                if not self._is_grok_model(model_id):
+                if not self._is_chat_model(model_id):
                     continue
-
-                context_window = self._get_context_window(model_id)
-                supports_tools = self._supports_tools(model_id)
-                supports_vision = self._supports_vision(model_id)
-
                 models.append(
                     ModelInfo(
                         id=model_id,
                         name=model_id,
                         provider=ProviderName.GROK,
-                        context_window=context_window,
-                        supports_tools=supports_tools,
-                        supports_vision=supports_vision,
+                        context_window=self._infer_context_window(model_id),
+                        supports_tools=True,
+                        supports_vision=self._infer_supports_vision(model_id),
                         supports_streaming=True,
                         input_cost_per_1m_tokens=None,
                         output_cost_per_1m_tokens=None,
@@ -184,56 +229,6 @@ class GrokProvider(LLMProviderBase):
             return sorted(models, key=lambda m: m.id, reverse=True)
         except Exception as e:
             raise ProviderError(_ERR_LIST_MODELS_FAILED % e) from e
-
-    @staticmethod
-    def _is_grok_model(model_id: str) -> bool:
-        """Check if model is a valid Grok chat model.
-
-        Args:
-            model_id: The model identifier.
-
-        Returns:
-            True if model is a Grok model.
-        """
-        return model_id.startswith("grok-")
-
-    @staticmethod
-    def _get_context_window(model_id: str) -> int:
-        """Get context window size for a Grok model.
-
-        Args:
-            model_id: The model identifier.
-
-        Returns:
-            Context window size in tokens.
-        """
-        if "grok-4" in model_id:
-            return 131072
-        return 131072 if "grok-3" in model_id else 32768
-
-    @staticmethod
-    def _supports_tools(model_id: str) -> bool:
-        """Check if model supports function calling.
-
-        Args:
-            model_id: The model identifier.
-
-        Returns:
-            True if model supports tools.
-        """
-        return model_id.startswith("grok-")
-
-    @staticmethod
-    def _supports_vision(model_id: str) -> bool:
-        """Check if model supports image input.
-
-        Args:
-            model_id: The model identifier.
-
-        Returns:
-            True if model supports vision.
-        """
-        return "grok-4" in model_id
 
     async def chat(
         self,
@@ -441,11 +436,26 @@ class GrokProvider(LLMProviderBase):
                     stream=True,
                 )
 
+            tc_buffer = ToolCallBufferManager()
+
             async for chunk in stream:
                 if self._cancel_requested:
                     break
-                if chunk.choices and chunk.choices[0].delta.content:
-                    yield chunk.choices[0].delta.content
+                if not chunk.choices:
+                    continue
+                delta = chunk.choices[0].delta
+                if delta.content:
+                    yield delta.content
+                if delta.tool_calls:
+                    for tc_delta in delta.tool_calls:
+                        tc_buffer.accumulate(
+                            index=tc_delta.index,
+                            call_id=tc_delta.id,
+                            name=tc_delta.function.name if tc_delta.function else None,
+                            arguments=tc_delta.function.arguments if tc_delta.function else None,
+                        )
+
+            self._pending_tool_calls = tc_buffer.finalize()
 
         except openai.RateLimitError as e:
             raise RateLimitError(_ERR_RATE_LIMITED % e) from e
@@ -474,51 +484,7 @@ class GrokProvider(LLMProviderBase):
         Returns:
             List of messages in Grok's format.
         """
-        grok_messages: list[dict[str, object]] = []
-
-        for msg in messages:
-            if msg.role == "system":
-                grok_messages.append({
-                    "role": "system",
-                    "content": msg.content,
-                })
-            elif msg.role == "user":
-                grok_messages.append({
-                    "role": "user",
-                    "content": msg.content,
-                })
-            elif msg.role == "assistant":
-                assistant_msg: dict[str, object] = {
-                    "role": "assistant",
-                    "content": msg.content,
-                }
-
-                if msg.tool_calls:
-                    tool_calls_list: list[dict[str, object]] = [
-                        {
-                            "id": tc.id,
-                            "type": "function",
-                            "function": {
-                                "name": tc.function_name,
-                                "arguments": json.dumps(tc.arguments),
-                            },
-                        }
-                        for tc in msg.tool_calls
-                    ]
-                    assistant_msg["tool_calls"] = tool_calls_list
-
-                grok_messages.append(assistant_msg)
-            elif msg.role == "tool" and msg.tool_results:
-                for tr in msg.tool_results:
-                    result_content = tr.result if isinstance(tr.result, str) else json.dumps(tr.result)
-
-                    grok_messages.append({
-                        "role": "tool",
-                        "tool_call_id": tr.call_id,
-                        "content": result_content,
-                    })
-
-        return grok_messages
+        return self._convert_messages_to_openai_format(messages)
 
     @override
     def _convert_tools_to_provider_format(

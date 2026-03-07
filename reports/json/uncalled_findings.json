@@ -1,8 +1,8 @@
 {
   "tool": "uncalled",
-  "generated": "2026-02-28T02:24:34.758707",
-  "total_findings": 34,
-  "total_files": 15,
+  "generated": "2026-03-06T22:52:09.277917",
+  "total_findings": 42,
+  "total_files": 19,
   "files": [
     {
       "path": "src\\intellicrack\\core\\types.py",
@@ -71,6 +71,60 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\core\\process_manager.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_all_tracked",
+          "raw": "src\\intellicrack\\core\\process_manager.py: Unused function get_all_tracked"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_running_processes",
+          "raw": "src\\intellicrack\\core\\process_manager.py: Unused function get_running_processes"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: request_shutdown",
+          "raw": "src\\intellicrack\\core\\process_manager.py: Unused function request_shutdown"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: reset_instance",
+          "raw": "src\\intellicrack\\core\\process_manager.py: Unused function reset_instance"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\credentials\\oauth.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: do_GET",
+          "raw": "src\\intellicrack\\credentials\\oauth.py: Unused function do_GET"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: log_request",
+          "raw": "src\\intellicrack\\credentials\\oauth.py: Unused function log_request"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: needs_refresh",
+          "raw": "src\\intellicrack\\credentials\\oauth.py: Unused function needs_refresh"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\resources\\font_manager.py",
       "count": 3,
       "findings": [
@@ -91,6 +145,30 @@
           "column": null,
           "message": "Unused function: ui_font_family",
           "raw": "src\\intellicrack\\ui\\resources\\font_manager.py: Unused function ui_font_family"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\resources\\icon_manager.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: icon_exists",
+          "raw": "src\\intellicrack\\ui\\resources\\icon_manager.py: Unused function icon_exists"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: list_available_icons",
+          "raw": "src\\intellicrack\\ui\\resources\\icon_manager.py: Unused function list_available_icons"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: reset_instance",
+          "raw": "src\\intellicrack\\ui\\resources\\icon_manager.py: Unused function reset_instance"
         }
       ]
     },
@@ -137,42 +215,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\bridges\\x64dbg.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: get_capstone",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py: Unused function get_capstone"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: get_keystone",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py: Unused function get_keystone"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\credentials\\oauth.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: do_GET",
-          "raw": "src\\intellicrack\\credentials\\oauth.py: Unused function do_GET"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: needs_refresh",
-          "raw": "src\\intellicrack\\credentials\\oauth.py: Unused function needs_refresh"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\providers\\local_transformers.py",
       "count": 2,
       "findings": [
@@ -209,36 +251,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\resources\\icon_manager.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: list_available_icons",
-          "raw": "src\\intellicrack\\ui\\resources\\icon_manager.py: Unused function list_available_icons"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: reset_instance",
-          "raw": "src\\intellicrack\\ui\\resources\\icon_manager.py: Unused function reset_instance"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\core\\process_manager.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: reset_instance",
-          "raw": "src\\intellicrack\\core\\process_manager.py: Unused function reset_instance"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\core\\script_gen.py",
       "count": 1,
       "findings": [
@@ -247,6 +259,30 @@
           "column": null,
           "message": "Unused function: prepare_ai_prompt",
           "raw": "src\\intellicrack\\core\\script_gen.py: Unused function prepare_ai_prompt"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\discovery.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_last_event",
+          "raw": "src\\intellicrack\\providers\\discovery.py: Unused function get_last_event"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\registry.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_provider_registry",
+          "raw": "src\\intellicrack\\providers\\registry.py: Unused function get_provider_registry"
         }
       ]
     },
@@ -287,6 +323,30 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\panels\\binary_panel.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: wheelEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: Unused function wheelEvent"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\qt_compat.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: edit_table_item",
+          "raw": "src\\intellicrack\\ui\\panels\\qt_compat.py: Unused function edit_table_item"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\panels\\stack_viewer.py",
       "count": 1,
       "findings": [
@@ -295,6 +355,18 @@
           "column": null,
           "message": "Unused function: get_source_name",
           "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py: Unused function get_source_name"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\tools.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_highlighter",
+          "raw": "src\\intellicrack\\ui\\tools.py: Unused function get_highlighter"
         }
       ]
     }

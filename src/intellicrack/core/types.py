@@ -962,12 +962,14 @@ class ProviderCredentials:
         api_base: Custom API base URL if any.
         organization_id: Organization ID for providers that support it.
         project_id: Project ID for providers that support it.
+        timeout: Optional HTTP request timeout override in seconds.
     """
 
     api_key: str | None = None
     api_base: str | None = None
     organization_id: str | None = None
     project_id: str | None = None
+    timeout: float | None = None
 
 
 @dataclass

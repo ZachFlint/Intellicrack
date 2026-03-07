@@ -1,6 +1,6 @@
 {
   "tool": "shellcheck",
-  "generated": "2026-02-28T02:20:39.204760",
+  "generated": "2026-03-06T22:44:25.866665",
   "total_findings": 164,
   "total_files": 24,
   "files": [
@@ -541,20 +541,20 @@
           "raw": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-rmi-trace\\data\\support\\setuputils.sh:33:8: warning: Declare and assign separately to avoid masking return values. [SC2155]"
         },
         {
+          "line": 33,
+          "column": 16,
+          "severity": "error",
+          "code": "",
+          "message": "This function is only defined later. Move the definition up. [SC2218]",
+          "raw": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-rmi-trace\\data\\support\\setuputils.sh:33:16: error: This function is only defined later. Move the definition up. [SC2218]"
+        },
+        {
           "line": 34,
           "column": 8,
           "severity": "warning",
           "code": "",
           "message": "Declare and assign separately to avoid masking return values. [SC2155]",
           "raw": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-rmi-trace\\data\\support\\setuputils.sh:34:8: warning: Declare and assign separately to avoid masking return values. [SC2155]"
-        },
-        {
-          "line": 34,
-          "column": 22,
-          "severity": "note",
-          "code": "",
-          "message": "Useless cat. Consider 'cmd < file | ..' or 'cmd file | ..' instead. [SC2002]",
-          "raw": "D:\\Intellicrack\\tools\\ghidra\\Ghidra\\Debug\\Debugger-rmi-trace\\data\\support\\setuputils.sh:34:22: note: Useless cat. Consider 'cmd < file | ..' or 'cmd file | ..' instead. [SC2002]"
         },
         {
           "line": 34,

@@ -17,11 +17,11 @@ import importlib
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Awaitable, Callable
     from logging import Logger
 
     from PyQt6.QtWidgets import QApplication
@@ -337,7 +337,9 @@ async def _initialize_providers(
 
     anthropic_mod = importlib.import_module("intellicrack.providers.anthropic")
     google_mod = importlib.import_module("intellicrack.providers.google")
+    grok_mod = importlib.import_module("intellicrack.providers.grok")
     hf_mod = importlib.import_module("intellicrack.providers.huggingface")
+    local_mod = importlib.import_module("intellicrack.providers.local_transformers")
     ollama_mod = importlib.import_module("intellicrack.providers.ollama")
     openai_mod = importlib.import_module("intellicrack.providers.openai")
     openrouter_mod = importlib.import_module("intellicrack.providers.openrouter")
@@ -349,17 +351,21 @@ async def _initialize_providers(
         (provider_name_enum.OLLAMA, ollama_mod.OllamaProvider),
         (provider_name_enum.OPENROUTER, openrouter_mod.OpenRouterProvider),
         (provider_name_enum.HUGGINGFACE, hf_mod.HuggingFaceProvider),
+        (provider_name_enum.GROK, grok_mod.GrokProvider),
+        (provider_name_enum.LOCAL_TRANSFORMERS, local_mod.LocalTransformersProvider),
     ]
 
-    for provider_name, provider_class in providers:
+    async def _init_one(provider_name: Any, provider_class: Any) -> None:
         try:
             provider = provider_class()
             if creds := credentials.get_credentials(provider_name):
                 try:
                     await asyncio.wait_for(
-                        provider.connect(creds), timeout=_PROVIDER_CONNECT_TIMEOUT,
+                        provider.connect(creds),
+                        timeout=_PROVIDER_CONNECT_TIMEOUT,
                     )
                     logger.info("provider_connected", extra={"provider": provider_name.value})
+                    registry.register(provider)
                 except TimeoutError:
                     logger.warning(
                         "provider_connect_timeout",
@@ -367,11 +373,19 @@ async def _initialize_providers(
                     )
             else:
                 logger.debug("no_credentials", extra={"provider": provider_name.value})
-
-            registry.register(provider)
+                registry.register(provider)
 
         except Exception as e:
-            logger.warning("provider_init_failed", extra={"provider": provider_name.value, "error": str(e)})
+            logger.exception(
+                "provider_init_failed",
+                extra={
+                    "provider": provider_name.value,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+            )
+
+    await asyncio.gather(*(_init_one(pn, pc) for pn, pc in providers))
 
 
 def main() -> int:
@@ -426,7 +440,8 @@ def main() -> int:
         try:
             loop.run_until_complete(
                 asyncio.wait_for(
-                    process_manager.cleanup_all_async(), timeout=_SHUTDOWN_PROCESS_TIMEOUT,
+                    process_manager.cleanup_all_async(),
+                    timeout=_SHUTDOWN_PROCESS_TIMEOUT,
                 ),
             )
         except TimeoutError:
@@ -455,7 +470,7 @@ def _init_script_engine(config: Config, logger: Logger) -> tuple[object, object]
     return script_gen_mod.ScriptManager(scripts_dir), script_gen_mod.ScriptValidator()
 
 
-def _init_model_discovery(
+async def _init_model_discovery(
     provider_registry: ProviderRegistry,
     config: Config,
     logger: Logger,
@@ -476,7 +491,7 @@ def _init_model_discovery(
     if discovery_cache.exists():
         load_cache = getattr(model_discovery, "load_cache", None)
         if callable(load_cache):
-            load_cache(discovery_cache)
+            await cast("Awaitable[None]", load_cache(discovery_cache))
     logger.info("model_discovery_initialized")
     return model_discovery, discovery_cache
 
@@ -561,7 +576,7 @@ async def _run_application(
     splash.set_progress(93, "Initializing model discovery...")
     app.processEvents()
 
-    model_discovery, discovery_cache = _init_model_discovery(provider_registry, config, logger)
+    model_discovery, discovery_cache = await _init_model_discovery(provider_registry, config, logger)
 
     splash.set_progress(95, "Initializing UI...")
     app.processEvents()
@@ -580,11 +595,12 @@ async def _run_application(
     logger.info("shutdown_started")
     save_cache = getattr(model_discovery, "save_cache", None)
     if callable(save_cache):
-        save_cache(discovery_cache)
+        await cast("Awaitable[None]", save_cache(discovery_cache))
 
     try:
         await asyncio.wait_for(
-            provider_registry.disconnect_all(), timeout=_SHUTDOWN_ORCHESTRATOR_TIMEOUT,
+            provider_registry.disconnect_all(),
+            timeout=_SHUTDOWN_ORCHESTRATOR_TIMEOUT,
         )
     except TimeoutError:
         logger.warning("provider_disconnect_timeout")
@@ -603,7 +619,8 @@ async def _run_application(
 
     try:
         await asyncio.wait_for(
-            process_manager.cleanup_all_async(), timeout=_SHUTDOWN_PROCESS_TIMEOUT,
+            process_manager.cleanup_all_async(),
+            timeout=_SHUTDOWN_PROCESS_TIMEOUT,
         )
     except TimeoutError:
         logger.warning("process_cleanup_timeout")

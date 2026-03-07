@@ -68,6 +68,10 @@
           {
             "type": "command",
             "command": "node D:/Intellicrack/.claude/hooks/sessionstart.js"
+          },
+          {
+            "type": "command",
+            "command": "node D:/Intellicrack/.claude/hooks/sync-lsp-config.cjs"
           }
         ]
       }

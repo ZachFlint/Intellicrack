@@ -11,11 +11,14 @@ for direct binary inspection and modification.
 
 from __future__ import annotations
 
+import re
 import struct
+from collections.abc import Callable, Iterable
 from pathlib import Path
+from typing import override
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QColor, QFont, QKeyEvent, QWheelEvent
 from PyQt6.QtWidgets import (
     QFileDialog,
     QHeaderView,
@@ -34,11 +37,23 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+
+try:
+    import lief
+except ImportError:
+    lief = None
+
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels._qt_compat import (
+from intellicrack.ui.panels.qt_compat import (
+    connect_cell_changed,
+    key_event_key,
+    qt_key_page_down,
+    qt_key_page_up,
     set_header_labels,
+    tree_add_child,
     tree_item_data,
     tree_item_set_data,
+    wheel_angle_delta_y,
 )
 from intellicrack.ui.resources.font_manager import DEFAULT_CODE_FONT
 
@@ -55,6 +70,75 @@ _HEX_COL_HEX = 1
 _HEX_COL_ASCII = 2
 _MAX_DISPLAY_SIZE = 16 * 1024 * 1024
 _CHUNK_SIZE = 4096
+_LARGE_FILE_THRESHOLD = 500 * 1024 * 1024
+_SCROLL_BYTES_PER_TICK = 48
+_PE32_PLUS_MAGIC = 0x20B
+_PE32_PLUS_IMPORT_DIR_OFFSET = 120
+_PE32_IMPORT_DIR_OFFSET = 104
+
+
+def _lief_parse(parser: object, data: list[int]) -> object:
+    """Parse binary data using a lief parser module.
+
+    Args:
+        parser: The lief sub-module (e.g. lief.ELF, lief.MachO).
+        data: Raw binary data as a list of integers.
+
+    Returns:
+        Parsed binary object, or None on failure.
+    """
+    parse_fn = getattr(parser, "parse", None)
+    if parse_fn is None:
+        return None
+    result: object = parse_fn(data)
+    return result
+
+
+def _lief_call(obj: object, method: str, *args: object) -> object:
+    """Call a method on a lief object by name.
+
+    Args:
+        obj: The lief object.
+        method: Method name.
+        *args: Method arguments.
+
+    Returns:
+        Method return value.
+    """
+    fn = getattr(obj, method, None)
+    if fn is None:
+        return None
+    result: object = fn(*args)
+    return result
+
+
+def _lief_attr_list(obj: object, attr: str) -> list[object]:
+    """Get a list attribute from a lief object.
+
+    Args:
+        obj: The lief object.
+        attr: Attribute name.
+
+    Returns:
+        List of objects from the attribute, empty if missing.
+    """
+    val: object = getattr(obj, attr, None)
+    if val is None:
+        return []
+    if isinstance(val, (list, tuple)):
+        return [*val]
+    if isinstance(val, Iterable):
+        return [*val]
+    return []
+
+
+_ELF_MAGIC = b"\x7fELF"
+_MIN_MAGIC_SIZE = 4
+_MACHO_MAGICS = {b"\xfe\xed\xfa\xce", b"\xfe\xed\xfa\xcf", b"\xce\xfa\xed\xfe", b"\xcf\xfa\xed\xfe"}
+
+_HEX_PATTERN = re.compile(r"^[0-9a-fA-F ]+$")
+
+_EDITED_HEX_BG = QColor(60, 60, 30)
 
 
 class BinaryPanel(QWidget):
@@ -150,6 +234,26 @@ class BinaryPanel(QWidget):
 
         toolbar.addSeparator()
 
+        self._prev_page_btn = QPushButton("<")
+        self._prev_page_btn.setObjectName("tool_button")
+        self._prev_page_btn.setToolTip("Previous Page (Page Up)")
+        self._prev_page_btn.setMaximumWidth(28)
+        self._prev_page_btn.clicked.connect(self._on_prev_page)
+        toolbar.addWidget(self._prev_page_btn)
+
+        self._page_label = QLabel("")
+        self._page_label.setObjectName("toolbar_label")
+        toolbar.addWidget(self._page_label)
+
+        self._next_page_btn = QPushButton(">")
+        self._next_page_btn.setObjectName("tool_button")
+        self._next_page_btn.setToolTip("Next Page (Page Down)")
+        self._next_page_btn.setMaximumWidth(28)
+        self._next_page_btn.clicked.connect(self._on_next_page)
+        toolbar.addWidget(self._next_page_btn)
+
+        toolbar.addSeparator()
+
         self._file_label = QLabel("No file loaded")
         self._file_label.setObjectName("toolbar_label")
         toolbar.addWidget(self._file_label)
@@ -171,6 +275,7 @@ class BinaryPanel(QWidget):
         hex_header.setSectionResizeMode(_HEX_COL_OFFSET, QHeaderView.ResizeMode.ResizeToContents)
         hex_header.setSectionResizeMode(_HEX_COL_HEX, QHeaderView.ResizeMode.Stretch)
         hex_header.setSectionResizeMode(_HEX_COL_ASCII, QHeaderView.ResizeMode.ResizeToContents)
+        connect_cell_changed(self._hex_table, self._on_hex_cell_changed)
         hex_layout.addWidget(self._hex_table)
         main_splitter.addWidget(hex_container)
 
@@ -227,6 +332,19 @@ class BinaryPanel(QWidget):
             return False
 
         file_size = path.stat().st_size
+
+        if file_size > _LARGE_FILE_THRESHOLD:
+            size_mb = file_size / (1024 * 1024)
+            answer = QMessageBox.question(
+                self,
+                "Large File",
+                f"This file is {size_mb:,.1f} MB. Loading it may use significant memory.\n\nContinue?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if answer != QMessageBox.StandardButton.Yes:
+                return False
+
         if file_size > _MAX_DISPLAY_SIZE:
             _logger.warning("binary_file_too_large", extra={"size": file_size})
 
@@ -261,8 +379,11 @@ class BinaryPanel(QWidget):
         display_size = min(len(self._file_data) - start_offset, _CHUNK_SIZE)
         row_count = (display_size + _HEX_BYTES_PER_ROW - 1) // _HEX_BYTES_PER_ROW
 
+        self._hex_table.blockSignals(True)
         self._hex_table.setRowCount(0)
         self._hex_table.setRowCount(row_count)
+
+        patched_offsets = self._get_patched_byte_offsets()
 
         for row_idx in range(row_count):
             offset = start_offset + row_idx * _HEX_BYTES_PER_ROW
@@ -277,23 +398,170 @@ class BinaryPanel(QWidget):
             hex_item = QTableWidgetItem(hex_str)
             self._hex_table.setItem(row_idx, _HEX_COL_HEX, hex_item)
 
+            has_patched = any(offset + j in patched_offsets for j in range(len(chunk)))
+            if has_patched:
+                hex_item.setBackground(_EDITED_HEX_BG)
+
             ascii_str = "".join(chr(b) if _ASCII_PRINTABLE_MIN <= b < _ASCII_PRINTABLE_MAX else "." for b in chunk)
             ascii_item = QTableWidgetItem(ascii_str)
             ascii_item.setFlags(ascii_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            if has_patched:
+                ascii_item.setBackground(_EDITED_HEX_BG)
             self._hex_table.setItem(row_idx, _HEX_COL_ASCII, ascii_item)
 
+        self._hex_table.blockSignals(False)
+        self._update_page_label()
         self.offset_changed.emit(start_offset)
 
+    def _get_patched_byte_offsets(self) -> set[int]:
+        """Collect all byte offsets that have been modified by patches.
+
+        Returns:
+            Set of patched byte positions.
+        """
+        offsets: set[int] = set()
+        for patch_offset, _, patched in self._patches:
+            for j in range(len(patched)):
+                offsets.add(patch_offset + j)
+        return offsets
+
+    def _update_page_label(self) -> None:
+        """Update the page indicator label."""
+        if not self._file_data:
+            self._page_label.setText("")
+            return
+        total_pages = max(1, (len(self._file_data) + _CHUNK_SIZE - 1) // _CHUNK_SIZE)
+        current_page = self._current_offset // _CHUNK_SIZE + 1
+        self._page_label.setText(f" {current_page}/{total_pages} ")
+
+    def _on_prev_page(self) -> None:
+        """Navigate to the previous hex page."""
+        if not self._file_data:
+            return
+        new_offset = max(0, self._current_offset - _CHUNK_SIZE)
+        self._populate_hex_view(new_offset)
+        self._offset_input.setText(f"0x{new_offset:08X}")
+
+    def _on_next_page(self) -> None:
+        """Navigate to the next hex page."""
+        if not self._file_data:
+            return
+        max_offset = max(0, len(self._file_data) - _CHUNK_SIZE)
+        new_offset = min(max_offset, self._current_offset + _CHUNK_SIZE)
+        self._populate_hex_view(new_offset)
+        self._offset_input.setText(f"0x{new_offset:08X}")
+
+    @override
+    def wheelEvent(self, a0: QWheelEvent | None) -> None:
+        """Handle scroll wheel for hex navigation.
+
+        Args:
+            a0: The wheel event.
+        """
+        if a0 is None or not self._file_data:
+            return
+
+        delta: int = wheel_angle_delta_y(a0)
+        if delta == 0:
+            return
+
+        ticks: int = delta // 120
+        byte_delta: int = ticks * _SCROLL_BYTES_PER_TICK
+        new_offset: int = self._current_offset - byte_delta
+
+        new_offset = max(0, min(new_offset, max(0, len(self._file_data) - _CHUNK_SIZE)))
+        new_offset = (new_offset // _HEX_BYTES_PER_ROW) * _HEX_BYTES_PER_ROW
+
+        if new_offset != self._current_offset:
+            self._populate_hex_view(new_offset)
+            self._offset_input.setText(f"0x{new_offset:08X}")
+
+        a0.accept()
+
+    @override
+    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
+        """Handle keyboard shortcuts for hex navigation.
+
+        Args:
+            a0: The key event.
+        """
+        if a0 is None:
+            return
+
+        key: int = key_event_key(a0)
+        if key == qt_key_page_up():
+            self._on_prev_page()
+            a0.accept()
+        elif key == qt_key_page_down():
+            self._on_next_page()
+            a0.accept()
+        else:
+            super().keyPressEvent(a0)
+
+    def _on_hex_cell_changed(self, row: int, column: int) -> None:
+        """Validate hex edits and update the ASCII column in real-time.
+
+        Args:
+            row: Changed cell row.
+            column: Changed cell column.
+        """
+        if column != _HEX_COL_HEX:
+            return
+
+        hex_item = self._hex_table.item(row, _HEX_COL_HEX)
+        if hex_item is None:
+            return
+
+        text = hex_item.text().strip()
+        if not text:
+            return
+
+        if not _HEX_PATTERN.match(text):
+            self._hex_table.blockSignals(True)
+            offset = self._current_offset + row * _HEX_BYTES_PER_ROW
+            end = min(offset + _HEX_BYTES_PER_ROW, len(self._file_data))
+            original_hex = " ".join(f"{b:02X}" for b in self._file_data[offset:end])
+            hex_item.setText(original_hex)
+            self._hex_table.blockSignals(False)
+            return
+
+        try:
+            new_bytes = bytes.fromhex(text.replace(" ", ""))
+        except ValueError:
+            return
+
+        ascii_str = "".join(chr(b) if _ASCII_PRINTABLE_MIN <= b < _ASCII_PRINTABLE_MAX else "." for b in new_bytes)
+        ascii_item = self._hex_table.item(row, _HEX_COL_ASCII)
+        if ascii_item is not None:
+            self._hex_table.blockSignals(True)
+            ascii_item.setText(ascii_str)
+            self._hex_table.blockSignals(False)
+
     def _parse_sections(self) -> None:
-        """Parse PE sections from the loaded binary data."""
+        """Parse sections from the loaded binary data.
+
+        Detects format via magic bytes and dispatches to the
+        appropriate parser (PE, ELF, or Mach-O).
+        """
         self._sections_tree.clear()
         self._imports_tree.clear()
         self._exports_tree.clear()
 
-        if len(self._file_data) < _MIN_PE_HEADER_SIZE:
+        if len(self._file_data) < _MIN_MAGIC_SIZE:
             return
 
-        if bytes(self._file_data[:2]) != b"MZ":
+        magic4 = bytes(self._file_data[:4])
+
+        if magic4[:2] == b"MZ":
+            self._parse_pe_sections()
+        elif magic4 == _ELF_MAGIC:
+            self._parse_elf_sections()
+        elif magic4 in _MACHO_MAGICS:
+            self._parse_macho_sections()
+
+    def _parse_pe_sections(self) -> None:
+        """Parse PE sections from the loaded binary data."""
+        if len(self._file_data) < _MIN_PE_HEADER_SIZE:
             return
 
         try:
@@ -318,6 +586,7 @@ class BinaryPanel(QWidget):
                 vaddr = struct.unpack_from("<I", self._file_data, sec_off + 12)[0]
                 vsize = struct.unpack_from("<I", self._file_data, sec_off + 8)[0]
                 raw_size = struct.unpack_from("<I", self._file_data, sec_off + 16)[0]
+                raw_offset = struct.unpack_from("<I", self._file_data, sec_off + 20)[0]
                 characteristics = struct.unpack_from("<I", self._file_data, sec_off + 36)[0]
 
                 flags_parts: list[str] = []
@@ -335,11 +604,343 @@ class BinaryPanel(QWidget):
                     f"{raw_size:,} / {vsize:,}",
                     flags_str,
                 ])
-                tree_item_set_data(item, 0, Qt.ItemDataRole.UserRole, vaddr)
+                tree_item_set_data(item, 0, Qt.ItemDataRole.UserRole, raw_offset)
                 self._sections_tree.addTopLevelItem(item)
 
         except (struct.error, IndexError) as e:
             _logger.debug("pe_section_parse_error", extra={"error": str(e)})
+
+        self._parse_pe_imports_exports()
+
+    def _parse_pe_imports_exports(self) -> None:
+        """Parse PE imports and exports using LIEF, with struct fallback."""
+        if lief is not None:
+            self._parse_pe_imports_exports_lief()
+            return
+        self._parse_pe_imports_exports_struct()
+
+    def _parse_pe_imports_exports_lief(self) -> None:
+        """Parse PE imports and exports via LIEF."""
+        pe: object = _lief_parse(lief, list(self._file_data))
+        if pe is None:
+            return
+
+        for imp in _lief_attr_list(pe, "imports"):
+            lib_name: str = str(getattr(imp, "name", ""))
+            for entry in _lief_attr_list(imp, "entries"):
+                func_name: str = str(getattr(entry, "name", ""))
+                iat_val: int = int(getattr(entry, "iat_value", 0))
+                addr_str = f"0x{iat_val:08X}" if iat_val else ""
+                item = QTreeWidgetItem([lib_name, func_name, addr_str])
+                self._imports_tree.addTopLevelItem(item)
+
+        export_obj: object = getattr(pe, "get_export", lambda: None)()
+        if export_obj is not None:
+            for entry in _lief_attr_list(export_obj, "entries"):
+                exp_name: str = str(getattr(entry, "name", ""))
+                ordinal: int = int(getattr(entry, "ordinal", 0))
+                address: int = int(getattr(entry, "address", 0))
+                item = QTreeWidgetItem([
+                    exp_name,
+                    f"0x{address:08X}",
+                    str(ordinal),
+                ])
+                self._exports_tree.addTopLevelItem(item)
+
+    def _parse_pe_imports_exports_struct(self) -> None:
+        """Parse PE imports via struct-based parsing of the Import Directory Table."""
+        try:
+            pe_offset = struct.unpack_from("<I", self._file_data, 0x3C)[0]
+            magic = struct.unpack_from("<H", self._file_data, pe_offset + 24)[0]
+            is_pe32_plus = magic == _PE32_PLUS_MAGIC
+            dir_off = _PE32_PLUS_IMPORT_DIR_OFFSET if is_pe32_plus else _PE32_IMPORT_DIR_OFFSET
+            import_rva = struct.unpack_from("<I", self._file_data, pe_offset + 24 + dir_off)[0]
+            if import_rva == 0:
+                return
+
+            sec_info = self._build_pe_section_map(pe_offset)
+            idt_offset = self._pe_rva_to_offset(import_rva, sec_info)
+            if idt_offset is None:
+                return
+
+            self._walk_pe_idt(idt_offset, is_pe32_plus, sec_info)
+
+        except (struct.error, IndexError, ValueError):
+            _logger.debug("pe_import_struct_parse_error")
+
+    def _build_pe_section_map(self, pe_offset: int) -> list[tuple[int, int, int]]:
+        """Build a section map for RVA-to-offset conversion.
+
+        Args:
+            pe_offset: Offset of the PE signature in the file.
+
+        Returns:
+            List of (vaddr, vsize, raw_offset) tuples per section.
+        """
+        num_sections = struct.unpack_from("<H", self._file_data, pe_offset + 6)[0]
+        opt_size = struct.unpack_from("<H", self._file_data, pe_offset + 20)[0]
+        sec_start = pe_offset + 24 + opt_size
+        sections: list[tuple[int, int, int]] = []
+        for i in range(num_sections):
+            so = sec_start + i * 40
+            s_vaddr = struct.unpack_from("<I", self._file_data, so + 12)[0]
+            s_vsize = struct.unpack_from("<I", self._file_data, so + 8)[0]
+            s_raw = struct.unpack_from("<I", self._file_data, so + 20)[0]
+            sections.append((s_vaddr, s_vsize, s_raw))
+        return sections
+
+    @staticmethod
+    def _pe_rva_to_offset(rva: int, sections: list[tuple[int, int, int]]) -> int | None:
+        """Convert an RVA to a file offset using the section map.
+
+        Args:
+            rva: Relative virtual address.
+            sections: Section map from _build_pe_section_map.
+
+        Returns:
+            File offset, or None if RVA not in any section.
+        """
+        for s_vaddr, s_vsize, s_raw in sections:
+            if s_vaddr <= rva < s_vaddr + s_vsize:
+                return rva - s_vaddr + s_raw
+        return None
+
+    def _walk_pe_idt(
+        self,
+        idt_offset: int,
+        is_pe32_plus: bool,
+        sec_info: list[tuple[int, int, int]],
+    ) -> None:
+        """Walk the PE Import Directory Table and populate _imports_tree.
+
+        Args:
+            idt_offset: File offset of the IDT.
+            is_pe32_plus: Whether the PE is 64-bit.
+            sec_info: Section map for RVA conversion.
+        """
+        idx = 0
+        while True:
+            entry_off = idt_offset + idx * 20
+            if entry_off + 20 > len(self._file_data):
+                break
+            name_rva = struct.unpack_from("<I", self._file_data, entry_off + 12)[0]
+            if name_rva == 0:
+                break
+
+            name_off = self._pe_rva_to_offset(name_rva, sec_info)
+            if name_off is None:
+                idx += 1
+                continue
+
+            search = self._file_data[name_off : name_off + 256]
+            end = name_off + (search.index(0) if 0 in search else 256)
+            lib_name = bytes(self._file_data[name_off:end]).decode("ascii", errors="replace")
+
+            ilt_rva = struct.unpack_from("<I", self._file_data, entry_off)[0]
+            if ilt_rva == 0:
+                ilt_rva = struct.unpack_from("<I", self._file_data, entry_off + 16)[0]
+
+            ilt_off = self._pe_rva_to_offset(ilt_rva, sec_info)
+            if ilt_off is not None:
+                self._parse_pe_ilt_entries(lib_name, ilt_off, is_pe32_plus, lambda r: self._pe_rva_to_offset(r, sec_info))
+
+            idx += 1
+
+    def _parse_pe_ilt_entries(
+        self,
+        lib_name: str,
+        ilt_off: int,
+        is_pe32_plus: bool,
+        rva_to_offset: Callable[[int], int | None],
+    ) -> None:
+        """Parse Import Lookup Table entries for a single DLL.
+
+        Args:
+            lib_name: Name of the importing DLL.
+            ilt_off: File offset of the ILT.
+            is_pe32_plus: Whether the PE is 64-bit.
+            rva_to_offset: RVA-to-file-offset conversion callable.
+        """
+        entry_size = 8 if is_pe32_plus else 4
+        ordinal_flag = 1 << 63 if is_pe32_plus else 1 << 31
+        j = 0
+        while True:
+            e_off = ilt_off + j * entry_size
+            if e_off + entry_size > len(self._file_data):
+                break
+            if is_pe32_plus:
+                val = struct.unpack_from("<Q", self._file_data, e_off)[0]
+            else:
+                val = struct.unpack_from("<I", self._file_data, e_off)[0]
+            if val == 0:
+                break
+            if val & ordinal_flag:
+                func_name = f"Ordinal {val & 0xFFFF}"
+            else:
+                hint_rva = val & 0x7FFFFFFF
+                hint_off = rva_to_offset(hint_rva)
+                if hint_off is not None and hint_off + 3 < len(self._file_data):
+                    name_start = hint_off + 2
+                    name_end_search = self._file_data[name_start : name_start + 256]
+                    name_end = name_start + (name_end_search.index(0) if 0 in name_end_search else 256)
+                    func_name = bytes(self._file_data[name_start:name_end]).decode("ascii", errors="replace")
+                else:
+                    func_name = f"RVA 0x{hint_rva:X}"
+            item = QTreeWidgetItem([lib_name, func_name, ""])
+            self._imports_tree.addTopLevelItem(item)
+            j += 1
+
+    def _parse_elf_sections(self) -> None:
+        """Parse ELF sections using LIEF."""
+        if lief is None:
+            _logger.debug("lief_not_available_for_elf_parsing")
+            self._sections_tree.addTopLevelItem(QTreeWidgetItem(["(ELF detected, install lief for section parsing)", "", "", ""]))
+            return
+
+        try:
+            elf: object = _lief_parse(lief.ELF, list(self._file_data))
+            if elf is None:
+                return
+
+            for section in _lief_attr_list(elf, "sections"):
+                sec_name: str = str(getattr(section, "name", ""))
+                name: str = sec_name if sec_name else "(unnamed)"
+                vaddr: int = int(getattr(section, "virtual_address", 0))
+                size: int = int(getattr(section, "size", 0))
+                offset: int = int(getattr(section, "offset", 0))
+
+                flags_parts: list[str] = []
+                section_flags: list[object] = _lief_attr_list(section, "flags_list")
+                for flag in section_flags:
+                    flag_name = str(flag).rsplit(".", maxsplit=1)[-1]
+                    if flag_name == "EXECINSTR":
+                        flags_parts.append("X")
+                    elif flag_name == "ALLOC":
+                        flags_parts.append("A")
+                    elif flag_name == "WRITE":
+                        flags_parts.append("W")
+                flags_str = "".join(flags_parts) if flags_parts else "---"
+
+                item = QTreeWidgetItem([
+                    name,
+                    f"0x{vaddr:08X}",
+                    f"{size:,}",
+                    flags_str,
+                ])
+                tree_item_set_data(item, 0, Qt.ItemDataRole.UserRole, int(offset))
+                self._sections_tree.addTopLevelItem(item)
+
+            for func in _lief_attr_list(elf, "imported_functions"):
+                func_name = str(getattr(func, "name", ""))
+                item = QTreeWidgetItem(["", func_name, ""])
+                self._imports_tree.addTopLevelItem(item)
+
+            for func in _lief_attr_list(elf, "exported_functions"):
+                func_name = str(getattr(func, "name", ""))
+                address = int(getattr(func, "address", 0))
+                item = QTreeWidgetItem([func_name, f"0x{address:08X}", ""])
+                self._exports_tree.addTopLevelItem(item)
+
+        except Exception as e:
+            _logger.debug("elf_section_parse_error", extra={"error": str(e)})
+
+    def _parse_macho_sections(self) -> None:
+        """Parse Mach-O sections using LIEF."""
+        if lief is None:
+            _logger.debug("lief_not_available_for_macho_parsing")
+            self._sections_tree.addTopLevelItem(QTreeWidgetItem(["(Mach-O detected, install lief for section parsing)", "", "", ""]))
+            return
+
+        try:
+            fat: object = _lief_parse(lief.MachO, list(self._file_data))
+            if fat is None:
+                return
+
+            macho: object = _lief_call(fat, "at", 0)
+            if macho is None:
+                return
+
+            for segment in _lief_attr_list(macho, "segments"):
+                seg_item = self._build_macho_segment_item(segment)
+                self._sections_tree.addTopLevelItem(seg_item)
+
+                for section in _lief_attr_list(segment, "sections"):
+                    sec_item = self._build_macho_section_item(section)
+                    tree_add_child(seg_item, sec_item)
+
+            for func in _lief_attr_list(macho, "imported_functions"):
+                func_name = str(getattr(func, "name", ""))
+                item = QTreeWidgetItem(["", func_name, ""])
+                self._imports_tree.addTopLevelItem(item)
+
+            for func in _lief_attr_list(macho, "exported_functions"):
+                func_name = str(getattr(func, "name", ""))
+                address = int(getattr(func, "address", 0))
+                item = QTreeWidgetItem([func_name, f"0x{address:08X}", ""])
+                self._exports_tree.addTopLevelItem(item)
+
+        except Exception as e:
+            _logger.debug("macho_section_parse_error", extra={"error": str(e)})
+
+    @staticmethod
+    def _macho_protection_flags(segment: object) -> str:
+        """Format Mach-O segment protection flags as a string.
+
+        Args:
+            segment: A lief MachO segment object.
+
+        Returns:
+            Protection flags string like "RWX" or "---".
+        """
+        init_prot: int = int(getattr(segment, "init_protection", 0))
+        parts: list[str] = []
+        if init_prot & 0x1:
+            parts.append("R")
+        if init_prot & 0x2:
+            parts.append("W")
+        if init_prot & 0x4:
+            parts.append("X")
+        return "".join(parts) if parts else "---"
+
+    def _build_macho_segment_item(self, segment: object) -> QTreeWidgetItem:
+        """Build a QTreeWidgetItem for a Mach-O segment.
+
+        Args:
+            segment: A lief MachO segment object.
+
+        Returns:
+            Tree widget item representing the segment.
+        """
+        name_raw: str = str(getattr(segment, "name", ""))
+        name: str = name_raw if name_raw else "(unnamed)"
+        vaddr: int = int(getattr(segment, "virtual_address", 0))
+        size: int = int(getattr(segment, "virtual_size", 0))
+        offset: int = int(getattr(segment, "file_offset", 0))
+        flags_str: str = self._macho_protection_flags(segment)
+
+        item = QTreeWidgetItem([name, f"0x{vaddr:08X}", f"{size:,}", flags_str])
+        tree_item_set_data(item, 0, Qt.ItemDataRole.UserRole, int(offset))
+        return item
+
+    @staticmethod
+    def _build_macho_section_item(section: object) -> QTreeWidgetItem:
+        """Build a QTreeWidgetItem for a Mach-O section.
+
+        Args:
+            section: A lief MachO section object.
+
+        Returns:
+            Tree widget item representing the section.
+        """
+        name_raw: str = str(getattr(section, "name", ""))
+        name: str = name_raw if name_raw else "(unnamed)"
+        vaddr: int = int(getattr(section, "virtual_address", 0))
+        size: int = int(getattr(section, "size", 0))
+        offset: int = int(getattr(section, "offset", 0))
+
+        item = QTreeWidgetItem([f"  {name}", f"0x{vaddr:08X}", f"{size:,}", ""])
+        tree_item_set_data(item, 0, Qt.ItemDataRole.UserRole, int(offset))
+        return item
 
     def _extract_strings(self, min_length: int = 4) -> None:
         """Extract printable ASCII strings from the binary.
@@ -442,6 +1043,9 @@ class BinaryPanel(QWidget):
             return
 
         new_hex = hex_item.text().strip()
+        if not _HEX_PATTERN.match(new_hex):
+            return
+
         try:
             new_bytes = bytes.fromhex(new_hex.replace(" ", ""))
         except ValueError:
@@ -503,16 +1107,16 @@ class BinaryPanel(QWidget):
             QMessageBox.warning(self, "Save Failed", str(e))
 
     def _on_section_double_clicked(self, item: QTreeWidgetItem, _column: int) -> None:
-        """Navigate to a section's virtual address in the hex view.
+        """Navigate to a section's raw file offset in the hex view.
 
         Args:
             item: The double-clicked tree item.
             _column: Column index (unused).
         """
-        vaddr: object = tree_item_data(item, 0, Qt.ItemDataRole.UserRole)
-        if isinstance(vaddr, int):
-            self._populate_hex_view(vaddr)
-            self._offset_input.setText(f"0x{vaddr:08X}")
+        raw_offset: object = tree_item_data(item, 0, Qt.ItemDataRole.UserRole)
+        if isinstance(raw_offset, int):
+            self._populate_hex_view(raw_offset)
+            self._offset_input.setText(f"0x{raw_offset:08X}")
 
     def _on_string_double_clicked(self, row: int, _column: int) -> None:
         """Navigate to a string's offset in the hex view.

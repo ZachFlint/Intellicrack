@@ -8,6 +8,10 @@
 This module provides a registry for tool bridges that handles
 initialization, availability checking, and tool schema generation
 for LLM function calling.
+
+Bridge imports are deferred to method bodies to break a circular
+dependency: bridges.base -> core.logging -> core.__init__ -> core.tools
+-> bridges.binary -> bridges.base.
 """
 
 from __future__ import annotations
@@ -18,14 +22,6 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from ..bridges.binary import BinaryBridge
-from ..bridges.frida_bridge import FridaBridge
-from ..bridges.ghidra import GhidraBridge
-from ..bridges.installer import ToolInstaller
-from ..bridges.process import ProcessBridge
-from ..bridges.radare2 import Radare2Bridge
-from ..bridges.sandbox_bridge import SandboxBridge
-from ..bridges.x64dbg import X64DbgBridge
 from .logging import get_logger, log_tool_call
 from .types import ToolDefinition, ToolError, ToolName
 
@@ -34,6 +30,13 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from ..bridges.base import ToolBridgeBase
+    from ..bridges.binary import BinaryBridge
+    from ..bridges.frida_bridge import FridaBridge
+    from ..bridges.ghidra import GhidraBridge
+    from ..bridges.process import ProcessBridge
+    from ..bridges.radare2 import Radare2Bridge
+    from ..bridges.sandbox_bridge import SandboxBridge
+    from ..bridges.x64dbg import X64DbgBridge
 
 
 _logger = get_logger("core.tools")
@@ -86,6 +89,8 @@ class ToolRegistry:
             tools_dir: Directory for tool installations.
         """
         self._bridges: dict[ToolName, ToolBridgeBase] = {}
+        from ..bridges.installer import ToolInstaller
+
         self._installer = ToolInstaller(tools_dir)
         self._tools_dir = tools_dir
         self._initialized = False
@@ -110,13 +115,21 @@ class ToolRegistry:
             _logger.debug("tool_registry_initialize_early_return", extra={"reason": "already_initialized"})
             return
 
-        self._bridges[ToolName.BINARY] = BinaryBridge()
-        self._bridges[ToolName.PROCESS] = ProcessBridge()
-        self._bridges[ToolName.FRIDA] = FridaBridge()
-        self._bridges[ToolName.GHIDRA] = GhidraBridge()
-        self._bridges[ToolName.RADARE2] = Radare2Bridge()
-        self._bridges[ToolName.X64DBG] = X64DbgBridge()
-        self._bridges[ToolName.SANDBOX] = SandboxBridge()
+        from ..bridges.binary import BinaryBridge as _BinaryBridge
+        from ..bridges.frida_bridge import FridaBridge as _FridaBridge
+        from ..bridges.ghidra import GhidraBridge as _GhidraBridge
+        from ..bridges.process import ProcessBridge as _ProcessBridge
+        from ..bridges.radare2 import Radare2Bridge as _Radare2Bridge
+        from ..bridges.sandbox_bridge import SandboxBridge as _SandboxBridge
+        from ..bridges.x64dbg import X64DbgBridge as _X64DbgBridge
+
+        self._bridges[ToolName.BINARY] = _BinaryBridge()
+        self._bridges[ToolName.PROCESS] = _ProcessBridge()
+        self._bridges[ToolName.FRIDA] = _FridaBridge()
+        self._bridges[ToolName.GHIDRA] = _GhidraBridge()
+        self._bridges[ToolName.RADARE2] = _Radare2Bridge()
+        self._bridges[ToolName.X64DBG] = _X64DbgBridge()
+        self._bridges[ToolName.SANDBOX] = _SandboxBridge()
         _logger.debug(
             "bridges_instantiated",
             extra={"bridge_names": [n.value for n in self._bridges]},
@@ -200,8 +213,10 @@ class ToolRegistry:
         Raises:
             ToolError: If bridge not available.
         """
+        from ..bridges.binary import BinaryBridge as _BinaryBridge
+
         bridge = self._bridges.get(ToolName.BINARY)
-        if bridge is None or not isinstance(bridge, BinaryBridge):
+        if bridge is None or not isinstance(bridge, _BinaryBridge):
             raise ToolError(_ERR_BRIDGE_NA)
         _logger.debug("get_binary_bridge_success", extra={"bridge_type": type(bridge).__name__})
         return bridge
@@ -215,8 +230,10 @@ class ToolRegistry:
         Raises:
             ToolError: If bridge not available.
         """
+        from ..bridges.process import ProcessBridge as _ProcessBridge
+
         bridge = self._bridges.get(ToolName.PROCESS)
-        if bridge is None or not isinstance(bridge, ProcessBridge):
+        if bridge is None or not isinstance(bridge, _ProcessBridge):
             raise ToolError(_ERR_BRIDGE_NA)
         _logger.debug("get_process_bridge_success", extra={"bridge_type": type(bridge).__name__})
         return bridge
@@ -230,8 +247,10 @@ class ToolRegistry:
         Raises:
             ToolError: If bridge not available.
         """
+        from ..bridges.frida_bridge import FridaBridge as _FridaBridge
+
         bridge = self._bridges.get(ToolName.FRIDA)
-        if bridge is None or not isinstance(bridge, FridaBridge):
+        if bridge is None or not isinstance(bridge, _FridaBridge):
             raise ToolError(_ERR_BRIDGE_NA)
         _logger.debug("get_frida_bridge_success", extra={"bridge_type": type(bridge).__name__})
         return bridge
@@ -245,8 +264,10 @@ class ToolRegistry:
         Raises:
             ToolError: If bridge not available.
         """
+        from ..bridges.ghidra import GhidraBridge as _GhidraBridge
+
         bridge = self._bridges.get(ToolName.GHIDRA)
-        if bridge is None or not isinstance(bridge, GhidraBridge):
+        if bridge is None or not isinstance(bridge, _GhidraBridge):
             raise ToolError(_ERR_BRIDGE_NA)
         _logger.debug("get_ghidra_bridge_success", extra={"bridge_type": type(bridge).__name__})
         return bridge
@@ -260,8 +281,10 @@ class ToolRegistry:
         Raises:
             ToolError: If bridge not available.
         """
+        from ..bridges.radare2 import Radare2Bridge as _Radare2Bridge
+
         bridge = self._bridges.get(ToolName.RADARE2)
-        if bridge is None or not isinstance(bridge, Radare2Bridge):
+        if bridge is None or not isinstance(bridge, _Radare2Bridge):
             raise ToolError(_ERR_BRIDGE_NA)
         _logger.debug("get_radare2_bridge_success", extra={"bridge_type": type(bridge).__name__})
         return bridge
@@ -275,8 +298,10 @@ class ToolRegistry:
         Raises:
             ToolError: If bridge not available.
         """
+        from ..bridges.x64dbg import X64DbgBridge as _X64DbgBridge
+
         bridge = self._bridges.get(ToolName.X64DBG)
-        if bridge is None or not isinstance(bridge, X64DbgBridge):
+        if bridge is None or not isinstance(bridge, _X64DbgBridge):
             raise ToolError(_ERR_BRIDGE_NA)
         _logger.debug("get_x64dbg_bridge_success", extra={"bridge_type": type(bridge).__name__})
         return bridge
@@ -290,8 +315,10 @@ class ToolRegistry:
         Raises:
             ToolError: If bridge not available.
         """
+        from ..bridges.sandbox_bridge import SandboxBridge as _SandboxBridge
+
         bridge = self._bridges.get(ToolName.SANDBOX)
-        if bridge is None or not isinstance(bridge, SandboxBridge):
+        if bridge is None or not isinstance(bridge, _SandboxBridge):
             raise ToolError(_ERR_BRIDGE_NA)
         _logger.debug("get_sandbox_bridge_success", extra={"bridge_type": type(bridge).__name__})
         return bridge

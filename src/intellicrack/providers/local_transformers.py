@@ -16,8 +16,12 @@ import gc
 import json
 import re
 import time
+import uuid
+from dataclasses import replace as dataclass_replace
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Literal, cast, override
+
+import httpx
 
 from ..core.logging import get_logger
 from ..core.types import (
@@ -29,7 +33,7 @@ from ..core.types import (
     ToolCall,
     ToolDefinition,
 )
-from .base import LLMProviderBase
+from .base import LLMProviderBase, create_openai_tool_schema
 from .model_loader import (
     RECOMMENDED_MODELS_B580,
     DtypeOption,
@@ -78,6 +82,69 @@ _ERR_STREAMING_FAILED = "Local streaming failed: %s"
 _DEFAULT_MODEL = "microsoft/Phi-3-mini-4k-instruct"
 _DEFAULT_MAX_NEW_TOKENS = 2048
 _DEFAULT_TEMPERATURE = 0.7
+
+_VISION_ARCHITECTURE_KEYWORDS: frozenset[str] = frozenset({
+    "vision",
+    "vit",
+    "clip",
+    "llava",
+    "visual",
+    "image",
+})
+
+_HF_CONFIG_URL = "https://huggingface.co/{model_id}/resolve/main/config.json"
+
+
+async def _fetch_model_config(model_id: str) -> dict[str, Any]:
+    """Fetch model config.json from HuggingFace Hub.
+
+    Args:
+        model_id: HuggingFace model identifier (e.g. "microsoft/Phi-3-mini-4k-instruct").
+
+    Returns:
+        Parsed config dict, or empty dict on failure.
+    """
+    url = _HF_CONFIG_URL.format(model_id=model_id)
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(10.0)) as client:
+            response = await client.get(url)
+            response.raise_for_status()
+            result: dict[str, Any] = response.json()
+            return result
+    except Exception:
+        return {}
+
+
+def _classify_model_capabilities(
+    config: dict[str, Any],
+) -> tuple[int, bool]:
+    """Extract context window and vision support from a HuggingFace config.
+
+    Args:
+        config: Parsed config.json dict from HuggingFace Hub.
+
+    Returns:
+        Tuple of (context_window, supports_vision).
+    """
+    context_window = 4096
+    for key in ("max_position_embeddings", "max_sequence_length", "n_positions"):
+        val = config.get(key)
+        if isinstance(val, int) and val > 0:
+            context_window = val
+            break
+
+    supports_vision = False
+    architectures: list[str] = config.get("architectures", [])
+    for arch in architectures:
+        arch_lower = arch.lower()
+        if any(kw in arch_lower for kw in _VISION_ARCHITECTURE_KEYWORDS):
+            supports_vision = True
+            break
+
+    if not supports_vision and ("vision_config" in config or "image_size" in config):
+        supports_vision = True
+
+    return context_window, supports_vision
 
 
 class LocalTransformersProvider(LLMProviderBase):
@@ -160,14 +227,14 @@ class LocalTransformersProvider(LLMProviderBase):
         """
         return self._loaded_model.model_id if self._loaded_model else None
 
-    async def connect(self, credentials: ProviderCredentials | None) -> None:
+    async def connect(self, credentials: ProviderCredentials) -> None:
         """Connect to the local transformers provider.
 
         Initializes XPU detection and validates system requirements.
         No API key is required for local inference.
 
         Args:
-            credentials: Optional credentials (not used for local inference).
+            credentials: Provider credentials (not used for local inference).
         """
         self._credentials = credentials
 
@@ -215,14 +282,18 @@ class LocalTransformersProvider(LLMProviderBase):
 
     async def disconnect(self) -> None:
         """Disconnect from the provider and cleanup resources."""
-        if self._loaded_model is not None:
-            self._loaded_model = None
+        try:
+            if self._loaded_model is not None:
+                self._loaded_model = None
 
-        if self._device_type == "xpu":
-            await asyncio.to_thread(clear_xpu_cache)
+            if self._device_type == "xpu":
+                await asyncio.to_thread(clear_xpu_cache)
 
-        await super().disconnect()
-        self._logger.info("local_transformers_disconnected")
+            await super().disconnect()
+            self._logger.info("local_transformers_disconnected")
+        except Exception as exc:
+            self._logger.warning("disconnect_cleanup_error", extra={"error": str(exc)})
+            self._connected = False
 
     async def list_models(self) -> list[ModelInfo]:
         """List local models that fit on the available hardware.
@@ -251,7 +322,7 @@ class LocalTransformersProvider(LLMProviderBase):
 
         usable_vram: int = int(total_vram * vram_utilisation_ceiling) if total_vram > 0 else 0
 
-        models: list[ModelInfo] = []
+        eligible_models: list[str] = []
 
         for model_data in RECOMMENDED_MODELS_B580:
             model_id = str(model_data["model_id"])
@@ -270,16 +341,26 @@ class LocalTransformersProvider(LLMProviderBase):
                     )
                     continue
 
-            supports_tools = self._model_supports_tools(model_id)
+            eligible_models.append(model_id)
+
+        configs = await asyncio.gather(
+            *(_fetch_model_config(mid) for mid in eligible_models),
+            return_exceptions=True,
+        )
+
+        models: list[ModelInfo] = []
+        for model_id, config_result in zip(eligible_models, configs, strict=True):
+            config = config_result if isinstance(config_result, dict) else {}
+            context_window, supports_vision = _classify_model_capabilities(config)
 
             models.append(
                 ModelInfo(
                     id=model_id,
                     name=f"[Local] {model_id.rsplit('/', maxsplit=1)[-1]}",
                     provider=ProviderName.LOCAL_TRANSFORMERS,
-                    context_window=self._estimate_context_window(model_id),
-                    supports_tools=supports_tools,
-                    supports_vision=False,
+                    context_window=context_window,
+                    supports_tools=False,
+                    supports_vision=supports_vision,
                     supports_streaming=True,
                     input_cost_per_1m_tokens=None,
                     output_cost_per_1m_tokens=None,
@@ -463,7 +544,7 @@ class LocalTransformersProvider(LLMProviderBase):
             if self._device_type == "xpu":
                 self._logger.warning("xpu_load_failed_falling_back_to_cpu")
                 self._device_type = "cpu"
-                config.device = "cpu"
+                config = dataclass_replace(config, device="cpu")
                 try:
                     self._loaded_model = await asyncio.to_thread(
                         load_model_for_cpu,
@@ -678,36 +759,9 @@ class LocalTransformersProvider(LLMProviderBase):
             List of tool dictionaries.
         """
         result: list[dict[str, object]] = []
-
         for tool in tools:
-            for func in tool.functions:
-                properties: dict[str, dict[str, object]] = {}
-                required: list[str] = []
-
-                for param in func.parameters:
-                    prop: dict[str, object] = {
-                        "type": param.type,
-                        "description": param.description,
-                    }
-                    if param.enum:
-                        prop["enum"] = param.enum
-                    properties[param.name] = prop
-                    if param.required:
-                        required.append(param.name)
-
-                result.append({
-                    "type": "function",
-                    "function": {
-                        "name": func.name,
-                        "description": func.description,
-                        "parameters": {
-                            "type": "object",
-                            "properties": properties,
-                            "required": required,
-                        },
-                    },
-                })
-
+            tool_schemas = create_openai_tool_schema(tool)
+            result.extend(dict(schema) for schema in tool_schemas)
         return result
 
     def _format_prompt(
@@ -886,7 +940,7 @@ class LocalTransformersProvider(LLMProviderBase):
             if name:
                 return [
                     ToolCall(
-                        id=f"call_{int(time.time() * 1000)}",
+                        id=f"call_{uuid.uuid4().hex}",
                         tool_name=name.split(".", maxsplit=1)[0] if "." in name else name,
                         function_name=name,
                         arguments=parsed_arguments,
@@ -910,66 +964,6 @@ class LocalTransformersProvider(LLMProviderBase):
         if match := re.search(r'\{"tool_call":', response):
             return response[: match.start()].strip()
         return response
-
-    @staticmethod
-    def _model_supports_tools(model_id: str) -> bool:
-        """Check if a model supports tool calling.
-
-        Args:
-            model_id: Model identifier.
-
-        Returns:
-            True if model supports tools.
-        """
-        model_lower = model_id.lower()
-        tool_capable = [
-            "phi-3",
-            "llama-3",
-            "qwen",
-            "mistral",
-            "mixtral",
-            "gemma",
-        ]
-        return any(cap in model_lower for cap in tool_capable)
-
-    @staticmethod
-    def _estimate_context_window(model_id: str) -> int:
-        """Estimate context window for a model.
-
-        Args:
-            model_id: Model identifier.
-
-        Returns:
-            Estimated context window in tokens.
-        """
-        model_lower = model_id.lower()
-
-        if "128k" in model_lower:
-            return 128000
-        if "32k" in model_lower:
-            return 32768
-        if "16k" in model_lower:
-            return 16384
-        if "8k" in model_lower:
-            return 8192
-
-        if "phi-3-mini-4k" in model_lower:
-            return 4096
-        if "phi-3-mini-128k" in model_lower:
-            return 128000
-        if "phi-3" in model_lower:
-            return 4096
-
-        if "qwen2.5" in model_lower:
-            return 32768
-
-        if "llama-3" in model_lower:
-            return 8192
-
-        if "mistral" in model_lower:
-            return 32768
-
-        return 2048 if "tinyllama" in model_lower else 4096
 
     def get_device_info(self) -> dict[str, object]:
         """Get information about the current device.

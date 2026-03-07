@@ -1,6 +1,6 @@
 {
   "tool": "yamllint",
-  "generated": "2026-02-28T02:24:28.359913",
+  "generated": "2026-03-06T22:51:57.167174",
   "total_findings": 48,
   "total_files": 16,
   "files": [
@@ -17,52 +17,52 @@
           "raw": ".\\.serena\\project.yml:1:73: [error] wrong new line character: expected \\n  (new-lines)"
         },
         {
-          "line": 64,
-          "column": 121,
-          "severity": "warning",
-          "code": "",
-          "message": "line too long (125 > 120 characters)  (line-length)",
-          "raw": ".\\.serena\\project.yml:64:121: [warning] line too long (125 > 120 characters)  (line-length)"
-        },
-        {
           "line": 65,
           "column": 121,
           "severity": "warning",
           "code": "",
-          "message": "line too long (137 > 120 characters)  (line-length)",
-          "raw": ".\\.serena\\project.yml:65:121: [warning] line too long (137 > 120 characters)  (line-length)"
+          "message": "line too long (125 > 120 characters)  (line-length)",
+          "raw": ".\\.serena\\project.yml:65:121: [warning] line too long (125 > 120 characters)  (line-length)"
         },
         {
           "line": 66,
           "column": 121,
           "severity": "warning",
           "code": "",
-          "message": "line too long (146 > 120 characters)  (line-length)",
-          "raw": ".\\.serena\\project.yml:66:121: [warning] line too long (146 > 120 characters)  (line-length)"
+          "message": "line too long (137 > 120 characters)  (line-length)",
+          "raw": ".\\.serena\\project.yml:66:121: [warning] line too long (137 > 120 characters)  (line-length)"
         },
         {
-          "line": 76,
+          "line": 67,
           "column": 121,
           "severity": "warning",
           "code": "",
-          "message": "line too long (125 > 120 characters)  (line-length)",
-          "raw": ".\\.serena\\project.yml:76:121: [warning] line too long (125 > 120 characters)  (line-length)"
+          "message": "line too long (146 > 120 characters)  (line-length)",
+          "raw": ".\\.serena\\project.yml:67:121: [warning] line too long (146 > 120 characters)  (line-length)"
         },
         {
           "line": 77,
           "column": 121,
           "severity": "warning",
           "code": "",
-          "message": "line too long (146 > 120 characters)  (line-length)",
-          "raw": ".\\.serena\\project.yml:77:121: [warning] line too long (146 > 120 characters)  (line-length)"
+          "message": "line too long (125 > 120 characters)  (line-length)",
+          "raw": ".\\.serena\\project.yml:77:121: [warning] line too long (125 > 120 characters)  (line-length)"
         },
         {
-          "line": 88,
+          "line": 78,
+          "column": 121,
+          "severity": "warning",
+          "code": "",
+          "message": "line too long (146 > 120 characters)  (line-length)",
+          "raw": ".\\.serena\\project.yml:78:121: [warning] line too long (146 > 120 characters)  (line-length)"
+        },
+        {
+          "line": 89,
           "column": 121,
           "severity": "warning",
           "code": "",
           "message": "line too long (123 > 120 characters)  (line-length)",
-          "raw": ".\\.serena\\project.yml:88:121: [warning] line too long (123 > 120 characters)  (line-length)"
+          "raw": ".\\.serena\\project.yml:89:121: [warning] line too long (123 > 120 characters)  (line-length)"
         }
       ]
     },
