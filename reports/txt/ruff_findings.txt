@@ -1,50 +1,29 @@
-15 findings in D:\Intellicrack\tests\test_ui\test_async_bridge.py
+4 findings in D:\Intellicrack\tests\test_core\test_logging.py
 
-D:\Intellicrack\tests\test_ui\test_async_bridge.py:12:29: TC002 Move third-party import `PyQt6.QtWidgets.QApplication` into a type-checking block
+D:\Intellicrack\tests\test_core\test_logging.py:3:1: I001 Import block is un-sorted or un-formatted
 
-D:\Intellicrack\tests\test_ui\test_async_bridge.py:16:5: PLC2701 Private name import `_ensure_loop` from external module `intellicrack.ui.panels.async_bridge`
+D:\Intellicrack\tests\test_core\test_logging.py:32:35: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
 
-D:\Intellicrack\tests\test_ui\test_async_bridge.py:44:19: RUF029 Function `simple_coro` is declared `async`, but doesn't `await` or use `async` features.
+D:\Intellicrack\tests\test_core\test_logging.py:591:5: SIM117 Use a single `with` statement with multiple contexts instead of nested `with` statements
 
-D:\Intellicrack\tests\test_ui\test_async_bridge.py:64:19: RUF029 Function `failing_coro` is declared `async`, but doesn't `await` or use `async` features.
-
-D:\Intellicrack\tests\test_ui\test_async_bridge.py:76:19: RUF029 Function `string_coro` is declared `async`, but doesn't `await` or use `async` features.
-
-D:\Intellicrack\tests\test_ui\test_async_bridge.py:87:19: RUF029 Function `dict_coro` is declared `async`, but doesn't `await` or use `async` features.
-
-D:\Intellicrack\tests\test_ui\test_async_bridge.py:107:19: RUF029 Function `simple_coro` is declared `async`, but doesn't `await` or use `async` features.
-
-D:\Intellicrack\tests\test_ui\test_async_bridge.py:111:42: PLW0108 Lambda may be unnecessary; consider inlining inner function
-
-D:\Intellicrack\tests\test_ui\test_async_bridge.py:127:19: RUF029 Function `failing_coro` is declared `async`, but doesn't `await` or use `async` features.
-
-D:\Intellicrack\tests\test_ui\test_async_bridge.py:132:39: PLW0108 Lambda may be unnecessary; consider inlining inner function
-
-D:\Intellicrack\tests\test_ui\test_async_bridge.py:148:19: RUF029 Function `noop_coro` is declared `async`, but doesn't `await` or use `async` features.
-
-D:\Intellicrack\tests\test_ui\test_async_bridge.py:171:19: RUF029 Function `coro` is declared `async`, but doesn't `await` or use `async` features.
-
-D:\Intellicrack\tests\test_ui\test_async_bridge.py:175:38: PLW0108 Lambda may be unnecessary; consider inlining inner function
-
-D:\Intellicrack\tests\test_ui\test_async_bridge.py:190:19: RUF029 Function `bad_coro` is declared `async`, but doesn't `await` or use `async` features.
-
-D:\Intellicrack\tests\test_ui\test_async_bridge.py:195:35: PLW0108 Lambda may be unnecessary; consider inlining inner function
+D:\Intellicrack\tests\test_core\test_logging.py:601:25: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
 
 
-8 findings in D:\Intellicrack\tests\test_ui\test_binary_panel_fixes.py
+1 findings in D:\Intellicrack\src\intellicrack\core\orchestrator.py
 
-D:\Intellicrack\tests\test_ui\test_binary_panel_fixes.py:19:5: PLC2701 Private name import `_CHUNK_SIZE` from external module `intellicrack.ui.panels.binary_panel`
+D:\Intellicrack\src\intellicrack\core\orchestrator.py:20:21: TC003 Move standard library import `pathlib.Path` into a type-checking block
 
-D:\Intellicrack\tests\test_ui\test_binary_panel_fixes.py:20:5: PLC2701 Private name import `_EDITED_HEX_BG` from external module `intellicrack.ui.panels.binary_panel`
 
-D:\Intellicrack\tests\test_ui\test_binary_panel_fixes.py:21:5: PLC2701 Private name import `_HEX_BYTES_PER_ROW` from external module `intellicrack.ui.panels.binary_panel`
+1 findings in D:\Intellicrack\src\intellicrack\sandbox\__init__.py
 
-D:\Intellicrack\tests\test_ui\test_binary_panel_fixes.py:22:5: PLC2701 Private name import `_HEX_COL_ASCII` from external module `intellicrack.ui.panels.binary_panel`
+D:\Intellicrack\src\intellicrack\sandbox\__init__.py:39:22: RUF022 `__all__` is not sorted
 
-D:\Intellicrack\tests\test_ui\test_binary_panel_fixes.py:23:5: PLC2701 Private name import `_HEX_COL_HEX` from external module `intellicrack.ui.panels.binary_panel`
 
-D:\Intellicrack\tests\test_ui\test_binary_panel_fixes.py:24:5: PLC2701 Private name import `_LARGE_FILE_THRESHOLD` from external module `intellicrack.ui.panels.binary_panel`
+1 findings in D:\Intellicrack\tests\test_credentials\__init__.py
 
-D:\Intellicrack\tests\test_ui\test_binary_panel_fixes.py:193:9: PLC0415 `import` should be at the top-level of a file
+D:\Intellicrack\tests\test_credentials\__init__.py:1:1: D104 Missing docstring in public package
 
-D:\Intellicrack\tests\test_ui\test_binary_panel_fixes.py:234:9: PLC0415 `import` should be at the top-level of a file
+
+1 findings in D:\Intellicrack\tests\test_sandbox\__init__.py
+
+D:\Intellicrack\tests\test_sandbox\__init__.py:1:1: D104 Missing docstring in public package

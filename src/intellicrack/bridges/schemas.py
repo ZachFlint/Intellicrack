@@ -15,12 +15,16 @@ from __future__ import annotations
 import re
 from typing import Any, Literal, Never, TypedDict
 
+from ..core.logging import get_logger
 from ..core.types import (
     ProviderName,
     ToolDefinition,
     ToolFunction,
     ToolParameter,
 )
+
+
+_logger = get_logger("bridges.schemas")
 
 
 def _assert_never(value: Never) -> Never:
@@ -646,7 +650,15 @@ def validate_and_convert(
     has_errors = any(e.severity == "error" for e in errors)
 
     if has_errors:
+        _logger.warning(
+            "tool_validation_failed",
+            extra={"tool": str(tool.tool_name), "error_count": len(errors)},
+        )
         return [], errors
 
     schemas = get_schema_for_provider(tool, provider)
+    _logger.debug(
+        "schema_converted",
+        extra={"tool": str(tool.tool_name), "provider": str(provider), "schema_count": len(schemas)},
+    )
     return schemas, errors

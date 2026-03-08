@@ -12,7 +12,6 @@ including isolation options, resource limits, and execution policies.
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import json
 import os
 import sys
@@ -42,6 +41,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core._subprocess import CREATE_NO_WINDOW, PIPE, Popen, SubprocessError, TimeoutExpired
+from intellicrack.core.config import get_config_dir, get_config_file
 from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager, ProcessType
 
@@ -186,8 +186,10 @@ class SandboxTestWorker(QThread):
                     )
                 ProcessManager.get_instance().unregister(pid)
             if self._wsb_file and self._wsb_file.exists():
-                with contextlib.suppress(OSError):
+                try:
                     self._wsb_file.unlink()
+                except OSError:
+                    _logger.debug("wsb_file_delete_failed", exc_info=True)
 
     def _generate_wsb_config(self) -> str:
         """Generate Windows Sandbox .wsb configuration XML.
@@ -235,9 +237,11 @@ class SandboxTestWorker(QThread):
                 self._process.terminate()
                 self._process.wait(timeout=5)
             except (TimeoutExpired, OSError):
-                with contextlib.suppress(OSError):
+                try:
                     self._process.kill()
                     self._process.wait()
+                except OSError:
+                    _logger.debug("process_kill_after_timeout_failed", exc_info=True)
 
             process_manager.unregister(pid)
 
@@ -254,8 +258,8 @@ class SandboxConfigDialog(QDialog):
 
     settings_updated: ClassVar[pyqtSignal] = pyqtSignal()
 
-    CONFIG_DIR = Path.home() / ".intellicrack"
-    CONFIG_FILE = CONFIG_DIR / "sandbox.json"
+    CONFIG_DIR: ClassVar[Path] = get_config_dir()
+    CONFIG_FILE: ClassVar[Path] = get_config_file("sandbox.json")
 
     def __init__(
         self,
@@ -650,8 +654,10 @@ class SandboxConfigDialog(QDialog):
 
             shared_folder = Path(settings["shared_folder"])
             if not shared_folder.exists():
-                with contextlib.suppress(OSError):
+                try:
                     shared_folder.mkdir(parents=True, exist_ok=True)
+                except OSError:
+                    _logger.debug("shared_folder_create_failed", exc_info=True)
 
             _logger.info(
                 "sandbox_config_saved",

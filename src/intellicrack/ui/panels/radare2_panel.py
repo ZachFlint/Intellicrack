@@ -6,9 +6,9 @@
 """Radare2 analysis panel for Intellicrack.
 
 Provides decompilation, disassembly, function listing, string search,
-import/export/section tables, cross-reference views, and a raw r2
-command console powered by the Radare2Bridge backend.  This panel
-also serves as the Cutter replacement (same underlying r2 engine).
+import/export/section tables, cross-reference views, a visual function
+graph, and a raw r2 command console powered by the Radare2Bridge
+backend.
 """
 
 from __future__ import annotations
@@ -42,6 +42,7 @@ from PyQt6.QtWidgets import (
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
+from intellicrack.ui.panels.graph_view import CFGGraphView
 from intellicrack.ui.panels.qt_compat import (
     set_header_labels,
     set_max_block_count,
@@ -69,9 +70,9 @@ class Radare2Panel(AnalysisPanelBase):
     """Native Qt panel for radare2 reverse engineering analysis.
 
     Displays decompiled code, disassembly, function lists, strings,
-    imports, exports, sections, cross-references, and an interactive
-    r2 command console via the Radare2Bridge backend.  Also serves
-    as the Cutter replacement panel.
+    imports, exports, sections, cross-references, a visual function
+    graph view, and an interactive r2 command console via the
+    Radare2Bridge backend.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -134,7 +135,7 @@ class Radare2Panel(AnalysisPanelBase):
             try:
                 run_bridge_coroutine(self._bridge.shutdown())
             except Exception:
-                _logger.exception("radare2_shutdown_failed")
+                _logger.exception("radare2_shutdown_failed", extra={"bridge_type": "radare2"})
 
     def _create_code_tabs(self) -> QTabWidget:
         """Create decompiled, disassembly, and r2 console tabs.
@@ -174,6 +175,10 @@ class Radare2Panel(AnalysisPanelBase):
         self._r2_input.returnPressed.connect(self._on_execute_r2_command)
         console_layout.addWidget(self._r2_input)
         tabs.addTab(console_container, "r2 Console")
+
+        self._graph_view = CFGGraphView()
+        self._graph_view.block_clicked.connect(self._on_graph_block_clicked)
+        tabs.addTab(self._graph_view, "Graph")
 
         return tabs
 
@@ -260,6 +265,12 @@ class Radare2Panel(AnalysisPanelBase):
         self._refresh_funcs_btn.setObjectName("secondary_button")
         self._refresh_funcs_btn.clicked.connect(self._on_refresh_functions)
         header.addWidget(self._refresh_funcs_btn)
+
+        self._graph_btn = QPushButton("Graph")
+        self._graph_btn.setObjectName("secondary_button")
+        self._graph_btn.clicked.connect(self._on_show_graph)
+        header.addWidget(self._graph_btn)
+
         layout.addLayout(header)
 
         self._func_filter = QLineEdit()
@@ -284,7 +295,7 @@ class Radare2Panel(AnalysisPanelBase):
             bridge: The Radare2Bridge to use.
         """
         self._bridge = bridge
-        _logger.info("radare2_bridge_set")
+        _logger.info("radare2_bridge_set", extra={"bridge_type": type(bridge).__name__})
 
     def get_bridge(self) -> Radare2Bridge | None:
         """Get the current Radare2Bridge instance.
@@ -304,7 +315,7 @@ class Radare2Panel(AnalysisPanelBase):
             True if loading was initiated.
         """
         if self._bridge is None:
-            _logger.warning("radare2_analyze_no_bridge")
+            _logger.warning("radare2_analyze_no_bridge", extra={"reason": "bridge not set"})
             return False
 
         self._load_btn.setEnabled(False)
@@ -430,7 +441,7 @@ class Radare2Panel(AnalysisPanelBase):
 
     def _on_refresh_funcs_error(self) -> None:
         """Handle function refresh failure."""
-        _logger.warning("radare2_refresh_functions_failed")
+        _logger.warning("radare2_refresh_functions_failed", extra={"bridge_type": "radare2"})
         self._refresh_funcs_btn.setEnabled(True)
 
     def _on_filter_changed(self, _text: str) -> None:
@@ -627,8 +638,7 @@ class Radare2Panel(AnalysisPanelBase):
 
     def _on_search_strings(self) -> None:
         """Trigger string search from the search input."""
-        pattern = self._string_search_input.text().strip()
-        if pattern:
+        if pattern := self._string_search_input.text().strip():
             self.search_strings(pattern)
 
     def show_xrefs(self, address: int) -> None:
@@ -728,3 +738,79 @@ class Radare2Panel(AnalysisPanelBase):
         """
         self._r2_output.appendPlainText(f"[-] Command failed: {exc}")
         _logger.warning("radare2_command_failed", extra={"error": str(exc)})
+
+    def _on_show_graph(self) -> None:
+        """Fetch and display the CFG for the currently selected function."""
+        if self._bridge is None:
+            self._r2_output.appendPlainText("[!] No bridge configured for graph view")
+            return
+
+        selected = self._func_tree.currentItem()
+        if selected is None:
+            self._r2_output.appendPlainText("[!] Select a function to display its graph")
+            return
+
+        addr_str = str(tree_item_data(selected, 0, Qt.ItemDataRole.UserRole) or "")
+        if not addr_str:
+            return
+
+        try:
+            addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+        except ValueError:
+            self._r2_output.appendPlainText(f"[!] Invalid function address: {addr_str}")
+            return
+
+        self._run_async(
+            self._bridge.get_function_graph(addr),
+            on_success=self._on_graph_data_received,
+            on_error=lambda e: self._r2_output.appendPlainText(f"[-] Graph failed: {e}"),
+        )
+
+    def _on_graph_data_received(self, blocks: object) -> None:
+        """Handle received graph data and load it into the graph view.
+
+        Args:
+            blocks: List of basic block dicts from r2 agj.
+        """
+        if not isinstance(blocks, list):
+            self._r2_output.appendPlainText("[!] No graph data returned")
+            return
+
+        self._graph_view.graph_scene().load_graph(blocks)
+        self._graph_view.fit_to_view()
+        _logger.debug("radare2_graph_loaded", extra={"block_count": len(blocks)})
+
+    def _on_graph_block_clicked(self, address: int) -> None:
+        """Handle click on a basic block in the graph view.
+
+        Seeks to the clicked address and disassembles it.
+
+        Args:
+            address: Start address of the clicked block.
+        """
+        if self._bridge is None:
+            return
+
+        self._run_async(
+            self._bridge.disassemble(address, count=30),
+            on_success=self._on_disassembly_result,
+            on_error=lambda e: self._r2_output.appendPlainText(f"[-] Disassembly failed: {e}"),
+        )
+
+    def _on_disassembly_result(self, lines: object) -> None:
+        """Display disassembly result from a graph block click.
+
+        Args:
+            lines: List of DisassemblyLine objects.
+        """
+        if not isinstance(lines, list):
+            return
+
+        text_lines: list[str] = []
+        for line in lines:
+            addr = getattr(line, "address", 0)
+            mnemonic = getattr(line, "mnemonic", "")
+            operands = getattr(line, "operands", "")
+            text_lines.append(f"0x{addr:08X}  {mnemonic} {operands}")
+
+        self._disasm_view.setPlainText("\n".join(text_lines))

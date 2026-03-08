@@ -5,7 +5,7 @@
 
 """UI panels for Intellicrack analysis displays.
 
-This module provides specialized panels for licensing analysis,
+This module provides specialized panels for bridge analysis,
 stack viewing, script management, Frida instrumentation, process
 management, binary hex viewing, sandbox control, and native tool
 panels (Ghidra, x64dbg, radare2) within the main application.
@@ -13,11 +13,12 @@ panels (Ghidra, x64dbg, radare2) within the main application.
 
 from __future__ import annotations
 
+from intellicrack.ui.panels.analysis_panel import BridgeAnalysisPanel
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.binary_panel import BinaryPanel
 from intellicrack.ui.panels.frida_panel import FridaPanel
 from intellicrack.ui.panels.ghidra_panel import GhidraPanel
-from intellicrack.ui.panels.licensing_panel import LicensingAnalysisPanel
+from intellicrack.ui.panels.hxd_panel import HxDPanel
 from intellicrack.ui.panels.process_panel import ProcessPanel
 from intellicrack.ui.panels.radare2_panel import Radare2Panel
 from intellicrack.ui.panels.sandbox_panel import SandboxPanel
@@ -34,10 +35,11 @@ from intellicrack.ui.panels.x64dbg_panel import X64DbgPanel
 __all__ = [
     "AnalysisPanelBase",
     "BinaryPanel",
+    "BridgeAnalysisPanel",
     "FridaPanel",
     "FridaStackSource",
     "GhidraPanel",
-    "LicensingAnalysisPanel",
+    "HxDPanel",
     "ProcessPanel",
     "Radare2Panel",
     "SandboxPanel",

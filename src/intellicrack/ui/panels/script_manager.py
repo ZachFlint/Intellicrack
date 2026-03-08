@@ -733,6 +733,7 @@ class ScriptManagerPanel(QWidget):
         )
 
         if reply == QMessageBox.StandardButton.Yes:
+            deleted_id = self._current_script_id
             if self._backend:
                 self._backend.delete_script(self._current_script_id)
             self._script_list.remove_script(self._current_script_id)
@@ -742,7 +743,7 @@ class ScriptManagerPanel(QWidget):
             self._editor.set_content("")
             self._modified = False
             self._status_bar.showMessage("Script deleted")
-            _logger.info("script_deleted")
+            _logger.info("script_deleted", extra={"script_id": deleted_id})
 
     def _on_load_file(self) -> None:
         """Handle load file button."""
@@ -784,7 +785,7 @@ class ScriptManagerPanel(QWidget):
         try:
             is_valid, error_msg = self._validator.validate(script)
         except Exception:
-            _logger.exception("script_validation_failed")
+            _logger.exception("script_validation_failed", extra={"script_name": name})
             self._status_bar.showMessage("Validation error. Check logs for details.")
             self._status_bar.setStyleSheet("background-color: #f14c4c; color: white;")
         else:

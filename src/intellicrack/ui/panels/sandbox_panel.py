@@ -41,6 +41,7 @@ from intellicrack.ui.panels.qt_compat import (
     set_header_labels,
     set_max_block_count,
 )
+from intellicrack.ui.panels.vnc_widget import VNCWidget
 
 
 if TYPE_CHECKING:
@@ -74,6 +75,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._pending_binary: Path = Path()
         self._pending_args: list[str] = []
         self._pending_snapshot_id: str = "unknown"
+        self._vnc_widget: VNCWidget | None = None
         self._status_poll_timer = QTimer(self)
         self._status_poll_timer.timeout.connect(self._poll_status)
 
@@ -182,6 +184,11 @@ class SandboxPanel(AnalysisPanelBase):
         set_header_labels(self._snapshots_tree, ["ID", "Name", "Created"])
         output_tabs.addTab(self._snapshots_tree, "Snapshots")
 
+        vnc_w = VNCWidget()
+        self._vnc_widget = vnc_w
+        vnc_w.connection_status_changed.connect(self._on_vnc_status_changed)
+        output_tabs.addTab(vnc_w, "VM Display")
+
         main_splitter.addWidget(output_tabs)
 
         main_splitter.setSizes([200, 400])
@@ -189,13 +196,14 @@ class SandboxPanel(AnalysisPanelBase):
 
     @override
     def _cleanup(self) -> None:
-        """Stop the status poll timer and shut down the sandbox."""
+        """Stop the status poll timer, disconnect VNC, and shut down the sandbox."""
+        self._disconnect_vnc_display()
         self._status_poll_timer.stop()
         if self._sandbox is not None and self._sandbox_id is not None:
             try:
                 run_bridge_coroutine(self._sandbox.stop())
             except Exception:
-                _logger.debug("sandbox_stop_skipped")
+                _logger.debug("sandbox_stop_skipped", exc_info=True)
 
     def set_sandbox(self, sandbox: SandboxBase) -> None:
         """Set the sandbox backend instance.
@@ -204,7 +212,7 @@ class SandboxPanel(AnalysisPanelBase):
             sandbox: The SandboxBase implementation to use.
         """
         self._sandbox = sandbox
-        _logger.info("sandbox_backend_set")
+        _logger.info("sandbox_backend_set", extra={"backend_type": type(sandbox).__name__})
 
     def set_sandbox_manager(self, manager: SandboxManager) -> None:
         """Set the sandbox manager for type-aware creation.
@@ -216,7 +224,7 @@ class SandboxPanel(AnalysisPanelBase):
             manager: The SandboxManager instance.
         """
         self._sandbox_manager = manager
-        _logger.info("sandbox_manager_set")
+        _logger.info("sandbox_manager_set", extra={"manager_type": type(manager).__name__})
 
     def get_sandbox(self) -> SandboxBase | None:
         """Get the current sandbox backend.
@@ -254,9 +262,7 @@ class SandboxPanel(AnalysisPanelBase):
             Sandbox type literal: ``"windows"`` or ``"qemu"``.
         """
         combo_text = self._sandbox_type_combo.currentText()
-        if combo_text == "QEMU":
-            return "qemu"
-        return "windows"
+        return "qemu" if combo_text == "QEMU" else "windows"
 
     def _on_create(self) -> None:
         """Create a new sandbox environment."""
@@ -273,10 +279,10 @@ class SandboxPanel(AnalysisPanelBase):
 
         if self._sandbox is None:
             self._log("[!] No sandbox backend configured")
-            _logger.warning("sandbox_create_failed_no_backend")
+            _logger.warning("sandbox_create_failed_no_backend", extra={"reason": "no backend configured"})
             return
 
-        _logger.debug("sandbox_create_started")
+        _logger.debug("sandbox_create_started", extra={"backend_type": type(self._sandbox).__name__})
         self._create_btn.setEnabled(False)
         self._run_async(
             self._sandbox.start(),
@@ -317,6 +323,8 @@ class SandboxPanel(AnalysisPanelBase):
         self.tool_started.emit()
         _logger.info("sandbox_created", extra={"sandbox_id": self._sandbox_id})
 
+        QTimer.singleShot(2000, self._connect_vnc_display)
+
     def _on_create_error(self, exc: object) -> None:
         """Handle sandbox creation failure.
 
@@ -332,7 +340,7 @@ class SandboxPanel(AnalysisPanelBase):
         if self._sandbox is None:
             return
 
-        _logger.debug("sandbox_destroy_started")
+        _logger.debug("sandbox_destroy_started", extra={"sandbox_id": self._sandbox_id})
         self._destroy_btn.setEnabled(False)
         self._run_async(
             self._sandbox.stop(),
@@ -346,13 +354,14 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             _result: Bridge call result (unused).
         """
+        self._disconnect_vnc_display()
         self._log("[+] Sandbox destroyed")
         self._sandbox_id = None
         self._status_indicator.setText("Inactive")
         self._set_sandbox_controls_active(False)
         self._status_poll_timer.stop()
         self.tool_closed.emit()
-        _logger.info("sandbox_destroyed")
+        _logger.info("sandbox_destroyed", extra={"sandbox_id": self._sandbox_id})
 
     def _on_destroy_error(self, exc: object) -> None:
         """Handle sandbox destruction failure.
@@ -373,7 +382,7 @@ class SandboxPanel(AnalysisPanelBase):
         if self._sandbox is None:
             return
 
-        _logger.debug("sandbox_restart_started")
+        _logger.debug("sandbox_restart_started", extra={"sandbox_id": self._sandbox_id})
         self._restart_btn.setEnabled(False)
         self._run_async(
             self._sandbox.restart(),
@@ -390,7 +399,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._log("[+] Sandbox restarted")
         self._clear_report_tabs()
         self._restart_btn.setEnabled(True)
-        _logger.info("sandbox_restarted")
+        _logger.info("sandbox_restarted", extra={"sandbox_id": self._sandbox_id})
 
     def _on_restart_error(self, exc: object) -> None:
         """Handle sandbox restart failure.
@@ -576,6 +585,36 @@ class SandboxPanel(AnalysisPanelBase):
         except Exception:
             self._status_indicator.setText("Active (status unavailable)")
 
+    def _on_vnc_status_changed(self, connected: bool) -> None:
+        """Handle VNC connection status changes.
+
+        Args:
+            connected: True if VNC is now connected.
+        """
+        if connected:
+            self._log("[+] VNC display connected")
+        else:
+            self._log("[*] VNC display disconnected")
+
+    def _connect_vnc_display(self) -> None:
+        """Connect the VNC widget to the sandbox VNC port if available."""
+        if self._vnc_widget is None or self._sandbox is None:
+            return
+
+        vnc_port = getattr(self._sandbox, "vnc_port", None)
+        if vnc_port is None:
+            _logger.debug("sandbox_vnc_port_not_available", extra={"sandbox_type": type(self._sandbox).__name__})
+            return
+
+        self._log(f"[*] Connecting VNC display on port {vnc_port}...")
+        self._vnc_widget.connect_to_server("127.0.0.1", int(vnc_port))
+        _logger.info("vnc_display_connecting", extra={"port": vnc_port})
+
+    def _disconnect_vnc_display(self) -> None:
+        """Disconnect the VNC widget if connected."""
+        if self._vnc_widget is not None:
+            self._vnc_widget.disconnect_from_server()
+
     def _clear_report_tabs(self) -> None:
         """Clear all execution report display tabs."""
         self._file_changes_tree.clear()
@@ -588,7 +627,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             report: The execution report to display.
         """
-        _logger.debug("execution_report_loading")
+        _logger.debug("execution_report_loading", extra={"report_type": type(report).__name__})
         self._clear_report_tabs()
 
         if hasattr(report, "file_changes"):

@@ -1,72 +1,92 @@
 {
   "tool": "darglint",
-  "generated": "2026-03-06T22:55:29.721734",
-  "total_findings": 6,
-  "total_files": 3,
+  "generated": "2026-03-07T20:22:15.019731",
+  "total_findings": 7,
+  "total_files": 5,
   "files": [
     {
-      "path": "src\\intellicrack\\providers\\base.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 291,
-          "column": null,
-          "function": "_retry_with_backoff",
-          "code": "DAR401",
-          "message": "[_retry_with_backoff] -r ProviderError",
-          "raw": "src\\intellicrack\\providers\\base.py:_retry_with_backoff:291: DAR401: -r ProviderError"
-        },
-        {
-          "line": 291,
-          "column": null,
-          "function": "_retry_with_backoff",
-          "code": "DAR401",
-          "message": "[_retry_with_backoff] -r last_exc",
-          "raw": "src\\intellicrack\\providers\\base.py:_retry_with_backoff:291: DAR401: -r last_exc"
-        },
-        {
-          "line": 313,
-          "column": null,
-          "function": "_retry_with_backoff",
-          "code": "DAR402",
-          "message": "[_retry_with_backoff] +r Exception",
-          "raw": "src\\intellicrack\\providers\\base.py:_retry_with_backoff:313: DAR402: +r Exception"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\credentials\\oauth.py",
+      "path": "src\\intellicrack\\sandbox\\qemu.py",
       "count": 2,
       "findings": [
         {
-          "line": 103,
+          "line": 1572,
           "column": null,
-          "function": "_oauth_provider_to_name",
-          "code": "DAR402",
-          "message": "[_oauth_provider_to_name] +r KeyError",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:_oauth_provider_to_name:103: DAR402: +r KeyError"
+          "function": "_poll_for_result",
+          "code": "DAR401",
+          "message": "[_poll_for_result] -r SandboxTimeoutError",
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:_poll_for_result:1572: DAR401: -r SandboxTimeoutError"
         },
         {
-          "line": 372,
+          "line": 1583,
           "column": null,
-          "function": "wait_for_callback",
-          "code": "DAR401",
-          "message": "[wait_for_callback] -r OAuthAuthorizationError",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:wait_for_callback:372: DAR401: -r OAuthAuthorizationError"
+          "function": "_poll_for_result",
+          "code": "DAR402",
+          "message": "[_poll_for_result] +r SandboxError",
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:_poll_for_result:1583: DAR402: +r SandboxError"
         }
       ]
     },
     {
-      "path": "src\\intellicrack\\sandbox\\base.py",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 229,
+          "column": null,
+          "function": "request_framebuffer_update",
+          "code": "DAR402",
+          "message": "[request_framebuffer_update] +r ConnectionError",
+          "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py:request_framebuffer_update:229: DAR402: +r ConnectionError"
+        },
+        {
+          "line": 299,
+          "column": null,
+          "function": "_handle_framebuffer_update",
+          "code": "DAR402",
+          "message": "[_handle_framebuffer_update] +r ConnectionError",
+          "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py:_handle_framebuffer_update:299: DAR402: +r ConnectionError"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\bridges\\x64dbg.py",
       "count": 1,
       "findings": [
         {
-          "line": 452,
+          "line": 1854,
           "column": null,
-          "function": "list_snapshots",
-          "code": "DAR202",
-          "message": "[list_snapshots] + return",
-          "raw": "src\\intellicrack\\sandbox\\base.py:list_snapshots:452: DAR202: + return"
+          "function": "disassemble_at",
+          "code": "DAR401",
+          "message": "[disassemble_at] -r ToolError",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:disassemble_at:1854: DAR401: -r ToolError"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\sandbox\\windows.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 492,
+          "column": null,
+          "function": "run_command",
+          "code": "DAR401",
+          "message": "[run_command] -r SandboxTimeoutError",
+          "raw": "src\\intellicrack\\sandbox\\windows.py:run_command:492: DAR401: -r SandboxTimeoutError"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\graph_view.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 461,
+          "column": null,
+          "function": "graph_scene",
+          "code": "DAR401",
+          "message": "[graph_scene] -r TypeError",
+          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:graph_scene:461: DAR401: -r TypeError"
         }
       ]
     }

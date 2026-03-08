@@ -10,7 +10,7 @@ The actual script content is written dynamically by the AI based on analysis
 results - there are NO pre-built templates or generated scripts here.
 
 The AI creates scripts from scratch using:
-- Analysis results from license_analyzer
+- Analysis results from analysis_aggregator
 - Binary metadata from the disassembly tools
 - Runtime information from Frida/debugger sessions
 
@@ -262,8 +262,7 @@ class ScriptContext:
         if getter is None:
             return
 
-        api_ref = getter()
-        if api_ref:
+        if api_ref := getter():
             lines.append(f"\n{language.value.upper()} API Reference:")
             lines.extend(f"  {category}: {usage}" for category, usage in api_ref.items())
 

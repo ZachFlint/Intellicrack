@@ -33,6 +33,7 @@ from .base import (
     SandboxBase,
     SandboxConfig,
     SandboxError,
+    SandboxTimeoutError,
     validate_file_operation,
     validate_process_operation,
     validate_registry_operation,
@@ -126,7 +127,7 @@ class WindowsSandbox(SandboxBase):
                 timeout=_WHERE_TIMEOUT,
             )
             if result.returncode != _RETURNCODE_SUCCESS:
-                _logger.debug("windows_sandbox_exe_not_found")
+                _logger.debug("windows_sandbox_exe_not_found", extra={"exe": self.SANDBOX_EXE})
                 return False
 
             features_result = await process_manager.run_tracked_async(
@@ -140,10 +141,10 @@ class WindowsSandbox(SandboxBase):
             )
 
             if "Enabled" in features_result.stdout:
-                _logger.info("windows_sandbox_available")
+                _logger.info("windows_sandbox_available", extra={"feature_state": "Enabled"})
                 is_available = True
             else:
-                _logger.warning("windows_sandbox_feature_not_enabled")
+                _logger.warning("windows_sandbox_feature_not_enabled", extra={"feature": "Containers-DisposableClientVM"})
                 is_available = False
 
         except Exception as e:
@@ -162,7 +163,7 @@ class WindowsSandbox(SandboxBase):
             SandboxError: If sandbox cannot be started.
         """
         if self._state.status == "running":
-            _logger.warning("sandbox_already_running")
+            _logger.warning("sandbox_already_running", extra={"sandbox_type": "windows"})
             return
 
         log_sandbox_operation("start", "windows")
@@ -236,7 +237,7 @@ class WindowsSandbox(SandboxBase):
             SandboxError: If sandbox cannot be stopped cleanly.
         """
         if self._state.status == "stopped":
-            _logger.debug("sandbox_already_stopped")
+            _logger.debug("sandbox_already_stopped", extra={"sandbox_type": "windows"})
             return
 
         self._state.status = "stopping"
@@ -279,7 +280,7 @@ class WindowsSandbox(SandboxBase):
 
             self._state.status = "stopped"
             self._state.pid = None
-            _logger.info("windows_sandbox_stopped")
+            _logger.info("windows_sandbox_stopped", extra={"sandbox_type": "windows"})
 
         except Exception as e:
             self._state.status = "error"
@@ -548,7 +549,7 @@ call "{sandbox_script_path}"
                 else:
                     return (exit_code, "", "")
 
-        raise SandboxError(_ERR_CMD_TIMEOUT)
+        raise SandboxTimeoutError(_ERR_CMD_TIMEOUT)
 
     async def run_binary(
         self,
@@ -607,9 +608,14 @@ call "{sandbox_script_path}"
                 timeout=effective_timeout,
             )
             result = "success"
+        except SandboxTimeoutError as e:
+            exit_code = _RETURNCODE_FAILURE
+            result = "timeout"
+            stderr = str(e)
+            stdout = ""
         except SandboxError as e:
             exit_code = _RETURNCODE_FAILURE
-            result = "timeout" if "timed out" in str(e) else "error"
+            result = "error"
             stderr = str(e)
             stdout = ""
         duration = time.time() - start_time

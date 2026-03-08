@@ -26,13 +26,34 @@ _logger = get_logger("core.config")
 _ERR_TOMLI_W_REQUIRED = "tomli_w is required for saving config"
 
 
-def _get_project_root() -> Path:
+def get_project_root() -> Path:
     """Compute the project root directory from this file's location.
 
     Returns:
         Path to the repository root (parent of ``src/``).
     """
-    return Path(__file__).resolve().parents[2]
+    return Path(__file__).resolve().parents[3]
+
+
+def get_config_dir() -> Path:
+    """Return the project-local configuration directory.
+
+    Returns:
+        Path to ``<project_root>/.intellicrack/``.
+    """
+    return get_project_root() / ".intellicrack"
+
+
+def get_config_file(filename: str) -> Path:
+    """Return the path to a specific configuration file.
+
+    Args:
+        filename: Name of the configuration file (e.g. ``"providers.json"``).
+
+    Returns:
+        Path to ``<project_root>/.intellicrack/<filename>``.
+    """
+    return get_config_dir() / filename
 
 
 @dataclass
@@ -63,12 +84,14 @@ class ToolConfig:
         path: Custom path to tool installation.
         auto_install: Whether to auto-install if not found.
         startup_timeout_seconds: Timeout for tool startup.
+        port: Network port for bridge communication if applicable.
     """
 
     enabled: bool = True
     path: Path | None = None
     auto_install: bool = True
     startup_timeout_seconds: int = 60
+    port: int | None = None
 
 
 @dataclass
@@ -152,19 +175,16 @@ def _default_providers() -> dict[ProviderName, ProviderConfig]:
     return {
         ProviderName.ANTHROPIC: ProviderConfig(
             enabled=True,
-            default_model="claude-sonnet-4-20250514",
             timeout_seconds=120,
             max_retries=3,
         ),
         ProviderName.OPENAI: ProviderConfig(
             enabled=True,
-            default_model="gpt-4o",
             timeout_seconds=120,
             max_retries=3,
         ),
         ProviderName.GOOGLE: ProviderConfig(
             enabled=True,
-            default_model="gemini-2.0-flash",
             timeout_seconds=120,
             max_retries=3,
         ),
@@ -200,6 +220,7 @@ def _default_tools() -> dict[ToolName, ToolConfig]:
             enabled=True,
             auto_install=True,
             startup_timeout_seconds=120,
+            port=4768,
         ),
         ToolName.X64DBG: ToolConfig(
             enabled=True,
@@ -247,9 +268,9 @@ class Config:
         log: Logging configuration.
     """
 
-    tools_directory: Path = field(default_factory=lambda: _get_project_root() / "tools")
-    logs_directory: Path = field(default_factory=lambda: _get_project_root() / "logs")
-    data_directory: Path = field(default_factory=lambda: _get_project_root() / "data")
+    tools_directory: Path = field(default_factory=lambda: get_project_root() / "tools")
+    logs_directory: Path = field(default_factory=lambda: get_project_root() / "logs")
+    data_directory: Path = field(default_factory=lambda: get_project_root() / "data")
 
     default_provider: ProviderName = ProviderName.ANTHROPIC
     confirmation_level: ConfirmationLevel = ConfirmationLevel.DESTRUCTIVE
@@ -296,7 +317,7 @@ class Config:
         Returns:
             Tuple of (tools_dir, logs_dir, data_dir, default_provider, confirmation_level).
         """
-        root = _get_project_root()
+        root = get_project_root()
         tools_dir = Path(general.get("tools_directory", str(root / "tools")))
         logs_dir = Path(general.get("logs_directory", str(root / "logs")))
         data_dir = Path(general.get("data_directory", str(root / "data")))
@@ -374,11 +395,13 @@ class Config:
                 tool_base = tools[tool_name]
                 path_str = tool_data.get("path")
                 tool_path = Path(path_str) if path_str else tool_base.path
+                port_val = tool_data.get("port", tool_base.port)
                 tools[tool_name] = ToolConfig(
                     enabled=tool_data.get("enabled", tool_base.enabled),
                     path=tool_path,
                     auto_install=tool_data.get("auto_install", tool_base.auto_install),
                     startup_timeout_seconds=tool_data.get("startup_timeout_seconds", tool_base.startup_timeout_seconds),
+                    port=int(port_val) if port_val is not None else None,
                 )
         return tools
 
@@ -544,6 +567,8 @@ class Config:
             }
             if tool_config.path:
                 tool_dict["path"] = str(tool_config.path)
+            if tool_config.port is not None:
+                tool_dict["port"] = tool_config.port
             data["tools"][tool_name.value] = tool_dict
 
         return data

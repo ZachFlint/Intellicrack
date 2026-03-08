@@ -2,8 +2,6 @@
 
 pyproject.toml: DEP002 'flake8-pyproject' defined as a dependency but not used in the codebase
 
-pyproject.toml: DEP002 'pytest' defined as a dependency but not used in the codebase
-
 pyproject.toml: DEP002 'build' defined as a dependency but not used in the codebase
 
 pyproject.toml: DEP002 'pyclean' defined as a dependency but not used in the codebase
@@ -67,6 +65,8 @@ pyproject.toml: DEP002 'safety' defined as a dependency but not used in the code
 pyproject.toml: DEP002 'yamllint' defined as a dependency but not used in the codebase
 
 pyproject.toml: DEP002 'jsonlint' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pytest' defined as a dependency but not used in the codebase
 
 pyproject.toml: DEP002 'pytest-cov' defined as a dependency but not used in the codebase
 
@@ -213,22 +213,13 @@ src\intellicrack\ui\panels\binary_panel.py:42:12: DEP003 'lief' imported but it 
 
 4 findings in src\intellicrack\ui\provider_config.py
 
-src\intellicrack\ui\provider_config.py:21:8: DEP003 'httpx' imported but it is a transitive dependency
+src\intellicrack\ui\provider_config.py:20:8: DEP003 'httpx' imported but it is a transitive dependency
+
+src\intellicrack\ui\provider_config.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
 src\intellicrack\ui\provider_config.py:22:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
 src\intellicrack\ui\provider_config.py:23:1: DEP003 'PyQt6' imported but it is a transitive dependency
-
-src\intellicrack\ui\provider_config.py:24:1: DEP003 'PyQt6' imported but it is a transitive dependency
-
-
-3 findings in src\intellicrack\core\license_analyzer.py
-
-src\intellicrack\core\license_analyzer.py:35:12: DEP003 'pefile' imported but it is a transitive dependency
-
-src\intellicrack\core\license_analyzer.py:42:12: DEP003 'lief' imported but it is a transitive dependency
-
-src\intellicrack\core\license_analyzer.py:49:12: DEP003 'capstone' imported but it is a transitive dependency
 
 
 3 findings in src\intellicrack\providers\google.py
@@ -276,6 +267,15 @@ src\intellicrack\ui\dialogs\splash_screen.py:17:1: DEP003 'PyQt6' imported but i
 src\intellicrack\ui\dialogs\splash_screen.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
 
+3 findings in src\intellicrack\ui\panels\analysis_panel.py
+
+src\intellicrack\ui\panels\analysis_panel.py:16:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\analysis_panel.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\analysis_panel.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
 3 findings in src\intellicrack\ui\panels\frida_panel.py
 
 src\intellicrack\ui\panels\frida_panel.py:16:1: DEP003 'PyQt6' imported but it is a transitive dependency
@@ -294,13 +294,22 @@ src\intellicrack\ui\panels\ghidra_panel.py:19:1: DEP003 'PyQt6' imported but it 
 src\intellicrack\ui\panels\ghidra_panel.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
 
-3 findings in src\intellicrack\ui\panels\licensing_panel.py
+3 findings in src\intellicrack\ui\panels\graph_view.py
 
-src\intellicrack\ui\panels\licensing_panel.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency
+src\intellicrack\ui\panels\graph_view.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
-src\intellicrack\ui\panels\licensing_panel.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency
+src\intellicrack\ui\panels\graph_view.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
-src\intellicrack\ui\panels\licensing_panel.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency
+src\intellicrack\ui\panels\graph_view.py:30:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\ui\panels\hxd_panel.py
+
+src\intellicrack\ui\panels\hxd_panel.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\hxd_panel.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\hxd_panel.py:22:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
 
 3 findings in src\intellicrack\ui\panels\process_panel.py
@@ -348,6 +357,15 @@ src\intellicrack\ui\panels\stack_viewer.py:19:1: DEP003 'PyQt6' imported but it 
 src\intellicrack\ui\panels\stack_viewer.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
 
+3 findings in src\intellicrack\ui\panels\vnc_widget.py
+
+src\intellicrack\ui\panels\vnc_widget.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\vnc_widget.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\vnc_widget.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
 3 findings in src\intellicrack\ui\panels\x64dbg_panel.py
 
 src\intellicrack\ui\panels\x64dbg_panel.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency
@@ -382,6 +400,15 @@ src\intellicrack\ui\tools.py:21:1: DEP003 'PyQt6' imported but it is a transitiv
 src\intellicrack\ui\tools.py:22:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
 src\intellicrack\ui\tools.py:23:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\ui\win32_embed.py
+
+src\intellicrack\ui\win32_embed.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\win32_embed.py:26:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\win32_embed.py:27:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
 
 2 findings in src\intellicrack\bridges\x64dbg.py
@@ -421,9 +448,9 @@ src\intellicrack\ui\panels\base_panel.py:18:1: DEP003 'PyQt6' imported but it is
 
 2 findings in src\intellicrack\ui\panels\qt_compat.py
 
-src\intellicrack\ui\panels\qt_compat.py:221:5: DEP003 'PyQt6' imported but it is a transitive dependency
+src\intellicrack\ui\panels\qt_compat.py:224:5: DEP003 'PyQt6' imported but it is a transitive dependency
 
-src\intellicrack\ui\panels\qt_compat.py:232:5: DEP003 'PyQt6' imported but it is a transitive dependency
+src\intellicrack\ui\panels\qt_compat.py:235:5: DEP003 'PyQt6' imported but it is a transitive dependency
 
 
 2 findings in src\intellicrack\ui\resources\icon_manager.py
@@ -435,9 +462,9 @@ src\intellicrack\ui\resources\icon_manager.py:16:1: DEP003 'PyQt6' imported but 
 
 2 findings in src\intellicrack\ui\sandbox_config.py
 
-src\intellicrack\ui\sandbox_config.py:23:1: DEP003 'PyQt6' imported but it is a transitive dependency
+src\intellicrack\ui\sandbox_config.py:22:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
-src\intellicrack\ui\sandbox_config.py:24:1: DEP003 'PyQt6' imported but it is a transitive dependency
+src\intellicrack\ui\sandbox_config.py:23:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
 
 2 findings in src\intellicrack\ui\session_manager.py

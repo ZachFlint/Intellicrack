@@ -40,6 +40,6 @@
   "reportUndefinedVariable": "error",
   "reportGeneralTypeIssues": "error",
   "extraPaths": [
-    "d:/intellicrack/src"
+    "src"
   ]
 }

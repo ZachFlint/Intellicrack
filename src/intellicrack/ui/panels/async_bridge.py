@@ -199,7 +199,7 @@ def shutdown_bridge_loop() -> None:
 
     _state.loop = None
     _state.thread = None
-    _logger.debug("bridge_event_loop_shutdown")
+    _logger.debug("bridge_event_loop_shutdown", extra={"had_loop": _state.loop is not None})
 
 
 def _log_task_exception(task: asyncio.Task[object]) -> None:
@@ -209,8 +209,8 @@ def _log_task_exception(task: asyncio.Task[object]) -> None:
         task: The completed asyncio task to inspect.
     """
     if task.cancelled():
-        _logger.debug("bridge_task_cancelled")
+        _logger.debug("bridge_task_cancelled", extra={"task_name": task.get_name()})
         return
     exc = task.exception()
     if exc is not None:
-        _logger.error("bridge_task_failed: %s: %s", type(exc).__name__, exc)
+        _logger.error("bridge_task_failed", extra={"exception_type": type(exc).__name__, "error": str(exc)})

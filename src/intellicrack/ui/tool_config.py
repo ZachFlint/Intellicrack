@@ -49,6 +49,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core._subprocess import TimeoutExpired
 
+from ..core.config import get_config_file
 from ..core.logging import get_logger
 from ..core.process_manager import ProcessManager
 from .resources import IconManager
@@ -668,7 +669,7 @@ class ToolConfigDialog(QDialog):
         self._registry = tool_registry
         self._tools_directory = tools_directory or Path("D:/Intellicrack/tools")
         self._tool_widgets: dict[str, ToolSettingsWidget] = {}
-        self._config_path = Path.home() / ".intellicrack" / "tools.json"
+        self._config_path = get_config_file("tools.json")
 
         self._setup_ui()
         self._load_tools()
@@ -811,7 +812,7 @@ class ToolSettingsWidget(QFrame):
         self._description = description
         self._tools_directory = tools_directory
         self._registry = registry
-        self._config_path = config_path or Path.home() / ".intellicrack" / "tools.json"
+        self._config_path = config_path or get_config_file("tools.json")
         self._install_worker: ToolInstallWorker | None = None
         self._status_worker: ToolStatusCheckWorker | None = None
 
@@ -1273,7 +1274,7 @@ class ToolStatusDialog(QDialog):
         """
         super().__init__(parent)
         self._registry = tool_registry
-        self._config_path = Path.home() / ".intellicrack" / "tools.json"
+        self._config_path = get_config_file("tools.json")
         self._status_workers: list[ToolStatusCheckWorker] = []
         self._tool_statuses: dict[str, tuple[bool, str]] = {}
 

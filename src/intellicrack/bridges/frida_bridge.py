@@ -393,7 +393,7 @@ class FridaBridge(InstrumentationBridge):
                 target_pid=None,
                 last_error=None,
             )
-            _logger.info("frida_bridge_initialized")
+            _logger.info("frida_bridge_initialized", extra={"bridge": "frida"})
         except Exception as e:
             self._state.connected = False
             self._state.tool_running = False
@@ -412,7 +412,7 @@ class FridaBridge(InstrumentationBridge):
             try:
                 await asyncio.to_thread(self._session.detach)
             except Exception:
-                _logger.exception("session_detach_failed")
+                _logger.exception("session_detach_failed", extra={"bridge": "frida"})
             self._session = None
 
         if self._spawned_pid is not None and self._device is not None:
@@ -430,7 +430,7 @@ class FridaBridge(InstrumentationBridge):
         self._pid = None
         self._hooks = {}
         await super().shutdown()
-        _logger.info("frida_bridge_shutdown")
+        _logger.info("frida_bridge_shutdown", extra={"bridge": "frida"})
 
     @override
     async def is_available(self) -> bool:
@@ -620,7 +620,7 @@ class FridaBridge(InstrumentationBridge):
             ToolError: If detachment fails.
         """
         if self._session is None:
-            _logger.warning("detach_no_session")
+            _logger.warning("detach_no_session", extra={"bridge": "frida"})
             return
 
         try:
@@ -648,7 +648,7 @@ class FridaBridge(InstrumentationBridge):
             self._state.process_attached = False
             self._state.target_pid = None
 
-            _logger.info("process_detached")
+            _logger.info("process_detached", extra={"bridge": "frida"})
         except Exception as e:
             raise ToolError(_ERR_NOT_ATTACHED) from e
 

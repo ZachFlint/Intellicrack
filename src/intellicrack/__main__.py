@@ -16,11 +16,12 @@ Example:
 from __future__ import annotations
 
 import importlib
-import logging
 import sys
 
+from intellicrack.core.logging import get_logger
 
-_logger = logging.getLogger("intellicrack.__main__")
+
+_logger = get_logger(__name__)
 
 
 def run() -> None:
@@ -35,7 +36,7 @@ def run() -> None:
         main_func = main_module.main
     except ImportError as e:
         _logger.exception("import_failed", extra={"error": str(e)})
-        _logger.warning("dependency_check_hint")
+        _logger.warning("dependency_check_hint", extra={"target_module": "intellicrack.main"})
         sys.exit(1)
 
     sys.exit(main_func())

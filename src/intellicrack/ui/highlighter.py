@@ -22,6 +22,10 @@ from PyQt6.QtGui import (
     QTextDocument,
 )
 
+from intellicrack.core.logging import get_logger
+
+
+_logger = get_logger("ui.highlighter")
 
 _BLOCK_STATE_NORMAL = 0
 _BLOCK_STATE_DOUBLE_QUOTE = 1
@@ -835,11 +839,11 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
                 break
 
             delim = delimiters[nearest_delim_idx]
-            state_value = _DELIM_STATE_MAP[nearest_delim_idx]
             end_idx = text.find(delim, nearest_pos + 3)
 
             if end_idx == -1:
                 self.setFormat(nearest_pos, len(text) - nearest_pos, self._triple_quote_format)
+                state_value = _DELIM_STATE_MAP[nearest_delim_idx]
                 self.setCurrentBlockState(state_value)
                 return
 
@@ -1047,6 +1051,7 @@ def get_highlighter_for_language(
         Appropriate highlighter or None if not supported.
     """
     language_lower = language.lower()
+    _logger.debug("highlighter_requested", extra={"language": language_lower})
 
     if language_lower in {"c", "cpp", "c++", "decompiled"}:
         return CSyntaxHighlighter(parent)

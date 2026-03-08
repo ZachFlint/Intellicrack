@@ -1,36 +1,29 @@
 """Comprehensive tests for Intellicrack core types module.
 
 Tests validate:
-- Enum values and membership for AlgorithmType and KeyFormat
 - Dataclass field assignments and type correctness
-- LicensingAnalysis integration with component types
+- BridgeAnalysisSummary aggregation type
 - DataTypeInfo for Ghidra integration
-- ValidationFunctionInfo, CryptoAPICall, MagicConstant structures
 - Session and state management types
 """
 
 from __future__ import annotations
 
-import enum
 from dataclasses import fields
 from pathlib import Path
 
 from intellicrack.core.types import (
-    AlgorithmType,
     AttachError,
     AuthenticationError,
     BinaryInfo,
     BreakpointInfo,
-    CryptoAPICall,
+    BridgeAnalysisSummary,
     DataTypeInfo,
     ExportInfo,
     FunctionInfo,
     HookInfo,
     ImportInfo,
     IntellicrackError,
-    KeyFormat,
-    LicensingAnalysis,
-    MagicConstant,
     Message,
     ModuleInfo,
     ParameterInfo,
@@ -52,7 +45,6 @@ from intellicrack.core.types import (
     ToolName,
     ToolParameter,
     ToolResult,
-    ValidationFunctionInfo,
     VariableInfo,
 )
 
@@ -63,11 +55,6 @@ ADDR_SECONDARY = 0x402000
 ADDR_TERTIARY = 0x403000
 ADDR_POINTER = 0x402000
 ADDR_ARRAY = 0x403000
-ADDR_CRYPTO_API = 0x401500
-ADDR_VALIDATION_FUNC = 0x500000
-ADDR_MAGIC_CRC32 = 0x401200
-ADDR_MAGIC_MD5 = 0x401300
-ADDR_MAGIC_RSA = 0x401400
 ADDR_ENTRY_POINT = 0x401000
 ADDR_IMPORT = 0x402000
 ADDR_SECTION_VIRTUAL = 0x1000
@@ -86,10 +73,6 @@ ADDR_BASE_POINTER = 0x7FFF00000000
 ADDR_REGISTER_RIP = 0x401000
 ADDR_REGISTER_RAX = 0x1234567890ABCDEF
 
-# Test constants for counts
-COUNT_TWO = 2
-COUNT_FOUR_FEATURES = 4
-
 # Test constants for sizes
 SIZE_DWORD = 4
 SIZE_POINTER_64 = 8
@@ -104,12 +87,6 @@ SIZE_SECTION_UPX_RAW = 0x200
 SIZE_MODULE = 0x1A0000
 SIZE_PATCH_BYTES = 5
 SIZE_DEFAULT_READ = 16
-
-# Test constants for magic values
-MAGIC_CRC32_POLYNOMIAL = 0xEDB88320
-MAGIC_MD5_INIT_A = 0x67452301
-MAGIC_RSA_EXPONENT = 65537
-MAGIC_RSA_BIT_WIDTH = 17
 
 # Test constants for PIDs and thread IDs
 TEST_PID = 1234
@@ -141,17 +118,6 @@ REGISTER_FS = 0x53
 REGISTER_GS = 0x2B
 REGISTER_SS = 0x2B
 
-# Test constants for analysis scores and counts
-MIN_ALGORITHM_COUNT = 10
-MIN_KEY_FORMAT_COUNT = 7
-COMPLEXITY_SCORE = 15
-COMPLEXITY_SCORE_LOW = 5
-COMPLEXITY_SCORE_MID = 10
-CONFIDENCE_SCORE = 0.85
-CONFIDENCE_SCORE_MID = 0.5
-KEY_LENGTH = 25
-KEY_LENGTH_UNKNOWN = 0
-GROUP_SIZE = 5
 DURATION_MS = 15.5
 DURATION_MS_SHORT = 5.0
 
@@ -182,109 +148,6 @@ BREAKPOINT_HIT_COUNT_ZERO = 0
 EXPORT_ORDINAL = 1
 VARIABLE_OFFSET = -0x10
 NO_ENTRY_POINT = 0
-
-
-# AlgorithmType enum tests
-
-
-def test_all_algorithm_types_are_enums() -> None:
-    """Verify AlgorithmType is a proper Enum class."""
-    assert issubclass(AlgorithmType, enum.Enum)
-
-
-def test_algorithm_type_values_are_strings() -> None:
-    """Verify all algorithm values are lowercase strings."""
-    for algo in AlgorithmType:
-        assert isinstance(algo.value, str)
-        assert algo.value == algo.value.lower()
-
-
-def test_md5_algorithm_exists() -> None:
-    """Verify MD5 algorithm is defined."""
-    assert AlgorithmType.MD5.value == "md5"
-
-
-def test_sha1_algorithm_exists() -> None:
-    """Verify SHA1 algorithm is defined."""
-    assert AlgorithmType.SHA1.value == "sha1"
-
-
-def test_sha256_algorithm_exists() -> None:
-    """Verify SHA256 algorithm is defined."""
-    assert AlgorithmType.SHA256.value == "sha256"
-
-
-def test_crc32_algorithm_exists() -> None:
-    """Verify CRC32 algorithm is defined."""
-    assert AlgorithmType.CRC32.value == "crc32"
-
-
-def test_rsa_algorithm_exists() -> None:
-    """Verify RSA algorithm is defined."""
-    assert AlgorithmType.RSA.value == "rsa"
-
-
-def test_hwid_algorithm_exists() -> None:
-    """Verify hardware ID based algorithm is defined."""
-    assert AlgorithmType.HWID_BASED.value == "hwid_based"
-
-
-def test_time_based_algorithm_exists() -> None:
-    """Verify time-based algorithm is defined."""
-    assert AlgorithmType.TIME_BASED.value == "time_based"
-
-
-def test_feature_flag_algorithm_exists() -> None:
-    """Verify feature flag algorithm is defined."""
-    assert AlgorithmType.FEATURE_FLAG.value == "feature_flag"
-
-
-def test_unknown_algorithm_exists() -> None:
-    """Verify unknown fallback is defined."""
-    assert AlgorithmType.UNKNOWN.value == "unknown"
-
-
-def test_algorithm_count_minimum() -> None:
-    """Verify minimum algorithm diversity."""
-    assert len(AlgorithmType) >= MIN_ALGORITHM_COUNT
-
-
-# KeyFormat enum tests
-
-
-def test_key_format_is_enum() -> None:
-    """Verify KeyFormat is a proper Enum class."""
-    assert issubclass(KeyFormat, enum.Enum)
-
-
-def test_serial_dashed_format_exists() -> None:
-    """Verify dashed serial format is defined."""
-    assert KeyFormat.SERIAL_DASHED.value == "serial_dashed"
-
-
-def test_serial_plain_format_exists() -> None:
-    """Verify plain serial format is defined."""
-    assert KeyFormat.SERIAL_PLAIN.value == "serial_plain"
-
-
-def test_hex_string_format_exists() -> None:
-    """Verify hex string format is defined."""
-    assert KeyFormat.HEX_STRING.value == "hex_string"
-
-
-def test_base64_format_exists() -> None:
-    """Verify base64 format is defined."""
-    assert KeyFormat.BASE64.value == "base64"
-
-
-def test_hardware_locked_format_exists() -> None:
-    """Verify hardware locked format is defined."""
-    assert KeyFormat.HARDWARE_LOCKED.value == "hardware_locked"
-
-
-def test_key_format_count_minimum() -> None:
-    """Verify minimum format diversity."""
-    assert len(KeyFormat) >= MIN_KEY_FORMAT_COUNT
 
 
 # DataTypeInfo dataclass tests
@@ -351,226 +214,121 @@ def test_datatype_info_has_required_fields() -> None:
     assert required.issubset(field_names)
 
 
-# CryptoAPICall dataclass tests
+# BridgeAnalysisSummary dataclass tests
 
 
-def test_crypto_api_call_creation() -> None:
-    """Verify CryptoAPICall instantiation."""
-    call = CryptoAPICall(
-        api_name="CryptAcquireContextA",
-        address=ADDR_CRYPTO_API,
-        dll="advapi32.dll",
-        caller_function="InitLicense",
-        parameters_hint="PROV_RSA_FULL",
-    )
-    assert call.api_name == "CryptAcquireContextA"
-    assert call.address == ADDR_CRYPTO_API
-    assert call.dll == "advapi32.dll"
-    assert call.caller_function == "InitLicense"
-    assert call.parameters_hint == "PROV_RSA_FULL"
-
-
-def test_crypto_api_call_minimal() -> None:
-    """Verify CryptoAPICall with optional fields as None."""
-    call = CryptoAPICall(
-        api_name="MD5",
-        address=ADDR_SECONDARY,
-        dll="ntdll.dll",
-        caller_function=None,
-        parameters_hint=None,
-    )
-    assert call.api_name == "MD5"
-    assert call.caller_function is None
-    assert call.parameters_hint is None
-
-
-# ValidationFunctionInfo dataclass tests
-
-
-def test_validation_function_info_creation() -> None:
-    """Verify ValidationFunctionInfo instantiation."""
-    comparison_addr_1 = 0x401050
-    comparison_addr_2 = 0x401080
-    info = ValidationFunctionInfo(
+def test_bridge_analysis_summary_creation() -> None:
+    """Verify BridgeAnalysisSummary can be constructed with all fields."""
+    string = StringInfo(
         address=ADDR_BASE,
-        name="CheckSerialKey",
-        return_type="bool",
-        comparison_addresses=[comparison_addr_1, comparison_addr_2],
-        string_references=["Invalid License", "License OK"],
-        calls_crypto_api=True,
-        complexity_score=COMPLEXITY_SCORE,
+        value="test string",
+        encoding="ascii",
+        section=".rdata",
     )
-    assert info.address == ADDR_BASE
-    assert info.name == "CheckSerialKey"
-    assert info.return_type == "bool"
-    assert len(info.comparison_addresses) == COUNT_TWO
-    assert len(info.string_references) == COUNT_TWO
-    assert info.calls_crypto_api is True
-    assert info.complexity_score == COMPLEXITY_SCORE
-
-
-def test_validation_function_complexity_score_is_numeric() -> None:
-    """Verify complexity score is an integer."""
-    info = ValidationFunctionInfo(
-        address=ADDR_VALIDATION_FUNC,
-        name="ValidateLicense",
-        return_type="int",
-        comparison_addresses=[],
-        string_references=[],
-        calls_crypto_api=False,
-        complexity_score=COMPLEXITY_SCORE_LOW,
-    )
-    assert isinstance(info.complexity_score, int)
-
-
-# MagicConstant dataclass tests
-
-
-BIT_WIDTH_32 = 32
-
-
-def test_magic_constant_crc32_polynomial() -> None:
-    """Verify CRC32 polynomial constant representation."""
-    const = MagicConstant(
-        value=MAGIC_CRC32_POLYNOMIAL,
-        address=ADDR_MAGIC_CRC32,
-        usage_context="crc32_polynomial",
-        bit_width=BIT_WIDTH_32,
-    )
-    assert const.value == MAGIC_CRC32_POLYNOMIAL
-    assert const.usage_context == "crc32_polynomial"
-    assert const.bit_width == BIT_WIDTH_32
-
-
-def test_magic_constant_md5_init() -> None:
-    """Verify MD5 initialization constant representation."""
-    const = MagicConstant(
-        value=MAGIC_MD5_INIT_A,
-        address=ADDR_MAGIC_MD5,
-        usage_context="md5_init",
-        bit_width=BIT_WIDTH_32,
-    )
-    assert const.value == MAGIC_MD5_INIT_A
-    assert const.usage_context == "md5_init"
-
-
-def test_magic_constant_rsa_exponent() -> None:
-    """Verify RSA public exponent constant representation."""
-    const = MagicConstant(
-        value=MAGIC_RSA_EXPONENT,
-        address=ADDR_MAGIC_RSA,
-        usage_context="rsa_public_exponent",
-        bit_width=MAGIC_RSA_BIT_WIDTH,
-    )
-    assert const.value == MAGIC_RSA_EXPONENT
-    assert const.usage_context == "rsa_public_exponent"
-
-
-# LicensingAnalysis dataclass tests
-
-
-COMPARISON_ADDR = 0x401050
-
-
-def test_licensing_analysis_full_creation() -> None:
-    """Verify complete LicensingAnalysis instantiation."""
-    validation_func = ValidationFunctionInfo(
-        address=ADDR_BASE,
-        name="CheckLicense",
-        return_type="bool",
-        comparison_addresses=[COMPARISON_ADDR],
-        string_references=["license"],
-        calls_crypto_api=True,
-        complexity_score=COMPLEXITY_SCORE_MID,
-    )
-    crypto_call = CryptoAPICall(
-        api_name="MD5",
+    imp = ImportInfo(
+        dll="kernel32.dll",
+        function="CreateFileA",
+        ordinal=None,
         address=ADDR_SECONDARY,
-        dll="advapi32.dll",
-        caller_function="CheckLicense",
-        parameters_hint=None,
     )
-    magic_const = MagicConstant(
-        value=MAGIC_MD5_INIT_A,
-        address=ADDR_TERTIARY,
-        usage_context="md5_init",
-        bit_width=BIT_WIDTH_32,
+    exp = ExportInfo(
+        name="DllMain",
+        ordinal=1,
+        address=ADDR_BASE,
     )
-
-    analysis = LicensingAnalysis(
-        binary_name="software.exe",
-        algorithm_type=AlgorithmType.MD5,
-        secondary_algorithms=[AlgorithmType.CRC32],
-        key_format=KeyFormat.SERIAL_DASHED,
-        key_length=KEY_LENGTH,
-        group_size=GROUP_SIZE,
-        group_separator="-",
-        validation_functions=[validation_func],
-        crypto_api_calls=[crypto_call],
-        magic_constants=[magic_const],
-        checksum_algorithm="crc32",
-        checksum_position="suffix",
-        hardware_id_apis=["GetVolumeInformationW"],
-        time_check_present=False,
-        feature_flags={"pro": 1, "enterprise": 2},
-        blacklist_present=True,
-        online_validation=False,
-        confidence_score=CONFIDENCE_SCORE,
-        analysis_notes=["Strong licensing protection detected"],
+    section = SectionInfo(
+        name=".text",
+        virtual_address=ADDR_SECTION_VIRTUAL,
+        virtual_size=SIZE_SECTION_VIRTUAL,
+        raw_size=SIZE_SECTION_RAW,
+        characteristics=SECTION_CHARACTERISTICS,
+        entropy=ENTROPY_NORMAL,
     )
 
-    assert analysis.binary_name == "software.exe"
-    assert analysis.algorithm_type == AlgorithmType.MD5
-    assert AlgorithmType.CRC32 in analysis.secondary_algorithms
-    assert analysis.key_format == KeyFormat.SERIAL_DASHED
-    assert analysis.key_length == KEY_LENGTH
-    assert len(analysis.validation_functions) == 1
-    assert len(analysis.crypto_api_calls) == 1
-    assert len(analysis.magic_constants) == 1
-    assert analysis.confidence_score == CONFIDENCE_SCORE
-    assert analysis.blacklist_present is True
-
-
-def test_licensing_analysis_confidence_range() -> None:
-    """Verify confidence score is within valid range."""
-    analysis = LicensingAnalysis(
+    summary = BridgeAnalysisSummary(
         binary_name="test.exe",
-        algorithm_type=AlgorithmType.UNKNOWN,
-        secondary_algorithms=[],
-        key_format=KeyFormat.UNKNOWN,
-        key_length=KEY_LENGTH_UNKNOWN,
-        group_size=None,
-        group_separator=None,
-        validation_functions=[],
-        crypto_api_calls=[],
-        magic_constants=[],
-        checksum_algorithm=None,
-        checksum_position=None,
-        hardware_id_apis=[],
-        time_check_present=False,
-        feature_flags={},
-        blacklist_present=False,
-        online_validation=False,
-        confidence_score=CONFIDENCE_SCORE_MID,
+        strings=[string],
+        imports=[imp],
+        exports=[exp],
+        sections=[section],
+        functions=[],
+        format_info="pe",
+        architecture="x86_64",
+        source_bridges=["binary", "ghidra"],
+        analysis_notes=["Analysis complete"],
+    )
+
+    assert summary.binary_name == "test.exe"
+    assert len(summary.strings) == 1
+    assert len(summary.imports) == 1
+    assert len(summary.exports) == 1
+    assert len(summary.sections) == 1
+    assert len(summary.functions) == 0
+    assert summary.format_info == "pe"
+    assert summary.architecture == "x86_64"
+    assert "binary" in summary.source_bridges
+    assert "ghidra" in summary.source_bridges
+    assert summary.analysis_notes == ["Analysis complete"]
+
+
+def test_bridge_analysis_summary_empty_lists() -> None:
+    """Verify BridgeAnalysisSummary works with all empty lists."""
+    summary = BridgeAnalysisSummary(
+        binary_name="empty.exe",
+        strings=[],
+        imports=[],
+        exports=[],
+        sections=[],
+        functions=[],
+        format_info="unknown",
+        architecture="unknown",
+        source_bridges=[],
         analysis_notes=[],
     )
-    assert 0.0 <= analysis.confidence_score <= 1.0
+    assert summary.binary_name == "empty.exe"
+    assert len(summary.strings) == 0
+    assert len(summary.imports) == 0
+    assert len(summary.exports) == 0
+    assert len(summary.sections) == 0
+    assert len(summary.functions) == 0
+    assert len(summary.source_bridges) == 0
+    assert len(summary.analysis_notes) == 0
 
 
-def test_licensing_analysis_has_all_fields() -> None:
-    """Verify all required fields exist in LicensingAnalysis."""
-    field_names = {f.name for f in fields(LicensingAnalysis)}
+def test_bridge_analysis_summary_has_all_fields() -> None:
+    """Verify all required fields exist in BridgeAnalysisSummary."""
+    field_names = {f.name for f in fields(BridgeAnalysisSummary)}
     required = {
         "binary_name",
-        "algorithm_type",
-        "key_format",
-        "key_length",
-        "validation_functions",
-        "crypto_api_calls",
-        "magic_constants",
-        "confidence_score",
+        "strings",
+        "imports",
+        "exports",
+        "sections",
+        "functions",
+        "format_info",
+        "architecture",
+        "source_bridges",
+        "analysis_notes",
     }
     assert required.issubset(field_names)
+
+
+def test_bridge_analysis_summary_str() -> None:
+    """Verify BridgeAnalysisSummary has a meaningful string representation."""
+    summary = BridgeAnalysisSummary(
+        binary_name="repr.exe",
+        strings=[],
+        imports=[],
+        exports=[],
+        sections=[],
+        functions=[],
+        format_info="pe",
+        architecture="x86",
+        source_bridges=["binary"],
+        analysis_notes=[],
+    )
+    text = str(summary)
+    assert "repr.exe" in text
 
 
 # StringInfo dataclass tests

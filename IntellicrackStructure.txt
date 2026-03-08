@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Fri, Mar 06, 2026 11:22:12 PM
+Generated: Sat, Mar 07, 2026 08:39:03 PM
 Directory: D:\Intellicrack\src
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -9,11 +9,10 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 
 ----------------------------------------
 
-├── .benchmarks/
+├── .intellicrack/
+│   ├── scripts/
+│   └── tools/
 ├── intellicrack/
-│   ├── .skylos/
-│   │   └── cache/
-│   │       └── pypi_exists.json
 │   ├── assets/
 │   │   ├── configs/
 │   │   │   ├── anthropic_claude3.json
@@ -170,8 +169,8 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   ├── __init__.py
 │   │   ├── _subprocess.py
 │   │   ├── _subprocess.pyi
+│   │   ├── analysis_aggregator.py
 │   │   ├── config.py
-│   │   ├── license_analyzer.py
 │   │   ├── logging.py
 │   │   ├── orchestrator.py
 │   │   ├── process_manager.py
@@ -232,18 +231,21 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   │   ├── __init__.py
 │   │   │   ├── _async_bridge.pyi
 │   │   │   ├── _qt_compat.pyi
+│   │   │   ├── analysis_panel.py
 │   │   │   ├── async_bridge.py
 │   │   │   ├── base_panel.py
 │   │   │   ├── binary_panel.py
 │   │   │   ├── frida_panel.py
 │   │   │   ├── ghidra_panel.py
-│   │   │   ├── licensing_panel.py
+│   │   │   ├── graph_view.py
+│   │   │   ├── hxd_panel.py
 │   │   │   ├── process_panel.py
 │   │   │   ├── qt_compat.py
 │   │   │   ├── radare2_panel.py
 │   │   │   ├── sandbox_panel.py
 │   │   │   ├── script_manager.py
 │   │   │   ├── stack_viewer.py
+│   │   │   ├── vnc_widget.py
 │   │   │   └── x64dbg_panel.py
 │   │   ├── resources/
 │   │   │   ├── icons/
@@ -264,16 +266,16 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   ├── sandbox_config.py
 │   │   ├── session_manager.py
 │   │   ├── tool_config.py
-│   │   └── tools.py
+│   │   ├── tools.py
+│   │   └── win32_embed.py
 │   ├── __init__.py
 │   ├── __main__.py
 │   ├── _metadata.py
 │   └── main.py
-├── Intellicrack.egg-info/
-│   ├── dependency_links.txt
-│   ├── entry_points.txt
-│   ├── PKG-INFO
-│   ├── requires.txt
-│   ├── SOURCES.txt
-│   └── top_level.txt
-└── .skylos_unused_fixtures.json
+└── Intellicrack.egg-info/
+    ├── dependency_links.txt
+    ├── entry_points.txt
+    ├── PKG-INFO
+    ├── requires.txt
+    ├── SOURCES.txt
+    └── top_level.txt

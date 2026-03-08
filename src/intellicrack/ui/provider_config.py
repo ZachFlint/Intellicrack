@@ -12,7 +12,6 @@ API key management, model selection, and connection settings.
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import json
 import os
 from pathlib import Path
@@ -45,8 +44,13 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.types import ProviderCredentials, ProviderName
 
+from ..core.config import get_config_file
 from ..core.logging import get_logger
-from ..credentials.env_loader import create_env_template, get_credential_loader
+from ..credentials.env_loader import (
+    create_env_template,
+    get_api_key_env_var_mapping,
+    get_credential_loader,
+)
 from ..credentials.oauth import (
     OAUTH_CONFIGS,
     OAuthProvider,
@@ -86,6 +90,17 @@ if TYPE_CHECKING:
     from intellicrack.providers.registry import ProviderRegistry
 
 HTTP_OK = 200
+
+_PROVIDER_DISPLAY_NAMES: dict[str, str] = {
+    "anthropic": "Anthropic",
+    "openai": "OpenAI",
+    "google": "Google Gemini",
+    "ollama": "Ollama",
+    "openrouter": "OpenRouter",
+    "huggingface": "HuggingFace",
+    "grok": "Grok",
+    "local_transformers": "Local Transformers",
+}
 HTTP_BAD_REQUEST = 400
 HTTP_UNAUTHORIZED = 401
 
@@ -106,15 +121,7 @@ class CredentialSourceDetector:
     variables, manual configuration, or are not configured at all.
     """
 
-    ENV_VAR_MAPPING: ClassVar[dict[str, str]] = {
-        "anthropic": "ANTHROPIC_API_KEY",
-        "openai": "OPENAI_API_KEY",
-        "google": "GOOGLE_API_KEY",
-        "ollama": "OLLAMA_API_KEY",
-        "openrouter": "OPENROUTER_API_KEY",
-        "huggingface": "HUGGINGFACE_API_TOKEN",
-        "grok": "XAI_API_KEY",
-    }
+    ENV_VAR_MAPPING: ClassVar[dict[str, str]] = get_api_key_env_var_mapping()
 
     def __init__(self, config_path: Path) -> None:
         """Initialize the credential source detector.
@@ -275,19 +282,14 @@ class ConnectionTestWorker(QThread):
         Returns:
             Tuple of (success, message).
         """
+        base_url = (self._api_base or "https://api.anthropic.com").rstrip("/")
         try:
             with httpx.Client(timeout=timeout) as client:
-                response = client.post(
-                    "https://api.anthropic.com/v1/messages",
+                response = client.get(
+                    f"{base_url}/v1/models?limit=1",
                     headers={
                         "x-api-key": self._api_key,
                         "anthropic-version": "2023-06-01",
-                        "content-type": "application/json",
-                    },
-                    json={
-                        "model": "claude-3-5-haiku-20241022",
-                        "max_tokens": 1,
-                        "messages": [{"role": "user", "content": "test"}],
                     },
                 )
                 if response.status_code == HTTP_OK:
@@ -514,18 +516,8 @@ class ModelRefreshWorker(QThread):
         Returns:
             Tuple of (success, model_list, message).
         """
-        fallback_models = [
-            "claude-opus-4-20250514",
-            "claude-sonnet-4-20250514",
-            "claude-3-7-sonnet-20250219",
-            "claude-3-5-sonnet-20241022",
-            "claude-3-5-haiku-20241022",
-            "claude-3-opus-20240229",
-            "claude-3-haiku-20240307",
-        ]
-
         if not self._api_key:
-            return True, fallback_models, "Anthropic models loaded (defaults)"
+            return False, [], "No Anthropic API key configured"
 
         headers = {
             "x-api-key": self._api_key,
@@ -589,7 +581,24 @@ class ModelRefreshWorker(QThread):
                 )
                 if response.status_code == HTTP_OK:
                     data = response.json()
-                    models = [m["id"] for m in data.get("data", []) if m["id"].startswith(("gpt-4", "gpt-3.5", "o1", "o3"))]
+                    non_chat_prefixes = (
+                        "text-embedding-",
+                        "dall-e-",
+                        "whisper-",
+                        "tts-",
+                        "text-moderation-",
+                        "davinci-",
+                        "babbage-",
+                        "canary-",
+                        "codex-",
+                        "text-davinci-",
+                        "text-babbage-",
+                        "text-curie-",
+                        "text-ada-",
+                        "code-davinci-",
+                        "code-cushman-",
+                    )
+                    models = [m["id"] for m in data.get("data", []) if not m["id"].startswith(non_chat_prefixes)]
                     models.sort(reverse=True)
                     return True, models[:20], f"Found {len(models)} OpenAI models"
                 return False, [], f"API error: {response.status_code}"
@@ -613,7 +622,11 @@ class ModelRefreshWorker(QThread):
                 )
                 if response.status_code == HTTP_OK:
                     data = response.json()
-                    models = [m["name"].replace("models/", "") for m in data.get("models", []) if "gemini" in m["name"].lower()]
+                    models = [
+                        m["name"].replace("models/", "")
+                        for m in data.get("models", [])
+                        if "gemini" in m["name"].lower() and "embedding" not in m["name"].lower()
+                    ]
                     return True, models, f"Found {len(models)} Gemini models"
                 return False, [], f"API error: {response.status_code}"
         except Exception as e:
@@ -740,7 +753,7 @@ class ProviderConfigDialog(QDialog):
         self._provider_widgets: dict[str, ProviderSettingsWidget] = {}
         self._provider_items: dict[str, QListWidgetItem] = {}
         self._current_provider: str | None = None
-        self._config_path = Path.home() / ".intellicrack" / "providers.json"
+        self._config_path = get_config_file("providers.json")
         self._credential_detector = CredentialSourceDetector(self._config_path)
 
         self._setup_ui()
@@ -785,7 +798,7 @@ class ProviderConfigDialog(QDialog):
             finally:
                 loop.close()
         except Exception:
-            _logger.debug("credential_overview_load_skipped")
+            _logger.debug("credential_overview_load_skipped", exc_info=True)
 
     def _setup_ui(self) -> None:
         """Set up the dialog UI layout."""
@@ -960,6 +973,7 @@ class ProviderConfigDialog(QDialog):
         try:
             active = self._registry.active_name
         except Exception:
+            _logger.debug("active_provider_lookup_failed", exc_info=True)
             return None
         else:
             return active.value if active is not None else None
@@ -980,6 +994,7 @@ class ProviderConfigDialog(QDialog):
             provider = self._registry.get(provider_name)
             return provider is not None and getattr(provider, "is_connected", False)
         except Exception:
+            _logger.debug("provider_connection_check_failed", exc_info=True, extra={"provider_id": provider_id})
             return False
 
     def _get_model_count(self, provider_id: str) -> int:
@@ -998,20 +1013,13 @@ class ProviderConfigDialog(QDialog):
             counts = self._discovery.get_provider_model_count()
             return counts.get(provider_name, 0)
         except Exception:
+            _logger.debug("model_count_lookup_failed", exc_info=True, extra={"provider_id": provider_id})
             return 0
 
     def _update_active_label(self) -> None:
         """Update the active provider display label."""
         if active_name := self._get_active_provider_name():
-            display_names = {
-                "anthropic": "Anthropic",
-                "openai": "OpenAI",
-                "google": "Google Gemini",
-                "ollama": "Ollama",
-                "openrouter": "OpenRouter",
-                "huggingface": "HuggingFace",
-            }
-            display = display_names.get(active_name, active_name)
+            display = _PROVIDER_DISPLAY_NAMES.get(active_name, active_name)
             self._active_label.setText(f"<b>Active:</b> {display}")
         else:
             self._active_label.setText("<b>Active:</b> None selected")
@@ -1053,15 +1061,7 @@ class ProviderConfigDialog(QDialog):
             model_count = self._get_model_count(provider_id)
             has_credential = provider_id in configured_providers
 
-            display_names = {
-                "anthropic": "Anthropic",
-                "openai": "OpenAI",
-                "google": "Google Gemini",
-                "ollama": "Ollama",
-                "openrouter": "OpenRouter",
-                "huggingface": "HuggingFace",
-            }
-            display_name = display_names.get(provider_id, provider_id.title())
+            display_name = _PROVIDER_DISPLAY_NAMES.get(provider_id, provider_id.title())
 
             self._update_provider_item_display(item, display_name, is_active, is_connected or has_credential, model_count)
 
@@ -1144,16 +1144,16 @@ class ProviderConfigDialog(QDialog):
                 extra={"configured": len(configured), "missing": len(missing)},
             )
         except Exception:
-            _logger.debug("credential_refresh_failed")
+            _logger.debug("credential_refresh_failed", exc_info=True)
         self._load_credential_overview()
 
     def create_env_template(self) -> None:
         """Create a .env template file for credential configuration."""
         try:
             create_env_template(Path(".env"))
-            _logger.info("env_template_created")
+            _logger.info("env_template_created", extra={"path": ".env"})
         except Exception:
-            _logger.debug("env_template_creation_failed")
+            _logger.debug("env_template_creation_failed", exc_info=True)
         self._load_credential_overview()
 
     def migrate_credentials(self) -> None:
@@ -1165,9 +1165,9 @@ class ProviderConfigDialog(QDialog):
                 loop.run_until_complete(store.migrate_from_env())
             finally:
                 loop.close()
-            _logger.info("credentials_migrated_from_env")
+            _logger.info("credentials_migrated_from_env", extra={"source": ".env"})
         except Exception:
-            _logger.debug("credential_migration_failed")
+            _logger.debug("credential_migration_failed", exc_info=True)
         self._load_credential_overview()
 
     def discover_single_provider(self, provider_name: str) -> None:
@@ -1296,12 +1296,13 @@ class ProviderSettingsWidget(QFrame):
         super().__init__(parent)
         self._provider_id = provider_id
         self._registry = registry
-        self._config_path = config_path or Path.home() / ".intellicrack" / "providers.json"
+        self._config_path = config_path or get_config_file("providers.json")
         self._credential_detector = credential_detector
         self._discovery = model_discovery
         self._models: list[ModelInfo] = []
         self._test_worker: ConnectionTestWorker | None = None
         self._refresh_worker: ModelRefreshWorker | None = None
+        self._pending_saved_model: str = ""
 
         self._setup_ui()
         self._load_settings()
@@ -1474,8 +1475,7 @@ class ProviderSettingsWidget(QFrame):
         model_input = getattr(self, "_pull_model_input", None)
         if model_input is None:
             return
-        model_name = model_input.text().strip()
-        if model_name:
+        if model_name := model_input.text().strip():
             self.pull_ollama_model(model_name)
 
     def _on_show_device_info(self) -> None:
@@ -1523,15 +1523,7 @@ class ProviderSettingsWidget(QFrame):
         Returns:
             Human-readable provider name.
         """
-        names = {
-            "anthropic": "Anthropic",
-            "openai": "OpenAI",
-            "google": "Google Gemini",
-            "ollama": "Ollama",
-            "openrouter": "OpenRouter",
-            "huggingface": "HuggingFace",
-        }
-        return names.get(self._provider_id, self._provider_id.title())
+        return _PROVIDER_DISPLAY_NAMES.get(self._provider_id, self._provider_id.title())
 
     def _toggle_key_visibility(self, show: bool) -> None:
         """Toggle API key visibility.
@@ -1639,12 +1631,9 @@ class ProviderSettingsWidget(QFrame):
         self._timeout_spin.setValue(saved_settings.get("timeout_seconds", 120))
         self._retries_spin.setValue(saved_settings.get("max_retries", 3))
 
-        saved_model = saved_settings.get("default_model", "")
+        saved_model: str = saved_settings.get("default_model", "")
+        self._pending_saved_model = saved_model
         self._populate_default_models()
-        if saved_model:
-            idx = self._model_combo.findText(saved_model)
-            if idx >= 0:
-                self._model_combo.setCurrentIndex(idx)
 
         self._update_credential_source_display(api_key)
         self._update_recommended_model()
@@ -1671,55 +1660,17 @@ class ProviderSettingsWidget(QFrame):
             _logger.warning("provider_config_load_failed", extra={"error": str(e)})
             return {}
 
-    def _populate_default_models(self) -> None:
-        """Populate model dropdown with default models."""
-        default_models: dict[str, list[str]] = {
-            "anthropic": [
-                "claude-sonnet-4-20250514",
-                "claude-3-5-sonnet-20241022",
-                "claude-3-5-haiku-20241022",
-                "claude-3-opus-20240229",
-            ],
-            "openai": [
-                "gpt-4o",
-                "gpt-4o-mini",
-                "gpt-4-turbo",
-                "gpt-4",
-                "gpt-3.5-turbo",
-            ],
-            "google": [
-                "gemini-2.0-flash-exp",
-                "gemini-1.5-pro",
-                "gemini-1.5-flash",
-                "gemini-1.0-pro",
-            ],
-            "ollama": [
-                "llama3.3:latest",
-                "llama3.2:latest",
-                "codellama:latest",
-                "mistral:latest",
-                "deepseek-coder:latest",
-            ],
-            "openrouter": [
-                "anthropic/claude-sonnet-4",
-                "anthropic/claude-3.5-sonnet",
-                "openai/gpt-4o",
-                "google/gemini-pro-1.5",
-                "meta-llama/llama-3.3-70b-instruct",
-            ],
-            "huggingface": [
-                "meta-llama/Llama-3.3-70B-Instruct",
-                "meta-llama/Llama-3.1-8B-Instruct",
-                "mistralai/Mistral-7B-Instruct-v0.3",
-                "Qwen/Qwen2.5-72B-Instruct",
-                "google/gemma-2-9b-it",
-                "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
-            ],
-        }
+    _NO_KEY_PROVIDERS: ClassVar[set[str]] = {"ollama"}
 
-        models = default_models.get(self._provider_id, [])
+    def _populate_default_models(self) -> None:
+        """Populate model dropdown with initial status text before API fetch."""
         self._model_combo.clear()
-        self._model_combo.addItems(models)
+        has_key = bool(self._api_key_input.text().strip())
+        if has_key or self._provider_id in self._NO_KEY_PROVIDERS:
+            self._model_combo.addItem("Loading models...")
+        else:
+            display = self._get_display_name()
+            self._model_combo.addItem(f"No {display} API key configured")
 
     def _refresh_models(self) -> None:
         """Refresh the model list from the provider API."""
@@ -1740,9 +1691,11 @@ class ProviderSettingsWidget(QFrame):
 
         provider = None
         if self._registry is not None:
-            with contextlib.suppress(ValueError):
+            try:
                 provider_name = ProviderName(self._provider_id)
                 provider = self._registry.get(provider_name)
+            except ValueError:
+                _logger.debug("provider_name_parse_failed", extra={"provider_id": self._provider_id})
 
         self._refresh_worker = ModelRefreshWorker(
             self._provider_id,
@@ -1778,10 +1731,11 @@ class ProviderSettingsWidget(QFrame):
                 "provider_models_refreshed",
                 extra={"provider": self._provider_id, "model_count": len(models)},
             )
-            current_model = self._model_combo.currentText()
+            restore_model = self._pending_saved_model or self._model_combo.currentText()
+            self._pending_saved_model = ""
             self._model_combo.clear()
             self._model_combo.addItems(models)
-            idx = self._model_combo.findText(current_model)
+            idx = self._model_combo.findText(restore_model)
             if idx >= 0:
                 self._model_combo.setCurrentIndex(idx)
             self._status_icon.setPixmap(icon_manager.get_pixmap("status_success", 16))
@@ -1859,6 +1813,17 @@ class ProviderSettingsWidget(QFrame):
         """
         self._api_key_input.setText(api_key)
 
+    def _get_selected_model(self) -> str:
+        """Return the selected model, or empty string if only status text is shown.
+
+        Returns:
+            Model ID string, or empty string if no real model is selected.
+        """
+        text = self._model_combo.currentText()
+        if text.startswith(("Loading models", "No ")):
+            return ""
+        return text
+
     def get_settings(self) -> dict[str, Any]:
         """Get current settings as a dictionary.
 
@@ -1868,7 +1833,7 @@ class ProviderSettingsWidget(QFrame):
         settings: dict[str, Any] = {
             "enabled": self._enabled_checkbox.isChecked(),
             "api_key": self._api_key_input.text().strip(),
-            "default_model": self._model_combo.currentText(),
+            "default_model": self._get_selected_model(),
             "timeout_seconds": self._timeout_spin.value(),
             "max_retries": self._retries_spin.value(),
         }
@@ -1895,7 +1860,8 @@ class ProviderSettingsWidget(QFrame):
                 all_settings = {}
 
         settings = self.get_settings()
-        if settings.get("api_key"):
+        has_api_key = bool(settings.pop("api_key", None))
+        if has_api_key:
             all_settings[self._provider_id] = settings
         elif self._provider_id in all_settings:
             del all_settings[self._provider_id]
@@ -1926,15 +1892,7 @@ class ProviderSettingsWidget(QFrame):
         if not api_key:
             return
 
-        env_var_mapping: dict[str, str] = {
-            "anthropic": "ANTHROPIC_API_KEY",
-            "openai": "OPENAI_API_KEY",
-            "google": "GOOGLE_API_KEY",
-            "openrouter": "OPENROUTER_API_KEY",
-            "ollama": "OLLAMA_API_KEY",
-            "huggingface": "HUGGINGFACE_API_TOKEN",
-            "grok": "XAI_API_KEY",
-        }
+        env_var_mapping = get_api_key_env_var_mapping()
 
         if self._provider_id not in env_var_mapping:
             return
@@ -1969,6 +1927,7 @@ class ProviderSettingsWidget(QFrame):
             provider = LocalTransformersProvider()
             return provider.get_device_info()
         except Exception:
+            _logger.debug("device_info_fetch_failed", exc_info=True)
             return None
 
     def pull_ollama_model(self, model_name: str) -> None:
@@ -2015,6 +1974,7 @@ class ProviderSettingsWidget(QFrame):
                 loop.run_until_complete(provider.disconnect())
                 loop.close()
         except Exception:
+            _logger.debug("openrouter_generation_fetch_failed", exc_info=True, extra={"generation_id": generation_id})
             return None
 
     def get_xpu_optimal_dtype(self) -> str | None:
@@ -2028,6 +1988,7 @@ class ProviderSettingsWidget(QFrame):
         try:
             dtype = get_optimal_dtype_for_xpu()
         except Exception:
+            _logger.debug("xpu_dtype_detection_failed", exc_info=True)
             return None
         else:
             self._xpu_dtype: str | None = dtype

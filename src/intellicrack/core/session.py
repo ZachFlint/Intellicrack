@@ -12,7 +12,6 @@ binary analysis state, and persistence to SQLite database.
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import json
 import sqlite3
 from contextlib import contextmanager
@@ -25,9 +24,9 @@ from uuid import uuid4
 from .logging import get_logger, log_session_operation
 from .types import (
     BinaryInfo,
+    BridgeAnalysisSummary,
     ExportInfo,
     ImportInfo,
-    LicensingAnalysis,
     Message,
     PatchInfo,
     ProviderName,
@@ -93,7 +92,7 @@ class Session:
         messages: Conversation history.
         tool_states: State of each tool bridge.
         patches: Applied patches.
-        licensing_analyses: Mapping of binary names to their licensing analysis.
+        bridge_analyses: Mapping of binary names to their bridge analysis summary.
         notes: User notes.
         tags: Session tags.
     """
@@ -109,7 +108,7 @@ class Session:
     messages: list[Message] = field(default_factory=list)
     tool_states: dict[ToolName, ToolState] = field(default_factory=dict)
     patches: list[PatchInfo] = field(default_factory=list)
-    licensing_analyses: dict[str, LicensingAnalysis] = field(default_factory=dict)
+    bridge_analyses: dict[str, BridgeAnalysisSummary] = field(default_factory=dict)
     notes: str = ""
     tags: list[str] = field(default_factory=list)
 
@@ -181,26 +180,26 @@ class Session:
         self.patches.append(patch)
         self.updated_at = datetime.now()
 
-    def add_licensing_analysis(self, binary_name: str, analysis: LicensingAnalysis) -> None:
-        """Add licensing analysis for a binary.
+    def add_bridge_analysis(self, binary_name: str, analysis: BridgeAnalysisSummary) -> None:
+        """Add bridge analysis summary for a binary.
 
         Args:
             binary_name: Name of the analyzed binary.
-            analysis: Licensing analysis results.
+            analysis: Bridge analysis summary results.
         """
-        self.licensing_analyses[binary_name] = analysis
+        self.bridge_analyses[binary_name] = analysis
         self.updated_at = datetime.now()
 
-    def get_licensing_analysis(self, binary_name: str) -> LicensingAnalysis | None:
-        """Get licensing analysis for a binary.
+    def get_bridge_analysis(self, binary_name: str) -> BridgeAnalysisSummary | None:
+        """Get bridge analysis summary for a binary.
 
         Args:
             binary_name: Name of the binary.
 
         Returns:
-            LicensingAnalysis if available, None otherwise.
+            BridgeAnalysisSummary if available, None otherwise.
         """
-        return self.licensing_analyses.get(binary_name)
+        return self.bridge_analyses.get(binary_name)
 
 
 class SessionStore:
@@ -280,7 +279,7 @@ class SessionStore:
                 )
             """)
 
-            _logger.debug("database_schema_initialized")
+            _logger.debug("database_schema_initialized", extra={"db_path": str(self._db_path)})
 
     def save(self, session: Session) -> None:
         """Save a session to the database.
@@ -1015,8 +1014,10 @@ class SessionManager:
         """Stop the auto-save task."""
         if self._save_task is not None:
             self._save_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
+            try:
                 await self._save_task
+            except asyncio.CancelledError:
+                _logger.debug("autosave_task_cancel_expected", exc_info=True)
             self._save_task = None
 
     async def _auto_save_loop(self) -> None:

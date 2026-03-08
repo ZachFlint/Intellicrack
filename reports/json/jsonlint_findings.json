@@ -1,7 +1,20 @@
 {
   "tool": "jsonlint",
-  "generated": "2026-03-06T22:43:40.514542",
-  "total_findings": 0,
-  "total_files": 0,
-  "files": []
+  "generated": "2026-03-07T20:12:24.610250",
+  "total_findings": 1,
+  "total_files": 1,
+  "files": [
+    {
+      "path": "coverage.json",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "The provided JSON includes a property whose name is an empty string, this is only supported using the -AsHashTable switch.",
+          "raw": "coverage.json: The provided JSON includes a property whose name is an empty string, this is only supported using the -AsHashTable switch."
+        }
+      ]
+    }
+  ]
 }

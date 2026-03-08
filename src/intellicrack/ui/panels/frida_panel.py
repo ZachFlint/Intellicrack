@@ -149,7 +149,7 @@ class FridaPanel(AnalysisPanelBase):
             try:
                 run_bridge_coroutine(self._bridge.detach())
             except Exception:
-                _logger.debug("frida_detach_skipped")
+                _logger.debug("frida_detach_skipped", exc_info=True)
         self._attached_pid = None
 
     def _create_editor_section(self) -> QWidget:
@@ -226,7 +226,7 @@ class FridaPanel(AnalysisPanelBase):
         """
         self._bridge = bridge
         bridge.set_message_handler(self._on_frida_message)
-        _logger.info("frida_bridge_set")
+        _logger.info("frida_bridge_set", extra={"bridge_type": type(bridge).__name__})
 
     def get_bridge(self) -> FridaBridge | None:
         """Get the current FridaBridge instance.
@@ -264,7 +264,7 @@ class FridaPanel(AnalysisPanelBase):
         """Attach to a target process."""
         if self._bridge is None:
             self._console.appendPlainText("[!] No Frida bridge available")
-            _logger.warning("frida_attach_failed_no_bridge")
+            _logger.warning("frida_attach_failed_no_bridge", extra={"reason": "bridge not set"})
             return
 
         target = self._target_input.text().strip()

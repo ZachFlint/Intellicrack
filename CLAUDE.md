@@ -2,64 +2,43 @@
 
 ## Project Overview
 
-**Intellicrack** - Advanced binary analysis platform **SPECIFICALLY AND
-EXCLUSIVELY** designed for analyzing software and cracking licensing
-protections. This tool focuses **SOLELY** on defeating software licensing
-mechanisms, registration systems, trial limitations, and copy protection
-schemes.
+**Intellicrack** is a unified desktop application for binary-analysis
+workflows that brings multiple external tools and AI providers together in one
+interface. Instead of acting as a standalone replacement for debuggers,
+disassemblers, sandboxes, or model backends, it serves as the layer that
+connects them, coordinates them, and makes them usable from a single GUI.
 
-### EXPLICIT TOOL SCOPE - CRITICAL
+The purpose of Intellicrack is to reduce fragmentation in reverse-engineering
+and analysis workflows. Users should be able to move between integrated tools,
+inspect outputs, preserve relevant context, and send that context to connected
+AI APIs without manually juggling disconnected windows, copy-pasting artifacts,
+or rebuilding state between steps. The application should function as the
+central workspace where tool output, user interaction, and AI-assisted
+reasoning all meet.
 
-**What Intellicrack IS:**
+At its core, Intellicrack should be understood as four connected layers. First,
+it provides a GUI workspace where users manage projects, targets, sessions, and
+outputs. Second, it exposes a bridge layer that integrates external tools and
+internal modules through a consistent interface. Third, it includes AI provider
+connectivity so users can configure local or remote models and route analysis
+context into them. Fourth, it maintains orchestration and context management so
+actions taken in one part of the application can inform work in another.
 
-- **SOFTWARE LICENSING CRACKER** - Defeats licensing protections, serial
-  validation, and registration systems
-- **PROTECTION ANALYZER** - Analyzes and bypasses copy protection, trial
-  limitations, and activation mechanisms
-- **BINARY PATCHER** - Modifies binaries to remove licensing checks and
-  protection routines
-- **LICENSE KEYGEN CREATOR** - Generates valid license keys and registration
-  codes
+This means Intellicrack should be scoped around orchestration,
+interoperability, and workflow continuity. Features should strengthen the
+application's role as the central hub between analysis tools and AI systems.
+The product should not be defined as a malware framework, exploit platform, or
+covert operations tool, and it should also not be narrowly described as a
+single-purpose licensing-cracking utility. If specialized binary-analysis use
+cases are supported, they should be presented as workflows that the platform
+can facilitate, not as the sole identity of the product.
 
-**What Intellicrack IS NOT:**
-
-- **NOT a malware creation tool** - No malware injection, payload delivery, or
-  virus creation
-- **NOT a system exploit framework** - No OS exploitation, privilege escalation,
-  or system compromise
-- **NOT a network attack tool** - No network intrusion, packet injection, or
-  remote exploitation
-- **NOT a data theft tool** - No credential harvesting, data exfiltration, or
-  information stealing
-
-**SCOPE LIMITATION:** This tool is **EXCLUSIVELY** for analyzing and defeating
-software licensing protections. Any functionality must be directly related to
-cracking software protections, NOT creating other types of exploits.
-
-### Project Intent & Security Research Purpose
-
-This tool is developed for **defensive security research** to help software
-developers:
-
-- **Identify weaknesses** in their own licensing protection mechanisms by using
-  Intellicrack in a controlled environment to crack their software, so they can
-  strengthen the licensing protections to prevent future attacks.
-- **Test robustness** of licensing, registration, and activation systems in
-  controlled environments
-- **Strengthen licensing defenses** against cracking attempts by understanding
-  bypass techniques
-- **Validate protection effectiveness** of their own software's licensing
-  mechanisms before deployment
-
-**Critical Context:** Intellicrack requires functionally real and robust
-licensing cracking capabilities to serve as an effective security research tool.
-All components must be production-ready to accurately defeat protection
-mechanisms and provide meaningful security insights to developers working to
-improve their software's licensing security.
-
-**Usage Environment:** This tool operates exclusively in controlled, isolated
-research environments for authorized security assessment of proprietary software
-licensing systems by their own developers and security teams.
+In practical terms, Intellicrack should let users launch or connect supported
+tools, capture and organize their outputs, maintain shared analysis state, and
+use AI assistance directly inside that workflow. The GUI should make these
+capabilities feel like one coherent application rather than a collection of
+disconnected integrations. The defining value of Intellicrack is that it
+unifies tools, context, and AI connectivity into a single operational surface.
 
 **TOOLS**
 
@@ -127,17 +106,14 @@ licensing systems by their own developers and security teams.
   PRIORITY.**
 - **NO STUBS, MOCKS, OR PLACEHOLDERS** - ALL code must be FULLY FUNCTIONAL
 - **NO TODO COMMENTS** - Implement REAL functionality immediately
-- **NO SIMULATION MODES** - Real licensing cracking tool only
 - **NEVER delete method bindings** - CREATE MISSING FUNCTIONS instead
-- **ALL METHODS MUST WORK ON REAL BINARIES** - Specifically for cracking
-  licensing protections
 - **MAINTAIN FUNCTIONALITY** - Never sacrifice features for "cleaner" code
-- **SCOPE ENFORCEMENT** - Every feature must relate to SOFTWARE LICENSING
-  CRACKING
-- **NO MALWARE CAPABILITIES** - No injection, payload delivery, or system
-  exploitation code
-- **LICENSING FOCUS ONLY** - All analysis must target registration, activation,
-  and licensing protection systems
+- **SCOPE ENFORCEMENT** - Every feature must strengthen Intellicrack's role as
+  a unified GUI bridge for tools, workflows, and AI provider connectivity
+- **NO MALWARE CAPABILITIES** - No payload delivery, persistence, credential
+  theft, destructive behavior, or system exploitation code
+- **INTEGRATION FOCUS** - Features should improve orchestration,
+  interoperability, context management, or AI-assisted workflow support
 - **NO "example" implementations that would need to be replaced**
 - **NO simple implementations that would be ineffective in real world
   scenarios**
@@ -189,4 +165,4 @@ confirm the correct path forward.
 
 ### MCP Configuration
 
-**Config location**: `~/.claude.json`
+**Config location**: `~/.mcp.json`

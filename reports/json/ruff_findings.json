@@ -1,179 +1,92 @@
 {
   "tool": "ruff",
-  "generated": "2026-03-06T22:43:30.606377",
-  "total_findings": 23,
-  "total_files": 2,
+  "generated": "2026-03-07T20:12:17.801203",
+  "total_findings": 8,
+  "total_files": 5,
   "files": [
     {
-      "path": "D:\\Intellicrack\\tests\\test_ui\\test_async_bridge.py",
-      "count": 15,
+      "path": "D:\\Intellicrack\\tests\\test_core\\test_logging.py",
+      "count": 4,
       "findings": [
         {
-          "line": 12,
-          "column": 29,
-          "code": "TC002",
-          "message": "Move third-party import `PyQt6.QtWidgets.QApplication` into a type-checking block",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_async_bridge.py:12:29: TC002 Move third-party import `PyQt6.QtWidgets.QApplication` into a type-checking block"
+          "line": 3,
+          "column": 1,
+          "code": "I001",
+          "message": "Import block is un-sorted or un-formatted",
+          "raw": "D:\\Intellicrack\\tests\\test_core\\test_logging.py:3:1: I001 Import block is un-sorted or un-formatted"
         },
         {
-          "line": 16,
-          "column": 5,
-          "code": "PLC2701",
-          "message": "Private name import `_ensure_loop` from external module `intellicrack.ui.panels.async_bridge`",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_async_bridge.py:16:5: PLC2701 Private name import `_ensure_loop` from external module `intellicrack.ui.panels.async_bridge`"
-        },
-        {
-          "line": 44,
-          "column": 19,
-          "code": "RUF029",
-          "message": "Function `simple_coro` is declared `async`, but doesn't `await` or use `async` features.",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_async_bridge.py:44:19: RUF029 Function `simple_coro` is declared `async`, but doesn't `await` or use `async` features."
-        },
-        {
-          "line": 64,
-          "column": 19,
-          "code": "RUF029",
-          "message": "Function `failing_coro` is declared `async`, but doesn't `await` or use `async` features.",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_async_bridge.py:64:19: RUF029 Function `failing_coro` is declared `async`, but doesn't `await` or use `async` features."
-        },
-        {
-          "line": 76,
-          "column": 19,
-          "code": "RUF029",
-          "message": "Function `string_coro` is declared `async`, but doesn't `await` or use `async` features.",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_async_bridge.py:76:19: RUF029 Function `string_coro` is declared `async`, but doesn't `await` or use `async` features."
-        },
-        {
-          "line": 87,
-          "column": 19,
-          "code": "RUF029",
-          "message": "Function `dict_coro` is declared `async`, but doesn't `await` or use `async` features.",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_async_bridge.py:87:19: RUF029 Function `dict_coro` is declared `async`, but doesn't `await` or use `async` features."
-        },
-        {
-          "line": 107,
-          "column": 19,
-          "code": "RUF029",
-          "message": "Function `simple_coro` is declared `async`, but doesn't `await` or use `async` features.",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_async_bridge.py:107:19: RUF029 Function `simple_coro` is declared `async`, but doesn't `await` or use `async` features."
-        },
-        {
-          "line": 111,
-          "column": 42,
-          "code": "PLW0108",
-          "message": "Lambda may be unnecessary; consider inlining inner function",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_async_bridge.py:111:42: PLW0108 Lambda may be unnecessary; consider inlining inner function"
-        },
-        {
-          "line": 127,
-          "column": 19,
-          "code": "RUF029",
-          "message": "Function `failing_coro` is declared `async`, but doesn't `await` or use `async` features.",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_async_bridge.py:127:19: RUF029 Function `failing_coro` is declared `async`, but doesn't `await` or use `async` features."
-        },
-        {
-          "line": 132,
-          "column": 39,
-          "code": "PLW0108",
-          "message": "Lambda may be unnecessary; consider inlining inner function",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_async_bridge.py:132:39: PLW0108 Lambda may be unnecessary; consider inlining inner function"
-        },
-        {
-          "line": 148,
-          "column": 19,
-          "code": "RUF029",
-          "message": "Function `noop_coro` is declared `async`, but doesn't `await` or use `async` features.",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_async_bridge.py:148:19: RUF029 Function `noop_coro` is declared `async`, but doesn't `await` or use `async` features."
-        },
-        {
-          "line": 171,
-          "column": 19,
-          "code": "RUF029",
-          "message": "Function `coro` is declared `async`, but doesn't `await` or use `async` features.",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_async_bridge.py:171:19: RUF029 Function `coro` is declared `async`, but doesn't `await` or use `async` features."
-        },
-        {
-          "line": 175,
-          "column": 38,
-          "code": "PLW0108",
-          "message": "Lambda may be unnecessary; consider inlining inner function",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_async_bridge.py:175:38: PLW0108 Lambda may be unnecessary; consider inlining inner function"
-        },
-        {
-          "line": 190,
-          "column": 19,
-          "code": "RUF029",
-          "message": "Function `bad_coro` is declared `async`, but doesn't `await` or use `async` features.",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_async_bridge.py:190:19: RUF029 Function `bad_coro` is declared `async`, but doesn't `await` or use `async` features."
-        },
-        {
-          "line": 195,
+          "line": 32,
           "column": 35,
-          "code": "PLW0108",
-          "message": "Lambda may be unnecessary; consider inlining inner function",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_async_bridge.py:195:35: PLW0108 Lambda may be unnecessary; consider inlining inner function"
+          "code": "B009",
+          "message": "Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.",
+          "raw": "D:\\Intellicrack\\tests\\test_core\\test_logging.py:32:35: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access."
+        },
+        {
+          "line": 591,
+          "column": 5,
+          "code": "SIM117",
+          "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+          "raw": "D:\\Intellicrack\\tests\\test_core\\test_logging.py:591:5: SIM117 Use a single `with` statement with multiple contexts instead of nested `with` statements"
+        },
+        {
+          "line": 601,
+          "column": 25,
+          "code": "B009",
+          "message": "Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.",
+          "raw": "D:\\Intellicrack\\tests\\test_core\\test_logging.py:601:25: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access."
         }
       ]
     },
     {
-      "path": "D:\\Intellicrack\\tests\\test_ui\\test_binary_panel_fixes.py",
-      "count": 8,
+      "path": "D:\\Intellicrack\\src\\intellicrack\\core\\orchestrator.py",
+      "count": 1,
       "findings": [
         {
-          "line": 19,
-          "column": 5,
-          "code": "PLC2701",
-          "message": "Private name import `_CHUNK_SIZE` from external module `intellicrack.ui.panels.binary_panel`",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_binary_panel_fixes.py:19:5: PLC2701 Private name import `_CHUNK_SIZE` from external module `intellicrack.ui.panels.binary_panel`"
-        },
-        {
           "line": 20,
-          "column": 5,
-          "code": "PLC2701",
-          "message": "Private name import `_EDITED_HEX_BG` from external module `intellicrack.ui.panels.binary_panel`",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_binary_panel_fixes.py:20:5: PLC2701 Private name import `_EDITED_HEX_BG` from external module `intellicrack.ui.panels.binary_panel`"
-        },
+          "column": 21,
+          "code": "TC003",
+          "message": "Move standard library import `pathlib.Path` into a type-checking block",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\core\\orchestrator.py:20:21: TC003 Move standard library import `pathlib.Path` into a type-checking block"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\__init__.py",
+      "count": 1,
+      "findings": [
         {
-          "line": 21,
-          "column": 5,
-          "code": "PLC2701",
-          "message": "Private name import `_HEX_BYTES_PER_ROW` from external module `intellicrack.ui.panels.binary_panel`",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_binary_panel_fixes.py:21:5: PLC2701 Private name import `_HEX_BYTES_PER_ROW` from external module `intellicrack.ui.panels.binary_panel`"
-        },
+          "line": 39,
+          "column": 22,
+          "code": "RUF022",
+          "message": "`__all__` is not sorted",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\__init__.py:39:22: RUF022 `__all__` is not sorted"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tests\\test_credentials\\__init__.py",
+      "count": 1,
+      "findings": [
         {
-          "line": 22,
-          "column": 5,
-          "code": "PLC2701",
-          "message": "Private name import `_HEX_COL_ASCII` from external module `intellicrack.ui.panels.binary_panel`",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_binary_panel_fixes.py:22:5: PLC2701 Private name import `_HEX_COL_ASCII` from external module `intellicrack.ui.panels.binary_panel`"
-        },
+          "line": 1,
+          "column": 1,
+          "code": "D104",
+          "message": "Missing docstring in public package",
+          "raw": "D:\\Intellicrack\\tests\\test_credentials\\__init__.py:1:1: D104 Missing docstring in public package"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\tests\\test_sandbox\\__init__.py",
+      "count": 1,
+      "findings": [
         {
-          "line": 23,
-          "column": 5,
-          "code": "PLC2701",
-          "message": "Private name import `_HEX_COL_HEX` from external module `intellicrack.ui.panels.binary_panel`",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_binary_panel_fixes.py:23:5: PLC2701 Private name import `_HEX_COL_HEX` from external module `intellicrack.ui.panels.binary_panel`"
-        },
-        {
-          "line": 24,
-          "column": 5,
-          "code": "PLC2701",
-          "message": "Private name import `_LARGE_FILE_THRESHOLD` from external module `intellicrack.ui.panels.binary_panel`",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_binary_panel_fixes.py:24:5: PLC2701 Private name import `_LARGE_FILE_THRESHOLD` from external module `intellicrack.ui.panels.binary_panel`"
-        },
-        {
-          "line": 193,
-          "column": 9,
-          "code": "PLC0415",
-          "message": "`import` should be at the top-level of a file",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_binary_panel_fixes.py:193:9: PLC0415 `import` should be at the top-level of a file"
-        },
-        {
-          "line": 234,
-          "column": 9,
-          "code": "PLC0415",
-          "message": "`import` should be at the top-level of a file",
-          "raw": "D:\\Intellicrack\\tests\\test_ui\\test_binary_panel_fixes.py:234:9: PLC0415 `import` should be at the top-level of a file"
+          "line": 1,
+          "column": 1,
+          "code": "D104",
+          "message": "Missing docstring in public package",
+          "raw": "D:\\Intellicrack\\tests\\test_sandbox\\__init__.py:1:1: D104 Missing docstring in public package"
         }
       ]
     }

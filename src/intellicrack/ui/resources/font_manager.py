@@ -98,7 +98,7 @@ class FontManager:
 
         try:
             if not resource_exists("fonts"):
-                _logger.warning("fonts_directory_not_found")
+                _logger.warning("fonts_directory_not_found", extra={"resource_key": "fonts"})
                 self._setup_fallback_fonts()
                 return False
 

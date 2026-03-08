@@ -1,19 +1,27 @@
-3 findings in src\intellicrack\providers\base.py
+2 findings in src\intellicrack\sandbox\qemu.py
 
-src\intellicrack\providers\base.py:_retry_with_backoff:291: DAR401: -r ProviderError
+src\intellicrack\sandbox\qemu.py:_poll_for_result:1572: DAR401: -r SandboxTimeoutError
 
-src\intellicrack\providers\base.py:_retry_with_backoff:291: DAR401: -r last_exc
-
-src\intellicrack\providers\base.py:_retry_with_backoff:313: DAR402: +r Exception
+src\intellicrack\sandbox\qemu.py:_poll_for_result:1583: DAR402: +r SandboxError
 
 
-2 findings in src\intellicrack\credentials\oauth.py
+2 findings in src\intellicrack\ui\panels\vnc_widget.py
 
-src\intellicrack\credentials\oauth.py:_oauth_provider_to_name:103: DAR402: +r KeyError
+src\intellicrack\ui\panels\vnc_widget.py:request_framebuffer_update:229: DAR402: +r ConnectionError
 
-src\intellicrack\credentials\oauth.py:wait_for_callback:372: DAR401: -r OAuthAuthorizationError
+src\intellicrack\ui\panels\vnc_widget.py:_handle_framebuffer_update:299: DAR402: +r ConnectionError
 
 
-1 findings in src\intellicrack\sandbox\base.py
+1 findings in src\intellicrack\bridges\x64dbg.py
 
-src\intellicrack\sandbox\base.py:list_snapshots:452: DAR202: + return
+src\intellicrack\bridges\x64dbg.py:disassemble_at:1854: DAR401: -r ToolError
+
+
+1 findings in src\intellicrack\sandbox\windows.py
+
+src\intellicrack\sandbox\windows.py:run_command:492: DAR401: -r SandboxTimeoutError
+
+
+1 findings in src\intellicrack\ui\panels\graph_view.py
+
+src\intellicrack\ui\panels\graph_view.py:graph_scene:461: DAR401: -r TypeError

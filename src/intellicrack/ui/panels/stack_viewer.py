@@ -139,7 +139,7 @@ class X64DbgStackSource:
                 )
                 frames.append(frame)
         except Exception:
-            _logger.exception("x64dbg_stack_frames_failed")
+            _logger.exception("x64dbg_stack_frames_failed", extra={"bridge_type": "x64dbg"})
             return []
         else:
             return frames
@@ -155,6 +155,7 @@ class X64DbgStackSource:
         try:
             return getattr(self._bridge, "is_connected", lambda: False)()
         except Exception:
+            _logger.debug("x64dbg_connection_check_failed", exc_info=True)
             return False
 
     @staticmethod
@@ -220,7 +221,7 @@ class FridaStackSource:
                 frames.append(frame)
             self._cached_frames = frames
         except Exception:
-            _logger.exception("frida_stack_frames_failed")
+            _logger.exception("frida_stack_frames_failed", extra={"bridge_type": "frida"})
             return self._cached_frames
         else:
             return frames
@@ -236,6 +237,7 @@ class FridaStackSource:
         try:
             return getattr(self._bridge, "is_attached", lambda: False)()
         except Exception:
+            _logger.debug("frida_connection_check_failed", exc_info=True)
             return False
 
     @staticmethod

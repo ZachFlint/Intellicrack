@@ -1,6 +1,6 @@
 {
   "tool": "flake8",
-  "generated": "2026-03-06T22:50:28.202422",
+  "generated": "2026-03-07T20:18:00.172132",
   "total_findings": 7,
   "total_files": 6,
   "files": [
@@ -29,11 +29,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 438,
+          "line": 439,
           "column": 141,
           "code": "E501",
           "message": "line too long (160 > 140 characters)",
-          "raw": "src/intellicrack/sandbox\\windows.py:438:141: E501 line too long (160 > 140 characters)"
+          "raw": "src/intellicrack/sandbox\\windows.py:439:141: E501 line too long (160 > 140 characters)"
         }
       ]
     },
@@ -42,11 +42,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 68,
+          "line": 70,
           "column": 5,
           "code": "F811",
           "message": "redefinition of unused 'Callable' from line 19",
-          "raw": "src/intellicrack/ui\\app.py:68:5: F811 redefinition of unused 'Callable' from line 19"
+          "raw": "src/intellicrack/ui\\app.py:70:5: F811 redefinition of unused 'Callable' from line 19"
         }
       ]
     },
@@ -68,11 +68,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 95,
+          "line": 96,
           "column": 141,
           "code": "E501",
           "message": "line too long (142 > 140 characters)",
-          "raw": "src/intellicrack/ui\\tool_config.py:95:141: E501 line too long (142 > 140 characters)"
+          "raw": "src/intellicrack/ui\\tool_config.py:96:141: E501 line too long (142 > 140 characters)"
         }
       ]
     },

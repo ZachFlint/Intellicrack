@@ -203,9 +203,7 @@ class OpenAIProvider(LLMProviderBase):
             return 128000
         if model_id.startswith("gpt-4-") and "turbo" not in model_id:
             return 8192
-        if model_id.startswith("gpt-3.5"):
-            return 16385
-        return 128000
+        return 16385 if model_id.startswith("gpt-3.5") else 128000
 
     @staticmethod
     def _infer_supports_vision(model_id: str) -> bool:

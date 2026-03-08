@@ -17,6 +17,7 @@ import importlib
 import importlib.util
 import json
 import re
+import socket
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
@@ -370,13 +371,16 @@ class GhidraBridge(StaticAnalysisBridge):
             ],
         )
 
-    async def initialize(self, tool_path: Path | None = None) -> None:
+    async def initialize(self, tool_path: Path | None = None, port: int | None = None) -> None:
         """Initialize the Ghidra bridge.
 
         Args:
             tool_path: Path to Ghidra installation.
+            port: Bridge server port. Uses DEFAULT_PORT (4768) if not specified.
         """
         self._ghidra_path = tool_path
+        if port is not None:
+            self._port = port
         self._state = BridgeState(
             connected=False,
             tool_running=False,
@@ -402,13 +406,13 @@ class GhidraBridge(StaticAnalysisBridge):
             _logger.info("ghidra_bridge_connected", extra={"port": self._port})
 
         except ImportError:
-            _logger.warning("ghidra_bridge_not_installed")
+            _logger.warning("ghidra_bridge_not_installed", extra={"bridge": "ghidra"})
             self._bridge = None
             self._state.connected = False
             self._state.tool_running = False
 
         except Exception as exc:
-            _logger.exception("ghidra_connect_failed")
+            _logger.exception("ghidra_connect_failed", extra={"error": str(exc)})
             self._bridge = None
             self._state.connected = False
             self._state.tool_running = False
@@ -450,7 +454,7 @@ class GhidraBridge(StaticAnalysisBridge):
         self._bridge = None
         self._binary_path = None
         await super().shutdown()
-        _logger.info("ghidra_bridge_shutdown")
+        _logger.info("ghidra_bridge_shutdown", extra={"bridge": "ghidra"})
 
     async def is_available(self) -> bool:
         """Check if Ghidra is available.
@@ -523,7 +527,7 @@ class GhidraBridge(StaticAnalysisBridge):
             cleanup_callback=self.shutdown,
         )
 
-        await asyncio.sleep(10)
+        await self._wait_for_bridge_port()
 
         try:
             ghidra_bridge_mod = importlib.import_module("ghidra_bridge")
@@ -537,11 +541,59 @@ class GhidraBridge(StaticAnalysisBridge):
             )
             self._state.connected = True
             self._state.tool_running = True
-            _logger.info("ghidra_headless_connected")
+            _logger.info("ghidra_headless_connected", extra={"port": self._port})
         except Exception as e:
             error_message = f"Failed to connect to Ghidra: {e}"
             self._state.last_error = error_message
             raise ToolError(error_message) from e
+
+    async def _wait_for_bridge_port(
+        self,
+        timeout_seconds: int = 60,
+        poll_interval: float = 2.0,
+    ) -> None:
+        """Poll until the Ghidra bridge port is accepting connections.
+
+        Args:
+            timeout_seconds: Maximum seconds to wait before raising.
+            poll_interval: Seconds between connection attempts.
+
+        Raises:
+            ToolError: If the process exits or the timeout is exceeded.
+        """
+        elapsed = 0.0
+        attempt = 0
+
+        while elapsed < timeout_seconds:
+            attempt += 1
+
+            if self._process is not None and self._process.poll() is not None:
+                rc = self._process.returncode
+                msg = f"Ghidra process exited prematurely with code {rc}"
+                raise ToolError(msg)
+
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(5.0)
+            try:
+                result = await asyncio.to_thread(sock.connect_ex, ("127.0.0.1", self._port))
+                if result == 0:
+                    _logger.info(
+                        "ghidra_bridge_port_ready",
+                        extra={"port": self._port, "attempts": attempt},
+                    )
+                    return
+            finally:
+                sock.close()
+
+            _logger.debug(
+                "ghidra_bridge_port_polling",
+                extra={"port": self._port, "attempt": attempt, "elapsed": elapsed},
+            )
+            await asyncio.sleep(poll_interval)
+            elapsed += poll_interval
+
+        msg = f"Ghidra bridge port {self._port} not ready after {timeout_seconds}s ({attempt} attempts)"
+        raise ToolError(msg)
 
     def _create_bridge_script(self) -> Path:
         """Create the Ghidra bridge startup script.
@@ -590,7 +642,7 @@ ghidra_bridge_server.GhidraBridgeServer(
             try:
                 await self._execute_remote(f'importFile(java.io.File("{path.as_posix()}"))')
             except Exception:
-                _logger.exception("ghidra_remote_import_failed")
+                _logger.exception("ghidra_remote_import_failed", extra={"binary_path": str(path)})
 
         data = path.read_bytes()
         md5 = hashlib.md5(data, usedforsecurity=False).hexdigest()
@@ -615,7 +667,7 @@ ghidra_bridge_server.GhidraBridgeServer(
             try:
                 entry_point, sections, imports, exports = await self._extract_binary_metadata()
             except Exception:
-                _logger.exception("ghidra_metadata_extraction_failed")
+                _logger.exception("ghidra_metadata_extraction_failed", extra={"binary_path": str(path)})
 
         return BinaryInfo(
             path=self._binary_path,
@@ -831,12 +883,12 @@ metadata
             ToolError: If analysis fails.
         """
         if self._bridge is None:
-            _logger.warning("ghidra_analysis_skipped_no_connection")
+            _logger.warning("ghidra_analysis_skipped_no_connection", extra={"bridge": "ghidra"})
             return
 
         try:
             await self._execute_remote("analyzeAll(currentProgram)")
-            _logger.info("ghidra_analysis_complete")
+            _logger.info("ghidra_analysis_complete", extra={"bridge": "ghidra"})
         except Exception as e:
             error_message = f"Analysis failed: {e}"
             raise ToolError(error_message) from e
@@ -894,7 +946,7 @@ metadata
                 )
 
         except Exception:
-            _logger.exception("get_functions_failed")
+            _logger.exception("get_functions_failed", extra={"filter_pattern": filter_pattern})
             return []
 
         return functions
@@ -980,7 +1032,7 @@ metadata
             )
 
         except Exception:
-            _logger.exception("get_function_failed")
+            _logger.exception("get_function_failed", extra={"address": hex(address)})
             return None
 
     async def decompile(self, address: int) -> str:
@@ -1079,7 +1131,7 @@ metadata
             ]
 
         except Exception:
-            _logger.exception("disassembly_failed")
+            _logger.exception("disassembly_failed", extra={"address": hex(address), "count": count})
             return []
 
     async def get_xrefs_to(self, address: int) -> list[CrossReference]:
@@ -1115,7 +1167,7 @@ metadata
                 CrossReference(
                     from_address=int(x.get("from", 0)),
                     to_address=int(x.get("to", 0)),
-                    ref_type="call" if "CALL" in str(x.get("type", "")) else "data",
+                    ref_type="call" if str(x.get("type", "")).startswith("CALL") else "data",
                     from_function=None,
                     to_function=None,
                 )
@@ -1123,7 +1175,7 @@ metadata
             ]
 
         except Exception:
-            _logger.exception("get_xrefs_to_failed")
+            _logger.exception("get_xrefs_to_failed", extra={"address": hex(address)})
             return []
 
     async def get_xrefs_from(self, address: int) -> list[CrossReference]:
@@ -1159,7 +1211,7 @@ metadata
                 CrossReference(
                     from_address=int(x.get("from", 0)),
                     to_address=int(x.get("to", 0)),
-                    ref_type="call" if "CALL" in str(x.get("type", "")) else "data",
+                    ref_type="call" if str(x.get("type", "")).startswith("CALL") else "data",
                     from_function=None,
                     to_function=None,
                 )
@@ -1167,7 +1219,7 @@ metadata
             ]
 
         except Exception:
-            _logger.exception("get_xrefs_from_failed")
+            _logger.exception("get_xrefs_from_failed", extra={"address": hex(address)})
             return []
 
     async def search_strings(self, pattern: str) -> list[StringInfo]:
@@ -1213,7 +1265,7 @@ metadata
             ]
 
         except Exception:
-            _logger.exception("string_search_failed")
+            _logger.exception("string_search_failed", extra={"pattern": pattern})
             return []
 
     async def search_bytes(self, pattern: bytes) -> list[int]:
@@ -1251,7 +1303,7 @@ metadata
             if isinstance(result, list):
                 return [int(addr) for addr in cast("list[int | float | str]", result)]
         except Exception:
-            _logger.exception("byte_search_failed")
+            _logger.exception("byte_search_failed", extra={"pattern_length": len(pattern)})
         return []
 
     async def rename_function(self, address: int, new_name: str) -> bool:
@@ -1373,7 +1425,7 @@ metadata
             ]
 
         except Exception:
-            _logger.exception("get_imports_failed")
+            _logger.exception("get_imports_failed", extra={"binary_path": str(self._binary_path)})
             return []
 
     async def get_exports(self) -> list[ExportInfo]:
@@ -1412,7 +1464,7 @@ metadata
             ]
 
         except Exception:
-            _logger.exception("get_exports_failed")
+            _logger.exception("get_exports_failed", extra={"binary_path": str(self._binary_path)})
             return []
 
     async def get_data_type(self, address: int) -> DataTypeInfo | None:
@@ -1475,7 +1527,7 @@ metadata
             )
 
         except Exception:
-            _logger.exception("get_data_type_failed")
+            _logger.exception("get_data_type_failed", extra={"address": hex(address)})
             return None
 
     async def set_data_type(self, address: int, data_type: str) -> bool:

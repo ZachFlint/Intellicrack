@@ -19,6 +19,9 @@ from .config import (
     SessionConfig,
     ToolConfig,
     UIConfig,
+    get_config_dir,
+    get_config_file,
+    get_project_root,
 )
 from .logging import get_logger, setup_logging
 from .orchestrator import (
@@ -54,6 +57,7 @@ from .tools import (
 from .types import (
     BinaryInfo,
     BreakpointInfo,
+    BridgeAnalysisSummary,
     ConfirmationLevel,
     CrossReference,
     ExportInfo,
@@ -87,6 +91,7 @@ from .types import (
 __all__: list[str] = [
     "BinaryInfo",
     "BreakpointInfo",
+    "BridgeAnalysisSummary",
     "BypassStrategy",
     "Config",
     "ConfirmationLevel",
@@ -141,6 +146,9 @@ __all__: list[str] = [
     "TrackedProcess",
     "UIConfig",
     "VariableInfo",
+    "get_config_dir",
+    "get_config_file",
     "get_logger",
+    "get_project_root",
     "setup_logging",
 ]
