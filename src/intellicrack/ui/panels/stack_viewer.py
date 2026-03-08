@@ -298,7 +298,7 @@ class StackFrameTable(QTableWidget):
                 address = int(addr_item.text(), 16)
                 self.frame_clicked.emit(address)
             except ValueError:
-                pass
+                _logger.debug("stack_frame_address_parse_failed")
 
     def _on_cell_double_clicked(self, row: int, _column: int) -> None:
         """Handle cell double-click.
@@ -312,7 +312,7 @@ class StackFrameTable(QTableWidget):
                 address = int(addr_item.text(), 16)
                 self.frame_double_clicked.emit(address)
             except ValueError:
-                pass
+                _logger.debug("stack_frame_address_parse_failed")
 
     def set_frames(self, frames: list[StackFrame]) -> None:
         """Populate the table with stack frames.

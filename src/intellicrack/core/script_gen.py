@@ -237,7 +237,7 @@ class ScriptContext:
                 elif isinstance(strategy_raw, BypassStrategy):
                     strategy_desc = f"{strategy_raw.value} ({strategy_raw.description})"
             except ValueError:
-                pass
+                _logger.debug("unknown_bypass_strategy", extra={"strategy": str(strategy_raw)})
 
             lines.append(f"  - {name} @ 0x{addr:X} (strategy: {strategy_desc})")
 
@@ -348,6 +348,7 @@ class ScriptValidator:
         try:
             ast.parse(content)
         except SyntaxError as e:
+            _logger.debug("python_syntax_error", extra={"line": e.lineno, "detail": e.msg})
             return False, f"Syntax error at line {e.lineno}: {e.msg}"
         else:
             return True, None

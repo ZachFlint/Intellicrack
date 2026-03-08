@@ -19,6 +19,7 @@ import json
 import logging
 import math
 import os
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -141,6 +142,9 @@ class KnowledgeGraphGenerator:
         "external": "#9B9B9B",
         "cluster": "#50E3C2",
         "entry": "#FF4444",
+        "javascript": "#F7DF1E",
+        "config": "#1ABC9C",
+        "documentation": "#9B59B6",
     }
 
     def __init__(self, root_dir: Path) -> None:
@@ -162,6 +166,12 @@ class KnowledgeGraphGenerator:
         """Builds the complete knowledge graph."""
         logger.info("Starting Python analysis...")
         self._scan_python()
+        
+        logger.info("Starting JavaScript analysis...")
+        self._scan_javascript()
+        
+        logger.info("Starting Asset analysis...")
+        self._scan_assets()
 
         logger.info(
             "Graph built with %d nodes and %d edges.",
@@ -172,6 +182,50 @@ class KnowledgeGraphGenerator:
         self.cluster_manager = ClusterManager(self.graph)
         self.cluster_manager.build_clusters(depth=2)
         logger.info("Built %d clusters.", len(self.cluster_manager.clusters))
+
+    def _scan_javascript(self) -> None:
+        """Scans JS/TS files in the repository."""
+        import_re = re.compile(r'(?:import|require)\s*\(?[\'"]([^\'"]+)[\'"]\)?')
+        try:
+            for root, _, files in os.walk(self.repo_root):
+                if any(x in Path(root).parts for x in ["node_modules", ".git", "dist", "build"]):
+                    continue
+                for file in files:
+                    if file.endswith((".js", ".ts", ".jsx", ".tsx", ".cjs", ".mjs")):
+                        path = Path(root) / file
+                        try:
+                            rel_path = path.relative_to(self.repo_root)
+                            node_id = str(rel_path).replace(os.sep, "/")
+                            self.graph.add_node(node_id, type="javascript", lang="javascript", path=str(path), label=file)
+                            
+                            with open(path, encoding="utf-8") as f:
+                                content = f.read()
+                                for match in import_re.finditer(content):
+                                    target = match.group(1)
+                                    self.graph.add_edge(node_id, target, type="imports")
+                        except Exception as e:
+                            logger.debug("Skipping JS file %s: %s", path, e)
+        except Exception as e:
+            logger.exception("Error scanning javascript")
+
+    def _scan_assets(self) -> None:
+        """Scans config and documentation files."""
+        try:
+            for root, _, files in os.walk(self.repo_root):
+                if any(x in Path(root).parts for x in ["node_modules", ".git"]):
+                    continue
+                for file in files:
+                    if file.endswith((".json", ".toml", ".yaml", ".yml", ".md")):
+                        path = Path(root) / file
+                        try:
+                            rel_path = path.relative_to(self.repo_root)
+                            node_id = str(rel_path).replace(os.sep, "/")
+                            node_type = "documentation" if file.endswith(".md") else "config"
+                            self.graph.add_node(node_id, type=node_type, path=str(path), label=file)
+                        except Exception as e:
+                            logger.debug("Skipping asset %s: %s", path, e)
+        except Exception as e:
+            logger.exception("Error scanning assets")
 
     def _scan_python(self) -> None:
         """Scans Python files and parses deep structure."""
@@ -199,6 +253,10 @@ class KnowledgeGraphGenerator:
             logger.warning("Error parsing %s: %s", path, e)
             return
 
+        module_doc = ast.get_docstring(tree)
+        if module_doc and module_name in self.graph.nodes:
+            self.graph.nodes[module_name]["docstring"] = module_doc[:500] + ("..." if len(module_doc) > 500 else "")
+
         imports_map: dict[str, str] = {}
 
         for node in ast.walk(tree):
@@ -219,7 +277,9 @@ class KnowledgeGraphGenerator:
 
             elif isinstance(node, ast.ClassDef):
                 class_id = f"{module_name}.{node.name}"
-                self.graph.add_node(class_id, type="class", lang="python", label=node.name)
+                class_doc = ast.get_docstring(node)
+                doc_str = (class_doc[:500] + "..." if len(class_doc) > 500 else class_doc) if class_doc else ""
+                self.graph.add_node(class_id, type="class", lang="python", label=node.name, docstring=doc_str)
                 self.graph.add_edge(module_name, class_id, type="defines")
                 for base in node.bases:
                     if isinstance(base, ast.Name):
@@ -229,7 +289,9 @@ class KnowledgeGraphGenerator:
             elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 func_id = f"{module_name}.{node.name}"
                 args = [a.arg for a in node.args.args]
-                self.graph.add_node(func_id, type="function", lang="python", label=node.name, args=str(args))
+                func_doc = ast.get_docstring(node)
+                doc_str = (func_doc[:500] + "..." if len(func_doc) > 500 else func_doc) if func_doc else ""
+                self.graph.add_node(func_id, type="function", lang="python", label=node.name, args=str(args), docstring=doc_str)
                 self.graph.add_edge(module_name, func_id, type="defines")
 
                 if node.name == "main" and (module_name.endswith("__main__") or "intellicrack.main" in module_name):
@@ -749,13 +811,15 @@ class KnowledgeGraphGenerator:
         <div class="legend-item"><div class="legend-dot" style="background:#F5A623"></div>Class</div>
         <div class="legend-item"><div class="legend-dot" style="background:#D0021B"></div>Function</div>
         <div class="legend-item"><div class="legend-dot" style="background:#7ED321"></div>Struct</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#F7DF1E"></div>JS/TS</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#1ABC9C"></div>Config</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#9B59B6"></div>Docs</div>
         <div class="legend-item"><div class="legend-dot" style="background:#9B9B9B"></div>External</div>
       </div>
       <div class="view-controls">
-        <button class="view-btn active" data-filter="all">All</button>
-        <button class="view-btn" data-filter="module">Modules</button>
-        <button class="view-btn" data-filter="class">Classes</button>
-        <button class="view-btn" data-filter="function">Functions</button>
+        <button class="view-btn" data-filter="high">High Level</button>
+        <button class="view-btn" data-filter="mid">Mid Level</button>
+        <button class="view-btn active" data-filter="all">Deep Dive</button>
       </div>
       <button class="cluster-toggle" id="cluster-toggle">&#128448; Toggle Cluster View</button>
     </div>
@@ -1013,8 +1077,13 @@ function setFilter(f){{
   document.querySelectorAll('.view-btn').forEach(b=>{{
     b.classList.toggle('active',b.dataset.filter===f);
   }});
+
+  let allowed = [];
+  if(f === 'high') allowed = ['module', 'cluster', 'external'];
+  else if(f === 'mid') allowed = ['module', 'cluster', 'external', 'class', 'struct', 'config', 'documentation', 'javascript'];
+
   graph.forEachNode((n,a)=>{{
-    const show=f==='all'||a.nodeType===f;
+    const show = f === 'all' || allowed.includes(a.nodeType);
     graph.setNodeAttribute(n,'hidden',!show);
     graph.setNodeAttribute(n,'color',show?a.originalColor:'rgba(100,100,100,0.1)');
   }});
@@ -1075,10 +1144,16 @@ function showPanel(nodeId){{
     clusterHtml='<span style="cursor:pointer;text-decoration:underline" onclick="toggleCluster(\''+escJS(a.cluster)+'\')">'+escHTML(a.cluster)+'</span>';
   }}
 
+  let docHtml = '';
+  if(a.docstring){{
+    docHtml = '<div class="info-row" style="flex-direction:column;gap:4px;"><span class="info-label" style="width:auto">Docstring:</span><pre style="white-space:pre-wrap;font-family:monospace;font-size:11px;background:var(--bg-primary);padding:8px;border-radius:4px;border:1px solid var(--border);max-height:150px;overflow-y:auto;">'+escHTML(a.docstring)+'</pre></div>';
+  }}
+
   document.getElementById('node-info').innerHTML=
     '<div class="info-row"><span class="info-label">Type:</span><span class="info-value">'+escHTML(a.nodeType)+'</span></div>'+
     '<div class="info-row"><span class="info-label">Full Path:</span><span class="info-value">'+escHTML(nodeId)+'</span></div>'+
-    '<div class="info-row"><span class="info-label">Cluster:</span><span class="info-value">'+clusterHtml+'</span></div>';
+    '<div class="info-row"><span class="info-label">Cluster:</span><span class="info-value">'+clusterHtml+'</span></div>'+
+    docHtml;
 
   const outN=connIndex.out[nodeId]||[],inN=connIndex.in[nodeId]||[];
   document.getElementById('out-count').textContent=outN.length;

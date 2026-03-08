@@ -1224,6 +1224,7 @@ class FridaBridge(InstrumentationBridge):
         try:
             await asyncio.wait_for(event.wait(), timeout=timeout)
         except TimeoutError:
+            _logger.warning("frida_script_execution_timeout", extra={"timeout": timeout})
             result["error"] = "Script execution timed out"
 
         await asyncio.to_thread(script.unload)

@@ -120,6 +120,7 @@ class BridgeCallWorker(QThread):
             result = future.result()
             self.call_finished.emit(result)
         except Exception as exc:
+            _logger.exception("async_bridge_worker_failed")
             self.call_error.emit(exc)
 
 

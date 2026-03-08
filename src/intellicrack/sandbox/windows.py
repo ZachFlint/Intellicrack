@@ -270,6 +270,7 @@ class WindowsSandbox(SandboxBase):
                         timeout=_PROCESS_WAIT_TIMEOUT,
                     )
                 except TimeoutError:
+                    _logger.warning("sandbox_process_terminate_timeout", extra={"pid": pid})
                     self._process.kill()
                     await asyncio.to_thread(self._process.wait)
 
@@ -609,11 +610,13 @@ call "{sandbox_script_path}"
             )
             result = "success"
         except SandboxTimeoutError as e:
+            _logger.warning("sandbox_execution_timeout", extra={"binary": binary_path.name, "timeout": effective_timeout})
             exit_code = _RETURNCODE_FAILURE
             result = "timeout"
             stderr = str(e)
             stdout = ""
         except SandboxError as e:
+            _logger.warning("sandbox_execution_error", extra={"binary": binary_path.name, "error": str(e)})
             exit_code = _RETURNCODE_FAILURE
             result = "error"
             stderr = str(e)

@@ -135,6 +135,7 @@ class AnalysisAggregator:
         try:
             binary_bridge = self._tools.get_binary_bridge()
         except ToolError:
+            _logger.debug("binary_bridge_unavailable")
             notes.append("BinaryBridge not available")
             return
 
@@ -181,6 +182,7 @@ class AnalysisAggregator:
         try:
             bridge = self._tools.get_ghidra_bridge() if bridge_name == "ghidra" else self._tools.get_radare2_bridge()
         except ToolError:
+            _logger.debug("static_bridge_unavailable", extra={"bridge": bridge_name})
             return
 
         contributed = False

@@ -686,6 +686,7 @@ class OllamaProvider(LLMProviderBase):
                             if status := data.get("status", ""):
                                 yield status
                         except json.JSONDecodeError:
+                            self._logger.warning("pull_status_json_decode_failed")
                             continue
         except Exception as e:
             raise ProviderError(_ERR_PULL_FAILED % (actual_model, e)) from e

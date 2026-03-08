@@ -380,6 +380,7 @@ class ToolRegistry:
             )
 
         except Exception as e:
+            _logger.exception("tool_status_check_failed", extra={"tool": name})
             return ToolStatus(
                 name=name,
                 available=False,

@@ -435,6 +435,7 @@ class ModelDiscovery:
                 )
 
             except TimeoutError:
+                self._logger.warning("discovery_timeout", extra={"provider": provider_name.value, "timeout": self._timeout})
                 duration_ms = (time.time() - start_time) * 1000
                 return (
                     provider_name,

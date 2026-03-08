@@ -59,6 +59,7 @@ from .xpu_utils import (
 try:
     import torch as _torch
 except ImportError:
+    get_logger("providers.local_transformers").debug("torch_import_unavailable")
     _torch = None
 
 if TYPE_CHECKING:
@@ -948,7 +949,7 @@ class LocalTransformersProvider(LLMProviderBase):
                     )
                 ]
         except json.JSONDecodeError:
-            pass
+            _logger.warning("tool_call_json_decode_failed")
 
         return None
 

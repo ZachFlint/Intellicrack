@@ -565,6 +565,7 @@ class ToolInstaller:
             )
 
         except Exception as e:
+            _logger.exception("pip_install_unexpected_error")
             return InstallResult(success=False, error=str(e))
 
     async def _get_latest_release_url(self, tool: ToolName) -> str | None:

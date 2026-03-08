@@ -431,6 +431,7 @@ class GhidraBridge(StaticAnalysisBridge):
                     timeout=10,
                 )
             except TimeoutError:
+                _logger.warning("ghidra_process_terminate_timeout", extra={"pid": pid})
                 self._process.kill()
                 await asyncio.to_thread(self._process.wait)
 

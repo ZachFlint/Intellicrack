@@ -121,6 +121,8 @@ def scan_directory(root_path: str) -> tuple[str, int, int]:
             try:
                 items = []
                 for item in os.listdir(path):
+                    if item in {".git", ".pixi", "node_modules", "__pycache__", ".ruff_cache", ".aider.tags.cache.v4", "dist", "build", ".venv", ".mypy_cache", ".pytest_cache", ".claude", ".serena", "Intellicrack.egg-info"}:
+                        continue
                     item_path = os.path.join(path, item)
                     items.append(item_path)
 
@@ -258,6 +260,8 @@ def generate_fallback_tree(root_path: str, prefix: str = "", _is_last: bool = Tr
     try:
         items = []
         for item in os.listdir(root_path):
+            if item in {".git", ".pixi", "node_modules", "__pycache__", ".ruff_cache", ".aider.tags.cache.v4", "dist", "build", ".venv", ".mypy_cache", ".pytest_cache", ".claude", ".serena", "Intellicrack.egg-info"}:
+                continue
             item_path = os.path.join(root_path, item)
             items.append((item, item_path))
 
@@ -320,7 +324,47 @@ def generate_hta(root_path: str, output_file: str) -> None:
         color: #d4d4d4;
         margin: 0;
         padding: 20px;
-        overflow-x: auto;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        box-sizing: border-box;
+    }}
+
+    .main-container {{
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+        gap: 20px;
+        margin-top: 10px;
+    }}
+
+    .tree-pane {{
+        flex: 1;
+        overflow-y: auto;
+        border-right: 1px solid #3c3c3c;
+        padding-right: 10px;
+    }}
+
+    .preview-pane {{
+        flex: 1;
+        overflow-y: auto;
+        background: #252526;
+        padding: 15px;
+        border-radius: 5px;
+    }}
+
+    #previewContent {{
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        font-size: 13px;
+        margin: 0;
+    }}
+
+    .action-buttons {{
+        margin-top: 10px;
+        display: flex;
+        gap: 5px;
     }}
 
     h1 {{
@@ -469,7 +513,8 @@ def generate_hta(root_path: str, output_file: str) -> None:
     <input type="text" class="search-box" id="searchBox" value="" title="Enter filename or partial text to search" onfocus="this.select()">
     <button id="expandBtn">Expand All</button>
     <button id="collapseBtn">Collapse All</button>
-    <button id="copyBtn">Copy Path</button>
+    <button id="copyBtn">Copy Relative Path</button>
+    <button id="refreshBtn">Refresh Tree</button>
 </div>
 
 <h1>
@@ -477,13 +522,24 @@ def generate_hta(root_path: str, output_file: str) -> None:
     <span class="stats">{file_count} files, {folder_count} folders</span>
 </h1>
 
-<div class="path-display" id="pathDisplay">Ready - Single-click folders to expand/collapse, double-click files to open</div>
+<div class="path-display" id="pathDisplay">Ready - Single-click to preview, double-click to open</div>
+<div class="action-buttons">
+    <button id="btnCode">Open in Code</button>
+    <button id="btnNotepad">Open in Notepad</button>
+    <button id="btnTerminal">Terminal Here</button>
+</div>
 
-<div class="tree" id="tree">
-{html_tree}
+<div class="main-container">
+    <div class="tree-pane tree" id="tree">
+    {html_tree}
+    </div>
+    <div class="preview-pane">
+        <pre id="previewContent">[Select a file to preview]</pre>
+    </div>
 </div>
 
 <script type="text/javascript">
+var rootPath = "{root_path}";
 var fso = new ActiveXObject("Scripting.FileSystemObject");
 var shell = new ActiveXObject("WScript.Shell");
 var currentPath = "";
@@ -505,6 +561,11 @@ window.onload = function() {{
     document.getElementById('collapseBtn').onclick = collapseAll;
     document.getElementById('copyBtn').onclick = copyPath;
     document.getElementById('searchBox').onkeyup = performSearch;
+    document.getElementById('refreshBtn').onclick = refreshTree;
+    
+    document.getElementById('btnCode').onclick = openInCode;
+    document.getElementById('btnNotepad').onclick = openInNotepad;
+    document.getElementById('btnTerminal').onclick = openTerminal;
 }};
 
 function handleItemClick(event) {{
@@ -532,6 +593,46 @@ function handleItemClick(event) {{
     // Toggle folder if it's a folder
     if (type === 'folder') {{
         toggleFolder(element);
+        document.getElementById('previewContent').innerText = "[Folder selected: " + path + "]";
+    }} else if (type === 'file') {{
+        try {{
+            var file = fso.GetFile(path);
+            if (file.Size > 0 && file.Size < 1000000) {{ // Limit preview to files under 1MB
+                var stream = fso.OpenTextFile(path, 1);
+                var content = stream.Read(Math.min(file.Size, 15000)); // Read up to 15KB
+                stream.Close();
+                if (file.Size > 15000) content += "\\n\\n... [Preview Truncated] ...";
+                document.getElementById('previewContent').innerText = content;
+            }} else {{
+                document.getElementById('previewContent').innerText = "[File too large or empty for preview. Size: " + file.Size + " bytes]";
+            }}
+        }} catch(e) {{
+            document.getElementById('previewContent').innerText = "[Preview not available for this file type or access denied]";
+        }}
+    }}
+}}
+
+function openInCode() {{
+    if(currentPath) shell.Run('cmd /c code "' + currentPath + '"', 0, false);
+}}
+
+function openInNotepad() {{
+    if(currentPath) shell.Run('notepad.exe "' + currentPath + '"', 1, false);
+}}
+
+function openTerminal() {{
+    if(currentPath) {{
+        var folder = fso.FileExists(currentPath) ? fso.GetParentFolderName(currentPath) : currentPath;
+        shell.Run('pwsh -NoExit -Command "cd \\'' + folder + '\\'"', 1, false);
+    }}
+}}
+
+function refreshTree() {{
+    try {{
+        shell.Run('pwsh -c "pixi run python scripts/generate_tree.py"', 0, true);
+        window.location.reload();
+    }} catch(e) {{
+        alert("Failed to refresh: " + e.message);
     }}
 }}
 
@@ -637,8 +738,15 @@ function collapseAll() {{
 function copyPath() {{
     if (currentPath) {{
         try {{
-            window.clipboardData.setData('Text', currentPath);
-            document.getElementById('pathDisplay').innerHTML = '<strong>Copied:</strong> ' + currentPath;
+            var relPath = currentPath;
+            if (currentPath.toLowerCase().indexOf(rootPath.toLowerCase()) === 0) {{
+                relPath = currentPath.substring(rootPath.length);
+                if (relPath.charAt(0) === '\\\\' || relPath.charAt(0) === '/') {{
+                    relPath = relPath.substring(1);
+                }}
+            }}
+            window.clipboardData.setData('Text', relPath);
+            document.getElementById('pathDisplay').innerHTML = '<strong>Copied Relative Path:</strong> ' + relPath;
         }} catch(e) {{
             alert('Cannot copy: ' + e.message);
         }}
@@ -734,7 +842,7 @@ function hasHighlightedChildren(element) {{
 
 
 if __name__ == "__main__":
-    root_path = r"D:\Intellicrack\src"
+    root_path = r"D:\Intellicrack"
     hta_output_file = r"D:\Intellicrack\IntellicrackStructure.hta"
     txt_output_file = r"D:\Intellicrack\IntellicrackStructure.txt"
 

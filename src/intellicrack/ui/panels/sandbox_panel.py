@@ -583,6 +583,7 @@ class SandboxPanel(AnalysisPanelBase):
             status_text = state.status if hasattr(state, "status") else "Unknown"
             self._status_indicator.setText(f"Active ({status_text})")
         except Exception:
+            _logger.exception("sandbox_status_query_failed")
             self._status_indicator.setText("Active (status unavailable)")
 
     def _on_vnc_status_changed(self, connected: bool) -> None:

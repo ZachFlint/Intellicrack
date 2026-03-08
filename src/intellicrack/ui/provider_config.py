@@ -63,21 +63,25 @@ from .resources import IconManager
 try:
     from ..providers.local_transformers import LocalTransformersProvider
 except ImportError:
+    get_logger("ui.provider_config").debug("local_transformers_unavailable")
     LocalTransformersProvider = None
 
 try:
     from ..providers.ollama import OllamaProvider
 except ImportError:
+    get_logger("ui.provider_config").debug("ollama_provider_unavailable")
     OllamaProvider = None
 
 try:
     from ..providers.openrouter import OpenRouterProvider
 except ImportError:
+    get_logger("ui.provider_config").debug("openrouter_provider_unavailable")
     OpenRouterProvider = None
 
 try:
     from ..providers.xpu_utils import get_optimal_dtype_for_xpu
 except ImportError:
+    get_logger("ui.provider_config").debug("xpu_utils_unavailable")
     get_optimal_dtype_for_xpu = None
 
 
@@ -298,6 +302,7 @@ class ConnectionTestWorker(QThread):
                     return False, "Invalid API key"
                 return False, f"API error: {response.status_code}"
         except httpx.ConnectError:
+            _logger.debug("provider_connect_failed", extra={"provider": "anthropic"})
             return False, "Could not connect to Anthropic API"
         except Exception as e:
             _logger.warning("provider_test_failed", extra={"provider": "anthropic", "error": str(e)})
@@ -325,6 +330,7 @@ class ConnectionTestWorker(QThread):
                     return False, "Invalid API key"
                 return False, f"API error: {response.status_code}"
         except httpx.ConnectError:
+            _logger.debug("provider_connect_failed", extra={"provider": "openai"})
             return False, "Could not connect to OpenAI API"
         except Exception as e:
             _logger.warning("provider_test_failed", extra={"provider": "openai", "error": str(e)})
@@ -351,6 +357,7 @@ class ConnectionTestWorker(QThread):
                     return False, "Invalid API key"
                 return False, f"API error: {response.status_code}"
         except httpx.ConnectError:
+            _logger.debug("provider_connect_failed", extra={"provider": "google"})
             return False, "Could not connect to Google API"
         except Exception as e:
             _logger.warning("provider_test_failed", extra={"provider": "google", "error": str(e)})
@@ -373,6 +380,7 @@ class ConnectionTestWorker(QThread):
                     return True, "Connected to Ollama"
                 return False, f"Ollama error: {response.status_code}"
         except httpx.ConnectError:
+            _logger.debug("provider_connect_failed", extra={"provider": "ollama"})
             return False, "Could not connect to Ollama (is it running?)"
         except Exception as e:
             _logger.warning("provider_test_failed", extra={"provider": "ollama", "error": str(e)})
@@ -400,6 +408,7 @@ class ConnectionTestWorker(QThread):
                     return False, "Invalid API key"
                 return False, f"API error: {response.status_code}"
         except httpx.ConnectError:
+            _logger.debug("provider_connect_failed", extra={"provider": "openrouter"})
             return False, "Could not connect to OpenRouter API"
         except Exception as e:
             _logger.warning("provider_test_failed", extra={"provider": "openrouter", "error": str(e)})
@@ -427,6 +436,7 @@ class ConnectionTestWorker(QThread):
                     return False, "Invalid API token"
                 return False, f"API error: {response.status_code}"
         except httpx.ConnectError:
+            _logger.debug("provider_connect_failed", extra={"provider": "huggingface"})
             return False, "Could not connect to HuggingFace API"
         except Exception as e:
             _logger.warning("provider_test_failed", extra={"provider": "huggingface", "error": str(e)})
@@ -603,6 +613,7 @@ class ModelRefreshWorker(QThread):
                     return True, models[:20], f"Found {len(models)} OpenAI models"
                 return False, [], f"API error: {response.status_code}"
         except Exception as e:
+            _logger.warning("model_fetch_failed", extra={"provider": "openai", "error": str(e)})
             return False, [], str(e)
 
     def _fetch_google_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
@@ -630,6 +641,7 @@ class ModelRefreshWorker(QThread):
                     return True, models, f"Found {len(models)} Gemini models"
                 return False, [], f"API error: {response.status_code}"
         except Exception as e:
+            _logger.warning("model_fetch_failed", extra={"provider": "google", "error": str(e)})
             return False, [], str(e)
 
     def _fetch_ollama_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
@@ -651,6 +663,7 @@ class ModelRefreshWorker(QThread):
                     return True, models, f"Found {len(models)} Ollama models"
                 return False, [], f"Ollama error: {response.status_code}"
         except Exception as e:
+            _logger.warning("model_fetch_failed", extra={"provider": "ollama", "error": str(e)})
             return False, [], str(e)
 
     def _fetch_openrouter_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
@@ -676,6 +689,7 @@ class ModelRefreshWorker(QThread):
                     return True, models[:50], f"Found {len(models)} OpenRouter models"
                 return False, [], f"API error: {response.status_code}"
         except Exception as e:
+            _logger.warning("model_fetch_failed", extra={"provider": "openrouter", "error": str(e)})
             return False, [], str(e)
 
     def _fetch_huggingface_models(
@@ -712,6 +726,7 @@ class ModelRefreshWorker(QThread):
                     )
                 return False, [], f"API error: {response.status_code}"
         except Exception as e:
+            _logger.warning("model_fetch_failed", extra={"provider": "huggingface", "error": str(e)})
             return False, [], str(e)
 
 
@@ -1045,8 +1060,10 @@ class ProviderConfigDialog(QDialog):
                 extra={"provider": self._current_provider},
             )
         except ValueError:
+            _logger.debug("unknown_provider_name", extra={"provider": self._current_provider})
             QMessageBox.critical(self, "Error", f"Unknown provider: {self._current_provider}")
         except Exception as e:
+            _logger.warning("set_active_provider_failed", extra={"provider": self._current_provider, "error": str(e)})
             QMessageBox.critical(self, "Error", f"Failed to set active provider: {e}")
 
     def _refresh_provider_status(self) -> None:
@@ -1181,6 +1198,7 @@ class ProviderConfigDialog(QDialog):
             try:
                 pname = ProviderName(provider_name)
             except ValueError:
+                _logger.debug("unknown_provider_for_discovery", extra={"provider": provider_name})
                 return
 
             async def _discover() -> None:

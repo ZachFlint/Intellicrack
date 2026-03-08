@@ -278,6 +278,7 @@ class FridaPanel(AnalysisPanelBase):
         try:
             pid = int(target)
         except ValueError:
+            _logger.debug("frida_attach_by_name_fallback", extra={"target": target})
             self._run_async(
                 self._bridge.attach_by_name(target),
                 on_success=lambda _: self._on_attach_name_success(target),
