@@ -59,6 +59,7 @@ _winreg_module: ModuleType | None
 try:
     import winreg as _winreg_module
 except ImportError:
+    get_logger("ui.tool_config").debug("winreg_unavailable")
     _winreg_module = None
 
 
@@ -385,6 +386,7 @@ class ToolInstallWorker(QThread):
                 try:
                     current_path, value_type = _winreg_module.QueryValueEx(key, "Path")
                 except FileNotFoundError:
+                    _logger.warning("user_path_registry_key_not_found")
                     current_path = ""
                     value_type = _winreg_module.REG_EXPAND_SZ
 
@@ -950,6 +952,7 @@ class ToolSettingsWidget(QFrame):
                 result: dict[str, Any] = all_settings.get(self._tool_id, {})
                 return result
         except (json.JSONDecodeError, OSError):
+            _logger.warning("tool_settings_load_failed", extra={"tool_id": self._tool_id})
             return {}
 
     def _browse_path(self) -> None:
@@ -1073,6 +1076,7 @@ class ToolSettingsWidget(QFrame):
                 with open(self._config_path, encoding="utf-8") as f:
                     all_settings = json.load(f)
             except (json.JSONDecodeError, OSError):
+                _logger.warning("tool_settings_load_for_save_failed", extra={"tool_id": self._tool_id})
                 all_settings = {}
 
         all_settings[self._tool_id] = self.get_settings()
@@ -1081,6 +1085,7 @@ class ToolSettingsWidget(QFrame):
             with open(self._config_path, "w", encoding="utf-8") as f:
                 json.dump(all_settings, f, indent=2)
         except OSError as e:
+            _logger.warning("tool_settings_save_failed", extra={"tool_id": self._tool_id, "error": str(e)})
             QMessageBox.warning(
                 self,
                 "Save Error",
@@ -1372,6 +1377,7 @@ class ToolStatusDialog(QDialog):
                 result: dict[str, dict[str, Any]] = json.load(f)
                 return result
         except (json.JSONDecodeError, OSError):
+            _logger.warning("tool_settings_load_all_failed")
             return {}
 
     def _refresh_status(self) -> None:

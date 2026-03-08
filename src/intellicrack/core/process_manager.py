@@ -246,6 +246,7 @@ class ProcessManager:
             loop = asyncio.get_running_loop()
             loop.call_soon_threadsafe(lambda: asyncio.create_task(self.cleanup_all_async()))
         except RuntimeError:
+            logger.warning("no_running_event_loop_for_async_cleanup")
             self._sync_cleanup()
 
         if (
@@ -917,6 +918,7 @@ class ProcessManager:
             )
 
         except psutil.NoSuchProcess:
+            logger.warning("external_pid_already_gone", extra={"pid": pid})
             self.unregister_external_pid(pid)
             return False
 

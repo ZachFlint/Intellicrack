@@ -140,6 +140,7 @@ class SandboxTestWorker(QThread):
                     self.finished.emit(False, f"Sandbox exited with error: {stderr_output}")
                     return
             except TimeoutExpired:
+                _logger.warning("sandbox_test_wait_timeout")
                 self.output.emit("Sandbox is running normally")
 
             self.finished.emit(True, "Windows Sandbox test completed successfully")

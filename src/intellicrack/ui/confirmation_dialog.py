@@ -145,6 +145,7 @@ class ToolConfirmationDialog(QDialog):
         try:
             formatted_args = json.dumps(self._call.arguments, indent=2, default=str)
         except (TypeError, ValueError):
+            _logger.debug("tool_call_args_format_failed")
             formatted_args = str(self._call.arguments)
         self._args_text.setPlainText(formatted_args)
         layout.addWidget(self._args_text)

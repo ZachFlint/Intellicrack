@@ -26,6 +26,7 @@ from ..core.process_manager import ProcessManager
 try:
     import torch as _torch_module
 except ImportError:
+    get_logger("providers.xpu_utils").debug("torch_import_unavailable")
     _torch_module = None
 
 if TYPE_CHECKING:

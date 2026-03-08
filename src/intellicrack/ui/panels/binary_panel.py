@@ -37,13 +37,14 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.core.logging import get_logger
+
 
 try:
     import lief
 except ImportError:
+    get_logger("ui.panels.binary").debug("lief_unavailable")
     lief = None
-
-from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.qt_compat import (
     connect_cell_changed,
     key_event_key,
@@ -526,6 +527,7 @@ class BinaryPanel(QWidget):
         try:
             new_bytes = bytes.fromhex(text.replace(" ", ""))
         except ValueError:
+            _logger.debug("hex_cell_edit_invalid_hex")
             return
 
         ascii_str = "".join(chr(b) if _ASCII_PRINTABLE_MIN <= b < _ASCII_PRINTABLE_MAX else "." for b in new_bytes)
@@ -1002,6 +1004,7 @@ class BinaryPanel(QWidget):
         try:
             offset = int(text, 16) if text.startswith(("0x", "0X")) else int(text)
         except ValueError:
+            _logger.debug("hex_goto_invalid_offset", extra={"input": text})
             return
 
         offset = max(0, min(offset, len(self._file_data) - 1))
@@ -1047,6 +1050,7 @@ class BinaryPanel(QWidget):
         try:
             new_bytes = bytes.fromhex(new_hex.replace(" ", ""))
         except ValueError:
+            _logger.debug("patch_invalid_hex")
             return
 
         offset = self._current_offset + selected_row * _HEX_BYTES_PER_ROW

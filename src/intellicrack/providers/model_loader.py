@@ -24,17 +24,20 @@ from ..core.logging import get_logger
 try:
     import torch as _torch
 except ImportError:
+    get_logger("providers.model_loader").debug("torch_import_unavailable")
     _torch = None
 
 try:
     from transformers import AutoModelForCausalLM, AutoTokenizer
 except (ImportError, ValueError):
+    get_logger("providers.model_loader").debug("transformers_automodel_unavailable")
     AutoModelForCausalLM = None
     AutoTokenizer = None
 
 try:
     from transformers import BitsAndBytesConfig
 except (ImportError, ValueError):
+    get_logger("providers.model_loader").debug("bitsandbytes_config_unavailable")
     BitsAndBytesConfig = None
 
 from .xpu_utils import clear_xpu_cache, get_xpu_memory_info, initialize_xpu, is_xpu_available

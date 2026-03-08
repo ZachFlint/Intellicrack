@@ -117,6 +117,7 @@ def parse_tool_call(
         try:
             parsed_args = json.loads(raw_arguments)
         except json.JSONDecodeError:
+            _logger.warning("tool_call_args_json_decode_failed", extra={"function": function_name})
             parsed_args = {}
     else:
         parsed_args = dict(raw_arguments)

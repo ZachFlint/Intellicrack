@@ -660,7 +660,7 @@ class XRefPanel(QFrame):
                 address = int(address_str, 16)
                 self.xref_selected.emit(address)
             except ValueError:
-                pass
+                _logger.debug("xref_address_parse_failed", extra={"address": address_str})
 
     def set_xrefs(
         self,

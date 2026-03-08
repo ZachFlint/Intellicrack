@@ -498,6 +498,7 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             pid = int(pid_text)
         except ValueError:
+            _logger.debug("invalid_pid_input", extra={"input": pid_text})
             self._console_output.appendPlainText(f"[!] Invalid PID: {pid_text}")
             return
 
@@ -710,6 +711,7 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             address = int(addr_text, 16) if addr_text.startswith("0x") else int(addr_text, 0)
         except ValueError:
+            _logger.debug("invalid_breakpoint_address", extra={"input": addr_text})
             self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
             return
 
@@ -755,6 +757,7 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             address = int(addr_item.text(), 16)
         except ValueError:
+            _logger.debug("invalid_breakpoint_address_from_table")
             return
 
         if self._bridge is None:
@@ -809,6 +812,7 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             value = int(val_text, 16) if val_text.startswith("0x") else int(val_text, 0)
         except ValueError:
+            _logger.debug("invalid_register_value", extra={"register": reg_name, "input": val_text})
             self._console_output.appendPlainText(f"[!] Invalid value for {reg_name}: {val_text}")
             return
 
@@ -855,12 +859,14 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             address = int(addr_text, 16) if addr_text.startswith("0x") else int(addr_text, 0)
         except ValueError:
+            _logger.debug("invalid_memory_address", extra={"input": addr_text})
             self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
             return
 
         try:
             size = int(size_text) if size_text else 256
         except ValueError:
+            _logger.debug("invalid_memory_size_using_default", extra={"input": size_text})
             size = 256
 
         self._mem_read_btn.setEnabled(False)

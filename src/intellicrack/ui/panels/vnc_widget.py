@@ -284,6 +284,7 @@ class RFBClient:
                 return True
 
         except TimeoutError:
+            _logger.warning("vnc_message_timeout")
             return False
         except Exception:
             _logger.exception("vnc_message_error", extra={"connected": self._connected})

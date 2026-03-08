@@ -268,8 +268,10 @@ class QMPClient:
                 return QMPResponse(success=True, data=response.get("return"))
 
             except TimeoutError:
+                _logger.warning("qmp_command_timeout")
                 return QMPResponse(success=False, error="Command timed out")
             except Exception as e:
+                _logger.exception("qmp_command_failed")
                 return QMPResponse(success=False, error=str(e))
 
     async def query_status(self) -> QMPResponse:
@@ -418,6 +420,7 @@ class GuestAgentClient:
                 break
 
             except (TimeoutError, OSError):
+                _logger.debug("guest_agent_connect_retry", extra={"host": self._host, "port": self._port})
                 await asyncio.sleep(retry_interval)
 
         if not connected:
@@ -524,9 +527,11 @@ class GuestAgentClient:
                             )
                             break
                     except TimeoutError:
+                        _logger.debug("guest_command_poll_timeout")
                         continue
 
             except Exception as e:
+                _logger.exception("guest_command_execution_failed")
                 result = (-1, "", str(e))
 
             return result
@@ -543,6 +548,7 @@ class GuestAgentClient:
                 msg = self._message_queue.get_nowait()
                 messages.append(msg)
             except asyncio.QueueEmpty:
+                _logger.debug("message_queue_empty")
                 break
         return messages
 
@@ -1657,11 +1663,13 @@ echo $? > "/mnt/shared/output/{result_name}"
             )
             result = "success"
         except SandboxTimeoutError as e:
+            _logger.warning("sandbox_execution_timeout", extra={"binary": binary_path.name, "timeout": effective_timeout})
             result = "timeout"
             stderr = str(e)
             stdout = ""
             exit_code = -1
         except SandboxError as e:
+            _logger.warning("sandbox_execution_error", extra={"binary": binary_path.name, "error": str(e)})
             result = "error"
             stderr = str(e)
             stdout = ""

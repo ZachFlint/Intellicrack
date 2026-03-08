@@ -171,11 +171,13 @@ class OpenRouterProvider(LLMProviderBase):
                     try:
                         input_cost = float(input_cost) * 1000000
                     except (ValueError, TypeError):
+                        self._logger.debug("input_cost_parse_failed", extra={"model": model_id})
                         input_cost = None
                 if output_cost is not None:
                     try:
                         output_cost = float(output_cost) * 1000000
                     except (ValueError, TypeError):
+                        self._logger.debug("output_cost_parse_failed", extra={"model": model_id})
                         output_cost = None
 
                 architecture: dict[str, object] = model_data.get("architecture", {})

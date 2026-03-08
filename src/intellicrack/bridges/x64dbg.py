@@ -939,6 +939,7 @@ class X64DbgBridge(DebuggerBridge):
                     timeout=5,
                 )
             except TimeoutError:
+                _logger.warning("x64dbg_process_terminate_timeout", extra={"pid": pid})
                 self._process.kill()
                 await asyncio.to_thread(self._process.wait)
 
@@ -1272,6 +1273,7 @@ class X64DbgBridge(DebuggerBridge):
             finally:
                 kernel32.CloseHandle(handle)
         except (OSError, AttributeError):
+            _logger.debug("wow64_check_failed_assuming_64bit")
             return True
 
     async def detach(self) -> None:
@@ -1493,6 +1495,7 @@ class X64DbgBridge(DebuggerBridge):
                 try:
                     return int(value, 0)
                 except ValueError:
+                    _logger.debug("register_value_parse_failed", extra={"value": str(value)})
                     return 0
             return 0
 

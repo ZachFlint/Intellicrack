@@ -757,6 +757,7 @@ class Radare2Panel(AnalysisPanelBase):
         try:
             addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
         except ValueError:
+            _logger.debug("invalid_function_address", extra={"input": addr_str})
             self._r2_output.appendPlainText(f"[!] Invalid function address: {addr_str}")
             return
 

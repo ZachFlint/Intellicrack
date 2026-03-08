@@ -61,6 +61,7 @@ from .tools import ToolOutputPanel
 try:
     from ..providers.model_loader import get_global_model_cache, set_global_cache_size
 except ImportError:
+    get_logger("ui.app").debug("model_loader_unavailable")
     get_global_model_cache = None
     set_global_cache_size = None
 
@@ -135,6 +136,7 @@ class AsyncWorker(QThread):
             result: object = loop.run_until_complete(self._coro)
             self.finished.emit(result)
         except Exception as e:
+            _logger.exception("async_worker_failed")
             self.error.emit(e)
         finally:
             if loop is not None:
@@ -1277,6 +1279,7 @@ class MainWindow(QMainWindow):
                 try:
                     config_enabled = self._config.is_tool_enabled(ToolName(tool_id.lower()))
                 except (ValueError, AttributeError):
+                    _logger.debug("tool_name_parse_fallback", extra={"tool_id": tool_id})
                     config_enabled = True
             if enabled and path_value and config_enabled:
                 tools_to_init.append(tool_id)
