@@ -1,8 +1,8 @@
 {
   "tool": "complexipy",
-  "generated": "2026-03-06T22:51:32.383492",
-  "total_findings": 56,
-  "total_files": 31,
+  "generated": "2026-03-07T20:18:52.909946",
+  "total_findings": 51,
+  "total_files": 29,
   "files": [
     {
       "path": "src\\intellicrack\\bridges\\installer.py",
@@ -39,44 +39,6 @@
           "complexity": 34,
           "message": "ToolInstaller::find_tool - cognitive complexity 34 (exceeds threshold)",
           "raw": "src\\intellicrack\\bridges\\installer.py: ToolInstaller::find_tool - cognitive complexity 34 (exceeds threshold)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\binary_panel.py",
-      "count": 4,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "BinaryPanel::_extract_strings",
-          "complexity": 16,
-          "message": "BinaryPanel::_extract_strings - cognitive complexity 16 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_extract_strings - cognitive complexity 16 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "BinaryPanel::_parse_pe_ilt_entries",
-          "complexity": 18,
-          "message": "BinaryPanel::_parse_pe_ilt_entries - cognitive complexity 18 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_parse_pe_ilt_entries - cognitive complexity 18 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "BinaryPanel::_parse_pe_sections",
-          "complexity": 23,
-          "message": "BinaryPanel::_parse_pe_sections - cognitive complexity 23 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_parse_pe_sections - cognitive complexity 23 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "BinaryPanel::_parse_elf_sections",
-          "complexity": 25,
-          "message": "BinaryPanel::_parse_elf_sections - cognitive complexity 25 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_parse_elf_sections - cognitive complexity 25 (exceeds threshold)"
         }
       ]
     },
@@ -137,36 +99,6 @@
           "complexity": 17,
           "message": "X64DbgBridge::_get_threads - cognitive complexity 17 (exceeds threshold)",
           "raw": "src\\intellicrack\\bridges\\x64dbg.py: X64DbgBridge::_get_threads - cognitive complexity 17 (exceeds threshold)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\core\\license_analyzer.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "LicenseAnalyzer::_detect_crypto_apis",
-          "complexity": 16,
-          "message": "LicenseAnalyzer::_detect_crypto_apis - cognitive complexity 16 (exceeds threshold)",
-          "raw": "src\\intellicrack\\core\\license_analyzer.py: LicenseAnalyzer::_detect_crypto_apis - cognitive complexity 16 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "LicenseAnalyzer::_detect_key_format",
-          "complexity": 21,
-          "message": "LicenseAnalyzer::_detect_key_format - cognitive complexity 21 (exceeds threshold)",
-          "raw": "src\\intellicrack\\core\\license_analyzer.py: LicenseAnalyzer::_detect_key_format - cognitive complexity 21 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "LicenseAnalyzer::_detect_algorithms",
-          "complexity": 29,
-          "message": "LicenseAnalyzer::_detect_algorithms - cognitive complexity 29 (exceeds threshold)",
-          "raw": "src\\intellicrack\\core\\license_analyzer.py: LicenseAnalyzer::_detect_algorithms - cognitive complexity 29 (exceeds threshold)"
         }
       ]
     },
@@ -257,6 +189,36 @@
           "complexity": 20,
           "message": "GuestAgentClient::send_command - cognitive complexity 20 (exceeds threshold)",
           "raw": "src\\intellicrack\\sandbox\\qemu.py: GuestAgentClient::send_command - cognitive complexity 20 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\binary_panel.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "BinaryPanel::_extract_strings",
+          "complexity": 16,
+          "message": "BinaryPanel::_extract_strings - cognitive complexity 16 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_extract_strings - cognitive complexity 16 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "BinaryPanel::_parse_pe_ilt_entries",
+          "complexity": 18,
+          "message": "BinaryPanel::_parse_pe_ilt_entries - cognitive complexity 18 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_parse_pe_ilt_entries - cognitive complexity 18 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "BinaryPanel::_parse_pe_sections",
+          "complexity": 23,
+          "message": "BinaryPanel::_parse_pe_sections - cognitive complexity 23 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_parse_pe_sections - cognitive complexity 23 (exceeds threshold)"
         }
       ]
     },
@@ -607,20 +569,6 @@
           "complexity": 18,
           "message": "PythonSyntaxHighlighter::_highlight_triple_quotes - cognitive complexity 18 (exceeds threshold)",
           "raw": "src\\intellicrack\\ui\\highlighter.py: PythonSyntaxHighlighter::_highlight_triple_quotes - cognitive complexity 18 (exceeds threshold)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\sandbox_config.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "SandboxTestWorker::run",
-          "complexity": 20,
-          "message": "SandboxTestWorker::run - cognitive complexity 20 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\sandbox_config.py: SandboxTestWorker::run - cognitive complexity 20 (exceeds threshold)"
         }
       ]
     },

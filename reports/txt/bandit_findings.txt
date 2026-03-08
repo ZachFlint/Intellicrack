@@ -16,12 +16,12 @@ src/intellicrack/core\_subprocess.py:19: [Low] B404:blacklist: Consider possible
 
 1 findings in src/intellicrack/core\script_gen.py
 
-src/intellicrack/core\script_gen.py:399: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
+src/intellicrack/core\script_gen.py:398: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module.
 
 
 1 findings in src/intellicrack/providers\base.py
 
-src/intellicrack/providers\base.py:327: [Low] B311:blacklist: Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+src/intellicrack/providers\base.py:326: [Low] B311:blacklist: Standard pseudo-random generators are not suitable for security/cryptographic purposes.
 
 
 1 findings in src/intellicrack/sandbox\windows.py

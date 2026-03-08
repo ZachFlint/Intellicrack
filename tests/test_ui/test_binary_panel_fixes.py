@@ -51,7 +51,7 @@ def _build_minimal_pe() -> bytearray:
         Bytearray containing a valid PE structure.
     """
     data = bytearray(1024)
-    data[0:2] = b"MZ"
+    data[:2] = b"MZ"
     struct.pack_into("<I", data, 0x3C, PE_HEADER_OFFSET)
 
     pe_off = PE_HEADER_OFFSET
@@ -77,7 +77,7 @@ def _build_minimal_elf() -> bytearray:
         Bytearray containing an ELF header (magic bytes sufficient for detection).
     """
     data = bytearray(256)
-    data[0:4] = b"\x7fELF"
+    data[:4] = b"\x7fELF"
     data[4] = 2
     data[5] = 1
     data[6] = 1
@@ -91,7 +91,7 @@ def _build_minimal_macho() -> bytearray:
         Bytearray containing a Mach-O header (magic bytes sufficient for detection).
     """
     data = bytearray(256)
-    data[0:4] = b"\xcf\xfa\xed\xfe"
+    data[:4] = b"\xcf\xfa\xed\xfe"
     return data
 
 

@@ -48,9 +48,10 @@ def _find_env_file() -> Path:
     Returns:
         Path to the found .env file or default location.
     """
+    project_root = Path(__file__).resolve().parents[3]
     search_paths = [
         Path.cwd() / ".env",
-        Path("D:/Intellicrack/.env"),
+        project_root / ".env",
         Path.home() / ".env",
     ]
 
@@ -64,8 +65,9 @@ def _find_env_file() -> Path:
             _logger.info("env_file_found", extra={"path": str(path)})
             return path
 
-    _logger.debug("env_file_not_found", extra={"default_path": "D:/Intellicrack/.env"})
-    return Path("D:/Intellicrack/.env")
+    default_path = project_root / ".env"
+    _logger.debug("env_file_not_found", extra={"default_path": str(default_path)})
+    return default_path
 
 
 def _validate_key_format(provider: ProviderName, api_key: str) -> str | None:
@@ -372,9 +374,7 @@ class CredentialLoader:
             The variable value, or default if not found.
         """
         value = self._env_vars.get(name)
-        if value is not None:
-            return value
-        return os.environ.get(name, default)
+        return value if value is not None else os.environ.get(name, default)
 
     def save_to_env_file(self, name: str, value: str) -> None:
         """Save an environment variable to the .env file.
@@ -420,6 +420,18 @@ class CredentialLoader:
                 "updated_existing": key_found,
             },
         )
+
+
+def get_api_key_env_var_mapping() -> dict[str, str]:
+    """Get a mapping of provider ID to API key environment variable name.
+
+    Derives the mapping from PROVIDER_MAPPINGS to maintain a single source
+    of truth for env var names.
+
+    Returns:
+        Dict mapping provider ID string to API key env var name.
+    """
+    return {provider.value: mapping.api_key_var for provider, mapping in CredentialLoader.PROVIDER_MAPPINGS.items()}
 
 
 def create_env_template(path: Path) -> None:

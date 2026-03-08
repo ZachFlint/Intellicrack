@@ -699,7 +699,7 @@ class OAuthManager:
             _logger.debug("oauth_token_store_success", extra={"provider": provider.value})
             _logger.info("oauth_token_stored", extra={"provider": provider.value})
         except Exception:
-            _logger.exception("oauth_token_store_failed")
+            _logger.exception("oauth_token_store_failed", extra={"provider": provider.value})
 
     async def _load_token(self, provider: OAuthProvider) -> OAuthToken | None:
         """Load OAuth token from credential store.
@@ -724,7 +724,7 @@ class OAuthManager:
             token = OAuthToken.from_dict(token_data)
             _logger.debug("oauth_token_load_success", extra={"provider": provider.value})
         except Exception:
-            _logger.exception("oauth_token_load_failed")
+            _logger.exception("oauth_token_load_failed", extra={"provider": provider.value})
             return None
         else:
             return token

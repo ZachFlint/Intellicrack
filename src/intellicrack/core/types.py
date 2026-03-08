@@ -22,15 +22,14 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "AlgorithmType",
     "AttachError",
     "AuthenticationError",
     "BinaryInfo",
     "BreakpointInfo",
+    "BridgeAnalysisSummary",
     "ConfigurationError",
     "ConfirmationLevel",
     "CrossReference",
-    "CryptoAPICall",
     "DataTypeInfo",
     "ExportInfo",
     "FunctionInfo",
@@ -38,9 +37,6 @@ __all__ = [
     "ImportInfo",
     "InitializationError",
     "IntellicrackError",
-    "KeyFormat",
-    "LicensingAnalysis",
-    "MagicConstant",
     "MemoryRegion",
     "Message",
     "ModelInfo",
@@ -68,7 +64,6 @@ __all__ = [
     "ToolParameter",
     "ToolResult",
     "ToolState",
-    "ValidationFunctionInfo",
     "VariableInfo",
 ]
 
@@ -104,79 +99,6 @@ class ConfirmationLevel(enum.Enum):
     NONE = "none"
     DESTRUCTIVE = "destructive"
     ALL = "all"
-
-
-class AlgorithmType(enum.Enum):
-    """Supported algorithm identifiers for license validation."""
-
-    UNKNOWN = "unknown"
-    MD5 = "md5"
-    SHA1 = "sha1"
-    SHA256 = "sha256"
-    CRC32 = "crc32"
-    XOR = "xor"
-    RSA = "rsa"
-    AES = "aes"
-    DES = "des"
-    CUSTOM_HASH = "custom_hash"
-    CHECKSUM = "checksum"
-    HWID_BASED = "hwid_based"
-    TIME_BASED = "time_based"
-    FEATURE_FLAG = "feature_flag"
-
-    @property
-    def is_hash(self) -> bool:
-        """Check if the algorithm is a hashing algorithm.
-
-        Returns:
-            True if this algorithm type is a hashing algorithm.
-        """
-        return self in {
-            AlgorithmType.MD5,
-            AlgorithmType.SHA1,
-            AlgorithmType.SHA256,
-            AlgorithmType.CRC32,
-            AlgorithmType.CUSTOM_HASH,
-            AlgorithmType.CHECKSUM,
-        }
-
-
-class KeyFormat(enum.Enum):
-    """Common license key format classifications."""
-
-    UNKNOWN = "unknown"
-    SERIAL_DASHED = "serial_dashed"
-    SERIAL_PLAIN = "serial_plain"
-    ALPHANUMERIC = "alphanumeric"
-    NUMERIC_ONLY = "numeric_only"
-    HEX_STRING = "hex_string"
-    BASE64 = "base64"
-    NAME_SERIAL_PAIR = "name_serial_pair"
-    HARDWARE_LOCKED = "hardware_locked"
-
-    @property
-    def requires_hardware_id(self) -> bool:
-        """Check if the key format requires a hardware ID.
-
-        Returns:
-            True if the format requires hardware identification.
-        """
-        return self in {KeyFormat.HARDWARE_LOCKED, KeyFormat.NAME_SERIAL_PAIR}
-
-    @property
-    def is_text_based(self) -> bool:
-        """Check if the key format is text-based.
-
-        Returns:
-            True if the format uses text-based key representation.
-        """
-        return self in {
-            KeyFormat.SERIAL_PLAIN,
-            KeyFormat.SERIAL_DASHED,
-            KeyFormat.ALPHANUMERIC,
-            KeyFormat.HEX_STRING,
-            KeyFormat.BASE64,
-        }
 
 
 @dataclass
@@ -466,76 +388,6 @@ class FunctionInfo:
 
 
 @dataclass
-class CryptoAPICall:
-    """Crypto API call information.
-
-    Attributes:
-        api_name: API function name.
-        address: Address of the call site or import thunk.
-        dll: Library that provides the API.
-        caller_function: Function name that calls the API if known.
-        parameters_hint: Optional hint about parameters observed.
-    """
-
-    api_name: str
-    address: int
-    dll: str
-    caller_function: str | None
-    parameters_hint: str | None
-
-
-@dataclass
-class ValidationFunctionInfo:
-    """Summary of a license validation function.
-
-    Attributes:
-        address: Function entry address.
-        name: Function name if known.
-        return_type: Return type or inferred return semantics.
-        comparison_addresses: Addresses of comparison operations.
-        string_references: License-related strings referenced by the function.
-        calls_crypto_api: Whether the function calls crypto APIs.
-        complexity_score: Estimated complexity score.
-        arithmetic_operations: Count of arithmetic/bitwise operations (XOR, AND, ADD, etc.).
-    """
-
-    address: int
-    name: str
-    return_type: str
-    comparison_addresses: list[int]
-    string_references: list[str]
-    calls_crypto_api: bool
-    complexity_score: int
-    arithmetic_operations: int = 0
-
-    @property
-    def summary(self) -> str:
-        """Get validation function summary.
-
-        Returns:
-            Summary with address, comparison count, and arithmetic operations.
-        """
-        return f"Validation @ {hex(self.address)}: {len(self.comparison_addresses)} cmps, {self.arithmetic_operations} ops"
-
-
-@dataclass
-class MagicConstant:
-    """A magic constant discovered in the binary.
-
-    Attributes:
-        value: Constant value.
-        address: Address where the constant is used.
-        usage_context: Context label for the constant.
-        bit_width: Bit width of the constant.
-    """
-
-    value: int
-    address: int
-    usage_context: str
-    bit_width: int
-
-
-@dataclass
 class CrossReference:
     """Cross-reference information.
 
@@ -582,49 +434,31 @@ class StringInfo:
 
 
 @dataclass
-class LicensingAnalysis:
-    """Aggregated licensing analysis results for a binary.
+class BridgeAnalysisSummary:
+    """Aggregated analysis results from connected bridges.
 
     Attributes:
         binary_name: Name of the analyzed binary.
-        algorithm_type: Primary detected algorithm type.
-        secondary_algorithms: Additional detected algorithms.
-        key_format: Detected key format.
-        key_length: Expected key length.
-        group_size: Key group size if grouped.
-        group_separator: Group separator if grouped.
-        validation_functions: Candidate validation functions.
-        crypto_api_calls: Observed crypto API calls.
-        magic_constants: Identified magic constants.
-        checksum_algorithm: Checksum algorithm name if detected.
-        checksum_position: Placement of checksum in the key.
-        hardware_id_apis: Hardware ID related APIs found.
-        time_check_present: Whether time-based checks exist.
-        feature_flags: Detected feature flags.
-        blacklist_present: Whether blacklist logic is present.
-        online_validation: Whether online validation is present.
-        confidence_score: Overall confidence score (0.0-1.0).
-        analysis_notes: Additional analysis notes.
+        strings: Strings extracted from the binary.
+        imports: Import table entries.
+        exports: Export table entries.
+        sections: Binary sections.
+        functions: Analyzed functions from static analysis bridges.
+        format_info: Detected file format description.
+        architecture: Target architecture.
+        source_bridges: Names of bridges that contributed data.
+        analysis_notes: Notes and observations from the aggregation.
     """
 
     binary_name: str
-    algorithm_type: AlgorithmType
-    secondary_algorithms: list[AlgorithmType]
-    key_format: KeyFormat
-    key_length: int
-    group_size: int | None
-    group_separator: str | None
-    validation_functions: list[ValidationFunctionInfo]
-    crypto_api_calls: list[CryptoAPICall]
-    magic_constants: list[MagicConstant]
-    checksum_algorithm: str | None
-    checksum_position: Literal["prefix", "suffix", "embedded"] | None
-    hardware_id_apis: list[str]
-    time_check_present: bool
-    feature_flags: dict[str, int]
-    blacklist_present: bool
-    online_validation: bool
-    confidence_score: float
+    strings: list[StringInfo]
+    imports: list[ImportInfo]
+    exports: list[ExportInfo]
+    sections: list[SectionInfo]
+    functions: list[FunctionInfo]
+    format_info: str
+    architecture: str
+    source_bridges: list[str]
     analysis_notes: list[str]
 
 
@@ -1343,6 +1177,36 @@ class SandboxError(IntellicrackError):
         super().__init__(message, error_code, details)
         self.sandbox_type = sandbox_type
         self.vm_state = vm_state
+
+
+class SandboxTimeoutError(SandboxError):
+    """Timeout during sandbox command execution.
+
+    Attributes:
+        timeout_seconds: Timeout duration that was exceeded.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        timeout_seconds: float | None = None,
+        sandbox_type: str | None = None,
+        vm_state: str | None = None,
+        error_code: int | None = None,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        """Initialize sandbox timeout error.
+
+        Args:
+            message: Human-readable error description.
+            timeout_seconds: Timeout duration that was exceeded.
+            sandbox_type: Type of sandbox.
+            vm_state: Current VM state when error occurred.
+            error_code: Optional numeric error code.
+            details: Optional dictionary with additional context.
+        """
+        super().__init__(message, sandbox_type, vm_state, error_code, details)
+        self.timeout_seconds = timeout_seconds
 
 
 class ConfigurationError(IntellicrackError):

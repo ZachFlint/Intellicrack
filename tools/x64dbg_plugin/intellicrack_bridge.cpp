@@ -221,7 +221,9 @@ DLL_EXPORT void CBCREATEPROCESS(CBTYPE cbType, PLUG_CB_CREATEPROCESS* info) {
 
 DLL_EXPORT void CBEXITPROCESS(CBTYPE cbType, PLUG_CB_EXITPROCESS* info) {
     (void)cbType;
-    intellicrack::on_process_exit(info ? info->ExitStatus : 0);
+    intellicrack::on_process_exit(
+        info && info->ExitProcess ? info->ExitProcess->dwExitCode : 0
+    );
 }
 
 DLL_EXPORT void CBLOADDLL(CBTYPE cbType, PLUG_CB_LOADDLL* info) {
@@ -233,8 +235,11 @@ DLL_EXPORT void CBLOADDLL(CBTYPE cbType, PLUG_CB_LOADDLL* info) {
 
 DLL_EXPORT void CBUNLOADDLL(CBTYPE cbType, PLUG_CB_UNLOADDLL* info) {
     (void)cbType;
-    if (info) {
-        intellicrack::on_dll_unload(nullptr, info->UnloadDll->lpBaseOfDll);
+    if (info && info->UnloadDll) {
+        intellicrack::on_dll_unload(
+            nullptr,
+            reinterpret_cast<uint64_t>(info->UnloadDll->lpBaseOfDll)
+        );
     }
 }
 

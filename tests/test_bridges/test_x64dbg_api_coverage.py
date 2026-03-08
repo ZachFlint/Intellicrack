@@ -131,7 +131,7 @@ async def test_process_info_real(bridge: X64DbgBridge) -> None:
     bridge.attached_pid = os.getpid()
     bridge.binary_path = Path(sys.executable)
 
-    info = await bridge._get_process_info()
+    info = await bridge.get_process_info()
     assert info is not None
     assert info.pid == os.getpid()
     assert len(info.threads) > 0

@@ -84,8 +84,8 @@ def __getattr__(name: str) -> object:
         msg = f"module {__name__!r} has no attribute {name!r}"
         raise AttributeError(msg)
 
-    logger = logging.getLogger("intellicrack")
-    logger.debug("lazy_import_resolved", extra={"attribute": name})
+    lazy_logger = logging.getLogger("intellicrack")
+    lazy_logger.debug("lazy_import_resolved", extra={"attribute": name})
     return attr
 
 

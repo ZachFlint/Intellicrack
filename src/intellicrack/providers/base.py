@@ -437,9 +437,7 @@ class LLMProviderBase(ABC):
         Returns:
             The result as a string, JSON-encoded if not already a string.
         """
-        if isinstance(result, str):
-            return result
-        return json.dumps(result)
+        return result if isinstance(result, str) else json.dumps(result)
 
     @staticmethod
     def _convert_messages_to_openai_format(

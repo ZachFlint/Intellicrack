@@ -1,12 +1,12 @@
 {
   "tool": "uncalled",
-  "generated": "2026-03-06T22:52:09.277917",
-  "total_findings": 42,
-  "total_files": 19,
+  "generated": "2026-03-07T20:19:18.064660",
+  "total_findings": 45,
+  "total_files": 22,
   "files": [
     {
       "path": "src\\intellicrack\\core\\types.py",
-      "count": 10,
+      "count": 7,
       "findings": [
         {
           "line": null,
@@ -29,32 +29,14 @@
         {
           "line": null,
           "column": null,
-          "message": "Unused function: is_hash",
-          "raw": "src\\intellicrack\\core\\types.py: Unused function is_hash"
-        },
-        {
-          "line": null,
-          "column": null,
           "message": "Unused function: is_readable",
           "raw": "src\\intellicrack\\core\\types.py: Unused function is_readable"
         },
         {
           "line": null,
           "column": null,
-          "message": "Unused function: is_text_based",
-          "raw": "src\\intellicrack\\core\\types.py: Unused function is_text_based"
-        },
-        {
-          "line": null,
-          "column": null,
           "message": "Unused function: is_writable",
           "raw": "src\\intellicrack\\core\\types.py: Unused function is_writable"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: requires_hardware_id",
-          "raw": "src\\intellicrack\\core\\types.py: Unused function requires_hardware_id"
         },
         {
           "line": null,
@@ -97,6 +79,36 @@
           "column": null,
           "message": "Unused function: reset_instance",
           "raw": "src\\intellicrack\\core\\process_manager.py: Unused function reset_instance"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: keyReleaseEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py: Unused function keyReleaseEvent"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: mouseMoveEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py: Unused function mouseMoveEvent"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: mouseReleaseEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py: Unused function mouseReleaseEvent"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: paintEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py: Unused function paintEvent"
         }
       ]
     },
@@ -287,6 +299,18 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\sandbox\\qemu.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: enable_vnc_display",
+          "raw": "src\\intellicrack\\sandbox\\qemu.py: Unused function enable_vnc_display"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\app.py",
       "count": 1,
       "findings": [
@@ -331,6 +355,18 @@
           "column": null,
           "message": "Unused function: wheelEvent",
           "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: Unused function wheelEvent"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\graph_view.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: wheelEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py: Unused function wheelEvent"
         }
       ]
     },

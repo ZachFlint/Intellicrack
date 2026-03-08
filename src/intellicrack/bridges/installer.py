@@ -536,7 +536,7 @@ class ToolInstaller:
             InstallResult with installation status.
         """
         try:
-            _logger.info("frida_pip_installing")
+            _logger.info("frida_pip_installing", extra={"tool": "frida"})
             process_manager = ProcessManager.get_instance()
 
             result = await process_manager.run_tracked_async(
@@ -611,7 +611,7 @@ class ToolInstaller:
                     return download_url
 
         except Exception:
-            _logger.exception("release_info_fetch_failed")
+            _logger.exception("release_info_fetch_failed", extra={"tool": tool.value})
 
         return None
 
@@ -649,7 +649,7 @@ class ToolInstaller:
             _logger.info("download_completed", extra={"file_name": filename, "bytes": downloaded})
 
         except Exception:
-            _logger.exception("download_failed")
+            _logger.exception("download_failed", extra={"url": url})
             return None
         else:
             return temp_path
@@ -683,7 +683,7 @@ class ToolInstaller:
             )
             subdirs = [d for d in tool_dir.iterdir() if d.is_dir()]
         except Exception as e:
-            _logger.exception("extraction_failed")
+            _logger.exception("extraction_failed", extra={"archive": str(archive_path), "tool": tool.value})
             raise ToolError(_ERR_EXTRACT_FAILED_FMT) from e
         else:
             return subdirs[0] if len(subdirs) == 1 else tool_dir
@@ -741,3 +741,94 @@ class ToolInstaller:
                 status[tool] = (False, None)
 
         return status
+
+
+_PLUGIN_ARCHS: list[tuple[str, str, str]] = [
+    ("x64", "intellicrack_bridge.dp64", "x86_64"),
+    ("x32", "intellicrack_bridge.dp32", "i686"),
+]
+
+
+def _find_plugin_source(plugin_dir: Path, filename: str) -> Path | None:
+    """Locate a pre-built plugin binary in known build output locations.
+
+    Args:
+        plugin_dir: Root of the x64dbg_plugin source tree.
+        filename: Plugin filename to search for (e.g. ``intellicrack_bridge.dp64``).
+
+    Returns:
+        Path to the binary if found, otherwise None.
+    """
+    arch = "x64" if filename.endswith(".dp64") else "x32"
+    candidates: list[Path] = [
+        plugin_dir / "bin" / filename,
+        plugin_dir / "build" / "plugins" / filename,
+        plugin_dir / "build" / "Release" / filename,
+        plugin_dir / f"build_{arch}" / "plugins" / filename,
+        plugin_dir / f"build_{arch}" / "Release" / filename,
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def deploy_x64dbg_plugin(x64dbg_path: Path, tools_directory: Path) -> bool:
+    """Deploy the Intellicrack bridge plugin into x64dbg's plugins directories.
+
+    Copies pre-built ``.dp64`` / ``.dp32`` binaries from the plugin source tree
+    into the corresponding ``release/{arch}/plugins/`` folders inside the x64dbg
+    installation.  The copy is skipped when the target is already up-to-date
+    (same or newer mtime).
+
+    Args:
+        x64dbg_path: Path to the x64dbg installation root.
+        tools_directory: Path to the tools directory containing ``x64dbg_plugin/``.
+
+    Returns:
+        True if at least one plugin was deployed or is already up-to-date.
+    """
+    plugin_dir = tools_directory / "x64dbg_plugin"
+    if not plugin_dir.is_dir():
+        _logger.debug(
+            "plugin_source_dir_missing",
+            extra={"path": str(plugin_dir)},
+        )
+        return False
+
+    deployed = False
+    for arch, filename, _cpu in _PLUGIN_ARCHS:
+        source = _find_plugin_source(plugin_dir, filename)
+        if source is None:
+            _logger.debug(
+                "plugin_binary_not_found",
+                extra={"plugin_filename": filename},
+            )
+            continue
+
+        target_dir = x64dbg_path / "release" / arch / "plugins"
+        target = target_dir / filename
+
+        if target.is_file() and target.stat().st_mtime >= source.stat().st_mtime:
+            _logger.debug(
+                "plugin_already_up_to_date",
+                extra={"target": str(target)},
+            )
+            deployed = True
+            continue
+
+        try:
+            target_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, target)
+            _logger.info(
+                "plugin_deployed",
+                extra={"source": str(source), "target": str(target)},
+            )
+            deployed = True
+        except OSError as exc:
+            _logger.warning(
+                "plugin_deploy_failed",
+                extra={"target": str(target), "error": str(exc)},
+            )
+
+    return deployed

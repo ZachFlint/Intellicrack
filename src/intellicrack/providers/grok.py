@@ -140,7 +140,7 @@ class GrokProvider(LLMProviderBase):
             await super().disconnect()
             self._client = None
             self._current_task = None
-            self._logger.info("grok_disconnected")
+            self._logger.info("grok_disconnected", extra={"provider": "grok"})
         except Exception as exc:
             self._logger.warning("disconnect_cleanup_error", extra={"error": str(exc)})
             self._connected = False
@@ -176,9 +176,7 @@ class GrokProvider(LLMProviderBase):
             return 131072
         if "grok-2" in model_id:
             return 131072
-        if "grok-1" in model_id:
-            return 8192
-        return 131072
+        return 8192 if "grok-1" in model_id else 131072
 
     @staticmethod
     def _infer_supports_vision(model_id: str) -> bool:

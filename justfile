@@ -255,7 +255,7 @@ flake8 *FLAGS:
 [group('lint')]
 wemake *FLAGS:
     @echo "[Wemake Styleguide] Running..."
-    @('txt','json','xml') | ForEach-Object { if (!(Test-Path "reports/$_")) { New-Item -ItemType Directory -Path "reports/$_" -Force | Out-Null } }; $tmpFile = [System.IO.Path]::GetTempFileName(); try { {{ pixi }} flake8 {{ FLAGS }} {{ src_and_tests }} --select=WPS,C9 --max-complexity 10 2>&1 | Out-File -FilePath $tmpFile -Encoding utf8; {{ pixi }} python scripts/process_lint_json.py wemake --text $tmpFile } finally { Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue }
+    @('txt','json','xml') | ForEach-Object { if (!(Test-Path "reports/$_")) { New-Item -ItemType Directory -Path "reports/$_" -Force | Out-Null } }; $tmpFile = [System.IO.Path]::GetTempFileName(); try { {{ pixi }} flake8 {{ FLAGS }} {{ src }} --select=WPS,C9 --max-complexity 10 2>&1 | Out-File -FilePath $tmpFile -Encoding utf8; {{ pixi }} python scripts/process_lint_json.py wemake --text $tmpFile } finally { Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue }
 
 # Run mccabe complexity checker and output sorted findings
 [group('lint')]

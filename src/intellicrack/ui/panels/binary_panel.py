@@ -127,9 +127,7 @@ def _lief_attr_list(obj: object, attr: str) -> list[object]:
         return []
     if isinstance(val, (list, tuple)):
         return [*val]
-    if isinstance(val, Iterable):
-        return [*val]
-    return []
+    return [*val] if isinstance(val, Iterable) else []
 
 
 _ELF_MAGIC = b"\x7fELF"
@@ -666,7 +664,7 @@ class BinaryPanel(QWidget):
             self._walk_pe_idt(idt_offset, is_pe32_plus, sec_info)
 
         except (struct.error, IndexError, ValueError):
-            _logger.debug("pe_import_struct_parse_error")
+            _logger.debug("pe_import_struct_parse_error", extra={"offset": self._current_offset})
 
     def _build_pe_section_map(self, pe_offset: int) -> list[tuple[int, int, int]]:
         """Build a section map for RVA-to-offset conversion.
@@ -700,10 +698,10 @@ class BinaryPanel(QWidget):
         Returns:
             File offset, or None if RVA not in any section.
         """
-        for s_vaddr, s_vsize, s_raw in sections:
-            if s_vaddr <= rva < s_vaddr + s_vsize:
-                return rva - s_vaddr + s_raw
-        return None
+        return next(
+            (rva - s_vaddr + s_raw for s_vaddr, s_vsize, s_raw in sections if s_vaddr <= rva < s_vaddr + s_vsize),
+            None,
+        )
 
     def _walk_pe_idt(
         self,
@@ -793,7 +791,7 @@ class BinaryPanel(QWidget):
     def _parse_elf_sections(self) -> None:
         """Parse ELF sections using LIEF."""
         if lief is None:
-            _logger.debug("lief_not_available_for_elf_parsing")
+            _logger.debug("lief_not_available_for_elf_parsing", extra={"format_type": "ELF"})
             self._sections_tree.addTopLevelItem(QTreeWidgetItem(["(ELF detected, install lief for section parsing)", "", "", ""]))
             return
 
@@ -804,7 +802,7 @@ class BinaryPanel(QWidget):
 
             for section in _lief_attr_list(elf, "sections"):
                 sec_name: str = str(getattr(section, "name", ""))
-                name: str = sec_name if sec_name else "(unnamed)"
+                name: str = sec_name or "(unnamed)"
                 vaddr: int = int(getattr(section, "virtual_address", 0))
                 size: int = int(getattr(section, "size", 0))
                 offset: int = int(getattr(section, "offset", 0))
@@ -813,10 +811,10 @@ class BinaryPanel(QWidget):
                 section_flags: list[object] = _lief_attr_list(section, "flags_list")
                 for flag in section_flags:
                     flag_name = str(flag).rsplit(".", maxsplit=1)[-1]
-                    if flag_name == "EXECINSTR":
-                        flags_parts.append("X")
-                    elif flag_name == "ALLOC":
+                    if flag_name == "ALLOC":
                         flags_parts.append("A")
+                    elif flag_name == "EXECINSTR":
+                        flags_parts.append("X")
                     elif flag_name == "WRITE":
                         flags_parts.append("W")
                 flags_str = "".join(flags_parts) if flags_parts else "---"
@@ -827,7 +825,7 @@ class BinaryPanel(QWidget):
                     f"{size:,}",
                     flags_str,
                 ])
-                tree_item_set_data(item, 0, Qt.ItemDataRole.UserRole, int(offset))
+                tree_item_set_data(item, 0, Qt.ItemDataRole.UserRole, offset)
                 self._sections_tree.addTopLevelItem(item)
 
             for func in _lief_attr_list(elf, "imported_functions"):
@@ -847,7 +845,7 @@ class BinaryPanel(QWidget):
     def _parse_macho_sections(self) -> None:
         """Parse Mach-O sections using LIEF."""
         if lief is None:
-            _logger.debug("lief_not_available_for_macho_parsing")
+            _logger.debug("lief_not_available_for_macho_parsing", extra={"format_type": "Mach-O"})
             self._sections_tree.addTopLevelItem(QTreeWidgetItem(["(Mach-O detected, install lief for section parsing)", "", "", ""]))
             return
 
@@ -912,14 +910,14 @@ class BinaryPanel(QWidget):
             Tree widget item representing the segment.
         """
         name_raw: str = str(getattr(segment, "name", ""))
-        name: str = name_raw if name_raw else "(unnamed)"
+        name: str = name_raw or "(unnamed)"
         vaddr: int = int(getattr(segment, "virtual_address", 0))
         size: int = int(getattr(segment, "virtual_size", 0))
         offset: int = int(getattr(segment, "file_offset", 0))
         flags_str: str = self._macho_protection_flags(segment)
 
         item = QTreeWidgetItem([name, f"0x{vaddr:08X}", f"{size:,}", flags_str])
-        tree_item_set_data(item, 0, Qt.ItemDataRole.UserRole, int(offset))
+        tree_item_set_data(item, 0, Qt.ItemDataRole.UserRole, offset)
         return item
 
     @staticmethod
@@ -933,13 +931,13 @@ class BinaryPanel(QWidget):
             Tree widget item representing the section.
         """
         name_raw: str = str(getattr(section, "name", ""))
-        name: str = name_raw if name_raw else "(unnamed)"
+        name: str = name_raw or "(unnamed)"
         vaddr: int = int(getattr(section, "virtual_address", 0))
         size: int = int(getattr(section, "size", 0))
         offset: int = int(getattr(section, "offset", 0))
 
         item = QTreeWidgetItem([f"  {name}", f"0x{vaddr:08X}", f"{size:,}", ""])
-        tree_item_set_data(item, 0, Qt.ItemDataRole.UserRole, int(offset))
+        tree_item_set_data(item, 0, Qt.ItemDataRole.UserRole, offset)
         return item
 
     def _extract_strings(self, min_length: int = 4) -> None:
@@ -1019,7 +1017,7 @@ class BinaryPanel(QWidget):
         try:
             hex_bytes = bytes.fromhex(text.replace(" ", ""))
         except ValueError:
-            _logger.debug("invalid_hex_search_pattern")
+            _logger.debug("invalid_hex_search_pattern", extra={"input": text})
             return
 
         start = self._current_offset + 1

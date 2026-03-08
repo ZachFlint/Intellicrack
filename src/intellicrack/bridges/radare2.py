@@ -165,9 +165,7 @@ def _get_list(data: dict[str, Any], key: str) -> list[Any]:
         List value or empty list.
     """
     val = data.get(key)
-    if isinstance(val, list):
-        return cast("list[Any]", val)
-    return []
+    return cast("list[Any]", val) if isinstance(val, list) else []
 
 
 class Radare2Bridge(StaticAnalysisBridge):
@@ -571,7 +569,7 @@ class Radare2Bridge(StaticAnalysisBridge):
             target_pid=None,
             last_error=None,
         )
-        _logger.info("radare2_bridge_initialized")
+        _logger.info("radare2_bridge_initialized", extra={"bridge": "radare2"})
 
     async def shutdown(self) -> None:
         """Shutdown radare2 and cleanup resources."""
@@ -590,7 +588,7 @@ class Radare2Bridge(StaticAnalysisBridge):
         self._binary_path = None
         self._analyzed = False
         await super().shutdown()
-        _logger.info("radare2_bridge_shutdown")
+        _logger.info("radare2_bridge_shutdown", extra={"bridge": "radare2"})
 
     @override
     async def is_available(self) -> bool:
@@ -742,7 +740,7 @@ class Radare2Bridge(StaticAnalysisBridge):
             )
 
         except Exception as e:
-            _logger.exception("binary_load_failed")
+            _logger.exception("binary_load_failed", extra={"path": str(self._binary_path)})
             raise ToolError(_ERR_LOAD_FAILED) from e
 
     async def analyze(self, level: str = "normal") -> None:
@@ -767,7 +765,7 @@ class Radare2Bridge(StaticAnalysisBridge):
         _logger.info("analysis_starting", extra={"level": level})
         await self._r2_cmd(cmd)
         self._analyzed = True
-        _logger.info("analysis_complete")
+        _logger.info("analysis_complete", extra={"bridge": "radare2", "level": level})
 
     async def get_functions(
         self,
@@ -1372,6 +1370,31 @@ class Radare2Bridge(StaticAnalysisBridge):
             Output of seek command.
         """
         return await self.execute_command(f"s {address}")
+
+    async def get_function_graph(self, address: int) -> list[dict[str, Any]]:
+        """Get function control flow graph data for graph rendering.
+
+        Args:
+            address: Address of the function to graph.
+
+        Returns:
+            List of basic block dictionaries from r2 agj output.
+
+        Raises:
+            ToolError: If no binary is loaded or command fails.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._cmd_json(f"agj @ {hex(address)}")
+        if result and isinstance(result, list) and len(result) > 0:
+            first = result[0]
+            if isinstance(first, dict) and "blocks" in first:
+                blocks = first["blocks"]
+                if isinstance(blocks, list):
+                    return cast("list[dict[str, Any]]", blocks)
+            return result
+        return []
 
     async def get_function_address(self, name: str) -> int | None:
         """Get address of a function by name.

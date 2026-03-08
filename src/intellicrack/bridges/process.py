@@ -465,9 +465,9 @@ class ProcessBridge(ToolBridgeBase):
                 target_pid=None,
                 last_error=None,
             )
-            _logger.info("process_bridge_initialized")
+            _logger.info("process_bridge_initialized", extra={"bridge": "process"})
         except Exception as e:
-            _logger.exception("process_bridge_init_failed")
+            _logger.exception("process_bridge_init_failed", extra={"bridge": "process"})
             self._state = BridgeState(
                 connected=False,
                 tool_running=False,
@@ -484,7 +484,7 @@ class ProcessBridge(ToolBridgeBase):
         self._kernel32 = None
         self._psapi = None
         await super().shutdown()
-        _logger.info("process_bridge_shutdown")
+        _logger.info("process_bridge_shutdown", extra={"bridge": "process"})
 
     @override
     async def is_available(self) -> bool:
@@ -616,7 +616,7 @@ class ProcessBridge(ToolBridgeBase):
             self._kernel32.CloseHandle(self._process_handle)
             self._process_handle = None
             self._attached_pid = None
-            _logger.info("process_handle_closed")
+            _logger.info("process_handle_closed", extra={"bridge": "process"})
 
         self._state.connected = True
         self._state.tool_running = True

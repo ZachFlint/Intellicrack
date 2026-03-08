@@ -396,7 +396,7 @@ class NamedPipeClient:
         _logger.debug("pipe_cancelling_io", extra={"handle": self._handle})
         cancel = getattr(ctypes.windll.kernel32, "CancelIoEx", None)
         if cancel is None:
-            _logger.debug("pipe_cancel_unavailable")
+            _logger.debug("pipe_cancel_unavailable", extra={"function": "CancelIoEx"})
             return
         cancel(self._handle, None)
-        _logger.debug("pipe_io_cancelled")
+        _logger.debug("pipe_io_cancelled", extra={"handle": self._handle})

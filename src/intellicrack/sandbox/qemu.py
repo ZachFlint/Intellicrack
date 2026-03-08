@@ -12,7 +12,6 @@ virtualization for safe execution and behavioral monitoring of binaries.
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import json
 import secrets
 import shutil
@@ -39,6 +38,7 @@ from .base import (
     SandboxBase,
     SandboxConfig,
     SandboxError,
+    SandboxTimeoutError,
     validate_file_operation,
     validate_process_operation,
     validate_registry_operation,
@@ -428,8 +428,10 @@ class GuestAgentClient:
         """Disconnect from guest agent."""
         if self._reader_task is not None:
             self._reader_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
+            try:
                 await self._reader_task
+            except asyncio.CancelledError:
+                _logger.debug("guest_agent_disconnect_cancelled", exc_info=True)
             self._reader_task = None
 
         if self._writer is not None:
@@ -583,6 +585,7 @@ class QEMUSandbox(SandboxBase):
         self._qemu_path: Path | None = None
         self._pidfile_path: Path | None = None
         self._qemu_pid: int | None = None
+        self._vnc_port: int | None = None
 
     @property
     def qemu_config(self) -> QEMUConfig:
@@ -592,6 +595,36 @@ class QEMUSandbox(SandboxBase):
             Current QEMU configuration.
         """
         return self._qemu_config
+
+    @property
+    def vnc_port(self) -> int | None:
+        """Get the VNC port if VNC display is active.
+
+        Returns:
+            VNC port number, or None if VNC is not enabled.
+        """
+        return self._vnc_port
+
+    def enable_vnc_display(self) -> None:
+        """Switch display mode to VNC for GUI embedding.
+
+        This must be called before ``start()`` to take effect.
+        If the sandbox is already running, restart is required.
+        """
+        self._qemu_config = QEMUConfig(
+            guest_os=self._qemu_config.guest_os,
+            image_path=self._qemu_config.image_path,
+            cpu_cores=self._qemu_config.cpu_cores,
+            memory_mb=self._qemu_config.memory_mb,
+            display="vnc",
+            ssh_port=self._qemu_config.ssh_port,
+            monitor_port=self._qemu_config.monitor_port,
+            agent_port=self._qemu_config.agent_port,
+            enable_acceleration=self._qemu_config.enable_acceleration,
+            snapshot_name=self._qemu_config.snapshot_name,
+            shared_folder=self._qemu_config.shared_folder,
+        )
+        _logger.info("vnc_display_enabled", extra={"vnc_port": self._qemu_config.vnc_port})
 
     async def is_available(self) -> bool:
         """Check if QEMU is available.
@@ -603,7 +636,7 @@ class QEMUSandbox(SandboxBase):
         """
         qemu_path = await self._find_qemu()
         if qemu_path is None:
-            _logger.debug("qemu_executable_not_found")
+            _logger.debug("qemu_executable_not_found", extra={"search_names": ["qemu-system-x86_64"]})
             return False
 
         self._qemu_path = qemu_path
@@ -684,7 +717,7 @@ class QEMUSandbox(SandboxBase):
                 )
                 stderr_bytes = whpx_test.stderr if isinstance(whpx_test.stderr, bytes) else whpx_test.stderr.encode()
                 if whpx_test.returncode == _RETURNCODE_SUCCESS or b"whpx" not in stderr_bytes.lower():
-                    _logger.info("whpx_acceleration_available")
+                    _logger.info("whpx_acceleration_available", extra={"accelerator": "whpx"})
                     return AcceleratorType.WHPX
 
             if "kvm" in output.lower():
@@ -707,13 +740,13 @@ class QEMUSandbox(SandboxBase):
                     timeout=_ACCEL_TEST_TIMEOUT,
                 )
                 if kvm_test.returncode == _RETURNCODE_SUCCESS:
-                    _logger.info("kvm_acceleration_available")
+                    _logger.info("kvm_acceleration_available", extra={"accelerator": "kvm"})
                     return AcceleratorType.KVM
 
         except Exception as e:
             _logger.debug("acceleration_detection_failed", extra={"error": str(e)})
 
-        _logger.info("using_tcg_software_emulation")
+        _logger.info("using_tcg_software_emulation", extra={"accelerator": "tcg"})
         return AcceleratorType.TCG
 
     @staticmethod
@@ -799,8 +832,10 @@ class QEMUSandbox(SandboxBase):
         if self._qemu_config.display == "none":
             cmd.extend(["-display", "none"])
         elif self._qemu_config.display == "vnc":
-            vnc_port = self._get_free_port(5900, 5999) - 5900
-            cmd.extend(["-vnc", f":{vnc_port}"])
+            vnc_full_port = self._get_free_port(5900, 5999)
+            vnc_display = vnc_full_port - 5900
+            self._vnc_port = vnc_full_port
+            cmd.extend(["-vnc", f":{vnc_display}"])
         elif self._qemu_config.display == "sdl":
             cmd.extend(["-display", "sdl"])
         elif self._qemu_config.display == "spice":
@@ -825,10 +860,13 @@ class QEMUSandbox(SandboxBase):
                     "virtio-9p-pci,fsdev=fsdev0,mount_tag=shared",
                 ])
 
-        cmd.extend(["-netdev", netdev, "-device", "virtio-net-pci,netdev=net0"])
-        cmd.extend(["-qmp", f"tcp:127.0.0.1:{monitor_port},server,nowait"])
-
         cmd.extend([
+            "-netdev",
+            netdev,
+            "-device",
+            "virtio-net-pci,netdev=net0",
+            "-qmp",
+            f"tcp:127.0.0.1:{monitor_port},server,nowait",
             "-device",
             "virtio-serial-pci",
             "-chardev",
@@ -836,7 +874,6 @@ class QEMUSandbox(SandboxBase):
             "-device",
             "virtserialport,chardev=agent,name=org.qemu.guest_agent.0",
         ])
-
         if self._qemu_config.snapshot_name:
             cmd.extend(["-loadvm", self._qemu_config.snapshot_name])
 
@@ -869,7 +906,7 @@ class QEMUSandbox(SandboxBase):
             SandboxError: If VM cannot be started.
         """
         if self._state.status == "running":
-            _logger.warning("qemu_sandbox_already_running")
+            _logger.warning("qemu_sandbox_already_running", extra={"state": self._state.value})
             return
 
         if not await self.is_available():
@@ -926,7 +963,7 @@ class QEMUSandbox(SandboxBase):
                             )
 
             if qemu_pid is None:
-                _logger.error("qemu_pidfile_unreadable")
+                _logger.error("qemu_pidfile_unreadable", extra={"pidfile": str(self._pidfile_path)})
                 await self._cleanup()
                 raise SandboxError(_ERR_PIDFILE_UNREADABLE)  # noqa: TRY301
 
@@ -951,13 +988,13 @@ class QEMUSandbox(SandboxBase):
 
             self._state.status = "running"
             self._state.started_at = datetime.now()
-            _logger.info("qemu_sandbox_started_successfully")
+            _logger.info("qemu_sandbox_started_successfully", extra={"pid": self._qemu_pid, "state": self._state.status})
 
         except Exception as e:
             self._state.status = "error"
             self._state.last_error = str(e)
             await self._cleanup()
-            _logger.exception("qemu_sandbox_start_failed")
+            _logger.exception("qemu_sandbox_start_failed", extra={"error": str(e)})
             raise SandboxError(_ERR_SANDBOX_START) from e
 
     async def stop(self) -> None:
@@ -967,7 +1004,7 @@ class QEMUSandbox(SandboxBase):
             SandboxError: If VM cannot be stopped.
         """
         if self._state.status == "stopped":
-            _logger.debug("qemu_sandbox_already_stopped")
+            _logger.debug("qemu_sandbox_already_stopped", extra={"state": self._state.status})
             return
 
         self._state.status = "stopping"
@@ -993,12 +1030,13 @@ class QEMUSandbox(SandboxBase):
 
             self._state.status = "stopped"
             self._state.pid = None
-            _logger.info("qemu_sandbox_stopped")
+            self._vnc_port = None
+            _logger.info("qemu_sandbox_stopped", extra={"state": self._state.status})
 
         except Exception as e:
             self._state.status = "error"
             self._state.last_error = str(e)
-            _logger.exception("qemu_sandbox_stop_failed")
+            _logger.exception("qemu_sandbox_stop_failed", extra={"error": str(e)})
             raise SandboxError(_ERR_SANDBOX_STOP) from e
 
     async def _cleanup(self) -> None:
@@ -1009,10 +1047,11 @@ class QEMUSandbox(SandboxBase):
                 try:
                     pid_content = await asyncio.to_thread(pid_path.read_text, encoding="utf-8")
                     pid = int(pid_content.strip())
-                    # Kill orphan QEMU process if it exists
-                    with contextlib.suppress(psutil.NoSuchProcess):
+                    try:
                         ProcessManager.terminate_tree(pid, graceful_timeout=2.0, force_timeout=2.0)
                         _logger.debug("cleanup_killed_orphan_qemu_tree", extra={"pid": pid})
+                    except psutil.NoSuchProcess:
+                        _logger.debug("cleanup_orphan_already_exited", extra={"pid": pid})
                 except Exception as e:
                     _logger.debug("cleanup_pid_check_failed", extra={"error": str(e)})
 
@@ -1185,7 +1224,7 @@ logging.basicConfig(
         logging.StreamHandler(sys.stderr),
     ],
 )
-_logger: logging.Logger = logging.getLogger("intellicrack_agent")
+_logger: logging.Logger = logging.getLogger("sandbox.qemu.agent")
 
 
 def file_monitor() -> None:
@@ -1197,12 +1236,12 @@ def file_monitor() -> None:
     try:
         import inotify.adapters
     except ImportError:
-        _logger.warning("inotify module not available, file monitoring disabled")
+        _logger.warning("inotify_module_unavailable", extra={"reason": "import failed"})
         return
 
     try:
         inotify_tree = inotify.adapters.InotifyTree("/")
-        _logger.info("File monitoring started")
+        _logger.info("file_monitoring_started", extra={"watch_root": "/"})
         for event in inotify_tree.event_gen(yield_nones=False):
             event_header, type_names, watch_path, filename = event
             timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -1212,9 +1251,9 @@ def file_monitor() -> None:
                 with open(log_path, "a", encoding="utf-8") as log_file:
                     log_file.write(f"{timestamp}|{operation}|{watch_path}/{filename}\\n")
             except OSError as write_err:
-                _logger.debug("Could not write file change log: %s", write_err)
+                _logger.debug("file_change_log_write_failed", extra={"error": str(write_err)})
     except OSError as inotify_err:
-        _logger.error("inotify initialization failed: %s", inotify_err)
+        _logger.error("inotify_init_failed", extra={"error": str(inotify_err)})
 
 
 def process_monitor() -> None:
@@ -1224,14 +1263,14 @@ def process_monitor() -> None:
     logging activity to the process_activity.log file.
     """
     known_pids: set[int] = set()
-    _logger.info("Process monitoring started")
+    _logger.info("process_monitoring_started", extra={"poll_interval": MONITOR_POLL_INTERVAL})
 
     while True:
         current_pids: set[int] = set()
         try:
             proc_entries = os.listdir("/proc")
         except OSError as list_err:
-            _logger.debug("Could not list /proc: %s", list_err)
+            _logger.debug("proc_list_failed", extra={"error": str(list_err)})
             time.sleep(MONITOR_POLL_INTERVAL)
             continue
 
@@ -1293,7 +1332,7 @@ def _log_process_activity(
             else:
                 log_file.write(f"{timestamp}|{operation}|{pid}\\n")
     except OSError as write_err:
-        _logger.debug("Could not write process activity log: %s", write_err)
+        _logger.debug("process_activity_log_write_failed", extra={"error": str(write_err)})
 
 
 def handle_client(conn: socket.socket) -> None:
@@ -1310,7 +1349,7 @@ def handle_client(conn: socket.socket) -> None:
     except OSError:
         pass
 
-    _logger.debug("Client connected: %s", client_addr)
+    _logger.debug("client_connected", extra={"client_addr": client_addr})
 
     try:
         while True:
@@ -1321,7 +1360,7 @@ def handle_client(conn: socket.socket) -> None:
             try:
                 request: dict[str, Any] = json.loads(data.decode("utf-8"))
             except (json.JSONDecodeError, UnicodeDecodeError) as parse_err:
-                _logger.warning("Invalid request from %s: %s", client_addr, parse_err)
+                _logger.warning("invalid_client_request", extra={"client_addr": client_addr, "error": str(parse_err)})
                 continue
 
             if request.get("type") == "execute":
@@ -1330,15 +1369,15 @@ def handle_client(conn: socket.socket) -> None:
                 conn.send(response_bytes)
 
     except ConnectionResetError:
-        _logger.debug("Client %s disconnected", client_addr)
+        _logger.debug("client_disconnected", extra={"client_addr": client_addr})
     except OSError as sock_err:
-        _logger.debug("Socket error with client %s: %s", client_addr, sock_err)
+        _logger.debug("client_socket_error", extra={"client_addr": client_addr, "error": str(sock_err)})
     finally:
         try:
             conn.close()
         except OSError:
             pass
-        _logger.debug("Client connection closed: %s", client_addr)
+        _logger.debug("client_connection_closed", extra={"client_addr": client_addr})
 
 
 def _execute_command(request: dict[str, Any]) -> dict[str, Any]:
@@ -1401,7 +1440,7 @@ def _execute_command(request: dict[str, Any]) -> dict[str, Any]:
 def main() -> None:
     """Main entry point for the guest agent."""
     LOG_DIR.mkdir(parents=True, exist_ok=True)
-    _logger.info("Intellicrack guest agent starting on port %d", PORT)
+    _logger.info("guest_agent_starting", extra={"port": PORT})
 
     process_thread = threading.Thread(target=process_monitor, daemon=True)
     process_thread.start()
@@ -1415,7 +1454,7 @@ def main() -> None:
     try:
         server.bind(("0.0.0.0", PORT))
         server.listen(5)
-        _logger.info("Agent listening on 0.0.0.0:%d", PORT)
+        _logger.info("agent_listening", extra={"host": "0.0.0.0", "port": PORT})
 
         while True:
             try:
@@ -1425,10 +1464,10 @@ def main() -> None:
                 )
                 client_thread.start()
             except OSError as accept_err:
-                _logger.error("Accept failed: %s", accept_err)
+                _logger.error("accept_failed", extra={"error": str(accept_err)})
                 break
     except OSError as bind_err:
-        _logger.error("Could not bind to port %d: %s", PORT, bind_err)
+        _logger.error("port_bind_failed", extra={"port": PORT, "error": str(bind_err)})
     finally:
         server.close()
 
@@ -1559,7 +1598,7 @@ echo $? > "/mnt/shared/output/{result_name}"
                     return (exit_code, "", "")
 
         _logger.error("command_timed_out", extra={"timeout_seconds": timeout})
-        raise SandboxError(_ERR_CMD_TIMEOUT)
+        raise SandboxTimeoutError(_ERR_CMD_TIMEOUT, timeout_seconds=timeout)
 
     async def run_binary(
         self,
@@ -1617,8 +1656,13 @@ echo $? > "/mnt/shared/output/{result_name}"
                 timeout=effective_timeout,
             )
             result = "success"
+        except SandboxTimeoutError as e:
+            result = "timeout"
+            stderr = str(e)
+            stdout = ""
+            exit_code = -1
         except SandboxError as e:
-            result = "timeout" if "timed out" in str(e) else "error"
+            result = "error"
             stderr = str(e)
             stdout = ""
             exit_code = -1
@@ -1811,7 +1855,7 @@ echo $? > "/mnt/shared/output/{result_name}"
             await asyncio.to_thread(shutil.copy2, source, dest_path)
             _logger.debug("file_copied_to_sandbox", extra={"source": str(source), "dest": dest})
         except Exception as e:
-            _logger.exception("copy_to_sandbox_failed")
+            _logger.exception("copy_to_sandbox_failed", extra={"source": str(source), "dest": dest})
             raise SandboxError(_ERR_COPY_TO_SANDBOX) from e
 
     async def copy_from_sandbox(self, source: str, dest: Path) -> None:
@@ -1839,7 +1883,7 @@ echo $? > "/mnt/shared/output/{result_name}"
             await asyncio.to_thread(shutil.copy2, source_path, dest)
             _logger.debug("file_copied_from_sandbox", extra={"source": source, "dest": str(dest)})
         except Exception as e:
-            _logger.exception("copy_from_sandbox_failed")
+            _logger.exception("copy_from_sandbox_failed", extra={"source": source, "dest": str(dest)})
             raise SandboxError(_ERR_COPY_FROM_SANDBOX) from e
 
     async def take_snapshot(self, name: str) -> str:

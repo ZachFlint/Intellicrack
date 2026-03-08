@@ -165,7 +165,7 @@ class DiscoveryCache:
         """
         if provider is None:
             self._cache.clear()
-            self._logger.debug("cache_invalidated_all")
+            self._logger.debug("cache_invalidated_all", extra={"cache_size": len(self._cache)})
         elif provider in self._cache:
             del self._cache[provider]
             self._logger.debug("cache_invalidated", extra={"provider": provider.value})
@@ -238,7 +238,7 @@ class DiscoveryCache:
                 self._logger.info("cache_saved", extra={"path": str(path)})
 
             except Exception:
-                self._logger.exception("cache_save_failed")
+                self._logger.exception("cache_save_failed", extra={"cache_path": str(path)})
 
     async def load_from_disk(self, path: Path) -> None:
         """Load cache from disk.
@@ -256,7 +256,7 @@ class DiscoveryCache:
                 data = json.loads(content)
 
                 if data.get("version") != 1:
-                    self._logger.warning("unknown_cache_version")
+                    self._logger.warning("unknown_cache_version", extra={"version": data.get("version")})
                     return
 
                 entries = data.get("entries", {})
@@ -297,9 +297,9 @@ class DiscoveryCache:
                 self._logger.info("cache_loaded", extra={"provider_count": len(self._cache), "path": str(path)})
 
             except json.JSONDecodeError:
-                self._logger.exception("cache_parse_failed")
+                self._logger.exception("cache_parse_failed", extra={"cache_path": str(path)})
             except Exception:
-                self._logger.exception("cache_load_failed")
+                self._logger.exception("cache_load_failed", extra={"cache_path": str(path)})
 
 
 class ModelDiscovery:
@@ -362,7 +362,7 @@ class ModelDiscovery:
         registered = self._registry.list_registered()
 
         if not registered:
-            self._logger.warning("no_providers_registered")
+            self._logger.warning("no_providers_registered", extra={"registry_size": len(registered)})
             return results
 
         if force_refresh:

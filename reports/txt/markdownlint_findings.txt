@@ -117,29 +117,21 @@ QWEN.md:17:81 error MD013/line-length Line length [Expected: 80; Actual: 722]
 QWEN.md:40:81 error MD013/line-length Line length [Expected: 80; Actual: 91]
 
 
-8 findings in AGENTS.md
+4 findings in AGENTS.md
 
-AGENTS.md:5:1 error MD033/no-inline-html Inline HTML [Element: system-reminder]
+AGENTS.md:43 error MD036/no-emphasis-as-heading Emphasis used instead of a heading [Context: "TOOLS"]
 
-AGENTS.md:6:81 error MD013/line-length Line length [Expected: 80; Actual: 211]
+AGENTS.md:53:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
 
-AGENTS.md:7:81 error MD013/line-length Line length [Expected: 80; Actual: 192]
+AGENTS.md:86:81 error MD013/line-length Line length [Expected: 80; Actual: 86]
 
-AGENTS.md:8:81 error MD013/line-length Line length [Expected: 80; Actual: 191]
-
-AGENTS.md:10:81 error MD013/line-length Line length [Expected: 80; Actual: 164]
-
-AGENTS.md:13:81 error MD013/line-length Line length [Expected: 80; Actual: 722]
-
-AGENTS.md:68 error MD024/no-duplicate-heading Multiple headings with the same content [Context: "Build, Lint, and Test Commands"]
-
-AGENTS.md:108:81 error MD013/line-length Line length [Expected: 80; Actual: 118]
+AGENTS.md:141:81 error MD013/line-length Line length [Expected: 80; Actual: 86]
 
 
 3 findings in CLAUDE.md
 
-CLAUDE.md:64 error MD036/no-emphasis-as-heading Emphasis used instead of a heading [Context: "TOOLS"]
+CLAUDE.md:43 error MD036/no-emphasis-as-heading Emphasis used instead of a heading [Context: "TOOLS"]
 
-CLAUDE.md:74:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
+CLAUDE.md:53:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
 
-CLAUDE.md:107:81 error MD013/line-length Line length [Expected: 80; Actual: 86]
+CLAUDE.md:86:81 error MD013/line-length Line length [Expected: 80; Actual: 86]

@@ -415,7 +415,7 @@ class BinaryBridge(BinaryOperationsBridge):
             target_pid=None,
             last_error=None,
         )
-        _logger.info("bridge_initialized")
+        _logger.info("bridge_initialized", extra={"bridge": "binary"})
 
     async def shutdown(self) -> None:
         """Shutdown and cleanup resources."""
@@ -426,7 +426,7 @@ class BinaryBridge(BinaryOperationsBridge):
         self._modified = False
         self._patches = []
         await super().shutdown()
-        _logger.info("bridge_shutdown")
+        _logger.info("bridge_shutdown", extra={"bridge": "binary"})
 
     @override
     async def is_available(self) -> bool:
@@ -511,7 +511,7 @@ class BinaryBridge(BinaryOperationsBridge):
             )
 
         except Exception as e:
-            _logger.exception("binary_load_failed")
+            _logger.exception("binary_load_failed", extra={"path": str(self._binary_path)})
             raise ToolError(_ERR_LOAD_FAILED) from e
 
     def _detect_format(self) -> str:

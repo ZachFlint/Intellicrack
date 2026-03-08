@@ -69,6 +69,7 @@ def _resolve(obj: object, method_name: str) -> Callable[..., Any]:
     if method is sentinel:
         cls_name = type(obj).__name__
         msg = f"{cls_name} has no method '{method_name}'; PyQt6 binding may be incompatible"
+        _logger.warning("qt_method_missing", extra={"class": cls_name, "method": method_name})
         raise AttributeError(msg)
     return cast("Callable[..., Any]", method)
 
@@ -103,6 +104,8 @@ def connect_cell_changed(table: QTableWidget, slot: Callable[..., object]) -> No
     signal = getattr(table, _CELL_CHANGED, None)
     if signal is not None:
         signal.connect(slot)
+    else:
+        _logger.warning("qt_signal_missing", extra={"widget": type(table).__name__, "signal": _CELL_CHANGED})
 
 
 def set_header_labels(tree: QTreeWidget, labels: list[str]) -> None:

@@ -1,4 +1,4 @@
-10 findings in src\intellicrack\core\types.py
+7 findings in src\intellicrack\core\types.py
 
 src\intellicrack\core\types.py: Unused function display_type
 
@@ -6,15 +6,9 @@ src\intellicrack\core\types.py: Unused function has_code
 
 src\intellicrack\core\types.py: Unused function is_executable
 
-src\intellicrack\core\types.py: Unused function is_hash
-
 src\intellicrack\core\types.py: Unused function is_readable
 
-src\intellicrack\core\types.py: Unused function is_text_based
-
 src\intellicrack\core\types.py: Unused function is_writable
-
-src\intellicrack\core\types.py: Unused function requires_hardware_id
 
 src\intellicrack\core\types.py: Unused function signature
 
@@ -30,6 +24,17 @@ src\intellicrack\core\process_manager.py: Unused function get_running_processes
 src\intellicrack\core\process_manager.py: Unused function request_shutdown
 
 src\intellicrack\core\process_manager.py: Unused function reset_instance
+
+
+4 findings in src\intellicrack\ui\panels\vnc_widget.py
+
+src\intellicrack\ui\panels\vnc_widget.py: Unused function keyReleaseEvent
+
+src\intellicrack\ui\panels\vnc_widget.py: Unused function mouseMoveEvent
+
+src\intellicrack\ui\panels\vnc_widget.py: Unused function mouseReleaseEvent
+
+src\intellicrack\ui\panels\vnc_widget.py: Unused function paintEvent
 
 
 3 findings in src\intellicrack\credentials\oauth.py
@@ -104,6 +109,11 @@ src\intellicrack\providers\discovery.py: Unused function get_last_event
 src\intellicrack\providers\registry.py: Unused function get_provider_registry
 
 
+1 findings in src\intellicrack\sandbox\qemu.py
+
+src\intellicrack\sandbox\qemu.py: Unused function enable_vnc_display
+
+
 1 findings in src\intellicrack\ui\app.py
 
 src\intellicrack\ui\app.py: Unused function closeEvent
@@ -122,6 +132,11 @@ src\intellicrack\ui\highlighter.py: Unused function highlightBlock
 1 findings in src\intellicrack\ui\panels\binary_panel.py
 
 src\intellicrack\ui\panels\binary_panel.py: Unused function wheelEvent
+
+
+1 findings in src\intellicrack\ui\panels\graph_view.py
+
+src\intellicrack\ui\panels\graph_view.py: Unused function wheelEvent
 
 
 1 findings in src\intellicrack\ui\panels\qt_compat.py

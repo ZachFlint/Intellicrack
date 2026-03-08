@@ -17,7 +17,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 from intellicrack.core._subprocess import (
-    CREATE_NO_WINDOW,
     PIPE,
     STARTF_USESHOWWINDOW,
     STARTUPINFO,
@@ -48,6 +47,7 @@ from .base import (
     StackFrame,
     WatchpointInfo,
 )
+from .installer import deploy_x64dbg_plugin
 from .named_pipe_client import NamedPipeClient, PipeConfig
 
 
@@ -70,14 +70,14 @@ try:
 
     _capstone = _capstone_module
 except ImportError:
-    _logger.debug("capstone_not_available")
+    _logger.debug("capstone_not_available", extra={"library": "capstone"})
 
 try:
     import keystone as _keystone_module
 
     _keystone = _keystone_module
 except ImportError:
-    _logger.debug("keystone_not_available")
+    _logger.debug("keystone_not_available", extra={"library": "keystone"})
 
 
 def get_capstone() -> ModuleType | None:
@@ -478,6 +478,17 @@ class X64DbgBridge(DebuggerBridge):
             value: The x64dbg installation path, or None to clear.
         """
         self._x64dbg_path = value
+
+    @property
+    def debugger_pid(self) -> int | None:
+        """Get the PID of the running debugger process.
+
+        Returns:
+            Process ID of the debugger, or None if not running.
+        """
+        if self._process is not None:
+            return self._process.pid
+        return None
 
     @property
     def name(self) -> ToolName:
@@ -890,8 +901,28 @@ class X64DbgBridge(DebuggerBridge):
             if x64_exe.exists() or x32_exe.exists():
                 self._state.connected = True
                 _logger.info("x64dbg_found", extra={"path": str(tool_path)})
+                deploy_x64dbg_plugin(tool_path, tool_path.parent)
             else:
                 _logger.warning("x64dbg_not_found", extra={"path": str(tool_path)})
+
+        if get_capstone() is None:
+            _logger.warning(
+                "x64dbg_optional_dep_missing",
+                extra={
+                    "dependency": "capstone",
+                    "install_cmd": "pixi add capstone-engine",
+                    "impact": "disassemble_at will raise ToolError",
+                },
+            )
+        if get_keystone() is None:
+            _logger.warning(
+                "x64dbg_optional_dep_missing",
+                extra={
+                    "dependency": "keystone",
+                    "install_cmd": "pixi run pip install keystone-engine",
+                    "impact": "assemble_at will raise ToolError",
+                },
+            )
 
     async def shutdown(self) -> None:
         """Shutdown x64dbg and cleanup resources."""
@@ -918,7 +949,7 @@ class X64DbgBridge(DebuggerBridge):
         self._breakpoints.clear()
         self._watchpoints.clear()
         await super().shutdown()
-        _logger.info("x64dbg_bridge_shutdown")
+        _logger.info("x64dbg_bridge_shutdown", extra={"bridge": "x64dbg"})
 
     async def is_available(self) -> bool:
         """Check if x64dbg is available.
@@ -961,14 +992,13 @@ class X64DbgBridge(DebuggerBridge):
 
         si = STARTUPINFO()
         si.dwFlags |= STARTF_USESHOWWINDOW
-        si.wShowWindow = 7
+        si.wShowWindow = 1
 
         self._process = await asyncio.to_thread(
             Popen,
             [str(exe_path)],
             stdout=PIPE,
             stderr=PIPE,
-            creationflags=CREATE_NO_WINDOW,
             startupinfo=si,
         )
 
@@ -999,7 +1029,7 @@ class X64DbgBridge(DebuggerBridge):
                 )
             await self._pipe_client.connect()
             self._pipe_client.set_event_handler(self._handle_event)
-            _logger.info("x64dbg_pipe_connected")
+            _logger.info("x64dbg_pipe_connected", extra={"bridge": "x64dbg"})
         except Exception as e:
             self._pipe_client = None
             msg = f"Failed to connect to x64dbg pipe: {e}"
@@ -1037,7 +1067,7 @@ class X64DbgBridge(DebuggerBridge):
         try:
             self._event_callbacks.remove(callback)
         except ValueError:
-            _logger.debug("event_callback_not_found_for_removal")
+            _logger.debug("event_callback_not_found_for_removal", extra={"callback": str(callback)})
 
     def _handle_event(self, message: dict[str, Any]) -> None:
         """Handle asynchronous debug events from x64dbg.
@@ -1238,9 +1268,7 @@ class X64DbgBridge(DebuggerBridge):
             try:
                 is_wow64 = ctypes.c_int(0)
                 ok: int = kernel32.IsWow64Process(handle, ctypes.byref(is_wow64))
-                if ok:
-                    return not bool(is_wow64.value)
-                return True
+                return not bool(is_wow64.value) if ok else True
             finally:
                 kernel32.CloseHandle(handle)
         except (OSError, AttributeError):
@@ -1256,17 +1284,17 @@ class X64DbgBridge(DebuggerBridge):
         self._state.process_attached = False
         self._state.target_pid = None
 
-        _logger.info("x64dbg_process_detached")
+        _logger.info("x64dbg_process_detached", extra={"bridge": "x64dbg"})
 
     async def run(self) -> None:
         """Continue execution."""
         await self._send_pipe_command("run")
-        _logger.debug("execution_continued")
+        _logger.debug("execution_continued", extra={"bridge": "x64dbg"})
 
     async def pause(self) -> None:
         """Pause execution."""
         await self._send_pipe_command("pause")
-        _logger.debug("execution_paused")
+        _logger.debug("execution_paused", extra={"bridge": "x64dbg"})
 
     async def stop(self) -> None:
         """Stop debugging and terminate process."""
@@ -1275,7 +1303,7 @@ class X64DbgBridge(DebuggerBridge):
         self._attached_pid = None
         self._state.process_attached = False
         self._state.target_pid = None
-        _logger.info("debugging_stopped")
+        _logger.info("debugging_stopped", extra={"bridge": "x64dbg"})
 
     async def step_into(self) -> int:
         """Single step into.
@@ -1836,8 +1864,8 @@ class X64DbgBridge(DebuggerBridge):
         """
         capstone = get_capstone()
         if capstone is None:
-            _logger.warning("capstone_unavailable")
-            return []
+            msg = "Capstone disassembler not available. Install with: pixi add capstone-engine"
+            raise ToolError(msg)
 
         try:
             data = await self.read_memory(address, count * 15)
@@ -1861,7 +1889,7 @@ class X64DbgBridge(DebuggerBridge):
                     break
 
         except Exception:
-            _logger.exception("disassembly_failed")
+            _logger.exception("disassembly_failed", extra={"address": hex(address), "count": count})
             return []
         else:
             return lines
@@ -1881,7 +1909,7 @@ class X64DbgBridge(DebuggerBridge):
         """
         keystone = get_keystone()
         if keystone is None:
-            msg = "keystone not available"
+            msg = "Keystone assembler not available. Not in conda-forge; install with: pixi run pip install keystone-engine"
             raise ToolError(msg)
 
         mode = keystone.KS_MODE_64 if self._is_64bit else keystone.KS_MODE_32

@@ -112,6 +112,7 @@ async def _fetch_model_config(model_id: str) -> dict[str, Any]:
             result: dict[str, Any] = response.json()
             return result
     except Exception:
+        _logger.debug("huggingface_config_fetch_failed", exc_info=True, extra={"url": url})
         return {}
 
 
@@ -266,9 +267,9 @@ class LocalTransformersProvider(LLMProviderBase):
         else:
             self._device_type = "cpu"
             if not self._xpu_available:
-                self._logger.info("xpu_not_available_using_cpu")
+                self._logger.info("xpu_not_available_using_cpu", extra={"device_type": "cpu"})
             else:
-                self._logger.info("cpu_preferred_over_xpu")
+                self._logger.info("cpu_preferred_over_xpu", extra={"device_type": "cpu"})
 
         self._connected = True
         self._logger.info(
@@ -290,7 +291,7 @@ class LocalTransformersProvider(LLMProviderBase):
                 await asyncio.to_thread(clear_xpu_cache)
 
             await super().disconnect()
-            self._logger.info("local_transformers_disconnected")
+            self._logger.info("local_transformers_disconnected", extra={"device_type": self._device_type})
         except Exception as exc:
             self._logger.warning("disconnect_cleanup_error", extra={"error": str(exc)})
             self._connected = False
@@ -542,7 +543,7 @@ class LocalTransformersProvider(LLMProviderBase):
             self._logger.exception("model_load_failed", extra={"model_id": model_id, "error": str(exc)})
 
             if self._device_type == "xpu":
-                self._logger.warning("xpu_load_failed_falling_back_to_cpu")
+                self._logger.warning("xpu_load_failed_falling_back_to_cpu", extra={"model_id": model_id})
                 self._device_type = "cpu"
                 config = dataclass_replace(config, device="cpu")
                 try:
@@ -1016,4 +1017,4 @@ class LocalTransformersProvider(LLMProviderBase):
     def clear_cache(self) -> None:
         """Clear the model cache."""
         clear_global_cache()
-        self._logger.info("model_cache_cleared")
+        self._logger.info("model_cache_cleared", extra={"provider": "local_transformers"})

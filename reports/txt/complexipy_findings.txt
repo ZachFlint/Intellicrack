@@ -9,17 +9,6 @@ src\intellicrack\bridges\installer.py: ToolInstaller::_get_latest_release_url - 
 src\intellicrack\bridges\installer.py: ToolInstaller::find_tool - cognitive complexity 34 (exceeds threshold)
 
 
-4 findings in src\intellicrack\ui\panels\binary_panel.py
-
-src\intellicrack\ui\panels\binary_panel.py: BinaryPanel::_extract_strings - cognitive complexity 16 (exceeds threshold)
-
-src\intellicrack\ui\panels\binary_panel.py: BinaryPanel::_parse_pe_ilt_entries - cognitive complexity 18 (exceeds threshold)
-
-src\intellicrack\ui\panels\binary_panel.py: BinaryPanel::_parse_pe_sections - cognitive complexity 23 (exceeds threshold)
-
-src\intellicrack\ui\panels\binary_panel.py: BinaryPanel::_parse_elf_sections - cognitive complexity 25 (exceeds threshold)
-
-
 3 findings in src\intellicrack\bridges\process.py
 
 src\intellicrack\bridges\process.py: ProcessBridge::list_processes - cognitive complexity 16 (exceeds threshold)
@@ -36,15 +25,6 @@ src\intellicrack\bridges\x64dbg.py: X64DbgBridge::_get_parent_pid - cognitive co
 src\intellicrack\bridges\x64dbg.py: X64DbgBridge::get_stack_trace - cognitive complexity 16 (exceeds threshold)
 
 src\intellicrack\bridges\x64dbg.py: X64DbgBridge::_get_threads - cognitive complexity 17 (exceeds threshold)
-
-
-3 findings in src\intellicrack\core\license_analyzer.py
-
-src\intellicrack\core\license_analyzer.py: LicenseAnalyzer::_detect_crypto_apis - cognitive complexity 16 (exceeds threshold)
-
-src\intellicrack\core\license_analyzer.py: LicenseAnalyzer::_detect_key_format - cognitive complexity 21 (exceeds threshold)
-
-src\intellicrack\core\license_analyzer.py: LicenseAnalyzer::_detect_algorithms - cognitive complexity 29 (exceeds threshold)
 
 
 3 findings in src\intellicrack\providers\discovery.py
@@ -72,6 +52,15 @@ src\intellicrack\sandbox\qemu.py: QEMUSandbox::_build_qemu_command - cognitive c
 src\intellicrack\sandbox\qemu.py: QEMUSandbox::_detect_accelerator - cognitive complexity 16 (exceeds threshold)
 
 src\intellicrack\sandbox\qemu.py: GuestAgentClient::send_command - cognitive complexity 20 (exceeds threshold)
+
+
+3 findings in src\intellicrack\ui\panels\binary_panel.py
+
+src\intellicrack\ui\panels\binary_panel.py: BinaryPanel::_extract_strings - cognitive complexity 16 (exceeds threshold)
+
+src\intellicrack\ui\panels\binary_panel.py: BinaryPanel::_parse_pe_ilt_entries - cognitive complexity 18 (exceeds threshold)
+
+src\intellicrack\ui\panels\binary_panel.py: BinaryPanel::_parse_pe_sections - cognitive complexity 23 (exceeds threshold)
 
 
 2 findings in src\intellicrack\bridges\binary.py
@@ -191,11 +180,6 @@ src\intellicrack\ui\app.py: MainWindow::_on_open_frida - cognitive complexity 26
 1 findings in src\intellicrack\ui\highlighter.py
 
 src\intellicrack\ui\highlighter.py: PythonSyntaxHighlighter::_highlight_triple_quotes - cognitive complexity 18 (exceeds threshold)
-
-
-1 findings in src\intellicrack\ui\sandbox_config.py
-
-src\intellicrack\ui\sandbox_config.py: SandboxTestWorker::run - cognitive complexity 20 (exceeds threshold)
 
 
 1 findings in src\intellicrack\ui\tools.py

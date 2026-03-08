@@ -125,7 +125,7 @@ class GhidraPanel(AnalysisPanelBase):
             try:
                 run_bridge_coroutine(self._bridge.shutdown())
             except Exception:
-                _logger.exception("ghidra_shutdown_failed")
+                _logger.exception("ghidra_shutdown_failed", extra={"bridge_type": "ghidra"})
 
     def _create_code_tabs(self) -> QTabWidget:
         """Create decompiled and disassembly code tabs.
@@ -249,7 +249,7 @@ class GhidraPanel(AnalysisPanelBase):
             bridge: The GhidraBridge to use.
         """
         self._bridge = bridge
-        _logger.info("ghidra_bridge_set")
+        _logger.info("ghidra_bridge_set", extra={"bridge_type": type(bridge).__name__})
 
     def get_bridge(self) -> GhidraBridge | None:
         """Get the current GhidraBridge instance.
@@ -269,7 +269,7 @@ class GhidraPanel(AnalysisPanelBase):
             True if loading was initiated.
         """
         if self._bridge is None:
-            _logger.warning("ghidra_load_no_bridge")
+            _logger.warning("ghidra_load_no_bridge", extra={"reason": "bridge not set"})
             return False
 
         self._load_btn.setEnabled(False)
@@ -305,7 +305,7 @@ class GhidraPanel(AnalysisPanelBase):
         """Connect to Ghidra bridge."""
         if self._bridge is None:
             self._set_status("No bridge configured")
-            _logger.warning("ghidra_connect_no_bridge")
+            _logger.warning("ghidra_connect_no_bridge", extra={"reason": "bridge not set"})
             return
 
         self._connect_btn.setEnabled(False)
@@ -319,7 +319,7 @@ class GhidraPanel(AnalysisPanelBase):
         """Handle successful connection."""
         self._set_status("Connected")
         self._disconnect_btn.setEnabled(True)
-        _logger.info("ghidra_connected")
+        _logger.info("ghidra_connected", extra={"bridge_type": "ghidra"})
 
     def _on_connect_error(self, exc: object) -> None:
         """Handle connection failure.
@@ -346,7 +346,7 @@ class GhidraPanel(AnalysisPanelBase):
     def _on_disconnect_success(self) -> None:
         """Handle successful disconnection."""
         self._set_status("Disconnected")
-        _logger.info("ghidra_disconnected")
+        _logger.info("ghidra_disconnected", extra={"bridge_type": "ghidra"})
         self._connect_btn.setEnabled(True)
 
     def _on_disconnect_error(self, exc: object) -> None:
@@ -391,7 +391,7 @@ class GhidraPanel(AnalysisPanelBase):
     def _on_analysis_complete(self) -> None:
         """Handle successful analysis."""
         self._set_status("Analysis complete")
-        _logger.info("ghidra_analysis_complete")
+        _logger.info("ghidra_analysis_complete", extra={"bridge_type": "ghidra"})
         self._analyze_btn.setEnabled(True)
         self._on_refresh_functions()
         self._refresh_imports()
@@ -448,7 +448,7 @@ class GhidraPanel(AnalysisPanelBase):
 
     def _on_refresh_funcs_error(self) -> None:
         """Handle function refresh failure."""
-        _logger.warning("ghidra_refresh_functions_failed")
+        _logger.warning("ghidra_refresh_functions_failed", extra={"bridge_type": "ghidra"})
         self._refresh_funcs_btn.setEnabled(True)
 
     def _on_filter_changed(self, _text: str) -> None:
@@ -609,8 +609,7 @@ class GhidraPanel(AnalysisPanelBase):
 
     def _on_search_strings(self) -> None:
         """Trigger string search from the search input."""
-        pattern = self._string_search_input.text().strip()
-        if pattern:
+        if pattern := self._string_search_input.text().strip():
             self.search_strings(pattern)
 
     def show_xrefs(self, address: int) -> None:

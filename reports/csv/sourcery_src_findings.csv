@@ -1,12 +1,50 @@
 file,line,rule,description
-src\intellicrack\core\script_gen.py,165,low-code-quality,Low code quality found in ScriptContext.to_prompt_context - 23%
-src\intellicrack\providers\grok.py,217,low-code-quality,Low code quality found in GrokProvider.chat - 24%
-src\intellicrack\providers\huggingface.py,343,low-code-quality,Low code quality found in HuggingFaceProvider.chat - 23%
-src\intellicrack\providers\ollama.py,365,low-code-quality,Low code quality found in OllamaProvider.chat - 24%
-src\intellicrack\providers\openai.py,245,low-code-quality,Low code quality found in OpenAIProvider.chat - 24%
-src\intellicrack\sandbox\qemu.py,783,merge-list-extend,Merge extend into list declaration
-src\intellicrack\sandbox\qemu.py,815,swap-nested-ifs,Swap positions of nested conditionals
-src\intellicrack\sandbox\qemu.py,816,hoist-similar-statement-from-if,Hoist nested repeated code outside conditional statements
-src\intellicrack\sandbox\qemu.py,1448,low-code-quality,Low code quality found in QEMUSandbox.execute - 23%
-src\intellicrack\ui\embedding\ghidra_widget.py,72,low-code-quality,Low code quality found in GhidraWidget.get_executable_path - 23%
-src\intellicrack\ui\embedding\x64dbg_widget.py,70,low-code-quality,Low code quality found in X64DbgWidget.get_executable_path - 22%
+src\intellicrack\bridges\radare2.py,168,reintroduce-else,Lift code into else after jump in control flow
+src\intellicrack\bridges\radare2.py,168,assign-if-exp,Replace if statement with if expression
+src\intellicrack\bridges\x64dbg.py,1241,reintroduce-else,Lift code into else after jump in control flow
+src\intellicrack\bridges\x64dbg.py,1241,assign-if-exp,Replace if statement with if expression
+src\intellicrack\core\script_gen.py,265,use-named-expression,Use named expression to simplify assignment and conditional
+src\intellicrack\credentials\env_loader.py,375,reintroduce-else,Lift code into else after jump in control flow
+src\intellicrack\credentials\env_loader.py,375,assign-if-exp,Replace if statement with if expression
+src\intellicrack\credentials\store.py,584,reintroduce-else,Lift code into else after jump in control flow
+src\intellicrack\credentials\store.py,584,assign-if-exp,Replace if statement with if expression
+src\intellicrack\providers\base.py,440,reintroduce-else,Lift code into else after jump in control flow
+src\intellicrack\providers\base.py,440,assign-if-exp,Replace if statement with if expression
+src\intellicrack\providers\google.py,177,use-assigned-variable,Use previously assigned local variable
+src\intellicrack\providers\grok.py,179,reintroduce-else,Lift code into else after jump in control flow
+src\intellicrack\providers\grok.py,179,assign-if-exp,Replace if statement with if expression
+src\intellicrack\providers\ollama.py,598,use-assigned-variable,Use previously assigned local variable
+src\intellicrack\providers\openai.py,206,reintroduce-else,Lift code into else after jump in control flow
+src\intellicrack\providers\openai.py,206,assign-if-exp,Replace if statement with if expression
+src\intellicrack\providers\openrouter.py,368,low-code-quality,Low code quality found in OpenRouterProvider.chat_stream - 17%
+src\intellicrack\sandbox\qemu.py,817,swap-nested-ifs,Swap positions of nested conditionals
+src\intellicrack\sandbox\qemu.py,818,hoist-similar-statement-from-if,Hoist nested repeated code outside conditional statements
+src\intellicrack\sandbox\qemu.py,828,merge-list-appends-into-extend,Merge consecutive list appends into a single extend
+src\intellicrack\ui\app.py,710,use-named-expression,Use named expression to simplify assignment and conditional
+src\intellicrack\ui\app.py,1171,move-assign-in-block,Move assignment closer to its usage within a block
+src\intellicrack\ui\app.py,1165,introduce-default-else,Move setting of default value for variable into `else` branch
+src\intellicrack\ui\app.py,1165,assign-if-exp,Replace if statement with if expression
+src\intellicrack\ui\app.py,1412,use-contextlib-suppress,Use `contextlib`'s `suppress` method to silence an error
+src\intellicrack\ui\app.py,1489,remove-redundant-if,Remove redundant conditional
+src\intellicrack\ui\app.py,1500,use-named-expression,Use named expression to simplify assignment and conditional
+src\intellicrack\ui\highlighter.py,838,move-assign,Move assignments closer to their usage
+src\intellicrack\ui\provider_config.py,517,move-assign,Move assignments closer to their usage
+src\intellicrack\ui\provider_config.py,1477,use-named-expression,Use named expression to simplify assignment and conditional
+src\intellicrack\ui\panels\binary_panel.py,130,reintroduce-else,Lift code into else after jump in control flow
+src\intellicrack\ui\panels\binary_panel.py,130,assign-if-exp,Replace if statement with if expression
+src\intellicrack\ui\panels\binary_panel.py,703,use-next,Use the built-in function `next` instead of a for-loop
+src\intellicrack\ui\panels\binary_panel.py,816,switch,Simplify conditional into switch-like form
+src\intellicrack\ui\panels\binary_panel.py,830,remove-unnecessary-cast,"Remove unnecessary casts to int, str, float or bool"
+src\intellicrack\ui\panels\binary_panel.py,816,switch,Simplify conditional into switch-like form
+src\intellicrack\ui\panels\binary_panel.py,922,remove-unnecessary-cast,"Remove unnecessary casts to int, str, float or bool"
+src\intellicrack\ui\panels\binary_panel.py,942,remove-unnecessary-cast,"Remove unnecessary casts to int, str, float or bool"
+src\intellicrack\ui\panels\ghidra_panel.py,612,use-named-expression,Use named expression to simplify assignment and conditional
+src\intellicrack\ui\panels\radare2_panel.py,630,use-named-expression,Use named expression to simplify assignment and conditional
+src\intellicrack\ui\panels\sandbox_panel.py,257,reintroduce-else,Lift code into else after jump in control flow
+src\intellicrack\ui\panels\sandbox_panel.py,257,assign-if-exp,Replace if statement with if expression
+src\intellicrack\ui\panels\x64dbg_panel.py,925,use-named-expression,Use named expression to simplify assignment and conditional
+src\intellicrack\core\orchestrator.py:750-750 or-if-exp-identity
+src\intellicrack\ui\app.py:1735-1735 swap-if-expression
+src\intellicrack\ui\panels\binary_panel.py:809-809 or-if-exp-identity
+src\intellicrack\ui\panels\binary_panel.py:917-917 or-if-exp-identity
+src\intellicrack\ui\panels\binary_panel.py:938-938 or-if-exp-identity

@@ -410,7 +410,7 @@ class SandboxBridge(ToolBridgeBase):
             last_error=None,
         )
 
-        _logger.info("sandbox_bridge_initialized")
+        _logger.info("sandbox_bridge_initialized", extra={"bridge": "sandbox"})
 
     async def shutdown(self) -> None:
         """Shutdown the sandbox bridge and cleanup resources."""
@@ -419,7 +419,7 @@ class SandboxBridge(ToolBridgeBase):
             self._manager = None
 
         self._state = BridgeState()
-        _logger.info("sandbox_bridge_shutdown")
+        _logger.info("sandbox_bridge_shutdown", extra={"bridge": "sandbox"})
 
     async def is_available(self) -> bool:
         """Check if sandbox functionality is available.

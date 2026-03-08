@@ -18,33 +18,11 @@ const PYTHON_PATH = "d:\\Intellicrack\\.pixi\\envs\\default\\python.exe";
 const VENV_PATH = "d:\\Intellicrack\\.pixi\\envs";
 const VENV_NAME = "default";
 
-const ANALYSIS_SETTINGS = {
-  extraPaths: ["d:/intellicrack/src"],
-  typeCheckingMode: "strict",
-  pythonVersion: "3.13",
-  pythonPlatform: "Windows",
-  useLibraryCodeForTypes: false,
-  analyzeUnannotatedFunctions: true,
-  enableTypeIgnoreComments: true,
-  strictListInference: true,
-  strictDictionaryInference: true,
-  strictSetInference: true,
-  reportMissingImports: "warning",
-  reportMissingTypeStubs: false,
-  reportMissingModuleSource: "warning",
-  reportUndefinedVariable: "error",
-  reportGeneralTypeIssues: "error",
-};
-
 function buildExpected() {
   const pythonSettings = {
     pythonPath: PYTHON_PATH,
     venvPath: VENV_PATH,
     venv: VENV_NAME,
-  };
-  const settingsBlock = {
-    python: { ...pythonSettings },
-    basedpyright: { analysis: { ...ANALYSIS_SETTINGS } },
   };
   return {
     python: {
@@ -53,8 +31,8 @@ function buildExpected() {
       extensionToLanguage: { ".py": "python", ".pyi": "python", ".pyw": "python" },
       transport: "stdio",
       workspaceFolder: WORKSPACE_FOLDER,
-      initializationOptions: { settings: { ...settingsBlock } },
-      settings: { ...settingsBlock },
+      initializationOptions: { settings: { python: { ...pythonSettings } } },
+      settings: { python: { ...pythonSettings } },
       maxRestarts: 3,
     },
   };

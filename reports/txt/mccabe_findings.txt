@@ -8,20 +8,20 @@ src/intellicrack/ui\tools.py:1147:5: C901 'ToolOutputPanel.add_radare2_tab' is t
 
 src/intellicrack/ui\tools.py:1194:5: C901 'ToolOutputPanel.add_frida_tab' is too complex (11)
 
-src/intellicrack/ui\tools.py:1569:5: C901 'ToolOutputPanel._on_tab_close_requested' is too complex (12)
+src/intellicrack/ui\tools.py:1570:5: C901 'ToolOutputPanel._on_tab_close_requested' is too complex (12)
 
-src/intellicrack/ui\tools.py:1633:5: C901 'ToolOutputPanel.close_embedded_tools' is too complex (15)
+src/intellicrack/ui\tools.py:1634:5: C901 'ToolOutputPanel.close_embedded_tools' is too complex (15)
 
 
 4 findings in src/intellicrack/ui\app.py
 
-src/intellicrack/ui\app.py:1237:5: C901 'MainWindow._apply_tool_settings' is too complex (11)
+src/intellicrack/ui\app.py:1261:5: C901 'MainWindow._apply_tool_settings' is too complex (11)
 
-src/intellicrack/ui\app.py:1309:5: C901 'MainWindow._apply_provider_settings' is too complex (11)
+src/intellicrack/ui\app.py:1333:5: C901 'MainWindow._apply_provider_settings' is too complex (11)
 
-src/intellicrack/ui\app.py:1383:5: C901 'MainWindow._on_refresh_models' is too complex (11)
+src/intellicrack/ui\app.py:1407:5: C901 'MainWindow._on_refresh_models' is too complex (11)
 
-src/intellicrack/ui\app.py:1722:5: C901 'MainWindow._on_open_frida' is too complex (11)
+src/intellicrack/ui\app.py:1743:5: C901 'MainWindow._on_open_frida' is too complex (11)
 
 
 3 findings in src/intellicrack/providers\discovery.py
@@ -33,13 +33,22 @@ src/intellicrack/providers\discovery.py:580:5: C901 'ModelDiscovery.filter' is t
 src/intellicrack/providers\discovery.py:688:5: C901 'ModelDiscovery.get_recommended_model' is too complex (12)
 
 
+3 findings in src/intellicrack/sandbox\qemu.py
+
+src/intellicrack/sandbox\qemu.py:804:5: C901 'QEMUSandbox._build_qemu_command' is too complex (11)
+
+src/intellicrack/sandbox\qemu.py:902:5: C901 'QEMUSandbox.start' is too complex (11)
+
+src/intellicrack/sandbox\qemu.py:1603:5: C901 'QEMUSandbox.run_binary' is too complex (11)
+
+
 3 findings in src/intellicrack/ui\session_manager.py
 
-src/intellicrack/ui\session_manager.py:234:5: C901 'SessionManagerDialog._load_sessions' is too complex (13)
+src/intellicrack/ui\session_manager.py:235:5: C901 'SessionManagerDialog._load_sessions' is too complex (13)
 
-src/intellicrack/ui\session_manager.py:289:5: C901 'SessionManagerDialog._load_sessions_from_disk' is too complex (13)
+src/intellicrack/ui\session_manager.py:290:5: C901 'SessionManagerDialog._load_sessions_from_disk' is too complex (13)
 
-src/intellicrack/ui\session_manager.py:614:5: C901 'SessionManagerDialog._prepare_export_data' is too complex (11)
+src/intellicrack/ui\session_manager.py:615:5: C901 'SessionManagerDialog._prepare_export_data' is too complex (11)
 
 
 2 findings in src/intellicrack/bridges\installer.py
@@ -49,25 +58,18 @@ src/intellicrack/bridges\installer.py:236:5: C901 'ToolInstaller.find_tool' is t
 src/intellicrack/bridges\installer.py:570:5: C901 'ToolInstaller._get_latest_release_url' is too complex (12)
 
 
-2 findings in src/intellicrack/core\license_analyzer.py
-
-src/intellicrack/core\license_analyzer.py:1902:5: C901 'LicenseAnalyzer._detect_algorithms' is too complex (12)
-
-src/intellicrack/core\license_analyzer.py:1962:5: C901 'LicenseAnalyzer._detect_key_format' is too complex (12)
-
-
 2 findings in src/intellicrack/providers\google.py
 
-src/intellicrack/providers\google.py:328:5: C901 'GoogleProvider.chat_stream' is too complex (13)
+src/intellicrack/providers\google.py:327:5: C901 'GoogleProvider.chat_stream' is too complex (13)
 
-src/intellicrack/providers\google.py:535:5: C901 'GoogleProvider._convert_messages_to_provider_format' is too complex (11)
+src/intellicrack/providers\google.py:534:5: C901 'GoogleProvider._convert_messages_to_provider_format' is too complex (11)
 
 
 2 findings in src/intellicrack/providers\local_transformers.py
 
-src/intellicrack/providers\local_transformers.py:611:5: C901 'LocalTransformersProvider._stream_generate' is too complex (11)
+src/intellicrack/providers\local_transformers.py:612:5: C901 'LocalTransformersProvider._stream_generate' is too complex (11)
 
-src/intellicrack/providers\local_transformers.py:890:5: C901 'LocalTransformersProvider._parse_tool_calls' is too complex (14)
+src/intellicrack/providers\local_transformers.py:891:5: C901 'LocalTransformersProvider._parse_tool_calls' is too complex (14)
 
 
 2 findings in src/intellicrack/providers\openrouter.py
@@ -77,25 +79,18 @@ src/intellicrack/providers\openrouter.py:143:5: C901 'OpenRouterProvider.list_mo
 src/intellicrack/providers\openrouter.py:368:5: C901 'OpenRouterProvider.chat_stream' is too complex (16)
 
 
-2 findings in src/intellicrack/sandbox\qemu.py
-
-src/intellicrack/sandbox\qemu.py:771:5: C901 'QEMUSandbox._build_qemu_command' is too complex (11)
-
-src/intellicrack/sandbox\qemu.py:865:5: C901 'QEMUSandbox.start' is too complex (11)
-
-
 2 findings in src/intellicrack/ui\panels\binary_panel.py
 
-src/intellicrack/ui\panels\binary_panel.py:562:5: C901 'BinaryPanel._parse_pe_sections' is too complex (11)
+src/intellicrack/ui\panels\binary_panel.py:560:5: C901 'BinaryPanel._parse_pe_sections' is too complex (11)
 
-src/intellicrack/ui\panels\binary_panel.py:793:5: C901 'BinaryPanel._parse_elf_sections' is too complex (12)
+src/intellicrack/ui\panels\binary_panel.py:791:5: C901 'BinaryPanel._parse_elf_sections' is too complex (12)
 
 
 2 findings in src/intellicrack/ui\provider_config.py
 
-src/intellicrack/ui\provider_config.py:475:5: C901 'ModelRefreshWorker._fetch_models' is too complex (11)
+src/intellicrack/ui\provider_config.py:477:5: C901 'ModelRefreshWorker._fetch_models' is too complex (11)
 
-src/intellicrack/ui\provider_config.py:508:5: C901 'ModelRefreshWorker._fetch_anthropic_models' is too complex (11)
+src/intellicrack/ui\provider_config.py:510:5: C901 'ModelRefreshWorker._fetch_anthropic_models' is too complex (11)
 
 
 1 findings in src/intellicrack/bridges\binary.py
@@ -113,14 +108,24 @@ src/intellicrack/bridges\frida_bridge.py:940:5: C901 'FridaBridge.hook_function'
 src/intellicrack/bridges\process.py:1115:5: C901 'ProcessBridge.search_pattern' is too complex (11)
 
 
+1 findings in src/intellicrack/core\analysis_aggregator.py
+
+src/intellicrack/core\analysis_aggregator.py:160:5: C901 'AnalysisAggregator._collect_from_static_bridge' is too complex (12)
+
+
 1 findings in src/intellicrack/core\orchestrator.py
 
 src/intellicrack/core\orchestrator.py:396:5: C901 'Orchestrator._run_agent_loop' is too complex (11)
 
 
+1 findings in src/intellicrack/core\process_manager.py
+
+src/intellicrack/core\process_manager.py:266:5: C901 'ProcessManager._sync_cleanup' is too complex (14)
+
+
 1 findings in src/intellicrack/core\tools.py
 
-src/intellicrack/core\tools.py:424:5: C901 'ToolRegistry.execute_tool_call' is too complex (12)
+src/intellicrack/core\tools.py:433:5: C901 'ToolRegistry.execute_tool_call' is too complex (12)
 
 
 1 findings in src/intellicrack/providers\anthropic.py
@@ -130,7 +135,7 @@ src/intellicrack/providers\anthropic.py:344:5: C901 'AnthropicProvider.chat_stre
 
 1 findings in src/intellicrack/providers\grok.py
 
-src/intellicrack/providers\grok.py:383:5: C901 'GrokProvider.chat_stream' is too complex (15)
+src/intellicrack/providers\grok.py:381:5: C901 'GrokProvider.chat_stream' is too complex (15)
 
 
 1 findings in src/intellicrack/providers\huggingface.py
@@ -150,7 +155,7 @@ src/intellicrack/providers\ollama.py:538:5: C901 'OllamaProvider.chat_stream' is
 
 1 findings in src/intellicrack/providers\openai.py
 
-src/intellicrack/providers\openai.py:427:5: C901 'OpenAIProvider.chat_stream' is too complex (14)
+src/intellicrack/providers\openai.py:425:5: C901 'OpenAIProvider.chat_stream' is too complex (14)
 
 
 1 findings in src/intellicrack/providers\xpu_utils.py
@@ -158,6 +163,11 @@ src/intellicrack/providers\openai.py:427:5: C901 'OpenAIProvider.chat_stream' is
 src/intellicrack/providers\xpu_utils.py:225:1: C901 'get_xpu_device_info' is too complex (18)
 
 
+1 findings in src/intellicrack/ui\panels\graph_view.py
+
+src/intellicrack/ui\panels\graph_view.py:384:5: C901 'CFGGraphScene._compute_layers' is too complex (11)
+
+
 1 findings in src/intellicrack/ui\tool_config.py
 
-src/intellicrack/ui\tool_config.py:133:5: C901 'ToolInstallWorker._install_tool' is too complex (12)
+src/intellicrack/ui\tool_config.py:134:5: C901 'ToolInstallWorker._install_tool' is too complex (12)

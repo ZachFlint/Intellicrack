@@ -447,7 +447,7 @@ def main() -> int:
         except TimeoutError:
             logger.warning("final_process_cleanup_timeout")
         except Exception:
-            logger.debug("final_process_cleanup_failed")
+            logger.debug("final_process_cleanup_failed", exc_info=True)
         process_manager.uninstall_handlers()
         loop.close()
 
@@ -512,7 +512,7 @@ def _clear_model_cache(logger: Logger) -> None:
                 clear_fn()
             logger.debug("model_cache_cleared")
         except Exception:
-            logger.debug("model_cache_cleanup_skipped")
+            logger.debug("model_cache_cleanup_skipped", exc_info=True)
 
 
 async def _run_application(

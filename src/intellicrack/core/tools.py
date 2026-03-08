@@ -20,7 +20,7 @@ import asyncio
 import inspect
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from .logging import get_logger, log_tool_call
 from .types import ToolDefinition, ToolError, ToolName
@@ -143,13 +143,18 @@ class ToolRegistry:
         _logger.info("tool_registry_initialized", extra={"bridge_count": len(self._bridges)})
         self._initialized = True
 
-    async def initialize_tool(self, name: ToolName) -> bool:
+    async def initialize_tool(
+        self,
+        name: ToolName,
+        port: int | None = None,
+    ) -> bool:
         """Initialize a specific tool.
 
         Finds or installs the tool and initializes its bridge.
 
         Args:
             name: Tool to initialize.
+            port: Network port for bridge communication if applicable.
 
         Returns:
             True if initialization succeeded.
@@ -168,7 +173,11 @@ class ToolRegistry:
         success = False
         try:
             tool_path = await self._installer.ensure_tool(name)
-            await bridge.initialize(tool_path)
+            if name == ToolName.GHIDRA and port is not None:
+                ghidra = cast("GhidraBridge", bridge)
+                await ghidra.initialize(tool_path, port=port)
+            else:
+                await bridge.initialize(tool_path)
             _logger.info("tool_initialized", extra={"tool_name": name.value, "tool_path": str(tool_path)})
             success = True
         except Exception:
@@ -186,7 +195,7 @@ class ToolRegistry:
                 _logger.warning("bridge_shutdown_error", extra={"bridge_name": name.value, "error": str(e)})
 
         self._initialized = False
-        _logger.info("tool_registry_shutdown")
+        _logger.info("tool_registry_shutdown", extra={"bridge_count": len(self._bridges)})
 
     def get(self, name: ToolName) -> ToolBridgeBase | None:
         """Get a tool bridge by name.

@@ -17,7 +17,6 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from ..bridges.schemas import (
@@ -25,7 +24,7 @@ from ..bridges.schemas import (
     get_all_schemas_for_provider,
     validate_and_convert,
 )
-from .license_analyzer import LicenseAnalyzer
+from .analysis_aggregator import AnalysisAggregator
 from .logging import get_logger, log_analysis_operation
 from .types import (
     ConfirmationLevel,
@@ -39,6 +38,7 @@ from .types import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
     from typing import Any
 
     from ..providers.base import LLMProvider
@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     from .script_gen import ScriptManager
     from .session import Session, SessionManager
     from .tools import ToolRegistry
-    from .types import BinaryInfo, LicensingAnalysis, ToolCall, ToolDefinition
+    from .types import BinaryInfo, BridgeAnalysisSummary, ToolCall, ToolDefinition
 
 
 _logger = get_logger("core.orchestrator")
@@ -203,7 +203,7 @@ class Orchestrator:
         self._on_tool_call: Callable[[ToolCall], None] | None = None
         self._on_tool_result: Callable[[ToolResult], None] | None = None
         self._on_stream_chunk: Callable[[str], None] | None = None
-        self._on_licensing_analysis: Callable[[LicensingAnalysis], None] | None = None
+        self._on_bridge_analysis: Callable[[BridgeAnalysisSummary], None] | None = None
         self._confirmation_callback: Callable[[ToolCall], bool] | None = None
         self._async_confirmation_callback: Callable[[ToolCall], asyncio.Future[bool]] | None = None
 
@@ -382,7 +382,7 @@ class Orchestrator:
         try:
             await self._run_agent_loop()
         except asyncio.CancelledError:
-            _logger.info("request_cancelled")
+            _logger.info("request_cancelled", extra={"state": self._state})
             self._state = "cancelled"
         finally:
             elapsed_ms = (time.time() - start_time) * 1000
@@ -747,7 +747,7 @@ class Orchestrator:
         content = "".join(content_parts)
 
         pending_calls = provider.get_pending_tool_calls()
-        tool_calls: list[ToolCall] | None = pending_calls if pending_calls else None
+        tool_calls: list[ToolCall] | None = pending_calls or None
 
         _logger.debug(
             "llm_stream_completed",
@@ -1053,7 +1053,7 @@ class Orchestrator:
 
     async def cancel(self) -> None:
         """Cancel current operation."""
-        _logger.info("operation_cancelling")
+        _logger.info("operation_cancelling", extra={"state": self._state})
         self._cancel_event.set()
 
         provider = self._providers.get(self._current_session.provider) if self._current_session else None
@@ -1073,12 +1073,12 @@ class Orchestrator:
             except Exception:
                 _logger.exception("cancel_pending_confirmation_failed", extra={"call_id": call_id})
 
-    async def add_binary(self, path: Path, run_license_analysis: bool = True) -> BinaryInfo:
+    async def add_binary(self, path: Path, run_bridge_analysis: bool = True) -> BinaryInfo:
         """Add a binary to the current session.
 
         Args:
             path: Path to the binary.
-            run_license_analysis: Whether to run licensing analysis automatically.
+            run_bridge_analysis: Whether to run bridge analysis automatically.
 
         Returns:
             Binary information.
@@ -1094,46 +1094,44 @@ class Orchestrator:
         self._current_session.binaries.append(binary_info)
         self._current_session.active_binary_index = len(self._current_session.binaries) - 1
 
-        if run_license_analysis:
-            analysis = await self._run_license_analysis(path)
+        if run_bridge_analysis:
+            analysis = await self._run_bridge_analysis(binary_info)
             if analysis:
-                self._current_session.add_licensing_analysis(path.name, analysis)
-                if self._on_licensing_analysis:
-                    self._on_licensing_analysis(analysis)
+                self._current_session.add_bridge_analysis(path.name, analysis)
+                if self._on_bridge_analysis:
+                    self._on_bridge_analysis(analysis)
 
         await self._sessions.update(self._current_session)
         return binary_info
 
-    @staticmethod
-    async def _run_license_analysis(path: Path) -> LicensingAnalysis | None:
-        """Run licensing analysis on a binary.
+    async def _run_bridge_analysis(self, binary_info: BinaryInfo) -> BridgeAnalysisSummary | None:
+        """Run bridge analysis aggregation on a binary.
 
         Args:
-            path: Path to the binary.
+            binary_info: Loaded binary metadata.
 
         Returns:
-            LicensingAnalysis results or None on failure.
+            BridgeAnalysisSummary results or None on failure.
         """
-        log_analysis_operation("license_analysis", path.name)
+        log_analysis_operation("bridge_analysis", binary_info.name)
         try:
-            analyzer = LicenseAnalyzer()
-            loop = asyncio.get_running_loop()
-            analysis = await loop.run_in_executor(None, analyzer.analyze, path)
+            aggregator = AnalysisAggregator(self._tools)
+            analysis = await aggregator.aggregate(binary_info.name, binary_info)
         except Exception as e:
-            _logger.warning("licensing_analysis_failed", extra={"binary": path.name, "error": str(e)})
+            _logger.warning("bridge_analysis_failed", extra={"binary": binary_info.name, "error": str(e)})
             return None
         else:
-            _logger.info("licensing_analysis_completed", extra={"binary": path.name})
+            _logger.info("bridge_analysis_completed", extra={"binary": binary_info.name})
             return analysis
 
-    async def reanalyze_licensing(self, binary_name: str | None = None) -> LicensingAnalysis | None:
-        """Re-run licensing analysis on the active or specified binary.
+    async def reanalyze_bridge_analysis(self, binary_name: str | None = None) -> BridgeAnalysisSummary | None:
+        """Re-run bridge analysis on the active or specified binary.
 
         Args:
             binary_name: Optional binary name; uses active binary if not specified.
 
         Returns:
-            LicensingAnalysis results or None.
+            BridgeAnalysisSummary results or None.
         """
         if self._current_session is None:
             return None
@@ -1141,24 +1139,24 @@ class Orchestrator:
         if binary_name:
             for binary in self._current_session.binaries:
                 if binary.name == binary_name:
-                    return await self._run_license_analysis(Path(binary.path))
+                    return await self._run_bridge_analysis(binary)
         elif self._current_session.active_binary:
-            analysis = await self._run_license_analysis(Path(self._current_session.active_binary.path))
+            analysis = await self._run_bridge_analysis(self._current_session.active_binary)
             if analysis:
-                self._current_session.add_licensing_analysis(self._current_session.active_binary.name, analysis)
-                if self._on_licensing_analysis:
-                    self._on_licensing_analysis(analysis)
+                self._current_session.add_bridge_analysis(self._current_session.active_binary.name, analysis)
+                if self._on_bridge_analysis:
+                    self._on_bridge_analysis(analysis)
             return analysis
 
         return None
 
-    def set_licensing_analysis_callback(self, callback: Callable[[LicensingAnalysis], None] | None) -> None:
-        """Set callback for licensing analysis completion.
+    def set_bridge_analysis_callback(self, callback: Callable[[BridgeAnalysisSummary], None] | None) -> None:
+        """Set callback for bridge analysis completion.
 
         Args:
             callback: Function to call with analysis results.
         """
-        self._on_licensing_analysis = callback
+        self._on_bridge_analysis = callback
 
     async def set_active_binary(self, index: int) -> None:
         """Set the active binary by index.
@@ -1278,18 +1276,18 @@ class Orchestrator:
         """
         return [t.value for t in self._tools.get_available_tools()]
 
-    def get_current_licensing_analysis(self, binary_name: str) -> LicensingAnalysis | None:
-        """Get cached licensing analysis for a binary.
+    def get_current_bridge_analysis(self, binary_name: str) -> BridgeAnalysisSummary | None:
+        """Get cached bridge analysis for a binary.
 
         Args:
             binary_name: Name of the binary.
 
         Returns:
-            LicensingAnalysis if available, None otherwise.
+            BridgeAnalysisSummary if available, None otherwise.
         """
         if self._current_session is None:
             return None
-        return self._current_session.get_licensing_analysis(binary_name)
+        return self._current_session.get_bridge_analysis(binary_name)
 
     def get_typed_bridge(self, tool_name: str) -> object | None:
         """Get a typed bridge instance by tool name.
@@ -1316,6 +1314,7 @@ class Orchestrator:
         try:
             bridge: object | None = getattr(self._tools, getter_name)()
         except Exception:
+            _logger.debug("bridge_getter_failed", exc_info=True, extra={"tool_name": tool_name, "getter": getter_name})
             return None
         else:
             return bridge
@@ -1364,23 +1363,23 @@ class Orchestrator:
 
     def configure_hooks(
         self,
-        on_licensing: Callable[[LicensingAnalysis], None] | None = None,
+        on_bridge_analysis: Callable[[BridgeAnalysisSummary], None] | None = None,
         on_confirmation: Callable[[ToolCall], bool] | None = None,
     ) -> None:
         """Configure event hooks.
 
         Args:
-            on_licensing: Callback for licensing analysis.
+            on_bridge_analysis: Callback for bridge analysis completion.
             on_confirmation: Callback for confirmation requests.
         """
-        if on_licensing:
-            self.set_licensing_analysis_callback(on_licensing)
+        if on_bridge_analysis:
+            self.set_bridge_analysis_callback(on_bridge_analysis)
         if on_confirmation:
             self.set_confirmation_callback(on_confirmation)
 
     async def refresh_session_state(self) -> None:
-        """Refresh the session state including licensing analysis."""
-        await self.reanalyze_licensing()
+        """Refresh the session state including bridge analysis."""
+        await self.reanalyze_bridge_analysis()
 
     async def register_manual_patch(
         self,
@@ -1439,10 +1438,10 @@ class Orchestrator:
     async def shutdown(self) -> None:
         """Shutdown the orchestrator and cleanup resources."""
         if self._shutdown_called:
-            _logger.debug("orchestrator_shutdown_already_called")
+            _logger.debug("orchestrator_shutdown_already_called", extra={"state": self._state})
             return
         self._shutdown_called = True
-        _logger.info("orchestrator_shutdown_started")
+        _logger.info("orchestrator_shutdown_started", extra={"state": self._state})
 
         try:
             await self.cancel()
@@ -1465,4 +1464,4 @@ class Orchestrator:
 
         self._current_session = None
         self._state = "idle"
-        _logger.info("orchestrator_shutdown_completed")
+        _logger.info("orchestrator_shutdown_completed", extra={"state": self._state})

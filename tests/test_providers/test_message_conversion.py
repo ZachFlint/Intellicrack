@@ -117,7 +117,7 @@ def test_serialize_empty_string() -> None:
     """Empty string is returned unchanged."""
     result: str = _serialize_tool_result("")
     assert isinstance(result, str)
-    assert len(result) == 0
+    assert not result
 
 
 def test_serialize_dict() -> None:

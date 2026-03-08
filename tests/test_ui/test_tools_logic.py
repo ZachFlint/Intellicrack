@@ -223,35 +223,35 @@ class TestTabCloseRequested:
         assert "log" in panel._tabs
 
     @staticmethod
-    def test_close_licensing_panel_nulls_reference() -> None:
-        """Verify closing the licensing panel nulls _licensing_panel."""
+    def test_close_analysis_panel_nulls_reference() -> None:
+        """Verify closing the analysis panel nulls _analysis_panel."""
         panel = ToolOutputPanel()
-        licensing = panel.add_licensing_panel()
-        assert panel._licensing_panel is not None
-        assert "licensing" in panel._panels
+        analysis_w = panel.add_analysis_panel()
+        assert panel._analysis_panel is not None
+        assert "analysis" in panel._panels
 
-        tab_index = panel._tab_widget.indexOf(licensing)
+        tab_index = panel._tab_widget.indexOf(analysis_w)
         assert tab_index >= 0
 
         panel._on_tab_close_requested(tab_index)
 
-        assert panel._licensing_panel is None
-        assert "licensing" not in panel._panels
-        assert panel._tab_widget.indexOf(licensing) == -1
+        assert panel._analysis_panel is None
+        assert "analysis" not in panel._panels
+        assert panel._tab_widget.indexOf(analysis_w) == -1
 
     @staticmethod
-    def test_close_licensing_allows_readd() -> None:
-        """Verify re-adding licensing panel after close creates a fresh instance."""
+    def test_close_analysis_allows_readd() -> None:
+        """Verify re-adding analysis panel after close creates a fresh instance."""
         panel = ToolOutputPanel()
-        first = panel.add_licensing_panel()
+        first = panel.add_analysis_panel()
         tab_index = panel._tab_widget.indexOf(first)
         panel._on_tab_close_requested(tab_index)
 
-        assert panel._licensing_panel is None
+        assert panel._analysis_panel is None
 
-        second = panel.add_licensing_panel()
-        assert panel._licensing_panel is not None
-        assert panel._licensing_panel is second
+        second = panel.add_analysis_panel()
+        assert panel._analysis_panel is not None
+        assert panel._analysis_panel is second
         assert second is not first
 
     @staticmethod
@@ -292,7 +292,7 @@ class TestTabCloseRequested:
         """Verify multiple tabs can be closed one after another."""
         panel = ToolOutputPanel()
         panel.log("log msg")
-        panel.add_licensing_panel()
+        panel.add_analysis_panel()
         panel.add_script_panel()
         assert panel._tab_widget.count() == _EXPECTED_TABS_AFTER_THREE_ADDS
 
@@ -315,7 +315,7 @@ class TestCloseEmbeddedTools:
         """Verify close_embedded_tools empties all tracking dictionaries."""
         panel = ToolOutputPanel()
         panel.log("message")
-        panel.add_licensing_panel()
+        panel.add_analysis_panel()
         assert len(panel._tabs) > 0
         assert len(panel._panels) > 0
 
@@ -329,17 +329,17 @@ class TestCloseEmbeddedTools:
     def test_close_embedded_tools_nulls_panel_refs() -> None:
         """Verify close_embedded_tools sets all panel references to None."""
         panel = ToolOutputPanel()
-        panel.add_licensing_panel()
+        panel.add_analysis_panel()
         panel.add_script_panel()
         panel.add_stack_panel()
 
-        assert panel._licensing_panel is not None
+        assert panel._analysis_panel is not None
         assert panel._script_panel is not None
         assert panel._stack_panel is not None
 
         panel.close_embedded_tools()
 
-        assert panel._licensing_panel is None
+        assert panel._analysis_panel is None
         assert panel._script_panel is None
         assert panel._stack_panel is None
 

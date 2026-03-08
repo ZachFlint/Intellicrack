@@ -38,6 +38,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ..core.config import get_config_dir
 from ..core.logging import get_logger
 
 
@@ -67,7 +68,7 @@ class SessionManagerDialog(QDialog):
     session_loaded: ClassVar[pyqtSignal] = pyqtSignal(str)
     session_deleted: ClassVar[pyqtSignal] = pyqtSignal(str)
 
-    SESSIONS_DIR = Path.home() / ".intellicrack" / "sessions"
+    SESSIONS_DIR: ClassVar[Path] = get_config_dir() / "sessions"
 
     def __init__(
         self,

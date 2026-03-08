@@ -375,7 +375,7 @@ class CredentialStore:
                     return creds
 
             _logger.debug("credential_fallback_to_env", extra={"provider": provider.value})
-            return self._fallback_loader.get_credentials(provider)
+            return await asyncio.to_thread(self._fallback_loader.get_credentials, provider)
 
     async def get_or_raise(self, provider: ProviderName) -> ProviderCredentials:
         """Get credentials for a provider, raising if not found.
@@ -516,7 +516,7 @@ class CredentialStore:
 
         async with self._lock:
             for provider in target_providers:
-                env_creds = self._fallback_loader.get_credentials(provider)
+                env_creds = await asyncio.to_thread(self._fallback_loader.get_credentials, provider)
                 if env_creds is None or not env_creds.api_key:
                     results[provider] = False
                     continue
@@ -566,6 +566,15 @@ class CredentialStore:
         elif provider == ProviderName.OPENROUTER and not creds.api_key.startswith("sk-or-"):
             return False, "OpenRouter API key should start with 'sk-or-'"
 
+        elif provider == ProviderName.GOOGLE and not creds.api_key.startswith("AIza"):
+            return False, "Google API key should start with 'AIza'"
+
+        elif provider == ProviderName.GROK and not creds.api_key.startswith("xai-"):
+            return False, "Grok API key should start with 'xai-'"
+
+        elif provider == ProviderName.HUGGINGFACE and not creds.api_key.startswith("hf_"):
+            return False, "HuggingFace API token should start with 'hf_'"
+
         return True, None
 
     async def get_source(self, provider: ProviderName) -> CredentialSource | None:
@@ -581,13 +590,10 @@ class CredentialStore:
             keyring_creds = await self._get_from_keyring(provider)
             if keyring_creds is not None and keyring_creds.api_key:
                 metadata = await self._get_metadata(provider)
-                if metadata is not None:
-                    return metadata.source
-                return CredentialSource.KEYRING
-
-        env_creds = self._fallback_loader.get_credentials(provider)
+                return metadata.source if metadata is not None else CredentialSource.KEYRING
+        env_creds = await asyncio.to_thread(self._fallback_loader.get_credentials, provider)
         if env_creds is not None and env_creds.api_key:
-            is_valid, source_desc = self._fallback_loader.validate_credentials(provider)
+            is_valid, source_desc = await asyncio.to_thread(self._fallback_loader.validate_credentials, provider)
             if is_valid and source_desc and "environment" in source_desc.lower():
                 return CredentialSource.ENV_VAR
             return CredentialSource.ENV_FILE

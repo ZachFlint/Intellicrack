@@ -25,11 +25,9 @@ src\intellicrack\providers\model_loader.py:658:13: error[invalid-argument-type] 
 
 11 findings in src\intellicrack\ui\session_manager.py
 
-src\intellicrack\ui\session_manager.py:130:9: error[unresolved-attribute] Attribute `setVisible` is not defined on `None` in union `QHeaderView | None`
+src\intellicrack\ui\session_manager.py:131:9: error[unresolved-attribute] Attribute `setVisible` is not defined on `None` in union `QHeaderView | None`
 
-src\intellicrack\ui\session_manager.py:131:9: error[unresolved-attribute] Attribute `setStretchLastSection` is not defined on `None` in union `QHeaderView | None`
-
-src\intellicrack\ui\session_manager.py:133:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
+src\intellicrack\ui\session_manager.py:132:9: error[unresolved-attribute] Attribute `setStretchLastSection` is not defined on `None` in union `QHeaderView | None`
 
 src\intellicrack\ui\session_manager.py:134:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
 
@@ -37,22 +35,20 @@ src\intellicrack\ui\session_manager.py:135:9: error[unresolved-attribute] Attrib
 
 src\intellicrack\ui\session_manager.py:136:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
 
-src\intellicrack\ui\session_manager.py:371:29: error[unresolved-attribute] Attribute `selectedRows` is not defined on `None` in union `Unknown | QItemSelectionModel | None`
+src\intellicrack\ui\session_manager.py:137:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
 
-src\intellicrack\ui\session_manager.py:460:25: error[unresolved-attribute] Attribute `selectedRows` is not defined on `None` in union `Unknown | QItemSelectionModel | None`
+src\intellicrack\ui\session_manager.py:372:29: error[unresolved-attribute] Attribute `selectedRows` is not defined on `None` in union `Unknown | QItemSelectionModel | None`
 
-src\intellicrack\ui\session_manager.py:492:25: error[unresolved-attribute] Attribute `selectedRows` is not defined on `None` in union `Unknown | QItemSelectionModel | None`
+src\intellicrack\ui\session_manager.py:461:25: error[unresolved-attribute] Attribute `selectedRows` is not defined on `None` in union `Unknown | QItemSelectionModel | None`
 
-src\intellicrack\ui\session_manager.py:553:25: error[unresolved-attribute] Attribute `selectedRows` is not defined on `None` in union `Unknown | QItemSelectionModel | None`
+src\intellicrack\ui\session_manager.py:493:25: error[unresolved-attribute] Attribute `selectedRows` is not defined on `None` in union `Unknown | QItemSelectionModel | None`
 
-src\intellicrack\ui\session_manager.py:766:29: error[unresolved-attribute] Attribute `selectedRows` is not defined on `None` in union `Unknown | QItemSelectionModel | None`
+src\intellicrack\ui\session_manager.py:554:25: error[unresolved-attribute] Attribute `selectedRows` is not defined on `None` in union `Unknown | QItemSelectionModel | None`
+
+src\intellicrack\ui\session_manager.py:767:29: error[unresolved-attribute] Attribute `selectedRows` is not defined on `None` in union `Unknown | QItemSelectionModel | None`
 
 
 8 findings in src\intellicrack\bridges\schemas.py
-
-src\intellicrack\bridges\schemas.py:591:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments
-
-src\intellicrack\bridges\schemas.py:593:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments
 
 src\intellicrack\bridges\schemas.py:595:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments
 
@@ -66,25 +62,12 @@ src\intellicrack\bridges\schemas.py:603:17: error[no-matching-overload] No overl
 
 src\intellicrack\bridges\schemas.py:605:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments
 
+src\intellicrack\bridges\schemas.py:607:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments
 
-7 findings in src\intellicrack\ui\panels\binary_panel.py
-
-src\intellicrack\ui\panels\binary_panel.py:44:12: error[invalid-assignment] Object of type `None` is not assignable to `<module 'lief'>`
-
-src\intellicrack\ui\panels\binary_panel.py:273:9: error[unresolved-attribute] Attribute `setVisible` is not defined on `None` in union `QHeaderView | None`
-
-src\intellicrack\ui\panels\binary_panel.py:275:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
-
-src\intellicrack\ui\panels\binary_panel.py:276:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
-
-src\intellicrack\ui\panels\binary_panel.py:277:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
-
-src\intellicrack\ui\panels\binary_panel.py:304:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
-
-src\intellicrack\ui\panels\binary_panel.py:311:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
+src\intellicrack\bridges\schemas.py:609:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments
 
 
-6 findings in src\intellicrack\providers\anthropic.py
+7 findings in src\intellicrack\providers\anthropic.py
 
 src\intellicrack\providers\anthropic.py:402:60: error[unresolved-attribute] Attribute `input` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
 
@@ -98,59 +81,95 @@ src\intellicrack\providers\anthropic.py:406:98: error[unresolved-attribute] Attr
 
 src\intellicrack\providers\anthropic.py:407:51: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
 
+src\intellicrack\providers\anthropic.py:492:17: error[invalid-argument-type] Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str | dict[str, Any]], None, None]`
+
+
+7 findings in src\intellicrack\ui\panels\binary_panel.py
+
+src\intellicrack\ui\panels\binary_panel.py:44:12: error[invalid-assignment] Object of type `None` is not assignable to `<module 'lief'>`
+
+src\intellicrack\ui\panels\binary_panel.py:271:9: error[unresolved-attribute] Attribute `setVisible` is not defined on `None` in union `QHeaderView | None`
+
+src\intellicrack\ui\panels\binary_panel.py:273:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
+
+src\intellicrack\ui\panels\binary_panel.py:274:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
+
+src\intellicrack\ui\panels\binary_panel.py:275:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
+
+src\intellicrack\ui\panels\binary_panel.py:302:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
+
+src\intellicrack\ui\panels\binary_panel.py:309:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
+
+
+6 findings in src\intellicrack\ui\panels\radare2_panel.py
+
+src\intellicrack\ui\panels\radare2_panel.py:88:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
+
+src\intellicrack\ui\panels\radare2_panel.py:197:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
+
+src\intellicrack\ui\panels\radare2_panel.py:223:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
+
+src\intellicrack\ui\panels\radare2_panel.py:230:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
+
+src\intellicrack\ui\panels\radare2_panel.py:237:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
+
+src\intellicrack\ui\panels\radare2_panel.py:779:51: error[invalid-argument-type] Argument to bound method `load_graph` is incorrect: Expected `list[dict[str, Any]]`, found `Top[list[Unknown]]`
+
+
+6 findings in src\intellicrack\ui\panels\vnc_widget.py
+
+src\intellicrack\ui\panels\vnc_widget.py:539:9: error[invalid-method-override] Invalid override of method `paintEvent`: Definition is incompatible with `QWidget.paintEvent`
+
+src\intellicrack\ui\panels\vnc_widget.py:599:9: error[invalid-method-override] Invalid override of method `mouseMoveEvent`: Definition is incompatible with `QWidget.mouseMoveEvent`
+
+src\intellicrack\ui\panels\vnc_widget.py:614:9: error[invalid-method-override] Invalid override of method `mousePressEvent`: Definition is incompatible with `QWidget.mousePressEvent`
+
+src\intellicrack\ui\panels\vnc_widget.py:629:9: error[invalid-method-override] Invalid override of method `mouseReleaseEvent`: Definition is incompatible with `QWidget.mouseReleaseEvent`
+
+src\intellicrack\ui\panels\vnc_widget.py:644:9: error[invalid-method-override] Invalid override of method `keyPressEvent`: Definition is incompatible with `QWidget.keyPressEvent`
+
+src\intellicrack\ui\panels\vnc_widget.py:659:9: error[invalid-method-override] Invalid override of method `keyReleaseEvent`: Definition is incompatible with `QWidget.keyReleaseEvent`
+
 
 6 findings in src\intellicrack\ui\panels\x64dbg_panel.py
 
-src\intellicrack\ui\panels\x64dbg_panel.py:100:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
-
-src\intellicrack\ui\panels\x64dbg_panel.py:206:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
-
-src\intellicrack\ui\panels\x64dbg_panel.py:214:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
-
-src\intellicrack\ui\panels\x64dbg_panel.py:221:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
+src\intellicrack\ui\panels\x64dbg_panel.py:102:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
 
 src\intellicrack\ui\panels\x64dbg_panel.py:228:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
 
-src\intellicrack\ui\panels\x64dbg_panel.py:274:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
+src\intellicrack\ui\panels\x64dbg_panel.py:236:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
+
+src\intellicrack\ui\panels\x64dbg_panel.py:243:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
+
+src\intellicrack\ui\panels\x64dbg_panel.py:250:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
+
+src\intellicrack\ui\panels\x64dbg_panel.py:296:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
 
 
 5 findings in src\intellicrack\providers\local_transformers.py
 
 src\intellicrack\providers\local_transformers.py:62:14: error[invalid-assignment] Object of type `None` is not assignable to `<module 'torch'>`
 
-src\intellicrack\providers\local_transformers.py:596:23: error[call-non-callable] Object of type `Tensor` is not callable
+src\intellicrack\providers\local_transformers.py:597:23: error[call-non-callable] Object of type `Tensor` is not callable
 
-src\intellicrack\providers\local_transformers.py:674:21: error[invalid-argument-type] Argument to function `to_thread` is incorrect: Expected `tuple[tuple[Tensor, ...], ...] | None`, found `None | Cache`
+src\intellicrack\providers\local_transformers.py:675:21: error[invalid-argument-type] Argument to function `to_thread` is incorrect: Expected `tuple[tuple[Tensor, ...], ...] | None`, found `None | Cache`
 
-src\intellicrack\providers\local_transformers.py:677:22: error[not-subscriptable] Cannot subscript object of type `None` with no `__getitem__` method
+src\intellicrack\providers\local_transformers.py:678:22: error[not-subscriptable] Cannot subscript object of type `None` with no `__getitem__` method
 
-src\intellicrack\providers\local_transformers.py:796:47: error[invalid-assignment] Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`
+src\intellicrack\providers\local_transformers.py:797:47: error[invalid-assignment] Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`
 
 
 5 findings in src\intellicrack\sandbox\windows.py
 
-src\intellicrack\sandbox\windows.py:196:13: error[invalid-assignment] Object of type `Popen[Any] | Popen[str] | Popen[bytes]` is not assignable to attribute `_process` of type `Popen[bytes] | None`
+src\intellicrack\sandbox\windows.py:197:13: error[invalid-assignment] Object of type `Popen[str] | Popen[bytes] | Popen[Any]` is not assignable to attribute `_process` of type `Popen[bytes] | None`
 
-src\intellicrack\sandbox\windows.py:206:17: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`
+src\intellicrack\sandbox\windows.py:207:17: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`
 
-src\intellicrack\sandbox\windows.py:215:16: error[unresolved-attribute] Attribute `poll` is not defined on `None` in union `Popen[bytes] | None`
+src\intellicrack\sandbox\windows.py:216:16: error[unresolved-attribute] Attribute `poll` is not defined on `None` in union `Popen[bytes] | None`
 
-src\intellicrack\sandbox\windows.py:220:31: error[unresolved-attribute] Attribute `pid` is not defined on `None` in union `Popen[bytes] | None`
+src\intellicrack\sandbox\windows.py:221:31: error[unresolved-attribute] Attribute `pid` is not defined on `None` in union `Popen[bytes] | None`
 
-src\intellicrack\sandbox\windows.py:222:67: error[unresolved-attribute] Attribute `pid` is not defined on `None` in union `Popen[bytes] | None`
-
-
-5 findings in src\intellicrack\ui\panels\radare2_panel.py
-
-src\intellicrack\ui\panels\radare2_panel.py:87:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
-
-src\intellicrack\ui\panels\radare2_panel.py:192:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
-
-src\intellicrack\ui\panels\radare2_panel.py:218:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
-
-src\intellicrack\ui\panels\radare2_panel.py:225:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
-
-src\intellicrack\ui\panels\radare2_panel.py:232:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
+src\intellicrack\sandbox\windows.py:223:67: error[unresolved-attribute] Attribute `pid` is not defined on `None` in union `Popen[bytes] | None`
 
 
 4 findings in src\intellicrack\bridges\binary.py
@@ -177,22 +196,31 @@ src\intellicrack\ui\panels\ghidra_panel.py:197:9: error[unresolved-attribute] At
 
 4 findings in src\intellicrack\ui\provider_config.py
 
-src\intellicrack\ui\provider_config.py:62:33: error[invalid-assignment] Object of type `None` is not assignable to `<class 'LocalTransformersProvider'>`
+src\intellicrack\ui\provider_config.py:66:33: error[invalid-assignment] Object of type `None` is not assignable to `<class 'LocalTransformersProvider'>`
 
-src\intellicrack\ui\provider_config.py:67:22: error[invalid-assignment] Object of type `None` is not assignable to `<class 'OllamaProvider'>`
+src\intellicrack\ui\provider_config.py:71:22: error[invalid-assignment] Object of type `None` is not assignable to `<class 'OllamaProvider'>`
 
-src\intellicrack\ui\provider_config.py:72:26: error[invalid-assignment] Object of type `None` is not assignable to `<class 'OpenRouterProvider'>`
+src\intellicrack\ui\provider_config.py:76:26: error[invalid-assignment] Object of type `None` is not assignable to `<class 'OpenRouterProvider'>`
 
-src\intellicrack\ui\provider_config.py:77:33: error[invalid-assignment] Object of type `None` is not assignable to `def get_optimal_dtype_for_xpu() -> str`
+src\intellicrack\ui\provider_config.py:81:33: error[invalid-assignment] Object of type `None` is not assignable to `def get_optimal_dtype_for_xpu() -> str`
 
 
-3 findings in src\intellicrack\ui\panels\licensing_panel.py
+3 findings in src\intellicrack\ui\panels\analysis_panel.py
 
-src\intellicrack\ui\panels\licensing_panel.py:215:9: error[unresolved-attribute] Attribute `setVisible` is not defined on `None` in union `QHeaderView | None`
+src\intellicrack\ui\panels\analysis_panel.py:170:9: error[unresolved-attribute] Attribute `setVisible` is not defined on `None` in union `QHeaderView | None`
 
-src\intellicrack\ui\panels\licensing_panel.py:302:9: error[unresolved-attribute] Attribute `setVisible` is not defined on `None` in union `QHeaderView | None`
+src\intellicrack\ui\panels\analysis_panel.py:175:9: error[unresolved-attribute] Attribute `setStretchLastSection` is not defined on `None` in union `QHeaderView | None`
 
-src\intellicrack\ui\panels\licensing_panel.py:379:9: error[unresolved-attribute] Attribute `setVisible` is not defined on `None` in union `QHeaderView | None`
+src\intellicrack\ui\panels\analysis_panel.py:176:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`
+
+
+3 findings in src\intellicrack\ui\panels\graph_view.py
+
+src\intellicrack\ui\panels\graph_view.py:133:9: error[invalid-method-override] Invalid override of method `paint`: Definition is incompatible with `QGraphicsRectItem.paint`
+
+src\intellicrack\ui\panels\graph_view.py:252:9: error[invalid-method-override] Invalid override of method `paint`: Definition is incompatible with `QGraphicsPathItem.paint`
+
+src\intellicrack\ui\panels\graph_view.py:480:9: error[invalid-method-override] Invalid override of method `wheelEvent`: Definition is incompatible with `QGraphicsView.wheelEvent`
 
 
 3 findings in tests\core\test_process_cleanup.py
@@ -213,23 +241,30 @@ src\intellicrack\bridges\sandbox_bridge.py:719:29: error[invalid-type-form] Inva
 
 2 findings in src\intellicrack\bridges\x64dbg.py
 
-src\intellicrack\bridges\x64dbg.py:966:9: error[invalid-assignment] Object of type `Popen[Any] | Popen[str] | Popen[bytes]` is not assignable to attribute `_process` of type `Popen[bytes] | None`
+src\intellicrack\bridges\x64dbg.py:997:9: error[invalid-assignment] Object of type `Popen[str] | Popen[bytes] | Popen[Any]` is not assignable to attribute `_process` of type `Popen[bytes] | None`
 
-src\intellicrack\bridges\x64dbg.py:977:13: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`
+src\intellicrack\bridges\x64dbg.py:1007:13: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`
 
 
 2 findings in src\intellicrack\core\process_manager.py
 
-src\intellicrack\core\process_manager.py:253:13: error[call-top-callable] Object of type `Top[(...) -> object]` is not safe to call; its signature is not known
+src\intellicrack\core\process_manager.py:256:13: error[call-top-callable] Object of type `Top[(...) -> object]` is not safe to call; its signature is not known
 
-src\intellicrack\core\process_manager.py:516:56: error[invalid-argument-type] Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`
+src\intellicrack\core\process_manager.py:525:56: error[invalid-argument-type] Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`
+
+
+2 findings in src\intellicrack\sandbox\qemu.py
+
+src\intellicrack\sandbox\qemu.py:627:64: error[unresolved-attribute] Object of type `QEMUConfig` has no attribute `vnc_port`
+
+src\intellicrack\sandbox\qemu.py:909:77: error[unresolved-attribute] Attribute `value` is not defined on `SandboxState` in union `Unknown | SandboxState`
 
 
 2 findings in src\intellicrack\ui\app.py
 
-src\intellicrack\ui\app.py:63:30: error[invalid-assignment] Object of type `None` is not assignable to `def get_global_model_cache() -> ModelCache`
+src\intellicrack\ui\app.py:64:30: error[invalid-assignment] Object of type `None` is not assignable to `def get_global_model_cache() -> ModelCache`
 
-src\intellicrack\ui\app.py:64:29: error[invalid-assignment] Object of type `None` is not assignable to `def set_global_cache_size(max_memory_bytes: int) -> None`
+src\intellicrack\ui\app.py:65:29: error[invalid-assignment] Object of type `None` is not assignable to `def set_global_cache_size(max_memory_bytes: int) -> None`
 
 
 2 findings in src\intellicrack\ui\chat.py
@@ -257,14 +292,21 @@ src\intellicrack\ui\panels\process_panel.py:445:9: error[unresolved-attribute] A
 
 src\intellicrack\ui\tools.py:404:17: error[unresolved-attribute] Attribute `findBlockByLineNumber` is not defined on `None` in union `QTextDocument | None`
 
-src\intellicrack\ui\tools.py:1845:16: error[unresolved-attribute] Attribute `findChild` is not defined on `None` in union `Unknown | QTextDocument | None`
+src\intellicrack\ui\tools.py:1846:16: error[unresolved-attribute] Attribute `findChild` is not defined on `None` in union `Unknown | QTextDocument | None`
 
 
 2 findings in tests\test_bridges\test_x64dbg.py
 
-tests\test_bridges\test_x64dbg.py:165:26: error[invalid-assignment] Object of type `dict[Unknown | str, Unknown | int | str]` is not assignable to `WatchpointInfo`
+tests\test_bridges\test_x64dbg.py:165:26: error[invalid-assignment] Object of type `dict[str, int | str]` is not assignable to `WatchpointInfo`
 
 tests\test_bridges\test_x64dbg.py:175:12: error[not-subscriptable] Cannot subscript object of type `WatchpointInfo` with no `__getitem__` method
+
+
+2 findings in tests\test_providers\test_local_transformers_provider.py
+
+tests\test_providers\test_local_transformers_provider.py:496:42: error[invalid-argument-type] Argument to bound method `_format_prompt` is incorrect: Expected `list[dict[str, object]]`, found `list[dict[str, str]]`
+
+tests\test_providers\test_local_transformers_provider.py:509:42: error[invalid-argument-type] Argument to bound method `_format_prompt` is incorrect: Expected `list[dict[str, object]]`, found `list[dict[str, str]]`
 
 
 2 findings in tests\test_providers\test_provider_bugfixes.py
@@ -296,6 +338,11 @@ src\intellicrack\credentials\store.py:34:23: error[invalid-assignment] Object of
 src\intellicrack\main.py:202:12: warning[redundant-cast] Value is already of type `<class 'SplashScreen'>`
 
 
+1 findings in src\intellicrack\providers\base.py
+
+src\intellicrack\providers\base.py:498:21: error[invalid-argument-type] Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str], None, None]`
+
+
 1 findings in src\intellicrack\providers\xpu_utils.py
 
 src\intellicrack\providers\xpu_utils.py:29:21: error[invalid-assignment] Object of type `None` is not assignable to `<module 'torch'>`
@@ -306,14 +353,19 @@ src\intellicrack\providers\xpu_utils.py:29:21: error[invalid-assignment] Object 
 src\intellicrack\ui\dialogs\splash_screen.py:107:18: error[unresolved-attribute] Object of type `QCoreApplication` has no attribute `primaryScreen`
 
 
+1 findings in src\intellicrack\ui\panels\hxd_panel.py
+
+src\intellicrack\ui\panels\hxd_panel.py:95:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
+
+
 1 findings in src\intellicrack\ui\panels\sandbox_panel.py
 
-src\intellicrack\ui\panels\sandbox_panel.py:81:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
+src\intellicrack\ui\panels\sandbox_panel.py:83:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
 
 
 1 findings in src\intellicrack\ui\panels\stack_viewer.py
 
-src\intellicrack\ui\panels\stack_viewer.py:281:9: error[unresolved-attribute] Attribute `setVisible` is not defined on `None` in union `QHeaderView | None`
+src\intellicrack\ui\panels\stack_viewer.py:283:9: error[unresolved-attribute] Attribute `setVisible` is not defined on `None` in union `QHeaderView | None`
 
 
 1 findings in src\intellicrack\ui\resources\theme_manager.py
@@ -323,12 +375,17 @@ src\intellicrack\ui\resources\theme_manager.py:1059:13: error[unresolved-attribu
 
 1 findings in src\intellicrack\ui\tool_config.py
 
-src\intellicrack\ui\tool_config.py:61:5: error[conflicting-declarations] Conflicting declared types for `_winreg_module`: `ModuleType | None` and `<module 'winreg'>`
+src\intellicrack\ui\tool_config.py:62:5: error[conflicting-declarations] Conflicting declared types for `_winreg_module`: `ModuleType | None` and `<module 'winreg'>`
 
 
-1 findings in tests\test_bridges\test_x64dbg_api_coverage.py
+1 findings in src\intellicrack\ui\win32_embed.py
 
-tests\test_bridges\test_x64dbg_api_coverage.py:134:18: error[unresolved-attribute] Object of type `X64DbgBridge` has no attribute `_get_process_info`
+src\intellicrack\ui\win32_embed.py:111:49: error[invalid-argument-type] Argument to function `fromWinId` is incorrect: Expected `voidptr`, found `int`
+
+
+1 findings in tests\test_ui\test_graph_view.py
+
+tests\test_ui\test_graph_view.py:335:17: error[unresolved-attribute] Attribute `items` is not defined on `None` in union `QGraphicsScene | None`
 
 
 1 findings in tests\test_ui\test_sandbox_panel_fixes.py

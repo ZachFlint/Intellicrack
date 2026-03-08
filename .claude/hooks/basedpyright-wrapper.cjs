@@ -2,7 +2,7 @@ const { spawn } = require("child_process");
 const path = require("path");
 
 const PROJECT_ROOT = "D:\\Intellicrack";
-const PROJECT_URI = "file:///D%3A/Intellicrack";
+const PROJECT_URI = "file:///D:/Intellicrack";
 const PYTHON_PATH = "d:\\Intellicrack\\.pixi\\envs\\default\\python.exe";
 const VENV_PATH = "d:\\Intellicrack\\.pixi\\envs";
 const VENV_NAME = "default";
@@ -10,22 +10,10 @@ const LANGSERVER = path.join(
   PROJECT_ROOT, ".pixi", "envs", "default", "Scripts", "basedpyright-langserver.exe"
 );
 
-const ANALYSIS_SETTINGS = {
-  extraPaths: ["d:/intellicrack/src"],
-  typeCheckingMode: "strict",
-  pythonVersion: "3.13",
-  pythonPlatform: "Windows",
-  useLibraryCodeForTypes: false,
-  analyzeUnannotatedFunctions: true,
-  enableTypeIgnoreComments: true,
-  strictListInference: true,
-  strictDictionaryInference: true,
-  strictSetInference: true,
-  reportMissingImports: "warning",
-  reportMissingTypeStubs: false,
-  reportMissingModuleSource: "warning",
-  reportUndefinedVariable: "error",
-  reportGeneralTypeIssues: "error",
+const PYTHON_SETTINGS = {
+  pythonPath: PYTHON_PATH,
+  venvPath: VENV_PATH,
+  venv: VENV_NAME,
 };
 
 const child = spawn(LANGSERVER, ["--stdio"], {
@@ -101,12 +89,8 @@ child.stdout.on("data", (chunk) => {
             jsonrpc: "2.0", id: msg.id,
             result: (msg.params.items || []).map((item) => {
               if (item.section === "python")
-                return { pythonPath: PYTHON_PATH, venvPath: VENV_PATH, venv: VENV_NAME };
-              if (item.section === "basedpyright")
-                return { analysis: ANALYSIS_SETTINGS };
-              if (item.section === "basedpyright.analysis")
-                return ANALYSIS_SETTINGS;
-              return {};
+                return PYTHON_SETTINGS;
+              return null;
             }),
           };
           break;

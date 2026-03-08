@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import asyncio
 import atexit
-import contextlib
 import signal
 import sys
 import threading
@@ -217,12 +216,16 @@ class ProcessManager:
             if self._original_sigterm_handler is not None:
                 signal.signal(signal.SIGTERM, self._original_sigterm_handler)
         elif self._original_sigint_handler is not None:
-            with contextlib.suppress(ValueError, OSError):
+            try:
                 signal.signal(signal.SIGINT, self._original_sigint_handler)
+            except (ValueError, OSError):
+                _module_logger.debug("signal_handler_uninstall_failed", exc_info=True)
 
         if self._atexit_registered:
-            with contextlib.suppress(Exception):
+            try:
                 atexit.unregister(self._atexit_cleanup)
+            except Exception:
+                _module_logger.warning("atexit_unregister_failed", exc_info=True)
             self._atexit_registered = False
 
         ProcessManager._get_logger().debug("handlers_uninstalled")
@@ -278,10 +281,12 @@ class ProcessManager:
         root_pids = [p.pid for p in processes if p.pid is not None] + external_pids
 
         for pid in root_pids:
-            with contextlib.suppress(psutil.NoSuchProcess):
+            try:
                 proc = psutil.Process(pid)
                 all_procs_psutil.append(proc)
                 all_procs_psutil.extend(proc.children(recursive=True))
+            except psutil.NoSuchProcess:
+                _module_logger.debug("process_already_exited", extra={"pid": pid})
         # Deduplicate based on PID
         seen_pids: set[int] = set()
         unique_procs: list[psutil.Process] = []
@@ -290,20 +295,22 @@ class ProcessManager:
                 seen_pids.add(p.pid)
                 unique_procs.append(p)
 
-        # 1. Terminate all
         for p in unique_procs:
-            with contextlib.suppress(psutil.NoSuchProcess):
+            try:
                 p.terminate()
+            except psutil.NoSuchProcess:
+                _module_logger.debug("terminate_process_already_exited", extra={"pid": p.pid})
 
         # 2. Wait for graceful termination
         _, alive = psutil.wait_procs(unique_procs, timeout=self.DEFAULT_GRACEFUL_TIMEOUT)
 
-        # 3. Kill survivors
         if alive:
             logger.warning("sync_cleanup_force_kill", extra={"count": len(alive)})
             for p in alive:
-                with contextlib.suppress(psutil.NoSuchProcess):
+                try:
                     p.kill()
+                except psutil.NoSuchProcess:
+                    _module_logger.debug("kill_process_already_exited", extra={"pid": p.pid})
             psutil.wait_procs(alive, timeout=self.DEFAULT_FORCE_TIMEOUT)
 
         with self._process_lock:
@@ -365,18 +372,20 @@ class ProcessManager:
 
         all_procs = [*children, parent]
 
-        # Graceful
         for p in all_procs:
-            with contextlib.suppress(psutil.NoSuchProcess):
+            try:
                 p.terminate()
+            except psutil.NoSuchProcess:
+                _module_logger.debug("terminate_tree_process_exited", extra={"pid": p.pid})
 
         _, alive = psutil.wait_procs(all_procs, timeout=graceful_timeout)
 
-        # Forceful
         if alive:
             for p in alive:
-                with contextlib.suppress(psutil.NoSuchProcess):
+                try:
                     p.kill()
+                except psutil.NoSuchProcess:
+                    _module_logger.debug("kill_tree_process_exited", extra={"pid": p.pid})
             psutil.wait_procs(alive, timeout=force_timeout)
 
     def register(
@@ -585,8 +594,10 @@ class ProcessManager:
         except TimeoutError:
             logger.warning("async_process_zombie_fallback", extra={"process_name": name})
             process.kill()
-            with contextlib.suppress(Exception):
+            try:
                 await process.wait()
+            except Exception:
+                _module_logger.warning("zombie_wait_fallback_failed", exc_info=True)
 
         logger.debug("async_process_terminated_tree", extra={"process_name": name})
 

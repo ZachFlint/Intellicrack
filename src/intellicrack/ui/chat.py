@@ -461,7 +461,7 @@ class ChatPanel(QFrame):
         Returns:
             Function to call with each text chunk.
         """
-        _logger.debug("streaming_message_started")
+        _logger.debug("streaming_message_started", extra={"message_count": len(self._messages)})
         message = Message(
             role="assistant",
             content="",

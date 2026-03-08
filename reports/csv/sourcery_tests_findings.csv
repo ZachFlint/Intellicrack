@@ -1,1 +1,6 @@
 file,line,rule,description
+tests\test_providers\test_message_conversion.py,120,simplify-str-len-comparison,Simplify comparison to string length
+tests\test_providers\test_message_conversion.py,120,simplify-empty-collection-comparison,Replaces an empty collection equality with a boolean operation
+tests\test_ui\test_binary_panel_fixes.py,54,remove-redundant-slice-index,Replace a[0:x] with a[:x] and a with a
+tests\test_ui\test_binary_panel_fixes.py,80,remove-redundant-slice-index,Replace a[0:x] with a[:x] and a with a
+tests\test_ui\test_binary_panel_fixes.py,94,remove-redundant-slice-index,Replace a[0:x] with a[:x] and a with a

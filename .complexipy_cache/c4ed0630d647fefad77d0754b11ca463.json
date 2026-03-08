@@ -813,12 +813,6 @@
     {
       "complexity": 2,
       "file_name": "ghidra.py",
-      "function_name": "GhidraBridge::initialize",
-      "path": "src\\intellicrack\\bridges\\ghidra.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "ghidra.py",
       "function_name": "GhidraBridge::rename_function",
       "path": "src\\intellicrack\\bridges\\ghidra.py"
     },
@@ -832,6 +826,12 @@
       "complexity": 3,
       "file_name": "ghidra.py",
       "function_name": "GhidraBridge::_execute_remote",
+      "path": "src\\intellicrack\\bridges\\ghidra.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "ghidra.py",
+      "function_name": "GhidraBridge::initialize",
       "path": "src\\intellicrack\\bridges\\ghidra.py"
     },
     {
@@ -913,6 +913,12 @@
       "path": "src\\intellicrack\\bridges\\ghidra.py"
     },
     {
+      "complexity": 7,
+      "file_name": "ghidra.py",
+      "function_name": "GhidraBridge::_wait_for_bridge_port",
+      "path": "src\\intellicrack\\bridges\\ghidra.py"
+    },
+    {
       "complexity": 11,
       "file_name": "ghidra.py",
       "function_name": "GhidraBridge::shutdown",
@@ -991,6 +997,12 @@
       "path": "src\\intellicrack\\bridges\\installer.py"
     },
     {
+      "complexity": 4,
+      "file_name": "installer.py",
+      "function_name": "_find_plugin_source",
+      "path": "src\\intellicrack\\bridges\\installer.py"
+    },
+    {
       "complexity": 5,
       "file_name": "installer.py",
       "function_name": "ToolInstaller::ensure_tool",
@@ -1000,6 +1012,12 @@
       "complexity": 7,
       "file_name": "installer.py",
       "function_name": "ToolInstaller::get_all_tool_status",
+      "path": "src\\intellicrack\\bridges\\installer.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "installer.py",
+      "function_name": "deploy_x64dbg_plugin",
       "path": "src\\intellicrack\\bridges\\installer.py"
     },
     {
@@ -1525,6 +1543,12 @@
       "path": "src\\intellicrack\\bridges\\radare2.py"
     },
     {
+      "complexity": 9,
+      "file_name": "radare2.py",
+      "function_name": "Radare2Bridge::get_function_graph",
+      "path": "src\\intellicrack\\bridges\\radare2.py"
+    },
+    {
       "complexity": 11,
       "file_name": "radare2.py",
       "function_name": "Radare2Bridge::search_strings",
@@ -1989,6 +2013,12 @@
     {
       "complexity": 1,
       "file_name": "x64dbg.py",
+      "function_name": "X64DbgBridge::debugger_pid",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::get_process_info",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
@@ -2109,12 +2139,6 @@
     {
       "complexity": 5,
       "file_name": "x64dbg.py",
-      "function_name": "X64DbgBridge::initialize",
-      "path": "src\\intellicrack\\bridges\\x64dbg.py"
-    },
-    {
-      "complexity": 5,
-      "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::read_memory",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
@@ -2140,6 +2164,12 @@
       "complexity": 7,
       "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::_detect_process_arch",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "x64dbg.py",
+      "function_name": "X64DbgBridge::initialize",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
@@ -2210,6 +2240,42 @@
     },
     {
       "complexity": 0,
+      "file_name": "analysis_aggregator.py",
+      "function_name": "AnalysisAggregator::__init__",
+      "path": "src\\intellicrack\\core\\analysis_aggregator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "analysis_aggregator.py",
+      "function_name": "AnalysisAggregator::aggregate",
+      "path": "src\\intellicrack\\core\\analysis_aggregator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "analysis_aggregator.py",
+      "function_name": "_deduplicate_exports",
+      "path": "src\\intellicrack\\core\\analysis_aggregator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "analysis_aggregator.py",
+      "function_name": "_deduplicate_imports",
+      "path": "src\\intellicrack\\core\\analysis_aggregator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "analysis_aggregator.py",
+      "function_name": "AnalysisAggregator::_collect_from_binary_bridge",
+      "path": "src\\intellicrack\\core\\analysis_aggregator.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "analysis_aggregator.py",
+      "function_name": "AnalysisAggregator::_collect_from_static_bridge",
+      "path": "src\\intellicrack\\core\\analysis_aggregator.py"
+    },
+    {
+      "complexity": 0,
       "file_name": "config.py",
       "function_name": "Config::_from_dict",
       "path": "src\\intellicrack\\core\\config.py"
@@ -2271,7 +2337,19 @@
     {
       "complexity": 0,
       "file_name": "config.py",
-      "function_name": "_get_project_root",
+      "function_name": "get_config_dir",
+      "path": "src\\intellicrack\\core\\config.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "config.py",
+      "function_name": "get_config_file",
+      "path": "src\\intellicrack\\core\\config.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "config.py",
+      "function_name": "get_project_root",
       "path": "src\\intellicrack\\core\\config.py"
     },
     {
@@ -2305,346 +2383,10 @@
       "path": "src\\intellicrack\\core\\config.py"
     },
     {
-      "complexity": 8,
+      "complexity": 10,
       "file_name": "config.py",
       "function_name": "Config::_to_dict",
       "path": "src\\intellicrack\\core\\config.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::__init__",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_analyze_crypto_data",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_analyze_key_format",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_build_validation_lookup_maps",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_extract_filtered_strings",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_extract_strings",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_filter_strings",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_find_rsa_public_keys",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_get_function_ranges",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_match_crypto_keyword",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "license_analyzer.py",
-      "function_name": "_FunctionAnalysisContext::create_empty",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_extract_rsa_constants",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_parse_call_target",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_parse_pe",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::analyze",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "license_analyzer.py",
-      "function_name": "_extract_pefile_sections",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_build_context_notes",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_identify_validation_functions",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_parse_hex_address",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "license_analyzer.py",
-      "function_name": "BinaryView::offset_to_va",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_analyze_function_ranges",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_analyze_runtime_indicators",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_build_binary_view",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_collect_matching_imports",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_extract_reference_address",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_section_end_for_address",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_analyze_single_function",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_build_feature_flags",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_create_validation_info_if_valid",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_find_pem_keys",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_parse_der_integer",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_parse_pe_with_pefile",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_read_der_length",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 5,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_address_in_exec_section",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 5,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_find_der_keys",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 5,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_parse_rsa_public_key_der_from_offset",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 5,
-      "file_name": "license_analyzer.py",
-      "function_name": "_extract_lief_sections",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 6,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_build_confidence",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 6,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_extract_magic_constants",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 6,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_parse_rsa_public_key_der",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 7,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_build_function_ranges",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 7,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_detect_format",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 7,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_parse_pe_with_lief",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 8,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_detect_checksum_info",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 8,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_disassemble_sections",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 8,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_update_context_for_instruction",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 10,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_scan_section_for_constant",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 12,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_collect_function_candidates",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 12,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_extract_ascii_strings",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 12,
-      "file_name": "license_analyzer.py",
-      "function_name": "_extract_lief_imports",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 13,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_extract_utf16le_strings",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 13,
-      "file_name": "license_analyzer.py",
-      "function_name": "_extract_pefile_imports",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 14,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_detect_architecture",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 16,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_detect_crypto_apis",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 21,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_detect_key_format",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
-    },
-    {
-      "complexity": 29,
-      "file_name": "license_analyzer.py",
-      "function_name": "LicenseAnalyzer::_detect_algorithms",
-      "path": "src\\intellicrack\\core\\license_analyzer.py"
     },
     {
       "complexity": 0,
@@ -2847,6 +2589,12 @@
     {
       "complexity": 0,
       "file_name": "orchestrator.py",
+      "function_name": "Orchestrator::set_bridge_analysis_callback",
+      "path": "src\\intellicrack\\core\\orchestrator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "orchestrator.py",
       "function_name": "Orchestrator::set_confirmation_callback",
       "path": "src\\intellicrack\\core\\orchestrator.py"
     },
@@ -2854,12 +2602,6 @@
       "complexity": 0,
       "file_name": "orchestrator.py",
       "function_name": "Orchestrator::set_confirmation_level",
-      "path": "src\\intellicrack\\core\\orchestrator.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "orchestrator.py",
-      "function_name": "Orchestrator::set_licensing_analysis_callback",
       "path": "src\\intellicrack\\core\\orchestrator.py"
     },
     {
@@ -2937,7 +2679,7 @@
     {
       "complexity": 1,
       "file_name": "orchestrator.py",
-      "function_name": "Orchestrator::_run_license_analysis",
+      "function_name": "Orchestrator::_run_bridge_analysis",
       "path": "src\\intellicrack\\core\\orchestrator.py"
     },
     {
@@ -2949,7 +2691,7 @@
     {
       "complexity": 1,
       "file_name": "orchestrator.py",
-      "function_name": "Orchestrator::get_current_licensing_analysis",
+      "function_name": "Orchestrator::get_current_bridge_analysis",
       "path": "src\\intellicrack\\core\\orchestrator.py"
     },
     {
@@ -3093,7 +2835,7 @@
     {
       "complexity": 13,
       "file_name": "orchestrator.py",
-      "function_name": "Orchestrator::reanalyze_licensing",
+      "function_name": "Orchestrator::reanalyze_bridge_analysis",
       "path": "src\\intellicrack\\core\\orchestrator.py"
     },
     {
@@ -3213,12 +2955,6 @@
     {
       "complexity": 1,
       "file_name": "process_manager.py",
-      "function_name": "ProcessManager::_terminate_async_subprocess",
-      "path": "src\\intellicrack\\core\\process_manager.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "process_manager.py",
       "function_name": "ProcessManager::unregister",
       "path": "src\\intellicrack\\core\\process_manager.py"
     },
@@ -3232,6 +2968,12 @@
       "complexity": 1,
       "file_name": "process_manager.py",
       "function_name": "TrackedProcess::is_running",
+      "path": "src\\intellicrack\\core\\process_manager.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "process_manager.py",
+      "function_name": "ProcessManager::_terminate_async_subprocess",
       "path": "src\\intellicrack\\core\\process_manager.py"
     },
     {
@@ -3267,13 +3009,13 @@
     {
       "complexity": 4,
       "file_name": "process_manager.py",
-      "function_name": "ProcessManager::_terminate_tree_with_psutil",
+      "function_name": "ProcessManager::register_external_pid",
       "path": "src\\intellicrack\\core\\process_manager.py"
     },
     {
-      "complexity": 4,
+      "complexity": 6,
       "file_name": "process_manager.py",
-      "function_name": "ProcessManager::register_external_pid",
+      "function_name": "ProcessManager::_terminate_tree_with_psutil",
       "path": "src\\intellicrack\\core\\process_manager.py"
     },
     {
@@ -3289,18 +3031,6 @@
       "path": "src\\intellicrack\\core\\process_manager.py"
     },
     {
-      "complexity": 7,
-      "file_name": "process_manager.py",
-      "function_name": "ProcessManager::uninstall_handlers",
-      "path": "src\\intellicrack\\core\\process_manager.py"
-    },
-    {
-      "complexity": 9,
-      "file_name": "process_manager.py",
-      "function_name": "ProcessManager::_sync_cleanup",
-      "path": "src\\intellicrack\\core\\process_manager.py"
-    },
-    {
       "complexity": 9,
       "file_name": "process_manager.py",
       "function_name": "ProcessManager::cleanup_all_async",
@@ -3313,9 +3043,21 @@
       "path": "src\\intellicrack\\core\\process_manager.py"
     },
     {
+      "complexity": 9,
+      "file_name": "process_manager.py",
+      "function_name": "ProcessManager::uninstall_handlers",
+      "path": "src\\intellicrack\\core\\process_manager.py"
+    },
+    {
       "complexity": 11,
       "file_name": "process_manager.py",
       "function_name": "ProcessManager::terminate_process",
+      "path": "src\\intellicrack\\core\\process_manager.py"
+    },
+    {
+      "complexity": 12,
+      "file_name": "process_manager.py",
+      "function_name": "ProcessManager::_sync_cleanup",
       "path": "src\\intellicrack\\core\\process_manager.py"
     },
     {
@@ -3513,7 +3255,7 @@
     {
       "complexity": 0,
       "file_name": "session.py",
-      "function_name": "Session::add_licensing_analysis",
+      "function_name": "Session::add_bridge_analysis",
       "path": "src\\intellicrack\\core\\session.py"
     },
     {
@@ -3537,7 +3279,7 @@
     {
       "complexity": 0,
       "file_name": "session.py",
-      "function_name": "Session::get_licensing_analysis",
+      "function_name": "Session::get_bridge_analysis",
       "path": "src\\intellicrack\\core\\session.py"
     },
     {
@@ -3651,12 +3393,6 @@
     {
       "complexity": 1,
       "file_name": "session.py",
-      "function_name": "SessionManager::_stop_auto_save",
-      "path": "src\\intellicrack\\core\\session.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "session.py",
       "function_name": "SessionManager::close",
       "path": "src\\intellicrack\\core\\session.py"
     },
@@ -3706,6 +3442,12 @@
       "complexity": 1,
       "file_name": "session.py",
       "function_name": "SessionStore::delete",
+      "path": "src\\intellicrack\\core\\session.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "session.py",
+      "function_name": "SessionManager::_stop_auto_save",
       "path": "src\\intellicrack\\core\\session.py"
     },
     {
@@ -3865,15 +3607,15 @@
       "path": "src\\intellicrack\\core\\tools.py"
     },
     {
-      "complexity": 5,
+      "complexity": 9,
       "file_name": "tools.py",
-      "function_name": "ToolRegistry::initialize_tool",
+      "function_name": "ToolRegistry::get_status",
       "path": "src\\intellicrack\\core\\tools.py"
     },
     {
       "complexity": 9,
       "file_name": "tools.py",
-      "function_name": "ToolRegistry::get_status",
+      "function_name": "ToolRegistry::initialize_tool",
       "path": "src\\intellicrack\\core\\tools.py"
     },
     {
@@ -3881,12 +3623,6 @@
       "file_name": "tools.py",
       "function_name": "ToolRegistry::execute_tool_call",
       "path": "src\\intellicrack\\core\\tools.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "types.py",
-      "function_name": "AlgorithmType::is_hash",
-      "path": "src\\intellicrack\\core\\types.py"
     },
     {
       "complexity": 0,
@@ -3910,18 +3646,6 @@
       "complexity": 0,
       "file_name": "types.py",
       "function_name": "InitializationError::__init__",
-      "path": "src\\intellicrack\\core\\types.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "types.py",
-      "function_name": "KeyFormat::is_text_based",
-      "path": "src\\intellicrack\\core\\types.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "types.py",
-      "function_name": "KeyFormat::requires_hardware_id",
       "path": "src\\intellicrack\\core\\types.py"
     },
     {
@@ -3952,6 +3676,12 @@
       "complexity": 0,
       "file_name": "types.py",
       "function_name": "SandboxError::__init__",
+      "path": "src\\intellicrack\\core\\types.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "types.py",
+      "function_name": "SandboxTimeoutError::__init__",
       "path": "src\\intellicrack\\core\\types.py"
     },
     {
@@ -3988,12 +3718,6 @@
       "complexity": 0,
       "file_name": "types.py",
       "function_name": "ToolFunction::signature",
-      "path": "src\\intellicrack\\core\\types.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "types.py",
-      "function_name": "ValidationFunctionInfo::summary",
       "path": "src\\intellicrack\\core\\types.py"
     },
     {
@@ -4060,6 +3784,12 @@
       "complexity": 0,
       "file_name": "env_loader.py",
       "function_name": "create_env_template",
+      "path": "src\\intellicrack\\credentials\\env_loader.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "env_loader.py",
+      "function_name": "get_api_key_env_var_mapping",
       "path": "src\\intellicrack\\credentials\\env_loader.py"
     },
     {
@@ -4173,12 +3903,6 @@
     {
       "complexity": 0,
       "file_name": "oauth.py",
-      "function_name": "_oauth_provider_to_name",
-      "path": "src\\intellicrack\\credentials\\oauth.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "oauth.py",
       "function_name": "authorize_google",
       "path": "src\\intellicrack\\credentials\\oauth.py"
     },
@@ -4234,6 +3958,12 @@
       "complexity": 1,
       "file_name": "oauth.py",
       "function_name": "OAuthToken::to_dict",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "oauth.py",
+      "function_name": "_oauth_provider_to_name",
       "path": "src\\intellicrack\\credentials\\oauth.py"
     },
     {
@@ -4423,12 +4153,6 @@
       "path": "src\\intellicrack\\credentials\\store.py"
     },
     {
-      "complexity": 10,
-      "file_name": "store.py",
-      "function_name": "CredentialStore::validate",
-      "path": "src\\intellicrack\\credentials\\store.py"
-    },
-    {
       "complexity": 11,
       "file_name": "store.py",
       "function_name": "CredentialStore::list_providers",
@@ -4438,6 +4162,12 @@
       "complexity": 12,
       "file_name": "store.py",
       "function_name": "CredentialStore::get_source",
+      "path": "src\\intellicrack\\credentials\\store.py"
+    },
+    {
+      "complexity": 16,
+      "file_name": "store.py",
+      "function_name": "CredentialStore::validate",
       "path": "src\\intellicrack\\credentials\\store.py"
     },
     {
@@ -4809,6 +4539,12 @@
     {
       "complexity": 6,
       "file_name": "base.py",
+      "function_name": "LLMProviderBase::_retry_with_backoff",
+      "path": "src\\intellicrack\\providers\\base.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "base.py",
       "function_name": "create_anthropic_tool_schema",
       "path": "src\\intellicrack\\providers\\base.py"
     },
@@ -4822,12 +4558,6 @@
       "complexity": 6,
       "file_name": "base.py",
       "function_name": "create_openai_tool_schema",
-      "path": "src\\intellicrack\\providers\\base.py"
-    },
-    {
-      "complexity": 7,
-      "file_name": "base.py",
-      "function_name": "LLMProviderBase::_retry_with_backoff",
       "path": "src\\intellicrack\\providers\\base.py"
     },
     {
@@ -6063,7 +5793,7 @@
     {
       "complexity": 0,
       "file_name": "base.py",
-      "function_name": "SandboxError::__init__",
+      "function_name": "SandboxBase::vnc_port",
       "path": "src\\intellicrack\\sandbox\\base.py"
     },
     {
@@ -6207,7 +5937,19 @@
     {
       "complexity": 0,
       "file_name": "qemu.py",
+      "function_name": "QEMUSandbox::enable_vnc_display",
+      "path": "src\\intellicrack\\sandbox\\qemu.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "qemu.py",
       "function_name": "QEMUSandbox::qemu_config",
+      "path": "src\\intellicrack\\sandbox\\qemu.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "qemu.py",
+      "function_name": "QEMUSandbox::vnc_port",
       "path": "src\\intellicrack\\sandbox\\qemu.py"
     },
     {
@@ -6327,12 +6069,6 @@
     {
       "complexity": 3,
       "file_name": "qemu.py",
-      "function_name": "GuestAgentClient::disconnect",
-      "path": "src\\intellicrack\\sandbox\\qemu.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "qemu.py",
       "function_name": "QEMUSandbox::_check_qemu_started",
       "path": "src\\intellicrack\\sandbox\\qemu.py"
     },
@@ -6357,6 +6093,12 @@
     {
       "complexity": 4,
       "file_name": "qemu.py",
+      "function_name": "GuestAgentClient::disconnect",
+      "path": "src\\intellicrack\\sandbox\\qemu.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "qemu.py",
       "function_name": "QEMUSandbox::_get_free_port",
       "path": "src\\intellicrack\\sandbox\\qemu.py"
     },
@@ -6370,12 +6112,6 @@
       "complexity": 6,
       "file_name": "qemu.py",
       "function_name": "QEMUSandbox::_generate_execution_script",
-      "path": "src\\intellicrack\\sandbox\\qemu.py"
-    },
-    {
-      "complexity": 7,
-      "file_name": "qemu.py",
-      "function_name": "QEMUSandbox::_cleanup",
       "path": "src\\intellicrack\\sandbox\\qemu.py"
     },
     {
@@ -6400,6 +6136,12 @@
       "complexity": 8,
       "file_name": "qemu.py",
       "function_name": "GuestAgentClient::_read_messages",
+      "path": "src\\intellicrack\\sandbox\\qemu.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "qemu.py",
+      "function_name": "QEMUSandbox::_cleanup",
       "path": "src\\intellicrack\\sandbox\\qemu.py"
     },
     {
@@ -6439,7 +6181,7 @@
       "path": "src\\intellicrack\\sandbox\\qemu.py"
     },
     {
-      "complexity": 13,
+      "complexity": 12,
       "file_name": "qemu.py",
       "function_name": "QEMUSandbox::run_binary",
       "path": "src\\intellicrack\\sandbox\\qemu.py"
@@ -6541,7 +6283,7 @@
       "path": "src\\intellicrack\\sandbox\\windows.py"
     },
     {
-      "complexity": 11,
+      "complexity": 10,
       "file_name": "windows.py",
       "function_name": "WindowsSandbox::run_binary",
       "path": "src\\intellicrack\\sandbox\\windows.py"
@@ -6621,6 +6363,18 @@
     {
       "complexity": 0,
       "file_name": "app.py",
+      "function_name": "MainWindow::_on_bridge_analysis_activated",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_on_bridge_analysis_received",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "app.py",
       "function_name": "MainWindow::_on_cancel",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -6628,18 +6382,6 @@
       "complexity": 0,
       "file_name": "app.py",
       "function_name": "MainWindow::_on_focus_chat_input",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "app.py",
-      "function_name": "MainWindow::_on_licensing_analysis_activated",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "app.py",
-      "function_name": "MainWindow::_on_licensing_analysis_received",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -6687,19 +6429,13 @@
     {
       "complexity": 0,
       "file_name": "app.py",
-      "function_name": "MainWindow::_on_view_licensing",
+      "function_name": "MainWindow::_on_view_analysis",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
       "complexity": 0,
       "file_name": "app.py",
       "function_name": "MainWindow::_on_view_stack",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "app.py",
-      "function_name": "MainWindow::_request_tool_confirmation",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -6748,6 +6484,12 @@
       "complexity": 0,
       "file_name": "app.py",
       "function_name": "MainWindow::wire_script_manager",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "app.py",
+      "function_name": "_unhandled_exception_hook",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -6826,6 +6568,12 @@
       "complexity": 1,
       "file_name": "app.py",
       "function_name": "MainWindow::_refresh_tool_status",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_request_tool_confirmation",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -7071,6 +6819,12 @@
     {
       "complexity": 9,
       "file_name": "app.py",
+      "function_name": "MainWindow::_on_browse_models_result",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "app.py",
       "function_name": "MainWindow::_on_open_sandbox",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -7090,12 +6844,6 @@
       "complexity": 11,
       "file_name": "app.py",
       "function_name": "MainWindow::_apply_tool_settings",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 12,
-      "file_name": "app.py",
-      "function_name": "MainWindow::_on_browse_models_result",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -7508,6 +7256,114 @@
     },
     {
       "complexity": 0,
+      "file_name": "analysis_panel.py",
+      "function_name": "BridgeAnalysisPanel::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "analysis_panel.py",
+      "function_name": "BridgeAnalysisPanel::_create_table",
+      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "analysis_panel.py",
+      "function_name": "BridgeAnalysisPanel::_on_exports_cell_clicked",
+      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "analysis_panel.py",
+      "function_name": "BridgeAnalysisPanel::_on_functions_cell_clicked",
+      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "analysis_panel.py",
+      "function_name": "BridgeAnalysisPanel::_on_imports_cell_clicked",
+      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "analysis_panel.py",
+      "function_name": "BridgeAnalysisPanel::_on_sections_cell_clicked",
+      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "analysis_panel.py",
+      "function_name": "BridgeAnalysisPanel::_on_strings_cell_clicked",
+      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "analysis_panel.py",
+      "function_name": "BridgeAnalysisPanel::_set_addr_item",
+      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "analysis_panel.py",
+      "function_name": "BridgeAnalysisPanel::_setup_ui",
+      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "analysis_panel.py",
+      "function_name": "BridgeAnalysisPanel::clear",
+      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "analysis_panel.py",
+      "function_name": "BridgeAnalysisPanel::get_current_analysis",
+      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "analysis_panel.py",
+      "function_name": "BridgeAnalysisPanel::_populate_exports",
+      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "analysis_panel.py",
+      "function_name": "BridgeAnalysisPanel::_populate_functions",
+      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "analysis_panel.py",
+      "function_name": "BridgeAnalysisPanel::_populate_sections",
+      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "analysis_panel.py",
+      "function_name": "BridgeAnalysisPanel::_populate_strings",
+      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "analysis_panel.py",
+      "function_name": "BridgeAnalysisPanel::set_analysis",
+      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "analysis_panel.py",
+      "function_name": "BridgeAnalysisPanel::_on_address_cell",
+      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "analysis_panel.py",
+      "function_name": "BridgeAnalysisPanel::_populate_imports",
+      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py"
+    },
+    {
+      "complexity": 0,
       "file_name": "async_bridge.py",
       "function_name": "BridgeCallWorker::__init__",
       "path": "src\\intellicrack\\ui\\panels\\async_bridge.py"
@@ -7653,6 +7509,12 @@
     {
       "complexity": 0,
       "file_name": "binary_panel.py",
+      "function_name": "BinaryPanel::_pe_rva_to_offset",
+      "path": "src\\intellicrack\\ui\\panels\\binary_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "binary_panel.py",
       "function_name": "BinaryPanel::_setup_ui",
       "path": "src\\intellicrack\\ui\\panels\\binary_panel.py"
     },
@@ -7779,12 +7641,6 @@
     {
       "complexity": 3,
       "file_name": "binary_panel.py",
-      "function_name": "BinaryPanel::_pe_rva_to_offset",
-      "path": "src\\intellicrack\\ui\\panels\\binary_panel.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "binary_panel.py",
       "function_name": "_lief_attr_list",
       "path": "src\\intellicrack\\ui\\panels\\binary_panel.py"
     },
@@ -7887,13 +7743,13 @@
     {
       "complexity": 23,
       "file_name": "binary_panel.py",
-      "function_name": "BinaryPanel::_parse_pe_sections",
+      "function_name": "BinaryPanel::_parse_elf_sections",
       "path": "src\\intellicrack\\ui\\panels\\binary_panel.py"
     },
     {
-      "complexity": 25,
+      "complexity": 23,
       "file_name": "binary_panel.py",
-      "function_name": "BinaryPanel::_parse_elf_sections",
+      "function_name": "BinaryPanel::_parse_pe_sections",
       "path": "src\\intellicrack\\ui\\panels\\binary_panel.py"
     },
     {
@@ -8324,171 +8180,141 @@
     },
     {
       "complexity": 0,
-      "file_name": "licensing_panel.py",
-      "function_name": "ConstantsTable::__init__",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
+      "file_name": "graph_view.py",
+      "function_name": "CFGGraphScene::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
     },
     {
       "complexity": 0,
-      "file_name": "licensing_panel.py",
-      "function_name": "CryptoAPITable::__init__",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
+      "file_name": "graph_view.py",
+      "function_name": "CFGGraphView::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
     },
     {
       "complexity": 0,
-      "file_name": "licensing_panel.py",
-      "function_name": "LicensingAnalysisPanel::__init__",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "licensing_panel.py",
-      "function_name": "LicensingAnalysisPanel::_setup_ui",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "licensing_panel.py",
-      "function_name": "LicensingAnalysisPanel::clear",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "licensing_panel.py",
-      "function_name": "LicensingAnalysisPanel::get_current_analysis",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "licensing_panel.py",
-      "function_name": "NotesPanel::__init__",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "licensing_panel.py",
-      "function_name": "NotesPanel::_setup_ui",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "licensing_panel.py",
-      "function_name": "ProtectionIndicators::__init__",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "licensing_panel.py",
-      "function_name": "ProtectionIndicators::update_from_analysis",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "licensing_panel.py",
-      "function_name": "SummaryCard::__init__",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "licensing_panel.py",
-      "function_name": "SummaryCard::_create_labeled_value",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "licensing_panel.py",
-      "function_name": "SummaryCard::_setup_ui",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "licensing_panel.py",
-      "function_name": "ValidationFunctionsTable::__init__",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
+      "file_name": "graph_view.py",
+      "function_name": "EdgeItem::paint",
+      "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
     },
     {
       "complexity": 1,
-      "file_name": "licensing_panel.py",
-      "function_name": "ConstantsTable::_setup_ui",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
+      "file_name": "graph_view.py",
+      "function_name": "BasicBlockItem::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
     },
     {
       "complexity": 1,
-      "file_name": "licensing_panel.py",
-      "function_name": "ConstantsTable::set_constants",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
+      "file_name": "graph_view.py",
+      "function_name": "CFGGraphView::fit_to_view",
+      "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
     },
     {
       "complexity": 1,
-      "file_name": "licensing_panel.py",
-      "function_name": "CryptoAPITable::_setup_ui",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
+      "file_name": "graph_view.py",
+      "function_name": "CFGGraphView::graph_scene",
+      "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
     },
     {
       "complexity": 1,
-      "file_name": "licensing_panel.py",
-      "function_name": "NotesPanel::set_notes",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "licensing_panel.py",
-      "function_name": "ProtectionIndicators::_setup_ui",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "licensing_panel.py",
-      "function_name": "ValidationFunctionsTable::_setup_ui",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
+      "file_name": "graph_view.py",
+      "function_name": "CFGGraphView::mousePressEvent",
+      "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
     },
     {
       "complexity": 2,
-      "file_name": "licensing_panel.py",
-      "function_name": "ConstantsTable::_on_cell_double_clicked",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "licensing_panel.py",
-      "function_name": "CryptoAPITable::_on_cell_double_clicked",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "licensing_panel.py",
-      "function_name": "ValidationFunctionsTable::_on_cell_double_clicked",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
+      "file_name": "graph_view.py",
+      "function_name": "CFGGraphView::wheelEvent",
+      "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
     },
     {
       "complexity": 3,
-      "file_name": "licensing_panel.py",
-      "function_name": "CryptoAPITable::set_calls",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
+      "file_name": "graph_view.py",
+      "function_name": "EdgeItem::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "graph_view.py",
+      "function_name": "BasicBlockItem::paint",
+      "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
+    },
+    {
+      "complexity": 13,
+      "file_name": "graph_view.py",
+      "function_name": "CFGGraphScene::_create_edges",
+      "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
+    },
+    {
+      "complexity": 13,
+      "file_name": "graph_view.py",
+      "function_name": "CFGGraphScene::load_graph",
+      "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
+    },
+    {
+      "complexity": 19,
+      "file_name": "graph_view.py",
+      "function_name": "CFGGraphScene::_compute_layers",
+      "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hxd_panel.py",
+      "function_name": "HxDPanel::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hxd_panel.py",
+      "function_name": "HxDPanel::_cleanup",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hxd_panel.py",
+      "function_name": "HxDPanel::_create_content",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hxd_panel.py",
+      "function_name": "HxDPanel::_show_not_installed_dialog",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hxd_panel.py",
+      "function_name": "HxDPanel::stop_tool",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hxd_panel.py",
+      "function_name": "HxDPanel::_populate_toolbar",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
     },
     {
       "complexity": 4,
-      "file_name": "licensing_panel.py",
-      "function_name": "LicensingAnalysisPanel::set_analysis",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
+      "file_name": "hxd_panel.py",
+      "function_name": "HxDPanel::_terminate_existing",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
     },
     {
-      "complexity": 4,
-      "file_name": "licensing_panel.py",
-      "function_name": "ProtectionIndicators::_set_indicator",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
+      "complexity": 5,
+      "file_name": "hxd_panel.py",
+      "function_name": "_find_hxd_executable",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
     },
     {
-      "complexity": 9,
-      "file_name": "licensing_panel.py",
-      "function_name": "ValidationFunctionsTable::set_functions",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
+      "complexity": 15,
+      "file_name": "hxd_panel.py",
+      "function_name": "HxDPanel::start_tool",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
     },
     {
-      "complexity": 11,
-      "file_name": "licensing_panel.py",
-      "function_name": "SummaryCard::update_from_analysis",
-      "path": "src\\intellicrack\\ui\\panels\\licensing_panel.py"
+      "complexity": 17,
+      "file_name": "hxd_panel.py",
+      "function_name": "HxDPanel::load_file",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
     },
     {
       "complexity": 0,
@@ -8695,7 +8521,7 @@
       "path": "src\\intellicrack\\ui\\panels\\qt_compat.py"
     },
     {
-      "complexity": 1,
+      "complexity": 2,
       "file_name": "qt_compat.py",
       "function_name": "connect_cell_changed",
       "path": "src\\intellicrack\\ui\\panels\\qt_compat.py"
@@ -8811,6 +8637,18 @@
     {
       "complexity": 1,
       "file_name": "radare2_panel.py",
+      "function_name": "Radare2Panel::_on_graph_block_clicked",
+      "path": "src\\intellicrack\\ui\\panels\\radare2_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "radare2_panel.py",
+      "function_name": "Radare2Panel::_on_graph_data_received",
+      "path": "src\\intellicrack\\ui\\panels\\radare2_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "radare2_panel.py",
       "function_name": "Radare2Panel::_on_load_binary",
       "path": "src\\intellicrack\\ui\\panels\\radare2_panel.py"
     },
@@ -8895,6 +8733,12 @@
     {
       "complexity": 2,
       "file_name": "radare2_panel.py",
+      "function_name": "Radare2Panel::_on_disassembly_result",
+      "path": "src\\intellicrack\\ui\\panels\\radare2_panel.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "radare2_panel.py",
       "function_name": "Radare2Panel::_on_execute_r2_command",
       "path": "src\\intellicrack\\ui\\panels\\radare2_panel.py"
     },
@@ -8926,6 +8770,12 @@
       "complexity": 4,
       "file_name": "radare2_panel.py",
       "function_name": "Radare2Panel::_apply_xrefs_to",
+      "path": "src\\intellicrack\\ui\\panels\\radare2_panel.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "radare2_panel.py",
+      "function_name": "Radare2Panel::_on_show_graph",
       "path": "src\\intellicrack\\ui\\panels\\radare2_panel.py"
     },
     {
@@ -9045,6 +8895,12 @@
     {
       "complexity": 1,
       "file_name": "sandbox_panel.py",
+      "function_name": "SandboxPanel::_disconnect_vnc_display",
+      "path": "src\\intellicrack\\ui\\panels\\sandbox_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "sandbox_panel.py",
       "function_name": "SandboxPanel::_on_browse_binary",
       "path": "src\\intellicrack\\ui\\panels\\sandbox_panel.py"
     },
@@ -9115,9 +8971,21 @@
       "path": "src\\intellicrack\\ui\\panels\\sandbox_panel.py"
     },
     {
+      "complexity": 2,
+      "file_name": "sandbox_panel.py",
+      "function_name": "SandboxPanel::_on_vnc_status_changed",
+      "path": "src\\intellicrack\\ui\\panels\\sandbox_panel.py"
+    },
+    {
       "complexity": 3,
       "file_name": "sandbox_panel.py",
       "function_name": "SandboxPanel::_cleanup",
+      "path": "src\\intellicrack\\ui\\panels\\sandbox_panel.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "sandbox_panel.py",
+      "function_name": "SandboxPanel::_connect_vnc_display",
       "path": "src\\intellicrack\\ui\\panels\\sandbox_panel.py"
     },
     {
@@ -9524,6 +9392,168 @@
     },
     {
       "complexity": 0,
+      "file_name": "vnc_widget.py",
+      "function_name": "RFBClient::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "vnc_widget.py",
+      "function_name": "RFBClient::connected",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "vnc_widget.py",
+      "function_name": "VNCWidget::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "vnc_widget.py",
+      "function_name": "VNCWidget::disconnect_from_server",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "vnc_widget.py",
+      "function_name": "RFBClient::_client_init",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "vnc_widget.py",
+      "function_name": "RFBClient::_negotiate_version",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "vnc_widget.py",
+      "function_name": "RFBClient::disconnect",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "vnc_widget.py",
+      "function_name": "RFBClient::send_pointer_event",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "vnc_widget.py",
+      "function_name": "VNCWidget::_on_update_tick",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "vnc_widget.py",
+      "function_name": "VNCWidget::_scale_coords",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "vnc_widget.py",
+      "function_name": "VNCWidget::paintEvent",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "vnc_widget.py",
+      "function_name": "RFBClient::connect",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "vnc_widget.py",
+      "function_name": "RFBClient::request_framebuffer_update",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "vnc_widget.py",
+      "function_name": "RFBClient::send_key_event",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "vnc_widget.py",
+      "function_name": "VNCWidget::_button_mask",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "vnc_widget.py",
+      "function_name": "VNCWidget::keyPressEvent",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "vnc_widget.py",
+      "function_name": "VNCWidget::keyReleaseEvent",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "vnc_widget.py",
+      "function_name": "VNCWidget::mouseMoveEvent",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "vnc_widget.py",
+      "function_name": "VNCWidget::mousePressEvent",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "vnc_widget.py",
+      "function_name": "VNCWidget::mouseReleaseEvent",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "vnc_widget.py",
+      "function_name": "_qt_key_to_x11",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "vnc_widget.py",
+      "function_name": "RFBClient::_read_raw_pixels",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "vnc_widget.py",
+      "function_name": "VNCWidget::connect_to_server",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "vnc_widget.py",
+      "function_name": "RFBClient::_apply_raw_rect",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "vnc_widget.py",
+      "function_name": "RFBClient::_negotiate_security",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "vnc_widget.py",
+      "function_name": "RFBClient::_handle_framebuffer_update",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 14,
+      "file_name": "vnc_widget.py",
+      "function_name": "RFBClient::handle_server_message",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 0,
       "file_name": "x64dbg_panel.py",
       "function_name": "X64DbgPanel::__init__",
       "path": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py"
@@ -9877,7 +9907,7 @@
       "path": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py"
     },
     {
-      "complexity": 6,
+      "complexity": 7,
       "file_name": "x64dbg_panel.py",
       "function_name": "X64DbgPanel::_cleanup",
       "path": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py"
@@ -9892,6 +9922,12 @@
       "complexity": 8,
       "file_name": "x64dbg_panel.py",
       "function_name": "X64DbgPanel::_on_read_memory",
+      "path": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py"
+    },
+    {
+      "complexity": 15,
+      "file_name": "x64dbg_panel.py",
+      "function_name": "X64DbgPanel::_try_embed_debugger_window",
       "path": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py"
     },
     {
@@ -10149,12 +10185,6 @@
     {
       "complexity": 0,
       "file_name": "provider_config.py",
-      "function_name": "ProviderSettingsWidget::_populate_default_models",
-      "path": "src\\intellicrack\\ui\\provider_config.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "provider_config.py",
       "function_name": "ProviderSettingsWidget::set_api_key",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
@@ -10240,6 +10270,12 @@
       "complexity": 1,
       "file_name": "provider_config.py",
       "function_name": "ProviderSettingsWidget::__init__",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "provider_config.py",
+      "function_name": "ProviderSettingsWidget::_get_selected_model",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
@@ -10347,6 +10383,12 @@
     {
       "complexity": 3,
       "file_name": "provider_config.py",
+      "function_name": "ProviderSettingsWidget::_populate_default_models",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "provider_config.py",
       "function_name": "ProviderSettingsWidget::_setup_provider_specific_ui",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
@@ -10413,12 +10455,6 @@
     {
       "complexity": 4,
       "file_name": "provider_config.py",
-      "function_name": "ProviderSettingsWidget::_refresh_models",
-      "path": "src\\intellicrack\\ui\\provider_config.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "provider_config.py",
       "function_name": "ProviderSettingsWidget::get_openrouter_generation",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
@@ -10449,7 +10485,7 @@
     {
       "complexity": 5,
       "file_name": "provider_config.py",
-      "function_name": "ProviderSettingsWidget::_on_models_refreshed",
+      "function_name": "ProviderSettingsWidget::_refresh_models",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
@@ -10486,6 +10522,12 @@
       "complexity": 6,
       "file_name": "provider_config.py",
       "function_name": "ProviderConfigDialog::refresh_credentials",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "provider_config.py",
+      "function_name": "ProviderSettingsWidget::_on_models_refreshed",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
@@ -10537,6 +10579,12 @@
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
+      "complexity": 11,
+      "file_name": "provider_config.py",
+      "function_name": "ProviderSettingsWidget::_load_settings",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
       "complexity": 12,
       "file_name": "provider_config.py",
       "function_name": "ModelRefreshWorker::_fetch_models",
@@ -10546,12 +10594,6 @@
       "complexity": 13,
       "file_name": "provider_config.py",
       "function_name": "CredentialSourceDetector::detect_source",
-      "path": "src\\intellicrack\\ui\\provider_config.py"
-    },
-    {
-      "complexity": 14,
-      "file_name": "provider_config.py",
-      "function_name": "ProviderSettingsWidget::_load_settings",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
@@ -10999,12 +11041,6 @@
       "path": "src\\intellicrack\\ui\\sandbox_config.py"
     },
     {
-      "complexity": 2,
-      "file_name": "sandbox_config.py",
-      "function_name": "SandboxTestWorker::stop",
-      "path": "src\\intellicrack\\ui\\sandbox_config.py"
-    },
-    {
       "complexity": 3,
       "file_name": "sandbox_config.py",
       "function_name": "SandboxConfigDialog::_load_settings",
@@ -11019,13 +11055,19 @@
     {
       "complexity": 3,
       "file_name": "sandbox_config.py",
-      "function_name": "SandboxConfigDialog::_save_settings",
+      "function_name": "SandboxMonitorWidget::set_running",
       "path": "src\\intellicrack\\ui\\sandbox_config.py"
     },
     {
       "complexity": 3,
       "file_name": "sandbox_config.py",
-      "function_name": "SandboxMonitorWidget::set_running",
+      "function_name": "SandboxTestWorker::stop",
+      "path": "src\\intellicrack\\ui\\sandbox_config.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "sandbox_config.py",
+      "function_name": "SandboxConfigDialog::_save_settings",
       "path": "src\\intellicrack\\ui\\sandbox_config.py"
     },
     {
@@ -11053,7 +11095,7 @@
       "path": "src\\intellicrack\\ui\\sandbox_config.py"
     },
     {
-      "complexity": 20,
+      "complexity": 21,
       "file_name": "sandbox_config.py",
       "function_name": "SandboxTestWorker::run",
       "path": "src\\intellicrack\\ui\\sandbox_config.py"
@@ -11847,7 +11889,7 @@
     {
       "complexity": 1,
       "file_name": "tools.py",
-      "function_name": "ToolOutputPanel::add_licensing_panel",
+      "function_name": "ToolOutputPanel::add_analysis_panel",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
     {
@@ -11895,7 +11937,7 @@
     {
       "complexity": 2,
       "file_name": "tools.py",
-      "function_name": "ToolOutputPanel::activate_licensing_tab",
+      "function_name": "ToolOutputPanel::activate_analysis_tab",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
     {
@@ -11979,7 +12021,7 @@
     {
       "complexity": 2,
       "file_name": "tools.py",
-      "function_name": "ToolOutputPanel::update_licensing_analysis",
+      "function_name": "ToolOutputPanel::update_bridge_analysis",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
     {
@@ -12119,6 +12161,24 @@
       "file_name": "tools.py",
       "function_name": "ToolOutputPanel::_on_tab_close_requested",
       "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "win32_embed.py",
+      "function_name": "embed_window",
+      "path": "src\\intellicrack\\ui\\win32_embed.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "win32_embed.py",
+      "function_name": "poll_and_embed",
+      "path": "src\\intellicrack\\ui\\win32_embed.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "win32_embed.py",
+      "function_name": "find_window_by_pid",
+      "path": "src\\intellicrack\\ui\\win32_embed.py"
     }
   ],
   "targets": [

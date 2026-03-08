@@ -39,6 +39,7 @@ from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.qt_compat import connect_cell_changed, set_max_block_count
+from intellicrack.ui.win32_embed import poll_and_embed
 
 
 if TYPE_CHECKING:
@@ -95,6 +96,7 @@ class X64DbgPanel(AnalysisPanelBase):
         super().__init__(parent)
         self._bridge: X64DbgBridge | None = None
         self._is_64bit: bool = True
+        self._embedded_container: QWidget | None = None
 
     @override
     def _populate_toolbar(self, toolbar: QToolBar) -> None:
@@ -141,8 +143,14 @@ class X64DbgPanel(AnalysisPanelBase):
         """Create the x64dbg debugging content area.
 
         Returns:
-            Splitter with disassembly, inspection tabs, and bottom tabs.
+            Tab widget with native controls and embedded x64dbg window.
         """
+        self._main_tabs = QTabWidget()
+
+        native_container = QWidget()
+        native_layout = QVBoxLayout(native_container)
+        native_layout.setContentsMargins(0, 0, 0, 0)
+
         main_splitter = QSplitter(Qt.Orientation.Vertical)
 
         top_splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -154,11 +162,25 @@ class X64DbgPanel(AnalysisPanelBase):
         main_splitter.addWidget(self._create_bottom_tabs())
         main_splitter.setSizes([450, 250])
 
-        return main_splitter
+        native_layout.addWidget(main_splitter)
+        self._main_tabs.addTab(native_container, "Analysis")
+
+        self._embed_host = QWidget()
+        embed_layout = QVBoxLayout(self._embed_host)
+        embed_layout.setContentsMargins(0, 0, 0, 0)
+        self._embed_status_label = QLabel("No debugger process active")
+        self._embed_status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        embed_layout.addWidget(self._embed_status_label)
+        self._main_tabs.addTab(self._embed_host, "x64dbg Window")
+
+        return self._main_tabs
 
     @override
     def _cleanup(self) -> None:
         """Unregister event callback and stop the x64dbg bridge."""
+        if self._embedded_container is not None:
+            self._embedded_container.setParent(None)
+            self._embedded_container = None
         if self._bridge is not None:
             if hasattr(self._bridge, "unregister_event_callback"):
                 self._bridge.unregister_event_callback(self._on_debug_event)
@@ -166,7 +188,7 @@ class X64DbgPanel(AnalysisPanelBase):
                 try:
                     run_bridge_coroutine(self._bridge.stop())
                 except Exception:
-                    _logger.exception("x64dbg_stop_failed")
+                    _logger.exception("x64dbg_stop_failed", extra={"bridge_type": "x64dbg"})
 
     def _create_disasm_section(self) -> QWidget:
         """Create the disassembly display section.
@@ -350,7 +372,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._bridge = bridge
         if hasattr(bridge, "register_event_callback"):
             bridge.register_event_callback(self._on_debug_event)
-        _logger.info("x64dbg_bridge_set")
+        _logger.info("x64dbg_bridge_set", extra={"bridge_type": type(bridge).__name__})
 
     def get_bridge(self) -> X64DbgBridge | None:
         """Get the current X64DbgBridge instance.
@@ -370,7 +392,7 @@ class X64DbgPanel(AnalysisPanelBase):
             True if loading was initiated.
         """
         if self._bridge is None:
-            _logger.warning("x64dbg_debug_no_bridge")
+            _logger.warning("x64dbg_debug_no_bridge", extra={"reason": "bridge not set"})
             return False
 
         self._load_btn.setEnabled(False)
@@ -392,6 +414,38 @@ class X64DbgPanel(AnalysisPanelBase):
         self._load_btn.setEnabled(True)
         self._sync_64bit_toggle()
         self._refresh_state()
+        self._try_embed_debugger_window()
+
+    def _try_embed_debugger_window(self) -> None:
+        """Attempt to capture and embed the x64dbg window into the panel."""
+        if self._bridge is None:
+            return
+
+        pid = self._bridge.debugger_pid
+        if pid is None:
+            _logger.debug("x64dbg_embed_skipped_no_pid", extra={"reason": "debugger_pid is None"})
+            return
+
+        def _on_embedded(container: QWidget) -> None:
+            layout = self._embed_host.layout()
+            if layout is not None:
+                while layout.count():
+                    item = layout.takeAt(0)
+                    widget = item.widget() if item is not None else None
+                    if widget is not None:
+                        widget.setParent(None)
+                layout.addWidget(container)
+            self._embedded_container = container
+            self._main_tabs.setCurrentWidget(self._embed_host)
+            _logger.info("x64dbg_window_embedded", extra={"pid": pid})
+
+        poll_and_embed(
+            pid=pid,
+            parent=self._embed_host,
+            callback=_on_embedded,
+            max_retries=20,
+            interval_ms=500,
+        )
 
     def _on_load_error(self, file_path: Path, exc: object) -> None:
         """Handle file load failure.
@@ -922,8 +976,7 @@ class X64DbgPanel(AnalysisPanelBase):
 
         self._reg_table.blockSignals(False)
 
-        rip = getattr(regs, "rip", 0)
-        if rip:
+        if rip := getattr(regs, "rip", 0):
             self._refresh_disassembly(rip)
 
     def _refresh_disassembly(self, address: int) -> None:

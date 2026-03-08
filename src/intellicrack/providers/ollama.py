@@ -161,11 +161,11 @@ class OllamaProvider(LLMProviderBase):
             response = await self._cloud_client.get(f"{self.CLOUD_API_URL}/tags")
             response.raise_for_status()
             self._cloud_available = True
-            self._logger.info("cloud_ollama_connected")
+            self._logger.info("cloud_ollama_connected", extra={"cloud_url": self.CLOUD_API_URL})
         except httpx.HTTPStatusError as e:
             self._cloud_available = False
             if e.response.status_code == HTTPStatus.UNAUTHORIZED:
-                self._logger.warning("cloud_api_key_invalid")
+                self._logger.warning("cloud_api_key_invalid", extra={"status_code": e.response.status_code})
             else:
                 self._logger.warning(
                     "cloud_ollama_unavailable",
@@ -204,7 +204,7 @@ class OllamaProvider(LLMProviderBase):
                 self._cloud_client = None
             self._local_available = False
             self._cloud_available = False
-            self._logger.info("ollama_disconnected")
+            self._logger.info("ollama_disconnected", extra={"provider": "ollama"})
         except Exception as exc:
             self._logger.warning("disconnect_cleanup_error", extra={"error": str(exc)})
             self._connected = False
@@ -596,7 +596,7 @@ class OllamaProvider(LLMProviderBase):
                         try:
                             chunk_data = json.loads(line)
                             last_chunk_data = chunk_data
-                            if content := chunk_data.get("message", {}).get("content", ""):
+                            if content := last_chunk_data.get("message", {}).get("content", ""):
                                 yield content
                         except json.JSONDecodeError as exc:
                             self._logger.debug("stream_json_parse_skipped", extra={"error": str(exc)})

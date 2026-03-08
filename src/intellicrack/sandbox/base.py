@@ -20,6 +20,10 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 from ..core.logging import get_logger
+from ..core.types import SandboxError, SandboxTimeoutError
+
+
+__all__ = ["SandboxError", "SandboxTimeoutError"]
 
 
 _logger = get_logger("sandbox.base")
@@ -222,20 +226,6 @@ class ExecutionReport:
     process_activity: list[ProcessActivity] = field(default_factory=list)
 
 
-class SandboxError(Exception):
-    """Exception raised for sandbox-related errors."""
-
-    def __init__(self, message: str, details: str | None = None) -> None:
-        """Initialize the sandbox error.
-
-        Args:
-            message: Error message.
-            details: Optional detailed information.
-        """
-        super().__init__(message)
-        self.details = details
-
-
 class SandboxBase:
     """Base class for sandbox implementations.
 
@@ -274,6 +264,15 @@ class SandboxBase:
         """
         return self._config
 
+    @property
+    def vnc_port(self) -> int | None:
+        """Get the VNC port if available.
+
+        Returns:
+            VNC port number, or None if not supported.
+        """
+        return None
+
     async def is_available(self) -> bool:
         """Check if this sandbox type is available.
 
@@ -302,7 +301,7 @@ class SandboxBase:
             SandboxError: If sandbox cannot be stopped.
         """
         if self._state.status == "stopped":
-            _logger.debug("sandbox_already_stopped")
+            _logger.debug("sandbox_already_stopped", extra={"sandbox_type": "base"})
             return
 
         raise SandboxError(

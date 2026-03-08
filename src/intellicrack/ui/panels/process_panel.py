@@ -425,7 +425,7 @@ class ProcessPanel(QWidget):
         if selection_model is not None:
             selection_model.currentChanged.connect(self._on_process_selection_changed)
         else:
-            _logger.warning("process_table_selection_model_unavailable")
+            _logger.warning("process_table_selection_model_unavailable", extra={"widget": "process_table"})
         self._process_table.horizontalHeader().setSectionResizeMode(_PROC_COL_NAME, QHeaderView.ResizeMode.Stretch)
         main_splitter.addWidget(self._process_table)
 
@@ -467,14 +467,14 @@ class ProcessPanel(QWidget):
         to prevent concurrent enumeration.
         """
         if self._refresh_worker is not None and self._refresh_worker.isRunning():
-            _logger.debug("process_refresh_skipped_already_running")
+            _logger.debug("process_refresh_skipped_already_running", extra={"reason": "worker active"})
             return
 
         if self._refresh_worker is not None:
             self._refresh_worker.deleteLater()
             self._refresh_worker = None
 
-        _logger.debug("process_list_refresh_started")
+        _logger.debug("process_list_refresh_started", extra={"source": "user_action"})
         current_filter = self._search_input.text().strip().lower()
 
         self._refresh_btn.setEnabled(False)

@@ -12,10 +12,10 @@ all UI components and connects them to the orchestrator.
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import importlib
 import json
 import os
+import sys
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, cast, override
@@ -42,6 +42,7 @@ from PyQt6.QtWidgets import (
 
 from .._metadata import __copyright__, __license__, __version__
 from ..bridges.installer import ToolInstaller
+from ..core.config import get_config_dir, get_config_file
 from ..core.logging import get_logger
 from ..core.script_gen import ScriptManager
 from ..core.types import Message, ModelInfo, ProviderCredentials, ProviderName, ToolCall, ToolName, ToolResult
@@ -65,6 +66,7 @@ except ImportError:
 
 
 if TYPE_CHECKING:
+    import types
     from collections.abc import Callable, Coroutine
 
     from PyQt6.QtGui import QCloseEvent
@@ -76,6 +78,28 @@ if TYPE_CHECKING:
 _logger = get_logger("ui.app")
 
 _MAX_RESULT_DISPLAY_LEN = 500
+
+_original_excepthook = sys.excepthook
+
+
+def _unhandled_exception_hook(
+    exc_type: type[BaseException],
+    exc_value: BaseException,
+    exc_tb: types.TracebackType | None,
+) -> None:
+    """Global exception hook for unhandled exceptions during Qt event loop.
+
+    Args:
+        exc_type: Exception type.
+        exc_value: Exception instance.
+        exc_tb: Traceback object.
+    """
+    _logger.critical(
+        "unhandled_exception",
+        extra={"exc_type": exc_type.__name__, "exc_value": str(exc_value)},
+        exc_info=(exc_type, exc_value, exc_tb),
+    )
+    _original_excepthook(exc_type, exc_value, exc_tb)
 
 
 class AsyncWorker(QThread):
@@ -129,7 +153,7 @@ class MainWindow(QMainWindow):
     tool_result_received = pyqtSignal(ToolResult)
     stream_chunk_received = pyqtSignal(str)
     status_update = pyqtSignal(str)
-    licensing_analysis_received = pyqtSignal(object)
+    bridge_analysis_received = pyqtSignal(object)
 
     def __init__(
         self,
@@ -145,6 +169,7 @@ class MainWindow(QMainWindow):
             parent: Parent widget.
         """
         super().__init__(parent)
+        sys.excepthook = _unhandled_exception_hook
         self._config = config
         self._orchestrator = orchestrator
         self._current_worker: AsyncWorker | None = None
@@ -224,7 +249,7 @@ class MainWindow(QMainWindow):
                 avail_y + (avail_h - target_h) // 2,
             )
         except Exception:
-            _logger.debug("screen_detection_failed_using_default_size")
+            _logger.debug("screen_detection_failed_using_default_size", exc_info=True)
             self.resize(max_w, max_h)
 
     def wire_script_manager(self, manager: object, validator: object | None = None) -> None:
@@ -258,7 +283,7 @@ class MainWindow(QMainWindow):
             if isinstance(max_cache, int) and max_cache > 0:
                 set_global_cache_size(max_cache)
         except Exception:
-            _logger.debug("model_cache_init_skipped")
+            _logger.debug("model_cache_init_skipped", exc_info=True)
 
     def _setup_ui(self) -> None:
         """Set up the main UI layout."""
@@ -379,13 +404,13 @@ class MainWindow(QMainWindow):
             msg = "Failed to create View menu"
             raise TypeError(msg)
 
-        self._add_menu_action(view_menu, "Licensing Analysis", self._on_view_licensing)
+        self._add_menu_action(view_menu, "Analysis", self._on_view_analysis)
         self._add_menu_action(view_menu, "Scripts Manager", self._on_view_scripts)
         self._add_menu_action(view_menu, "Stack Viewer", self._on_view_stack)
 
-    def _on_view_licensing(self) -> None:
-        """Show the licensing analysis panel."""
-        self._tool_panel.activate_licensing_tab()
+    def _on_view_analysis(self) -> None:
+        """Show the bridge analysis panel."""
+        self._tool_panel.activate_analysis_tab()
 
     def _on_view_scripts(self) -> None:
         """Show the scripts manager panel."""
@@ -682,7 +707,7 @@ class MainWindow(QMainWindow):
             session_text = f" | Session: {session_id}" if session_id else ""
             self._status_label.setText(f"State: {state}{session_text}")
         except Exception:
-            _logger.debug("system_status_refresh_failed")
+            _logger.debug("system_status_refresh_failed", exc_info=True)
 
         self._refresh_memory_status()
         self._refresh_model_discovery_status()
@@ -700,6 +725,7 @@ class MainWindow(QMainWindow):
             else:
                 self._memory_label.setText("")
         except Exception:
+            _logger.debug("memory_label_update_failed", exc_info=True)
             self._memory_label.setText("")
 
     def _refresh_model_discovery_status(self) -> None:
@@ -707,14 +733,13 @@ class MainWindow(QMainWindow):
         if self._model_discovery is None:
             return
         try:
-            events = self._model_discovery.get_discovery_events()
-            if events:
+            if events := self._model_discovery.get_discovery_events():
                 last_event = events[-1]
                 provider_str = last_event.provider.value
                 status_str = "OK" if last_event.success else (last_event.error_message or "failed")
                 self._model_status_label.setText(f"Discovery: {provider_str} {status_str}")
         except Exception:
-            _logger.debug("model_discovery_status_refresh_failed")
+            _logger.debug("model_discovery_status_refresh_failed", exc_info=True)
 
     def _connect_signals(self) -> None:
         """Connect Qt signals."""
@@ -725,7 +750,7 @@ class MainWindow(QMainWindow):
         self.stream_chunk_received.connect(self._on_stream_chunk)
         self.status_update.connect(self._update_status)
         self._tool_panel.address_clicked.connect(self._on_address_clicked)
-        self.licensing_analysis_received.connect(self._on_licensing_analysis_activated)
+        self.bridge_analysis_received.connect(self._on_bridge_analysis_activated)
 
     def _configure_orchestrator(self) -> None:
         """Configure orchestrator callbacks."""
@@ -734,15 +759,15 @@ class MainWindow(QMainWindow):
         self._orchestrator.set_tool_result_callback(self.tool_result_received.emit)
         self._orchestrator.set_stream_callback(self.stream_chunk_received.emit)
         self._orchestrator.set_async_confirmation_callback(self._request_tool_confirmation)
-        self._orchestrator.set_licensing_analysis_callback(self._on_licensing_analysis_received)
+        self._orchestrator.set_bridge_analysis_callback(self._on_bridge_analysis_received)
         self._orchestrator.configure_hooks(
-            on_licensing=self._on_licensing_analysis_received,
+            on_bridge_analysis=self._on_bridge_analysis_received,
             on_confirmation=None,
         )
-        self.licensing_analysis_received.connect(self._tool_panel.update_licensing_analysis)
+        self.bridge_analysis_received.connect(self._tool_panel.update_bridge_analysis)
 
         try:
-            scripts_dir = Path.home() / ".intellicrack" / "scripts"
+            scripts_dir = get_config_dir() / "scripts"
             scripts_dir.mkdir(parents=True, exist_ok=True)
             script_mgr = ScriptManager(scripts_dir)
             self._orchestrator.set_script_manager(script_mgr)
@@ -755,14 +780,14 @@ class MainWindow(QMainWindow):
         tool_reg = getattr(self._orchestrator, "_tool_registry", None)
         if tool_reg is not None:
             self._tool_panel.set_tool_registry(tool_reg)
-            _logger.info("tool_registry_wired_to_panel")
+            _logger.info("tool_registry_wired_to_panel", extra={"registry": type(tool_reg).__name__})
 
         bridge = self._orchestrator.get_typed_bridge("process")
         if bridge is not None:
-            _logger.debug("process_bridge_available")
+            _logger.debug("process_bridge_available", extra={"bridge_type": "process"})
 
         try:
-            tools_dir = Path.home() / ".intellicrack" / "tools"
+            tools_dir = get_config_dir() / "tools"
             tools_dir.mkdir(parents=True, exist_ok=True)
             installer = ToolInstaller(tools_dir)
             self._tool_installer = installer
@@ -791,27 +816,27 @@ class MainWindow(QMainWindow):
         )
         return result
 
-    def _on_licensing_analysis_received(self, analysis: object) -> None:
-        """Handle licensing analysis completion from orchestrator.
+    def _on_bridge_analysis_received(self, analysis: object) -> None:
+        """Handle bridge analysis completion from orchestrator.
 
         Marshals the analysis data to the Qt main thread via signal emission.
         This callback is invoked from an async worker thread, so direct UI
         updates are unsafe.
 
         Args:
-            analysis: The LicensingAnalysis result from the orchestrator.
+            analysis: The BridgeAnalysisSummary result from the orchestrator.
         """
-        self._tool_panel.clear_analysis_tab("licensing")
-        self._tool_panel.display_analysis_result("licensing", str(analysis))
-        self.licensing_analysis_received.emit(analysis)
+        self._tool_panel.clear_analysis_tab("analysis")
+        self._tool_panel.display_analysis_result("analysis", str(analysis))
+        self.bridge_analysis_received.emit(analysis)
 
-    def _on_licensing_analysis_activated(self, _analysis: object) -> None:
-        """Activate the licensing tab after analysis completes.
+    def _on_bridge_analysis_activated(self, _analysis: object) -> None:
+        """Activate the analysis tab after bridge analysis completes.
 
         Args:
-            _analysis: The licensing analysis result (unused here).
+            _analysis: The bridge analysis result (unused here).
         """
-        self._tool_panel.activate_licensing_tab()
+        self._tool_panel.activate_analysis_tab()
 
     def _request_tool_confirmation(self, call: ToolCall) -> asyncio.Future[bool]:
         """Request user confirmation for a tool call.
@@ -830,8 +855,10 @@ class MainWindow(QMainWindow):
             dialog = confirmation_module.ToolConfirmationDialog(call, self)
             dialog.exec()
             self._orchestrator.resolve_confirmation(dialog.approved)
-            with contextlib.suppress(asyncio.InvalidStateError):
+            try:
                 future.set_result(dialog.approved)
+            except asyncio.InvalidStateError:
+                _logger.debug("confirmation_dialog_state_error", exc_info=True)
 
         QTimer.singleShot(0, show_dialog)
 
@@ -986,10 +1013,10 @@ class MainWindow(QMainWindow):
         self.status_update.emit(f"Loading {binary_name}...")
         self._run_async(load())
 
-        cached_analysis = self._orchestrator.get_current_licensing_analysis(binary_name)
+        cached_analysis = self._orchestrator.get_current_bridge_analysis(binary_name)
         if cached_analysis is not None:
             self._tool_panel.display_analysis_result(
-                "licensing",
+                "analysis",
                 str(cached_analysis),
             )
 
@@ -1162,17 +1189,14 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Save", f"Patched binary saved to {path}\nReport: {report_path}")
 
     def _on_export_analysis(self) -> None:
-        """Export the current licensing analysis to a JSON file."""
-        licensing_panel = self._tool_panel.get_panel("licensing")
-        if licensing_panel is None:
-            QMessageBox.information(self, "Export", "No licensing analysis available.")
+        """Export the current bridge analysis to a JSON file."""
+        analysis_panel = self._tool_panel.get_panel("analysis")
+        if analysis_panel is None:
+            QMessageBox.information(self, "Export", "No analysis available.")
             return
 
-        analysis: object = None
-        get_analysis = getattr(licensing_panel, "get_current_analysis", None)
-        if callable(get_analysis):
-            analysis = get_analysis()
-
+        get_analysis = getattr(analysis_panel, "get_current_analysis", None)
+        analysis = get_analysis() if callable(get_analysis) else None
         if analysis is None:
             QMessageBox.information(self, "Export", "No analysis data available.")
             return
@@ -1219,7 +1243,7 @@ class MainWindow(QMainWindow):
                 extra={"tool_count": len(tool_statuses)},
             )
         except Exception:
-            _logger.debug("tool_status_refresh_before_dialog_failed")
+            _logger.debug("tool_status_refresh_before_dialog_failed", exc_info=True)
 
         dialog = ToolStatusDialog(parent=self)
         dialog.exec()
@@ -1407,7 +1431,7 @@ class MainWindow(QMainWindow):
         if provider_id in env_vars:
             api_key = os.environ.get(env_vars[provider_id], "")
 
-        config_path = Path.home() / ".intellicrack" / "providers.json"
+        config_path = get_config_file("providers.json")
         if config_path.exists():
             try:
                 with open(config_path, encoding="utf-8") as f:
@@ -1416,8 +1440,7 @@ class MainWindow(QMainWindow):
                     if config_key := provider_section.get("api_key", ""):
                         api_key = config_key
             except (json.JSONDecodeError, OSError):
-                pass
-
+                _logger.debug("config_file_load_failed", exc_info=True)
         self.status_update.emit("Refreshing models...")
         self._model_combo.clear()
         self._model_combo.setEnabled(False)
@@ -1428,7 +1451,7 @@ class MainWindow(QMainWindow):
                 loop.run_until_complete(self._model_discovery.discover_all())
                 loop.close()
             except Exception:
-                _logger.debug("model_discovery_refresh_failed")
+                _logger.debug("model_discovery_refresh_failed", exc_info=True)
 
         self._model_refresh_worker = ModelRefreshWorker(provider_id, api_key, parent=self)
         self._model_refresh_worker.refresh_finished.connect(self._on_models_refresh_finished)
@@ -1486,7 +1509,7 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Browse Models", "No models available.")
             return
 
-        if self._model_discovery is not None and model_infos:
+        if self._model_discovery is not None:
             first_model = model_infos[0]
             model_detail = self._model_discovery.get_by_id(first_model.provider, first_model.id)
             if model_detail is not None:
@@ -1496,12 +1519,10 @@ class MainWindow(QMainWindow):
                 )
 
         dialog = ModelSelectionDialog(models=model_infos, parent=self)
-        if dialog.exec():
-            selected = dialog.get_selected_model()
-            if selected:
-                idx = self._model_combo.findText(selected)
-                if idx >= 0:
-                    self._model_combo.setCurrentIndex(idx)
+        if dialog.exec() and (selected := dialog.get_selected_model()):
+            idx = self._model_combo.findText(selected)
+            if idx >= 0:
+                self._model_combo.setCurrentIndex(idx)
 
     def _on_configure_sandbox(self) -> None:
         """Handle configure sandbox action."""
@@ -1579,7 +1600,7 @@ class MainWindow(QMainWindow):
         """Handle preferences action."""
         preferences_module = importlib.import_module(".preferences", "intellicrack.ui")
         dialog = preferences_module.PreferencesDialog(self._config, self)
-        config_path = Path.home() / ".intellicrack" / "config.json"
+        config_path = get_config_file("config.json")
         set_config_path = getattr(dialog, "set_config_path", None)
         if callable(set_config_path):
             set_config_path(config_path)
@@ -1740,7 +1761,7 @@ class MainWindow(QMainWindow):
                 if callable(set_handler):
 
                     def _frida_msg_handler(message: object) -> None:
-                        text = str(message) if not isinstance(message, str) else message
+                        text = message if isinstance(message, str) else str(message)
                         self._tool_panel.log_frida_message(text)
                         if isinstance(message, dict):
                             msg_dict = cast("dict[str, object]", message)
@@ -1781,11 +1802,11 @@ class MainWindow(QMainWindow):
 
         sandbox_backend = self._tool_panel.get_sandbox_backend()
         if sandbox_backend is not None:
-            _logger.debug("sandbox_backend_available")
+            _logger.debug("sandbox_backend_available", extra={"backend_type": type(sandbox_backend).__name__})
 
         sandbox_widget = self._tool_panel.get_active_tool_widget("sandbox")
         if sandbox_widget is not None:
-            _logger.debug("sandbox_widget_active")
+            _logger.debug("sandbox_widget_active", extra={"widget_type": type(sandbox_widget).__name__})
 
     def _on_debug_current_binary(self) -> None:
         """Debug the currently loaded binary with x64dbg."""

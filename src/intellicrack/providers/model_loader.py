@@ -229,7 +229,7 @@ class ModelCache:
             self._cache.clear()
             self._current_memory_bytes = 0
             gc.collect()
-        _logger.info("model_cache_cleared")
+        _logger.info("model_cache_cleared", extra={"cache_size": len(self._cache)})
 
     def get_memory_usage(self) -> int:
         """Get current memory usage.

@@ -1,7 +1,7 @@
 {
   "tool": "markdownlint",
-  "generated": "2026-03-06T22:51:44.081840",
-  "total_findings": 66,
+  "generated": "2026-03-07T20:19:01.023867",
+  "total_findings": 62,
   "total_files": 5,
   "files": [
     {
@@ -409,63 +409,35 @@
     },
     {
       "path": "AGENTS.md",
-      "count": 8,
+      "count": 4,
       "findings": [
         {
-          "line": 5,
-          "column": 1,
-          "code": "error",
-          "message": "MD033/no-inline-html Inline HTML [Element: system-reminder]",
-          "raw": "AGENTS.md:5:1 error MD033/no-inline-html Inline HTML [Element: system-reminder]"
-        },
-        {
-          "line": 6,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 211]",
-          "raw": "AGENTS.md:6:81 error MD013/line-length Line length [Expected: 80; Actual: 211]"
-        },
-        {
-          "line": 7,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 192]",
-          "raw": "AGENTS.md:7:81 error MD013/line-length Line length [Expected: 80; Actual: 192]"
-        },
-        {
-          "line": 8,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 191]",
-          "raw": "AGENTS.md:8:81 error MD013/line-length Line length [Expected: 80; Actual: 191]"
-        },
-        {
-          "line": 10,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 164]",
-          "raw": "AGENTS.md:10:81 error MD013/line-length Line length [Expected: 80; Actual: 164]"
-        },
-        {
-          "line": 13,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 722]",
-          "raw": "AGENTS.md:13:81 error MD013/line-length Line length [Expected: 80; Actual: 722]"
-        },
-        {
-          "line": 68,
+          "line": 43,
           "column": null,
           "code": "error",
-          "message": "MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Build, Lint, and Test Commands\"]",
-          "raw": "AGENTS.md:68 error MD024/no-duplicate-heading Multiple headings with the same content [Context: \"Build, Lint, and Test Commands\"]"
+          "message": "MD036/no-emphasis-as-heading Emphasis used instead of a heading [Context: \"TOOLS\"]",
+          "raw": "AGENTS.md:43 error MD036/no-emphasis-as-heading Emphasis used instead of a heading [Context: \"TOOLS\"]"
         },
         {
-          "line": 108,
+          "line": 53,
           "column": 81,
           "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 118]",
-          "raw": "AGENTS.md:108:81 error MD013/line-length Line length [Expected: 80; Actual: 118]"
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 101]",
+          "raw": "AGENTS.md:53:81 error MD013/line-length Line length [Expected: 80; Actual: 101]"
+        },
+        {
+          "line": 86,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 86]",
+          "raw": "AGENTS.md:86:81 error MD013/line-length Line length [Expected: 80; Actual: 86]"
+        },
+        {
+          "line": 141,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 86]",
+          "raw": "AGENTS.md:141:81 error MD013/line-length Line length [Expected: 80; Actual: 86]"
         }
       ]
     },
@@ -474,25 +446,25 @@
       "count": 3,
       "findings": [
         {
-          "line": 64,
+          "line": 43,
           "column": null,
           "code": "error",
           "message": "MD036/no-emphasis-as-heading Emphasis used instead of a heading [Context: \"TOOLS\"]",
-          "raw": "CLAUDE.md:64 error MD036/no-emphasis-as-heading Emphasis used instead of a heading [Context: \"TOOLS\"]"
+          "raw": "CLAUDE.md:43 error MD036/no-emphasis-as-heading Emphasis used instead of a heading [Context: \"TOOLS\"]"
         },
         {
-          "line": 74,
+          "line": 53,
           "column": 81,
           "code": "error",
           "message": "MD013/line-length Line length [Expected: 80; Actual: 101]",
-          "raw": "CLAUDE.md:74:81 error MD013/line-length Line length [Expected: 80; Actual: 101]"
+          "raw": "CLAUDE.md:53:81 error MD013/line-length Line length [Expected: 80; Actual: 101]"
         },
         {
-          "line": 107,
+          "line": 86,
           "column": 81,
           "code": "error",
           "message": "MD013/line-length Line length [Expected: 80; Actual: 86]",
-          "raw": "CLAUDE.md:107:81 error MD013/line-length Line length [Expected: 80; Actual: 86]"
+          "raw": "CLAUDE.md:86:81 error MD013/line-length Line length [Expected: 80; Actual: 86]"
         }
       ]
     }
