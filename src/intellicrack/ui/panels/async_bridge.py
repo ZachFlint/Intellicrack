@@ -146,6 +146,7 @@ def run_bridge_coroutine[T](coro: Coroutine[object, object, T]) -> T | None:
     try:
         running = asyncio.get_running_loop()
     except RuntimeError:
+        _logger.debug("no_running_event_loop", exc_info=True)
         running = None
 
     if running is not None and running.is_running():

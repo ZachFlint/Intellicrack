@@ -1,6 +1,6 @@
 {
   "tool": "ty",
-  "generated": "2026-03-07T20:14:00.842594",
+  "generated": "2026-03-08T16:21:35.730727",
   "total_findings": 133,
   "total_files": 43,
   "files": [
@@ -9,81 +9,81 @@
       "count": 11,
       "findings": [
         {
-          "line": 27,
+          "line": 28,
           "column": 14,
           "code": "invalid-assignment",
           "message": "Object of type `None` is not assignable to `<module 'torch'>`",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:27:14: error[invalid-assignment] Object of type `None` is not assignable to `<module 'torch'>`"
+          "raw": "src\\intellicrack\\providers\\model_loader.py:28:14: error[invalid-assignment] Object of type `None` is not assignable to `<module 'torch'>`"
         },
         {
-          "line": 38,
+          "line": 41,
           "column": 26,
           "code": "invalid-assignment",
           "message": "Object of type `None` is not assignable to `<class 'BitsAndBytesConfig'>`",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:38:26: error[invalid-assignment] Object of type `None` is not assignable to `<class 'BitsAndBytesConfig'>`"
+          "raw": "src\\intellicrack\\providers\\model_loader.py:41:26: error[invalid-assignment] Object of type `None` is not assignable to `<class 'BitsAndBytesConfig'>`"
         },
         {
-          "line": 532,
+          "line": 535,
           "column": 12,
           "code": "unresolved-attribute",
           "message": "Attribute `pad_token` is not defined on `None` in union `Unknown | TokenizersBackend | None | SentencePieceBackend`",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:532:12: error[unresolved-attribute] Attribute `pad_token` is not defined on `None` in union `Unknown | TokenizersBackend | None | SentencePieceBackend`"
+          "raw": "src\\intellicrack\\providers\\model_loader.py:535:12: error[unresolved-attribute] Attribute `pad_token` is not defined on `None` in union `Unknown | TokenizersBackend | None | SentencePieceBackend`"
         },
         {
-          "line": 533,
+          "line": 536,
           "column": 13,
           "code": "invalid-assignment",
           "message": "Object of type `Unknown` is not assignable to attribute `pad_token` on type `Unknown | TokenizersBackend | None | SentencePieceBackend`",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:533:13: error[invalid-assignment] Object of type `Unknown` is not assignable to attribute `pad_token` on type `Unknown | TokenizersBackend | None | SentencePieceBackend`"
+          "raw": "src\\intellicrack\\providers\\model_loader.py:536:13: error[invalid-assignment] Object of type `Unknown` is not assignable to attribute `pad_token` on type `Unknown | TokenizersBackend | None | SentencePieceBackend`"
         },
         {
-          "line": 533,
+          "line": 536,
           "column": 35,
           "code": "unresolved-attribute",
           "message": "Attribute `eos_token` is not defined on `None` in union `Unknown | TokenizersBackend | None | SentencePieceBackend`",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:533:35: error[unresolved-attribute] Attribute `eos_token` is not defined on `None` in union `Unknown | TokenizersBackend | None | SentencePieceBackend`"
+          "raw": "src\\intellicrack\\providers\\model_loader.py:536:35: error[unresolved-attribute] Attribute `eos_token` is not defined on `None` in union `Unknown | TokenizersBackend | None | SentencePieceBackend`"
         },
         {
-          "line": 549,
+          "line": 552,
           "column": 30,
           "code": "invalid-argument-type",
           "message": "Argument to bound method `__call__` is incorrect: Expected `PreTrainedModel`, found `device`",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:549:30: error[invalid-argument-type] Argument to bound method `__call__` is incorrect: Expected `PreTrainedModel`, found `device`"
+          "raw": "src\\intellicrack\\providers\\model_loader.py:552:30: error[invalid-argument-type] Argument to bound method `__call__` is incorrect: Expected `PreTrainedModel`, found `device`"
         },
         {
-          "line": 559,
+          "line": 562,
           "column": 13,
           "code": "invalid-argument-type",
           "message": "Argument is incorrect: Expected `PreTrainedTokenizerBase`, found `Unknown | TokenizersBackend | None | SentencePieceBackend`",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:559:13: error[invalid-argument-type] Argument is incorrect: Expected `PreTrainedTokenizerBase`, found `Unknown | TokenizersBackend | None | SentencePieceBackend`"
+          "raw": "src\\intellicrack\\providers\\model_loader.py:562:13: error[invalid-argument-type] Argument is incorrect: Expected `PreTrainedTokenizerBase`, found `Unknown | TokenizersBackend | None | SentencePieceBackend`"
         },
         {
-          "line": 635,
+          "line": 639,
           "column": 12,
           "code": "unresolved-attribute",
           "message": "Attribute `pad_token` is not defined on `None` in union `Unknown | TokenizersBackend | None | SentencePieceBackend`",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:635:12: error[unresolved-attribute] Attribute `pad_token` is not defined on `None` in union `Unknown | TokenizersBackend | None | SentencePieceBackend`"
+          "raw": "src\\intellicrack\\providers\\model_loader.py:639:12: error[unresolved-attribute] Attribute `pad_token` is not defined on `None` in union `Unknown | TokenizersBackend | None | SentencePieceBackend`"
         },
         {
-          "line": 636,
+          "line": 640,
           "column": 13,
           "code": "invalid-assignment",
           "message": "Object of type `Unknown` is not assignable to attribute `pad_token` on type `Unknown | TokenizersBackend | None | SentencePieceBackend`",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:636:13: error[invalid-assignment] Object of type `Unknown` is not assignable to attribute `pad_token` on type `Unknown | TokenizersBackend | None | SentencePieceBackend`"
+          "raw": "src\\intellicrack\\providers\\model_loader.py:640:13: error[invalid-assignment] Object of type `Unknown` is not assignable to attribute `pad_token` on type `Unknown | TokenizersBackend | None | SentencePieceBackend`"
         },
         {
-          "line": 636,
+          "line": 640,
           "column": 35,
           "code": "unresolved-attribute",
           "message": "Attribute `eos_token` is not defined on `None` in union `Unknown | TokenizersBackend | None | SentencePieceBackend`",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:636:35: error[unresolved-attribute] Attribute `eos_token` is not defined on `None` in union `Unknown | TokenizersBackend | None | SentencePieceBackend`"
+          "raw": "src\\intellicrack\\providers\\model_loader.py:640:35: error[unresolved-attribute] Attribute `eos_token` is not defined on `None` in union `Unknown | TokenizersBackend | None | SentencePieceBackend`"
         },
         {
-          "line": 658,
+          "line": 662,
           "column": 13,
           "code": "invalid-argument-type",
           "message": "Argument is incorrect: Expected `PreTrainedTokenizerBase`, found `Unknown | TokenizersBackend | None | SentencePieceBackend`",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:658:13: error[invalid-argument-type] Argument is incorrect: Expected `PreTrainedTokenizerBase`, found `Unknown | TokenizersBackend | None | SentencePieceBackend`"
+          "raw": "src\\intellicrack\\providers\\model_loader.py:662:13: error[invalid-argument-type] Argument is incorrect: Expected `PreTrainedTokenizerBase`, found `Unknown | TokenizersBackend | None | SentencePieceBackend`"
         }
       ]
     },
@@ -237,53 +237,53 @@
       "count": 7,
       "findings": [
         {
-          "line": 402,
+          "line": 406,
           "column": 60,
           "code": "unresolved-attribute",
           "message": "Attribute `input` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:402:60: error[unresolved-attribute] Attribute `input` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
+          "raw": "src\\intellicrack\\providers\\anthropic.py:406:60: error[unresolved-attribute] Attribute `input` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
         },
         {
-          "line": 405,
+          "line": 409,
           "column": 40,
           "code": "unresolved-attribute",
           "message": "Attribute `id` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:405:40: error[unresolved-attribute] Attribute `id` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
+          "raw": "src\\intellicrack\\providers\\anthropic.py:409:40: error[unresolved-attribute] Attribute `id` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
         },
         {
-          "line": 406,
+          "line": 410,
           "column": 47,
           "code": "unresolved-attribute",
           "message": "Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:406:47: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
+          "raw": "src\\intellicrack\\providers\\anthropic.py:410:47: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
         },
         {
-          "line": 406,
+          "line": 410,
           "column": 82,
           "code": "unresolved-attribute",
           "message": "Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:406:82: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
+          "raw": "src\\intellicrack\\providers\\anthropic.py:410:82: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
         },
         {
-          "line": 406,
+          "line": 410,
           "column": 98,
           "code": "unresolved-attribute",
           "message": "Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:406:98: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
+          "raw": "src\\intellicrack\\providers\\anthropic.py:410:98: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
         },
         {
-          "line": 407,
+          "line": 411,
           "column": 51,
           "code": "unresolved-attribute",
           "message": "Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:407:51: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
+          "raw": "src\\intellicrack\\providers\\anthropic.py:411:51: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
         },
         {
-          "line": 492,
+          "line": 498,
           "column": 17,
           "code": "invalid-argument-type",
           "message": "Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str | dict[str, Any]], None, None]`",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:492:17: error[invalid-argument-type] Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str | dict[str, Any]], None, None]`"
+          "raw": "src\\intellicrack\\providers\\anthropic.py:498:17: error[invalid-argument-type] Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str | dict[str, Any]], None, None]`"
         }
       ]
     },
@@ -292,25 +292,18 @@
       "count": 7,
       "findings": [
         {
-          "line": 44,
+          "line": 47,
           "column": 12,
           "code": "invalid-assignment",
           "message": "Object of type `None` is not assignable to `<module 'lief'>`",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:44:12: error[invalid-assignment] Object of type `None` is not assignable to `<module 'lief'>`"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:47:12: error[invalid-assignment] Object of type `None` is not assignable to `<module 'lief'>`"
         },
         {
-          "line": 271,
+          "line": 272,
           "column": 9,
           "code": "unresolved-attribute",
           "message": "Attribute `setVisible` is not defined on `None` in union `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:271:9: error[unresolved-attribute] Attribute `setVisible` is not defined on `None` in union `QHeaderView | None`"
-        },
-        {
-          "line": 273,
-          "column": 9,
-          "code": "unresolved-attribute",
-          "message": "Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:273:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:272:9: error[unresolved-attribute] Attribute `setVisible` is not defined on `None` in union `QHeaderView | None`"
         },
         {
           "line": 274,
@@ -327,18 +320,25 @@
           "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:275:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`"
         },
         {
-          "line": 302,
+          "line": 276,
           "column": 9,
           "code": "unresolved-attribute",
           "message": "Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:302:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:276:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`"
         },
         {
-          "line": 309,
+          "line": 303,
           "column": 9,
           "code": "unresolved-attribute",
           "message": "Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:309:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:303:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`"
+        },
+        {
+          "line": 310,
+          "column": 9,
+          "code": "unresolved-attribute",
+          "message": "Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:310:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`"
         }
       ]
     },
@@ -382,11 +382,11 @@
           "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:237:9: error[unresolved-attribute] Attribute `setSectionResizeMode` is not defined on `None` in union `QHeaderView | None`"
         },
         {
-          "line": 779,
+          "line": 780,
           "column": 51,
           "code": "invalid-argument-type",
           "message": "Argument to bound method `load_graph` is incorrect: Expected `list[dict[str, Any]]`, found `Top[list[Unknown]]`",
-          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:779:51: error[invalid-argument-type] Argument to bound method `load_graph` is incorrect: Expected `list[dict[str, Any]]`, found `Top[list[Unknown]]`"
+          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:780:51: error[invalid-argument-type] Argument to bound method `load_graph` is incorrect: Expected `list[dict[str, Any]]`, found `Top[list[Unknown]]`"
         }
       ]
     },
@@ -395,46 +395,46 @@
       "count": 6,
       "findings": [
         {
-          "line": 539,
+          "line": 540,
           "column": 9,
           "code": "invalid-method-override",
           "message": "Invalid override of method `paintEvent`: Definition is incompatible with `QWidget.paintEvent`",
-          "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py:539:9: error[invalid-method-override] Invalid override of method `paintEvent`: Definition is incompatible with `QWidget.paintEvent`"
+          "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py:540:9: error[invalid-method-override] Invalid override of method `paintEvent`: Definition is incompatible with `QWidget.paintEvent`"
         },
         {
-          "line": 599,
+          "line": 600,
           "column": 9,
           "code": "invalid-method-override",
           "message": "Invalid override of method `mouseMoveEvent`: Definition is incompatible with `QWidget.mouseMoveEvent`",
-          "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py:599:9: error[invalid-method-override] Invalid override of method `mouseMoveEvent`: Definition is incompatible with `QWidget.mouseMoveEvent`"
+          "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py:600:9: error[invalid-method-override] Invalid override of method `mouseMoveEvent`: Definition is incompatible with `QWidget.mouseMoveEvent`"
         },
         {
-          "line": 614,
+          "line": 615,
           "column": 9,
           "code": "invalid-method-override",
           "message": "Invalid override of method `mousePressEvent`: Definition is incompatible with `QWidget.mousePressEvent`",
-          "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py:614:9: error[invalid-method-override] Invalid override of method `mousePressEvent`: Definition is incompatible with `QWidget.mousePressEvent`"
+          "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py:615:9: error[invalid-method-override] Invalid override of method `mousePressEvent`: Definition is incompatible with `QWidget.mousePressEvent`"
         },
         {
-          "line": 629,
+          "line": 630,
           "column": 9,
           "code": "invalid-method-override",
           "message": "Invalid override of method `mouseReleaseEvent`: Definition is incompatible with `QWidget.mouseReleaseEvent`",
-          "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py:629:9: error[invalid-method-override] Invalid override of method `mouseReleaseEvent`: Definition is incompatible with `QWidget.mouseReleaseEvent`"
+          "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py:630:9: error[invalid-method-override] Invalid override of method `mouseReleaseEvent`: Definition is incompatible with `QWidget.mouseReleaseEvent`"
         },
         {
-          "line": 644,
+          "line": 645,
           "column": 9,
           "code": "invalid-method-override",
           "message": "Invalid override of method `keyPressEvent`: Definition is incompatible with `QWidget.keyPressEvent`",
-          "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py:644:9: error[invalid-method-override] Invalid override of method `keyPressEvent`: Definition is incompatible with `QWidget.keyPressEvent`"
+          "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py:645:9: error[invalid-method-override] Invalid override of method `keyPressEvent`: Definition is incompatible with `QWidget.keyPressEvent`"
         },
         {
-          "line": 659,
+          "line": 660,
           "column": 9,
           "code": "invalid-method-override",
           "message": "Invalid override of method `keyReleaseEvent`: Definition is incompatible with `QWidget.keyReleaseEvent`",
-          "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py:659:9: error[invalid-method-override] Invalid override of method `keyReleaseEvent`: Definition is incompatible with `QWidget.keyReleaseEvent`"
+          "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py:660:9: error[invalid-method-override] Invalid override of method `keyReleaseEvent`: Definition is incompatible with `QWidget.keyReleaseEvent`"
         }
       ]
     },
@@ -491,39 +491,39 @@
       "count": 5,
       "findings": [
         {
-          "line": 62,
+          "line": 63,
           "column": 14,
           "code": "invalid-assignment",
           "message": "Object of type `None` is not assignable to `<module 'torch'>`",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:62:14: error[invalid-assignment] Object of type `None` is not assignable to `<module 'torch'>`"
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:63:14: error[invalid-assignment] Object of type `None` is not assignable to `<module 'torch'>`"
         },
         {
-          "line": 597,
+          "line": 598,
           "column": 23,
           "code": "call-non-callable",
           "message": "Object of type `Tensor` is not callable",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:597:23: error[call-non-callable] Object of type `Tensor` is not callable"
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:598:23: error[call-non-callable] Object of type `Tensor` is not callable"
         },
         {
-          "line": 675,
+          "line": 676,
           "column": 21,
           "code": "invalid-argument-type",
           "message": "Argument to function `to_thread` is incorrect: Expected `tuple[tuple[Tensor, ...], ...] | None`, found `None | Cache`",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:675:21: error[invalid-argument-type] Argument to function `to_thread` is incorrect: Expected `tuple[tuple[Tensor, ...], ...] | None`, found `None | Cache`"
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:676:21: error[invalid-argument-type] Argument to function `to_thread` is incorrect: Expected `tuple[tuple[Tensor, ...], ...] | None`, found `None | Cache`"
         },
         {
-          "line": 678,
+          "line": 679,
           "column": 22,
           "code": "not-subscriptable",
           "message": "Cannot subscript object of type `None` with no `__getitem__` method",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:678:22: error[not-subscriptable] Cannot subscript object of type `None` with no `__getitem__` method"
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:679:22: error[not-subscriptable] Cannot subscript object of type `None` with no `__getitem__` method"
         },
         {
-          "line": 797,
+          "line": 798,
           "column": 47,
           "code": "invalid-assignment",
           "message": "Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:797:47: error[invalid-assignment] Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`"
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:798:47: error[invalid-assignment] Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`"
         }
       ]
     },
@@ -641,32 +641,32 @@
       "count": 4,
       "findings": [
         {
-          "line": 66,
+          "line": 67,
           "column": 33,
           "code": "invalid-assignment",
           "message": "Object of type `None` is not assignable to `<class 'LocalTransformersProvider'>`",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:66:33: error[invalid-assignment] Object of type `None` is not assignable to `<class 'LocalTransformersProvider'>`"
+          "raw": "src\\intellicrack\\ui\\provider_config.py:67:33: error[invalid-assignment] Object of type `None` is not assignable to `<class 'LocalTransformersProvider'>`"
         },
         {
-          "line": 71,
+          "line": 73,
           "column": 22,
           "code": "invalid-assignment",
           "message": "Object of type `None` is not assignable to `<class 'OllamaProvider'>`",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:71:22: error[invalid-assignment] Object of type `None` is not assignable to `<class 'OllamaProvider'>`"
+          "raw": "src\\intellicrack\\ui\\provider_config.py:73:22: error[invalid-assignment] Object of type `None` is not assignable to `<class 'OllamaProvider'>`"
         },
         {
-          "line": 76,
+          "line": 79,
           "column": 26,
           "code": "invalid-assignment",
           "message": "Object of type `None` is not assignable to `<class 'OpenRouterProvider'>`",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:76:26: error[invalid-assignment] Object of type `None` is not assignable to `<class 'OpenRouterProvider'>`"
+          "raw": "src\\intellicrack\\ui\\provider_config.py:79:26: error[invalid-assignment] Object of type `None` is not assignable to `<class 'OpenRouterProvider'>`"
         },
         {
-          "line": 81,
+          "line": 85,
           "column": 33,
           "code": "invalid-assignment",
           "message": "Object of type `None` is not assignable to `def get_optimal_dtype_for_xpu() -> str`",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:81:33: error[invalid-assignment] Object of type `None` is not assignable to `def get_optimal_dtype_for_xpu() -> str`"
+          "raw": "src\\intellicrack\\ui\\provider_config.py:85:33: error[invalid-assignment] Object of type `None` is not assignable to `def get_optimal_dtype_for_xpu() -> str`"
         }
       ]
     },
@@ -776,18 +776,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 997,
+          "line": 998,
           "column": 9,
           "code": "invalid-assignment",
           "message": "Object of type `Popen[str] | Popen[bytes] | Popen[Any]` is not assignable to attribute `_process` of type `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:997:9: error[invalid-assignment] Object of type `Popen[str] | Popen[bytes] | Popen[Any]` is not assignable to attribute `_process` of type `Popen[bytes] | None`"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:998:9: error[invalid-assignment] Object of type `Popen[str] | Popen[bytes] | Popen[Any]` is not assignable to attribute `_process` of type `Popen[bytes] | None`"
         },
         {
-          "line": 1007,
+          "line": 1008,
           "column": 13,
           "code": "invalid-argument-type",
           "message": "Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1007:13: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1008:13: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`"
         }
       ]
     },
@@ -796,18 +796,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 256,
+          "line": 257,
           "column": 13,
           "code": "call-top-callable",
           "message": "Object of type `Top[(...) -> object]` is not safe to call; its signature is not known",
-          "raw": "src\\intellicrack\\core\\process_manager.py:256:13: error[call-top-callable] Object of type `Top[(...) -> object]` is not safe to call; its signature is not known"
+          "raw": "src\\intellicrack\\core\\process_manager.py:257:13: error[call-top-callable] Object of type `Top[(...) -> object]` is not safe to call; its signature is not known"
         },
         {
-          "line": 525,
+          "line": 526,
           "column": 56,
           "code": "invalid-argument-type",
           "message": "Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`",
-          "raw": "src\\intellicrack\\core\\process_manager.py:525:56: error[invalid-argument-type] Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`"
+          "raw": "src\\intellicrack\\core\\process_manager.py:526:56: error[invalid-argument-type] Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`"
         }
       ]
     },
@@ -816,18 +816,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 627,
+          "line": 634,
           "column": 64,
           "code": "unresolved-attribute",
           "message": "Object of type `QEMUConfig` has no attribute `vnc_port`",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:627:64: error[unresolved-attribute] Object of type `QEMUConfig` has no attribute `vnc_port`"
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:634:64: error[unresolved-attribute] Object of type `QEMUConfig` has no attribute `vnc_port`"
         },
         {
-          "line": 909,
+          "line": 916,
           "column": 77,
           "code": "unresolved-attribute",
           "message": "Attribute `value` is not defined on `SandboxState` in union `Unknown | SandboxState`",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:909:77: error[unresolved-attribute] Attribute `value` is not defined on `SandboxState` in union `Unknown | SandboxState`"
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:916:77: error[unresolved-attribute] Attribute `value` is not defined on `SandboxState` in union `Unknown | SandboxState`"
         }
       ]
     },
@@ -836,18 +836,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 64,
+          "line": 65,
           "column": 30,
           "code": "invalid-assignment",
           "message": "Object of type `None` is not assignable to `def get_global_model_cache() -> ModelCache`",
-          "raw": "src\\intellicrack\\ui\\app.py:64:30: error[invalid-assignment] Object of type `None` is not assignable to `def get_global_model_cache() -> ModelCache`"
+          "raw": "src\\intellicrack\\ui\\app.py:65:30: error[invalid-assignment] Object of type `None` is not assignable to `def get_global_model_cache() -> ModelCache`"
         },
         {
-          "line": 65,
+          "line": 66,
           "column": 29,
           "code": "invalid-assignment",
           "message": "Object of type `None` is not assignable to `def set_global_cache_size(max_memory_bytes: int) -> None`",
-          "raw": "src\\intellicrack\\ui\\app.py:65:29: error[invalid-assignment] Object of type `None` is not assignable to `def set_global_cache_size(max_memory_bytes: int) -> None`"
+          "raw": "src\\intellicrack\\ui\\app.py:66:29: error[invalid-assignment] Object of type `None` is not assignable to `def set_global_cache_size(max_memory_bytes: int) -> None`"
         }
       ]
     },
@@ -1029,11 +1029,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 34,
+          "line": 37,
           "column": 23,
           "code": "invalid-assignment",
           "message": "Object of type `None` is not assignable to `<module 'keyring'>`",
-          "raw": "src\\intellicrack\\credentials\\store.py:34:23: error[invalid-assignment] Object of type `None` is not assignable to `<module 'keyring'>`"
+          "raw": "src\\intellicrack\\credentials\\store.py:37:23: error[invalid-assignment] Object of type `None` is not assignable to `<module 'keyring'>`"
         }
       ]
     },
@@ -1055,11 +1055,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 498,
+          "line": 499,
           "column": 21,
           "code": "invalid-argument-type",
           "message": "Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str], None, None]`",
-          "raw": "src\\intellicrack\\providers\\base.py:498:21: error[invalid-argument-type] Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str], None, None]`"
+          "raw": "src\\intellicrack\\providers\\base.py:499:21: error[invalid-argument-type] Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str], None, None]`"
         }
       ]
     },
@@ -1068,11 +1068,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 29,
+          "line": 30,
           "column": 21,
           "code": "invalid-assignment",
           "message": "Object of type `None` is not assignable to `<module 'torch'>`",
-          "raw": "src\\intellicrack\\providers\\xpu_utils.py:29:21: error[invalid-assignment] Object of type `None` is not assignable to `<module 'torch'>`"
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:30:21: error[invalid-assignment] Object of type `None` is not assignable to `<module 'torch'>`"
         }
       ]
     },
@@ -1146,11 +1146,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 62,
+          "line": 63,
           "column": 5,
           "code": "conflicting-declarations",
           "message": "Conflicting declared types for `_winreg_module`: `ModuleType | None` and `<module 'winreg'>`",
-          "raw": "src\\intellicrack\\ui\\tool_config.py:62:5: error[conflicting-declarations] Conflicting declared types for `_winreg_module`: `ModuleType | None` and `<module 'winreg'>`"
+          "raw": "src\\intellicrack\\ui\\tool_config.py:63:5: error[conflicting-declarations] Conflicting declared types for `_winreg_module`: `ModuleType | None` and `<module 'winreg'>`"
         }
       ]
     },

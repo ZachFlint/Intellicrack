@@ -166,10 +166,10 @@ class KnowledgeGraphGenerator:
         """Builds the complete knowledge graph."""
         logger.info("Starting Python analysis...")
         self._scan_python()
-        
+
         logger.info("Starting JavaScript analysis...")
         self._scan_javascript()
-        
+
         logger.info("Starting Asset analysis...")
         self._scan_assets()
 
@@ -197,7 +197,7 @@ class KnowledgeGraphGenerator:
                             rel_path = path.relative_to(self.repo_root)
                             node_id = str(rel_path).replace(os.sep, "/")
                             self.graph.add_node(node_id, type="javascript", lang="javascript", path=str(path), label=file)
-                            
+
                             with open(path, encoding="utf-8") as f:
                                 content = f.read()
                                 for match in import_re.finditer(content):

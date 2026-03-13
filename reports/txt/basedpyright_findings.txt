@@ -382,311 +382,311 @@ d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:108:13: [error] Type of
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:108:30: [error] Cannot access attribute "fill" for class "QImage"
   Attribute "fill" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:363:17: [error] Type of "setPixelColor" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:364:17: [error] Type of "setPixelColor" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:363:34: [error] Cannot access attribute "setPixelColor" for class "QImage"
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:364:34: [error] Cannot access attribute "setPixelColor" for class "QImage"
   Attribute "setPixelColor" is unknown
-
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:416:5: [error] Type of "Key" is unknown
-
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:416:5: [error] Type of "Key_Escape" is unknown
-
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:416:8: [error] Cannot access attribute "Key" for class "type[Qt]"
-  Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:417:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:417:5: [error] Type of "Key_Tab" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:417:5: [error] Type of "Key_Escape" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:417:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:418:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:418:5: [error] Type of "Key_Backspace" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:418:5: [error] Type of "Key_Tab" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:418:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:419:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:419:5: [error] Type of "Key_Return" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:419:5: [error] Type of "Key_Backspace" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:419:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:420:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:420:5: [error] Type of "Key_Enter" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:420:5: [error] Type of "Key_Return" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:420:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:421:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:421:5: [error] Type of "Key_Insert" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:421:5: [error] Type of "Key_Enter" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:421:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:422:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:422:5: [error] Type of "Key_Delete" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:422:5: [error] Type of "Key_Insert" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:422:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:423:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:423:5: [error] Type of "Key_Home" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:423:5: [error] Type of "Key_Delete" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:423:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:424:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:424:5: [error] Type of "Key_End" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:424:5: [error] Type of "Key_Home" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:424:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:425:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:425:5: [error] Type of "Key_Left" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:425:5: [error] Type of "Key_End" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:425:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:426:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:426:5: [error] Type of "Key_Up" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:426:5: [error] Type of "Key_Left" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:426:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:427:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:427:5: [error] Type of "Key_Right" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:427:5: [error] Type of "Key_Up" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:427:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:428:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:428:5: [error] Type of "Key_Down" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:428:5: [error] Type of "Key_Right" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:428:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:429:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:429:5: [error] Type of "Key_PageUp" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:429:5: [error] Type of "Key_Down" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:429:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:430:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:430:5: [error] Type of "Key_PageDown" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:430:5: [error] Type of "Key_PageUp" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:430:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:431:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:431:5: [error] Type of "Key_Shift" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:431:5: [error] Type of "Key_PageDown" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:431:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:432:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:432:5: [error] Type of "Key_Control" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:432:5: [error] Type of "Key_Shift" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:432:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:433:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:433:5: [error] Type of "Key_Alt" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:433:5: [error] Type of "Key_Control" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:433:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:434:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:434:5: [error] Type of "Key_CapsLock" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:434:5: [error] Type of "Key_Alt" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:434:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:435:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:435:5: [error] Type of "Key_F1" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:435:5: [error] Type of "Key_CapsLock" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:435:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:436:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:436:5: [error] Type of "Key_F2" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:436:5: [error] Type of "Key_F1" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:436:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:437:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:437:5: [error] Type of "Key_F3" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:437:5: [error] Type of "Key_F2" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:437:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:438:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:438:5: [error] Type of "Key_F4" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:438:5: [error] Type of "Key_F3" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:438:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:439:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:439:5: [error] Type of "Key_F5" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:439:5: [error] Type of "Key_F4" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:439:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:440:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:440:5: [error] Type of "Key_F6" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:440:5: [error] Type of "Key_F5" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:440:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:441:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:441:5: [error] Type of "Key_F7" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:441:5: [error] Type of "Key_F6" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:441:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:442:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:442:5: [error] Type of "Key_F8" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:442:5: [error] Type of "Key_F7" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:442:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:443:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:443:5: [error] Type of "Key_F9" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:443:5: [error] Type of "Key_F8" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:443:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:444:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:444:5: [error] Type of "Key_F10" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:444:5: [error] Type of "Key_F9" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:444:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:445:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:445:5: [error] Type of "Key_F11" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:445:5: [error] Type of "Key_F10" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:445:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:446:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:446:5: [error] Type of "Key_F12" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:446:5: [error] Type of "Key_F11" is unknown
 
 d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:446:8: [error] Cannot access attribute "Key" for class "type[Qt]"
   Attribute "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:489:9: [error] Type of "setMouseTracking" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:447:5: [error] Type of "Key" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:489:14: [error] Cannot access attribute "setMouseTracking" for class "VNCWidget*"
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:447:5: [error] Type of "Key_F12" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:447:8: [error] Cannot access attribute "Key" for class "type[Qt]"
+  Attribute "Key" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:490:9: [error] Type of "setMouseTracking" is unknown
+
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:490:14: [error] Cannot access attribute "setMouseTracking" for class "VNCWidget*"
   Attribute "setMouseTracking" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:547:13: [error] Type of "scaled" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:548:13: [error] Type of "scaled" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:547:22: [error] Type of "scaled" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:548:22: [error] Type of "scaled" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:547:47: [error] Cannot access attribute "scaled" for class "QImage"
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:548:47: [error] Cannot access attribute "scaled" for class "QImage"
   Attribute "scaled" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:548:17: [error] Type of "size" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:549:17: [error] Type of "size" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:548:22: [error] Cannot access attribute "size" for class "VNCWidget*"
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:549:22: [error] Cannot access attribute "size" for class "VNCWidget*"
   Attribute "size" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:552:13: [error] Type of "x_offset" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:553:13: [error] Type of "x_offset" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:552:40: [error] Type of "width" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:553:40: [error] Type of "width" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:553:13: [error] Type of "y_offset" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:554:13: [error] Type of "y_offset" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:553:41: [error] Type of "height" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:554:41: [error] Type of "height" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:554:13: [error] Type of "drawImage" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:555:13: [error] Type of "drawImage" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:554:21: [error] Cannot access attribute "drawImage" for class "QPainter"
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:555:21: [error] Cannot access attribute "drawImage" for class "QPainter"
   Attribute "drawImage" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:556:30: [error] Type of "rect" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:557:30: [error] Type of "rect" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:556:35: [error] Cannot access attribute "rect" for class "VNCWidget*"
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:557:35: [error] Cannot access attribute "rect" for class "VNCWidget*"
   Attribute "rect" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:558:30: [error] Type of "rect" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:559:30: [error] Type of "rect" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:558:35: [error] Cannot access attribute "rect" for class "VNCWidget*"
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:559:35: [error] Cannot access attribute "rect" for class "VNCWidget*"
   Attribute "rect" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:573:9: [error] Type of "pos" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:574:9: [error] Type of "pos" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:573:15: [error] Type of "pos" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:574:15: [error] Type of "pos" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:573:21: [error] Cannot access attribute "pos" for class "QMouseEvent"
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:574:21: [error] Cannot access attribute "pos" for class "QMouseEvent"
   Attribute "pos" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:576:20: [error] Type of "x" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:577:20: [error] Type of "x" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:576:20: [error] Argument type is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:577:20: [error] Argument type is unknown
   Argument corresponds to parameter "x" in function "__new__"
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:576:44: [error] Type of "y" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:577:44: [error] Type of "y" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:576:44: [error] Argument type is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:577:44: [error] Argument type is unknown
   Argument corresponds to parameter "x" in function "__new__"
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:589:9: [error] Type of "buttons" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:590:9: [error] Type of "buttons" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:589:19: [error] Type of "buttons" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:590:19: [error] Type of "buttons" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:589:25: [error] Cannot access attribute "buttons" for class "QMouseEvent"
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:590:25: [error] Cannot access attribute "buttons" for class "QMouseEvent"
   Attribute "buttons" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:590:22: [error] Type of "MouseButton" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:591:22: [error] Type of "MouseButton" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:590:22: [error] Type of "LeftButton" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:591:22: [error] Type of "LeftButton" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:590:25: [error] Cannot access attribute "MouseButton" for class "type[Qt]"
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:591:25: [error] Cannot access attribute "MouseButton" for class "type[Qt]"
   Attribute "MouseButton" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:592:22: [error] Type of "MouseButton" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:593:22: [error] Type of "MouseButton" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:592:22: [error] Type of "MiddleButton" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:593:22: [error] Type of "MiddleButton" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:592:25: [error] Cannot access attribute "MouseButton" for class "type[Qt]"
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:593:25: [error] Cannot access attribute "MouseButton" for class "type[Qt]"
   Attribute "MouseButton" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:594:22: [error] Type of "MouseButton" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:595:22: [error] Type of "MouseButton" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:594:22: [error] Type of "RightButton" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:595:22: [error] Type of "RightButton" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:594:25: [error] Cannot access attribute "MouseButton" for class "type[Qt]"
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:595:25: [error] Cannot access attribute "MouseButton" for class "type[Qt]"
   Attribute "MouseButton" is unknown
 
 
@@ -702,23 +702,23 @@ d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:748:36: [error] Cann
 d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:753:39: [error] Argument type is unknown
   Argument corresponds to parameter "item" in function "tree_item_data"
 
-d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:779:51: [error] Argument type is partially unknown
+d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:780:51: [error] Argument type is partially unknown
   Argument corresponds to parameter "blocks" in function "load_graph"
   Argument type is "list[Unknown]"
 
-d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:781:73: [error] Argument type is partially unknown
+d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:782:73: [error] Argument type is partially unknown
   Argument corresponds to parameter "obj" in function "len"
   Argument type is "list[Unknown]"
 
-d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:810:13: [error] Type of "line" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:811:13: [error] Type of "line" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:811:28: [error] Argument type is unknown
-  Argument corresponds to parameter "o" in function "getattr"
-
-d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:812:32: [error] Argument type is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:812:28: [error] Argument type is unknown
   Argument corresponds to parameter "o" in function "getattr"
 
 d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:813:32: [error] Argument type is unknown
+  Argument corresponds to parameter "o" in function "getattr"
+
+d:\Intellicrack\src\intellicrack\ui\panels\radare2_panel.py:814:32: [error] Argument type is unknown
   Argument corresponds to parameter "o" in function "getattr"
 
 
@@ -747,32 +747,32 @@ d:\Intellicrack\src\intellicrack\ui\win32_embed.py:127:12: [error] Return type, 
 
 6 findings in d:\Intellicrack\src\intellicrack\sandbox\qemu.py
 
-d:\Intellicrack\src\intellicrack\sandbox\qemu.py:627:51: [error] Argument type is partially unknown
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:634:51: [error] Argument type is partially unknown
   Argument corresponds to parameter "extra" in function "info"
   Argument type is "dict[str, Unknown]"
 
-d:\Intellicrack\src\intellicrack\sandbox\qemu.py:627:64: [error] Type of "vnc_port" is unknown
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:634:64: [error] Type of "vnc_port" is unknown
 
-d:\Intellicrack\src\intellicrack\sandbox\qemu.py:627:82: [error] Cannot access attribute "vnc_port" for class "QEMUConfig"
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:634:82: [error] Cannot access attribute "vnc_port" for class "QEMUConfig"
   Attribute "vnc_port" is unknown
 
-d:\Intellicrack\src\intellicrack\sandbox\qemu.py:909:67: [error] Argument type is partially unknown
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:916:67: [error] Argument type is partially unknown
   Argument corresponds to parameter "extra" in function "warning"
   Argument type is "dict[str, Unknown]"
 
-d:\Intellicrack\src\intellicrack\sandbox\qemu.py:909:77: [error] Type of "value" is unknown
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:916:77: [error] Type of "value" is unknown
 
-d:\Intellicrack\src\intellicrack\sandbox\qemu.py:909:89: [error] Cannot access attribute "value" for class "SandboxState"
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py:916:89: [error] Cannot access attribute "value" for class "SandboxState"
   Attribute "value" is unknown
 
 
 3 findings in d:\Intellicrack\src\intellicrack\providers\ollama.py
 
-d:\Intellicrack\src\intellicrack\providers\ollama.py:599:32: [error] Type of "content" is unknown
+d:\Intellicrack\src\intellicrack\providers\ollama.py:603:32: [error] Type of "content" is unknown
 
-d:\Intellicrack\src\intellicrack\providers\ollama.py:599:43: [error] Type of "get" is unknown
+d:\Intellicrack\src\intellicrack\providers\ollama.py:603:43: [error] Type of "get" is unknown
 
-d:\Intellicrack\src\intellicrack\providers\ollama.py:599:78: [error] Cannot access attribute "get" for class "object"
+d:\Intellicrack\src\intellicrack\providers\ollama.py:603:78: [error] Cannot access attribute "get" for class "object"
   Attribute "get" is unknown
 
 

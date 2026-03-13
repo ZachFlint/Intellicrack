@@ -11,11 +11,9 @@ bridges, including path settings, installation, and connection options.
 
 from __future__ import annotations
 
-import ctypes
 import importlib
 import importlib.util
 import json
-import os
 import sys
 import tempfile
 import zipfile
@@ -55,17 +53,7 @@ from ..core.process_manager import ProcessManager
 from .resources import IconManager
 
 
-_winreg_module: ModuleType | None
-try:
-    import winreg as _winreg_module
-except ImportError:
-    get_logger("ui.tool_config").debug("winreg_unavailable")
-    _winreg_module = None
-
-
 if TYPE_CHECKING:
-    from types import ModuleType
-
     from intellicrack.core.tools import ToolRegistry
 
 
@@ -74,9 +62,6 @@ EXPECTED_TOOL_COUNT = 6
 _RETURNCODE_SUCCESS = 0
 
 _logger = get_logger("ui.tool_config")
-_hwnd_broadcast = 0xFFFF
-_wm_settingchange = 0x1A
-_smto_abortifhung = 0x2
 
 
 class ToolInstallWorker(QThread):
@@ -101,9 +86,9 @@ class ToolInstallWorker(QThread):
             "url": "https://github.com/x64dbg/x64dbg/releases/download/snapshot/snapshot_2024-01-01_00-00.zip",
             "name": "x64dbg Snapshot",
         },
-        "radare2": {
-            "url": "https://github.com/radareorg/radare2/releases/download/5.9.6/radare2-5.9.6-w64.zip",
-            "name": "radare2 5.9.6",
+        "cutter": {
+            "url": "https://github.com/rizinorg/cutter/releases/latest",
+            "name": "Cutter",
         },
     }
 
@@ -198,8 +183,8 @@ class ToolInstallWorker(QThread):
 
             if self._tool_id == "ghidra":
                 self._post_install_ghidra()
-            elif self._tool_id == "radare2":
-                self._post_install_radare2()
+            elif self._tool_id == "cutter":
+                self._post_install_cutter()
 
             self.progress.emit(100)
             self.install_finished.emit(True, f"{name} installed successfully")
@@ -326,132 +311,32 @@ class ToolInstallWorker(QThread):
             encoding="utf-8",
         )
 
-    def _post_install_radare2(self) -> None:
-        """Post-installation setup for radare2."""
-        bin_path = self._find_radare2_bin_path()
-        self._update_radare2_path(bin_path)
-        self._verify_radare2()
-        self._ensure_radare2_config()
+    def _post_install_cutter(self) -> None:
+        """Post-installation setup for Cutter."""
+        cutter_exe = self._find_cutter_executable()
+        if cutter_exe is not None:
+            _logger.debug("cutter_install_verified", extra={"path": str(cutter_exe)})
 
-    def _find_radare2_bin_path(self) -> Path:
-        """Locate the radare2 bin directory.
+    def _find_cutter_executable(self) -> Path | None:
+        """Locate the Cutter executable after extraction.
 
         Returns:
-            Path to the radare2 bin directory.
-
-        Raises:
-            RuntimeError: If the bin directory cannot be found.
+            Path to the Cutter executable, or ``None`` if not found.
         """
-        candidates: list[Path] = []
-        direct_bin = self._install_path / "bin"
-        if direct_bin.exists():
-            candidates.append(direct_bin)
+        candidates: list[Path] = [
+            self._install_path / "cutter.exe",
+        ]
 
         for item in self._install_path.iterdir():
             if item.is_dir():
-                candidate = item / "bin"
-                if candidate.exists():
-                    candidates.append(candidate)
+                candidates.append(item / "cutter.exe")
 
         for candidate in candidates:
-            if (candidate / "radare2.exe").exists() or (candidate / "r2.exe").exists():
+            if candidate.exists():
                 return candidate
 
-        error_message = "radare2 bin directory not found after extraction"
-        raise RuntimeError(error_message)
-
-    def _update_radare2_path(self, bin_path: Path) -> None:
-        """Update PATH to include radare2.
-
-        Args:
-            bin_path: Path to radare2 bin directory.
-
-        Raises:
-            RuntimeError: If updating PATH fails.
-        """
-        bin_path_str = str(bin_path)
-
-        if os.name == "nt":
-            if _winreg_module is None:
-                error_message = "winreg not available for PATH updates"
-                raise RuntimeError(error_message)
-
-            try:
-                key = _winreg_module.OpenKey(
-                    _winreg_module.HKEY_CURRENT_USER,
-                    "Environment",
-                    0,
-                    _winreg_module.KEY_READ | _winreg_module.KEY_WRITE,
-                )
-                try:
-                    current_path, value_type = _winreg_module.QueryValueEx(key, "Path")
-                except FileNotFoundError:
-                    _logger.warning("user_path_registry_key_not_found")
-                    current_path = ""
-                    value_type = _winreg_module.REG_EXPAND_SZ
-
-                existing = [os.path.normcase(os.path.normpath(p.strip())) for p in current_path.split(os.pathsep) if p.strip()]
-                if os.path.normcase(os.path.normpath(bin_path_str)) not in existing:
-                    new_path = f"{bin_path_str}{os.pathsep}{current_path}" if current_path else bin_path_str
-                    _winreg_module.SetValueEx(key, "Path", 0, value_type, new_path)
-                _winreg_module.CloseKey(key)
-            except OSError as exc:
-                error_message = f"Failed to update PATH: {exc}"
-                raise RuntimeError(error_message) from exc
-
-            self._broadcast_environment_change()
-
-        current_env_path = os.environ.get("PATH", "")
-        if bin_path_str not in current_env_path:
-            os.environ["PATH"] = f"{bin_path_str}{os.pathsep}{current_env_path}" if current_env_path else bin_path_str
-
-    @staticmethod
-    def _broadcast_environment_change() -> None:
-        """Broadcast environment change to running processes."""
-        _logger.debug("environment_change_broadcast_starting", extra={})
-        try:
-            ctypes.windll.user32.SendMessageTimeoutW(
-                _hwnd_broadcast,
-                _wm_settingchange,
-                0,
-                "Environment",
-                _smto_abortifhung,
-                5000,
-                None,
-            )
-            _logger.debug("environment_change_broadcast_completed", extra={})
-        except Exception as exc:
-            _logger.warning("environment_change_broadcast_failed", extra={"error": str(exc)})
-
-    @staticmethod
-    def _verify_radare2() -> None:
-        """Verify radare2 is available in PATH.
-
-        Raises:
-            RuntimeError: If verification fails.
-        """
-        process_manager = ProcessManager.get_instance()
-        result = process_manager.run_tracked(
-            ["radare2", "-v"],
-            name="radare2-verify",
-            check=False,
-            timeout=10,
-        )
-        if result.returncode != _RETURNCODE_SUCCESS:
-            error_message = "radare2 verification failed after PATH update"
-            raise RuntimeError(error_message)
-
-    @staticmethod
-    def _ensure_radare2_config() -> None:
-        """Create default radare2 configuration if missing."""
-        config_dir = Path.home() / ".radare2"
-        config_dir.mkdir(parents=True, exist_ok=True)
-        config_path = config_dir / "radare2rc"
-        if not config_path.exists():
-            config_path.write_text(
-                "e asm.syntax=intel\ne asm.lines=true\ne scr.color=1\n",
-                encoding="utf-8",
-            )
+        _logger.warning("cutter_executable_not_found_after_extraction", extra={})
+        return None
 
 
 class ToolStatusCheckWorker(QThread):
@@ -513,8 +398,8 @@ class ToolStatusCheckWorker(QThread):
             return self._check_ghidra(tool_path)
         if self._tool_id == "x64dbg":
             return self._check_x64dbg(tool_path)
-        if self._tool_id == "radare2":
-            return self._check_radare2(tool_path)
+        if self._tool_id == "cutter":
+            return self._check_cutter(tool_path)
 
         return True, "Installed"
 
@@ -601,41 +486,43 @@ class ToolStatusCheckWorker(QThread):
         )
 
     @staticmethod
-    def _check_radare2(tool_path: Path) -> tuple[bool, str]:
-        """Check radare2 installation.
+    def _check_cutter(tool_path: Path) -> tuple[bool, str]:
+        """Check Cutter installation.
 
         Args:
-            tool_path: Path to radare2 installation.
+            tool_path: Path to Cutter installation.
 
         Returns:
             Tuple of (is_available, status_message).
         """
         for candidate in [
-            tool_path / "bin" / "radare2.exe",
-            tool_path / "radare2.exe",
-            tool_path / "bin" / "r2.exe",
+            tool_path / "cutter.exe",
         ]:
             if candidate.exists():
-                return True, "radare2 installed"
+                return True, "Cutter installed"
+
+        for item in tool_path.iterdir() if tool_path.exists() else []:
+            if item.is_dir() and (item / "cutter.exe").exists():
+                return True, "Cutter installed"
 
         try:
             process_manager = ProcessManager.get_instance()
             result = process_manager.run_tracked(
-                ["r2", "-v"],
-                name="r2-path-check",
+                ["cutter", "--version"],
+                name="cutter-path-check",
                 check=False,
                 timeout=5,
             )
             if result.returncode == _RETURNCODE_SUCCESS:
-                return True, "radare2 available in PATH"
+                return True, "Cutter available in PATH"
         except TimeoutExpired:
-            _logger.debug("radare2_path_check_timed_out", extra={})
+            _logger.debug("cutter_path_check_timed_out", extra={})
         except FileNotFoundError:
-            _logger.debug("radare2_executable_not_in_path", extra={})
+            _logger.debug("cutter_executable_not_in_path", extra={})
         except OSError as e:
-            _logger.debug("radare2_os_error", extra={"error": str(e)})
+            _logger.debug("cutter_os_error", extra={"error": str(e)})
 
-        return False, "radare2 executable not found"
+        return False, "Cutter executable not found"
 
 
 class ToolConfigDialog(QDialog):
@@ -714,7 +601,7 @@ class ToolConfigDialog(QDialog):
             ("Ghidra", "ghidra", "Static analysis and decompilation"),
             ("x64dbg", "x64dbg", "Windows debugger"),
             ("Frida", "frida", "Dynamic instrumentation"),
-            ("radare2", "radare2", "Reverse engineering framework"),
+            ("Cutter", "cutter", "Reverse engineering framework"),
             ("Process Control", "process", "Windows process manipulation"),
             ("Binary Operations", "binary", "Binary file analysis"),
         ]
@@ -917,7 +804,7 @@ class ToolSettingsWidget(QFrame):
         default_paths: dict[str, str] = {
             "ghidra": str(self._tools_directory / "ghidra"),
             "x64dbg": str(self._tools_directory / "x64dbg"),
-            "radare2": str(self._tools_directory / "radare2"),
+            "cutter": str(self._tools_directory / "cutter"),
             "frida": "",
             "process": "",
             "binary": "",
@@ -1231,7 +1118,7 @@ class ToolStatusDialog(QDialog):
             "architectures": ["x86", "x86_64", "ARM", "ARM64"],
             "formats": ["PE", "ELF", "Mach-O"],
         },
-        "radare2": {
+        "cutter": {
             "supports_static_analysis": True,
             "supports_dynamic_analysis": True,
             "supports_decompilation": True,
@@ -1347,7 +1234,7 @@ class ToolStatusDialog(QDialog):
                 "ghidra": "Ghidra",
                 "x64dbg": "x64dbg",
                 "frida": "Frida",
-                "radare2": "radare2",
+                "cutter": "Cutter",
                 "process": "Process Control",
                 "binary": "Binary Operations",
             }
@@ -1390,7 +1277,7 @@ class ToolStatusDialog(QDialog):
             ("Ghidra", "ghidra", "Static analysis"),
             ("x64dbg", "x64dbg", "Debugging"),
             ("Frida", "frida", "Dynamic instrumentation"),
-            ("radare2", "radare2", "Analysis framework"),
+            ("Cutter", "cutter", "Analysis framework"),
             ("Process Control", "process", "Process manipulation"),
             ("Binary Operations", "binary", "File analysis"),
         ]
@@ -1423,7 +1310,7 @@ class ToolStatusDialog(QDialog):
             "ghidra": "Ghidra",
             "x64dbg": "x64dbg",
             "frida": "Frida",
-            "radare2": "radare2",
+            "cutter": "Cutter",
             "process": "Process Control",
             "binary": "Binary Operations",
         }

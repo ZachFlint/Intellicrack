@@ -20,7 +20,7 @@ and this project adheres to
   - Ghidra integration for static analysis and decompilation
   - x64dbg integration for Windows debugging via named pipe
   - Frida integration for runtime instrumentation and hooking
-  - radare2 integration for multi-platform binary analysis
+  - Cutter/Rizin integration for multi-platform binary analysis
   - Direct binary operations via pefile/lief/capstone
 
 - **LLM Providers**:

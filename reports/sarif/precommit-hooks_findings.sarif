@@ -15,21 +15,42 @@
               }
             },
             {
-              "id": "mixed-line-ending",
-              "shortDescription": {
-                "text": "[FIXED] fixed mixed line endings"
-              }
-            },
-            {
               "id": "end-of-file-fixer",
               "shortDescription": {
                 "text": "[FIXED] Fixed"
+              }
+            },
+            {
+              "id": "mixed-line-ending",
+              "shortDescription": {
+                "text": "[FIXED] fixed mixed line endings"
               }
             }
           ]
         }
       },
       "results": [
+        {
+          "ruleId": "trailing-whitespace",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] Fixed"
+          }
+        },
+        {
+          "ruleId": "end-of-file-fixer",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] Fixed"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
         {
           "ruleId": "trailing-whitespace",
           "level": "warning",
@@ -45,17 +66,17 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "trailing-whitespace",
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
           }
         },
         {
-          "ruleId": "mixed-line-ending",
+          "ruleId": "trailing-whitespace",
           "level": "warning",
           "message": {
-            "text": "[FIXED] fixed mixed line endings"
+            "text": "[FIXED] Fixed"
           }
         },
         {
@@ -84,6 +105,13 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "end-of-file-fixer",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] Fixed"
           }
         },
         {
@@ -1099,76 +1127,6 @@
           "level": "warning",
           "message": {
             "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -1407,7 +1365,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-03-07T20:24:06.014210"
+          "endTimeUtc": "2026-03-08T16:29:11.126563"
         }
       ]
     }

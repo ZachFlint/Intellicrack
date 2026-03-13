@@ -7,7 +7,7 @@
 
 This module defines the abstract interface that all tool bridge implementations
 must follow, enabling consistent interaction across Ghidra, x64dbg, Frida,
-radare2, and other reverse engineering tools.
+Cutter/Rizin, and other reverse engineering tools.
 """
 
 from __future__ import annotations
@@ -37,6 +37,7 @@ if TYPE_CHECKING:
         PatchInfo,
         RegisterState,
         StringInfo,
+        ThreadInfo,
         ToolDefinition,
         ToolName,
     )
@@ -330,7 +331,7 @@ class ToolBridgeBase(abc.ABC):
 
 
 class StaticAnalysisBridge(ToolBridgeBase):
-    """Base class for static analysis tools (Ghidra, radare2).
+    """Base class for static analysis tools (Ghidra, Cutter/Rizin).
 
     Provides interface for binary loading, disassembly, decompilation,
     and cross-reference analysis without executing the target.
@@ -1025,6 +1026,35 @@ class InstrumentationBridge(DynamicAnalysisBridge):
         Note:
             Subclasses must override to return the integer return value
             from calling the function at the specified address.
+        """
+        raise RuntimeError(_ERR_MUST_OVERRIDE)
+
+    @abc.abstractmethod
+    async def enumerate_imports(self, module_name: str) -> list[ImportInfo]:
+        """List imports of a module.
+
+        Args:
+            module_name: Name of the module.
+
+        Raises:
+            RuntimeError: If the subclass does not override this method.
+
+        Note:
+            Subclasses must override to return list of ImportInfo for all
+            imported symbols from the specified module.
+        """
+        raise RuntimeError(_ERR_MUST_OVERRIDE)
+
+    @abc.abstractmethod
+    async def enumerate_threads(self) -> list[ThreadInfo]:
+        """List all threads in the attached process.
+
+        Raises:
+            RuntimeError: If the subclass does not override this method.
+
+        Note:
+            Subclasses must override to return list of ThreadInfo for each
+            thread in the attached process.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 

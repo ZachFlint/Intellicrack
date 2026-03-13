@@ -17,7 +17,7 @@ from intellicrack.core.script_gen import (
     ScriptValidator,
     get_frida_api_reference,
     get_ghidra_api_reference,
-    get_radare2_reference,
+    get_cutter_reference,
     get_x64dbg_reference,
 )
 
@@ -29,7 +29,7 @@ _BYPASS_STRATEGY_COUNT: Final[int] = 11
 _LANGUAGE_COUNT: Final[int] = 5
 _FRIDA_API_KEYS: Final[int] = 6
 _GHIDRA_API_KEYS: Final[int] = 5
-_R2_REF_KEYS: Final[int] = 6
+_CUTTER_REF_KEYS: Final[int] = 6
 _X64DBG_REF_KEYS: Final[int] = 5
 
 
@@ -652,7 +652,7 @@ def test_manager_load_script_java(tmp_path: Path) -> None:
 
 
 def test_manager_load_script_r2(tmp_path: Path) -> None:
-    """Verify load_script loads .r2 file as r2_commands/radare2.
+    """Verify load_script loads .r2 file as r2_commands/cutter.
 
     Args:
         tmp_path: Pytest temporary directory.
@@ -663,7 +663,7 @@ def test_manager_load_script_r2(tmp_path: Path) -> None:
     script = mgr.load_script(script_file)
     assert script is not None
     assert script.language == ScriptLanguage.R2_COMMANDS
-    assert script.script_type == "radare2"
+    assert script.script_type == "cutter"
 
 
 def test_manager_load_script_x64dbg(tmp_path: Path) -> None:
@@ -798,10 +798,10 @@ def test_ghidra_api_reference_keys() -> None:
     assert "patching" in ref
 
 
-def test_radare2_reference_keys() -> None:
-    """Verify radare2 reference has expected categories."""
-    ref = get_radare2_reference()
-    assert len(ref) == _R2_REF_KEYS
+def test_cutter_reference_keys() -> None:
+    """Verify Cutter/Rizin reference has expected categories."""
+    ref = get_cutter_reference()
+    assert len(ref) == _CUTTER_REF_KEYS
     assert "analysis" in ref
     assert "writing" in ref
 

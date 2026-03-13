@@ -23,7 +23,7 @@ Intellicrack is a comprehensive binary analysis and security research tool. It f
 intellicrack/
 ├── src/intellicrack/      # Main package source code
 │   ├── core/             # Configuration, orchestration, types, session, logging
-│   ├── bridges/          # Tool integrations (Ghidra, x64dbg, Frida, radare2)
+│   ├── bridges/          # Tool integrations (Ghidra, x64dbg, Frida, Cutter/Rizin)
 │   ├── providers/        # LLM providers (Anthropic, OpenAI, Google, Ollama, etc.)
 │   ├── sandbox/          # Windows Sandbox isolation
 │   ├── ui/               # PyQt6 graphical interface

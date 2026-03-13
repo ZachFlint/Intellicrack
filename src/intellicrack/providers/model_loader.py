@@ -580,6 +580,7 @@ def load_model_for_xpu(
             },
         )
     except Exception as exc:
+        _logger.warning("xpu_model_load_failed", extra={"model_id": config.model_id, "error": str(exc)})
         clear_xpu_cache()
         raise RuntimeError(_ERR_LOAD_XPU_FAILED % (config.model_id, exc)) from exc
     else:
@@ -679,6 +680,7 @@ def load_model_for_cpu(
             },
         )
     except Exception as exc:
+        _logger.warning("cpu_model_load_failed", extra={"model_id": config.model_id, "error": str(exc)})
         gc.collect()
         raise RuntimeError(_ERR_LOAD_CPU_FAILED % (config.model_id, exc)) from exc
     else:

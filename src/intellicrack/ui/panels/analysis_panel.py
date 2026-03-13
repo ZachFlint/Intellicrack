@@ -167,13 +167,16 @@ class BridgeAnalysisPanel(QWidget):
         table.setAlternatingRowColors(True)
         table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        table.verticalHeader().setVisible(False)
+        v_header = table.verticalHeader()
+        if v_header is not None:
+            v_header.setVisible(False)
         table.setFont(self._mono_font)
         table.setStyleSheet(_TABLE_STYLE)
 
         h_header = table.horizontalHeader()
-        h_header.setStretchLastSection(True)
-        h_header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        if h_header is not None:
+            h_header.setStretchLastSection(True)
+            h_header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
 
         return table
 

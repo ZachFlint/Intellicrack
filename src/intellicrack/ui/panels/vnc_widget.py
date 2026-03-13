@@ -14,10 +14,10 @@ from __future__ import annotations
 
 import asyncio
 import struct
-from typing import Any, Final, override
+from typing import Final, override
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor, QImage, QMouseEvent, QPainter
+from PyQt6.QtGui import QColor, QImage, QKeyEvent, QMouseEvent, QPainter, QPaintEvent
 from PyQt6.QtWidgets import QWidget
 
 from intellicrack.core.logging import get_logger
@@ -537,11 +537,11 @@ class VNCWidget(QWidget):
         self.update()
 
     @override
-    def paintEvent(self, event: Any) -> None:
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         """Paint the current framebuffer scaled to widget size.
 
         Args:
-            event: Paint event.
+            a0: Paint event.
         """
         painter = QPainter(self)
         if self._client.framebuffer is not None:
@@ -597,75 +597,75 @@ class VNCWidget(QWidget):
         return mask
 
     @override
-    def mouseMoveEvent(self, event: QMouseEvent | None) -> None:
+    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
         """Forward mouse movement to VNC server.
 
         Args:
-            event: Mouse event.
+            a0: Mouse event.
         """
-        if event is None or not self._client.connected:
+        if a0 is None or not self._client.connected:
             return
-        x, y = self._scale_coords(event)
+        x, y = self._scale_coords(a0)
         try:
-            run_bridge_coroutine(self._client.send_pointer_event(x, y, self._button_mask(event)))
+            run_bridge_coroutine(self._client.send_pointer_event(x, y, self._button_mask(a0)))
         except Exception:
             _logger.debug("vnc_pointer_error", exc_info=True)
 
     @override
-    def mousePressEvent(self, event: QMouseEvent | None) -> None:
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
         """Forward mouse press to VNC server.
 
         Args:
-            event: Mouse event.
+            a0: Mouse event.
         """
-        if event is None or not self._client.connected:
+        if a0 is None or not self._client.connected:
             return
-        x, y = self._scale_coords(event)
+        x, y = self._scale_coords(a0)
         try:
-            run_bridge_coroutine(self._client.send_pointer_event(x, y, self._button_mask(event)))
+            run_bridge_coroutine(self._client.send_pointer_event(x, y, self._button_mask(a0)))
         except Exception:
             _logger.debug("vnc_pointer_error", exc_info=True)
 
     @override
-    def mouseReleaseEvent(self, event: QMouseEvent | None) -> None:
+    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
         """Forward mouse release to VNC server.
 
         Args:
-            event: Mouse event.
+            a0: Mouse event.
         """
-        if event is None or not self._client.connected:
+        if a0 is None or not self._client.connected:
             return
-        x, y = self._scale_coords(event)
+        x, y = self._scale_coords(a0)
         try:
             run_bridge_coroutine(self._client.send_pointer_event(x, y, 0))
         except Exception:
             _logger.debug("vnc_pointer_error", exc_info=True)
 
     @override
-    def keyPressEvent(self, event: Any) -> None:
+    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
         """Forward key press to VNC server.
 
         Args:
-            event: Key event.
+            a0: Key event.
         """
-        if event is None or not self._client.connected:
+        if a0 is None or not self._client.connected:
             return
-        keysym = _qt_key_to_x11(event.key(), event.text())
+        keysym = _qt_key_to_x11(a0.key(), a0.text())
         try:
             run_bridge_coroutine(self._client.send_key_event(keysym, down=True))
         except Exception:
             _logger.debug("vnc_key_error", exc_info=True)
 
     @override
-    def keyReleaseEvent(self, event: Any) -> None:
+    def keyReleaseEvent(self, a0: QKeyEvent | None) -> None:
         """Forward key release to VNC server.
 
         Args:
-            event: Key event.
+            a0: Key event.
         """
-        if event is None or not self._client.connected:
+        if a0 is None or not self._client.connected:
             return
-        keysym = _qt_key_to_x11(event.key(), event.text())
+        keysym = _qt_key_to_x11(a0.key(), a0.text())
         try:
             run_bridge_coroutine(self._client.send_key_event(keysym, down=False))
         except Exception:

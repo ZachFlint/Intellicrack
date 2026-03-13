@@ -29,7 +29,9 @@
       "mcp__dev-tools__coverage_report",
       "mcp__dev-tools__git_status",
       "mcp__dev-tools__git_diff",
-      "mcp__dev-tools__git_log"
+      "mcp__dev-tools__git_log",
+      "mcp__Screenshot__capture_window",
+      "mcp__Screenshot__list_windows"
     ],
     "deny": [],
     "ask": []
@@ -43,6 +45,7 @@
     "serena",
     "e2b",
     "MCPControl",
+    "Screenshot",
     "zen"
   ],
   "disabledMcpjsonServers": [],

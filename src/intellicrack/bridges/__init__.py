@@ -6,7 +6,7 @@
 """Tool bridges for external reverse engineering tools.
 
 This package provides bridge interfaces for controlling external tools
-including Ghidra, x64dbg, Frida, radare2, and direct binary/process manipulation.
+including Ghidra, x64dbg, Frida, Cutter/Rizin, and direct binary/process manipulation.
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ from .frida_bridge import FridaBridge
 from .ghidra import GhidraBridge
 from .installer import ToolInstaller
 from .process import ProcessBridge
-from .radare2 import Radare2Bridge
+from .cutter import CutterBridge
 from .sandbox_bridge import SandboxBridge
 from .x64dbg import X64DbgBridge
 
@@ -48,7 +48,7 @@ __all__: list[str] = [
     "InstrumentationBridge",
     "MemorySearchResult",
     "ProcessBridge",
-    "Radare2Bridge",
+    "CutterBridge",
     "SandboxBridge",
     "StackFrame",
     "StaticAnalysisBridge",

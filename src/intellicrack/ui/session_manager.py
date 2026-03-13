@@ -128,13 +128,16 @@ class SessionManagerDialog(QDialog):
         self._session_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self._session_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self._session_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self._session_table.verticalHeader().setVisible(False)
-        self._session_table.horizontalHeader().setStretchLastSection(True)
+        sm_v_header = self._session_table.verticalHeader()
+        if sm_v_header is not None:
+            sm_v_header.setVisible(False)
         header = self._session_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        if header is not None:
+            header.setStretchLastSection(True)
+            header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+            header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+            header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+            header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
         self._session_table.itemSelectionChanged.connect(self._on_selection_changed)
         self._session_table.itemDoubleClicked.connect(self._on_double_click)
 
@@ -369,7 +372,10 @@ class SessionManagerDialog(QDialog):
 
     def _on_selection_changed(self) -> None:
         """Handle session selection change."""
-        if selected_rows := self._session_table.selectionModel().selectedRows():
+        sel_model = self._session_table.selectionModel()
+        if sel_model is None:
+            return
+        if selected_rows := sel_model.selectedRows():
             row = selected_rows[0].row()
             name_item = self._session_table.item(row, 0)
             if name_item is None:
@@ -458,7 +464,10 @@ class SessionManagerDialog(QDialog):
 
     def _load_selected_session(self) -> None:
         """Load the currently selected session."""
-        selected_rows = self._session_table.selectionModel().selectedRows()
+        sel_model = self._session_table.selectionModel()
+        if sel_model is None:
+            return
+        selected_rows = sel_model.selectedRows()
         if not selected_rows:
             return
 
@@ -490,7 +499,10 @@ class SessionManagerDialog(QDialog):
 
     def _delete_session(self) -> None:
         """Delete the currently selected session."""
-        selected_rows = self._session_table.selectionModel().selectedRows()
+        sel_model = self._session_table.selectionModel()
+        if sel_model is None:
+            return
+        selected_rows = sel_model.selectedRows()
         if not selected_rows:
             return
 
@@ -551,7 +563,10 @@ class SessionManagerDialog(QDialog):
 
     def _export_session(self) -> None:
         """Export selected session to file."""
-        selected_rows = self._session_table.selectionModel().selectedRows()
+        sel_model = self._session_table.selectionModel()
+        if sel_model is None:
+            return
+        selected_rows = sel_model.selectedRows()
         if not selected_rows:
             QMessageBox.information(
                 self,
@@ -764,7 +779,8 @@ class SessionManagerDialog(QDialog):
         Returns:
             Selected session ID or None.
         """
-        if selected_rows := self._session_table.selectionModel().selectedRows():
+        sel_model = self._session_table.selectionModel()
+        if sel_model is not None and (selected_rows := sel_model.selectedRows()):
             row = selected_rows[0].row()
             item = self._session_table.item(row, 0)
             if item is not None:

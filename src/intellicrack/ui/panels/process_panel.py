@@ -426,7 +426,9 @@ class ProcessPanel(QWidget):
             selection_model.currentChanged.connect(self._on_process_selection_changed)
         else:
             _logger.warning("process_table_selection_model_unavailable", extra={"widget": "process_table"})
-        self._process_table.horizontalHeader().setSectionResizeMode(_PROC_COL_NAME, QHeaderView.ResizeMode.Stretch)
+        proc_h = self._process_table.horizontalHeader()
+        if proc_h is not None:
+            proc_h.setSectionResizeMode(_PROC_COL_NAME, QHeaderView.ResizeMode.Stretch)
         main_splitter.addWidget(self._process_table)
 
         details_panel = QWidget()
@@ -442,7 +444,9 @@ class ProcessPanel(QWidget):
         self._threads_table = QTableWidget(0, 2)
         self._threads_table.setHorizontalHeaderLabels(["Thread ID", "Priority"])
         self._threads_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self._threads_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        threads_h = self._threads_table.horizontalHeader()
+        if threads_h is not None:
+            threads_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self._details_tabs.addTab(self._threads_table, "Threads")
 
         self._info_label = QLabel("Select a process to view details")

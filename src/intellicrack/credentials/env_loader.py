@@ -34,12 +34,14 @@ class ProviderCredentialMapping:
         api_base_var: Environment variable name for custom API base URL.
         organization_var: Environment variable name for organization ID.
         project_var: Environment variable name for project ID.
+        api_key_aliases: Alternative environment variable names for the API key.
     """
 
     api_key_var: str
     api_base_var: str | None = None
     organization_var: str | None = None
     project_var: str | None = None
+    api_key_aliases: tuple[str, ...] = ()
 
 
 def _find_env_file() -> Path:
@@ -121,6 +123,7 @@ class CredentialLoader:
         ProviderName.GOOGLE: ProviderCredentialMapping(
             api_key_var="GOOGLE_API_KEY",
             project_var="GOOGLE_CLOUD_PROJECT",
+            api_key_aliases=("GEMINI_API_KEY",),
         ),
         ProviderName.OLLAMA: ProviderCredentialMapping(
             api_key_var="OLLAMA_API_KEY",
@@ -228,6 +231,15 @@ class CredentialLoader:
 
         api_key = self._get_var(mapping.api_key_var)
         if not api_key:
+            for alias in mapping.api_key_aliases:
+                api_key = self._get_var(alias)
+                if api_key:
+                    _logger.debug(
+                        "credential_found_via_alias",
+                        extra={"provider": provider.value, "alias": alias},
+                    )
+                    break
+        if not api_key:
             _logger.debug(
                 "credential_not_found",
                 extra={"provider": provider.value},
@@ -296,6 +308,11 @@ class CredentialLoader:
             return False, f"Unknown provider: {provider.value}"
 
         api_key = self._get_var(mapping.api_key_var)
+        if not api_key:
+            for alias in mapping.api_key_aliases:
+                api_key = self._get_var(alias)
+                if api_key:
+                    break
         if not api_key:
             _logger.debug(
                 "credential_validation_failed",

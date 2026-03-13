@@ -7,7 +7,7 @@
 
 This module provides the tool output display panel showing
 decompiled code, disassembly, and analysis results from tools,
-as well as native analysis panels (Ghidra, x64dbg, radare2,
+as well as native analysis panels (Ghidra, x64dbg, Cutter,
 Frida, Binary) and specialized panels (Licensing, Scripts, Stack).
 """
 
@@ -129,10 +129,10 @@ class CutterWidgetProtocol(ToolWidget, Protocol):
     """Protocol for Cutter reverse engineering widget integration."""
 
     def set_bridge(self, bridge: Any) -> None:
-        """Set the Radare2Bridge instance.
+        """Set the CutterBridge instance.
 
         Args:
-            bridge: Radare2Bridge instance for analysis.
+            bridge: CutterBridge instance for analysis.
         """
         _ = (self, bridge)
 
@@ -169,31 +169,6 @@ class GhidraWidgetProtocol(ToolWidget, Protocol):
 
         Returns:
             True if the binary was loaded successfully.
-        """
-        _ = (self, binary_path)
-        return False
-
-
-@runtime_checkable
-class Radare2WidgetProtocol(ToolWidget, Protocol):
-    """Protocol for radare2/iaito GUI widget integration."""
-
-    def set_bridge(self, bridge: Any) -> None:
-        """Set the Radare2Bridge instance.
-
-        Args:
-            bridge: Radare2Bridge instance for analysis.
-        """
-        _ = (self, bridge)
-
-    def analyze_binary(self, binary_path: Path) -> bool:
-        """Load and analyze a binary in the radare2 GUI.
-
-        Args:
-            binary_path: Path to the binary to analyze.
-
-        Returns:
-            True if analysis was started successfully.
         """
         _ = (self, binary_path)
         return False
@@ -314,7 +289,6 @@ _logger = get_logger("ui.tools")
 OutputType = Literal[
     "ghidra",
     "frida",
-    "radare2",
     "x64dbg",
     "log",
     "analysis",
@@ -401,7 +375,10 @@ class CodeDisplay(QPlainTextEdit):
         Args:
             line_number: 1-based line number.
         """
-        block = self.document().findBlockByLineNumber(line_number - 1)
+        doc = self.document()
+        if doc is None:
+            return
+        block = doc.findBlockByLineNumber(line_number - 1)
         if block.isValid():
             cursor = QTextCursor(block)
             self.setTextCursor(cursor)
@@ -910,7 +887,6 @@ class ToolOutputPanel(QFrame):
         self._x64dbg_widget: X64DbgWidgetProtocol | None = None
         self._cutter_widget: CutterWidgetProtocol | None = None
         self._ghidra_widget: GhidraWidgetProtocol | None = None
-        self._radare2_widget: Radare2WidgetProtocol | None = None
         self._frida_panel: FridaPanelProtocol | None = None
         self._process_panel: ProcessPanelProtocol | None = None
         self._binary_panel: BinaryPanelProtocol | None = None
@@ -918,7 +894,7 @@ class ToolOutputPanel(QFrame):
 
         self._x64dbg_bridge: object | None = None
         self._ghidra_bridge: object | None = None
-        self._radare2_bridge: object | None = None
+        self._cutter_bridge: object | None = None
         self._frida_bridge: object | None = None
 
         self._tool_registry: object | None = None
@@ -1081,21 +1057,51 @@ class ToolOutputPanel(QFrame):
             return self._x64dbg_widget
 
     def add_cutter_tab(self) -> CutterWidgetProtocol | None:
-        """Add Cutter analysis (redirects to radare2 panel).
+        """Add the Cutter reverse engineering panel as a native tab.
 
         Returns:
-            The radare2 panel cast as CutterWidgetProtocol, or None on failure.
+            The created CutterPanel or None if creation failed.
         """
         if self._cutter_widget is not None:
             return self._cutter_widget
 
-        radare2 = self.add_radare2_tab()
-        if radare2 is None:
-            return None
+        try:
+            panel_module = importlib.import_module(".panels.cutter_panel", "intellicrack.ui")
+            raw_widget = panel_module.CutterPanel()
+            self._cutter_widget = cast("CutterWidgetProtocol", raw_widget)
+            qwidget = cast("QWidget", raw_widget)
+            self._cutter_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("cutter"))
+            self._cutter_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("cutter"))
+            self._tab_widget.addTab(qwidget, "Cutter")
+            self._embedded_tools["cutter"] = qwidget
 
-        self._cutter_widget = cast("CutterWidgetProtocol", radare2)
-        _logger.info("cutter_tab_redirected_to_radare2", extra={"tab": "radare2"})
-        return self._cutter_widget
+            bridge: object | None = None
+            reg_getter = getattr(self._tool_registry, "get_cutter_bridge", None)
+            if callable(reg_getter):
+                try:
+                    bridge = reg_getter()
+                    _logger.info("cutter_bridge_from_registry", extra={"source": "registry"})
+                except Exception:
+                    _logger.debug("cutter_bridge_registry_fallback", exc_info=True)
+
+            if bridge is None:
+                try:
+                    bridge_module = importlib.import_module("intellicrack.bridges.cutter")
+                    bridge = bridge_module.CutterBridge()
+                except Exception as bridge_err:
+                    _logger.warning("cutter_bridge_create_failed", extra={"error": str(bridge_err)})
+
+            if bridge is not None:
+                self._cutter_widget.set_bridge(bridge)
+                self._cutter_bridge = bridge
+                _logger.info("cutter_bridge_set", extra={"bridge_type": type(bridge).__name__})
+
+            _logger.info("cutter_tab_added", extra={"tab": "Cutter"})
+        except Exception as e:
+            _logger.warning("cutter_tab_add_failed", extra={"error": str(e)})
+            return None
+        else:
+            return self._cutter_widget
 
     def add_ghidra_tab(self) -> GhidraWidgetProtocol | None:
         """Add the Ghidra analysis panel as a native tab.
@@ -1143,53 +1149,6 @@ class ToolOutputPanel(QFrame):
             return None
         else:
             return self._ghidra_widget
-
-    def add_radare2_tab(self) -> Radare2WidgetProtocol | None:
-        """Add the radare2 analysis panel as a native tab.
-
-        Returns:
-            The created Radare2Panel or None if creation failed.
-        """
-        if self._radare2_widget is not None:
-            return self._radare2_widget
-
-        try:
-            panel_module = importlib.import_module(".panels.radare2_panel", "intellicrack.ui")
-            raw_widget = panel_module.Radare2Panel()
-            self._radare2_widget = cast("Radare2WidgetProtocol", raw_widget)
-            qwidget = cast("QWidget", raw_widget)
-            self._radare2_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("radare2"))
-            self._radare2_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("radare2"))
-            self._tab_widget.addTab(qwidget, "radare2")
-            self._embedded_tools["radare2"] = qwidget
-
-            bridge: object | None = None
-            reg_getter = getattr(self._tool_registry, "get_radare2_bridge", None)
-            if callable(reg_getter):
-                try:
-                    bridge = reg_getter()
-                    _logger.info("radare2_bridge_from_registry", extra={"source": "registry"})
-                except Exception:
-                    _logger.debug("radare2_bridge_registry_fallback", exc_info=True)
-
-            if bridge is None:
-                try:
-                    bridge_module = importlib.import_module("intellicrack.bridges.radare2")
-                    bridge = bridge_module.Radare2Bridge()
-                except Exception as bridge_err:
-                    _logger.warning("radare2_bridge_create_failed", extra={"error": str(bridge_err)})
-
-            if bridge is not None:
-                self._radare2_widget.set_bridge(bridge)
-                self._radare2_bridge = bridge
-                _logger.info("radare2_bridge_set", extra={"bridge_type": type(bridge).__name__})
-
-            _logger.info("radare2_tab_added", extra={"tab": "radare2"})
-        except Exception as e:
-            _logger.warning("radare2_tab_add_failed", extra={"error": str(e)})
-            return None
-        else:
-            return self._radare2_widget
 
     def add_frida_tab(self) -> FridaPanelProtocol | None:
         """Add the Frida instrumentation panel as a tab.
@@ -1356,29 +1315,6 @@ class ToolOutputPanel(QFrame):
             self._activate_tab_by_widget(cast("QWidget", self._ghidra_widget))
         return success
 
-    def open_in_radare2(self, file_path: Path | str) -> bool:
-        """Open a file in the embedded radare2/iaito tool.
-
-        Args:
-            file_path: Path to the binary to analyze.
-
-        Returns:
-            True if the file was opened successfully.
-        """
-        if self._radare2_widget is None:
-            widget = self.add_radare2_tab()
-            if widget is None:
-                return False
-
-        if self._radare2_widget is None:
-            return False
-
-        path = Path(file_path) if isinstance(file_path, str) else file_path
-        success = self._radare2_widget.analyze_binary(path)
-        if success:
-            self._activate_tab_by_widget(cast("QWidget", self._radare2_widget))
-        return success
-
     def open_in_binary(self, file_path: Path | str) -> bool:
         """Open a file in the binary hex viewer panel.
 
@@ -1518,7 +1454,7 @@ class ToolOutputPanel(QFrame):
 
         if self._analysis_panel is not None:
             self._analysis_panel.set_analysis(analysis)
-            _logger.info("bridge_analysis_updated", extra={"has_panel": self._analysis_panel is not None})
+            _logger.info("bridge_analysis_updated", extra={"has_panel": True})
 
     def activate_analysis_tab(self) -> None:
         """Activate the bridge analysis tab."""
@@ -1582,10 +1518,9 @@ class ToolOutputPanel(QFrame):
 
         panel_registry: tuple[tuple[str, str | None], ...] = (
             ("_ghidra_widget", "_ghidra_bridge"),
-            ("_radare2_widget", "_radare2_bridge"),
+            ("_cutter_widget", "_cutter_bridge"),
             ("_x64dbg_widget", "_x64dbg_bridge"),
             ("_hxd_widget", None),
-            ("_cutter_widget", "_radare2_bridge"),
             ("_frida_panel", "_frida_bridge"),
             ("_process_panel", None),
             ("_binary_panel", None),
@@ -1649,10 +1584,6 @@ class ToolOutputPanel(QFrame):
             self._ghidra_widget.stop_tool()
             self._ghidra_widget = None
 
-        if self._radare2_widget is not None:
-            self._radare2_widget.stop_tool()
-            self._radare2_widget = None
-
         if self._frida_panel is not None:
             self._frida_panel.stop_tool()
             self._frida_panel = None
@@ -1678,7 +1609,7 @@ class ToolOutputPanel(QFrame):
         if self._stack_panel is not None:
             self._stack_panel = None
 
-        for attr_name in ("_x64dbg_bridge", "_ghidra_bridge", "_radare2_bridge", "_frida_bridge"):
+        for attr_name in ("_x64dbg_bridge", "_ghidra_bridge", "_cutter_bridge", "_frida_bridge"):
             if getattr(self, attr_name, None) is not None:
                 setattr(self, attr_name, None)
                 _logger.debug("bridge_reference_released", extra={"bridge": attr_name})
@@ -1695,7 +1626,7 @@ class ToolOutputPanel(QFrame):
         Delegates to the appropriate panel's get_bridge() method.
 
         Args:
-            tool_id: Tool identifier (e.g., "frida", "ghidra", "radare2", "x64dbg").
+            tool_id: Tool identifier (e.g., "frida", "ghidra", "cutter", "x64dbg").
 
         Returns:
             Bridge instance or None if not available.
@@ -1703,7 +1634,7 @@ class ToolOutputPanel(QFrame):
         panel_map: dict[str, str] = {
             "frida": "_frida_panel",
             "ghidra": "_ghidra_widget",
-            "radare2": "_radare2_widget",
+            "cutter": "_cutter_widget",
             "x64dbg": "_x64dbg_widget",
         }
         attr_name = panel_map.get(tool_id.lower())
@@ -1840,9 +1771,9 @@ class ToolOutputPanel(QFrame):
         if current_widget is None:
             return None
         code_display = current_widget.findChild(QPlainTextEdit)
-        if code_display is None:
-            return None
         doc = code_display.document()
+        if doc is None:
+            return None
         return doc.findChild(QSyntaxHighlighter)
 
     def _wire_stack_viewer_bridges(self) -> None:

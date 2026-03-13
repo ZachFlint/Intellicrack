@@ -125,13 +125,16 @@ class GrokProvider(LLMProviderBase):
             self._connected = True
             self._logger.info("grok_api_connected", extra={"base_url": base_url})
         except openai.AuthenticationError as e:
+            self._logger.warning("grok_auth_failed", extra={"error": str(e)})
             raise AuthenticationError(_ERR_INVALID_API_KEY % e) from e
         except openai.BadRequestError as e:
+            self._logger.warning("grok_bad_request", extra={"error": str(e)})
             error_str = str(e).lower()
             if "api key" in error_str or "incorrect" in error_str:
                 raise AuthenticationError(_ERR_INVALID_API_KEY % e) from e
             raise ProviderError(_ERR_API_REQUEST % e) from e
         except Exception as e:
+            self._logger.warning("grok_connect_failed", extra={"error": str(e)})
             raise ProviderError(_ERR_CONNECT_FAILED % e) from e
 
     async def disconnect(self) -> None:
@@ -226,6 +229,7 @@ class GrokProvider(LLMProviderBase):
 
             return sorted(models, key=lambda m: m.id, reverse=True)
         except Exception as e:
+            self._logger.warning("grok_list_models_failed", extra={"error": str(e)})
             raise ProviderError(_ERR_LIST_MODELS_FAILED % e) from e
 
     async def chat(
@@ -337,10 +341,13 @@ class GrokProvider(LLMProviderBase):
                 max_tokens=max_tokens,
             )
         except openai.RateLimitError as e:
+            self._logger.warning("grok_chat_rate_limited", extra={"error": str(e)})
             raise RateLimitError(_ERR_RATE_LIMITED % e) from e
         except openai.APIError as e:
+            self._logger.warning("grok_chat_api_error", extra={"error": str(e)})
             raise ProviderError(_ERR_API_ERROR % e) from e
         except Exception as e:
+            self._logger.warning("grok_chat_request_failed", extra={"error": str(e)})
             raise ProviderError(_ERR_REQUEST_FAILED % e) from e
 
     def _parse_grok_tool_calls(
@@ -456,11 +463,14 @@ class GrokProvider(LLMProviderBase):
             self._pending_tool_calls = tc_buffer.finalize()
 
         except openai.RateLimitError as e:
+            self._logger.warning("grok_stream_rate_limited", extra={"error": str(e)})
             raise RateLimitError(_ERR_RATE_LIMITED % e) from e
         except openai.APIError as e:
+            self._logger.warning("grok_stream_api_error", extra={"error": str(e)})
             raise ProviderError(_ERR_API_ERROR % e) from e
         except Exception as e:
             if not self._cancel_requested:
+                self._logger.warning("grok_stream_failed", extra={"error": str(e)})
                 raise ProviderError(_ERR_STREAM_FAILED % e) from e
 
     async def cancel_request(self) -> None:

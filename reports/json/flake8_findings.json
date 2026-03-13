@@ -1,26 +1,26 @@
 {
   "tool": "flake8",
-  "generated": "2026-03-07T20:18:00.172132",
-  "total_findings": 7,
-  "total_files": 6,
+  "generated": "2026-03-08T16:24:58.512664",
+  "total_findings": 8,
+  "total_files": 7,
   "files": [
     {
       "path": "src/intellicrack/providers\\xpu_utils.py",
       "count": 2,
       "findings": [
         {
-          "line": 538,
+          "line": 539,
           "column": 141,
           "code": "E501",
           "message": "line too long (146 > 140 characters)",
-          "raw": "src/intellicrack/providers\\xpu_utils.py:538:141: E501 line too long (146 > 140 characters)"
+          "raw": "src/intellicrack/providers\\xpu_utils.py:539:141: E501 line too long (146 > 140 characters)"
         },
         {
-          "line": 567,
+          "line": 568,
           "column": 141,
           "code": "E501",
           "message": "line too long (179 > 140 characters)",
-          "raw": "src/intellicrack/providers\\xpu_utils.py:567:141: E501 line too long (179 > 140 characters)"
+          "raw": "src/intellicrack/providers\\xpu_utils.py:568:141: E501 line too long (179 > 140 characters)"
         }
       ]
     },
@@ -29,11 +29,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 439,
+          "line": 442,
           "column": 141,
           "code": "E501",
           "message": "line too long (160 > 140 characters)",
-          "raw": "src/intellicrack/sandbox\\windows.py:439:141: E501 line too long (160 > 140 characters)"
+          "raw": "src/intellicrack/sandbox\\windows.py:442:141: E501 line too long (160 > 140 characters)"
         }
       ]
     },
@@ -42,11 +42,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 70,
+          "line": 71,
           "column": 5,
           "code": "F811",
           "message": "redefinition of unused 'Callable' from line 19",
-          "raw": "src/intellicrack/ui\\app.py:70:5: F811 redefinition of unused 'Callable' from line 19"
+          "raw": "src/intellicrack/ui\\app.py:71:5: F811 redefinition of unused 'Callable' from line 19"
         }
       ]
     },
@@ -68,11 +68,24 @@
       "count": 1,
       "findings": [
         {
-          "line": 96,
+          "line": 97,
           "column": 141,
           "code": "E501",
           "message": "line too long (142 > 140 characters)",
-          "raw": "src/intellicrack/ui\\tool_config.py:96:141: E501 line too long (142 > 140 characters)"
+          "raw": "src/intellicrack/ui\\tool_config.py:97:141: E501 line too long (142 > 140 characters)"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_core\\test_logging.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 593,
+          "column": 13,
+          "code": "E117",
+          "message": "over-indented",
+          "raw": "tests/test_core\\test_logging.py:593:13: E117 over-indented"
         }
       ]
     },

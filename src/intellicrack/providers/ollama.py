@@ -37,6 +37,8 @@ from ..core.types import (
 from .base import LLMProviderBase, create_openai_tool_schema
 
 
+_logger = get_logger("providers.ollama")
+
 _MSG_NOT_CONNECTED = "Not connected"
 _ERR_CONNECT_BOTH_FAILED = "Could not connect to local or cloud Ollama. Ensure local Ollama is running or provide a valid API key."
 _ERR_CLOUD_NOT_AVAILABLE = "Ollama cloud not available"
@@ -488,8 +490,10 @@ class OllamaProvider(LLMProviderBase):
             response.raise_for_status()
             return cast("dict[str, Any]", response.json())
         except httpx.HTTPStatusError as e:
+            _logger.warning("ollama_api_error", extra={"error": str(e)})
             raise ProviderError(_ERR_API_ERROR % e) from e
         except Exception as e:
+            _logger.warning("ollama_request_failed", extra={"error": str(e)})
             raise ProviderError(_ERR_REQUEST_FAILED % e) from e
 
     def _parse_ollama_tool_calls(self, data: dict[str, Any]) -> list[ToolCall]:
@@ -582,7 +586,7 @@ class OllamaProvider(LLMProviderBase):
             if tools:
                 request_body["tools"] = self._convert_tools_to_provider_format(tools)
 
-            last_chunk_data: dict[str, object] = {}
+            last_chunk_data: dict[str, Any] = {}
             async with client.stream(
                 "POST",
                 f"{base_url}/api/chat",
@@ -604,11 +608,12 @@ class OllamaProvider(LLMProviderBase):
 
             if not self._cancel_requested and last_chunk_data:
                 self._pending_tool_calls = self._parse_ollama_tool_calls(
-                    cast("dict[str, Any]", last_chunk_data),
+                    last_chunk_data,
                 )
 
         except Exception as e:
             if not self._cancel_requested:
+                self._logger.warning("ollama_stream_failed", extra={"error": str(e)})
                 raise ProviderError(_ERR_STREAM_FAILED % e) from e
 
     async def cancel_request(self) -> None:
@@ -689,4 +694,5 @@ class OllamaProvider(LLMProviderBase):
                             self._logger.warning("pull_status_json_decode_failed")
                             continue
         except Exception as e:
+            self._logger.warning("ollama_pull_failed", extra={"model": actual_model, "error": str(e)})
             raise ProviderError(_ERR_PULL_FAILED % (actual_model, e)) from e

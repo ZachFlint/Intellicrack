@@ -86,7 +86,7 @@ def get_assets_path() -> Path:
             _logger.debug("assets_path_found", extra={"path": str(path)})
             return path
 
-    _logger.error(
+    _logger.warning(
         "assets_path_not_found",
         extra={"searched_paths": [str(p) for p in search_paths]},
     )

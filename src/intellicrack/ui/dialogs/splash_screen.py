@@ -102,7 +102,7 @@ class SplashScreen(QSplashScreen):
             DPI scale factor (defaults to 1.0 if unavailable).
         """
         app = QApplication.instance()
-        if app is None:
+        if not isinstance(app, QApplication):
             return DEFAULT_DPI_SCALE
         screen = app.primaryScreen()
         if screen is None:

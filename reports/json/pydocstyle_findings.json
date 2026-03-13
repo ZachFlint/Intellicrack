@@ -1,8 +1,8 @@
 {
   "tool": "pydocstyle",
-  "generated": "2026-03-07T20:20:40.504882",
-  "total_findings": 11,
-  "total_files": 9,
+  "generated": "2026-03-08T16:27:01.139547",
+  "total_findings": 9,
+  "total_files": 7,
   "files": [
     {
       "path": "src/intellicrack/bridges\\base.py",
@@ -31,20 +31,20 @@
       "count": 2,
       "findings": [
         {
-          "line": 946,
+          "line": 955,
           "column": null,
           "code": "D401",
           "context": "in public method `hook_function`:",
           "message": "in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')",
-          "raw": "src/intellicrack/bridges\\frida_bridge.py:946: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
+          "raw": "src/intellicrack/bridges\\frida_bridge.py:955: D401: in public method `hook_function`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
         },
         {
-          "line": 1132,
+          "line": 1141,
           "column": null,
           "code": "D401",
           "context": "in public method `intercept_return`:",
           "message": "in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')",
-          "raw": "src/intellicrack/bridges\\frida_bridge.py:1132: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
+          "raw": "src/intellicrack/bridges\\frida_bridge.py:1141: D401: in public method `intercept_return`: - First line should be in imperative mood; try rephrasing (found 'Hook')"
         }
       ]
     },
@@ -53,12 +53,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 267,
+          "line": 268,
           "column": null,
           "code": "D401",
           "context": "in private method `_sync_cleanup`:",
           "message": "in private method `_sync_cleanup`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')",
-          "raw": "src/intellicrack/core\\process_manager.py:267: D401: in private method `_sync_cleanup`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')"
+          "raw": "src/intellicrack/core\\process_manager.py:268: D401: in private method `_sync_cleanup`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')"
         }
       ]
     },
@@ -67,12 +67,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 407,
+          "line": 408,
           "column": null,
           "code": "D401",
           "context": "in public method `validate_java`:",
           "message": "in public method `validate_java`: - First line should be in imperative mood; try rephrasing (found 'Basic')",
-          "raw": "src/intellicrack/core\\script_gen.py:407: D401: in public method `validate_java`: - First line should be in imperative mood; try rephrasing (found 'Basic')"
+          "raw": "src/intellicrack/core\\script_gen.py:408: D401: in public method `validate_java`: - First line should be in imperative mood; try rephrasing (found 'Basic')"
         }
       ]
     },
@@ -81,12 +81,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 944,
+          "line": 949,
           "column": null,
           "code": "D401",
           "context": "in public function `authorize_google`:",
           "message": "in public function `authorize_google`: - First line should be in imperative mood; try rephrasing (found 'Convenience')",
-          "raw": "src/intellicrack/credentials\\oauth.py:944: D401: in public function `authorize_google`: - First line should be in imperative mood; try rephrasing (found 'Convenience')"
+          "raw": "src/intellicrack/credentials\\oauth.py:949: D401: in public function `authorize_google`: - First line should be in imperative mood; try rephrasing (found 'Convenience')"
         }
       ]
     },
@@ -95,12 +95,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 566,
+          "line": 567,
           "column": null,
           "code": "D401",
           "context": "in private method `_generate_sync`:",
           "message": "in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')",
-          "raw": "src/intellicrack/providers\\local_transformers.py:566: D401: in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')"
+          "raw": "src/intellicrack/providers\\local_transformers.py:567: D401: in private method `_generate_sync`: - First line should be in imperative mood (perhaps 'Synchronize', not 'Synchronous')"
         }
       ]
     },
@@ -109,40 +109,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 126,
+          "line": 127,
           "column": null,
           "code": "D103",
           "context": "in public function `run_bridge_coroutine`:",
           "message": "in public function `run_bridge_coroutine`: - Missing docstring in public function",
-          "raw": "src/intellicrack/ui\\panels\\async_bridge.py:126: D103: in public function `run_bridge_coroutine`: - Missing docstring in public function"
-        }
-      ]
-    },
-    {
-      "path": "tests/test_credentials\\__init__.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 1,
-          "column": null,
-          "code": "D104",
-          "context": "at module level:",
-          "message": "at module level: - Missing docstring in public package",
-          "raw": "tests/test_credentials\\__init__.py:1: D104: at module level: - Missing docstring in public package"
-        }
-      ]
-    },
-    {
-      "path": "tests/test_sandbox\\__init__.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 1,
-          "column": null,
-          "code": "D104",
-          "context": "at module level:",
-          "message": "at module level: - Missing docstring in public package",
-          "raw": "tests/test_sandbox\\__init__.py:1: D104: at module level: - Missing docstring in public package"
+          "raw": "src/intellicrack/ui\\panels\\async_bridge.py:127: D103: in public function `run_bridge_coroutine`: - Missing docstring in public function"
         }
       ]
     }

@@ -461,7 +461,6 @@ class MainWindow(QMainWindow):
 
         tools_menu.addSeparator()
         self._add_menu_action(tools_menu, "Open in Ghidra...", self._on_open_binary_in_ghidra)
-        self._add_menu_action(tools_menu, "Open in radare2...", self._on_open_binary_in_radare2)
 
     def _setup_providers_menu(self, menubar: QMenuBar) -> None:
         """Set up the Providers menu.
@@ -618,12 +617,6 @@ class MainWindow(QMainWindow):
         self._ghidra_btn.clicked.connect(self._on_open_ghidra)
         toolbar.addWidget(self._ghidra_btn)
 
-        self._radare2_btn = QPushButton("radare2")
-        self._radare2_btn.setObjectName("tool_button")
-        self._radare2_btn.setToolTip("Open radare2/iaito GUI")
-        self._radare2_btn.clicked.connect(self._on_open_radare2)
-        toolbar.addWidget(self._radare2_btn)
-
         self._frida_btn = QPushButton("Frida")
         self._frida_btn.setObjectName("tool_button")
         self._frida_btn.setToolTip("Open Frida Instrumentation Panel")
@@ -695,19 +688,18 @@ class MainWindow(QMainWindow):
 
     def _refresh_system_status(self) -> None:
         """Periodically refresh the system status display."""
+        from .panels.async_bridge import run_bridge_coroutine
 
         async def fetch_status() -> dict[str, object]:
             return await self._orchestrator.get_system_status()
 
         try:
-            loop = asyncio.new_event_loop()
-            status = loop.run_until_complete(fetch_status())
-            loop.close()
-
-            state = status.get("state", "unknown")
-            session_id = status.get("session_id")
-            session_text = f" | Session: {session_id}" if session_id else ""
-            self._status_label.setText(f"State: {state}{session_text}")
+            status = run_bridge_coroutine(fetch_status())
+            if status is not None:
+                state = status.get("state", "unknown")
+                session_id = status.get("session_id")
+                session_text = f" | Session: {session_id}" if session_id else ""
+                self._status_label.setText(f"State: {state}{session_text}")
         except Exception:
             _logger.debug("system_status_refresh_failed", exc_info=True)
 
@@ -1684,11 +1676,11 @@ class MainWindow(QMainWindow):
             self._show_tool_error("x64dbg", f"Failed to open x64dbg panel: {e}")
 
     def _on_open_cutter(self) -> None:
-        """Open Cutter analysis (redirects to radare2 panel)."""
+        """Open Cutter reverse engineering panel."""
         try:
             widget = self._tool_panel.add_cutter_tab()
             if widget is None:
-                self._show_tool_error("Cutter", "Failed to initialize radare2 panel")
+                self._show_tool_error("Cutter", "Failed to initialize Cutter panel")
                 return
             widget.start_tool()
         except Exception as e:
@@ -1724,24 +1716,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             _logger.exception("tool_open_failed", extra={"tool_name": "Ghidra", "error": str(e)})
             self._show_tool_error("Ghidra", f"Failed to open Ghidra panel: {e}")
-
-    def _on_open_radare2(self) -> None:
-        """Open radare2 analysis panel."""
-        try:
-            tool_reg = getattr(self._orchestrator, "_tool_registry", None)
-            if tool_reg is not None:
-                ensure_ready = getattr(tool_reg, "ensure_tool_ready", None)
-                if callable(ensure_ready):
-                    ensure_ready("radare2")
-
-            widget = self._tool_panel.add_radare2_tab()
-            if widget is None:
-                self._show_tool_error("radare2", "Failed to initialize radare2 panel")
-                return
-            widget.start_tool()
-        except Exception as e:
-            _logger.exception("tool_open_failed", extra={"tool_name": "radare2", "error": str(e)})
-            self._show_tool_error("radare2", f"Failed to open radare2 panel: {e}")
 
     def _on_open_frida(self) -> None:
         """Open Frida instrumentation panel."""
@@ -1842,14 +1816,6 @@ class MainWindow(QMainWindow):
             return
         if not self._tool_panel.open_in_ghidra(self._current_binary):
             self._show_tool_error("Ghidra", "Failed to open binary in Ghidra")
-
-    def _on_open_binary_in_radare2(self) -> None:
-        """Open the currently loaded binary in the radare2 panel."""
-        if self._current_binary is None:
-            self._show_no_binary_warning("radare2 analysis")
-            return
-        if not self._tool_panel.open_in_radare2(self._current_binary):
-            self._show_tool_error("radare2", "Failed to open binary in radare2")
 
     def _show_tool_error(self, tool_name: str, message: str) -> None:
         """Show tool-related error dialog.

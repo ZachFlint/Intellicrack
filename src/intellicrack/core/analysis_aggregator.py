@@ -36,7 +36,7 @@ _logger = get_logger("core.analysis_aggregator")
 class AnalysisAggregator:
     """Aggregates analysis data from connected bridges.
 
-    Queries BinaryBridge, GhidraBridge, and Radare2Bridge for strings,
+    Queries BinaryBridge, GhidraBridge, and CutterBridge for strings,
     imports, exports, functions, and sections, then packages everything
     into a single BridgeAnalysisSummary.
 
@@ -90,7 +90,7 @@ class AnalysisAggregator:
             notes,
         )
         await self._collect_from_static_bridge(
-            "radare2",
+            "cutter",
             strings,
             imports,
             exports,
@@ -168,10 +168,10 @@ class AnalysisAggregator:
         source_bridges: list[str],
         notes: list[str],
     ) -> None:
-        """Collect data from a static analysis bridge (Ghidra or radare2).
+        """Collect data from a static analysis bridge (Ghidra or Cutter).
 
         Args:
-            bridge_name: Name of the bridge ("ghidra" or "radare2").
+            bridge_name: Name of the bridge ("ghidra" or "cutter").
             strings: Accumulator list for discovered strings.
             imports: Accumulator list for import entries.
             exports: Accumulator list for export entries.
@@ -180,7 +180,7 @@ class AnalysisAggregator:
             notes: Accumulator list for analysis notes.
         """
         try:
-            bridge = self._tools.get_ghidra_bridge() if bridge_name == "ghidra" else self._tools.get_radare2_bridge()
+            bridge = self._tools.get_ghidra_bridge() if bridge_name == "ghidra" else self._tools.get_cutter_bridge()
         except ToolError:
             _logger.debug("static_bridge_unavailable", extra={"bridge": bridge_name})
             return

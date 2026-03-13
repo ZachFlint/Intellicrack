@@ -1,9 +1,36 @@
 {
   "tool": "precommit-hooks",
-  "generated": "2026-03-07T20:24:06.014210",
-  "total_findings": 196,
-  "total_files": 135,
+  "generated": "2026-03-08T16:29:11.126563",
+  "total_findings": 190,
+  "total_files": 128,
   "files": [
+    {
+      "path": "IntellicrackStructure.hta",
+      "count": 3,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "IntellicrackStructure.hta: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "IntellicrackStructure.hta: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "IntellicrackStructure.hta: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
     {
       "path": "reports/csv/precommit-hooks_findings.csv",
       "count": 2,
@@ -61,26 +88,6 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "IntellicrackKnowledgeGraph.html: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": "IntellicrackStructure.hta",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "IntellicrackStructure.hta: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "IntellicrackStructure.hta: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -1225,6 +1232,45 @@
       ]
     },
     {
+      "path": "scripts/generate_tree.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "scripts/generate_tree.py: [trailing-whitespace] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "scripts/knowledge-graph/visualize_architecture.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "scripts/knowledge-graph/visualize_architecture.py: [trailing-whitespace] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "coverage.json",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "coverage.json: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
       "path": "reports/txt/codespell_findings.txt",
       "count": 1,
       "findings": [
@@ -1628,58 +1674,6 @@
       ]
     },
     {
-      "path": ".claude/commands/lint.md",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": ".claude/commands/lint.md: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": ".claude/commands/typecheck.md",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": ".claude/commands/typecheck.md: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": ".claude/hooks/basedpyright-wrapper.cjs",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": ".claude/hooks/basedpyright-wrapper.cjs: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": ".claude/hooks/sync-lsp-config.cjs",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": ".claude/hooks/sync-lsp-config.cjs: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
       "path": ".github/dependabot.yml",
       "count": 1,
       "findings": [
@@ -1914,19 +1908,6 @@
       ]
     },
     {
-      "path": "requirements.txt",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "requirements.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
       "path": "scripts/knowledge-graph/IntellicrackKnowledgeGraph.dot",
       "count": 1,
       "findings": [
@@ -2079,71 +2060,6 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "src/intellicrack/assets/fonts/font_config.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": "tests/test_bridges/test_x64dbg_events.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "tests/test_bridges/test_x64dbg_events.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": "tests/test_providers/test_provider_bugfixes.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "tests/test_providers/test_provider_bugfixes.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": "tests/test_providers/test_tool_call_buffer.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "tests/test_providers/test_tool_call_buffer.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": "tests/test_ui/test_async_bridge.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "tests/test_ui/test_async_bridge.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": "tests/test_ui/test_sandbox_panel_fixes.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "tests/test_ui/test_sandbox_panel_fixes.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },

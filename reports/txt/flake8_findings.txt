@@ -1,18 +1,18 @@
 2 findings in src/intellicrack/providers\xpu_utils.py
 
-src/intellicrack/providers\xpu_utils.py:538:141: E501 line too long (146 > 140 characters)
+src/intellicrack/providers\xpu_utils.py:539:141: E501 line too long (146 > 140 characters)
 
-src/intellicrack/providers\xpu_utils.py:567:141: E501 line too long (179 > 140 characters)
+src/intellicrack/providers\xpu_utils.py:568:141: E501 line too long (179 > 140 characters)
 
 
 1 findings in src/intellicrack/sandbox\windows.py
 
-src/intellicrack/sandbox\windows.py:439:141: E501 line too long (160 > 140 characters)
+src/intellicrack/sandbox\windows.py:442:141: E501 line too long (160 > 140 characters)
 
 
 1 findings in src/intellicrack/ui\app.py
 
-src/intellicrack/ui\app.py:70:5: F811 redefinition of unused 'Callable' from line 19
+src/intellicrack/ui\app.py:71:5: F811 redefinition of unused 'Callable' from line 19
 
 
 1 findings in src/intellicrack/ui\chat.py
@@ -22,7 +22,12 @@ src/intellicrack/ui\chat.py:490:13: F824 `nonlocal content_label` is unused: nam
 
 1 findings in src/intellicrack/ui\tool_config.py
 
-src/intellicrack/ui\tool_config.py:96:141: E501 line too long (142 > 140 characters)
+src/intellicrack/ui\tool_config.py:97:141: E501 line too long (142 > 140 characters)
+
+
+1 findings in tests/test_core\test_logging.py
+
+tests/test_core\test_logging.py:593:13: E117 over-indented
 
 
 1 findings in tests/test_core\test_main.py

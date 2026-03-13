@@ -18,6 +18,7 @@ import ctypes.wintypes
 from typing import TYPE_CHECKING, Any, Final
 
 from PyQt6.QtGui import QWindow
+from PyQt6.sip import voidptr
 
 
 if TYPE_CHECKING:
@@ -108,7 +109,7 @@ def embed_window(hwnd: int, parent: QWidget) -> QWidget | None:
         The container QWidget wrapping the embedded window, or None on failure.
     """
     try:
-        foreign_window: Any = QWindow.fromWinId(hwnd)
+        foreign_window: Any = QWindow.fromWinId(voidptr(hwnd))
         if foreign_window is None:
             _logger.warning("win32_embed_from_winid_failed", extra={"hwnd": hex(hwnd)})
             return None

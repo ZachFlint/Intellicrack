@@ -6,12 +6,12 @@
 """Intellicrack: AI-powered reverse engineering orchestration platform.
 
 This package provides a unified interface for controlling reverse engineering tools
-(Ghidra, x64dbg, Frida, radare2) through natural language AI interaction.
+(Ghidra, x64dbg, Frida, Cutter/Rizin) through natural language AI interaction.
 
 The architecture consists of:
     - Core: Configuration, logging, types, session management, orchestration
     - Providers: LLM provider implementations (Anthropic, OpenAI, Google, Ollama, OpenRouter)
-    - Bridges: Tool integrations (Ghidra, x64dbg, Frida, radare2, process control)
+    - Bridges: Tool integrations (Ghidra, x64dbg, Frida, Cutter/Rizin, process control)
     - Sandbox: Windows Sandbox for isolated binary execution
     - UI: PyQt6-based graphical interface
     - Credentials: Secure API key management from .env files

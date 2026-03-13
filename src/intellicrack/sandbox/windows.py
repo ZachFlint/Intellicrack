@@ -223,6 +223,7 @@ class WindowsSandbox(SandboxBase):
             _logger.info("windows_sandbox_started", extra={"pid": self._process.pid})
 
         except Exception as e:
+            _logger.warning("windows_sandbox_start_failed", extra={"error": str(e)})
             self._state.status = "error"
             self._state.last_error = str(e)
             await self._cleanup()
@@ -284,6 +285,7 @@ class WindowsSandbox(SandboxBase):
             _logger.info("windows_sandbox_stopped", extra={"sandbox_type": "windows"})
 
         except Exception as e:
+            _logger.warning("windows_sandbox_stop_failed", extra={"error": str(e)})
             self._state.status = "error"
             self._state.last_error = str(e)
             raise SandboxError(_ERR_STOP_FAILED) from e
@@ -809,6 +811,7 @@ call "{sandbox_script_path}"
             await asyncio.to_thread(shutil.copy2, source, dest_path)
             _logger.debug("file_copied_to_sandbox", extra={"source": str(source), "dest": dest})
         except Exception as e:
+            _logger.warning("copy_to_sandbox_failed", extra={"source": str(source), "dest": dest, "error": str(e)})
             raise SandboxError(_ERR_COPY_TO_SANDBOX_FAILED) from e
 
     async def copy_from_sandbox(self, source: str, dest: Path) -> None:
@@ -835,4 +838,5 @@ call "{sandbox_script_path}"
             await asyncio.to_thread(shutil.copy2, source_path, dest)
             _logger.debug("file_copied_from_sandbox", extra={"source": source, "dest": str(dest)})
         except Exception as e:
+            _logger.warning("copy_from_sandbox_failed", extra={"source": source, "dest": str(dest), "error": str(e)})
             raise SandboxError(_ERR_COPY_FROM_SANDBOX_FAILED) from e

@@ -2,7 +2,7 @@
 
 Validates that:
 1. SandboxTestWorker finally-block kills processes and cleans temp files
-2. Radare2Bridge._r2_cmd enforces timeout on blocking commands
+2. CutterBridge._r2_cmd enforces timeout on blocking commands
 3. QEMU pidfile retry logic handles delayed/missing pidfiles
 4. GhidraBridge.shutdown cleans up temp bridge scripts
 5. ProcessManager.terminate_tree kills real process trees
@@ -20,10 +20,10 @@ from typing import TYPE_CHECKING
 import psutil
 import pytest
 
-import intellicrack.bridges.radare2 as r2_module
+import intellicrack.bridges.cutter as cutter_module
 import intellicrack.sandbox.qemu as qemu_module
+from intellicrack.bridges.cutter import CutterBridge
 from intellicrack.bridges.ghidra import GhidraBridge
-from intellicrack.bridges.radare2 import Radare2Bridge
 from intellicrack.core.process_manager import ProcessManager, ProcessType
 from intellicrack.core.types import ToolError
 
@@ -144,7 +144,7 @@ def test_sandbox_temp_wsb_file_cleaned_up(tmp_path: Path) -> None:
     assert not wsb_file.exists(), "Temp .wsb file should be deleted"
 
 
-# ─── 2. Radare2 command timeout (radare2.py) ────────────────────────────────
+# ─── 2. Cutter command timeout (cutter.py) ───────────────────────────────────
 
 
 class _BlockingR2:
@@ -208,16 +208,16 @@ async def test_r2_cmd_timeout_raises_tool_error() -> None:
     This test would HANG INDEFINITELY if the asyncio.wait_for wrapper
     were removed.
     """
-    bridge = Radare2Bridge()
+    bridge = CutterBridge()
     blocker = _BlockingR2()
     bridge._r2 = blocker
 
-    original_timeout: float = r2_module._R2_COMMAND_TIMEOUT
-    r2_module._R2_COMMAND_TIMEOUT = _R2_TEST_TIMEOUT
+    original_timeout: float = cutter_module._R2_COMMAND_TIMEOUT
+    cutter_module._R2_COMMAND_TIMEOUT = _R2_TEST_TIMEOUT
 
     try:
         start = time.monotonic()
-        with pytest.raises(ToolError, match="radare2 command timed out"):
+        with pytest.raises(ToolError, match="cutter command timed out"):
             _ = await bridge._r2_cmd("aaa")
         elapsed = time.monotonic() - start
 
@@ -225,13 +225,13 @@ async def test_r2_cmd_timeout_raises_tool_error() -> None:
         assert elapsed < _ELAPSED_UPPER_BOUND, msg
     finally:
         blocker.release()
-        r2_module._R2_COMMAND_TIMEOUT = original_timeout
+        cutter_module._R2_COMMAND_TIMEOUT = original_timeout
 
 
 @pytest.mark.asyncio
 async def test_r2_cmd_returns_result_within_timeout() -> None:
     """_r2_cmd returns normally when the command completes before timeout."""
-    bridge = Radare2Bridge()
+    bridge = CutterBridge()
     bridge._r2 = _FastR2()
 
     result = await bridge._r2_cmd("pd 10")
@@ -241,7 +241,7 @@ async def test_r2_cmd_returns_result_within_timeout() -> None:
 @pytest.mark.asyncio
 async def test_r2_cmd_converts_none_to_empty_string() -> None:
     """_r2_cmd converts None return from r2pipe to empty string."""
-    bridge = Radare2Bridge()
+    bridge = CutterBridge()
     bridge._r2 = _NoneR2()
 
     result = await bridge._r2_cmd("?")
@@ -251,7 +251,7 @@ async def test_r2_cmd_converts_none_to_empty_string() -> None:
 @pytest.mark.asyncio
 async def test_r2_cmd_no_binary_raises_tool_error() -> None:
     """_r2_cmd raises ToolError when no binary is loaded (r2 is None)."""
-    bridge = Radare2Bridge()
+    bridge = CutterBridge()
     assert bridge._r2 is None
 
     with pytest.raises(ToolError):

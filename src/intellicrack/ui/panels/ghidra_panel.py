@@ -12,6 +12,7 @@ GhidraBridge headless analysis backend.
 
 from __future__ import annotations
 
+import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, override
 
@@ -91,8 +92,9 @@ class GhidraPanel(AnalysisPanelBase):
 
         toolbar.addSeparator()
 
-        self._load_btn = self._add_tool_button(toolbar, "Load Binary...", self._on_load_binary)
-        self._analyze_btn = self._add_tool_button(toolbar, "Analyze", self._on_analyze)
+        self._load_btn = self._add_tool_button(toolbar, "Load Binary...", self._on_load_binary, enabled=False)
+        self._analyze_btn = self._add_tool_button(toolbar, "Analyze", self._on_analyze, enabled=False)
+        self._headless_btn = self._add_tool_button(toolbar, "Start Headless", self._on_start_headless)
 
         toolbar.addSeparator()
 
@@ -161,7 +163,9 @@ class GhidraPanel(AnalysisPanelBase):
         self._strings_table.setHorizontalHeaderLabels(_STRING_COLUMNS)
         self._strings_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._strings_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self._strings_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        strings_h = self._strings_table.horizontalHeader()
+        if strings_h is not None:
+            strings_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         strings_container = QWidget()
         strings_layout = QVBoxLayout(strings_container)
         strings_layout.setContentsMargins(0, 0, 0, 0)
@@ -187,14 +191,18 @@ class GhidraPanel(AnalysisPanelBase):
         self._imports_table.setHorizontalHeaderLabels(_IMPORT_COLUMNS)
         self._imports_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._imports_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self._imports_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        imports_h = self._imports_table.horizontalHeader()
+        if imports_h is not None:
+            imports_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         tabs.addTab(self._imports_table, "Imports")
 
         self._exports_table = QTableWidget(0, len(_EXPORT_COLUMNS))
         self._exports_table.setHorizontalHeaderLabels(_EXPORT_COLUMNS)
         self._exports_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._exports_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self._exports_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        exports_h = self._exports_table.horizontalHeader()
+        if exports_h is not None:
+            exports_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         tabs.addTab(self._exports_table, "Exports")
 
         self._xrefs_tree = QTreeWidget()
@@ -250,6 +258,7 @@ class GhidraPanel(AnalysisPanelBase):
         """
         self._bridge = bridge
         _logger.info("ghidra_bridge_set", extra={"bridge_type": type(bridge).__name__})
+        self._sync_toolbar_state()
 
     def get_bridge(self) -> GhidraBridge | None:
         """Get the current GhidraBridge instance.
@@ -258,6 +267,40 @@ class GhidraPanel(AnalysisPanelBase):
             The attached bridge or None.
         """
         return self._bridge
+
+    def set_ghidra_path(self, path: Path) -> None:
+        """Set the Ghidra installation path on the bridge.
+
+        Args:
+            path: Path to Ghidra installation directory.
+        """
+        if self._bridge is not None:
+            self._bridge.ghidra_path = path
+            _logger.info("ghidra_path_set", extra={"path": str(path)})
+
+    def _require_connected(self) -> GhidraBridge | None:
+        """Check bridge connection is live and show status if not.
+
+        Returns:
+            The connected bridge, or None if not ready.
+        """
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return None
+        if not self._bridge.state.is_ready():
+            self._set_status("Ghidra not connected")
+            return None
+        return self._bridge
+
+    def _sync_toolbar_state(self) -> None:
+        """Enable or disable toolbar buttons based on bridge connection state."""
+        ready = self._bridge is not None and self._bridge.state.is_ready()
+        self._load_btn.setEnabled(ready)
+        self._analyze_btn.setEnabled(ready)
+        self._refresh_funcs_btn.setEnabled(ready)
+        self._string_search_btn.setEnabled(ready)
+        self._connect_btn.setEnabled(not ready)
+        self._disconnect_btn.setEnabled(ready)
 
     def load_binary(self, binary_path: Path) -> bool:
         """Load a binary for analysis (protocol-compatible convenience).
@@ -268,13 +311,13 @@ class GhidraPanel(AnalysisPanelBase):
         Returns:
             True if loading was initiated.
         """
-        if self._bridge is None:
-            _logger.warning("ghidra_load_no_bridge", extra={"reason": "bridge not set"})
+        bridge = self._require_connected()
+        if bridge is None:
             return False
 
         self._load_btn.setEnabled(False)
         self._run_async(
-            self._bridge.load_binary(binary_path),
+            bridge.load_binary(binary_path),
             on_success=lambda _: self._on_binary_loaded(binary_path),
             on_error=lambda e: self._on_binary_load_error(binary_path, e),
         )
@@ -288,7 +331,7 @@ class GhidraPanel(AnalysisPanelBase):
         """
         self._set_status(f"Loaded: {binary_path.name}")
         _logger.info("ghidra_binary_loaded", extra={"path": binary_path.name})
-        self._load_btn.setEnabled(True)
+        self._sync_toolbar_state()
 
     def _on_binary_load_error(self, binary_path: Path, exc: object) -> None:
         """Handle binary load failure.
@@ -299,7 +342,7 @@ class GhidraPanel(AnalysisPanelBase):
         """
         self._set_status(f"Load failed: {exc}")
         _logger.warning("ghidra_load_failed", extra={"path": binary_path.name, "error": str(exc)})
-        self._load_btn.setEnabled(True)
+        self._sync_toolbar_state()
 
     def _on_connect(self) -> None:
         """Connect to Ghidra bridge."""
@@ -316,10 +359,16 @@ class GhidraPanel(AnalysisPanelBase):
         )
 
     def _on_connect_success(self) -> None:
-        """Handle successful connection."""
-        self._set_status("Connected")
-        self._disconnect_btn.setEnabled(True)
-        _logger.info("ghidra_connected", extra={"bridge_type": "ghidra"})
+        """Handle connection attempt completion and validate state."""
+        if self._bridge is not None and self._bridge.state.is_ready():
+            self._set_status("Connected")
+            _logger.info("ghidra_connected", extra={"bridge_type": "ghidra"})
+        else:
+            last_err = self._bridge.state.last_error if self._bridge else None
+            msg = f"Connection failed: {last_err}" if last_err else "Connection failed"
+            self._set_status(msg)
+            _logger.warning("ghidra_connect_validation_failed", extra={"last_error": last_err})
+        self._sync_toolbar_state()
 
     def _on_connect_error(self, exc: object) -> None:
         """Handle connection failure.
@@ -329,7 +378,7 @@ class GhidraPanel(AnalysisPanelBase):
         """
         self._set_status(f"Connection failed: {exc}")
         _logger.warning("ghidra_connect_failed", extra={"error": str(exc)})
-        self._connect_btn.setEnabled(True)
+        self._sync_toolbar_state()
 
     def _on_disconnect(self) -> None:
         """Disconnect from Ghidra bridge."""
@@ -347,7 +396,7 @@ class GhidraPanel(AnalysisPanelBase):
         """Handle successful disconnection."""
         self._set_status("Disconnected")
         _logger.info("ghidra_disconnected", extra={"bridge_type": "ghidra"})
-        self._connect_btn.setEnabled(True)
+        self._sync_toolbar_state()
 
     def _on_disconnect_error(self, exc: object) -> None:
         """Handle disconnection failure.
@@ -357,11 +406,13 @@ class GhidraPanel(AnalysisPanelBase):
         """
         self._set_status(f"Disconnect failed: {exc}")
         _logger.warning("ghidra_disconnect_failed", extra={"error": str(exc)})
-        self._connect_btn.setEnabled(True)
-        self._disconnect_btn.setEnabled(False)
+        self._sync_toolbar_state()
 
     def _on_load_binary(self) -> None:
         """Open file dialog and load selected binary."""
+        if self._require_connected() is None:
+            return
+
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Load Binary",
@@ -375,15 +426,15 @@ class GhidraPanel(AnalysisPanelBase):
 
     def _on_analyze(self) -> None:
         """Run full Ghidra analysis and refresh views."""
-        if self._bridge is None:
-            self._set_status("No bridge connected")
+        bridge = self._require_connected()
+        if bridge is None:
             return
 
         self._set_status("Analyzing...")
         self._analyze_btn.setEnabled(False)
 
         self._run_async(
-            self._bridge.analyze(),
+            bridge.analyze(),
             on_success=lambda _: self._on_analysis_complete(),
             on_error=self._on_analysis_error,
         )
@@ -392,7 +443,7 @@ class GhidraPanel(AnalysisPanelBase):
         """Handle successful analysis."""
         self._set_status("Analysis complete")
         _logger.info("ghidra_analysis_complete", extra={"bridge_type": "ghidra"})
-        self._analyze_btn.setEnabled(True)
+        self._sync_toolbar_state()
         self._on_refresh_functions()
         self._refresh_imports()
         self._refresh_exports()
@@ -405,18 +456,19 @@ class GhidraPanel(AnalysisPanelBase):
         """
         self._set_status(f"Analysis failed: {exc}")
         _logger.warning("ghidra_analysis_failed", extra={"error": str(exc)})
-        self._analyze_btn.setEnabled(True)
+        self._sync_toolbar_state()
 
     def _on_refresh_functions(self) -> None:
         """Refresh the functions list from bridge."""
-        if self._bridge is None:
+        bridge = self._require_connected()
+        if bridge is None:
             return
 
         filter_text = self._func_filter.text().strip() or None
         self._refresh_funcs_btn.setEnabled(False)
 
         self._run_async(
-            self._bridge.get_functions(filter_text),
+            bridge.get_functions(filter_text),
             on_success=self._apply_functions,
             on_error=lambda _: self._on_refresh_funcs_error(),
         )
@@ -467,17 +519,20 @@ class GhidraPanel(AnalysisPanelBase):
             _column: Column index (unused).
         """
         address = tree_item_data(item, 0, Qt.ItemDataRole.UserRole)
-        if not isinstance(address, int) or self._bridge is None:
+        if not isinstance(address, int):
+            return
+        bridge = self._require_connected()
+        if bridge is None:
             return
 
         self._run_async(
-            self._bridge.decompile(address),
+            bridge.decompile(address),
             on_success=self._apply_decompiled,
             on_error=lambda _: _logger.warning("ghidra_decompile_failed", extra={"address": hex(address)}),
         )
 
         self._run_async(
-            self._bridge.disassemble(address),
+            bridge.disassemble(address),
             on_success=self._apply_disassembly,
             on_error=lambda _: _logger.warning("ghidra_disassemble_failed", extra={"address": hex(address)}),
         )
@@ -512,11 +567,12 @@ class GhidraPanel(AnalysisPanelBase):
 
     def _refresh_imports(self) -> None:
         """Refresh the imports table from bridge."""
-        if self._bridge is None:
+        bridge = self._require_connected()
+        if bridge is None:
             return
 
         self._run_async(
-            self._bridge.get_imports(),
+            bridge.get_imports(),
             on_success=self._apply_imports,
             on_error=lambda _: _logger.warning("ghidra_refresh_imports_failed"),
         )
@@ -539,11 +595,12 @@ class GhidraPanel(AnalysisPanelBase):
 
     def _refresh_exports(self) -> None:
         """Refresh the exports table from bridge."""
-        if self._bridge is None:
+        bridge = self._require_connected()
+        if bridge is None:
             return
 
         self._run_async(
-            self._bridge.get_exports(),
+            bridge.get_exports(),
             on_success=self._apply_exports,
             on_error=lambda _: _logger.warning("ghidra_refresh_exports_failed"),
         )
@@ -570,12 +627,13 @@ class GhidraPanel(AnalysisPanelBase):
         Args:
             pattern: Regex pattern to match.
         """
-        if self._bridge is None:
+        bridge = self._require_connected()
+        if bridge is None:
             return
 
         self._string_search_btn.setEnabled(False)
         self._run_async(
-            self._bridge.search_strings(pattern),
+            bridge.search_strings(pattern),
             on_success=self._apply_strings,
             on_error=lambda _: self._on_string_search_error(pattern),
         )
@@ -618,19 +676,20 @@ class GhidraPanel(AnalysisPanelBase):
         Args:
             address: Target address for xref lookup.
         """
-        if self._bridge is None:
+        bridge = self._require_connected()
+        if bridge is None:
             return
 
         self._xrefs_tree.clear()
 
         self._run_async(
-            self._bridge.get_xrefs_to(address),
+            bridge.get_xrefs_to(address),
             on_success=self._apply_xrefs_to,
             on_error=lambda _: _logger.warning("ghidra_xrefs_to_failed", extra={"address": hex(address)}),
         )
 
         self._run_async(
-            self._bridge.get_xrefs_from(address),
+            bridge.get_xrefs_from(address),
             on_success=self._apply_xrefs_from,
             on_error=lambda _: _logger.warning("ghidra_xrefs_from_failed", extra={"address": hex(address)}),
         )
@@ -672,3 +731,46 @@ class GhidraPanel(AnalysisPanelBase):
                 getattr(xref, "to_function", "") or "",
             ])
             self._xrefs_tree.addTopLevelItem(item)
+
+    def _on_start_headless(self) -> None:
+        """Start Ghidra headless analyzer and auto-connect."""
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return
+
+        ghidra_path = self._bridge.ghidra_path
+        if ghidra_path is None:
+            path_str = QFileDialog.getExistingDirectory(
+                self,
+                "Select Ghidra Installation Directory",
+            )
+            if not path_str:
+                return
+            ghidra_path = Path(path_str)
+            self._bridge.ghidra_path = ghidra_path
+
+        project_dir = Path(tempfile.gettempdir()) / "intellicrack_ghidra"
+        self._headless_btn.setEnabled(False)
+        self._set_status("Starting headless Ghidra...")
+        self._run_async(
+            self._bridge.start_headless(project_dir),
+            on_success=lambda _: self._on_headless_started(),
+            on_error=self._on_headless_error,
+        )
+
+    def _on_headless_started(self) -> None:
+        """Handle successful headless start."""
+        self._set_status("Headless Ghidra started")
+        _logger.info("ghidra_headless_started", extra={"bridge_type": "ghidra"})
+        self._headless_btn.setEnabled(True)
+        self._sync_toolbar_state()
+
+    def _on_headless_error(self, exc: object) -> None:
+        """Handle headless start failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._set_status(f"Headless start failed: {exc}")
+        _logger.warning("ghidra_headless_failed", extra={"error": str(exc)})
+        self._headless_btn.setEnabled(True)

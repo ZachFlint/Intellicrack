@@ -1,6 +1,6 @@
 {
   "tool": "basedpyright",
-  "generated": "2026-03-07T20:21:20.031303",
+  "generated": "2026-03-08T16:27:33.311546",
   "total_findings": 338,
   "total_files": 8,
   "files": [
@@ -1423,44 +1423,20 @@
           "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:108:30: [error] Cannot access attribute \"fill\" for class \"QImage\"\n\u00a0\u00a0Attribute \"fill\" is unknown"
         },
         {
-          "line": 363,
+          "line": 364,
           "column": 17,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"setPixelColor\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:363:17: [error] Type of \"setPixelColor\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:364:17: [error] Type of \"setPixelColor\" is unknown"
         },
         {
-          "line": 363,
+          "line": 364,
           "column": 34,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"setPixelColor\" for class \"QImage\"\n\u00a0\u00a0Attribute \"setPixelColor\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:363:34: [error] Cannot access attribute \"setPixelColor\" for class \"QImage\"\n\u00a0\u00a0Attribute \"setPixelColor\" is unknown"
-        },
-        {
-          "line": 416,
-          "column": 5,
-          "severity": "error",
-          "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:416:5: [error] Type of \"Key\" is unknown"
-        },
-        {
-          "line": 416,
-          "column": 5,
-          "severity": "error",
-          "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_Escape\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:416:5: [error] Type of \"Key_Escape\" is unknown"
-        },
-        {
-          "line": 416,
-          "column": 8,
-          "severity": "error",
-          "rule": "reportAttributeAccessIssue",
-          "message": "Cannot access attribute \"Key\" for class \"type[Qt]\"\n\u00a0\u00a0Attribute \"Key\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:416:8: [error] Cannot access attribute \"Key\" for class \"type[Qt]\"\n\u00a0\u00a0Attribute \"Key\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:364:34: [error] Cannot access attribute \"setPixelColor\" for class \"QImage\"\n\u00a0\u00a0Attribute \"setPixelColor\" is unknown"
         },
         {
           "line": 417,
@@ -1475,8 +1451,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_Tab\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:417:5: [error] Type of \"Key_Tab\" is unknown"
+          "message": "Type of \"Key_Escape\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:417:5: [error] Type of \"Key_Escape\" is unknown"
         },
         {
           "line": 417,
@@ -1499,8 +1475,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_Backspace\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:418:5: [error] Type of \"Key_Backspace\" is unknown"
+          "message": "Type of \"Key_Tab\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:418:5: [error] Type of \"Key_Tab\" is unknown"
         },
         {
           "line": 418,
@@ -1523,8 +1499,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_Return\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:419:5: [error] Type of \"Key_Return\" is unknown"
+          "message": "Type of \"Key_Backspace\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:419:5: [error] Type of \"Key_Backspace\" is unknown"
         },
         {
           "line": 419,
@@ -1547,8 +1523,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_Enter\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:420:5: [error] Type of \"Key_Enter\" is unknown"
+          "message": "Type of \"Key_Return\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:420:5: [error] Type of \"Key_Return\" is unknown"
         },
         {
           "line": 420,
@@ -1571,8 +1547,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_Insert\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:421:5: [error] Type of \"Key_Insert\" is unknown"
+          "message": "Type of \"Key_Enter\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:421:5: [error] Type of \"Key_Enter\" is unknown"
         },
         {
           "line": 421,
@@ -1595,8 +1571,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_Delete\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:422:5: [error] Type of \"Key_Delete\" is unknown"
+          "message": "Type of \"Key_Insert\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:422:5: [error] Type of \"Key_Insert\" is unknown"
         },
         {
           "line": 422,
@@ -1619,8 +1595,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_Home\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:423:5: [error] Type of \"Key_Home\" is unknown"
+          "message": "Type of \"Key_Delete\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:423:5: [error] Type of \"Key_Delete\" is unknown"
         },
         {
           "line": 423,
@@ -1643,8 +1619,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_End\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:424:5: [error] Type of \"Key_End\" is unknown"
+          "message": "Type of \"Key_Home\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:424:5: [error] Type of \"Key_Home\" is unknown"
         },
         {
           "line": 424,
@@ -1667,8 +1643,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_Left\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:425:5: [error] Type of \"Key_Left\" is unknown"
+          "message": "Type of \"Key_End\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:425:5: [error] Type of \"Key_End\" is unknown"
         },
         {
           "line": 425,
@@ -1691,8 +1667,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_Up\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:426:5: [error] Type of \"Key_Up\" is unknown"
+          "message": "Type of \"Key_Left\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:426:5: [error] Type of \"Key_Left\" is unknown"
         },
         {
           "line": 426,
@@ -1715,8 +1691,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_Right\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:427:5: [error] Type of \"Key_Right\" is unknown"
+          "message": "Type of \"Key_Up\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:427:5: [error] Type of \"Key_Up\" is unknown"
         },
         {
           "line": 427,
@@ -1739,8 +1715,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_Down\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:428:5: [error] Type of \"Key_Down\" is unknown"
+          "message": "Type of \"Key_Right\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:428:5: [error] Type of \"Key_Right\" is unknown"
         },
         {
           "line": 428,
@@ -1763,8 +1739,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_PageUp\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:429:5: [error] Type of \"Key_PageUp\" is unknown"
+          "message": "Type of \"Key_Down\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:429:5: [error] Type of \"Key_Down\" is unknown"
         },
         {
           "line": 429,
@@ -1787,8 +1763,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_PageDown\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:430:5: [error] Type of \"Key_PageDown\" is unknown"
+          "message": "Type of \"Key_PageUp\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:430:5: [error] Type of \"Key_PageUp\" is unknown"
         },
         {
           "line": 430,
@@ -1811,8 +1787,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_Shift\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:431:5: [error] Type of \"Key_Shift\" is unknown"
+          "message": "Type of \"Key_PageDown\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:431:5: [error] Type of \"Key_PageDown\" is unknown"
         },
         {
           "line": 431,
@@ -1835,8 +1811,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_Control\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:432:5: [error] Type of \"Key_Control\" is unknown"
+          "message": "Type of \"Key_Shift\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:432:5: [error] Type of \"Key_Shift\" is unknown"
         },
         {
           "line": 432,
@@ -1859,8 +1835,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_Alt\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:433:5: [error] Type of \"Key_Alt\" is unknown"
+          "message": "Type of \"Key_Control\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:433:5: [error] Type of \"Key_Control\" is unknown"
         },
         {
           "line": 433,
@@ -1883,8 +1859,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_CapsLock\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:434:5: [error] Type of \"Key_CapsLock\" is unknown"
+          "message": "Type of \"Key_Alt\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:434:5: [error] Type of \"Key_Alt\" is unknown"
         },
         {
           "line": 434,
@@ -1907,8 +1883,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_F1\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:435:5: [error] Type of \"Key_F1\" is unknown"
+          "message": "Type of \"Key_CapsLock\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:435:5: [error] Type of \"Key_CapsLock\" is unknown"
         },
         {
           "line": 435,
@@ -1931,8 +1907,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_F2\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:436:5: [error] Type of \"Key_F2\" is unknown"
+          "message": "Type of \"Key_F1\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:436:5: [error] Type of \"Key_F1\" is unknown"
         },
         {
           "line": 436,
@@ -1955,8 +1931,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_F3\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:437:5: [error] Type of \"Key_F3\" is unknown"
+          "message": "Type of \"Key_F2\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:437:5: [error] Type of \"Key_F2\" is unknown"
         },
         {
           "line": 437,
@@ -1979,8 +1955,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_F4\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:438:5: [error] Type of \"Key_F4\" is unknown"
+          "message": "Type of \"Key_F3\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:438:5: [error] Type of \"Key_F3\" is unknown"
         },
         {
           "line": 438,
@@ -2003,8 +1979,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_F5\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:439:5: [error] Type of \"Key_F5\" is unknown"
+          "message": "Type of \"Key_F4\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:439:5: [error] Type of \"Key_F4\" is unknown"
         },
         {
           "line": 439,
@@ -2027,8 +2003,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_F6\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:440:5: [error] Type of \"Key_F6\" is unknown"
+          "message": "Type of \"Key_F5\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:440:5: [error] Type of \"Key_F5\" is unknown"
         },
         {
           "line": 440,
@@ -2051,8 +2027,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_F7\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:441:5: [error] Type of \"Key_F7\" is unknown"
+          "message": "Type of \"Key_F6\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:441:5: [error] Type of \"Key_F6\" is unknown"
         },
         {
           "line": 441,
@@ -2075,8 +2051,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_F8\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:442:5: [error] Type of \"Key_F8\" is unknown"
+          "message": "Type of \"Key_F7\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:442:5: [error] Type of \"Key_F7\" is unknown"
         },
         {
           "line": 442,
@@ -2099,8 +2075,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_F9\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:443:5: [error] Type of \"Key_F9\" is unknown"
+          "message": "Type of \"Key_F8\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:443:5: [error] Type of \"Key_F8\" is unknown"
         },
         {
           "line": 443,
@@ -2123,8 +2099,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_F10\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:444:5: [error] Type of \"Key_F10\" is unknown"
+          "message": "Type of \"Key_F9\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:444:5: [error] Type of \"Key_F9\" is unknown"
         },
         {
           "line": 444,
@@ -2147,8 +2123,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_F11\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:445:5: [error] Type of \"Key_F11\" is unknown"
+          "message": "Type of \"Key_F10\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:445:5: [error] Type of \"Key_F10\" is unknown"
         },
         {
           "line": 445,
@@ -2171,8 +2147,8 @@
           "column": 5,
           "severity": "error",
           "rule": "reportUnknownMemberType",
-          "message": "Type of \"Key_F12\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:446:5: [error] Type of \"Key_F12\" is unknown"
+          "message": "Type of \"Key_F11\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:446:5: [error] Type of \"Key_F11\" is unknown"
         },
         {
           "line": 446,
@@ -2183,292 +2159,316 @@
           "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:446:8: [error] Cannot access attribute \"Key\" for class \"type[Qt]\"\n\u00a0\u00a0Attribute \"Key\" is unknown"
         },
         {
-          "line": 489,
+          "line": 447,
+          "column": 5,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"Key\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:447:5: [error] Type of \"Key\" is unknown"
+        },
+        {
+          "line": 447,
+          "column": 5,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"Key_F12\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:447:5: [error] Type of \"Key_F12\" is unknown"
+        },
+        {
+          "line": 447,
+          "column": 8,
+          "severity": "error",
+          "rule": "reportAttributeAccessIssue",
+          "message": "Cannot access attribute \"Key\" for class \"type[Qt]\"\n\u00a0\u00a0Attribute \"Key\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:447:8: [error] Cannot access attribute \"Key\" for class \"type[Qt]\"\n\u00a0\u00a0Attribute \"Key\" is unknown"
+        },
+        {
+          "line": 490,
           "column": 9,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"setMouseTracking\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:489:9: [error] Type of \"setMouseTracking\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:490:9: [error] Type of \"setMouseTracking\" is unknown"
         },
         {
-          "line": 489,
+          "line": 490,
           "column": 14,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"setMouseTracking\" for class \"VNCWidget*\"\n\u00a0\u00a0Attribute \"setMouseTracking\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:489:14: [error] Cannot access attribute \"setMouseTracking\" for class \"VNCWidget*\"\n\u00a0\u00a0Attribute \"setMouseTracking\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:490:14: [error] Cannot access attribute \"setMouseTracking\" for class \"VNCWidget*\"\n\u00a0\u00a0Attribute \"setMouseTracking\" is unknown"
         },
         {
-          "line": 547,
+          "line": 548,
           "column": 13,
           "severity": "error",
           "rule": "reportUnknownVariableType",
           "message": "Type of \"scaled\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:547:13: [error] Type of \"scaled\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:548:13: [error] Type of \"scaled\" is unknown"
         },
         {
-          "line": 547,
+          "line": 548,
           "column": 22,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"scaled\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:547:22: [error] Type of \"scaled\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:548:22: [error] Type of \"scaled\" is unknown"
         },
         {
-          "line": 547,
+          "line": 548,
           "column": 47,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"scaled\" for class \"QImage\"\n\u00a0\u00a0Attribute \"scaled\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:547:47: [error] Cannot access attribute \"scaled\" for class \"QImage\"\n\u00a0\u00a0Attribute \"scaled\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:548:47: [error] Cannot access attribute \"scaled\" for class \"QImage\"\n\u00a0\u00a0Attribute \"scaled\" is unknown"
         },
         {
-          "line": 548,
+          "line": 549,
           "column": 17,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"size\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:548:17: [error] Type of \"size\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:549:17: [error] Type of \"size\" is unknown"
         },
         {
-          "line": 548,
+          "line": 549,
           "column": 22,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"size\" for class \"VNCWidget*\"\n\u00a0\u00a0Attribute \"size\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:548:22: [error] Cannot access attribute \"size\" for class \"VNCWidget*\"\n\u00a0\u00a0Attribute \"size\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:549:22: [error] Cannot access attribute \"size\" for class \"VNCWidget*\"\n\u00a0\u00a0Attribute \"size\" is unknown"
         },
         {
-          "line": 552,
+          "line": 553,
           "column": 13,
           "severity": "error",
           "rule": "reportUnknownVariableType",
           "message": "Type of \"x_offset\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:552:13: [error] Type of \"x_offset\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:553:13: [error] Type of \"x_offset\" is unknown"
         },
         {
-          "line": 552,
+          "line": 553,
           "column": 40,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"width\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:552:40: [error] Type of \"width\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:553:40: [error] Type of \"width\" is unknown"
         },
         {
-          "line": 553,
+          "line": 554,
           "column": 13,
           "severity": "error",
           "rule": "reportUnknownVariableType",
           "message": "Type of \"y_offset\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:553:13: [error] Type of \"y_offset\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:554:13: [error] Type of \"y_offset\" is unknown"
         },
         {
-          "line": 553,
+          "line": 554,
           "column": 41,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"height\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:553:41: [error] Type of \"height\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:554:41: [error] Type of \"height\" is unknown"
         },
         {
-          "line": 554,
+          "line": 555,
           "column": 13,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"drawImage\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:554:13: [error] Type of \"drawImage\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:555:13: [error] Type of \"drawImage\" is unknown"
         },
         {
-          "line": 554,
+          "line": 555,
           "column": 21,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"drawImage\" for class \"QPainter\"\n\u00a0\u00a0Attribute \"drawImage\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:554:21: [error] Cannot access attribute \"drawImage\" for class \"QPainter\"\n\u00a0\u00a0Attribute \"drawImage\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:555:21: [error] Cannot access attribute \"drawImage\" for class \"QPainter\"\n\u00a0\u00a0Attribute \"drawImage\" is unknown"
         },
         {
-          "line": 556,
+          "line": 557,
           "column": 30,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"rect\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:556:30: [error] Type of \"rect\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:557:30: [error] Type of \"rect\" is unknown"
         },
         {
-          "line": 556,
+          "line": 557,
           "column": 35,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"rect\" for class \"VNCWidget*\"\n\u00a0\u00a0Attribute \"rect\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:556:35: [error] Cannot access attribute \"rect\" for class \"VNCWidget*\"\n\u00a0\u00a0Attribute \"rect\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:557:35: [error] Cannot access attribute \"rect\" for class \"VNCWidget*\"\n\u00a0\u00a0Attribute \"rect\" is unknown"
         },
         {
-          "line": 558,
+          "line": 559,
           "column": 30,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"rect\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:558:30: [error] Type of \"rect\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:559:30: [error] Type of \"rect\" is unknown"
         },
         {
-          "line": 558,
+          "line": 559,
           "column": 35,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"rect\" for class \"VNCWidget*\"\n\u00a0\u00a0Attribute \"rect\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:558:35: [error] Cannot access attribute \"rect\" for class \"VNCWidget*\"\n\u00a0\u00a0Attribute \"rect\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:559:35: [error] Cannot access attribute \"rect\" for class \"VNCWidget*\"\n\u00a0\u00a0Attribute \"rect\" is unknown"
         },
         {
-          "line": 573,
+          "line": 574,
           "column": 9,
           "severity": "error",
           "rule": "reportUnknownVariableType",
           "message": "Type of \"pos\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:573:9: [error] Type of \"pos\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:574:9: [error] Type of \"pos\" is unknown"
         },
         {
-          "line": 573,
+          "line": 574,
           "column": 15,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"pos\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:573:15: [error] Type of \"pos\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:574:15: [error] Type of \"pos\" is unknown"
         },
         {
-          "line": 573,
+          "line": 574,
           "column": 21,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"pos\" for class \"QMouseEvent\"\n\u00a0\u00a0Attribute \"pos\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:573:21: [error] Cannot access attribute \"pos\" for class \"QMouseEvent\"\n\u00a0\u00a0Attribute \"pos\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:574:21: [error] Cannot access attribute \"pos\" for class \"QMouseEvent\"\n\u00a0\u00a0Attribute \"pos\" is unknown"
         },
         {
-          "line": 576,
+          "line": 577,
           "column": 20,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"x\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:576:20: [error] Type of \"x\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:577:20: [error] Type of \"x\" is unknown"
         },
         {
-          "line": 576,
+          "line": 577,
           "column": 20,
           "severity": "error",
           "rule": "reportUnknownArgumentType",
           "message": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"x\" in function \"__new__\"",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:576:20: [error] Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"x\" in function \"__new__\""
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:577:20: [error] Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"x\" in function \"__new__\""
         },
         {
-          "line": 576,
+          "line": 577,
           "column": 44,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"y\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:576:44: [error] Type of \"y\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:577:44: [error] Type of \"y\" is unknown"
         },
         {
-          "line": 576,
+          "line": 577,
           "column": 44,
           "severity": "error",
           "rule": "reportUnknownArgumentType",
           "message": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"x\" in function \"__new__\"",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:576:44: [error] Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"x\" in function \"__new__\""
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:577:44: [error] Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"x\" in function \"__new__\""
         },
         {
-          "line": 589,
+          "line": 590,
           "column": 9,
           "severity": "error",
           "rule": "reportUnknownVariableType",
           "message": "Type of \"buttons\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:589:9: [error] Type of \"buttons\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:590:9: [error] Type of \"buttons\" is unknown"
         },
         {
-          "line": 589,
+          "line": 590,
           "column": 19,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"buttons\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:589:19: [error] Type of \"buttons\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:590:19: [error] Type of \"buttons\" is unknown"
         },
         {
-          "line": 589,
+          "line": 590,
           "column": 25,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"buttons\" for class \"QMouseEvent\"\n\u00a0\u00a0Attribute \"buttons\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:589:25: [error] Cannot access attribute \"buttons\" for class \"QMouseEvent\"\n\u00a0\u00a0Attribute \"buttons\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:590:25: [error] Cannot access attribute \"buttons\" for class \"QMouseEvent\"\n\u00a0\u00a0Attribute \"buttons\" is unknown"
         },
         {
-          "line": 590,
+          "line": 591,
           "column": 22,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"MouseButton\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:590:22: [error] Type of \"MouseButton\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:591:22: [error] Type of \"MouseButton\" is unknown"
         },
         {
-          "line": 590,
+          "line": 591,
           "column": 22,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"LeftButton\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:590:22: [error] Type of \"LeftButton\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:591:22: [error] Type of \"LeftButton\" is unknown"
         },
         {
-          "line": 590,
+          "line": 591,
           "column": 25,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"MouseButton\" for class \"type[Qt]\"\n\u00a0\u00a0Attribute \"MouseButton\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:590:25: [error] Cannot access attribute \"MouseButton\" for class \"type[Qt]\"\n\u00a0\u00a0Attribute \"MouseButton\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:591:25: [error] Cannot access attribute \"MouseButton\" for class \"type[Qt]\"\n\u00a0\u00a0Attribute \"MouseButton\" is unknown"
         },
         {
-          "line": 592,
+          "line": 593,
           "column": 22,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"MouseButton\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:592:22: [error] Type of \"MouseButton\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:593:22: [error] Type of \"MouseButton\" is unknown"
         },
         {
-          "line": 592,
+          "line": 593,
           "column": 22,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"MiddleButton\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:592:22: [error] Type of \"MiddleButton\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:593:22: [error] Type of \"MiddleButton\" is unknown"
         },
         {
-          "line": 592,
+          "line": 593,
           "column": 25,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"MouseButton\" for class \"type[Qt]\"\n\u00a0\u00a0Attribute \"MouseButton\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:592:25: [error] Cannot access attribute \"MouseButton\" for class \"type[Qt]\"\n\u00a0\u00a0Attribute \"MouseButton\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:593:25: [error] Cannot access attribute \"MouseButton\" for class \"type[Qt]\"\n\u00a0\u00a0Attribute \"MouseButton\" is unknown"
         },
         {
-          "line": 594,
+          "line": 595,
           "column": 22,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"MouseButton\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:594:22: [error] Type of \"MouseButton\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:595:22: [error] Type of \"MouseButton\" is unknown"
         },
         {
-          "line": 594,
+          "line": 595,
           "column": 22,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"RightButton\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:594:22: [error] Type of \"RightButton\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:595:22: [error] Type of \"RightButton\" is unknown"
         },
         {
-          "line": 594,
+          "line": 595,
           "column": 25,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"MouseButton\" for class \"type[Qt]\"\n\u00a0\u00a0Attribute \"MouseButton\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:594:25: [error] Cannot access attribute \"MouseButton\" for class \"type[Qt]\"\n\u00a0\u00a0Attribute \"MouseButton\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:595:25: [error] Cannot access attribute \"MouseButton\" for class \"type[Qt]\"\n\u00a0\u00a0Attribute \"MouseButton\" is unknown"
         }
       ]
     },
@@ -2509,44 +2509,36 @@
           "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:753:39: [error] Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"item\" in function \"tree_item_data\""
         },
         {
-          "line": 779,
+          "line": 780,
           "column": 51,
           "severity": "error",
           "rule": "reportUnknownArgumentType",
           "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"blocks\" in function \"load_graph\"\n\u00a0\u00a0Argument type is \"list[Unknown]\"",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:779:51: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"blocks\" in function \"load_graph\"\n\u00a0\u00a0Argument type is \"list[Unknown]\""
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:780:51: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"blocks\" in function \"load_graph\"\n\u00a0\u00a0Argument type is \"list[Unknown]\""
         },
         {
-          "line": 781,
+          "line": 782,
           "column": 73,
           "severity": "error",
           "rule": "reportUnknownArgumentType",
           "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"obj\" in function \"len\"\n\u00a0\u00a0Argument type is \"list[Unknown]\"",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:781:73: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"obj\" in function \"len\"\n\u00a0\u00a0Argument type is \"list[Unknown]\""
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:782:73: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"obj\" in function \"len\"\n\u00a0\u00a0Argument type is \"list[Unknown]\""
         },
         {
-          "line": 810,
+          "line": 811,
           "column": 13,
           "severity": "error",
           "rule": "reportUnknownVariableType",
           "message": "Type of \"line\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:810:13: [error] Type of \"line\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:811:13: [error] Type of \"line\" is unknown"
         },
         {
-          "line": 811,
+          "line": 812,
           "column": 28,
           "severity": "error",
           "rule": "reportUnknownArgumentType",
           "message": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"getattr\"",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:811:28: [error] Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"getattr\""
-        },
-        {
-          "line": 812,
-          "column": 32,
-          "severity": "error",
-          "rule": "reportUnknownArgumentType",
-          "message": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"getattr\"",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:812:32: [error] Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"getattr\""
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:812:28: [error] Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"getattr\""
         },
         {
           "line": 813,
@@ -2555,6 +2547,14 @@
           "rule": "reportUnknownArgumentType",
           "message": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"getattr\"",
           "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:813:32: [error] Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"getattr\""
+        },
+        {
+          "line": 814,
+          "column": 32,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"getattr\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\radare2_panel.py:814:32: [error] Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"getattr\""
         }
       ]
     },
@@ -2641,52 +2641,52 @@
       "count": 6,
       "findings": [
         {
-          "line": 627,
+          "line": 634,
           "column": 51,
           "severity": "error",
           "rule": "reportUnknownArgumentType",
           "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"extra\" in function \"info\"\n\u00a0\u00a0Argument type is \"dict[str, Unknown]\"",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\sandbox\\qemu.py:627:51: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"extra\" in function \"info\"\n\u00a0\u00a0Argument type is \"dict[str, Unknown]\""
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\sandbox\\qemu.py:634:51: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"extra\" in function \"info\"\n\u00a0\u00a0Argument type is \"dict[str, Unknown]\""
         },
         {
-          "line": 627,
+          "line": 634,
           "column": 64,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"vnc_port\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\sandbox\\qemu.py:627:64: [error] Type of \"vnc_port\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\sandbox\\qemu.py:634:64: [error] Type of \"vnc_port\" is unknown"
         },
         {
-          "line": 627,
+          "line": 634,
           "column": 82,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"vnc_port\" for class \"QEMUConfig\"\n\u00a0\u00a0Attribute \"vnc_port\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\sandbox\\qemu.py:627:82: [error] Cannot access attribute \"vnc_port\" for class \"QEMUConfig\"\n\u00a0\u00a0Attribute \"vnc_port\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\sandbox\\qemu.py:634:82: [error] Cannot access attribute \"vnc_port\" for class \"QEMUConfig\"\n\u00a0\u00a0Attribute \"vnc_port\" is unknown"
         },
         {
-          "line": 909,
+          "line": 916,
           "column": 67,
           "severity": "error",
           "rule": "reportUnknownArgumentType",
           "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"extra\" in function \"warning\"\n\u00a0\u00a0Argument type is \"dict[str, Unknown]\"",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\sandbox\\qemu.py:909:67: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"extra\" in function \"warning\"\n\u00a0\u00a0Argument type is \"dict[str, Unknown]\""
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\sandbox\\qemu.py:916:67: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"extra\" in function \"warning\"\n\u00a0\u00a0Argument type is \"dict[str, Unknown]\""
         },
         {
-          "line": 909,
+          "line": 916,
           "column": 77,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"value\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\sandbox\\qemu.py:909:77: [error] Type of \"value\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\sandbox\\qemu.py:916:77: [error] Type of \"value\" is unknown"
         },
         {
-          "line": 909,
+          "line": 916,
           "column": 89,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"value\" for class \"SandboxState\"\n\u00a0\u00a0Attribute \"value\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\sandbox\\qemu.py:909:89: [error] Cannot access attribute \"value\" for class \"SandboxState\"\n\u00a0\u00a0Attribute \"value\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\sandbox\\qemu.py:916:89: [error] Cannot access attribute \"value\" for class \"SandboxState\"\n\u00a0\u00a0Attribute \"value\" is unknown"
         }
       ]
     },
@@ -2695,28 +2695,28 @@
       "count": 3,
       "findings": [
         {
-          "line": 599,
+          "line": 603,
           "column": 32,
           "severity": "error",
           "rule": "reportUnknownVariableType",
           "message": "Type of \"content\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\providers\\ollama.py:599:32: [error] Type of \"content\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\providers\\ollama.py:603:32: [error] Type of \"content\" is unknown"
         },
         {
-          "line": 599,
+          "line": 603,
           "column": 43,
           "severity": "error",
           "rule": "reportUnknownMemberType",
           "message": "Type of \"get\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\providers\\ollama.py:599:43: [error] Type of \"get\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\providers\\ollama.py:603:43: [error] Type of \"get\" is unknown"
         },
         {
-          "line": 599,
+          "line": 603,
           "column": 78,
           "severity": "error",
           "rule": "reportAttributeAccessIssue",
           "message": "Cannot access attribute \"get\" for class \"object\"\n\u00a0\u00a0Attribute \"get\" is unknown",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\providers\\ollama.py:599:78: [error] Cannot access attribute \"get\" for class \"object\"\n\u00a0\u00a0Attribute \"get\" is unknown"
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\providers\\ollama.py:603:78: [error] Cannot access attribute \"get\" for class \"object\"\n\u00a0\u00a0Attribute \"get\" is unknown"
         }
       ]
     },

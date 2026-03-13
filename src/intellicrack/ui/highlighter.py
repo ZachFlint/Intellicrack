@@ -222,12 +222,14 @@ class CSyntaxHighlighter(QSyntaxHighlighter):
         self._rules.append(HighlightRule(r"[+\-*/%&|^~<>=!]+", operator_format))
 
     @override
-    def highlightBlock(self, text: str) -> None:
+    def highlightBlock(self, text: str | None) -> None:
         """Apply highlighting to a block of text.
 
         Args:
             text: The text block to highlight.
         """
+        if text is None:
+            return
         for rule in self._rules:
             iterator = rule.pattern.globalMatch(text)
             while iterator.hasNext():
@@ -565,12 +567,14 @@ class AssemblySyntaxHighlighter(QSyntaxHighlighter):
         self._rules.append(HighlightRule(r"'[^']*'", string_format))
 
     @override
-    def highlightBlock(self, text: str) -> None:
+    def highlightBlock(self, text: str | None) -> None:
         """Apply highlighting to a block of text.
 
         Args:
             text: The text block to highlight.
         """
+        if text is None:
+            return
         for rule in self._rules:
             iterator = rule.pattern.globalMatch(text)
             while iterator.hasNext():
@@ -768,12 +772,14 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
         self._rules.append(HighlightRule(r"\bcls\b", self_format))
 
     @override
-    def highlightBlock(self, text: str) -> None:
+    def highlightBlock(self, text: str | None) -> None:
         """Apply highlighting to a block of text.
 
         Args:
             text: The text block to highlight.
         """
+        if text is None:
+            return
         for rule in self._rules:
             iterator = rule.pattern.globalMatch(text)
             while iterator.hasNext():
@@ -995,12 +1001,14 @@ class JavaScriptSyntaxHighlighter(QSyntaxHighlighter):
         self._multi_line_comment_format = comment_format
 
     @override
-    def highlightBlock(self, text: str) -> None:
+    def highlightBlock(self, text: str | None) -> None:
         """Apply highlighting to a block of text.
 
         Args:
             text: The text block to highlight.
         """
+        if text is None:
+            return
         for rule in self._rules:
             iterator = rule.pattern.globalMatch(text)
             while iterator.hasNext():

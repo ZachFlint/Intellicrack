@@ -209,6 +209,7 @@ class SandboxManager:
                     await sandbox.start()
                     _logger.info("sandbox_instance_started", extra={"instance_id": instance.id})
                 except Exception as e:
+                    _logger.warning("sandbox_auto_start_failed", extra={"instance_id": instance.id, "error": str(e)})
                     del self._instances[instance.id]
                     error_message = f"Failed to start sandbox: {e}"
                     raise SandboxError(error_message) from e
@@ -317,7 +318,7 @@ class SandboxManager:
             )
 
         except Exception:
-            _logger.exception("binary_execution_failed", extra={"instance_id": instance.id})
+            _logger.warning("binary_execution_failed", extra={"instance_id": instance.id})
             raise
 
         return (instance, report)

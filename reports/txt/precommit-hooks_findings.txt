@@ -1,3 +1,12 @@
+3 findings in IntellicrackStructure.hta
+
+IntellicrackStructure.hta: [trailing-whitespace] [FIXED] Fixed
+
+IntellicrackStructure.hta: [end-of-file-fixer] [FIXED] Fixed
+
+IntellicrackStructure.hta: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
 2 findings in reports/csv/precommit-hooks_findings.csv
 
 reports/csv/precommit-hooks_findings.csv: [trailing-whitespace] [FIXED] Fixed
@@ -17,13 +26,6 @@ reports/csv/precommit-hooks_findings.csv: [mixed-line-ending] [FIXED] fixed mixe
 IntellicrackKnowledgeGraph.html: [end-of-file-fixer] [FIXED] Fixed
 
 IntellicrackKnowledgeGraph.html: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-2 findings in IntellicrackStructure.hta
-
-IntellicrackStructure.hta: [end-of-file-fixer] [FIXED] Fixed
-
-IntellicrackStructure.hta: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 2 findings in reports/json/bandit_findings.json
@@ -425,6 +427,21 @@ reports/xml/semgrep_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 reports/xml/semgrep_findings.xml: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
+1 findings in scripts/generate_tree.py
+
+scripts/generate_tree.py: [trailing-whitespace] [FIXED] Fixed
+
+
+1 findings in scripts/knowledge-graph/visualize_architecture.py
+
+scripts/knowledge-graph/visualize_architecture.py: [trailing-whitespace] [FIXED] Fixed
+
+
+1 findings in coverage.json
+
+coverage.json: [end-of-file-fixer] [FIXED] Fixed
+
+
 1 findings in reports/txt/codespell_findings.txt
 
 reports/txt/codespell_findings.txt: [end-of-file-fixer] [FIXED] Fixed
@@ -580,26 +597,6 @@ reports/xml/xenon_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 reports/xml/yamllint_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 
 
-1 findings in .claude/commands/lint.md
-
-.claude/commands/lint.md: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-1 findings in .claude/commands/typecheck.md
-
-.claude/commands/typecheck.md: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-1 findings in .claude/hooks/basedpyright-wrapper.cjs
-
-.claude/hooks/basedpyright-wrapper.cjs: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-1 findings in .claude/hooks/sync-lsp-config.cjs
-
-.claude/hooks/sync-lsp-config.cjs: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
 1 findings in .github/dependabot.yml
 
 .github/dependabot.yml: [mixed-line-ending] [FIXED] fixed mixed line endings
@@ -690,11 +687,6 @@ pyrightconfig.json: [mixed-line-ending] [FIXED] fixed mixed line endings
 qodana.yaml: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
-1 findings in requirements.txt
-
-requirements.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
 1 findings in scripts/knowledge-graph/IntellicrackKnowledgeGraph.dot
 
 scripts/knowledge-graph/IntellicrackKnowledgeGraph.dot: [mixed-line-ending] [FIXED] fixed mixed line endings
@@ -753,31 +745,6 @@ src/intellicrack/assets/configs/vulnerability_assessment.json: [mixed-line-endin
 1 findings in src/intellicrack/assets/fonts/font_config.json
 
 src/intellicrack/assets/fonts/font_config.json: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-1 findings in tests/test_bridges/test_x64dbg_events.py
-
-tests/test_bridges/test_x64dbg_events.py: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-1 findings in tests/test_providers/test_provider_bugfixes.py
-
-tests/test_providers/test_provider_bugfixes.py: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-1 findings in tests/test_providers/test_tool_call_buffer.py
-
-tests/test_providers/test_tool_call_buffer.py: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-1 findings in tests/test_ui/test_async_bridge.py
-
-tests/test_ui/test_async_bridge.py: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-1 findings in tests/test_ui/test_sandbox_panel_fixes.py
-
-tests/test_ui/test_sandbox_panel_fixes.py: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 1 findings in tools/pmd-bin-7.8.0/sbom/pmd-7.8.0-cyclonedx.json

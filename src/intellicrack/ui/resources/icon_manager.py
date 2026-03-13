@@ -23,6 +23,12 @@ _logger = get_logger("ui.resources.icons")
 
 
 ICON_MAP: Final[dict[str, str]] = {
+    "app": "ai_brain.svg",
+    "binary": "binary_exe.svg",
+    "tools": "tool_x64dbg.svg",
+    "provider": "ai_model.svg",
+    "sandbox": "security_shield.svg",
+    "process": "action_run.svg",
     "action_build": "action_build.svg",
     "action_debug": "action_debug.svg",
     "action_deploy": "action_deploy.svg",
@@ -91,7 +97,7 @@ ICON_MAP: Final[dict[str, str]] = {
     "tool_gdb": "tool_gdb.svg",
     "tool_ghidra": "tool_ghidra.svg",
     "tool_ollydbg": "tool_ollydbg.svg",
-    "tool_radare2": "tool_radare2.svg",
+    "tool_cutter": "tool_cutter.svg",
     "tool_x64dbg": "tool_x64dbg.svg",
     "accessories_text_editor": "accessories-text-editor.png",
     "ai_assistant": "ai-assistant.png",
@@ -133,6 +139,12 @@ ICON_MAP: Final[dict[str, str]] = {
 }
 
 UNICODE_FALLBACK: Final[dict[str, str]] = {
+    "app": "\u2699",
+    "binary": "\u2b22",
+    "tools": "\u2692",
+    "provider": "\u2601",
+    "sandbox": "\u2610",
+    "process": "\u2699",
     "status_success": "\u2713",
     "status_error": "\u2717",
     "status_warning": "\u26a0",
@@ -171,7 +183,7 @@ UNICODE_FALLBACK: Final[dict[str, str]] = {
     "ai_brain": "\U0001f9e0",
     "tool_ghidra": "G",
     "tool_frida": "F",
-    "tool_radare2": "r2",
+    "tool_cutter": "C",
     "tool_x64dbg": "x64",
     "tool_gdb": "gdb",
 }

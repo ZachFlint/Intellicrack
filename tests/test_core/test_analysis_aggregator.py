@@ -83,7 +83,7 @@ def _make_tool_registry_no_bridges() -> MagicMock:
     registry = MagicMock()
     registry.get_binary_bridge.side_effect = ToolError("not available")
     registry.get_ghidra_bridge.side_effect = ToolError("not available")
-    registry.get_radare2_bridge.side_effect = ToolError("not available")
+    registry.get_cutter_bridge.side_effect = ToolError("not available")
     return registry
 
 
@@ -103,7 +103,7 @@ def _make_tool_registry_with_binary_bridge() -> MagicMock:
     )
     registry.get_binary_bridge.return_value = binary_bridge
     registry.get_ghidra_bridge.side_effect = ToolError("not available")
-    registry.get_radare2_bridge.side_effect = ToolError("not available")
+    registry.get_cutter_bridge.side_effect = ToolError("not available")
     return registry
 
 
@@ -182,7 +182,7 @@ class TestAnalysisAggregatorExceptionHandling:
         binary_bridge.get_strings = AsyncMock(side_effect=RuntimeError("disk error"))
         registry.get_binary_bridge.return_value = binary_bridge
         registry.get_ghidra_bridge.side_effect = ToolError("not available")
-        registry.get_radare2_bridge.side_effect = ToolError("not available")
+        registry.get_cutter_bridge.side_effect = ToolError("not available")
 
         aggregator = AnalysisAggregator(registry)
         binary_info = _make_binary_info()
@@ -205,7 +205,7 @@ class TestAnalysisAggregatorExceptionHandling:
         ghidra.get_exports = AsyncMock(side_effect=RuntimeError("connection lost"))
         ghidra.get_functions = AsyncMock(side_effect=RuntimeError("connection lost"))
         registry.get_ghidra_bridge.return_value = ghidra
-        registry.get_radare2_bridge.side_effect = ToolError("not available")
+        registry.get_cutter_bridge.side_effect = ToolError("not available")
 
         aggregator = AnalysisAggregator(registry)
         binary_info = _make_binary_info()
@@ -235,7 +235,7 @@ class TestDeduplication:
         ghidra.get_exports = AsyncMock(return_value=[])
         ghidra.get_functions = AsyncMock(return_value=[])
         registry.get_ghidra_bridge.return_value = ghidra
-        registry.get_radare2_bridge.side_effect = ToolError("not available")
+        registry.get_cutter_bridge.side_effect = ToolError("not available")
 
         binary_info = _make_binary_info()
         aggregator = AnalysisAggregator(registry)

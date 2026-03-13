@@ -613,6 +613,17 @@ class OperationTimer:
         self._start_time: float = 0.0
         self._slog = get_structlog_logger(logger_name)
 
+    @property
+    def elapsed_ms(self) -> float:
+        """Return elapsed time in milliseconds since the timer started.
+
+        Returns:
+            Elapsed time in milliseconds, or 0.0 if the timer has not started.
+        """
+        if self._start_time == 0.0:
+            return 0.0
+        return (time.perf_counter() - self._start_time) * 1000
+
     def __enter__(self) -> OperationTimer:
         """Start the timer and log operation start.
 

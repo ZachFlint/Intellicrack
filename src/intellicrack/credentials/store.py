@@ -28,12 +28,13 @@ from .env_loader import CredentialLoader, get_credential_loader
 if TYPE_CHECKING:
     from types import ModuleType
 
+_logger = get_logger("credentials.store")
+
 try:
     import keyring as _keyring_module
 except ImportError:
+    _logger.debug("keyring_import_failed", exc_info=True)
     _keyring_module = None
-
-_logger = get_logger("credentials.store")
 
 
 class CredentialStoreError(IntellicrackError):
@@ -201,6 +202,7 @@ class CredentialStore:
                 project_id=parsed.get("project_id"),
             )
         except (json.JSONDecodeError, TypeError, KeyError) as e:
+            _logger.warning("credential_deserialize_failed", extra={"error": str(e)})
             msg = f"Failed to deserialize credentials: {e}"
             raise CredentialStoreError(msg) from e
 
@@ -328,6 +330,7 @@ class CredentialStore:
             await asyncio.to_thread(_store)
             _logger.info("credentials_stored", extra={"provider": provider.value, "store": "keyring"})
         except Exception as e:
+            _logger.warning("credential_store_failed", extra={"provider": provider.value, "error": str(e)})
             msg = f"Failed to store credentials: {e}"
             raise CredentialStoreError(msg) from e
 

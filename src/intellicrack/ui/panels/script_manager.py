@@ -6,7 +6,7 @@
 """Script manager panel for creating and managing analysis scripts.
 
 Provides a comprehensive UI for script editing, validation, and execution
-with support for Frida, Ghidra, radare2, x64dbg, and Python scripts.
+with support for Frida, Ghidra, Cutter, x64dbg, and Python scripts.
 """
 
 from __future__ import annotations
@@ -103,11 +103,11 @@ public class LicenseAnalyzer extends GhidraScript {
 }
 """,
         },
-        "radare2": {
-            "display": "radare2",
+        "cutter": {
+            "display": "Cutter",
             "extension": ".r2",
             "language": "r2cmd",
-            "template": """# radare2 script for license analysis
+            "template": """# Cutter/Rizin script for license analysis
 # Target: {target}
 
 # Analyze all
@@ -595,7 +595,7 @@ class ScriptManagerPanel(QWidget):
         language_map = {
             "frida": ScriptLanguage.JAVASCRIPT,
             "ghidra": ScriptLanguage.JAVA,
-            "radare2": ScriptLanguage.R2_COMMANDS,
+            "cutter": ScriptLanguage.R2_COMMANDS,
             "x64dbg": ScriptLanguage.X64DBG_SCRIPT,
             "python": ScriptLanguage.PYTHON,
         }

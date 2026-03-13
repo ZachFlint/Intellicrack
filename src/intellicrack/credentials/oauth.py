@@ -659,10 +659,12 @@ class OAuthManager:
                 extra={"has_refresh_token": token.refresh_token is not None},
             )
         except httpx.HTTPStatusError as e:
+            _logger.warning("oauth_code_exchange_http_error", extra={"status_code": e.response.status_code, "error": str(e)})
             error_body = e.response.text
             msg = f"Token exchange failed: {e.response.status_code} - {error_body}"
             raise OAuthTokenError(msg) from e
         except Exception as e:
+            _logger.warning("oauth_code_exchange_failed", extra={"error": str(e)})
             msg = f"Token exchange failed: {e}"
             raise OAuthTokenError(msg) from e
         else:
@@ -816,9 +818,11 @@ class OAuthManager:
             await self._store_token(provider, new_token)
             _logger.info("oauth_token_refreshed", extra={"provider": provider.value})
         except httpx.HTTPStatusError as e:
+            _logger.warning("oauth_token_refresh_http_error", extra={"status_code": e.response.status_code, "error": str(e)})
             msg = f"Token refresh failed: {e.response.status_code}"
             raise OAuthTokenError(msg) from e
         except Exception as e:
+            _logger.warning("oauth_token_refresh_failed", extra={"error": str(e)})
             msg = f"Token refresh failed: {e}"
             raise OAuthTokenError(msg) from e
         else:
