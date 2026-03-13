@@ -18,7 +18,7 @@ backrefs==6.2
 bandit==1.9.4
 basedpyright==1.38.2
 bitsandbytes==0.49.2
-black==26.1.0
+black==26.3.1
 blinter==1.0.112
 boolean_py==5.0
 build==1.4.0
