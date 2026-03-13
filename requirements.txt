@@ -208,7 +208,7 @@ pyflakes==3.4.0
 pygments==2.19.2
 pygount==3.1.1
 pyinstrument==5.1.2
-pyjwt==2.11.0
+pyjwt==2.12.0
 pylint==4.0.5
 pymdown_extensions==10.21
 pyparsing==3.3.2
