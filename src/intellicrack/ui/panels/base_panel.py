@@ -7,7 +7,7 @@
 
 Provides common layout scaffolding, toolbar construction, async bridge
 integration, and lifecycle signals used by all native analysis panels
-(Frida, Ghidra, radare2, x64dbg, Sandbox).
+(Frida, Ghidra, Cutter, x64dbg, Sandbox).
 """
 
 from __future__ import annotations

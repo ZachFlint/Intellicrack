@@ -3,10 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""radare2 bridge for static and dynamic analysis.
+"""Cutter/Rizin bridge for static and dynamic analysis.
 
-This module provides integration with radare2 for disassembly,
-analysis, and debugging capabilities using r2pipe.
+This module provides integration with Cutter/Rizin for disassembly,
+analysis, and debugging capabilities using r2pipe (wire-compatible
+with Rizin's pipe protocol).
 """
 
 from __future__ import annotations
@@ -47,22 +48,22 @@ from .base import (
 if TYPE_CHECKING:
     from pathlib import Path
 
-__all__ = ["Radare2Bridge"]
+__all__ = ["CutterBridge"]
 
 XRefType = Literal["call", "jump", "data", "read", "write"]
 StringEncoding = Literal["ascii", "utf-8", "utf-16le", "utf-16be"]
 
-_logger = get_logger("bridges.radare2")
+_logger = get_logger("bridges.cutter")
 
 _ERR_FILE_NOT_FOUND = "file not found"
 _ERR_LOAD_FAILED = "failed to load binary"
 _ERR_NO_BINARY = "no binary loaded"
 _ERR_NOT_ANALYZED = "binary not analyzed"
 _ERR_CMD_FAILED = "command execution failed"
-_ERR_TOOL_NOT_AVAILABLE = "radare2 not available"
+_ERR_TOOL_NOT_AVAILABLE = "cutter not available"
 _ERR_DECOMPILE_NA = "decompilation not available"
 _ERR_ASSEMBLE_FAILED = "failed to assemble instruction"
-_ERR_CMD_TIMEOUT = "radare2 command timed out"
+_ERR_CMD_TIMEOUT = "cutter command timed out"
 _BITS_64 = 64
 _R2_COMMAND_TIMEOUT: float = 60.0
 
@@ -168,8 +169,8 @@ def _get_list(data: dict[str, Any], key: str) -> list[Any]:
     return cast("list[Any]", val) if isinstance(val, list) else []
 
 
-class Radare2Bridge(StaticAnalysisBridge):
-    """Bridge for radare2 reverse engineering framework.
+class CutterBridge(StaticAnalysisBridge):
+    """Bridge for Cutter/Rizin reverse engineering framework.
 
     Provides static analysis, disassembly, and debugging capabilities
     using the r2pipe interface.
@@ -181,7 +182,7 @@ class Radare2Bridge(StaticAnalysisBridge):
     """
 
     def __init__(self) -> None:
-        """Initialize the radare2 bridge."""
+        """Initialize the Cutter bridge."""
         super().__init__()
         self._r2: r2pipe.open | None = None
         self._binary_path: Path | None = None
@@ -231,9 +232,9 @@ class Radare2Bridge(StaticAnalysisBridge):
         """Get the tool's name.
 
         Returns:
-            ToolName.RADARE2
+            ToolName.CUTTER
         """
-        return ToolName.RADARE2
+        return ToolName.CUTTER
 
     @property
     def tool_definition(self) -> ToolDefinition:
@@ -243,12 +244,12 @@ class Radare2Bridge(StaticAnalysisBridge):
             ToolDefinition with all available functions.
         """
         return ToolDefinition(
-            tool_name=ToolName.RADARE2,
-            description="radare2 reverse engineering - disassembly, analysis, patching",
+            tool_name=ToolName.CUTTER,
+            description="Cutter/Rizin reverse engineering - disassembly, analysis, patching",
             functions=[
                 ToolFunction(
-                    name="r2.load_binary",
-                    description="Load a binary file into radare2",
+                    name="cutter.load_binary",
+                    description="Load a binary file into Cutter/Rizin",
                     parameters=[
                         ToolParameter(
                             name="path",
@@ -260,7 +261,7 @@ class Radare2Bridge(StaticAnalysisBridge):
                     returns="BinaryInfo object with file details",
                 ),
                 ToolFunction(
-                    name="r2.analyze",
+                    name="cutter.analyze",
                     description="Run full analysis on the loaded binary",
                     parameters=[
                         ToolParameter(
@@ -275,7 +276,7 @@ class Radare2Bridge(StaticAnalysisBridge):
                     returns="Analysis completion status",
                 ),
                 ToolFunction(
-                    name="r2.get_functions",
+                    name="cutter.get_functions",
                     description="Get list of all functions",
                     parameters=[
                         ToolParameter(
@@ -288,7 +289,7 @@ class Radare2Bridge(StaticAnalysisBridge):
                     returns="List of FunctionInfo objects",
                 ),
                 ToolFunction(
-                    name="r2.decompile",
+                    name="cutter.decompile",
                     description="Decompile a function to pseudocode",
                     parameters=[
                         ToolParameter(
@@ -301,7 +302,7 @@ class Radare2Bridge(StaticAnalysisBridge):
                     returns="Decompiled C-like pseudocode",
                 ),
                 ToolFunction(
-                    name="r2.disassemble",
+                    name="cutter.disassemble",
                     description="Disassemble instructions at an address",
                     parameters=[
                         ToolParameter(
@@ -321,7 +322,7 @@ class Radare2Bridge(StaticAnalysisBridge):
                     returns="Disassembly listing",
                 ),
                 ToolFunction(
-                    name="r2.get_xrefs_to",
+                    name="cutter.get_xrefs_to",
                     description="Get cross-references to an address",
                     parameters=[
                         ToolParameter(
@@ -334,7 +335,7 @@ class Radare2Bridge(StaticAnalysisBridge):
                     returns="List of cross-references",
                 ),
                 ToolFunction(
-                    name="r2.get_xrefs_from",
+                    name="cutter.get_xrefs_from",
                     description="Get cross-references from an address",
                     parameters=[
                         ToolParameter(
@@ -347,7 +348,7 @@ class Radare2Bridge(StaticAnalysisBridge):
                     returns="List of cross-references",
                 ),
                 ToolFunction(
-                    name="r2.search_strings",
+                    name="cutter.search_strings",
                     description="Search for strings in the binary",
                     parameters=[
                         ToolParameter(
@@ -360,7 +361,7 @@ class Radare2Bridge(StaticAnalysisBridge):
                     returns="List of matching strings",
                 ),
                 ToolFunction(
-                    name="r2.search_bytes",
+                    name="cutter.search_bytes",
                     description="Search for byte pattern",
                     parameters=[
                         ToolParameter(
@@ -373,25 +374,25 @@ class Radare2Bridge(StaticAnalysisBridge):
                     returns="List of addresses",
                 ),
                 ToolFunction(
-                    name="r2.get_imports",
+                    name="cutter.get_imports",
                     description="Get imported functions",
                     parameters=[],
                     returns="List of imports",
                 ),
                 ToolFunction(
-                    name="r2.get_exports",
+                    name="cutter.get_exports",
                     description="Get exported functions",
                     parameters=[],
                     returns="List of exports",
                 ),
                 ToolFunction(
-                    name="r2.get_sections",
+                    name="cutter.get_sections",
                     description="Get binary sections",
                     parameters=[],
                     returns="List of sections",
                 ),
                 ToolFunction(
-                    name="r2.rename_function",
+                    name="cutter.rename_function",
                     description="Rename a function",
                     parameters=[
                         ToolParameter(
@@ -410,7 +411,7 @@ class Radare2Bridge(StaticAnalysisBridge):
                     returns="Success status",
                 ),
                 ToolFunction(
-                    name="r2.add_comment",
+                    name="cutter.add_comment",
                     description="Add a comment at an address",
                     parameters=[
                         ToolParameter(
@@ -429,7 +430,7 @@ class Radare2Bridge(StaticAnalysisBridge):
                     returns="Success status",
                 ),
                 ToolFunction(
-                    name="r2.write_bytes",
+                    name="cutter.write_bytes",
                     description="Write bytes at an address",
                     parameters=[
                         ToolParameter(
@@ -448,7 +449,7 @@ class Radare2Bridge(StaticAnalysisBridge):
                     returns="Success status",
                 ),
                 ToolFunction(
-                    name="r2.assemble",
+                    name="cutter.assemble",
                     description="Assemble instruction at an address",
                     parameters=[
                         ToolParameter(
@@ -467,20 +468,20 @@ class Radare2Bridge(StaticAnalysisBridge):
                     returns="Assembled bytes",
                 ),
                 ToolFunction(
-                    name="r2.execute",
-                    description="Execute raw radare2 command",
+                    name="cutter.execute",
+                    description="Execute raw Rizin command",
                     parameters=[
                         ToolParameter(
                             name="command",
                             type="string",
-                            description="radare2 command to execute",
+                            description="Rizin command to execute",
                             required=True,
                         ),
                     ],
                     returns="Command output",
                 ),
                 ToolFunction(
-                    name="r2.get_function",
+                    name="cutter.get_function",
                     description="Get function at a specific address",
                     parameters=[
                         ToolParameter(
@@ -493,7 +494,7 @@ class Radare2Bridge(StaticAnalysisBridge):
                     returns="FunctionInfo or None if not found",
                 ),
                 ToolFunction(
-                    name="r2.search_bytes_wildcard",
+                    name="cutter.search_bytes_wildcard",
                     description="Search for byte pattern with wildcards",
                     parameters=[
                         ToolParameter(
@@ -506,7 +507,7 @@ class Radare2Bridge(StaticAnalysisBridge):
                     returns="List of addresses where pattern found",
                 ),
                 ToolFunction(
-                    name="r2.assemble_at",
+                    name="cutter.assemble_at",
                     description="Assemble instruction at address",
                     parameters=[
                         ToolParameter(
@@ -525,7 +526,7 @@ class Radare2Bridge(StaticAnalysisBridge):
                     returns="Assembled bytes",
                 ),
                 ToolFunction(
-                    name="r2.seek",
+                    name="cutter.seek",
                     description="Seek to a specific address in the binary",
                     parameters=[
                         ToolParameter(
@@ -538,7 +539,7 @@ class Radare2Bridge(StaticAnalysisBridge):
                     returns="Output of seek command",
                 ),
                 ToolFunction(
-                    name="r2.get_function_address",
+                    name="cutter.get_function_address",
                     description="Get address of a function by name",
                     parameters=[
                         ToolParameter(
@@ -554,10 +555,10 @@ class Radare2Bridge(StaticAnalysisBridge):
         )
 
     async def initialize(self, tool_path: Path | None = None) -> None:
-        """Initialize the radare2 bridge.
+        """Initialize the Cutter bridge.
 
         Args:
-            tool_path: Optional path to radare2 installation.
+            tool_path: Optional path to Cutter/Rizin installation.
         """
         del tool_path
         self._state = BridgeState(
@@ -569,15 +570,15 @@ class Radare2Bridge(StaticAnalysisBridge):
             target_pid=None,
             last_error=None,
         )
-        _logger.info("radare2_bridge_initialized", extra={"bridge": "radare2"})
+        _logger.info("cutter_bridge_initialized", extra={"bridge": "cutter"})
 
     async def shutdown(self) -> None:
-        """Shutdown radare2 and cleanup resources."""
+        """Shutdown Cutter bridge and cleanup resources."""
         if self._r2 is not None:
             try:
                 await asyncio.to_thread(self._r2.quit)
             except Exception as e:
-                _logger.warning("radare2_close_failed", extra={"error": str(e)})
+                _logger.warning("cutter_close_failed", extra={"error": str(e)})
             self._r2 = None
 
         if self._r2_pid is not None:
@@ -588,21 +589,21 @@ class Radare2Bridge(StaticAnalysisBridge):
         self._binary_path = None
         self._analyzed = False
         await super().shutdown()
-        _logger.info("radare2_bridge_shutdown", extra={"bridge": "radare2"})
+        _logger.info("cutter_bridge_shutdown", extra={"bridge": "cutter"})
 
     @override
     async def is_available(self) -> bool:
-        """Check if radare2 is available.
+        """Check if Cutter/Rizin is available.
 
         Returns:
-            True if radare2 can be used.
+            True if Cutter/Rizin can be used.
         """
         r2: r2pipe.open | None = None
         try:
             r2 = await asyncio.to_thread(r2pipe.open, "-")
             version: str | None = await asyncio.to_thread(r2.cmd, "?V")
         except Exception as e:
-            _logger.debug("radare2_availability_check_failed", extra={"error": str(e)})
+            _logger.debug("cutter_availability_check_failed", extra={"error": str(e)})
             return False
         else:
             return bool(version)
@@ -611,10 +612,10 @@ class Radare2Bridge(StaticAnalysisBridge):
                 try:
                     await asyncio.to_thread(r2.quit)
                 except Exception as e:
-                    _logger.debug("radare2_cleanup_failed", extra={"error": str(e)})
+                    _logger.debug("cutter_cleanup_failed", extra={"error": str(e)})
 
     async def _close_existing_r2(self) -> None:
-        """Close existing radare2 session and unregister process."""
+        """Close existing Rizin session and unregister process."""
         if self._r2 is not None:
             await asyncio.to_thread(self._r2.quit)
             if self._r2_pid is not None:
@@ -622,8 +623,8 @@ class Radare2Bridge(StaticAnalysisBridge):
                 process_manager.unregister_external_pid(self._r2_pid)
                 self._r2_pid = None
 
-    def _register_r2_process(self, path: Path) -> None:
-        """Register radare2 process with process manager.
+    def _register_rizin_process(self, path: Path) -> None:
+        """Register Rizin process with process manager.
 
         Args:
             path: Path to the binary being analyzed.
@@ -643,11 +644,11 @@ class Radare2Bridge(StaticAnalysisBridge):
         process_manager = ProcessManager.get_instance()
         process_manager.register_external_pid(
             self._r2_pid,
-            name=f"radare2-{path.name}",
+            name=f"cutter-rizin-{path.name}",
             process_type=ProcessType.EXTERNAL_TOOL,
             metadata={"binary": str(path)},
         )
-        _logger.debug("radare2_process_registered", extra={"pid": self._r2_pid})
+        _logger.debug("cutter_process_registered", extra={"pid": self._r2_pid})
 
     async def _extract_hashes(self) -> tuple[str, str]:
         """Extract MD5 and SHA256 hashes from loaded binary.
@@ -667,7 +668,7 @@ class Radare2Bridge(StaticAnalysisBridge):
         return md5, sha256
 
     async def _extract_binary_metadata(self) -> tuple[str, str, int, int]:
-        """Extract binary metadata from radare2.
+        """Extract binary metadata from Rizin.
 
         Returns:
             Tuple of (file_type, arch, bits, entry_point).
@@ -686,7 +687,7 @@ class Radare2Bridge(StaticAnalysisBridge):
         return file_type, arch, bits, entry
 
     async def load_binary(self, path: Path) -> BinaryInfo:
-        """Load a binary file into radare2.
+        """Load a binary file into Cutter/Rizin.
 
         Args:
             path: Path to the binary file.
@@ -707,7 +708,7 @@ class Radare2Bridge(StaticAnalysisBridge):
             self._binary_path = path.resolve()
             self._analyzed = False
 
-            self._register_r2_process(path)
+            self._register_rizin_process(path)
 
             file_type, arch, bits, entry = await self._extract_binary_metadata()
             await self._r2_cmd("e io.cache=true")
@@ -765,7 +766,7 @@ class Radare2Bridge(StaticAnalysisBridge):
         _logger.info("analysis_starting", extra={"level": level})
         await self._r2_cmd(cmd)
         self._analyzed = True
-        _logger.info("analysis_complete", extra={"bridge": "radare2", "level": level})
+        _logger.info("analysis_complete", extra={"bridge": "cutter", "level": level})
 
     async def get_functions(
         self,
@@ -1139,7 +1140,7 @@ class Radare2Bridge(StaticAnalysisBridge):
             List of section info.
         """
         if self._r2 is None:
-            _logger.error("radare2_unavailable", extra={"operation": "_get_sections_internal"})
+            _logger.error("cutter_unavailable", extra={"operation": "_get_sections_internal"})
             return []
 
         sections = await self._cmd_json("iSj")
@@ -1163,7 +1164,7 @@ class Radare2Bridge(StaticAnalysisBridge):
             List of import info.
         """
         if self._r2 is None:
-            _logger.error("radare2_unavailable", extra={"operation": "_get_imports_internal"})
+            _logger.error("cutter_unavailable", extra={"operation": "_get_imports_internal"})
             return []
 
         imports = await self._cmd_json("iij")
@@ -1185,7 +1186,7 @@ class Radare2Bridge(StaticAnalysisBridge):
             List of export info.
         """
         if self._r2 is None:
-            _logger.error("radare2_unavailable", extra={"operation": "_get_exports_internal"})
+            _logger.error("cutter_unavailable", extra={"operation": "_get_exports_internal"})
             return []
 
         exports = await self._cmd_json("iEj")
@@ -1322,10 +1323,10 @@ class Radare2Bridge(StaticAnalysisBridge):
         return bytes.fromhex(result.strip())
 
     async def execute_command(self, command: str) -> str:
-        """Execute raw radare2 command.
+        """Execute raw Rizin command.
 
         Args:
-            command: radare2 command to execute.
+            command: Rizin command to execute.
 
         Returns:
             Command output.
@@ -1342,7 +1343,7 @@ class Radare2Bridge(StaticAnalysisBridge):
             Parsed JSON as list of dicts.
         """
         if self._r2 is None:
-            _logger.error("radare2_unavailable", extra={"operation": "_cmd_json"})
+            _logger.error("cutter_unavailable", extra={"operation": "_cmd_json"})
             return []
 
         result = await self._r2_cmd(command)
@@ -1387,9 +1388,9 @@ class Radare2Bridge(StaticAnalysisBridge):
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._cmd_json(f"agj @ {hex(address)}")
-        if result and isinstance(result, list) and len(result) > 0:
+        if result:
             first = result[0]
-            if isinstance(first, dict) and "blocks" in first:
+            if "blocks" in first:
                 blocks = first["blocks"]
                 if isinstance(blocks, list):
                     return cast("list[dict[str, Any]]", blocks)

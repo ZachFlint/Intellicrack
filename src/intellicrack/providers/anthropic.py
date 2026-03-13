@@ -102,8 +102,10 @@ class AnthropicProvider(LLMProviderBase):
             )
             await self._client.models.list(limit=1)
         except anthropic.AuthenticationError as e:
+            self._logger.warning("anthropic_auth_failed", extra={"error": str(e)})
             raise AuthenticationError(_MSG_INVALID_API_KEY) from e
         except Exception as e:
+            self._logger.warning("anthropic_connect_failed", extra={"error": str(e)})
             raise ProviderError(_MSG_CONNECTION_FAILED) from e
         else:
             self._credentials = credentials
@@ -337,8 +339,10 @@ class AnthropicProvider(LLMProviderBase):
                 duration_ms=duration_ms,
             )
         except anthropic.RateLimitError as e:
+            self._logger.warning("anthropic_rate_limited", extra={"error": str(e)})
             raise RateLimitError(_MSG_RATE_LIMITED) from e
         except Exception as e:
+            self._logger.warning("anthropic_request_failed", extra={"error": str(e)})
             raise ProviderError(_MSG_REQUEST_FAILED) from e
 
     async def chat_stream(
@@ -411,9 +415,11 @@ class AnthropicProvider(LLMProviderBase):
                     self._pending_tool_calls = tool_calls
 
         except anthropic.RateLimitError as e:
+            self._logger.warning("anthropic_stream_rate_limited", extra={"error": str(e)})
             raise RateLimitError(_MSG_RATE_LIMITED) from e
         except Exception as e:
             if not self._cancel_requested:
+                self._logger.warning("anthropic_stream_failed", extra={"error": str(e)})
                 raise ProviderError(_MSG_STREAM_FAILED) from e
 
     async def cancel_request(self) -> None:

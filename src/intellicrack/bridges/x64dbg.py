@@ -12,6 +12,7 @@ debugging, and memory manipulation on Windows systems.
 from __future__ import annotations
 
 import asyncio
+import struct
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
@@ -136,6 +137,13 @@ POINTER_SIZE_32 = 4
 UNICODE_STRING_SIZE_64 = 16
 UNICODE_STRING_SIZE_32 = 8
 STACK_FRAME_SIZE_64 = 16  # Size of 64-bit stack frame (saved RBP + return address)
+HEX_BYTE_LENGTH = 2
+MIN_LINE_PARTS = 2
+MAX_LOCAL_VARS = 15
+PE_SECTION_HEADER_SIZE = 40
+PE_EXPORT_MAX = 4096
+PE_EXPORT_NAME_BUF = 256
+PE_EXPORT_DIR_MIN_SIZE = 0x10000
 
 
 _ERR_REQUIRES_WINDOWS = "requires Windows platform"
@@ -343,6 +351,7 @@ class X64DbgBridge(DebuggerBridge):
         self._next_bp_id: int = 1
         self._watchpoints: dict[int, WatchpointInfo] = {}
         self._next_wp_id: int = 1
+        self._plugin_deployed: bool = False
         self._event_callbacks: list[Callable[[str, dict[str, Any]], None]] = []
         self._capabilities = BridgeCapabilities(
             supports_debugging=True,
@@ -406,6 +415,46 @@ class X64DbgBridge(DebuggerBridge):
             value: True for 64-bit mode, False for 32-bit.
         """
         self._is_64bit = value
+
+    @property
+    def plugin_status(self) -> dict[str, object]:
+        """Get diagnostic information about plugin deployment readiness.
+
+        Returns:
+            Dictionary with keys ``plugin_deployed``, ``x64dbg_found``,
+            ``pipe_connected``, ``ready``, and ``diagnostic``.
+        """
+        x64dbg_found = self._x64dbg_path is not None and self._state.connected
+        pipe_connected = (
+            self._pipe_client is not None and self._pipe_client.is_connected
+        )
+        ready = x64dbg_found and self._plugin_deployed and pipe_connected
+
+        diagnostic: str
+        if not x64dbg_found:
+            diagnostic = "x64dbg installation not configured"
+        elif not self._plugin_deployed:
+            diagnostic = (
+                "x64dbg bridge plugin not installed. Ensure Visual Studio and"
+                " CMake are installed for automatic build, or manually build"
+                " from tools/x64dbg_plugin/"
+            )
+        elif not pipe_connected:
+            diagnostic = (
+                "Plugin deployed but x64dbg is not running or has not loaded"
+                " the plugin. Start x64dbg and verify the plugin is loaded"
+                " (Plugins menu)"
+            )
+        else:
+            diagnostic = ""
+
+        return {
+            "plugin_deployed": self._plugin_deployed,
+            "x64dbg_found": x64dbg_found,
+            "pipe_connected": pipe_connected,
+            "ready": ready,
+            "diagnostic": diagnostic,
+        }
 
     @property
     def breakpoints(self) -> dict[int, BreakpointInfo]:
@@ -708,25 +757,6 @@ class X64DbgBridge(DebuggerBridge):
                     returns="Disassembly text",
                 ),
                 ToolFunction(
-                    name="x64dbg.assemble",
-                    description="Assemble instruction at address",
-                    parameters=[
-                        ToolParameter(
-                            name="address",
-                            type="integer",
-                            description="Target address",
-                            required=True,
-                        ),
-                        ToolParameter(
-                            name="instruction",
-                            type="string",
-                            description="Assembly instruction",
-                            required=True,
-                        ),
-                    ],
-                    returns="Assembled bytes",
-                ),
-                ToolFunction(
                     name="x64dbg.get_stack_trace",
                     description="Get current stack trace",
                     parameters=[],
@@ -874,6 +904,170 @@ class X64DbgBridge(DebuggerBridge):
                     parameters=[],
                     returns="ProcessInfo with threads, modules, command line, and parent PID",
                 ),
+                ToolFunction(
+                    name="x64dbg.get_memory_regions",
+                    description="Get full process memory map with all regions, base addresses, sizes, protections, and types",
+                    parameters=[],
+                    returns="List of MemoryRegion objects",
+                ),
+                ToolFunction(
+                    name="x64dbg.get_threads",
+                    description="Enumerate all threads in the debugged process with IDs, entry points, and states",
+                    parameters=[],
+                    returns="List of ThreadInfo objects",
+                ),
+                ToolFunction(
+                    name="x64dbg.get_modules",
+                    description="List all loaded modules in the debugged process with base addresses, sizes, and paths",
+                    parameters=[],
+                    returns="List of ModuleInfo objects",
+                ),
+                ToolFunction(
+                    name="x64dbg.get_breakpoints",
+                    description="List all breakpoints including those set in the x64dbg GUI",
+                    parameters=[],
+                    returns="List of BreakpointInfo objects",
+                ),
+                ToolFunction(
+                    name="x64dbg.run_to",
+                    description="Run execution until a specific address is reached",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Target address to run to", required=True),
+                    ],
+                    returns="Execution result",
+                ),
+                ToolFunction(
+                    name="x64dbg.execute_til_return",
+                    description="Execute until the current function returns",
+                    parameters=[],
+                    returns="Execution result",
+                ),
+                ToolFunction(
+                    name="x64dbg.skip_instruction",
+                    description="Skip the current instruction by advancing the instruction pointer past it",
+                    parameters=[],
+                    returns="Old and new IP with skipped byte count",
+                ),
+                ToolFunction(
+                    name="x64dbg.set_ip",
+                    description="Set the instruction pointer to a specific address",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="New instruction pointer value", required=True),
+                    ],
+                    returns="Updated IP info",
+                ),
+                ToolFunction(
+                    name="x64dbg.set_label",
+                    description="Set a debug label at an address in x64dbg",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address for the label", required=True),
+                        ToolParameter(name="text", type="string", description="Label text", required=True),
+                    ],
+                    returns="Label set result",
+                ),
+                ToolFunction(
+                    name="x64dbg.get_labels",
+                    description="Get debug labels in an address range",
+                    parameters=[
+                        ToolParameter(name="start", type="integer", description="Start address", required=True),
+                        ToolParameter(name="end", type="integer", description="End address", required=True),
+                    ],
+                    returns="List of labels",
+                ),
+                ToolFunction(
+                    name="x64dbg.set_comment",
+                    description="Set a debug comment at an address in x64dbg",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address for the comment", required=True),
+                        ToolParameter(name="text", type="string", description="Comment text", required=True),
+                    ],
+                    returns="Comment set result",
+                ),
+                ToolFunction(
+                    name="x64dbg.get_comments",
+                    description="Get debug comments in an address range",
+                    parameters=[
+                        ToolParameter(name="start", type="integer", description="Start address", required=True),
+                        ToolParameter(name="end", type="integer", description="End address", required=True),
+                    ],
+                    returns="List of comments",
+                ),
+                ToolFunction(
+                    name="x64dbg.enable_breakpoint",
+                    description="Enable a breakpoint at an address",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Breakpoint address", required=True),
+                    ],
+                    returns="Enable result",
+                ),
+                ToolFunction(
+                    name="x64dbg.disable_breakpoint",
+                    description="Disable a breakpoint at an address",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Breakpoint address", required=True),
+                    ],
+                    returns="Disable result",
+                ),
+                ToolFunction(
+                    name="x64dbg.set_breakpoint_on_api",
+                    description="Set a breakpoint on an imported API function",
+                    parameters=[
+                        ToolParameter(name="module", type="string", description="Module name (e.g. kernel32)", required=True),
+                        ToolParameter(name="function", type="string", description="Function name (e.g. CreateFileW)", required=True),
+                    ],
+                    returns="Breakpoint set result",
+                ),
+                ToolFunction(
+                    name="x64dbg.dump_memory_to_file",
+                    description="Dump a memory region to a file on disk",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Start address", required=True),
+                        ToolParameter(name="size", type="integer", description="Number of bytes to dump", required=True),
+                        ToolParameter(name="path", type="string", description="File path to write to", required=True),
+                    ],
+                    returns="Dump result with bytes written",
+                ),
+                ToolFunction(
+                    name="x64dbg.get_module_sections",
+                    description="Get PE section info of a loaded module by parsing its in-memory PE header",
+                    parameters=[
+                        ToolParameter(name="module_name", type="string", description="Module name (e.g. ntdll.dll)", required=True),
+                    ],
+                    returns="List of section info dicts",
+                ),
+                ToolFunction(
+                    name="x64dbg.get_module_exports",
+                    description="Get exports of a loaded module by parsing its in-memory PE export table",
+                    parameters=[
+                        ToolParameter(name="module_name", type="string", description="Module name (e.g. kernel32.dll)", required=True),
+                    ],
+                    returns="List of export dicts",
+                ),
+                ToolFunction(
+                    name="x64dbg.trace_start",
+                    description="Start conditional trace recording in x64dbg",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address to start tracing at", required=False),
+                        ToolParameter(name="condition", type="string", description="Trace break condition", required=False),
+                        ToolParameter(name="log_text", type="string", description="Text to log at each traced instruction", required=False),
+                    ],
+                    returns="Trace start result",
+                ),
+                ToolFunction(
+                    name="x64dbg.trace_stop",
+                    description="Stop trace recording",
+                    parameters=[],
+                    returns="Trace stop result",
+                ),
+                ToolFunction(
+                    name="x64dbg.set_exception_config",
+                    description="Configure how x64dbg handles a specific exception code",
+                    parameters=[
+                        ToolParameter(name="code", type="integer", description="Exception code (e.g. 0xC0000005)", required=True),
+                        ToolParameter(name="handling", type="string", description="Handling mode: break, ignore, or log", required=True, enum=["break", "ignore", "log"]),
+                    ],
+                    returns="Exception config result",
+                ),
             ],
         )
 
@@ -901,7 +1095,15 @@ class X64DbgBridge(DebuggerBridge):
             if x64_exe.exists() or x32_exe.exists():
                 self._state.connected = True
                 _logger.info("x64dbg_found", extra={"path": str(tool_path)})
-                deploy_x64dbg_plugin(tool_path, tool_path.parent)
+                self._plugin_deployed = deploy_x64dbg_plugin(
+                    tool_path, tool_path.parent,
+                )
+                if not self._plugin_deployed:
+                    diag = str(self.plugin_status.get("diagnostic", ""))
+                    _logger.warning(
+                        "x64dbg_plugin_not_deployed",
+                        extra={"diagnostic": diag},
+                    )
             else:
                 _logger.warning("x64dbg_not_found", extra={"path": str(tool_path)})
 
@@ -1032,8 +1234,15 @@ class X64DbgBridge(DebuggerBridge):
             self._pipe_client.set_event_handler(self._handle_event)
             _logger.info("x64dbg_pipe_connected", extra={"bridge": "x64dbg"})
         except Exception as e:
+            diag = str(self.plugin_status.get("diagnostic", ""))
+            _logger.warning(
+                "x64dbg_pipe_connect_failed",
+                extra={"error": str(e), "diagnostic": diag},
+            )
             self._pipe_client = None
             msg = f"Failed to connect to x64dbg pipe: {e}"
+            if diag:
+                msg = f"{msg}. {diag}"
             raise ToolError(msg) from e
 
     async def _close_connection(self) -> None:
@@ -1112,6 +1321,11 @@ class X64DbgBridge(DebuggerBridge):
         Raises:
             ToolError: If the command fails.
         """
+        if not self._plugin_deployed:
+            diag = str(self.plugin_status.get("diagnostic", ""))
+            msg = f"x64dbg bridge plugin not available: {diag}"
+            raise ToolError(msg)
+
         if self._pipe_client is None or not self._pipe_client.is_connected:
             await self._connect()
 
@@ -1125,6 +1339,7 @@ class X64DbgBridge(DebuggerBridge):
                 timeout=self.COMMAND_TIMEOUT,
             )
         except TimeoutError as e:
+            _logger.warning("x64dbg_command_timeout", extra={"command": command, "error": str(e)})
             msg = f"Command {command} timed out"
             raise ToolError(msg) from e
 
@@ -1314,6 +1529,7 @@ class X64DbgBridge(DebuggerBridge):
             New instruction pointer.
         """
         await self._send_pipe_command("step_into")
+        await asyncio.sleep(0.05)
         regs = await self.get_registers()
         return regs.rip if self._is_64bit else regs.rip & DWORD_MASK
 
@@ -1324,6 +1540,7 @@ class X64DbgBridge(DebuggerBridge):
             New instruction pointer.
         """
         await self._send_pipe_command("step_over")
+        await asyncio.sleep(0.05)
         regs = await self.get_registers()
         return regs.rip if self._is_64bit else regs.rip & DWORD_MASK
 
@@ -1334,6 +1551,7 @@ class X64DbgBridge(DebuggerBridge):
             New instruction pointer.
         """
         await self._send_pipe_command("step_out")
+        await asyncio.sleep(0.05)
         regs = await self.get_registers()
         return regs.rip if self._is_64bit else regs.rip & DWORD_MASK
 
@@ -1395,12 +1613,32 @@ class X64DbgBridge(DebuggerBridge):
         return True
 
     async def get_breakpoints(self) -> list[BreakpointInfo]:
-        """Get all breakpoints.
+        """Get all breakpoints including those set in the x64dbg GUI.
 
         Returns:
-            List of breakpoints.
+            List of breakpoints from both local tracking and x64dbg.
         """
-        return list(self._breakpoints.values())
+        merged = dict(self._breakpoints)
+
+        if self._pipe_client is not None and self._pipe_client.connected:
+            try:
+                result = await self._send_pipe_command("bp_list")
+                if isinstance(result, list):
+                    for bp_data in result:
+                        if isinstance(bp_data, dict):
+                            addr = int(bp_data.get("address", 0))
+                            if addr not in merged:
+                                merged[addr] = BreakpointInfo(
+                                    address=addr,
+                                    bp_type=str(bp_data.get("type", "software")),
+                                    enabled=bool(bp_data.get("enabled", True)),
+                                    hit_count=int(bp_data.get("hit_count", 0)),
+                                    condition=bp_data.get("condition"),
+                                )
+            except ToolError:
+                _logger.debug("bp_list_pipe_unavailable")
+
+        return list(merged.values())
 
     async def set_watchpoint(
         self,
@@ -1467,12 +1705,36 @@ class X64DbgBridge(DebuggerBridge):
         return True
 
     async def get_watchpoints(self) -> list[WatchpointInfo]:
-        """Get all watchpoints.
+        """Get all watchpoints including those set in the x64dbg GUI.
 
         Returns:
-            List of watchpoints.
+            List of watchpoints from both local tracking and x64dbg.
         """
-        return list(self._watchpoints.values())
+        merged = dict(self._watchpoints)
+
+        if self._pipe_client is not None and self._pipe_client.connected:
+            try:
+                result = await self._send_pipe_command("wp_list")
+                if isinstance(result, list):
+                    for wp_data in result:
+                        if isinstance(wp_data, dict):
+                            wp_addr = int(wp_data.get("address", 0))
+                            existing = any(w.address == wp_addr for w in merged.values())
+                            if not existing:
+                                wp_id = self._next_wp_id
+                                self._next_wp_id += 1
+                                merged[wp_id] = WatchpointInfo(
+                                    id=wp_id,
+                                    address=wp_addr,
+                                    size=int(wp_data.get("size", 1)),
+                                    watch_type=str(wp_data.get("type", "write")),
+                                    enabled=bool(wp_data.get("enabled", True)),
+                                    hit_count=int(wp_data.get("hit_count", 0)),
+                                )
+            except ToolError:
+                _logger.debug("wp_list_pipe_unavailable")
+
+        return list(merged.values())
 
     async def get_registers(self) -> RegisterState:
         """Get all register values.
@@ -1681,10 +1943,23 @@ class X64DbgBridge(DebuggerBridge):
         Raises:
             ToolError: If allocation fails.
         """
-        del protection
         if sys.platform != "win32":
             msg = "Windows API not available"
             raise ToolError(msg)
+
+        prot_map: dict[str, int] = {
+            "rwx": PAGE_EXECUTE_READWRITE_FLAG,
+            "PAGE_EXECUTE_READWRITE": PAGE_EXECUTE_READWRITE_FLAG,
+            "rx": PAGE_EXECUTE_READ,
+            "PAGE_EXECUTE_READ": PAGE_EXECUTE_READ,
+            "rw": PAGE_READWRITE,
+            "PAGE_READWRITE": PAGE_READWRITE,
+            "r": PAGE_READONLY,
+            "PAGE_READONLY": PAGE_READONLY,
+            "x": PAGE_EXECUTE,
+            "PAGE_EXECUTE": PAGE_EXECUTE,
+        }
+        prot_flag = prot_map.get(protection, PAGE_EXECUTE_READWRITE_FLAG)
 
         kernel32 = ctypes.windll.kernel32
 
@@ -1709,7 +1984,7 @@ class X64DbgBridge(DebuggerBridge):
                 0,
                 size,
                 WIN_MEM_COMMIT | WIN_MEM_RESERVE,
-                WIN_PAGE_EXECUTE_READWRITE,
+                prot_flag,
             )
 
             if not address_result:
@@ -1991,15 +2266,18 @@ class X64DbgBridge(DebuggerBridge):
 
         return frames
 
-    async def scan_memory(self, pattern: bytes) -> list[MemorySearchResult]:
+    async def scan_memory(self, pattern: str | bytes) -> list[MemorySearchResult]:
         """Scan process memory for a pattern.
 
         Args:
-            pattern: Byte pattern to search for.
+            pattern: Byte pattern to search for. Accepts bytes or hex string
+                (e.g. "48 8B 05" or "488B05").
 
         Returns:
             List of matches with context.
         """
+        if isinstance(pattern, str):
+            pattern = bytes.fromhex(pattern.replace(" ", ""))
         if len(pattern) < MIN_PATTERN_LENGTH:
             _logger.warning("scan_pattern_too_short", extra={"length": len(pattern)})
 
@@ -2123,6 +2401,7 @@ class X64DbgBridge(DebuggerBridge):
                     if not kernel32.Thread32Next(snapshot, ctypes.byref(te32)):
                         break
         except Exception as e:
+            _logger.warning("x64dbg_get_threads_failed", extra={"pid": self._attached_pid, "error": str(e)})
             msg = f"{_ERR_GET_THREADS_FAILED}: {e}"
             raise ToolError(msg, tool_name="x64dbg") from e
         finally:
@@ -2198,6 +2477,7 @@ class X64DbgBridge(DebuggerBridge):
                     if not kernel32.Module32NextW(snapshot, ctypes.byref(me32)):
                         break
         except Exception as e:
+            _logger.warning("x64dbg_get_modules_failed", extra={"pid": self._attached_pid, "error": str(e)})
             msg = f"{_ERR_GET_MODULES_FAILED}: {e}"
             raise ToolError(msg, tool_name="x64dbg") from e
         finally:
@@ -2249,6 +2529,547 @@ class X64DbgBridge(DebuggerBridge):
             threads=threads,
             modules=modules,
         )
+
+    async def find_pattern(self, pattern: str) -> list[dict[str, Any]]:
+        """Search memory for a hex pattern with optional wildcards.
+
+        Args:
+            pattern: Hex pattern string with optional '??' wildcards
+                (e.g. "48 8B ?? 90" or "488B??90").
+
+        Returns:
+            List of match dicts with 'address' and 'offset' keys.
+        """
+        tokens = pattern.replace("  ", " ").strip().split(" ")
+        if len(tokens) == 1 and len(tokens[0]) > HEX_BYTE_LENGTH:
+            raw = tokens[0]
+            tokens = [raw[i : i + HEX_BYTE_LENGTH] for i in range(0, len(raw), HEX_BYTE_LENGTH)]
+
+        wildcard_marker = "??"
+        has_wildcards = any(t == wildcard_marker for t in tokens)
+
+        if not has_wildcards:
+            byte_pattern = bytes.fromhex("".join(tokens))
+            results = await self.scan_memory(byte_pattern)
+            return [
+                {"address": hex(r.address), "offset": r.address}
+                for r in results
+            ]
+
+        pat_bytes: list[int | None] = []
+        for token in tokens:
+            if token == wildcard_marker:
+                pat_bytes.append(None)
+            else:
+                pat_bytes.append(int(token, 16))
+
+        pat_len = len(pat_bytes)
+        regions = await self.get_memory_regions()
+        matches: list[dict[str, Any]] = []
+
+        for region in regions:
+            if "r" not in region.protection:
+                continue
+            try:
+                data = await self.read_memory(
+                    region.base_address, min(region.size, MAX_MEMORY_READ_SIZE)
+                )
+            except ToolError:
+                continue
+
+            for i in range(len(data) - pat_len + 1):
+                matched = True
+                for j in range(pat_len):
+                    if pat_bytes[j] is not None and data[i + j] != pat_bytes[j]:
+                        matched = False
+                        break
+                if matched:
+                    addr = region.base_address + i
+                    matches.append({"address": hex(addr), "offset": addr})
+
+        return matches
+
+    async def run_to(self, address: int) -> dict[str, Any]:
+        """Run execution until a specific address is reached.
+
+        Args:
+            address: Target address to run to.
+
+        Returns:
+            Dict with success status and target address.
+        """
+        await self._send_pipe_command("exec", {"command": f"runto {hex(address)}"})
+        return {"success": True, "target": hex(address)}
+
+    async def execute_til_return(self) -> dict[str, Any]:
+        """Execute until the current function returns.
+
+        Returns:
+            Dict with success status.
+        """
+        await self._send_pipe_command("exec", {"command": "erun"})
+        return {"success": True}
+
+    async def skip_instruction(self) -> dict[str, Any]:
+        """Skip the current instruction by advancing the instruction pointer.
+
+        Returns:
+            Dict with old IP, new IP, and skipped byte count.
+
+        Raises:
+            ToolError: If disassembly fails or no instructions at current IP.
+        """
+        regs = await self.get_registers()
+        current_ip = regs.rip if self._is_64bit else regs.rip & DWORD_MASK
+
+        disasm = await self.disassemble(current_ip, 1)
+        if not disasm:
+            msg = f"Cannot disassemble instruction at {hex(current_ip)}"
+            raise ToolError(msg)
+
+        first_line = disasm[0]
+        instr_len = len(bytes.fromhex(first_line.bytes_str.replace(" ", "")))
+        new_ip = current_ip + instr_len
+
+        reg_name = "rip" if self._is_64bit else "eip"
+        await self._send_pipe_command("exec", {"command": f"{reg_name}={hex(new_ip)}"})
+
+        return {
+            "success": True,
+            "old_ip": hex(current_ip),
+            "new_ip": hex(new_ip),
+            "skipped_bytes": instr_len,
+        }
+
+    async def set_ip(self, address: int) -> dict[str, Any]:
+        """Set the instruction pointer to a specific address.
+
+        Args:
+            address: New instruction pointer value.
+
+        Returns:
+            Dict with success status and new IP.
+        """
+        reg_name = "rip" if self._is_64bit else "eip"
+        await self._send_pipe_command("exec", {"command": f"{reg_name}={hex(address)}"})
+        return {"success": True, "instruction_pointer": hex(address)}
+
+    async def set_label(self, address: int, text: str) -> dict[str, Any]:
+        """Set a debug label at an address.
+
+        Args:
+            address: Address for the label.
+            text: Label text.
+
+        Returns:
+            Dict with address, text, and success status.
+        """
+        await self._send_pipe_command("exec", {"command": f"lblset {hex(address)}, {text}"})
+        return {"address": hex(address), "text": text, "success": True}
+
+    async def get_labels(self, start: int, end: int) -> list[dict[str, Any]]:
+        """Get debug labels in an address range.
+
+        Args:
+            start: Start address.
+            end: End address.
+
+        Returns:
+            List of label dicts with address and text.
+        """
+        try:
+            result = await self._send_pipe_command("exec", {"command": "lbllist"})
+        except ToolError:
+            return []
+
+        labels: list[dict[str, Any]] = []
+        if isinstance(result, str):
+            for line in result.strip().splitlines():
+                parts = line.split(maxsplit=1)
+                if len(parts) >= MIN_LINE_PARTS:
+                    try:
+                        addr = int(parts[0], 16)
+                    except ValueError:
+                        continue
+                    if start <= addr <= end:
+                        labels.append({"address": hex(addr), "text": parts[1]})
+        return labels
+
+    async def set_comment(self, address: int, text: str) -> dict[str, Any]:
+        """Set a debug comment at an address.
+
+        Args:
+            address: Address for the comment.
+            text: Comment text.
+
+        Returns:
+            Dict with address, text, and success status.
+        """
+        await self._send_pipe_command("exec", {"command": f"cmtset {hex(address)}, {text}"})
+        return {"address": hex(address), "text": text, "success": True}
+
+    async def get_comments(self, start: int, end: int) -> list[dict[str, Any]]:
+        """Get debug comments in an address range.
+
+        Args:
+            start: Start address.
+            end: End address.
+
+        Returns:
+            List of comment dicts with address and text.
+        """
+        try:
+            result = await self._send_pipe_command("exec", {"command": "cmtlist"})
+        except ToolError:
+            return []
+
+        comments: list[dict[str, Any]] = []
+        if isinstance(result, str):
+            for line in result.strip().splitlines():
+                parts = line.split(maxsplit=1)
+                if len(parts) >= MIN_LINE_PARTS:
+                    try:
+                        addr = int(parts[0], 16)
+                    except ValueError:
+                        continue
+                    if start <= addr <= end:
+                        comments.append({"address": hex(addr), "text": parts[1]})
+        return comments
+
+    async def enable_breakpoint(self, address: int) -> dict[str, Any]:
+        """Enable a breakpoint at an address.
+
+        Args:
+            address: Breakpoint address.
+
+        Returns:
+            Dict with address and success status.
+        """
+        await self._send_pipe_command("exec", {"command": f"be {hex(address)}"})
+        bp = self._breakpoints.get(address)
+        if bp is not None:
+            self._breakpoints[address] = BreakpointInfo(
+                address=bp.address,
+                bp_type=bp.bp_type,
+                enabled=True,
+                hit_count=bp.hit_count,
+                condition=bp.condition,
+            )
+        return {"address": hex(address), "success": True}
+
+    async def disable_breakpoint(self, address: int) -> dict[str, Any]:
+        """Disable a breakpoint at an address.
+
+        Args:
+            address: Breakpoint address.
+
+        Returns:
+            Dict with address and success status.
+        """
+        await self._send_pipe_command("exec", {"command": f"bd {hex(address)}"})
+        bp = self._breakpoints.get(address)
+        if bp is not None:
+            self._breakpoints[address] = BreakpointInfo(
+                address=bp.address,
+                bp_type=bp.bp_type,
+                enabled=False,
+                hit_count=bp.hit_count,
+                condition=bp.condition,
+            )
+        return {"address": hex(address), "success": True}
+
+    async def set_breakpoint_on_api(self, module: str, function: str) -> dict[str, Any]:
+        """Set a breakpoint on an imported API function.
+
+        Args:
+            module: Module name (e.g. 'kernel32').
+            function: Function name (e.g. 'CreateFileW').
+
+        Returns:
+            Dict with target and success status.
+        """
+        target = f"{module}.{function}"
+        await self._send_pipe_command("exec", {"command": f"bpx {target}"})
+        return {"success": True, "target": target}
+
+    async def dump_memory_to_file(self, address: int, size: int, path: str) -> dict[str, Any]:
+        """Dump a memory region to a file on disk.
+
+        Args:
+            address: Start address.
+            size: Number of bytes to dump.
+            path: File path to write to.
+
+        Returns:
+            Dict with path and bytes_written count.
+
+        Raises:
+            ToolError: If memory read fails.
+        """
+        data = await self.read_memory(address, size)
+        output_path = Path(path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_bytes(data)
+        return {"success": True, "path": path, "bytes_written": len(data)}
+
+    async def _resolve_module_base(self, module_name: str) -> int:
+        """Resolve a module name to its base address.
+
+        Args:
+            module_name: Module name (e.g. 'ntdll.dll').
+
+        Returns:
+            Base address of the module.
+
+        Raises:
+            ToolError: If module not found.
+        """
+        modules = await self.get_modules()
+        for mod in modules:
+            if mod.name.lower() == module_name.lower():
+                return mod.base_address
+        msg = f"Module {module_name!r} not found"
+        raise ToolError(msg)
+
+    async def _read_pe_header(self, base_address: int, module_name: str, size: int = 256) -> tuple[int, bytes]:
+        """Read and validate PE header from a module's base address.
+
+        Args:
+            base_address: Module base address.
+            module_name: Module name for error messages.
+            size: Bytes to read from PE header start.
+
+        Returns:
+            Tuple of (pe_offset, pe_header_bytes).
+
+        Raises:
+            ToolError: If DOS or PE signature is invalid.
+        """
+        dos_header = await self.read_memory(base_address, 64)
+        if dos_header[:2] != b"MZ":
+            msg = f"Invalid DOS header in {module_name}"
+            raise ToolError(msg)
+
+        pe_offset = struct.unpack_from("<I", dos_header, PE_HEADER_OFFSET)[0]
+        pe_header = await self.read_memory(base_address + pe_offset, size)
+
+        if pe_header[:4] != b"PE\x00\x00":
+            msg = f"Invalid PE signature in {module_name}"
+            raise ToolError(msg)
+
+        return pe_offset, pe_header
+
+    @staticmethod
+    def _parse_section_entry(sec_data: bytes, sec_offset: int, base_address: int) -> dict[str, Any]:
+        """Parse a single PE section header entry.
+
+        Args:
+            sec_data: Buffer containing the section header.
+            sec_offset: Offset within the buffer.
+            base_address: Module base address for RVA calculation.
+
+        Returns:
+            Dict with section name, addresses, sizes, and permissions.
+        """
+        name_bytes = sec_data[sec_offset : sec_offset + 8]
+        sec_name = name_bytes.split(b"\x00")[0].decode("ascii", errors="replace")
+        virtual_size = struct.unpack_from("<I", sec_data, sec_offset + 8)[0]
+        virtual_address = struct.unpack_from("<I", sec_data, sec_offset + 12)[0]
+        raw_size = struct.unpack_from("<I", sec_data, sec_offset + 16)[0]
+        characteristics = struct.unpack_from("<I", sec_data, sec_offset + 36)[0]
+
+        return {
+            "name": sec_name,
+            "virtual_address": hex(base_address + virtual_address),
+            "virtual_size": virtual_size,
+            "raw_size": raw_size,
+            "characteristics": hex(characteristics),
+            "readable": bool(characteristics & 0x40000000),
+            "writable": bool(characteristics & 0x80000000),
+            "executable": bool(characteristics & 0x20000000),
+        }
+
+    async def get_module_sections(self, module_name: str) -> list[dict[str, Any]]:
+        """Get PE section info of a loaded module by parsing its in-memory header.
+
+        Args:
+            module_name: Module name (e.g. 'ntdll.dll').
+
+        Returns:
+            List of section dicts with name, virtual_address, virtual_size,
+            raw_size, and characteristics.
+
+        Raises:
+            ToolError: If module not found or PE parsing fails.
+        """
+        base_address = await self._resolve_module_base(module_name)
+        pe_offset, pe_header = await self._read_pe_header(base_address, module_name)
+
+        num_sections = struct.unpack_from("<H", pe_header, 6)[0]
+        optional_header_size = struct.unpack_from("<H", pe_header, 20)[0]
+        section_table_offset = 24 + optional_header_size
+
+        sections: list[dict[str, Any]] = []
+        for i in range(num_sections):
+            offset = section_table_offset + (i * PE_SECTION_HEADER_SIZE)
+            if offset + PE_SECTION_HEADER_SIZE > len(pe_header):
+                sec_data = await self.read_memory(
+                    base_address + pe_offset + offset, PE_SECTION_HEADER_SIZE
+                )
+                sections.append(self._parse_section_entry(sec_data, 0, base_address))
+            else:
+                sections.append(self._parse_section_entry(pe_header, offset, base_address))
+
+        return sections
+
+    async def _read_export_tables(
+        self, base_address: int, pe_header: bytes
+    ) -> tuple[bytes, bytes, bytes, int, int, int]:
+        """Read PE export address, name pointer, and ordinal tables.
+
+        Args:
+            base_address: Module base address.
+            pe_header: PE header bytes.
+
+        Returns:
+            Tuple of (addr_table, name_ptrs, ordinal_table, num_names, ordinal_base, num_functions).
+
+        Raises:
+            ToolError: If PE header too small or no exports.
+        """
+        machine = struct.unpack_from("<H", pe_header, 4)[0]
+        is_pe64 = machine == PE64_MACHINE
+        export_dir_offset = 24 + (112 if is_pe64 else 96)
+
+        if export_dir_offset + 8 > len(pe_header):
+            msg = "PE header too small for export directory"
+            raise ToolError(msg)
+
+        export_rva = struct.unpack_from("<I", pe_header, export_dir_offset)[0]
+
+        if export_rva == 0 or struct.unpack_from("<I", pe_header, export_dir_offset + 4)[0] == 0:
+            msg = "No export directory"
+            raise ToolError(msg)
+
+        export_dir = await self.read_memory(
+            base_address + export_rva,
+            min(struct.unpack_from("<I", pe_header, export_dir_offset + 4)[0], PE_EXPORT_DIR_MIN_SIZE),
+        )
+
+        num_functions = struct.unpack_from("<I", export_dir, 20)[0]
+        num_names = struct.unpack_from("<I", export_dir, 24)[0]
+        ordinal_base = struct.unpack_from("<I", export_dir, 16)[0]
+
+        addr_table = await self.read_memory(
+            base_address + struct.unpack_from("<I", export_dir, 28)[0], num_functions * 4
+        )
+        name_ptrs = await self.read_memory(
+            base_address + struct.unpack_from("<I", export_dir, 32)[0], num_names * 4
+        )
+        ordinal_table = await self.read_memory(
+            base_address + struct.unpack_from("<I", export_dir, 36)[0], num_names * 2
+        )
+
+        return addr_table, name_ptrs, ordinal_table, num_names, ordinal_base, num_functions
+
+    async def get_module_exports(self, module_name: str) -> list[dict[str, Any]]:
+        """Get exports of a loaded module by parsing its in-memory PE export table.
+
+        Args:
+            module_name: Module name (e.g. 'kernel32.dll').
+
+        Returns:
+            List of export dicts with ordinal, name, and address.
+
+        Raises:
+            ToolError: If module not found or PE parsing fails.
+        """
+        base_address = await self._resolve_module_base(module_name)
+        _, pe_header = await self._read_pe_header(base_address, module_name, size=512)
+
+        try:
+            addr_table, name_ptrs, ordinal_table, num_names, ordinal_base, _ = (
+                await self._read_export_tables(base_address, pe_header)
+            )
+        except ToolError:
+            return []
+
+        exports: list[dict[str, Any]] = []
+        for i in range(min(num_names, PE_EXPORT_MAX)):
+            name_rva = struct.unpack_from("<I", name_ptrs, i * 4)[0]
+            ordinal_index = struct.unpack_from("<H", ordinal_table, i * 2)[0]
+            func_rva = struct.unpack_from("<I", addr_table, ordinal_index * 4)[0]
+
+            try:
+                name_data = await self.read_memory(base_address + name_rva, PE_EXPORT_NAME_BUF)
+                null_pos = name_data.find(b"\x00")
+                func_name = name_data[: null_pos if null_pos != -1 else PE_EXPORT_NAME_BUF].decode(
+                    "ascii", errors="replace"
+                )
+            except ToolError:
+                func_name = f"ordinal_{ordinal_base + ordinal_index}"
+
+            exports.append({
+                "ordinal": ordinal_base + ordinal_index,
+                "name": func_name,
+                "address": hex(base_address + func_rva),
+            })
+
+        return exports
+
+    async def trace_start(
+        self,
+        address: int | None = None,
+        condition: str | None = None,
+        log_text: str | None = None,
+    ) -> dict[str, Any]:
+        """Start conditional trace recording in x64dbg.
+
+        Args:
+            address: Address to start tracing at.
+            condition: Trace break condition expression.
+            log_text: Text to log at each traced instruction.
+
+        Returns:
+            Dict with success status.
+        """
+        if address is not None and log_text is not None:
+            await self._send_pipe_command(
+                "exec", {"command": f"TraceSetLog {hex(address)}, {log_text}"}
+            )
+        if address is not None and condition is not None:
+            await self._send_pipe_command(
+                "exec", {"command": f"TraceSetCondition {hex(address)}, {condition}"}
+            )
+        await self._send_pipe_command("exec", {"command": "StartRunTrace"})
+        return {"success": True}
+
+    async def trace_stop(self) -> dict[str, Any]:
+        """Stop trace recording.
+
+        Returns:
+            Dict with success status.
+        """
+        await self._send_pipe_command("exec", {"command": "StopRunTrace"})
+        return {"success": True}
+
+    async def set_exception_config(self, code: int, handling: str) -> dict[str, Any]:
+        """Configure how x64dbg handles a specific exception code.
+
+        Args:
+            code: Exception code (e.g. 0xC0000005 for access violation).
+            handling: Handling mode - 'break' (first chance break),
+                'ignore' (pass to application), or 'log' (log and continue).
+
+        Returns:
+            Dict with code, handling, and success status.
+        """
+        handling_map = {"break": 1, "ignore": 0, "log": 2}
+        handling_code = handling_map.get(handling, 1)
+        await self._send_pipe_command(
+            "exec", {"command": f"SetExceptionBPX {hex(code)}, {handling_code}"}
+        )
+        return {"success": True, "code": hex(code), "handling": handling}
 
     @staticmethod
     def _get_parent_pid(pid: int) -> int:
@@ -2303,6 +3124,7 @@ class X64DbgBridge(DebuggerBridge):
                     if not kernel32.Process32NextW(snapshot, ctypes.byref(pe32)):
                         break
         except Exception as e:
+            _logger.warning("x64dbg_get_parent_pid_failed", extra={"pid": pid, "error": str(e)})
             msg = f"{_ERR_GET_PARENT_PID_FAILED}: {e}"
             raise ToolError(msg, tool_name="x64dbg") from e
         finally:

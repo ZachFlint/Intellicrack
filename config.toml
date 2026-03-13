@@ -47,7 +47,7 @@ enabled = true
 auto_install = true
 startup_timeout_seconds = 10
 
-[tools.radare2]
+[tools.cutter]
 enabled = true
 auto_install = true
 startup_timeout_seconds = 10

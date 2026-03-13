@@ -93,10 +93,10 @@ class X64DbgPanel(AnalysisPanelBase):
         Args:
             parent: Parent widget.
         """
-        super().__init__(parent)
         self._bridge: X64DbgBridge | None = None
         self._is_64bit: bool = True
         self._embedded_container: QWidget | None = None
+        super().__init__(parent)
 
     @override
     def _populate_toolbar(self, toolbar: QToolBar) -> None:
@@ -137,6 +137,15 @@ class X64DbgPanel(AnalysisPanelBase):
         toolbar.addSeparator()
 
         self._status_label = self._add_toolbar_label(toolbar, "Not loaded")
+        self._debug_buttons: list[QPushButton] = [
+            self._run_btn,
+            self._pause_btn,
+            self._stop_btn,
+            self._step_into_btn,
+            self._step_over_btn,
+            self._step_out_btn,
+        ]
+        self._update_controls_state()
 
     @override
     def _create_content(self) -> QWidget:
@@ -225,7 +234,9 @@ class X64DbgPanel(AnalysisPanelBase):
         self._reg_table.setHorizontalHeaderLabels(_REG_COLUMNS)
         self._reg_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._reg_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self._reg_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        reg_h = self._reg_table.horizontalHeader()
+        if reg_h is not None:
+            reg_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         connect_cell_changed(self._reg_table, self._on_register_edited)
         tabs.addTab(self._reg_table, "Registers")
 
@@ -233,21 +244,27 @@ class X64DbgPanel(AnalysisPanelBase):
         self._stack_table.setHorizontalHeaderLabels(_STACK_COLUMNS)
         self._stack_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._stack_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self._stack_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        stack_h = self._stack_table.horizontalHeader()
+        if stack_h is not None:
+            stack_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         tabs.addTab(self._stack_table, "Stack")
 
         self._module_table = QTableWidget(0, len(_MODULE_COLUMNS))
         self._module_table.setHorizontalHeaderLabels(_MODULE_COLUMNS)
         self._module_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._module_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self._module_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        mod_h = self._module_table.horizontalHeader()
+        if mod_h is not None:
+            mod_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         tabs.addTab(self._module_table, "Modules")
 
         self._thread_table = QTableWidget(0, len(_THREAD_COLUMNS))
         self._thread_table.setHorizontalHeaderLabels(_THREAD_COLUMNS)
         self._thread_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._thread_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self._thread_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        thread_h = self._thread_table.horizontalHeader()
+        if thread_h is not None:
+            thread_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         tabs.addTab(self._thread_table, "Threads")
 
         return tabs
@@ -272,8 +289,7 @@ class X64DbgPanel(AnalysisPanelBase):
 
         self._bp_addr_input = QLineEdit()
         self._bp_addr_input.setMaximumWidth(160)
-        set_hint_bp = getattr(self._bp_addr_input, "set" + "Place" + "holderText")
-        set_hint_bp("0x...")
+        getattr(self._bp_addr_input, "set" + "Place" + "holderText")("0x...")
         bp_toolbar.addWidget(self._bp_addr_input)
 
         self._add_bp_btn = QPushButton("Add BP")
@@ -293,7 +309,9 @@ class X64DbgPanel(AnalysisPanelBase):
         self._bp_table.setHorizontalHeaderLabels(_BP_COLUMNS)
         self._bp_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._bp_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self._bp_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        bp_h = self._bp_table.horizontalHeader()
+        if bp_h is not None:
+            bp_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         bp_layout.addWidget(self._bp_table)
         tabs.addTab(bp_container, "Breakpoints")
 
@@ -373,6 +391,30 @@ class X64DbgPanel(AnalysisPanelBase):
         if hasattr(bridge, "register_event_callback"):
             bridge.register_event_callback(self._on_debug_event)
         _logger.info("x64dbg_bridge_set", extra={"bridge_type": type(bridge).__name__})
+        self._update_controls_state()
+
+    def _update_controls_state(self) -> None:
+        """Enable or disable debug buttons based on bridge plugin readiness.
+
+        When prerequisites are not met, buttons are disabled and a
+        diagnostic message is shown in the status label and console.
+        """
+        if self._bridge is None:
+            enabled = False
+            diagnostic = "No bridge configured"
+        else:
+            status = self._bridge.plugin_status
+            ready = bool(status.get("ready", False))
+            diagnostic = str(status.get("diagnostic", ""))
+            enabled = ready or bool(status.get("plugin_deployed", False))
+
+        for btn in self._debug_buttons:
+            btn.setEnabled(enabled)
+
+        if diagnostic and not enabled:
+            self._set_status(diagnostic)
+            if hasattr(self, "_console_output"):
+                self._console_output.appendPlainText(f"[!] {diagnostic}")
 
     def get_bridge(self) -> X64DbgBridge | None:
         """Get the current X64DbgBridge instance.
@@ -413,6 +455,7 @@ class X64DbgPanel(AnalysisPanelBase):
         _logger.info("x64dbg_file_loaded", extra={"path": file_path.name})
         self._load_btn.setEnabled(True)
         self._sync_64bit_toggle()
+        self._update_controls_state()
         self._refresh_state()
         self._try_embed_debugger_window()
 
@@ -520,6 +563,7 @@ class X64DbgPanel(AnalysisPanelBase):
         _logger.info("x64dbg_attached", extra={"pid": pid})
         self._attach_btn.setEnabled(True)
         self._sync_64bit_toggle()
+        self._update_controls_state()
         self._refresh_state()
 
     def _on_attach_error(self, exc: object) -> None:

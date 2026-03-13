@@ -15,7 +15,7 @@ import uuid
 from collections.abc import Callable
 from ctypes import wintypes
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any, ClassVar, cast
 
 from ..core.logging import get_logger
 from ..core.types import ToolError
@@ -205,6 +205,7 @@ class NamedPipeClient:
         try:
             payload: object = json.loads(data.decode("utf-8"))
         except json.JSONDecodeError as exc:
+            _logger.warning("pipe_invalid_json_payload", extra={"error": str(exc)})
             error_message = f"Invalid JSON payload: {exc}"
             raise ToolError(error_message) from exc
 
@@ -262,6 +263,18 @@ class NamedPipeClient:
             error_message = "Timed out writing to pipe"
             raise ToolError(error_message) from exc
 
+    _PIPE_ERROR_HINTS: ClassVar[dict[int, str]] = {
+        2: (
+            "The x64dbg bridge plugin is not running. Ensure x64dbg is open"
+            " and the Intellicrack plugin is loaded"
+        ),
+        5: "Access denied. Try running Intellicrack as administrator",
+        231: (
+            "All pipe instances are busy. Another client may already be"
+            " connected"
+        ),
+    }
+
     def _open_handle(self) -> int:
         if os.name != "nt":
             error_message = "Named pipes are only supported on Windows"
@@ -275,11 +288,14 @@ class NamedPipeClient:
         wait_ok = kernel32.WaitNamedPipeW(pipe_name, timeout_ms)
         if wait_ok == 0:
             error = ctypes.get_last_error()
+            hint = self._PIPE_ERROR_HINTS.get(error, "")
             _logger.error(
                 "pipe_connection_failed",
-                extra={"pipe_name": pipe_name, "error": f"pipe not available (code {error})"},
+                extra={"pipe_name": pipe_name, "error": f"pipe not available (code {error})", "hint": hint},
             )
             error_message = f"Named pipe not available (error {error})"
+            if hint:
+                error_message = f"{error_message}. {hint}"
             raise ToolError(error_message)
 
         handle = kernel32.CreateFileW(
@@ -294,11 +310,14 @@ class NamedPipeClient:
 
         if handle == wintypes.HANDLE(-1).value:
             error = ctypes.get_last_error()
+            hint = self._PIPE_ERROR_HINTS.get(error, "")
             _logger.error(
                 "pipe_connection_failed",
-                extra={"pipe_name": pipe_name, "error": f"failed to open (code {error})"},
+                extra={"pipe_name": pipe_name, "error": f"failed to open (code {error})", "hint": hint},
             )
             error_message = f"Failed to open pipe (error {error})"
+            if hint:
+                error_message = f"{error_message}. {hint}"
             raise ToolError(error_message)
 
         return int(handle)

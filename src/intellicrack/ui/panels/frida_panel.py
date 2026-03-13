@@ -11,21 +11,25 @@ for interacting with Frida dynamic instrumentation framework.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, cast, override
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QFontMetrics
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QHBoxLayout,
     QHeaderView,
     QInputDialog,
     QLabel,
+    QLineEdit,
     QPlainTextEdit,
     QPushButton,
+    QSpinBox,
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
+    QTabWidget,
     QToolBar,
     QVBoxLayout,
     QWidget,
@@ -91,6 +95,16 @@ class FridaPanel(AnalysisPanelBase):
         Args:
             toolbar: The toolbar to populate.
         """
+        self._add_toolbar_label(toolbar, "Device:")
+
+        self._device_combo = QComboBox()
+        self._device_combo.setMinimumWidth(120)
+        self._device_combo.addItem("local")
+        self._device_combo.currentTextChanged.connect(self._on_device_changed)
+        toolbar.addWidget(self._device_combo)
+
+        toolbar.addSeparator()
+
         self._add_toolbar_label(toolbar, "Target:")
 
         self._target_input = self._add_toolbar_input(toolbar, "PID or process name")
@@ -113,14 +127,15 @@ class FridaPanel(AnalysisPanelBase):
         """Create the Frida instrumentation content area.
 
         Returns:
-            Splitter with script editor, hooks table, and console.
+            Splitter with process browser, editor, hooks/threads, and console.
         """
         main_splitter = QSplitter(Qt.Orientation.Vertical)
 
         top_splitter = QSplitter(Qt.Orientation.Horizontal)
+        top_splitter.addWidget(self._create_process_browser())
         top_splitter.addWidget(self._create_editor_section())
-        top_splitter.addWidget(self._create_hooks_section())
-        top_splitter.setSizes([500, 300])
+        top_splitter.addWidget(self._create_right_tabs())
+        top_splitter.setSizes([200, 400, 300])
         main_splitter.addWidget(top_splitter)
 
         console_container = QWidget()
@@ -181,6 +196,53 @@ class FridaPanel(AnalysisPanelBase):
         editor_layout.addWidget(self._script_editor)
         return editor_container
 
+    def _create_process_browser(self) -> QWidget:
+        """Create the process browser panel.
+
+        Returns:
+            Process browser container widget.
+        """
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
+
+        header = QHBoxLayout()
+        title = QLabel("Processes")
+        title.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+        header.addWidget(title)
+        header.addStretch()
+
+        self._refresh_procs_btn = QPushButton("Refresh")
+        self._refresh_procs_btn.setObjectName("tool_button")
+        self._refresh_procs_btn.clicked.connect(self._on_refresh_processes)
+        header.addWidget(self._refresh_procs_btn)
+        layout.addLayout(header)
+
+        self._process_table = QTableWidget(0, 2)
+        self._process_table.setHorizontalHeaderLabels(["PID", "Name"])
+        self._process_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._process_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        self._process_table.doubleClicked.connect(self._on_process_double_click)
+        proc_header = self._process_table.horizontalHeader()
+        if proc_header is not None:
+            proc_header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+            proc_header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        layout.addWidget(self._process_table)
+        return container
+
+    def _create_right_tabs(self) -> QWidget:
+        """Create the tabbed right panel with hooks, threads, and stalker.
+
+        Returns:
+            Tab widget containing hooks, threads, and stalker tabs.
+        """
+        self._right_tabs = QTabWidget()
+        self._right_tabs.addTab(self._create_hooks_section(), "Hooks")
+        self._right_tabs.addTab(self._create_threads_section(), "Threads")
+        self._right_tabs.addTab(self._create_stalker_section(), "Stalker")
+        return self._right_tabs
+
     def _create_hooks_section(self) -> QWidget:
         """Create the hooks manager section.
 
@@ -214,9 +276,109 @@ class FridaPanel(AnalysisPanelBase):
         self._hooks_table.setHorizontalHeaderLabels(_HOOK_COLUMNS)
         self._hooks_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._hooks_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self._hooks_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        hooks_h = self._hooks_table.horizontalHeader()
+        if hooks_h is not None:
+            hooks_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         hooks_layout.addWidget(self._hooks_table)
         return hooks_container
+
+    def _create_threads_section(self) -> QWidget:
+        """Create the thread viewer section.
+
+        Returns:
+            Threads container widget.
+        """
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
+
+        header = QHBoxLayout()
+        title = QLabel("Threads")
+        title.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+        header.addWidget(title)
+        header.addStretch()
+
+        self._refresh_threads_btn = QPushButton("Refresh")
+        self._refresh_threads_btn.setObjectName("tool_button")
+        self._refresh_threads_btn.clicked.connect(self._on_refresh_threads)
+        header.addWidget(self._refresh_threads_btn)
+        layout.addLayout(header)
+
+        self._threads_table = QTableWidget(0, 3)
+        self._threads_table.setHorizontalHeaderLabels(["TID", "State", "PC"])
+        self._threads_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._threads_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        threads_h = self._threads_table.horizontalHeader()
+        if threads_h is not None:
+            threads_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        layout.addWidget(self._threads_table)
+        return container
+
+    def _create_stalker_section(self) -> QWidget:
+        """Create the Stalker code tracing controls.
+
+        Returns:
+            Stalker controls container widget.
+        """
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
+
+        title = QLabel("Stalker Tracing")
+        title.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+        layout.addWidget(title)
+
+        tid_row = QHBoxLayout()
+        tid_row.addWidget(QLabel("Thread ID:"))
+        self._stalker_tid_input = QLineEdit()
+        self._stalker_tid_input.setToolTip("Leave empty for current thread")
+        self._stalker_tid_input.setMaximumWidth(100)
+        tid_row.addWidget(self._stalker_tid_input)
+        tid_row.addStretch()
+        layout.addLayout(tid_row)
+
+        events_row = QHBoxLayout()
+        events_row.addWidget(QLabel("Events:"))
+        self._stalker_call_cb = QCheckBox("call")
+        self._stalker_call_cb.setChecked(True)
+        events_row.addWidget(self._stalker_call_cb)
+        self._stalker_ret_cb = QCheckBox("ret")
+        events_row.addWidget(self._stalker_ret_cb)
+        self._stalker_exec_cb = QCheckBox("exec")
+        events_row.addWidget(self._stalker_exec_cb)
+        self._stalker_block_cb = QCheckBox("block")
+        events_row.addWidget(self._stalker_block_cb)
+        events_row.addStretch()
+        layout.addLayout(events_row)
+
+        limit_row = QHBoxLayout()
+        limit_row.addWidget(QLabel("Limit:"))
+        self._stalker_limit_spin = QSpinBox()
+        self._stalker_limit_spin.setRange(100, 1000000)
+        self._stalker_limit_spin.setValue(10000)
+        self._stalker_limit_spin.setSingleStep(1000)
+        limit_row.addWidget(self._stalker_limit_spin)
+        limit_row.addStretch()
+        layout.addLayout(limit_row)
+
+        btn_row = QHBoxLayout()
+        self._stalker_start_btn = QPushButton("Start Trace")
+        self._stalker_start_btn.setObjectName("tool_button")
+        self._stalker_start_btn.clicked.connect(self._on_stalker_start)
+        btn_row.addWidget(self._stalker_start_btn)
+
+        self._stalker_stop_btn = QPushButton("Stop Trace")
+        self._stalker_stop_btn.setObjectName("tool_button")
+        self._stalker_stop_btn.setEnabled(False)
+        self._stalker_stop_btn.clicked.connect(self._on_stalker_stop)
+        btn_row.addWidget(self._stalker_stop_btn)
+        btn_row.addStretch()
+        layout.addLayout(btn_row)
+
+        layout.addStretch()
+        return container
 
     def set_bridge(self, bridge: FridaBridge) -> None:
         """Set the FridaBridge instance for instrumentation.
@@ -602,3 +764,282 @@ class FridaPanel(AnalysisPanelBase):
         self._hook_ids.append(hook_id)
         self.hook_added.emit(address)
         _logger.debug("frida_hook_entry_added", extra={"address": address, "target_module": module, "function": function})
+
+    def _on_device_changed(self, device_text: str) -> None:
+        """Handle device selector change.
+
+        Args:
+            device_text: Selected device identifier text.
+        """
+        if self._bridge is None:
+            return
+
+        device_type = "local"
+        host: str | None = None
+        if device_text.startswith("remote:"):
+            device_type = "remote"
+            host = device_text.split(":", 1)[1].strip()
+        elif device_text == "usb":
+            device_type = "usb"
+
+        self._console.appendPlainText(f"[*] Switching to {device_type} device...")
+        self._run_async(
+            self._bridge.connect_device(device_type, host),
+            on_success=lambda r: self._console.appendPlainText(f"[+] Connected to device: {getattr(r, 'name', device_type)}"),
+            on_error=lambda e: self._console.appendPlainText(f"[-] Device switch failed: {e}"),
+        )
+
+    def _on_refresh_processes(self) -> None:
+        """Refresh the process browser table."""
+        if self._bridge is None:
+            self._console.appendPlainText("[!] No Frida bridge available")
+            return
+
+        self._refresh_procs_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.enumerate_processes(),
+            on_success=self._populate_process_table,
+            on_error=self._on_refresh_processes_error,
+        )
+
+    def _populate_process_table(self, result: object) -> None:
+        """Populate the process table from enumeration results.
+
+        Args:
+            result: List of process dictionaries from the bridge.
+        """
+        self._process_table.setRowCount(0)
+        if isinstance(result, list):
+            proc_list = cast("list[object]", result)
+            for proc in proc_list:
+                if not isinstance(proc, dict):
+                    continue
+                proc_dict = cast("dict[str, object]", proc)
+                row = self._process_table.rowCount()
+                self._process_table.insertRow(row)
+                pid_val = proc_dict.get("pid", 0)
+                name_val = proc_dict.get("name", "")
+                self._process_table.setItem(row, 0, QTableWidgetItem(str(pid_val)))
+                self._process_table.setItem(row, 1, QTableWidgetItem(str(name_val)))
+        self._refresh_procs_btn.setEnabled(True)
+
+    def _on_refresh_processes_error(self, exc: object) -> None:
+        """Handle process enumeration failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console.appendPlainText(f"[-] Process enumeration failed: {exc}")
+        _logger.warning("frida_process_enum_failed", extra={"error": str(exc)})
+        self._refresh_procs_btn.setEnabled(True)
+
+    def _on_process_double_click(self) -> None:
+        """Attach to the double-clicked process."""
+        row = self._process_table.currentRow()
+        if row < 0:
+            return
+
+        pid_item = self._process_table.item(row, 0)
+        if pid_item is None:
+            return
+
+        pid_text = pid_item.text()
+        self._target_input.setText(pid_text)
+        self._on_attach()
+
+    def _on_refresh_threads(self) -> None:
+        """Refresh the thread viewer table."""
+        if self._bridge is None:
+            self._console.appendPlainText("[!] No Frida bridge available")
+            return
+
+        self._refresh_threads_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.enumerate_threads(),
+            on_success=self._populate_threads_table,
+            on_error=self._on_refresh_threads_error,
+        )
+
+    def _populate_threads_table(self, result: object) -> None:
+        """Populate the threads table from enumeration results.
+
+        Args:
+            result: List of ThreadInfo from the bridge.
+        """
+        self._threads_table.setRowCount(0)
+        if isinstance(result, list):
+            thread_list = cast("list[object]", result)
+            for thread_obj in thread_list:
+                row = self._threads_table.rowCount()
+                self._threads_table.insertRow(row)
+                tid: int = int(getattr(thread_obj, "tid", 0))
+                state: str = str(getattr(thread_obj, "state", "unknown"))
+                pc: object = getattr(thread_obj, "start_address", 0)
+                self._threads_table.setItem(row, 0, QTableWidgetItem(str(tid)))
+                self._threads_table.setItem(row, 1, QTableWidgetItem(state))
+                self._threads_table.setItem(
+                    row,
+                    2,
+                    QTableWidgetItem(f"0x{pc:X}" if isinstance(pc, int) else str(pc)),
+                )
+        self._refresh_threads_btn.setEnabled(True)
+
+    def _on_refresh_threads_error(self, exc: object) -> None:
+        """Handle thread enumeration failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console.appendPlainText(f"[-] Thread enumeration failed: {exc}")
+        _logger.warning("frida_thread_enum_failed", extra={"error": str(exc)})
+        self._refresh_threads_btn.setEnabled(True)
+
+    def _get_stalker_events_string(self) -> str:
+        """Build comma-separated events string from stalker checkboxes.
+
+        Returns:
+            Comma-separated event type string.
+        """
+        events: list[str] = []
+        if self._stalker_call_cb.isChecked():
+            events.append("call")
+        if self._stalker_ret_cb.isChecked():
+            events.append("ret")
+        if self._stalker_exec_cb.isChecked():
+            events.append("exec")
+        if self._stalker_block_cb.isChecked():
+            events.append("block")
+        return ",".join(events) if events else "call"
+
+    def _on_stalker_start(self) -> None:
+        """Start Stalker code tracing."""
+        if self._bridge is None:
+            self._console.appendPlainText("[!] No Frida bridge available")
+            return
+
+        tid_text = self._stalker_tid_input.text().strip()
+        thread_id: int | None = None
+        if tid_text:
+            try:
+                thread_id = int(tid_text)
+            except ValueError:
+                self._console.appendPlainText(f"[-] Invalid thread ID: {tid_text}")
+                return
+
+        events = self._get_stalker_events_string()
+        limit = self._stalker_limit_spin.value()
+
+        self._stalker_start_btn.setEnabled(False)
+        self._console.appendPlainText(f"[*] Starting Stalker trace (tid={thread_id or 'current'}, events={events}, limit={limit})")
+        self._run_async(
+            self._bridge.stalker_follow(thread_id=thread_id, events=events, limit=limit),
+            on_success=self._on_stalker_started,
+            on_error=self._on_stalker_start_error,
+        )
+
+    def _on_stalker_started(self, result: object) -> None:
+        """Handle successful Stalker trace start.
+
+        Args:
+            result: Trace ID from the bridge.
+        """
+        self._console.appendPlainText(f"[+] Stalker tracing started (trace_id={result})")
+        self._stalker_start_btn.setEnabled(False)
+        self._stalker_stop_btn.setEnabled(True)
+
+    def _on_stalker_start_error(self, exc: object) -> None:
+        """Handle Stalker start failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console.appendPlainText(f"[-] Stalker start failed: {exc}")
+        _logger.warning("frida_stalker_start_failed", extra={"error": str(exc)})
+        self._stalker_start_btn.setEnabled(True)
+
+    def _on_stalker_stop(self) -> None:
+        """Stop Stalker code tracing and display results."""
+        if self._bridge is None:
+            return
+
+        tid_text = self._stalker_tid_input.text().strip()
+        thread_id: int | None = None
+        if tid_text:
+            try:
+                thread_id = int(tid_text)
+            except ValueError:
+                _logger.debug("stalker_stop_invalid_tid", extra={"tid_text": tid_text})
+
+        self._stalker_stop_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.stalker_unfollow(thread_id=thread_id),
+            on_success=self._on_stalker_stopped,
+            on_error=self._on_stalker_stop_error,
+        )
+
+    def _on_stalker_stopped(self, result: object) -> None:
+        """Handle Stalker trace completion and display results.
+
+        Args:
+            result: StalkerTrace from the bridge.
+        """
+        event_count = getattr(result, "event_count", 0)
+        duration = getattr(result, "duration_ms", 0.0)
+        self._console.appendPlainText(f"[+] Stalker trace complete: {event_count} events in {duration:.1f}ms")
+        events = getattr(result, "events", [])
+        display_limit = min(len(events), 50)
+        for evt in events[:display_limit]:
+            evt_type = getattr(evt, "event_type", "?")
+            from_addr = getattr(evt, "from_address", 0)
+            to_addr = getattr(evt, "to_address", None)
+            depth = getattr(evt, "depth", 0)
+            to_str = f" -> 0x{to_addr:X}" if isinstance(to_addr, int) else ""
+            self._console.appendPlainText(f"  [{evt_type}] 0x{from_addr:X}{to_str} (depth={depth})")
+        if len(events) > display_limit:
+            self._console.appendPlainText(f"  ... and {len(events) - display_limit} more events")
+        self._stalker_start_btn.setEnabled(True)
+        self._stalker_stop_btn.setEnabled(False)
+
+    def _on_stalker_stop_error(self, exc: object) -> None:
+        """Handle Stalker stop failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console.appendPlainText(f"[-] Stalker stop failed: {exc}")
+        _logger.warning("frida_stalker_stop_failed", extra={"error": str(exc)})
+        self._stalker_start_btn.setEnabled(True)
+        self._stalker_stop_btn.setEnabled(False)
+
+    def refresh_devices(self) -> None:
+        """Refresh the device selector combo box."""
+        if self._bridge is None:
+            return
+
+        self._run_async(
+            self._bridge.enumerate_devices(),
+            on_success=self._populate_device_combo,
+            on_error=lambda e: _logger.debug("device_enum_failed", extra={"error": str(e)}),
+        )
+
+    def _populate_device_combo(self, result: object) -> None:
+        """Populate the device combo box from enumeration results.
+
+        Args:
+            result: List of FridaDeviceInfo from the bridge.
+        """
+        self._device_combo.blockSignals(True)
+        current = self._device_combo.currentText()
+        self._device_combo.clear()
+        if isinstance(result, list):
+            device_list = cast("list[object]", result)
+            for device_obj in device_list:
+                dev_id = str(getattr(device_obj, "id", ""))
+                dev_name = str(getattr(device_obj, "name", dev_id))
+                dev_type = str(getattr(device_obj, "device_type", ""))
+                display = f"{dev_name} ({dev_type})" if dev_type else dev_name
+                self._device_combo.addItem(display, dev_id)
+        idx = self._device_combo.findText(current)
+        if idx >= 0:
+            self._device_combo.setCurrentIndex(idx)
+        self._device_combo.blockSignals(False)

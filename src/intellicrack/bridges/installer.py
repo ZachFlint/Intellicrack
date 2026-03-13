@@ -23,7 +23,12 @@ from typing import Any, cast
 
 import httpx
 
-from intellicrack.core._subprocess import TimeoutExpired
+from intellicrack.core._subprocess import (
+    PIPE,
+    CalledProcessError,
+    TimeoutExpired,
+    run as _subprocess_run,
+)
 
 from ..core.logging import get_logger
 from ..core.process_manager import ProcessManager
@@ -151,19 +156,18 @@ TOOL_REGISTRY: dict[ToolName, ToolInfo] = {
         version_command=["x64dbg.exe", "-v"],
         min_version="2024.01.01",
     ),
-    ToolName.RADARE2: ToolInfo(
-        name=ToolName.RADARE2,
-        display_name="radare2",
+    ToolName.CUTTER: ToolInfo(
+        name=ToolName.CUTTER,
+        display_name="Cutter",
         common_paths=[
-            Path("C:/Program Files/radare2"),
-            Path("C:/Tools/radare2"),
-            Path("C:/radare2"),
-            Path("D:/Tools/radare2"),
+            Path("C:/Program Files/Cutter"),
+            Path("C:/Tools/Cutter"),
+            Path("D:/Tools/Cutter"),
         ],
-        executables=["radare2.exe", "r2.exe"],
-        download_url="https://github.com/radareorg/radare2/releases/latest",
-        version_command=["radare2.exe", "-v"],
-        min_version="5.9.0",
+        executables=["cutter.exe"],
+        download_url="https://github.com/rizinorg/cutter/releases/latest",
+        version_command=["cutter.exe", "--version"],
+        min_version="2.3.0",
     ),
     ToolName.FRIDA: ToolInfo(
         name=ToolName.FRIDA,
@@ -608,7 +612,7 @@ class ToolInstaller:
                 elif tool == ToolName.X64DBG:
                     if name.endswith(".zip") and "snapshot" in name:
                         return download_url
-                elif tool == ToolName.RADARE2 and "w64" in name and name.endswith(".zip"):
+                elif tool == ToolName.CUTTER and "windows" in name and name.endswith(".zip"):
                     return download_url
 
         except Exception:
@@ -745,9 +749,174 @@ class ToolInstaller:
 
 
 _PLUGIN_ARCHS: list[tuple[str, str, str]] = [
-    ("x64", "intellicrack_bridge.dp64", "x86_64"),
-    ("x32", "intellicrack_bridge.dp32", "i686"),
+    ("x64", "intellicrack_bridge_x64.dp64", "x86_64"),
+    ("x32", "intellicrack_bridge_x32.dp32", "i686"),
 ]
+
+
+def _find_cmake() -> Path | None:
+    """Locate the cmake executable.
+
+    Searches PATH first, then falls back to the Visual Studio bundled cmake
+    via ``vswhere.exe``.
+
+    Returns:
+        Path to cmake if found, otherwise None.
+    """
+    found = shutil.which("cmake")
+    if found is not None:
+        return Path(found)
+
+    vswhere = Path(os.environ.get("PROGRAMFILES(X86)", r"C:\Program Files (x86)")) / (
+        "Microsoft Visual Studio/Installer/vswhere.exe"
+    )
+    if not vswhere.is_file():
+        return None
+
+    try:
+        result = _subprocess_run(
+            [str(vswhere), "-latest", "-property", "installationPath"],
+            capture_output=False,
+            stdout=PIPE,
+            stderr=PIPE,
+            text=True,
+            timeout=15,
+        )
+        vs_path = result.stdout.strip()
+        if vs_path:
+            cmake_path = (
+                Path(vs_path)
+                / "Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe"
+            )
+            if cmake_path.is_file():
+                return cmake_path
+    except (OSError, TimeoutExpired):
+        pass
+    return None
+
+
+def _detect_vs_generator(cmake_path: Path) -> str | None:
+    """Detect the highest available Visual Studio CMake generator.
+
+    Runs ``cmake --help`` and parses its output for ``Visual Studio NN YYYY``
+    generator lines.
+
+    Args:
+        cmake_path: Path to the cmake executable.
+
+    Returns:
+        Generator string (e.g. ``"Visual Studio 18 2026"``) or None.
+    """
+    try:
+        result = _subprocess_run(
+            [str(cmake_path), "--help"],
+            capture_output=False,
+            stdout=PIPE,
+            stderr=PIPE,
+            text=True,
+            timeout=15,
+        )
+    except (OSError, TimeoutExpired):
+        return None
+
+    best: str | None = None
+    best_ver = 0
+    for line in result.stdout.splitlines():
+        match = re.search(r"(Visual Studio (\d+) \d{4})", line)
+        if match:
+            ver = int(match.group(2))
+            if ver > best_ver:
+                best_ver = ver
+                best = match.group(1)
+    return best
+
+
+def build_x64dbg_plugin(plugin_dir: Path, x64dbg_path: Path) -> bool:
+    """Build the x64dbg bridge plugin from source using CMake + Visual Studio.
+
+    Attempts to compile both x64 and x32 architectures. Succeeds if at least
+    one architecture builds successfully.
+
+    Args:
+        plugin_dir: Root of the ``x64dbg_plugin`` source tree containing
+            ``CMakeLists.txt``.
+        x64dbg_path: Path to the x64dbg installation (passed to CMake
+            as a hint for SDK headers).
+
+    Returns:
+        True if at least one architecture built successfully.
+    """
+    cmake_path = _find_cmake()
+    if cmake_path is None:
+        _logger.warning(
+            "plugin_build_skipped",
+            extra={"reason": "cmake not found"},
+        )
+        return False
+
+    generator = _detect_vs_generator(cmake_path)
+    if generator is None:
+        _logger.warning(
+            "plugin_build_skipped",
+            extra={"reason": "no Visual Studio generator detected"},
+        )
+        return False
+
+    _logger.info(
+        "plugin_build_starting",
+        extra={"generator": generator, "plugin_dir": str(plugin_dir)},
+    )
+
+    archs: list[tuple[str, str, str]] = [
+        ("x64", "x64", "ON"),
+        ("x32", "Win32", "OFF"),
+    ]
+    built = False
+
+    for arch_label, platform, build_x64_flag in archs:
+        build_dir = plugin_dir / f"build_{arch_label}"
+        build_dir.mkdir(parents=True, exist_ok=True)
+
+        try:
+            _subprocess_run(
+                [
+                    str(cmake_path),
+                    str(plugin_dir),
+                    "-G",
+                    generator,
+                    "-A",
+                    platform,
+                    f"-DBUILD_X64={build_x64_flag}",
+                    f"-DX64DBG_PATH={x64dbg_path}",
+                ],
+                capture_output=False,
+                stdout=PIPE,
+                stderr=PIPE,
+                cwd=str(build_dir),
+                timeout=120,
+                check=True,
+            )
+            _subprocess_run(
+                [str(cmake_path), "--build", ".", "--config", "Release"],
+                capture_output=False,
+                stdout=PIPE,
+                stderr=PIPE,
+                cwd=str(build_dir),
+                timeout=300,
+                check=True,
+            )
+            _logger.info(
+                "plugin_build_succeeded",
+                extra={"arch": arch_label},
+            )
+            built = True
+        except (CalledProcessError, OSError) as exc:
+            _logger.warning(
+                "plugin_build_failed",
+                extra={"arch": arch_label, "error": str(exc)},
+            )
+
+    return built
 
 
 def _find_plugin_source(plugin_dir: Path, filename: str) -> Path | None:
@@ -755,7 +924,7 @@ def _find_plugin_source(plugin_dir: Path, filename: str) -> Path | None:
 
     Args:
         plugin_dir: Root of the x64dbg_plugin source tree.
-        filename: Plugin filename to search for (e.g. ``intellicrack_bridge.dp64``).
+        filename: Plugin filename to search for (e.g. ``intellicrack_bridge_x64.dp64``).
 
     Returns:
         Path to the binary if found, otherwise None.
@@ -796,6 +965,17 @@ def deploy_x64dbg_plugin(x64dbg_path: Path, tools_directory: Path) -> bool:
             extra={"path": str(plugin_dir)},
         )
         return False
+
+    any_source_found = any(
+        _find_plugin_source(plugin_dir, fn) is not None
+        for _, fn, _ in _PLUGIN_ARCHS
+    )
+    if not any_source_found:
+        _logger.info(
+            "plugin_binaries_missing_attempting_build",
+            extra={"plugin_dir": str(plugin_dir)},
+        )
+        build_x64dbg_plugin(plugin_dir, x64dbg_path)
 
     deployed = False
     for arch, filename, _cpu in _PLUGIN_ARCHS:

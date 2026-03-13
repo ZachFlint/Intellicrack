@@ -8,7 +8,7 @@
 This module provides specialized panels for bridge analysis,
 stack viewing, script management, Frida instrumentation, process
 management, binary hex viewing, sandbox control, and native tool
-panels (Ghidra, x64dbg, radare2) within the main application.
+panels (Ghidra, x64dbg, Cutter) within the main application.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from intellicrack.ui.panels.frida_panel import FridaPanel
 from intellicrack.ui.panels.ghidra_panel import GhidraPanel
 from intellicrack.ui.panels.hxd_panel import HxDPanel
 from intellicrack.ui.panels.process_panel import ProcessPanel
-from intellicrack.ui.panels.radare2_panel import Radare2Panel
+from intellicrack.ui.panels.cutter_panel import CutterPanel
 from intellicrack.ui.panels.sandbox_panel import SandboxPanel
 from intellicrack.ui.panels.script_manager import ScriptManagerPanel, ScriptTypeInfo
 from intellicrack.ui.panels.stack_viewer import (
@@ -41,7 +41,7 @@ __all__ = [
     "GhidraPanel",
     "HxDPanel",
     "ProcessPanel",
-    "Radare2Panel",
+    "CutterPanel",
     "SandboxPanel",
     "ScriptManagerPanel",
     "ScriptTypeInfo",

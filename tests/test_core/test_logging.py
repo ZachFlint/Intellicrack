@@ -28,8 +28,10 @@ from intellicrack.core.logging import (
     log_tool_call,
 )
 
+
 _SanitizeFn = Callable[[dict[str, object]], dict[str, str]]
-sanitize_arguments: _SanitizeFn = getattr(logging_mod, "_sanitize_arguments")
+_SANITIZE_FN_ATTR: Final[str] = "_sanitize_arguments"
+sanitize_arguments: _SanitizeFn = getattr(logging_mod, _SANITIZE_FN_ATTR)
 
 
 _RETENTION_DAYS: Final[int] = 7
@@ -588,18 +590,16 @@ def test_operation_timer_with_context() -> None:
 
 def test_operation_timer_on_exception() -> None:
     """Verify OperationTimer logs failure on exception."""
-    with pytest.raises(ValueError, match="test error"):
-        with OperationTimer("failing_op"):
-            msg = "test error"
-            raise ValueError(msg)
+    with pytest.raises(ValueError, match="test error"), OperationTimer("failing_op"):
+        msg = "test error"
+        raise ValueError(msg)
 
 
 def test_operation_timer_measures_time() -> None:
     """Verify OperationTimer records nonzero elapsed time."""
     with OperationTimer("timed_op") as timer:
         time.sleep(_TIMER_SLEEP)
-    start_time: float = getattr(timer, "_start_time")
-    assert start_time > 0
+    assert timer.elapsed_ms > 0
 
 
 # --- LEVEL_COLORS class attribute ---

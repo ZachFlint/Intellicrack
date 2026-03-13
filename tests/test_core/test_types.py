@@ -773,9 +773,9 @@ def test_tool_name_has_ghidra() -> None:
     assert ToolName.GHIDRA.value == "ghidra"
 
 
-def test_tool_name_has_radare2() -> None:
-    """Verify radare2 tool is defined."""
-    assert ToolName.RADARE2.value == "radare2"
+def test_tool_name_has_cutter() -> None:
+    """Verify Cutter tool is defined."""
+    assert ToolName.CUTTER.value == "cutter"
 
 
 def test_tool_name_has_frida() -> None:

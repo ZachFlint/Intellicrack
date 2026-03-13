@@ -471,6 +471,7 @@ class GuestAgentClient:
                     _logger.debug("agent_invalid_json", extra={"line": line.decode(errors="replace")})
 
             except asyncio.CancelledError:
+                _logger.debug("agent_read_cancelled", exc_info=True)
                 break
             except Exception as e:
                 _logger.debug("agent_read_error", extra={"error": str(e)})
@@ -630,7 +631,7 @@ class QEMUSandbox(SandboxBase):
             snapshot_name=self._qemu_config.snapshot_name,
             shared_folder=self._qemu_config.shared_folder,
         )
-        _logger.info("vnc_display_enabled", extra={"vnc_port": self._qemu_config.vnc_port})
+        _logger.info("vnc_display_enabled", extra={"vnc_port": self.vnc_port})
 
     async def is_available(self) -> bool:
         """Check if QEMU is available.
@@ -789,7 +790,7 @@ class QEMUSandbox(SandboxBase):
         """
         if returncode != _RETURNCODE_SUCCESS:
             error_msg = stderr.decode() if stderr else "Unknown error"
-            _logger.error("qemu_start_failed", extra={"error": error_msg})
+            _logger.warning("qemu_start_failed", extra={"error": error_msg})
             raise SandboxError(_ERR_QEMU_START)
 
     async def _connect_and_verify_qmp(self) -> None:
@@ -804,7 +805,7 @@ class QEMUSandbox(SandboxBase):
 
         status = await self._qmp.query_status()
         if not status.success:
-            _logger.error("vm_status_query_failed", extra={"error": status.error})
+            _logger.warning("vm_status_query_failed", extra={"error": status.error})
             raise SandboxError(_ERR_VM_STATUS)
 
     async def _build_qemu_command(self) -> list[str]:
@@ -912,7 +913,7 @@ class QEMUSandbox(SandboxBase):
             SandboxError: If VM cannot be started.
         """
         if self._state.status == "running":
-            _logger.warning("qemu_sandbox_already_running", extra={"state": self._state.value})
+            _logger.warning("qemu_sandbox_already_running", extra={"state": self._state.status})
             return
 
         if not await self.is_available():
@@ -969,7 +970,7 @@ class QEMUSandbox(SandboxBase):
                             )
 
             if qemu_pid is None:
-                _logger.error("qemu_pidfile_unreadable", extra={"pidfile": str(self._pidfile_path)})
+                _logger.warning("qemu_pidfile_unreadable", extra={"pidfile": str(self._pidfile_path)})
                 await self._cleanup()
                 raise SandboxError(_ERR_PIDFILE_UNREADABLE)  # noqa: TRY301
 
@@ -1316,6 +1317,7 @@ def _get_process_name(pid: int) -> str | None:
         with open(comm_path, "r", encoding="utf-8") as comm_file:
             return comm_file.read().strip()
     except (OSError, PermissionError, FileNotFoundError):
+        _logger.debug("process_name_lookup_failed", exc_info=True)
         return None
 
 
@@ -1353,7 +1355,7 @@ def handle_client(conn: socket.socket) -> None:
     try:
         client_addr = str(conn.getpeername())
     except OSError:
-        pass
+        _logger.debug("client_peername_unavailable", exc_info=True)
 
     _logger.debug("client_connected", extra={"client_addr": client_addr})
 
@@ -1382,7 +1384,7 @@ def handle_client(conn: socket.socket) -> None:
         try:
             conn.close()
         except OSError:
-            pass
+            _logger.debug("client_close_failed", exc_info=True)
         _logger.debug("client_connection_closed", extra={"client_addr": client_addr})
 
 
@@ -1422,21 +1424,25 @@ def _execute_command(request: dict[str, Any]) -> dict[str, Any]:
             },
         }
     except subprocess.TimeoutExpired:
+        _logger.debug("command_execution_timeout", extra={"command": cmd, "timeout": timeout})
         return {
             "type": "result",
             "data": {"exit_code": -1, "stdout": "", "stderr": f"Command timed out after {timeout}s"},
         }
     except FileNotFoundError:
+        _logger.debug("command_not_found", extra={"command": cmd})
         return {
             "type": "result",
             "data": {"exit_code": -1, "stdout": "", "stderr": f"Command not found: {cmd}"},
         }
     except PermissionError:
+        _logger.debug("command_permission_denied", extra={"command": cmd})
         return {
             "type": "result",
             "data": {"exit_code": -1, "stdout": "", "stderr": f"Permission denied: {cmd}"},
         }
     except OSError as os_err:
+        _logger.debug("command_os_error", extra={"command": cmd, "error": str(os_err)})
         return {
             "type": "result",
             "data": {"exit_code": -1, "stdout": "", "stderr": str(os_err)},
@@ -1603,7 +1609,7 @@ echo $? > "/mnt/shared/output/{result_name}"
                 else:
                     return (exit_code, "", "")
 
-        _logger.error("command_timed_out", extra={"timeout_seconds": timeout})
+        _logger.warning("command_timed_out", extra={"timeout_seconds": timeout})
         raise SandboxTimeoutError(_ERR_CMD_TIMEOUT, timeout_seconds=timeout)
 
     async def run_binary(
@@ -1631,7 +1637,7 @@ echo $? > "/mnt/shared/output/{result_name}"
             raise SandboxError(_ERR_NOT_RUNNING)
 
         if not binary_path.exists():
-            _logger.error("binary_not_found", extra={"path": str(binary_path)})
+            _logger.warning("binary_not_found", extra={"path": str(binary_path)})
             raise SandboxError(_ERR_BINARY_NOT_FOUND)
 
         if self._shared_folder is None:
@@ -1853,7 +1859,7 @@ echo $? > "/mnt/shared/output/{result_name}"
             raise SandboxError(_ERR_NO_SHARED_FOLDER)
 
         if not source.exists():
-            _logger.error("source_file_not_found", extra={"path": str(source)})
+            _logger.warning("source_file_not_found", extra={"path": str(source)})
             raise SandboxError(_ERR_SOURCE_NOT_FOUND)
 
         dest_path = self._shared_folder / dest
@@ -1882,7 +1888,7 @@ echo $? > "/mnt/shared/output/{result_name}"
         source_path = self._shared_folder / source
 
         if not source_path.exists():
-            _logger.error("sandbox_source_file_not_found", extra={"path": source})
+            _logger.warning("sandbox_source_file_not_found", extra={"path": source})
             raise SandboxError(_ERR_SOURCE_NOT_FOUND)
 
         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -1911,7 +1917,7 @@ echo $? > "/mnt/shared/output/{result_name}"
 
         result = await self._qmp.savevm(name)
         if not result.success:
-            _logger.error("snapshot_create_failed", extra={"error": result.error})
+            _logger.warning("snapshot_create_failed", extra={"error": result.error})
             raise SandboxError(_ERR_SNAPSHOT_CREATE)
 
         _logger.info("snapshot_created", extra={"snapshot_name": name})
@@ -1931,7 +1937,7 @@ echo $? > "/mnt/shared/output/{result_name}"
 
         result = await self._qmp.loadvm(snapshot_id)
         if not result.success:
-            _logger.error("snapshot_restore_failed", extra={"error": result.error})
+            _logger.warning("snapshot_restore_failed", extra={"error": result.error})
             raise SandboxError(_ERR_SNAPSHOT_RESTORE)
 
         _logger.info("snapshot_restored", extra={"snapshot_id": snapshot_id})
@@ -1972,7 +1978,7 @@ echo $? > "/mnt/shared/output/{result_name}"
 
         result = await self._qmp.delvm(name)
         if not result.success:
-            _logger.error("snapshot_delete_failed", extra={"error": result.error})
+            _logger.warning("snapshot_delete_failed", extra={"error": result.error})
             raise SandboxError(_ERR_SNAPSHOT_DELETE)
 
         _logger.info("snapshot_deleted", extra={"snapshot_name": name})

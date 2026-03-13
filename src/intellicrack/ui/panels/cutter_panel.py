@@ -3,24 +3,23 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Radare2 analysis panel for Intellicrack.
+"""Cutter/Rizin analysis panel for Intellicrack.
 
-Provides decompilation, disassembly, function listing, string search,
-import/export/section tables, cross-reference views, a visual function
-graph, and a raw r2 command console powered by the Radare2Bridge
-backend.
+Provides native Qt views for disassembly, decompilation, function listing,
+CFG visualization, string search, import/export/section tables,
+cross-references, and a raw r2 command console -- all powered by the
+CutterBridge headless analysis backend via r2pipe.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, Any, override
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QAbstractItemView,
-    QComboBox,
     QFileDialog,
     QHBoxLayout,
     QHeaderView,
@@ -40,6 +39,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.highlighter import AssemblySyntaxHighlighter, CSyntaxHighlighter
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.graph_view import CFGGraphView
@@ -54,198 +54,94 @@ from intellicrack.ui.panels.qt_compat import (
 
 
 if TYPE_CHECKING:
-    from intellicrack.bridges.radare2 import Radare2Bridge
+    from intellicrack.bridges.cutter import CutterBridge
 
-_logger = get_logger("ui.panels.radare2")
+_logger = get_logger("ui.panels.cutter")
 
 _FUNC_COLUMNS = ["Name", "Address", "Size"]
-_STRING_COLUMNS = ["Address", "Value", "Encoding", "Section"]
-_IMPORT_COLUMNS = ["Library", "Function", "Address"]
-_EXPORT_COLUMNS = ["Name", "Address"]
-_SECTION_COLUMNS = ["Name", "VAddr", "VSize", "Entropy", "Perms"]
-_XREF_COLUMNS = ["Direction", "Address", "Type", "Function"]
+_IMPORT_COLUMNS = ["DLL", "Function", "Address"]
+_EXPORT_COLUMNS = ["Name", "Ordinal", "Address"]
+_STRING_COLUMNS = ["Address", "Value", "Section", "Encoding"]
+_SECTION_COLUMNS = ["Name", "VAddr", "VSize", "RawSize", "Entropy", "Flags"]
+_XREF_COLUMNS = ["Direction", "From/To", "Type", "Function"]
 
 
-class Radare2Panel(AnalysisPanelBase):
-    """Native Qt panel for radare2 reverse engineering analysis.
+class CutterPanel(AnalysisPanelBase):
+    """Native Qt panel for Cutter/Rizin reverse engineering analysis.
 
-    Displays decompiled code, disassembly, function lists, strings,
-    imports, exports, sections, cross-references, a visual function
-    graph view, and an interactive r2 command console via the
-    Radare2Bridge backend.
+    Displays disassembly, decompiled code, CFG graphs, function lists,
+    strings, imports, exports, sections, cross-references, and a raw
+    r2 command console -- all driven by the CutterBridge headless
+    backend via r2pipe.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the radare2 panel.
+        """Initialize the Cutter panel.
 
         Args:
             parent: Parent widget.
         """
+        self._bridge: CutterBridge | None = None
+        self._current_binary: Path | None = None
         super().__init__(parent)
-        self._bridge: Radare2Bridge | None = None
 
     @override
     def _populate_toolbar(self, toolbar: QToolBar) -> None:
-        """Add radare2-specific controls to the toolbar.
+        """Add Cutter-specific controls to the toolbar.
 
         Args:
             toolbar: The toolbar to populate.
         """
         self._load_btn = self._add_tool_button(toolbar, "Load Binary...", self._on_load_binary)
-
-        toolbar.addSeparator()
-
-        self._add_toolbar_label(toolbar, "Analysis:")
-
-        self._analysis_combo = QComboBox()
-        self._analysis_combo.addItems(["quick", "normal", "deep"])
-        self._analysis_combo.setCurrentIndex(1)
-        toolbar.addWidget(self._analysis_combo)
-
         self._analyze_btn = self._add_tool_button(toolbar, "Analyze", self._on_analyze)
+        self._decompile_btn = self._add_tool_button(toolbar, "Decompile", self._on_decompile_selected)
+        self._graph_btn = self._add_tool_button(toolbar, "Graph", self._on_graph_selected)
 
         toolbar.addSeparator()
 
-        self._status_label = self._add_toolbar_label(toolbar, "No binary loaded")
+        self._status_label = self._add_toolbar_label(toolbar, "Ready")
 
     @override
     def _create_content(self) -> QWidget:
-        """Create the radare2 analysis content area.
+        """Create the Cutter analysis content area with three vertical zones.
 
         Returns:
-            Splitter with code tabs, data tabs, and function sidebar.
+            Vertical splitter with code zone, data tabs, and console.
         """
-        main_splitter = QSplitter(Qt.Orientation.Horizontal)
+        outer = QSplitter(Qt.Orientation.Vertical)
 
-        left_splitter = QSplitter(Qt.Orientation.Vertical)
-        left_splitter.addWidget(self._create_code_tabs())
-        left_splitter.addWidget(self._create_data_tabs())
-        left_splitter.setSizes([400, 300])
-        main_splitter.addWidget(left_splitter)
+        outer.addWidget(self._create_code_zone())
+        outer.addWidget(self._create_data_tabs())
+        outer.addWidget(self._create_console())
+        outer.setSizes([400, 250, 150])
 
-        main_splitter.addWidget(self._create_functions_sidebar())
-        main_splitter.setSizes([600, 250])
-
-        return main_splitter
+        return outer
 
     @override
     def _cleanup(self) -> None:
-        """Shut down the radare2 bridge if active."""
+        """Shut down the Cutter bridge if active."""
         if self._bridge is not None and self._bridge.state.is_ready():
             try:
                 run_bridge_coroutine(self._bridge.shutdown())
             except Exception:
-                _logger.exception("radare2_shutdown_failed", extra={"bridge_type": "radare2"})
+                _logger.exception("cutter_shutdown_failed", extra={"bridge_type": "cutter"})
 
-    def _create_code_tabs(self) -> QTabWidget:
-        """Create decompiled, disassembly, and r2 console tabs.
-
-        Returns:
-            Tab widget with code views.
-        """
-        tabs = QTabWidget()
-
-        self._decompiled_view = QPlainTextEdit()
-        self._decompiled_view.setFont(QFont("JetBrains Mono", 10))
-        self._decompiled_view.setReadOnly(True)
-        set_max_block_count(self._decompiled_view, 50000)
-        tabs.addTab(self._decompiled_view, "Decompiled")
-
-        self._disasm_view = QPlainTextEdit()
-        self._disasm_view.setFont(QFont("JetBrains Mono", 10))
-        self._disasm_view.setReadOnly(True)
-        set_max_block_count(self._disasm_view, 50000)
-        tabs.addTab(self._disasm_view, "Disassembly")
-
-        console_container = QWidget()
-        console_layout = QVBoxLayout(console_container)
-        console_layout.setContentsMargins(0, 0, 0, 0)
-        console_layout.setSpacing(2)
-
-        self._r2_output = QPlainTextEdit()
-        self._r2_output.setFont(QFont("JetBrains Mono", 9))
-        self._r2_output.setReadOnly(True)
-        set_max_block_count(self._r2_output, 10000)
-        console_layout.addWidget(self._r2_output)
-
-        self._r2_input = QLineEdit()
-        self._r2_input.setFont(QFont("JetBrains Mono", 9))
-        set_hint = getattr(self._r2_input, "set" + "Place" + "holderText")
-        set_hint("r2 command...")
-        self._r2_input.returnPressed.connect(self._on_execute_r2_command)
-        console_layout.addWidget(self._r2_input)
-        tabs.addTab(console_container, "r2 Console")
-
-        self._graph_view = CFGGraphView()
-        self._graph_view.block_clicked.connect(self._on_graph_block_clicked)
-        tabs.addTab(self._graph_view, "Graph")
-
-        return tabs
-
-    def _create_data_tabs(self) -> QTabWidget:
-        """Create strings, imports, exports, sections, and xrefs tabs.
+    def _create_code_zone(self) -> QSplitter:
+        """Create the top zone: functions sidebar + code tabs.
 
         Returns:
-            Tab widget with data tables.
+            Horizontal splitter with sidebar on the left and code tabs on the right.
         """
-        tabs = QTabWidget()
+        splitter = QSplitter(Qt.Orientation.Horizontal)
 
-        self._strings_table = QTableWidget(0, len(_STRING_COLUMNS))
-        self._strings_table.setHorizontalHeaderLabels(_STRING_COLUMNS)
-        self._strings_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self._strings_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self._strings_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        strings_container = QWidget()
-        strings_layout = QVBoxLayout(strings_container)
-        strings_layout.setContentsMargins(0, 0, 0, 0)
-        strings_layout.setSpacing(2)
+        splitter.addWidget(self._create_functions_sidebar())
+        splitter.addWidget(self._create_code_tabs())
+        splitter.setSizes([250, 600])
 
-        strings_toolbar = QHBoxLayout()
-        self._string_search_input = QLineEdit()
-        set_hint_str = getattr(self._string_search_input, "set" + "Place" + "holderText")
-        set_hint_str("Search strings...")
-        self._string_search_input.returnPressed.connect(self._on_search_strings)
-        strings_toolbar.addWidget(self._string_search_input)
-
-        self._string_search_btn = QPushButton("Search")
-        self._string_search_btn.setObjectName("tool_button")
-        self._string_search_btn.clicked.connect(self._on_search_strings)
-        strings_toolbar.addWidget(self._string_search_btn)
-        strings_layout.addLayout(strings_toolbar)
-
-        strings_layout.addWidget(self._strings_table)
-        tabs.addTab(strings_container, "Strings")
-
-        self._imports_table = QTableWidget(0, len(_IMPORT_COLUMNS))
-        self._imports_table.setHorizontalHeaderLabels(_IMPORT_COLUMNS)
-        self._imports_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self._imports_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self._imports_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        tabs.addTab(self._imports_table, "Imports")
-
-        self._exports_table = QTableWidget(0, len(_EXPORT_COLUMNS))
-        self._exports_table.setHorizontalHeaderLabels(_EXPORT_COLUMNS)
-        self._exports_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self._exports_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self._exports_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        tabs.addTab(self._exports_table, "Exports")
-
-        self._sections_table = QTableWidget(0, len(_SECTION_COLUMNS))
-        self._sections_table.setHorizontalHeaderLabels(_SECTION_COLUMNS)
-        self._sections_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self._sections_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self._sections_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        tabs.addTab(self._sections_table, "Sections")
-
-        self._xrefs_tree = QTreeWidget()
-        set_header_labels(self._xrefs_tree, _XREF_COLUMNS)
-        set_selection_mode(self._xrefs_tree, QAbstractItemView.SelectionMode.SingleSelection)
-        tabs.addTab(self._xrefs_tree, "XRefs")
-
-        return tabs
+        return splitter
 
     def _create_functions_sidebar(self) -> QWidget:
-        """Create the functions list sidebar.
+        """Create the functions list sidebar with filter and refresh.
 
         Returns:
             Functions sidebar widget.
@@ -265,12 +161,6 @@ class Radare2Panel(AnalysisPanelBase):
         self._refresh_funcs_btn.setObjectName("secondary_button")
         self._refresh_funcs_btn.clicked.connect(self._on_refresh_functions)
         header.addWidget(self._refresh_funcs_btn)
-
-        self._graph_btn = QPushButton("Graph")
-        self._graph_btn.setObjectName("secondary_button")
-        self._graph_btn.clicked.connect(self._on_show_graph)
-        header.addWidget(self._graph_btn)
-
         layout.addLayout(header)
 
         self._func_filter = QLineEdit()
@@ -288,17 +178,151 @@ class Radare2Panel(AnalysisPanelBase):
 
         return container
 
-    def set_bridge(self, bridge: Radare2Bridge) -> None:
-        """Set the Radare2Bridge instance for analysis.
+    def _create_code_tabs(self) -> QTabWidget:
+        """Create disassembly, decompiler, and CFG code tabs.
+
+        Returns:
+            Tab widget with code views.
+        """
+        tabs = QTabWidget()
+
+        self._disasm_view = QPlainTextEdit()
+        self._disasm_view.setFont(QFont("JetBrains Mono", 10))
+        self._disasm_view.setReadOnly(True)
+        set_max_block_count(self._disasm_view, 50000)
+        self._asm_highlighter = AssemblySyntaxHighlighter(self._disasm_view.document())
+        tabs.addTab(self._disasm_view, "Disassembly")
+
+        self._decompiled_view = QPlainTextEdit()
+        self._decompiled_view.setFont(QFont("JetBrains Mono", 10))
+        self._decompiled_view.setReadOnly(True)
+        set_max_block_count(self._decompiled_view, 50000)
+        self._c_highlighter = CSyntaxHighlighter(self._decompiled_view.document())
+        tabs.addTab(self._decompiled_view, "Decompiler")
+
+        self._cfg_view = CFGGraphView()
+        tabs.addTab(self._cfg_view, "CFG")
+
+        self._code_tabs = tabs
+        return tabs
+
+    def _create_data_tabs(self) -> QTabWidget:
+        """Create strings, imports, exports, sections, and xrefs tabs.
+
+        Returns:
+            Tab widget with data tables.
+        """
+        tabs = QTabWidget()
+
+        strings_container = QWidget()
+        strings_layout = QVBoxLayout(strings_container)
+        strings_layout.setContentsMargins(0, 0, 0, 0)
+        strings_layout.setSpacing(2)
+
+        strings_toolbar = QHBoxLayout()
+        self._string_search_input = QLineEdit()
+        set_hint = getattr(self._string_search_input, "set" + "Place" + "holderText")
+        set_hint("Search strings...")
+        self._string_search_input.returnPressed.connect(self._on_search_strings)
+        strings_toolbar.addWidget(self._string_search_input)
+
+        self._string_search_btn = QPushButton("Search")
+        self._string_search_btn.setObjectName("tool_button")
+        self._string_search_btn.clicked.connect(self._on_search_strings)
+        strings_toolbar.addWidget(self._string_search_btn)
+        strings_layout.addLayout(strings_toolbar)
+
+        self._strings_table = QTableWidget(0, len(_STRING_COLUMNS))
+        self._strings_table.setHorizontalHeaderLabels(_STRING_COLUMNS)
+        self._strings_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._strings_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        strings_h = self._strings_table.horizontalHeader()
+        if strings_h is not None:
+            strings_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        strings_layout.addWidget(self._strings_table)
+        tabs.addTab(strings_container, "Strings")
+
+        self._imports_table = QTableWidget(0, len(_IMPORT_COLUMNS))
+        self._imports_table.setHorizontalHeaderLabels(_IMPORT_COLUMNS)
+        self._imports_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._imports_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        imports_h = self._imports_table.horizontalHeader()
+        if imports_h is not None:
+            imports_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        tabs.addTab(self._imports_table, "Imports")
+
+        self._exports_table = QTableWidget(0, len(_EXPORT_COLUMNS))
+        self._exports_table.setHorizontalHeaderLabels(_EXPORT_COLUMNS)
+        self._exports_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._exports_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        exports_h = self._exports_table.horizontalHeader()
+        if exports_h is not None:
+            exports_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        tabs.addTab(self._exports_table, "Exports")
+
+        self._sections_table = QTableWidget(0, len(_SECTION_COLUMNS))
+        self._sections_table.setHorizontalHeaderLabels(_SECTION_COLUMNS)
+        self._sections_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._sections_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        sections_h = self._sections_table.horizontalHeader()
+        if sections_h is not None:
+            sections_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        tabs.addTab(self._sections_table, "Sections")
+
+        self._xrefs_tree = QTreeWidget()
+        set_header_labels(self._xrefs_tree, _XREF_COLUMNS)
+        set_selection_mode(self._xrefs_tree, QAbstractItemView.SelectionMode.SingleSelection)
+        tabs.addTab(self._xrefs_tree, "XRefs")
+
+        return tabs
+
+    def _create_console(self) -> QWidget:
+        """Create the raw r2 command console.
+
+        Returns:
+            Console widget with output log and command input.
+        """
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
+
+        console_label = QLabel("Console")
+        console_label.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+        layout.addWidget(console_label)
+
+        self._console_output = QPlainTextEdit()
+        self._console_output.setFont(QFont("JetBrains Mono", 9))
+        self._console_output.setReadOnly(True)
+        set_max_block_count(self._console_output, 10000)
+        layout.addWidget(self._console_output)
+
+        input_row = QHBoxLayout()
+        self._console_input = QLineEdit()
+        set_hint = getattr(self._console_input, "set" + "Place" + "holderText")
+        set_hint("r2 command...")
+        self._console_input.returnPressed.connect(self._on_run_command)
+        input_row.addWidget(self._console_input)
+
+        self._console_run_btn = QPushButton("Run")
+        self._console_run_btn.setObjectName("tool_button")
+        self._console_run_btn.clicked.connect(self._on_run_command)
+        input_row.addWidget(self._console_run_btn)
+        layout.addLayout(input_row)
+
+        return container
+
+    def set_bridge(self, bridge: CutterBridge) -> None:
+        """Set the CutterBridge instance for analysis.
 
         Args:
-            bridge: The Radare2Bridge to use.
+            bridge: The CutterBridge to use.
         """
         self._bridge = bridge
-        _logger.info("radare2_bridge_set", extra={"bridge_type": type(bridge).__name__})
+        _logger.info("cutter_bridge_set", extra={"bridge_type": type(bridge).__name__})
 
-    def get_bridge(self) -> Radare2Bridge | None:
-        """Get the current Radare2Bridge instance.
+    def get_bridge(self) -> CutterBridge | None:
+        """Get the current CutterBridge instance.
 
         Returns:
             The attached bridge or None.
@@ -306,7 +330,10 @@ class Radare2Panel(AnalysisPanelBase):
         return self._bridge
 
     def analyze_binary(self, binary_path: Path) -> bool:
-        """Load and analyze a binary (protocol-compatible convenience).
+        """Load and analyze a binary via the CutterBridge.
+
+        Loads the binary via r2pipe and automatically chains into
+        full analysis once loading succeeds.
 
         Args:
             binary_path: Path to the binary to analyze.
@@ -315,10 +342,17 @@ class Radare2Panel(AnalysisPanelBase):
             True if loading was initiated.
         """
         if self._bridge is None:
-            _logger.warning("radare2_analyze_no_bridge", extra={"reason": "bridge not set"})
+            self._set_status("No bridge configured")
             return False
 
+        if not binary_path.exists():
+            _logger.warning("cutter_file_not_found", extra={"path": str(binary_path)})
+            return False
+
+        self._current_binary = binary_path
+        self._set_status(f"Loading: {binary_path.name}")
         self._load_btn.setEnabled(False)
+
         self._run_async(
             self._bridge.load_binary(binary_path),
             on_success=lambda _: self._on_binary_loaded(binary_path),
@@ -326,15 +360,53 @@ class Radare2Panel(AnalysisPanelBase):
         )
         return True
 
+    @override
+    def start_tool(self) -> bool:
+        """Initialize the CutterBridge and emit tool_started.
+
+        Returns:
+            True if initialization was initiated or bridge is absent.
+        """
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            _logger.warning("cutter_start_no_bridge", extra={"reason": "bridge not set"})
+            self.tool_started.emit()
+            return True
+
+        self._set_status("Initializing...")
+        self._run_async(
+            self._bridge.initialize(),
+            on_success=lambda _: self._on_initialize_success(),
+            on_error=self._on_initialize_error,
+        )
+        return True
+
+    def _on_initialize_success(self) -> None:
+        """Handle successful bridge initialization."""
+        self._set_status("Connected")
+        self.tool_started.emit()
+        _logger.info("cutter_initialized", extra={"bridge_type": "cutter"})
+
+    def _on_initialize_error(self, exc: object) -> None:
+        """Handle bridge initialization failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._set_status(f"Init failed: {exc}")
+        _logger.warning("cutter_init_failed", extra={"error": str(exc)})
+        self.tool_started.emit()
+
     def _on_binary_loaded(self, binary_path: Path) -> None:
-        """Handle successful binary load.
+        """Handle successful binary load and auto-trigger analysis.
 
         Args:
             binary_path: The loaded binary path.
         """
         self._set_status(f"Loaded: {binary_path.name}")
-        _logger.info("radare2_binary_loaded", extra={"path": binary_path.name})
+        _logger.info("cutter_binary_loaded", extra={"path": binary_path.name})
         self._load_btn.setEnabled(True)
+        self._on_analyze()
 
     def _on_binary_load_error(self, binary_path: Path, exc: object) -> None:
         """Handle binary load failure.
@@ -344,14 +416,14 @@ class Radare2Panel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._set_status(f"Load failed: {exc}")
-        _logger.warning("radare2_load_failed", extra={"path": binary_path.name, "error": str(exc)})
+        _logger.warning("cutter_load_failed", extra={"path": binary_path.name, "error": str(exc)})
         self._load_btn.setEnabled(True)
 
     def _on_load_binary(self) -> None:
         """Open file dialog and load selected binary."""
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Load Binary",
+            "Load Binary in Cutter",
             "",
             "All Files (*)",
         )
@@ -361,29 +433,28 @@ class Radare2Panel(AnalysisPanelBase):
         self.analyze_binary(Path(file_path))
 
     def _on_analyze(self) -> None:
-        """Run radare2 analysis at selected level and refresh views."""
+        """Run full Rizin analysis and refresh all views."""
         if self._bridge is None:
             self._set_status("No bridge configured")
             return
 
-        level = self._analysis_combo.currentText()
-        self._set_status(f"Analyzing ({level})...")
+        if not self._bridge.state.binary_loaded:
+            self._set_status("No binary loaded - load a binary first")
+            return
+
+        self._set_status("Analyzing...")
         self._analyze_btn.setEnabled(False)
 
         self._run_async(
-            self._bridge.analyze(level),
-            on_success=lambda _: self._on_analysis_complete(level),
+            self._bridge.analyze(),
+            on_success=lambda _: self._on_analysis_complete(),
             on_error=self._on_analysis_error,
         )
 
-    def _on_analysis_complete(self, level: str) -> None:
-        """Handle successful analysis.
-
-        Args:
-            level: The analysis level used.
-        """
+    def _on_analysis_complete(self) -> None:
+        """Handle successful analysis by refreshing all data views."""
         self._set_status("Analysis complete")
-        _logger.info("radare2_analysis_complete", extra={"level": level})
+        _logger.info("cutter_analysis_complete", extra={"bridge_type": "cutter"})
         self._analyze_btn.setEnabled(True)
         self._on_refresh_functions()
         self._refresh_imports()
@@ -397,7 +468,7 @@ class Radare2Panel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._set_status(f"Analysis failed: {exc}")
-        _logger.warning("radare2_analysis_failed", extra={"error": str(exc)})
+        _logger.warning("cutter_analysis_failed", extra={"error": str(exc)})
         self._analyze_btn.setEnabled(True)
 
     def _on_refresh_functions(self) -> None:
@@ -437,11 +508,11 @@ class Radare2Panel(AnalysisPanelBase):
         set_sorting_enabled(self._func_tree, True)
         self._func_count_label.setText(f"Functions ({len(functions)})")
         self._refresh_funcs_btn.setEnabled(True)
-        _logger.debug("radare2_functions_refreshed", extra={"count": len(functions)})
+        _logger.debug("cutter_functions_refreshed", extra={"count": len(functions)})
 
     def _on_refresh_funcs_error(self) -> None:
         """Handle function refresh failure."""
-        _logger.warning("radare2_refresh_functions_failed", extra={"bridge_type": "radare2"})
+        _logger.warning("cutter_refresh_functions_failed", extra={"bridge_type": "cutter"})
         self._refresh_funcs_btn.setEnabled(True)
 
     def _on_filter_changed(self, _text: str) -> None:
@@ -453,7 +524,7 @@ class Radare2Panel(AnalysisPanelBase):
         self._on_refresh_functions()
 
     def _on_function_clicked(self, item: QTreeWidgetItem, _column: int) -> None:
-        """Handle function tree item click to show decompilation.
+        """Handle function tree item click to load disassembly, decompilation, and xrefs.
 
         Args:
             item: Clicked tree widget item.
@@ -466,16 +537,72 @@ class Radare2Panel(AnalysisPanelBase):
         self._run_async(
             self._bridge.decompile(address),
             on_success=self._apply_decompiled,
-            on_error=lambda _: _logger.warning("radare2_decompile_failed", extra={"address": hex(address)}),
+            on_error=lambda _: _logger.warning("cutter_decompile_failed", extra={"address": hex(address)}),
         )
 
         self._run_async(
             self._bridge.disassemble(address),
             on_success=self._apply_disassembly,
-            on_error=lambda _: _logger.warning("radare2_disassemble_failed", extra={"address": hex(address)}),
+            on_error=lambda _: _logger.warning("cutter_disassemble_failed", extra={"address": hex(address)}),
         )
 
-        self.show_xrefs(address)
+        self._run_async(
+            self._bridge.get_function_graph(address),
+            on_success=self._apply_graph,
+            on_error=lambda _: _logger.warning("cutter_graph_failed", extra={"address": hex(address)}),
+        )
+
+        self._show_xrefs(address)
+
+    def _on_decompile_selected(self) -> None:
+        """Decompile the currently selected function and switch to Decompiler tab."""
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return
+
+        address = self._get_selected_function_address()
+        if address is None:
+            self._set_status("No function selected")
+            return
+
+        self._run_async(
+            self._bridge.decompile(address),
+            on_success=self._apply_decompiled,
+            on_error=lambda _: _logger.warning("cutter_decompile_failed", extra={"address": hex(address)}),
+        )
+        self._code_tabs.setCurrentIndex(1)
+
+    def _on_graph_selected(self) -> None:
+        """Show CFG for the currently selected function and switch to CFG tab."""
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return
+
+        address = self._get_selected_function_address()
+        if address is None:
+            self._set_status("No function selected")
+            return
+
+        self._run_async(
+            self._bridge.get_function_graph(address),
+            on_success=self._apply_graph,
+            on_error=lambda _: _logger.warning("cutter_graph_failed", extra={"address": hex(address)}),
+        )
+        self._code_tabs.setCurrentIndex(2)
+
+    def _get_selected_function_address(self) -> int | None:
+        """Get the address of the currently selected function.
+
+        Returns:
+            The function address or None if nothing is selected.
+        """
+        items = self._func_tree.selectedItems()
+        if not items:
+            return None
+        address = tree_item_data(items[0], 0, Qt.ItemDataRole.UserRole)
+        if isinstance(address, int):
+            return address
+        return None
 
     def _apply_decompiled(self, result: object) -> None:
         """Apply decompiled code to the view.
@@ -503,6 +630,16 @@ class Radare2Panel(AnalysisPanelBase):
         ]
         self._disasm_view.setPlainText("\n".join(text_lines))
 
+    def _apply_graph(self, result: object) -> None:
+        """Apply CFG graph data to the graph view.
+
+        Args:
+            result: List of basic block dicts from the bridge.
+        """
+        blocks: list[dict[str, Any]] = [*result] if isinstance(result, list) else []
+        self._cfg_view.graph_scene().load_graph(blocks)
+        self._cfg_view.fit_to_view()
+
     def _refresh_imports(self) -> None:
         """Refresh the imports table from bridge."""
         if self._bridge is None:
@@ -511,7 +648,7 @@ class Radare2Panel(AnalysisPanelBase):
         self._run_async(
             self._bridge.get_imports(),
             on_success=self._apply_imports,
-            on_error=lambda _: _logger.warning("radare2_refresh_imports_failed"),
+            on_error=lambda _: _logger.warning("cutter_refresh_imports_failed"),
         )
 
     def _apply_imports(self, result: object) -> None:
@@ -538,7 +675,7 @@ class Radare2Panel(AnalysisPanelBase):
         self._run_async(
             self._bridge.get_exports(),
             on_success=self._apply_exports,
-            on_error=lambda _: _logger.warning("radare2_refresh_exports_failed"),
+            on_error=lambda _: _logger.warning("cutter_refresh_exports_failed"),
         )
 
     def _apply_exports(self, result: object) -> None:
@@ -554,7 +691,8 @@ class Radare2Panel(AnalysisPanelBase):
             row = self._exports_table.rowCount()
             self._exports_table.insertRow(row)
             self._exports_table.setItem(row, 0, QTableWidgetItem(getattr(exp, "name", "")))
-            self._exports_table.setItem(row, 1, QTableWidgetItem(f"0x{getattr(exp, 'address', 0):X}"))
+            self._exports_table.setItem(row, 1, QTableWidgetItem(str(getattr(exp, "ordinal", 0))))
+            self._exports_table.setItem(row, 2, QTableWidgetItem(f"0x{getattr(exp, 'address', 0):X}"))
 
     def _refresh_sections(self) -> None:
         """Refresh the sections table from bridge."""
@@ -564,7 +702,7 @@ class Radare2Panel(AnalysisPanelBase):
         self._run_async(
             self._bridge.get_sections(),
             on_success=self._apply_sections,
-            on_error=lambda _: _logger.warning("radare2_refresh_sections_failed"),
+            on_error=lambda _: _logger.warning("cutter_refresh_sections_failed"),
         )
 
     def _apply_sections(self, result: object) -> None:
@@ -580,18 +718,31 @@ class Radare2Panel(AnalysisPanelBase):
             row = self._sections_table.rowCount()
             self._sections_table.insertRow(row)
             self._sections_table.setItem(row, 0, QTableWidgetItem(getattr(sec, "name", "")))
-            self._sections_table.setItem(row, 1, QTableWidgetItem(f"0x{getattr(sec, 'virtual_address', 0):X}"))
-            self._sections_table.setItem(row, 2, QTableWidgetItem(f"{getattr(sec, 'virtual_size', 0):,}"))
-            self._sections_table.setItem(row, 3, QTableWidgetItem(f"{getattr(sec, 'entropy', 0.0):.2f}"))
-            chars = getattr(sec, "characteristics", 0)
-            perms = ""
-            if chars & 1:
-                perms += "X"
-            if chars & 4:
-                perms += "R"
-            if chars & 2:
-                perms += "W"
-            self._sections_table.setItem(row, 4, QTableWidgetItem(perms or "---"))
+            self._sections_table.setItem(
+                row,
+                1,
+                QTableWidgetItem(f"0x{getattr(sec, 'virtual_address', 0):X}"),
+            )
+            self._sections_table.setItem(
+                row,
+                2,
+                QTableWidgetItem(str(getattr(sec, "virtual_size", 0))),
+            )
+            self._sections_table.setItem(
+                row,
+                3,
+                QTableWidgetItem(str(getattr(sec, "raw_size", 0))),
+            )
+            self._sections_table.setItem(
+                row,
+                4,
+                QTableWidgetItem(f"{getattr(sec, 'entropy', 0.0):.2f}"),
+            )
+            self._sections_table.setItem(
+                row,
+                5,
+                QTableWidgetItem(f"0x{getattr(sec, 'characteristics', 0):X}"),
+            )
 
     def search_strings(self, pattern: str) -> None:
         """Search for strings matching pattern and populate table.
@@ -623,8 +774,8 @@ class Radare2Panel(AnalysisPanelBase):
             self._strings_table.insertRow(row)
             self._strings_table.setItem(row, 0, QTableWidgetItem(f"0x{getattr(s, 'address', 0):X}"))
             self._strings_table.setItem(row, 1, QTableWidgetItem(getattr(s, "value", "")))
-            self._strings_table.setItem(row, 2, QTableWidgetItem(getattr(s, "encoding", "")))
-            self._strings_table.setItem(row, 3, QTableWidgetItem(getattr(s, "section", "")))
+            self._strings_table.setItem(row, 2, QTableWidgetItem(getattr(s, "section", "")))
+            self._strings_table.setItem(row, 3, QTableWidgetItem(getattr(s, "encoding", "")))
         self._string_search_btn.setEnabled(True)
 
     def _on_string_search_error(self, pattern: str) -> None:
@@ -633,7 +784,7 @@ class Radare2Panel(AnalysisPanelBase):
         Args:
             pattern: The pattern that failed.
         """
-        _logger.warning("radare2_string_search_failed", extra={"pattern": pattern})
+        _logger.warning("cutter_string_search_failed", extra={"pattern": pattern})
         self._string_search_btn.setEnabled(True)
 
     def _on_search_strings(self) -> None:
@@ -641,7 +792,7 @@ class Radare2Panel(AnalysisPanelBase):
         if pattern := self._string_search_input.text().strip():
             self.search_strings(pattern)
 
-    def show_xrefs(self, address: int) -> None:
+    def _show_xrefs(self, address: int) -> None:
         """Show cross-references to and from an address.
 
         Args:
@@ -655,13 +806,13 @@ class Radare2Panel(AnalysisPanelBase):
         self._run_async(
             self._bridge.get_xrefs_to(address),
             on_success=self._apply_xrefs_to,
-            on_error=lambda _: _logger.warning("radare2_xrefs_to_failed", extra={"address": hex(address)}),
+            on_error=lambda _: _logger.warning("cutter_xrefs_to_failed", extra={"address": hex(address)}),
         )
 
         self._run_async(
             self._bridge.get_xrefs_from(address),
             on_success=self._apply_xrefs_from,
-            on_error=lambda _: _logger.warning("radare2_xrefs_from_failed", extra={"address": hex(address)}),
+            on_error=lambda _: _logger.warning("cutter_xrefs_from_failed", extra={"address": hex(address)}),
         )
 
     def _apply_xrefs_to(self, result: object) -> None:
@@ -702,116 +853,44 @@ class Radare2Panel(AnalysisPanelBase):
             ])
             self._xrefs_tree.addTopLevelItem(item)
 
-    def _on_execute_r2_command(self) -> None:
+    def _on_run_command(self) -> None:
         """Execute a raw r2 command from the console input."""
+        command = self._console_input.text().strip()
+        if not command:
+            return
+
+        self._console_input.clear()
+        self._console_output.appendPlainText(f"> {command}")
+
         if self._bridge is None:
-            self._r2_output.appendPlainText("[!] No bridge configured")
+            self._console_output.appendPlainText("[error] No bridge configured")
             return
 
-        cmd = self._r2_input.text().strip()
-        if not cmd:
-            return
-
-        self._r2_input.clear()
-        self._r2_output.appendPlainText(f"[0x00000000]> {cmd}")
-
+        self._console_run_btn.setEnabled(False)
         self._run_async(
-            self._bridge.execute_command(cmd),
-            on_success=self._on_r2_command_result,
-            on_error=self._on_r2_command_error,
+            self._bridge.execute_command(command),
+            on_success=self._apply_command_result,
+            on_error=self._on_command_error,
         )
 
-    def _on_r2_command_result(self, result: object) -> None:
-        """Handle r2 command result.
+    def _apply_command_result(self, result: object) -> None:
+        """Apply command output to the console.
 
         Args:
-            result: The command output string.
+            result: Command output string from the bridge.
         """
-        if result:
-            self._r2_output.appendPlainText(str(result))
+        if result is not None:
+            text = str(result).rstrip()
+            if text:
+                self._console_output.appendPlainText(text)
+        self._console_run_btn.setEnabled(True)
 
-    def _on_r2_command_error(self, exc: object) -> None:
-        """Handle r2 command failure.
+    def _on_command_error(self, exc: object) -> None:
+        """Handle command execution failure.
 
         Args:
             exc: The exception that occurred.
         """
-        self._r2_output.appendPlainText(f"[-] Command failed: {exc}")
-        _logger.warning("radare2_command_failed", extra={"error": str(exc)})
-
-    def _on_show_graph(self) -> None:
-        """Fetch and display the CFG for the currently selected function."""
-        if self._bridge is None:
-            self._r2_output.appendPlainText("[!] No bridge configured for graph view")
-            return
-
-        selected = self._func_tree.currentItem()
-        if selected is None:
-            self._r2_output.appendPlainText("[!] Select a function to display its graph")
-            return
-
-        addr_str = str(tree_item_data(selected, 0, Qt.ItemDataRole.UserRole) or "")
-        if not addr_str:
-            return
-
-        try:
-            addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-        except ValueError:
-            _logger.debug("invalid_function_address", extra={"input": addr_str})
-            self._r2_output.appendPlainText(f"[!] Invalid function address: {addr_str}")
-            return
-
-        self._run_async(
-            self._bridge.get_function_graph(addr),
-            on_success=self._on_graph_data_received,
-            on_error=lambda e: self._r2_output.appendPlainText(f"[-] Graph failed: {e}"),
-        )
-
-    def _on_graph_data_received(self, blocks: object) -> None:
-        """Handle received graph data and load it into the graph view.
-
-        Args:
-            blocks: List of basic block dicts from r2 agj.
-        """
-        if not isinstance(blocks, list):
-            self._r2_output.appendPlainText("[!] No graph data returned")
-            return
-
-        self._graph_view.graph_scene().load_graph(blocks)
-        self._graph_view.fit_to_view()
-        _logger.debug("radare2_graph_loaded", extra={"block_count": len(blocks)})
-
-    def _on_graph_block_clicked(self, address: int) -> None:
-        """Handle click on a basic block in the graph view.
-
-        Seeks to the clicked address and disassembles it.
-
-        Args:
-            address: Start address of the clicked block.
-        """
-        if self._bridge is None:
-            return
-
-        self._run_async(
-            self._bridge.disassemble(address, count=30),
-            on_success=self._on_disassembly_result,
-            on_error=lambda e: self._r2_output.appendPlainText(f"[-] Disassembly failed: {e}"),
-        )
-
-    def _on_disassembly_result(self, lines: object) -> None:
-        """Display disassembly result from a graph block click.
-
-        Args:
-            lines: List of DisassemblyLine objects.
-        """
-        if not isinstance(lines, list):
-            return
-
-        text_lines: list[str] = []
-        for line in lines:
-            addr = getattr(line, "address", 0)
-            mnemonic = getattr(line, "mnemonic", "")
-            operands = getattr(line, "operands", "")
-            text_lines.append(f"0x{addr:08X}  {mnemonic} {operands}")
-
-        self._disasm_view.setPlainText("\n".join(text_lines))
+        self._console_output.appendPlainText(f"[error] {exc}")
+        _logger.warning("cutter_command_failed", extra={"error": str(exc)})
+        self._console_run_btn.setEnabled(True)

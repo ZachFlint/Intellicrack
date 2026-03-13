@@ -1774,7 +1774,7 @@ packages:
 - pypi: ./
   name: intellicrack
   version: 0.1.0a1
-  sha256: eda35aaae48b770a636a55ab9883c3b3c796d4676d7a830d76ae026812f044ab
+  sha256: 7c2ccc56b189f17b31c6048bf7dc7aae57c1bd933769fe50b08c3307929640f6
   requires_dist:
   - psutil>=7.2.2,<8
   - torch

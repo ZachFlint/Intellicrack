@@ -50,7 +50,7 @@ def _make_plugin_source(
 
     Args:
         tools_dir: Tools directory that contains ``x64dbg_plugin/``.
-        filename: Plugin filename (e.g. ``intellicrack_bridge.dp64``).
+        filename: Plugin filename (e.g. ``intellicrack_bridge_x64.dp64``).
         content: Binary content to write.
         subdir: Sub-directory within x64dbg_plugin.
 
@@ -71,10 +71,10 @@ class TestFindPluginSourceViaDeployment:
     def test_finds_binary_in_bin_directory(tmp_path: Path) -> None:
         """Deploy succeeds when source is in bin/ directory."""
         x64dbg = _make_x64dbg_tree(tmp_path)
-        _make_plugin_source(tmp_path, "intellicrack_bridge.dp64", DUMMY_PE, "bin")
+        _make_plugin_source(tmp_path, "intellicrack_bridge_x64.dp64", DUMMY_PE, "bin")
 
         assert deploy_x64dbg_plugin(x64dbg, tmp_path) is True
-        target = x64dbg / "release" / "x64" / "plugins" / "intellicrack_bridge.dp64"
+        target = x64dbg / "release" / "x64" / "plugins" / "intellicrack_bridge_x64.dp64"
         assert target.read_bytes() == DUMMY_PE
 
     @staticmethod
@@ -83,13 +83,13 @@ class TestFindPluginSourceViaDeployment:
         x64dbg = _make_x64dbg_tree(tmp_path)
         _make_plugin_source(
             tmp_path,
-            "intellicrack_bridge.dp32",
+            "intellicrack_bridge_x32.dp32",
             DUMMY_PE_32,
             subdir="build/plugins",
         )
 
         assert deploy_x64dbg_plugin(x64dbg, tmp_path) is True
-        target = x64dbg / "release" / "x32" / "plugins" / "intellicrack_bridge.dp32"
+        target = x64dbg / "release" / "x32" / "plugins" / "intellicrack_bridge_x32.dp32"
         assert target.read_bytes() == DUMMY_PE_32
 
     @staticmethod
@@ -98,7 +98,7 @@ class TestFindPluginSourceViaDeployment:
         x64dbg = _make_x64dbg_tree(tmp_path)
         _make_plugin_source(
             tmp_path,
-            "intellicrack_bridge.dp64",
+            "intellicrack_bridge_x64.dp64",
             DUMMY_PE,
             subdir="build/Release",
         )
@@ -111,7 +111,7 @@ class TestFindPluginSourceViaDeployment:
         x64dbg = _make_x64dbg_tree(tmp_path)
         _make_plugin_source(
             tmp_path,
-            "intellicrack_bridge.dp64",
+            "intellicrack_bridge_x64.dp64",
             DUMMY_PE,
             subdir="build_x64/plugins",
         )
@@ -124,7 +124,7 @@ class TestFindPluginSourceViaDeployment:
         x64dbg = _make_x64dbg_tree(tmp_path)
         _make_plugin_source(
             tmp_path,
-            "intellicrack_bridge.dp32",
+            "intellicrack_bridge_x32.dp32",
             DUMMY_PE_32,
             subdir="build_x32/Release",
         )
@@ -135,17 +135,17 @@ class TestFindPluginSourceViaDeployment:
     def test_priority_bin_over_build(tmp_path: Path) -> None:
         """Prefer bin/ over build/plugins/ when both exist."""
         x64dbg = _make_x64dbg_tree(tmp_path)
-        _make_plugin_source(tmp_path, "intellicrack_bridge.dp64", b"\x01" * 64, "bin")
+        _make_plugin_source(tmp_path, "intellicrack_bridge_x64.dp64", b"\x01" * 64, "bin")
         _make_plugin_source(
             tmp_path,
-            "intellicrack_bridge.dp64",
+            "intellicrack_bridge_x64.dp64",
             b"\x02" * 64,
             subdir="build/plugins",
         )
 
         deploy_x64dbg_plugin(x64dbg, tmp_path)
 
-        target = x64dbg / "release" / "x64" / "plugins" / "intellicrack_bridge.dp64"
+        target = x64dbg / "release" / "x64" / "plugins" / "intellicrack_bridge_x64.dp64"
         assert target.read_bytes() == b"\x01" * 64
 
 
@@ -169,12 +169,12 @@ class TestDeployX64dbgPlugin:
     def test_deploys_dp64_binary(tmp_path: Path) -> None:
         """Deploy a .dp64 binary to x64 plugins directory."""
         x64dbg = _make_x64dbg_tree(tmp_path)
-        _make_plugin_source(tmp_path, "intellicrack_bridge.dp64", DUMMY_PE)
+        _make_plugin_source(tmp_path, "intellicrack_bridge_x64.dp64", DUMMY_PE)
 
         result = deploy_x64dbg_plugin(x64dbg, tmp_path)
 
         assert result is True
-        target = x64dbg / "release" / "x64" / "plugins" / "intellicrack_bridge.dp64"
+        target = x64dbg / "release" / "x64" / "plugins" / "intellicrack_bridge_x64.dp64"
         assert target.is_file()
         assert target.read_bytes() == DUMMY_PE
 
@@ -182,12 +182,12 @@ class TestDeployX64dbgPlugin:
     def test_deploys_dp32_binary(tmp_path: Path) -> None:
         """Deploy a .dp32 binary to x32 plugins directory."""
         x64dbg = _make_x64dbg_tree(tmp_path)
-        _make_plugin_source(tmp_path, "intellicrack_bridge.dp32", DUMMY_PE_32)
+        _make_plugin_source(tmp_path, "intellicrack_bridge_x32.dp32", DUMMY_PE_32)
 
         result = deploy_x64dbg_plugin(x64dbg, tmp_path)
 
         assert result is True
-        target = x64dbg / "release" / "x32" / "plugins" / "intellicrack_bridge.dp32"
+        target = x64dbg / "release" / "x32" / "plugins" / "intellicrack_bridge_x32.dp32"
         assert target.is_file()
         assert target.read_bytes() == DUMMY_PE_32
 
@@ -195,22 +195,22 @@ class TestDeployX64dbgPlugin:
     def test_deploys_both_architectures(tmp_path: Path) -> None:
         """Deploy both x64 and x32 plugins when both sources exist."""
         x64dbg = _make_x64dbg_tree(tmp_path)
-        _make_plugin_source(tmp_path, "intellicrack_bridge.dp64", DUMMY_PE)
-        _make_plugin_source(tmp_path, "intellicrack_bridge.dp32", DUMMY_PE_32)
+        _make_plugin_source(tmp_path, "intellicrack_bridge_x64.dp64", DUMMY_PE)
+        _make_plugin_source(tmp_path, "intellicrack_bridge_x32.dp32", DUMMY_PE_32)
 
         result = deploy_x64dbg_plugin(x64dbg, tmp_path)
 
         assert result is True
-        assert (x64dbg / "release" / "x64" / "plugins" / "intellicrack_bridge.dp64").is_file()
-        assert (x64dbg / "release" / "x32" / "plugins" / "intellicrack_bridge.dp32").is_file()
+        assert (x64dbg / "release" / "x64" / "plugins" / "intellicrack_bridge_x64.dp64").is_file()
+        assert (x64dbg / "release" / "x32" / "plugins" / "intellicrack_bridge_x32.dp32").is_file()
 
     @staticmethod
     def test_skips_copy_when_target_is_newer(tmp_path: Path) -> None:
         """Skip copy when the target file has a newer mtime than source."""
         x64dbg = _make_x64dbg_tree(tmp_path)
-        _make_plugin_source(tmp_path, "intellicrack_bridge.dp64", DUMMY_PE)
+        _make_plugin_source(tmp_path, "intellicrack_bridge_x64.dp64", DUMMY_PE)
 
-        target = x64dbg / "release" / "x64" / "plugins" / "intellicrack_bridge.dp64"
+        target = x64dbg / "release" / "x64" / "plugins" / "intellicrack_bridge_x64.dp64"
 
         time.sleep(0.05)
         target.write_bytes(DUMMY_ALTERNATE)
@@ -225,11 +225,11 @@ class TestDeployX64dbgPlugin:
         """Overwrite target when source has a newer mtime."""
         x64dbg = _make_x64dbg_tree(tmp_path)
 
-        target = x64dbg / "release" / "x64" / "plugins" / "intellicrack_bridge.dp64"
+        target = x64dbg / "release" / "x64" / "plugins" / "intellicrack_bridge_x64.dp64"
         target.write_bytes(DUMMY_ALTERNATE)
 
         time.sleep(0.05)
-        _make_plugin_source(tmp_path, "intellicrack_bridge.dp64", DUMMY_PE)
+        _make_plugin_source(tmp_path, "intellicrack_bridge_x64.dp64", DUMMY_PE)
 
         result = deploy_x64dbg_plugin(x64dbg, tmp_path)
 
@@ -241,12 +241,12 @@ class TestDeployX64dbgPlugin:
         """Create the plugins directory when it does not yet exist."""
         x64dbg = tmp_path / "x64dbg"
         x64dbg.mkdir()
-        _make_plugin_source(tmp_path, "intellicrack_bridge.dp64", DUMMY_PE)
+        _make_plugin_source(tmp_path, "intellicrack_bridge_x64.dp64", DUMMY_PE)
 
         result = deploy_x64dbg_plugin(x64dbg, tmp_path)
 
         assert result is True
-        assert (x64dbg / "release" / "x64" / "plugins" / "intellicrack_bridge.dp64").is_file()
+        assert (x64dbg / "release" / "x64" / "plugins" / "intellicrack_bridge_x64.dp64").is_file()
 
     @staticmethod
     def test_gracefully_handles_copy_failure(
@@ -255,7 +255,7 @@ class TestDeployX64dbgPlugin:
     ) -> None:
         """Return False and log warning when copy raises OSError."""
         x64dbg = _make_x64dbg_tree(tmp_path)
-        _make_plugin_source(tmp_path, "intellicrack_bridge.dp64", DUMMY_PE)
+        _make_plugin_source(tmp_path, "intellicrack_bridge_x64.dp64", DUMMY_PE)
 
         def _fail(_src: object, _dst: object, **_kw: object) -> object:
             raise OSError

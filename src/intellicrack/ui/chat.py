@@ -519,7 +519,8 @@ class ChatPanel(QFrame):
     def _scroll_to_bottom(self) -> None:
         """Scroll the message area to the bottom."""
         scrollbar = self._scroll_area.verticalScrollBar()
-        scrollbar.setValue(scrollbar.maximum())
+        if scrollbar is not None:
+            scrollbar.setValue(scrollbar.maximum())
 
     def get_messages(self) -> list[Message]:
         """Get all messages in the chat.

@@ -31,10 +31,10 @@ if TYPE_CHECKING:
 
     from ..bridges.base import ToolBridgeBase
     from ..bridges.binary import BinaryBridge
+    from ..bridges.cutter import CutterBridge
     from ..bridges.frida_bridge import FridaBridge
     from ..bridges.ghidra import GhidraBridge
     from ..bridges.process import ProcessBridge
-    from ..bridges.radare2 import Radare2Bridge
     from ..bridges.sandbox_bridge import SandboxBridge
     from ..bridges.x64dbg import X64DbgBridge
 
@@ -116,10 +116,10 @@ class ToolRegistry:
             return
 
         from ..bridges.binary import BinaryBridge as _BinaryBridge
+        from ..bridges.cutter import CutterBridge as _CutterBridge
         from ..bridges.frida_bridge import FridaBridge as _FridaBridge
         from ..bridges.ghidra import GhidraBridge as _GhidraBridge
         from ..bridges.process import ProcessBridge as _ProcessBridge
-        from ..bridges.radare2 import Radare2Bridge as _Radare2Bridge
         from ..bridges.sandbox_bridge import SandboxBridge as _SandboxBridge
         from ..bridges.x64dbg import X64DbgBridge as _X64DbgBridge
 
@@ -127,7 +127,7 @@ class ToolRegistry:
         self._bridges[ToolName.PROCESS] = _ProcessBridge()
         self._bridges[ToolName.FRIDA] = _FridaBridge()
         self._bridges[ToolName.GHIDRA] = _GhidraBridge()
-        self._bridges[ToolName.RADARE2] = _Radare2Bridge()
+        self._bridges[ToolName.CUTTER] = _CutterBridge()
         self._bridges[ToolName.X64DBG] = _X64DbgBridge()
         self._bridges[ToolName.SANDBOX] = _SandboxBridge()
         _logger.debug(
@@ -281,21 +281,21 @@ class ToolRegistry:
         _logger.debug("get_ghidra_bridge_success", extra={"bridge_type": type(bridge).__name__})
         return bridge
 
-    def get_radare2_bridge(self) -> Radare2Bridge:
-        """Get the radare2 analysis bridge.
+    def get_cutter_bridge(self) -> CutterBridge:
+        """Get the Cutter/Rizin analysis bridge.
 
         Returns:
-            Radare2Bridge instance.
+            CutterBridge instance.
 
         Raises:
             ToolError: If bridge not available.
         """
-        from ..bridges.radare2 import Radare2Bridge as _Radare2Bridge
+        from ..bridges.cutter import CutterBridge as _CutterBridge
 
-        bridge = self._bridges.get(ToolName.RADARE2)
-        if bridge is None or not isinstance(bridge, _Radare2Bridge):
+        bridge = self._bridges.get(ToolName.CUTTER)
+        if bridge is None or not isinstance(bridge, _CutterBridge):
             raise ToolError(_ERR_BRIDGE_NA)
-        _logger.debug("get_radare2_bridge_success", extra={"bridge_type": type(bridge).__name__})
+        _logger.debug("get_cutter_bridge_success", extra={"bridge_type": type(bridge).__name__})
         return bridge
 
     def get_x64dbg_bridge(self) -> X64DbgBridge:
@@ -465,14 +465,6 @@ class ToolRegistry:
         if bridge is None:
             _logger.debug("execute_tool_call_not_registered", extra={"tool_name": tool_enum.value})
             raise ToolError(_ERR_NOT_REGISTERED)
-
-        capabilities = getattr(bridge, "capabilities", None)
-        if capabilities is not None and hasattr(capabilities, "has_capability") and not capabilities.has_capability(function_name):
-            _logger.debug(
-                "execute_tool_call_no_capability",
-                extra={"tool_name": tool_enum.value, "function_name": function_name},
-            )
-            raise ToolError(_ERR_UNKNOWN_FUNC)
 
         method = getattr(bridge, function_name, None)
         if method is None:

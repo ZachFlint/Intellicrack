@@ -562,7 +562,7 @@ window.onload = function() {{
     document.getElementById('copyBtn').onclick = copyPath;
     document.getElementById('searchBox').onkeyup = performSearch;
     document.getElementById('refreshBtn').onclick = refreshTree;
-    
+
     document.getElementById('btnCode').onclick = openInCode;
     document.getElementById('btnNotepad').onclick = openInNotepad;
     document.getElementById('btnTerminal').onclick = openTerminal;

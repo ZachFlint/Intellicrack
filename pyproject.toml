@@ -17,7 +17,8 @@ keywords = [
   "security-research",
   "frida",
   "ghidra",
-  "radare2",
+  "cutter",
+  "rizin",
   "x64dbg",
 ]
 classifiers = [
@@ -637,9 +638,14 @@ fixable = [ "ALL" ]
 dummy-variable-rgx = "^(_+|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = [ "S101", "S102", "S404" ]
+"tests/**" = [ "S101", "S102", "S404", "PLR6301", "PLR2004", "B009" ]
 "scripts/**" = [ "T201", "S404", "S603" ]
+".claude/**" = [ "S404" ]
 "src/intellicrack/core/tools.py" = [ "PLC0415" ]
+"src/intellicrack/main.py" = [ "PLC0415" ]
+"src/intellicrack/ui/app.py" = [ "PLC0415" ]
+"src/intellicrack/bridges/x64dbg.py" = [ "PLR0904" ]
+"src/intellicrack/bridges/ghidra.py" = [ "PLR0904" ]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 30

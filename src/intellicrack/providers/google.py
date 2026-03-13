@@ -12,6 +12,7 @@ chat completion and tool/function calling using the modern google-genai SDK.
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Final, cast, override
@@ -93,6 +94,7 @@ class GoogleProvider(LLMProviderBase):
         if not credentials.api_key:
             raise AuthenticationError(_MSG_API_KEY_REQUIRED)
 
+        saved_gemini_key = os.environ.pop("GEMINI_API_KEY", None)
         try:
             self._client = genai.Client(api_key=credentials.api_key)
 
@@ -120,6 +122,9 @@ class GoogleProvider(LLMProviderBase):
                 extra={"error": str(e)},
             )
             raise ProviderError(_MSG_CONNECTION_FAILED) from e
+        finally:
+            if saved_gemini_key is not None:
+                os.environ["GEMINI_API_KEY"] = saved_gemini_key
 
     async def disconnect(self) -> None:
         """Disconnect from Google AI API.

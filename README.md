@@ -15,7 +15,7 @@ Intellicrack (v0.1.0a1) is designed for analyzing and defeating software licensi
 - **License Protection Analysis**: Detects algorithm types (MD5, SHA256, RSA, AES, HWID, time-based), validation functions, crypto API calls, and magic constants
 - **Binary Analysis**: PE/ELF/Mach-O parsing, section enumeration, entropy analysis, import/export extraction, string extraction
 - **Dynamic Analysis**: Process attachment, function hooking, memory read/write, breakpoint management, register inspection
-- **Script Generation**: AI-generated Frida hooks, Ghidra plugins, radare2 commands, x64dbg scripts
+- **Script Generation**: AI-generated Frida hooks, Ghidra plugins, Cutter/Rizin commands, x64dbg scripts
 - **Sandbox Execution**: Windows Sandbox integration with process/file/registry/network activity monitoring
 - **Binary Patching**: Direct modification with offset/RVA support and patch tracking
 
@@ -36,7 +36,7 @@ Unified interfaces for external reverse engineering tools:
 - **Ghidra** (`bridges/ghidra.py`): Static analysis and decompilation via ghidra_bridge
 - **x64dbg** (`bridges/x64dbg.py`): Windows debugging via named pipe communication with custom plugin
 - **Frida** (`bridges/frida_bridge.py`): Runtime instrumentation, function hooking, memory manipulation
-- **radare2** (`bridges/radare2.py`): Multi-platform binary analysis via r2pipe
+- **Cutter/Rizin** (`bridges/cutter.py`): Multi-platform binary analysis via r2pipe
 - **Binary** (`bridges/binary.py`): Direct PE/ELF/Mach-O parsing using pefile/lief
 
 ### LLM Providers
@@ -72,7 +72,7 @@ PyQt6-based GUI featuring:
 
 - Ghidra (static analysis/decompilation)
 - x64dbg (Windows debugging)
-- radare2 (binary analysis)
+- Cutter/Rizin (binary analysis)
 - Frida (runtime instrumentation)
 
 ## Installation
@@ -120,7 +120,7 @@ main()
 intellicrack/
 ├── src/intellicrack/
 │   ├── core/           # Configuration, orchestration, types, session, logging
-│   ├── bridges/        # Tool integrations (Ghidra, x64dbg, Frida, radare2)
+│   ├── bridges/        # Tool integrations (Ghidra, x64dbg, Frida, Cutter/Rizin)
 │   ├── providers/      # LLM providers (Anthropic, OpenAI, Google, Ollama, etc.)
 │   ├── sandbox/        # Windows Sandbox isolation
 │   ├── ui/             # PyQt6 graphical interface

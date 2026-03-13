@@ -15,6 +15,7 @@ import argparse
 import asyncio
 import importlib
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
@@ -278,10 +279,26 @@ def _import_main_window() -> type[MainWindow]:
     return cast("type[MainWindow]", mod.MainWindow)
 
 
+def _log_import_time(logger: Logger, module_name: str, elapsed: float) -> None:
+    """Log the elapsed time for a module import.
+
+    Args:
+        logger: Logger for timing output.
+        module_name: Fully-qualified module name that was imported.
+        elapsed: Elapsed time in seconds.
+    """
+    logger.debug("import_timing", extra={"imported_module": module_name, "elapsed_s": round(elapsed, 3)})
+
+
 def _setup_qt_and_splash(
     logger: Logger,
 ) -> tuple[QApplication, SplashScreen] | None:
     """Set up Qt application with theme, icons, and splash screen.
+
+    Phase 1 imports only PyQt6.QtWidgets, creates QApplication and shows
+    a minimal QSplashScreen immediately for visual feedback.
+    Phase 2 imports the heavier UI resource modules (ThemeManager,
+    IconManager, SplashScreen) and swaps in the full splash.
 
     Args:
         logger: Logger for error reporting.
@@ -290,25 +307,52 @@ def _setup_qt_and_splash(
         Tuple of (app, splash) or None if imports failed.
     """
     try:
+        t0 = time.perf_counter()
         qt_app_cls = _import_qt_app()
-        splash_cls = _import_splash_screen()
-        theme_mgr_cls, icon_mgr_cls = _import_theme_icon_managers()
+        _log_import_time(logger, "PyQt6.QtWidgets", time.perf_counter() - t0)
     except ImportError as e:
         logger.exception("dependency_import_failed", extra={"error": str(e)})
         logger.warning("install_hint", extra={"command": "pixi install"})
         return None
 
     try:
+        from PyQt6.QtGui import QColor, QPixmap
+        from PyQt6.QtWidgets import QSplashScreen
+
         app = qt_app_cls(sys.argv)
         qt_app_cls.setApplicationName("Intellicrack")
         qt_app_cls.setApplicationVersion(_APP_VERSION)
         app.setStyle("Fusion")
+
+        from .ui.resources.resource_helper import get_assets_path
+
+        icon_path = get_assets_path() / "icon.ico"
+        if icon_path.exists():
+            early_pixmap = QPixmap(str(icon_path))
+        else:
+            early_pixmap = QPixmap(400, 250)
+            early_pixmap.fill(QColor("#1e1e2e"))
+
+        early_splash = QSplashScreen(early_pixmap)
+        early_splash.show()
+        app.processEvents()
+        logger.debug("early_splash_shown")
+
+        t0 = time.perf_counter()
+        theme_mgr_cls, icon_mgr_cls = _import_theme_icon_managers()
+        _log_import_time(logger, "intellicrack.ui.resources", time.perf_counter() - t0)
+
+        t0 = time.perf_counter()
+        splash_cls = _import_splash_screen()
+        _log_import_time(logger, "intellicrack.ui.dialogs", time.perf_counter() - t0)
 
         theme_manager = theme_mgr_cls.get_instance()
         theme_manager.apply_theme("dark")
 
         icon_manager = icon_mgr_cls.get_instance()
         qt_app_cls.setWindowIcon(icon_manager.get_app_icon())
+
+        early_splash.close()
 
         splash = splash_cls(version=_APP_VERSION)
         splash.show_animated()

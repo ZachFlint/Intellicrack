@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Sun, Mar 08, 2026 01:30:29 PM
+Generated: Fri, Mar 13, 2026 05:04:52 PM
 Directory: D:\Intellicrack
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -10,8 +10,6 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 ----------------------------------------
 
 ├── .benchmarks/
-├── .complexipy_cache/
-│   └── c4ed0630d647fefad77d0754b11ca463.json
 ├── .fleet/
 │   └── settings.json
 ├── .github/
@@ -72,6 +70,9 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   ├── Qwen.ps1
 │   ├── UpdateTools.cmd
 │   └── UpdateTools.ps1
+├── data/
+│   ├── scripts/
+│   └── sessions.db
 ├── docs/
 │   ├── source/
 │   │   ├── _templates/
@@ -468,6 +469,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   ├── stop.png
 │       │   │   ├── system-search.png
 │       │   │   ├── tool_cheat_engine.svg
+│       │   │   ├── tool_cutter.svg
 │       │   │   ├── tool_frida.svg
 │       │   │   ├── tool_gdb.svg
 │       │   │   ├── tool_ghidra.svg
@@ -484,12 +486,12 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   ├── __init__.py
 │       │   ├── base.py
 │       │   ├── binary.py
+│       │   ├── cutter.py
 │       │   ├── frida_bridge.py
 │       │   ├── ghidra.py
 │       │   ├── installer.py
 │       │   ├── named_pipe_client.py
 │       │   ├── process.py
-│       │   ├── radare2.py
 │       │   ├── sandbox_bridge.py
 │       │   ├── schemas.py
 │       │   └── x64dbg.py
@@ -558,13 +560,13 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   ├── async_bridge.py
 │       │   │   ├── base_panel.py
 │       │   │   ├── binary_panel.py
+│       │   │   ├── cutter_panel.py
 │       │   │   ├── frida_panel.py
 │       │   │   ├── ghidra_panel.py
 │       │   │   ├── graph_view.py
 │       │   │   ├── hxd_panel.py
 │       │   │   ├── process_panel.py
 │       │   │   ├── qt_compat.py
-│       │   │   ├── radare2_panel.py
 │       │   │   ├── sandbox_panel.py
 │       │   │   ├── script_manager.py
 │       │   │   ├── stack_viewer.py
@@ -605,11 +607,14 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   ├── test_bridges/
 │   │   ├── __init__.py
 │   │   ├── test_base.py
+│   │   ├── test_frida_bridge.py
+│   │   ├── test_ghidra.py
 │   │   ├── test_plugin_deploy.py
 │   │   ├── test_schemas.py
 │   │   ├── test_x64dbg.py
 │   │   ├── test_x64dbg_api_coverage.py
-│   │   └── test_x64dbg_events.py
+│   │   ├── test_x64dbg_events.py
+│   │   └── test_x64dbg_new_methods.py
 │   ├── test_core/
 │   │   ├── __init__.py
 │   │   ├── test_analysis_aggregator.py
@@ -15328,22 +15333,12 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   ├── PIL/
 │   │   ├── __init__.pyi
 │   │   └── Image.pyi
-│   ├── PyQt6/
-│   │   ├── __init__.pyi
-│   │   ├── QtCore.pyi
-│   │   ├── QtGui.pyi
-│   │   ├── QtWidgets.pyi
-│   │   └── sip.pyi
 │   ├── r2pipe/
 │   │   ├── __init__.pyi
 │   │   ├── native.pyi
 │   │   ├── open_async.pyi
 │   │   ├── open_base.pyi
 │   │   └── open_sync.pyi
-│   ├── torch/
-│   │   ├── xpu/
-│   │   │   └── __init__.pyi
-│   │   └── __init__.pyi
 │   ├── transformers/
 │   │   ├── __init__.pyi
 │   │   └── modeling_outputs.pyi
@@ -15395,4 +15390,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 ├── REMOVE_NUL.cmd
 ├── requirements.txt
 ├── SECURITY.md
+├── simple_pyqt_test.py
+├── test_import_check.py
+├── test_pyqt.py
 └── yarn.lock

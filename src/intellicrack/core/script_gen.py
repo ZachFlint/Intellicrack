@@ -39,7 +39,7 @@ from .process_manager import ProcessManager
 
 _logger = get_logger("core.script_gen")
 
-ScriptType = Literal["frida", "ghidra", "radare2", "python", "x64dbg"]
+ScriptType = Literal["frida", "ghidra", "cutter", "python", "x64dbg"]
 
 _ApiRefGetter = Callable[[], dict[str, str]]
 
@@ -166,7 +166,7 @@ class ScriptContext:
     _LANGUAGE_API_MAP: ClassVar[dict[ScriptLanguage, str]] = {
         ScriptLanguage.JAVASCRIPT: "frida",
         ScriptLanguage.JAVA: "ghidra",
-        ScriptLanguage.R2_COMMANDS: "radare2",
+        ScriptLanguage.R2_COMMANDS: "cutter",
         ScriptLanguage.X64DBG_SCRIPT: "x64dbg",
     }
 
@@ -255,7 +255,7 @@ class ScriptContext:
         api_getters: dict[str, _ApiRefGetter] = {
             "frida": get_frida_api_reference,
             "ghidra": get_ghidra_api_reference,
-            "radare2": get_radare2_reference,
+            "cutter": get_cutter_reference,
             "x64dbg": get_x64dbg_reference,
         }
         getter = api_getters.get(api_ref_key)
@@ -273,7 +273,7 @@ class Script:
 
     Attributes:
         name: Script name.
-        script_type: Type of script (frida, ghidra, radare2, python, x64dbg).
+        script_type: Type of script (frida, ghidra, cutter, python, x64dbg).
         language: Script language.
         content: Script content (written by AI).
         description: Description of what the script does.
@@ -589,7 +589,7 @@ class ScriptManager:
         elif language == ScriptLanguage.JAVA:
             script_type = "ghidra"
         elif language == ScriptLanguage.R2_COMMANDS:
-            script_type = "radare2"
+            script_type = "cutter"
         elif language == ScriptLanguage.X64DBG_SCRIPT:
             script_type = "x64dbg"
         else:
@@ -715,8 +715,8 @@ def get_ghidra_api_reference() -> dict[str, str]:
     }
 
 
-def get_radare2_reference() -> dict[str, str]:
-    """Get radare2 command reference for AI context.
+def get_cutter_reference() -> dict[str, str]:
+    """Get Cutter/Rizin command reference for AI context.
 
     Returns:
         Dictionary mapping command categories to examples.

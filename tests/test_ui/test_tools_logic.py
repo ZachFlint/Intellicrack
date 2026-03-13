@@ -352,5 +352,5 @@ class TestCloseEmbeddedTools:
 
         assert panel._x64dbg_bridge is None
         assert panel._ghidra_bridge is None
-        assert panel._radare2_bridge is None
+        assert panel._cutter_bridge is None
         assert panel._frida_bridge is None

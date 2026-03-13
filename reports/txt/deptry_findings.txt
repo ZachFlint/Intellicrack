@@ -208,7 +208,7 @@ src\intellicrack\ui\panels\binary_panel.py:21:1: DEP003 'PyQt6' imported but it 
 
 src\intellicrack\ui\panels\binary_panel.py:22:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
-src\intellicrack\ui\panels\binary_panel.py:42:12: DEP003 'lief' imported but it is a transitive dependency
+src\intellicrack\ui\panels\binary_panel.py:44:12: DEP003 'lief' imported but it is a transitive dependency
 
 
 4 findings in src\intellicrack\ui\provider_config.py
@@ -427,9 +427,9 @@ src\intellicrack\providers\anthropic.py:18:1: DEP003 'anthropic' imported but it
 
 2 findings in src\intellicrack\providers\model_loader.py
 
-src\intellicrack\providers\model_loader.py:30:5: DEP003 'transformers' imported but it is a transitive dependency
+src\intellicrack\providers\model_loader.py:31:5: DEP003 'transformers' imported but it is a transitive dependency
 
-src\intellicrack\providers\model_loader.py:36:5: DEP003 'transformers' imported but it is a transitive dependency
+src\intellicrack\providers\model_loader.py:38:5: DEP003 'transformers' imported but it is a transitive dependency
 
 
 2 findings in src\intellicrack\ui\highlighter.py
@@ -501,7 +501,7 @@ src\intellicrack\credentials\oauth.py:30:8: DEP003 'httpx' imported but it is a 
 
 1 findings in src\intellicrack\credentials\store.py
 
-src\intellicrack\credentials\store.py:32:12: DEP003 'keyring' imported but it is a transitive dependency
+src\intellicrack\credentials\store.py:34:12: DEP003 'keyring' imported but it is a transitive dependency
 
 
 1 findings in src\intellicrack\providers\grok.py

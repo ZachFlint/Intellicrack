@@ -1,8 +1,8 @@
 {
   "tool": "complexipy",
-  "generated": "2026-03-07T20:18:52.909946",
-  "total_findings": 51,
-  "total_files": 29,
+  "generated": "2026-03-08T16:25:42.215090",
+  "total_findings": 56,
+  "total_files": 32,
   "files": [
     {
       "path": "src\\intellicrack\\bridges\\installer.py",
@@ -39,6 +39,44 @@
           "complexity": 34,
           "message": "ToolInstaller::find_tool - cognitive complexity 34 (exceeds threshold)",
           "raw": "src\\intellicrack\\bridges\\installer.py: ToolInstaller::find_tool - cognitive complexity 34 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\binary_panel.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "BinaryPanel::_extract_strings",
+          "complexity": 16,
+          "message": "BinaryPanel::_extract_strings - cognitive complexity 16 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_extract_strings - cognitive complexity 16 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "BinaryPanel::_parse_pe_ilt_entries",
+          "complexity": 18,
+          "message": "BinaryPanel::_parse_pe_ilt_entries - cognitive complexity 18 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_parse_pe_ilt_entries - cognitive complexity 18 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "BinaryPanel::_parse_elf_sections",
+          "complexity": 23,
+          "message": "BinaryPanel::_parse_elf_sections - cognitive complexity 23 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_parse_elf_sections - cognitive complexity 23 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "BinaryPanel::_parse_pe_sections",
+          "complexity": 23,
+          "message": "BinaryPanel::_parse_pe_sections - cognitive complexity 23 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_parse_pe_sections - cognitive complexity 23 (exceeds threshold)"
         }
       ]
     },
@@ -193,36 +231,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\binary_panel.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "BinaryPanel::_extract_strings",
-          "complexity": 16,
-          "message": "BinaryPanel::_extract_strings - cognitive complexity 16 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_extract_strings - cognitive complexity 16 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "BinaryPanel::_parse_pe_ilt_entries",
-          "complexity": 18,
-          "message": "BinaryPanel::_parse_pe_ilt_entries - cognitive complexity 18 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_parse_pe_ilt_entries - cognitive complexity 18 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "BinaryPanel::_parse_pe_sections",
-          "complexity": 23,
-          "message": "BinaryPanel::_parse_pe_sections - cognitive complexity 23 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_parse_pe_sections - cognitive complexity 23 (exceeds threshold)"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\bridges\\binary.py",
       "count": 2,
       "findings": [
@@ -241,6 +249,28 @@
           "complexity": 18,
           "message": "BinaryBridge::_get_imports_internal - cognitive complexity 18 (exceeds threshold)",
           "raw": "src\\intellicrack\\bridges\\binary.py: BinaryBridge::_get_imports_internal - cognitive complexity 18 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\credentials\\store.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "CredentialStore::validate",
+          "complexity": 16,
+          "message": "CredentialStore::validate - cognitive complexity 16 (exceeds threshold)",
+          "raw": "src\\intellicrack\\credentials\\store.py: CredentialStore::validate - cognitive complexity 16 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "CredentialStore::migrate_from_env",
+          "complexity": 17,
+          "message": "CredentialStore::migrate_from_env - cognitive complexity 17 (exceeds threshold)",
+          "raw": "src\\intellicrack\\credentials\\store.py: CredentialStore::migrate_from_env - cognitive complexity 17 (exceeds threshold)"
         }
       ]
     },
@@ -419,20 +449,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\credentials\\store.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "CredentialStore::migrate_from_env",
-          "complexity": 17,
-          "message": "CredentialStore::migrate_from_env - cognitive complexity 17 (exceeds threshold)",
-          "raw": "src\\intellicrack\\credentials\\store.py: CredentialStore::migrate_from_env - cognitive complexity 17 (exceeds threshold)"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\providers\\anthropic.py",
       "count": 1,
       "findings": [
@@ -569,6 +585,48 @@
           "complexity": 18,
           "message": "PythonSyntaxHighlighter::_highlight_triple_quotes - cognitive complexity 18 (exceeds threshold)",
           "raw": "src\\intellicrack\\ui\\highlighter.py: PythonSyntaxHighlighter::_highlight_triple_quotes - cognitive complexity 18 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\graph_view.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "CFGGraphScene::_compute_layers",
+          "complexity": 19,
+          "message": "CFGGraphScene::_compute_layers - cognitive complexity 19 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py: CFGGraphScene::_compute_layers - cognitive complexity 19 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "HxDPanel::load_file",
+          "complexity": 17,
+          "message": "HxDPanel::load_file - cognitive complexity 17 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hxd_panel.py: HxDPanel::load_file - cognitive complexity 17 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\sandbox_config.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "SandboxTestWorker::run",
+          "complexity": 21,
+          "message": "SandboxTestWorker::run - cognitive complexity 21 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\sandbox_config.py: SandboxTestWorker::run - cognitive complexity 21 (exceeds threshold)"
         }
       ]
     },

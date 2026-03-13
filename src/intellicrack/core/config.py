@@ -232,7 +232,7 @@ def _default_tools() -> dict[ToolName, ToolConfig]:
             auto_install=True,
             startup_timeout_seconds=10,
         ),
-        ToolName.RADARE2: ToolConfig(
+        ToolName.CUTTER: ToolConfig(
             enabled=True,
             auto_install=True,
             startup_timeout_seconds=10,
@@ -494,7 +494,7 @@ class Config:
         try:
             tomli_w = importlib.import_module("tomli_w")
         except ImportError as err:
-            _logger.exception("config_save_failed", extra={"reason": "tomli_w_not_installed"})
+            _logger.warning("config_save_failed", extra={"reason": "tomli_w_not_installed"})
             raise ImportError(_ERR_TOMLI_W_REQUIRED) from err
 
         data = self._to_dict()

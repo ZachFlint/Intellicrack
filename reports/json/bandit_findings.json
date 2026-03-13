@@ -1,6 +1,6 @@
 {
   "tool": "bandit",
-  "generated": "2026-03-07T20:14:11.196416",
+  "generated": "2026-03-08T16:21:45.596368",
   "total_findings": 9,
   "total_files": 6,
   "files": [
@@ -9,40 +9,40 @@
       "count": 4,
       "findings": [
         {
-          "line": 527,
+          "line": 530,
           "column": null,
           "severity": "Medium",
           "confidence": "High",
           "code": "B615:huggingface_unsafe_download",
           "message": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()",
-          "raw": "src/intellicrack/providers\\model_loader.py:527: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+          "raw": "src/intellicrack/providers\\model_loader.py:530: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
         },
         {
-          "line": 546,
+          "line": 549,
           "column": null,
           "severity": "Medium",
           "confidence": "High",
           "code": "B615:huggingface_unsafe_download",
           "message": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()",
-          "raw": "src/intellicrack/providers\\model_loader.py:546: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+          "raw": "src/intellicrack/providers\\model_loader.py:549: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
         },
         {
-          "line": 630,
+          "line": 634,
           "column": null,
           "severity": "Medium",
           "confidence": "High",
           "code": "B615:huggingface_unsafe_download",
           "message": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()",
-          "raw": "src/intellicrack/providers\\model_loader.py:630: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+          "raw": "src/intellicrack/providers\\model_loader.py:634: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
         },
         {
-          "line": 649,
+          "line": 653,
           "column": null,
           "severity": "Medium",
           "confidence": "High",
           "code": "B615:huggingface_unsafe_download",
           "message": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()",
-          "raw": "src/intellicrack/providers\\model_loader.py:649: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+          "raw": "src/intellicrack/providers\\model_loader.py:653: [Medium] B615:huggingface_unsafe_download: Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
         }
       ]
     },
@@ -66,13 +66,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 398,
+          "line": 399,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B404:blacklist",
           "message": "Consider possible security implications associated with the subprocess module.",
-          "raw": "src/intellicrack/core\\script_gen.py:398: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
+          "raw": "src/intellicrack/core\\script_gen.py:399: [Low] B404:blacklist: Consider possible security implications associated with the subprocess module."
         }
       ]
     },
@@ -81,13 +81,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 326,
+          "line": 327,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B311:blacklist",
           "message": "Standard pseudo-random generators are not suitable for security/cryptographic purposes.",
-          "raw": "src/intellicrack/providers\\base.py:326: [Low] B311:blacklist: Standard pseudo-random generators are not suitable for security/cryptographic purposes."
+          "raw": "src/intellicrack/providers\\base.py:327: [Low] B311:blacklist: Standard pseudo-random generators are not suitable for security/cryptographic purposes."
         }
       ]
     },

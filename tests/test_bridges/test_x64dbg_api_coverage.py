@@ -37,22 +37,22 @@ async def test_debugger_control_methods_exist(bridge: X64DbgBridge) -> None:
     """Verify debugger control methods exist and raise ToolError when not connected."""
     # These methods should try to send pipe commands and fail
 
-    with pytest.raises(ToolError, match="pipe"):
+    with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
         await bridge.step_into()
 
-    with pytest.raises(ToolError, match="pipe"):
+    with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
         await bridge.step_over()
 
-    with pytest.raises(ToolError, match="pipe"):
+    with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
         await bridge.step_out()
 
-    with pytest.raises(ToolError, match="pipe"):
+    with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
         await bridge.run()
 
-    with pytest.raises(ToolError, match="pipe"):
+    with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
         await bridge.pause()
 
-    with pytest.raises(ToolError, match="pipe"):
+    with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
         await bridge.stop()
 
 
@@ -61,7 +61,7 @@ async def test_breakpoint_management(bridge: X64DbgBridge) -> None:
     # set_breakpoint adds to dict THEN sends command.
     # If command fails, we check if it handled it gracefully or if we catch it.
 
-    with pytest.raises(ToolError, match="pipe"):
+    with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
         await bridge.set_breakpoint(_ADDR_BREAKPOINT, "software")
 
     bridge._breakpoints[_ADDR_BREAKPOINT] = BreakpointInfo(
@@ -72,7 +72,7 @@ async def test_breakpoint_management(bridge: X64DbgBridge) -> None:
         hit_count=0,
     )
 
-    with pytest.raises(ToolError, match="pipe"):
+    with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
         await bridge.remove_breakpoint(_ADDR_BREAKPOINT)
 
     bps = await bridge.get_breakpoints()
@@ -82,7 +82,7 @@ async def test_breakpoint_management(bridge: X64DbgBridge) -> None:
 
 async def test_watchpoint_management(bridge: X64DbgBridge) -> None:
     """Verify watchpoint methods."""
-    with pytest.raises(ToolError, match="pipe"):
+    with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
         await bridge.set_watchpoint(_ADDR_WATCHPOINT, _WATCHPOINT_SIZE, "read")
 
     # get_watchpoints should work locally
@@ -92,10 +92,10 @@ async def test_watchpoint_management(bridge: X64DbgBridge) -> None:
 
 async def test_register_management(bridge: X64DbgBridge) -> None:
     """Verify register methods."""
-    with pytest.raises(ToolError, match="pipe"):
+    with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
         await bridge.set_register("rax", _REG_VALUE)
 
-    with pytest.raises(ToolError, match="pipe"):
+    with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
         await bridge.get_registers()
 
 

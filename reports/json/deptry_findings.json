@@ -1,6 +1,6 @@
 {
   "tool": "deptry",
-  "generated": "2026-03-07T20:23:43.804369",
+  "generated": "2026-03-08T16:28:52.868502",
   "total_findings": 202,
   "total_files": 49,
   "files": [
@@ -728,11 +728,11 @@
           "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:22:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         },
         {
-          "line": 42,
+          "line": 44,
           "column": 12,
           "code": "DEP003",
           "message": "'lief' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:42:12: DEP003 'lief' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:44:12: DEP003 'lief' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1382,18 +1382,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 30,
+          "line": 31,
           "column": 5,
           "code": "DEP003",
           "message": "'transformers' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:30:5: DEP003 'transformers' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\providers\\model_loader.py:31:5: DEP003 'transformers' imported but it is a transitive dependency"
         },
         {
-          "line": 36,
+          "line": 38,
           "column": 5,
           "code": "DEP003",
           "message": "'transformers' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:36:5: DEP003 'transformers' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\providers\\model_loader.py:38:5: DEP003 'transformers' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1587,11 +1587,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 32,
+          "line": 34,
           "column": 12,
           "code": "DEP003",
           "message": "'keyring' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\credentials\\store.py:32:12: DEP003 'keyring' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\credentials\\store.py:34:12: DEP003 'keyring' imported but it is a transitive dependency"
         }
       ]
     },

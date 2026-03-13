@@ -269,11 +269,14 @@ class BinaryPanel(QWidget):
         self._hex_table.setHorizontalHeaderLabels(["Offset", "Hex", "ASCII"])
         self._hex_table.setFont(QFont(DEFAULT_CODE_FONT, 9))
         self._hex_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self._hex_table.verticalHeader().setVisible(False)
+        v_header = self._hex_table.verticalHeader()
+        if v_header is not None:
+            v_header.setVisible(False)
         hex_header = self._hex_table.horizontalHeader()
-        hex_header.setSectionResizeMode(_HEX_COL_OFFSET, QHeaderView.ResizeMode.ResizeToContents)
-        hex_header.setSectionResizeMode(_HEX_COL_HEX, QHeaderView.ResizeMode.Stretch)
-        hex_header.setSectionResizeMode(_HEX_COL_ASCII, QHeaderView.ResizeMode.ResizeToContents)
+        if hex_header is not None:
+            hex_header.setSectionResizeMode(_HEX_COL_OFFSET, QHeaderView.ResizeMode.ResizeToContents)
+            hex_header.setSectionResizeMode(_HEX_COL_HEX, QHeaderView.ResizeMode.Stretch)
+            hex_header.setSectionResizeMode(_HEX_COL_ASCII, QHeaderView.ResizeMode.ResizeToContents)
         connect_cell_changed(self._hex_table, self._on_hex_cell_changed)
         hex_layout.addWidget(self._hex_table)
         main_splitter.addWidget(hex_container)
@@ -300,14 +303,18 @@ class BinaryPanel(QWidget):
         self._strings_table = QTableWidget(0, 3)
         self._strings_table.setHorizontalHeaderLabels(["Offset", "Length", "String"])
         self._strings_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self._strings_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        strings_h = self._strings_table.horizontalHeader()
+        if strings_h is not None:
+            strings_h.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         self._strings_table.cellDoubleClicked.connect(self._on_string_double_clicked)
         self._side_tabs.addTab(self._strings_table, "Strings")
 
         self._patches_table = QTableWidget(0, 3)
         self._patches_table.setHorizontalHeaderLabels(["Offset", "Original", "Patched"])
         self._patches_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self._patches_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        patches_h = self._patches_table.horizontalHeader()
+        if patches_h is not None:
+            patches_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self._side_tabs.addTab(self._patches_table, "Patches")
 
         side_layout.addWidget(self._side_tabs)

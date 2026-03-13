@@ -3,10 +3,10 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Control flow graph view for radare2 function analysis.
+"""Control flow graph view for Cutter/Rizin function analysis.
 
 Provides QGraphicsView-based rendering of function CFGs parsed from
-radare2's ``agj`` JSON output with hierarchical block layout, colored
+Cutter/Rizin ``agj`` JSON output with hierarchical block layout, colored
 edges for branch direction, and interactive block selection.
 """
 
@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import math
 from collections import defaultdict, deque
-from typing import Any, Final, override
+from typing import Any, Final, cast, override
 
 from PyQt6.QtCore import QPointF, QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import (
@@ -132,8 +132,8 @@ class BasicBlockItem(QGraphicsRectItem):
     @override
     def paint(
         self,
-        painter: QPainter,
-        option: QStyleOptionGraphicsItem,
+        painter: QPainter | None,
+        option: QStyleOptionGraphicsItem | None,
         widget: QWidget | None = None,
     ) -> None:
         """Paint the block with header and assembly lines.
@@ -143,6 +143,8 @@ class BasicBlockItem(QGraphicsRectItem):
             option: Style options.
             widget: Target widget.
         """
+        if painter is None:
+            return
         del option, widget
         rect = self.rect()
 
@@ -251,8 +253,8 @@ class EdgeItem(QGraphicsPathItem):
     @override
     def paint(
         self,
-        painter: QPainter,
-        option: QStyleOptionGraphicsItem,
+        painter: QPainter | None,
+        option: QStyleOptionGraphicsItem | None,
         widget: QWidget | None = None,
     ) -> None:
         """Paint the edge path and arrowhead.
@@ -262,6 +264,8 @@ class EdgeItem(QGraphicsPathItem):
             option: Style options.
             widget: Target widget.
         """
+        if painter is None:
+            return
         super().paint(painter, option, widget)
         painter.setBrush(self._arrow_brush)
         painter.setPen(Qt.PenStyle.NoPen)
@@ -301,7 +305,7 @@ class CFGGraphScene(QGraphicsScene):
             ops = block.get("ops", [])
             if not isinstance(ops, list):
                 ops = []
-            item = BasicBlockItem(offset, ops)
+            item = BasicBlockItem(offset, cast("list[dict[str, Any]]", ops))
             self._block_items[offset] = item
             self.addItem(item)
 
@@ -477,12 +481,14 @@ class CFGGraphView(QGraphicsView):
             self.fitInView(scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
 
     @override
-    def wheelEvent(self, event: QWheelEvent) -> None:
+    def wheelEvent(self, event: QWheelEvent | None) -> None:
         """Zoom with mouse wheel.
 
         Args:
             event: Wheel event.
         """
+        if event is None:
+            return
         if event.angleDelta().y() > 0:
             self.scale(_ZOOM_FACTOR, _ZOOM_FACTOR)
         else:

@@ -22,16 +22,20 @@ if TYPE_CHECKING:
 
 
 __all__ = [
+    "ApiResolverMatch",
     "AttachError",
     "AuthenticationError",
     "BinaryInfo",
     "BreakpointInfo",
     "BridgeAnalysisSummary",
+    "ChildProcessInfo",
     "ConfigurationError",
     "ConfirmationLevel",
+    "CrashInfo",
     "CrossReference",
     "DataTypeInfo",
     "ExportInfo",
+    "FridaDeviceInfo",
     "FunctionInfo",
     "HookInfo",
     "ImportInfo",
@@ -53,7 +57,10 @@ __all__ = [
     "SandboxError",
     "SectionInfo",
     "Session",
+    "StalkerEvent",
+    "StalkerTrace",
     "StringInfo",
+    "SymbolInfo",
     "ThreadInfo",
     "ToolCall",
     "ToolDefinition",
@@ -74,7 +81,7 @@ class ToolName(enum.Enum):
     GHIDRA = "ghidra"
     X64DBG = "x64dbg"
     FRIDA = "frida"
-    RADARE2 = "radare2"
+    CUTTER = "cutter"
     PROCESS = "process"
     BINARY = "binary"
     SANDBOX = "sandbox"
@@ -710,6 +717,129 @@ class PatchInfo:
     new_bytes: bytes
     description: str
     applied: bool
+
+
+@dataclass
+class SymbolInfo:
+    """Debug symbol information resolved from an address.
+
+    Attributes:
+        name: Symbol name.
+        address: Symbol address.
+        module_name: Module containing the symbol.
+        file_name: Source file name if available.
+        line_number: Source line number if available.
+    """
+
+    name: str
+    address: int
+    module_name: str | None
+    file_name: str | None
+    line_number: int | None
+
+
+@dataclass
+class CrashInfo:
+    """Process crash report from Frida.
+
+    Attributes:
+        pid: Process ID that crashed.
+        process_name: Name of the crashed process.
+        summary: Short crash summary.
+        report: Full crash report text.
+        parameters: Additional crash parameters.
+        timestamp: Time when the crash occurred.
+    """
+
+    pid: int
+    process_name: str
+    summary: str
+    report: str
+    parameters: dict[str, object]
+    timestamp: float
+
+
+@dataclass
+class ChildProcessInfo:
+    """Information about a child process intercepted by Frida child gating.
+
+    Attributes:
+        pid: Child process ID.
+        parent_pid: Parent process ID.
+        origin: How the child was created (fork, exec, spawn).
+        identifier: Application identifier if available.
+        path: Executable path if available.
+        argv: Command line arguments.
+    """
+
+    pid: int
+    parent_pid: int
+    origin: str
+    identifier: str | None
+    path: str | None
+    argv: list[str]
+
+
+@dataclass
+class StalkerEvent:
+    """Single Stalker code tracing event.
+
+    Attributes:
+        event_type: Type of event (call, ret, exec, block, compile).
+        from_address: Source address.
+        to_address: Destination address if applicable.
+        depth: Call depth at the time of the event.
+    """
+
+    event_type: str
+    from_address: int
+    to_address: int | None
+    depth: int
+
+
+@dataclass
+class StalkerTrace:
+    """Complete Stalker trace result for a thread.
+
+    Attributes:
+        thread_id: Thread that was traced.
+        events: Collected trace events.
+        event_count: Total number of events collected.
+        duration_ms: Trace duration in milliseconds.
+    """
+
+    thread_id: int
+    events: list[StalkerEvent]
+    event_count: int
+    duration_ms: float
+
+
+@dataclass
+class FridaDeviceInfo:
+    """Frida device information.
+
+    Attributes:
+        id: Device identifier.
+        name: Human-readable device name.
+        device_type: Device type (local, usb, remote).
+    """
+
+    id: str
+    name: str
+    device_type: str
+
+
+@dataclass
+class ApiResolverMatch:
+    """Result from Frida ApiResolver query.
+
+    Attributes:
+        name: Fully qualified API name.
+        address: Resolved address of the API.
+    """
+
+    name: str
+    address: int
 
 
 @dataclass

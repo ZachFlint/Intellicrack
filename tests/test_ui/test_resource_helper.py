@@ -279,7 +279,7 @@ class TestAssetIntegrity:
         required_icons = [
             "tool_ghidra.svg",
             "tool_frida.svg",
-            "tool_radare2.svg",
+            "tool_cutter.svg",
             "tool_x64dbg.svg",
         ]
 
