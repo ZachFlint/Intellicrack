@@ -241,7 +241,7 @@ class BridgeAnalysisPanel(QWidget):
             try:
                 self.address_navigate.emit(int(text, 16))
             except ValueError:
-                _logger.debug("invalid_hex_address", extra={"text": text})
+                _logger.debug("invalid_hex_address", text=text)
 
     def set_analysis(self, analysis: BridgeAnalysisSummary) -> None:
         """Populate the panel with bridge analysis data.
@@ -270,13 +270,11 @@ class BridgeAnalysisPanel(QWidget):
 
         _logger.info(
             "analysis_panel_updated",
-            extra={
-                "binary": analysis.binary_name,
-                "strings": len(analysis.strings),
-                "imports": len(analysis.imports),
-                "exports": len(analysis.exports),
-                "functions": len(analysis.functions),
-            },
+            binary=analysis.binary_name,
+            strings=len(analysis.strings),
+            imports=len(analysis.imports),
+            exports=len(analysis.exports),
+            functions=len(analysis.functions),
         )
 
     def _populate_strings(self, analysis: BridgeAnalysisSummary) -> None:

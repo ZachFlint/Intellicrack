@@ -285,7 +285,7 @@ class ChatInput(QFrame):
         """Handle send button click."""
         text = self._text_edit.toPlainText().strip()
         if text and text != self._hint_text:
-            _logger.debug("user_message_submitted", extra={"length": len(text)})
+            _logger.debug("user_message_submitted", length=len(text))
             self.message_submitted.emit(text)
             self._text_edit.clear()
             self._show_hint()
@@ -440,11 +440,9 @@ class ChatPanel(QFrame):
         self._messages.append(message)
         _logger.debug(
             "chat_message_added",
-            extra={
-                "role": message.role,
-                "has_tool_calls": message.tool_calls is not None,
-                "has_tool_results": message.tool_results is not None,
-            },
+            role=message.role,
+            has_tool_calls=message.tool_calls is not None,
+            has_tool_results=message.tool_results is not None,
         )
 
         bubble = MessageBubble(message)
@@ -461,7 +459,7 @@ class ChatPanel(QFrame):
         Returns:
             Function to call with each text chunk.
         """
-        _logger.debug("streaming_message_started", extra={"message_count": len(self._messages)})
+        _logger.debug("streaming_message_started", message_count=len(self._messages))
         message = Message(
             role="assistant",
             content="",
@@ -499,7 +497,7 @@ class ChatPanel(QFrame):
         """Clear all messages from the chat."""
         count = len(self._messages)
         self._messages.clear()
-        _logger.debug("chat_messages_cleared", extra={"count": count})
+        _logger.debug("chat_messages_cleared", count=count)
 
         while self._messages_layout.count() > 1:
             item = self._messages_layout.takeAt(0)

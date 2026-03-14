@@ -158,7 +158,7 @@ class CredentialSourceDetector:
                                 self._env_file_vars.add(key)
                 break
             except OSError as e:
-                _logger.debug("env_file_read_failed", extra={"path": str(env_path), "error": str(e)})
+                _logger.debug("env_file_read_failed", path=str(env_path), error=str(e))
                 continue
 
     def detect_source(self, provider_id: str, current_key: str) -> str:
@@ -193,7 +193,7 @@ class CredentialSourceDetector:
                     if provider_id in config and config[provider_id].get("api_key") == current_key:
                         return CredentialSource.MANUAL
             except (OSError, json.JSONDecodeError) as e:
-                _logger.debug("config_file_read_failed", extra={"error": str(e)})
+                _logger.debug("config_file_read_failed", error=str(e))
         return CredentialSource.MANUAL
 
     @staticmethod
@@ -252,7 +252,7 @@ class ConnectionTestWorker(QThread):
             success, message = self._test_provider_connection()
             self.test_finished.emit(success, message)
         except Exception as e:
-            _logger.warning("connection_test_failed", extra={"provider": self._provider_id, "error": str(e)})
+            _logger.warning("connection_test_failed", provider=self._provider_id, error=str(e))
             self.test_finished.emit(False, f"Connection error: {e}")
 
     def _test_provider_connection(self) -> tuple[bool, str]:
@@ -302,10 +302,10 @@ class ConnectionTestWorker(QThread):
                     return False, "Invalid API key"
                 return False, f"API error: {response.status_code}"
         except httpx.ConnectError:
-            _logger.debug("provider_connect_failed", extra={"provider": "anthropic"})
+            _logger.debug("provider_connect_failed", provider="anthropic")
             return False, "Could not connect to Anthropic API"
         except Exception as e:
-            _logger.warning("provider_test_failed", extra={"provider": "anthropic", "error": str(e)})
+            _logger.warning("provider_test_failed", provider="anthropic", error=str(e))
             return False, str(e)
 
     def _test_openai(self, timeout: httpx.Timeout) -> tuple[bool, str]:
@@ -330,10 +330,10 @@ class ConnectionTestWorker(QThread):
                     return False, "Invalid API key"
                 return False, f"API error: {response.status_code}"
         except httpx.ConnectError:
-            _logger.debug("provider_connect_failed", extra={"provider": "openai"})
+            _logger.debug("provider_connect_failed", provider="openai")
             return False, "Could not connect to OpenAI API"
         except Exception as e:
-            _logger.warning("provider_test_failed", extra={"provider": "openai", "error": str(e)})
+            _logger.warning("provider_test_failed", provider="openai", error=str(e))
             return False, str(e)
 
     def _test_google(self, timeout: httpx.Timeout) -> tuple[bool, str]:
@@ -357,10 +357,10 @@ class ConnectionTestWorker(QThread):
                     return False, "Invalid API key"
                 return False, f"API error: {response.status_code}"
         except httpx.ConnectError:
-            _logger.debug("provider_connect_failed", extra={"provider": "google"})
+            _logger.debug("provider_connect_failed", provider="google")
             return False, "Could not connect to Google API"
         except Exception as e:
-            _logger.warning("provider_test_failed", extra={"provider": "google", "error": str(e)})
+            _logger.warning("provider_test_failed", provider="google", error=str(e))
             return False, str(e)
 
     def _test_ollama(self, timeout: httpx.Timeout) -> tuple[bool, str]:
@@ -380,10 +380,10 @@ class ConnectionTestWorker(QThread):
                     return True, "Connected to Ollama"
                 return False, f"Ollama error: {response.status_code}"
         except httpx.ConnectError:
-            _logger.debug("provider_connect_failed", extra={"provider": "ollama"})
+            _logger.debug("provider_connect_failed", provider="ollama")
             return False, "Could not connect to Ollama (is it running?)"
         except Exception as e:
-            _logger.warning("provider_test_failed", extra={"provider": "ollama", "error": str(e)})
+            _logger.warning("provider_test_failed", provider="ollama", error=str(e))
             return False, str(e)
 
     def _test_openrouter(self, timeout: httpx.Timeout) -> tuple[bool, str]:
@@ -408,10 +408,10 @@ class ConnectionTestWorker(QThread):
                     return False, "Invalid API key"
                 return False, f"API error: {response.status_code}"
         except httpx.ConnectError:
-            _logger.debug("provider_connect_failed", extra={"provider": "openrouter"})
+            _logger.debug("provider_connect_failed", provider="openrouter")
             return False, "Could not connect to OpenRouter API"
         except Exception as e:
-            _logger.warning("provider_test_failed", extra={"provider": "openrouter", "error": str(e)})
+            _logger.warning("provider_test_failed", provider="openrouter", error=str(e))
             return False, str(e)
 
     def _test_huggingface(self, timeout: httpx.Timeout) -> tuple[bool, str]:
@@ -436,10 +436,10 @@ class ConnectionTestWorker(QThread):
                     return False, "Invalid API token"
                 return False, f"API error: {response.status_code}"
         except httpx.ConnectError:
-            _logger.debug("provider_connect_failed", extra={"provider": "huggingface"})
+            _logger.debug("provider_connect_failed", provider="huggingface")
             return False, "Could not connect to HuggingFace API"
         except Exception as e:
-            _logger.warning("provider_test_failed", extra={"provider": "huggingface", "error": str(e)})
+            _logger.warning("provider_test_failed", provider="huggingface", error=str(e))
             return False, str(e)
 
 
@@ -481,7 +481,7 @@ class ModelRefreshWorker(QThread):
             success, models, message = self._fetch_models()
             self.refresh_finished.emit(success, models, message)
         except Exception as e:
-            _logger.warning("model_refresh_failed", extra={"error": str(e)})
+            _logger.warning("model_refresh_failed", error=str(e))
             self.refresh_finished.emit(False, [], f"Error fetching models: {e}")
 
     def _fetch_models(self) -> tuple[bool, list[str], str]:
@@ -498,7 +498,8 @@ class ModelRefreshWorker(QThread):
             except Exception as exc:
                 _logger.warning(
                     "provider_list_models_fallback",
-                    extra={"provider": self._provider_id, "error": str(exc)},
+                    provider=self._provider_id,
+                    error=str(exc),
                 )
 
         timeout = httpx.Timeout(15.0)
@@ -565,7 +566,7 @@ class ModelRefreshWorker(QThread):
                     else:
                         break
         except Exception as e:
-            _logger.debug("anthropic_models_api_unavailable", extra={"error": str(e)})
+            _logger.debug("anthropic_models_api_unavailable", error=str(e))
             return False, [], f"API unavailable: {e}"
         else:
             if all_models:
@@ -613,7 +614,7 @@ class ModelRefreshWorker(QThread):
                     return True, models[:20], f"Found {len(models)} OpenAI models"
                 return False, [], f"API error: {response.status_code}"
         except Exception as e:
-            _logger.warning("model_fetch_failed", extra={"provider": "openai", "error": str(e)})
+            _logger.warning("model_fetch_failed", provider="openai", error=str(e))
             return False, [], str(e)
 
     def _fetch_google_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
@@ -641,7 +642,7 @@ class ModelRefreshWorker(QThread):
                     return True, models, f"Found {len(models)} Gemini models"
                 return False, [], f"API error: {response.status_code}"
         except Exception as e:
-            _logger.warning("model_fetch_failed", extra={"provider": "google", "error": str(e)})
+            _logger.warning("model_fetch_failed", provider="google", error=str(e))
             return False, [], str(e)
 
     def _fetch_ollama_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
@@ -663,7 +664,7 @@ class ModelRefreshWorker(QThread):
                     return True, models, f"Found {len(models)} Ollama models"
                 return False, [], f"Ollama error: {response.status_code}"
         except Exception as e:
-            _logger.warning("model_fetch_failed", extra={"provider": "ollama", "error": str(e)})
+            _logger.warning("model_fetch_failed", provider="ollama", error=str(e))
             return False, [], str(e)
 
     def _fetch_openrouter_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
@@ -689,7 +690,7 @@ class ModelRefreshWorker(QThread):
                     return True, models[:50], f"Found {len(models)} OpenRouter models"
                 return False, [], f"API error: {response.status_code}"
         except Exception as e:
-            _logger.warning("model_fetch_failed", extra={"provider": "openrouter", "error": str(e)})
+            _logger.warning("model_fetch_failed", provider="openrouter", error=str(e))
             return False, [], str(e)
 
     def _fetch_huggingface_models(
@@ -726,7 +727,7 @@ class ModelRefreshWorker(QThread):
                     )
                 return False, [], f"API error: {response.status_code}"
         except Exception as e:
-            _logger.warning("model_fetch_failed", extra={"provider": "huggingface", "error": str(e)})
+            _logger.warning("model_fetch_failed", provider="huggingface", error=str(e))
             return False, [], str(e)
 
 
@@ -794,10 +795,8 @@ class ProviderConfigDialog(QDialog):
             }
             _logger.info(
                 "credential_overview",
-                extra={
-                    "configured_count": len(configured),
-                    "missing_count": len(missing),
-                },
+                configured_count=len(configured),
+                missing_count=len(missing),
             )
 
             store = CredentialStore()
@@ -808,7 +807,8 @@ class ProviderConfigDialog(QDialog):
                     source = loop.run_until_complete(store.get_source(cred.provider))
                     _logger.debug(
                         "credential_source",
-                        extra={"provider": cred.provider.value, "source": str(source)},
+                        provider=cred.provider.value,
+                        source=str(source),
                     )
             finally:
                 loop.close()
@@ -1009,7 +1009,7 @@ class ProviderConfigDialog(QDialog):
             provider = self._registry.get(provider_name)
             return provider is not None and getattr(provider, "is_connected", False)
         except Exception:
-            _logger.debug("provider_connection_check_failed", exc_info=True, extra={"provider_id": provider_id})
+            _logger.debug("provider_connection_check_failed", exc_info=True, provider_id=provider_id)
             return False
 
     def _get_model_count(self, provider_id: str) -> int:
@@ -1028,7 +1028,7 @@ class ProviderConfigDialog(QDialog):
             counts = self._discovery.get_provider_model_count()
             return counts.get(provider_name, 0)
         except Exception:
-            _logger.debug("model_count_lookup_failed", exc_info=True, extra={"provider_id": provider_id})
+            _logger.debug("model_count_lookup_failed", exc_info=True, provider_id=provider_id)
             return 0
 
     def _update_active_label(self) -> None:
@@ -1057,13 +1057,13 @@ class ProviderConfigDialog(QDialog):
             self.active_provider_changed.emit(self._current_provider)
             _logger.info(
                 "active_provider_changed",
-                extra={"provider": self._current_provider},
+                provider=self._current_provider,
             )
         except ValueError:
-            _logger.debug("unknown_provider_name", extra={"provider": self._current_provider})
+            _logger.debug("unknown_provider_name", provider=self._current_provider)
             QMessageBox.critical(self, "Error", f"Unknown provider: {self._current_provider}")
         except Exception as e:
-            _logger.warning("set_active_provider_failed", extra={"provider": self._current_provider, "error": str(e)})
+            _logger.warning("set_active_provider_failed", provider=self._current_provider, error=str(e))
             QMessageBox.critical(self, "Error", f"Failed to set active provider: {e}")
 
     def _refresh_provider_status(self) -> None:
@@ -1155,10 +1155,11 @@ class ProviderConfigDialog(QDialog):
             for name in configured:
                 env_var = loader.get_env_var(name.value)
                 if env_var is not None:
-                    _logger.debug("credential_refreshed", extra={"provider": name})
+                    _logger.debug("credential_refreshed", provider=name)
             _logger.info(
                 "credentials_reloaded",
-                extra={"configured": len(configured), "missing": len(missing)},
+                configured=len(configured),
+                missing=len(missing),
             )
         except Exception:
             _logger.debug("credential_refresh_failed", exc_info=True)
@@ -1168,7 +1169,7 @@ class ProviderConfigDialog(QDialog):
         """Create a .env template file for credential configuration."""
         try:
             create_env_template(Path(".env"))
-            _logger.info("env_template_created", extra={"path": ".env"})
+            _logger.info("env_template_created", path=".env")
         except Exception:
             _logger.debug("env_template_creation_failed", exc_info=True)
         self._load_credential_overview()
@@ -1182,7 +1183,7 @@ class ProviderConfigDialog(QDialog):
                 loop.run_until_complete(store.migrate_from_env())
             finally:
                 loop.close()
-            _logger.info("credentials_migrated_from_env", extra={"source": ".env"})
+            _logger.info("credentials_migrated_from_env", source=".env")
         except Exception:
             _logger.debug("credential_migration_failed", exc_info=True)
         self._load_credential_overview()
@@ -1198,7 +1199,7 @@ class ProviderConfigDialog(QDialog):
             try:
                 pname = ProviderName(provider_name)
             except ValueError:
-                _logger.debug("unknown_provider_for_discovery", extra={"provider": provider_name})
+                _logger.debug("unknown_provider_for_discovery", provider=provider_name)
                 return
 
             async def _discover() -> None:
@@ -1211,13 +1212,15 @@ class ProviderConfigDialog(QDialog):
             except Exception as exc:
                 _logger.debug(
                     "provider_discovery_failed",
-                    extra={"provider": provider_name, "error": str(exc)},
+                    provider=provider_name,
+                    error=str(exc),
                 )
 
             events = discovery.get_discovery_events()
             _logger.debug(
                 "provider_discovery_events",
-                extra={"provider": provider_name, "event_count": len(events)},
+                provider=provider_name,
+                event_count=len(events),
             )
 
     def start_oauth_flow(self, provider_id: str) -> None:
@@ -1229,12 +1232,12 @@ class ProviderConfigDialog(QDialog):
         try:
             oauth_provider = OAuthProvider(provider_id)
         except ValueError:
-            _logger.warning("oauth_unknown_provider", extra={"provider": provider_id})
+            _logger.warning("oauth_unknown_provider", provider=provider_id)
             return
 
         oauth_config = OAUTH_CONFIGS.get(oauth_provider)
         if oauth_config is None:
-            _logger.warning("oauth_no_config", extra={"provider": provider_id})
+            _logger.warning("oauth_no_config", provider=provider_id)
             return
 
         try:
@@ -1248,12 +1251,12 @@ class ProviderConfigDialog(QDialog):
             finally:
                 loop.close()
             if creds is not None and creds.api_key:
-                _logger.info("oauth_credentials_obtained", extra={"provider": provider_id})
+                _logger.info("oauth_credentials_obtained", provider=provider_id)
                 widget = self._provider_widgets.get(provider_id)
                 if widget is not None:
                     widget.set_api_key(creds.api_key)
         except Exception:
-            _logger.warning("oauth_flow_failed", extra={"provider": provider_id})
+            _logger.warning("oauth_flow_failed", provider=provider_id)
         self._load_credential_overview()
 
     def revoke_oauth_token(self, provider_id: str) -> None:
@@ -1267,16 +1270,16 @@ class ProviderConfigDialog(QDialog):
             try:
                 oauth_provider = OAuthProvider(provider_id)
             except ValueError:
-                _logger.debug("unknown_oauth_provider", extra={"provider": provider_id})
+                _logger.debug("unknown_oauth_provider", provider=provider_id)
                 return
             loop = asyncio.new_event_loop()
             try:
                 loop.run_until_complete(manager.revoke_token(oauth_provider))
             finally:
                 loop.close()
-            _logger.info("oauth_token_revoked", extra={"provider": provider_id})
+            _logger.info("oauth_token_revoked", provider=provider_id)
         except Exception:
-            _logger.debug("oauth_revoke_failed", extra={"provider": provider_id})
+            _logger.debug("oauth_revoke_failed", provider=provider_id)
         self._load_credential_overview()
 
 
@@ -1500,7 +1503,7 @@ class ProviderSettingsWidget(QFrame):
         """Handle show device info button click."""
         info = self.get_provider_device_info()
         if info is not None:
-            _logger.info("device_info_displayed", extra={"keys": list(info.keys())})
+            _logger.info("device_info_displayed", keys=list(info.keys()))
             QMessageBox.information(self, "Device Info", "\n".join(f"{k}: {v}" for k, v in info.items()))
 
     def _on_detect_xpu_dtype(self) -> None:
@@ -1521,7 +1524,7 @@ class ProviderSettingsWidget(QFrame):
             return
         result = self.get_openrouter_generation(gen_id)
         if result is not None:
-            _logger.info("generation_lookup", extra={"id": gen_id})
+            _logger.info("generation_lookup", id=gen_id)
             cost_lines = [f"{k}: {v}" for k, v in result.items()]
             QMessageBox.information(
                 self,
@@ -1595,7 +1598,7 @@ class ProviderSettingsWidget(QFrame):
             try:
                 loop = asyncio.get_running_loop()
             except RuntimeError:
-                _logger.debug("no_running_event_loop", extra={"provider": self._provider_id})
+                _logger.debug("no_running_event_loop", provider=self._provider_id)
 
             if loop is not None and loop.is_running():
                 self._recommended_label.setText("")
@@ -1606,7 +1609,7 @@ class ProviderSettingsWidget(QFrame):
             else:
                 self._recommended_label.setText("")
         except Exception as e:
-            _logger.exception("recommended_model_update_failed", extra={"provider": self._provider_id, "error": str(e)})
+            _logger.exception("recommended_model_update_failed", provider=self._provider_id, error=str(e))
             self._recommended_label.setText("")
 
     def _load_settings(self) -> None:
@@ -1614,7 +1617,7 @@ class ProviderSettingsWidget(QFrame):
         saved_settings = self._load_from_config()
         _logger.info(
             "provider_settings_loaded",
-            extra={"provider": self._provider_id},
+            provider=self._provider_id,
         )
 
         env_vars = {
@@ -1675,7 +1678,7 @@ class ProviderSettingsWidget(QFrame):
                 result: dict[str, Any] = all_settings.get(self._provider_id, {})
                 return result
         except (json.JSONDecodeError, OSError) as e:
-            _logger.warning("provider_config_load_failed", extra={"error": str(e)})
+            _logger.warning("provider_config_load_failed", error=str(e))
             return {}
 
     _NO_KEY_PROVIDERS: ClassVar[set[str]] = {"ollama"}
@@ -1692,7 +1695,7 @@ class ProviderSettingsWidget(QFrame):
 
     def _refresh_models(self) -> None:
         """Refresh the model list from the provider API."""
-        _logger.debug("model_refresh_started", extra={"provider": self._provider_id})
+        _logger.debug("model_refresh_started", provider=self._provider_id)
         icon_manager = IconManager.get_instance()
         self._status_icon.setPixmap(icon_manager.get_pixmap("status_loading", 16))
         self._status_label.setText("Refreshing models...")
@@ -1713,7 +1716,7 @@ class ProviderSettingsWidget(QFrame):
                 provider_name = ProviderName(self._provider_id)
                 provider = self._registry.get(provider_name)
             except ValueError:
-                _logger.debug("provider_name_parse_failed", extra={"provider_id": self._provider_id})
+                _logger.debug("provider_name_parse_failed", provider_id=self._provider_id)
 
         self._refresh_worker = ModelRefreshWorker(
             self._provider_id,
@@ -1728,9 +1731,9 @@ class ProviderSettingsWidget(QFrame):
     def _auto_refresh_models(self) -> None:
         """Auto-refresh models if no refresh is already running."""
         if self._refresh_worker is not None and self._refresh_worker.isRunning():
-            _logger.debug("model_auto_refresh_skipped", extra={"provider": self._provider_id, "reason": "refresh_in_progress"})
+            _logger.debug("model_auto_refresh_skipped", provider=self._provider_id, reason="refresh_in_progress")
             return
-        _logger.debug("model_auto_refresh_triggered", extra={"provider": self._provider_id})
+        _logger.debug("model_auto_refresh_triggered", provider=self._provider_id)
         self._refresh_models()
 
     def _on_models_refreshed(self, success: bool, models: list[str], message: str) -> None:
@@ -1747,7 +1750,8 @@ class ProviderSettingsWidget(QFrame):
         if success and models:
             _logger.info(
                 "provider_models_refreshed",
-                extra={"provider": self._provider_id, "model_count": len(models)},
+                provider=self._provider_id,
+                model_count=len(models),
             )
             restore_model = self._pending_saved_model or self._model_combo.currentText()
             self._pending_saved_model = ""
@@ -1761,7 +1765,8 @@ class ProviderSettingsWidget(QFrame):
         else:
             _logger.warning(
                 "provider_models_refresh_failed",
-                extra={"provider": self._provider_id, "error": message or "Failed to refresh models"},
+                provider=self._provider_id,
+                error=message or "Failed to refresh models",
             )
             self._status_icon.setPixmap(icon_manager.get_pixmap("status_error", 16))
             self._status_label.setText(message or "Failed to refresh models")
@@ -1770,7 +1775,7 @@ class ProviderSettingsWidget(QFrame):
         """Test the provider connection."""
         _logger.info(
             "provider_connection_test_started",
-            extra={"provider": self._provider_id},
+            provider=self._provider_id,
         )
 
         icon_manager = IconManager.get_instance()
@@ -1784,7 +1789,8 @@ class ProviderSettingsWidget(QFrame):
         if not api_key and self._provider_id != "ollama":
             _logger.warning(
                 "provider_connection_test_failed",
-                extra={"provider": self._provider_id, "error": "API key required"},
+                provider=self._provider_id,
+                error="API key required",
             )
             self._status_icon.setPixmap(icon_manager.get_pixmap("status_error", 16))
             self._status_label.setText("API key required")
@@ -1808,7 +1814,8 @@ class ProviderSettingsWidget(QFrame):
         if success:
             _logger.info(
                 "provider_connection_test_succeeded",
-                extra={"provider": self._provider_id, "status_message": message},
+                provider=self._provider_id,
+                status_message=message,
             )
             self._status_icon.setPixmap(icon_manager.get_pixmap("status_success", 16))
             self._status_label.setText(message)
@@ -1816,7 +1823,8 @@ class ProviderSettingsWidget(QFrame):
         else:
             _logger.warning(
                 "provider_connection_test_failed",
-                extra={"provider": self._provider_id, "error": message},
+                provider=self._provider_id,
+                error=message,
             )
             self._status_icon.setPixmap(icon_manager.get_pixmap("status_error", 16))
             self._status_label.setText(message)
@@ -1874,7 +1882,7 @@ class ProviderSettingsWidget(QFrame):
                 with open(self._config_path, encoding="utf-8") as f:
                     all_settings = json.load(f)
             except (json.JSONDecodeError, OSError) as e:
-                _logger.warning("provider_config_read_failed_using_empty", extra={"error": str(e)})
+                _logger.warning("provider_config_read_failed_using_empty", error=str(e))
                 all_settings = {}
 
         settings = self.get_settings()
@@ -1889,12 +1897,13 @@ class ProviderSettingsWidget(QFrame):
                 json.dump(all_settings, f, indent=2)
             _logger.info(
                 "provider_settings_saved",
-                extra={"provider": self._provider_id},
+                provider=self._provider_id,
             )
         except OSError as e:
             _logger.exception(
                 "provider_settings_save_failed",
-                extra={"provider": self._provider_id, "error": str(e)},
+                provider=self._provider_id,
+                error=str(e),
             )
             QMessageBox.warning(
                 self,
@@ -1924,7 +1933,7 @@ class ProviderSettingsWidget(QFrame):
                 if host and host != "http://localhost:11434":
                     loader.save_to_env_file("OLLAMA_HOST", host)
         except Exception as e:
-            _logger.warning("env_file_update_failed", extra={"error": str(e)})
+            _logger.warning("env_file_update_failed", error=str(e))
             QMessageBox.warning(
                 self,
                 "Save Warning",
@@ -1961,9 +1970,9 @@ class ProviderSettingsWidget(QFrame):
         try:
             provider = OllamaProvider()
             provider.pull_model(model_name)
-            _logger.info("ollama_model_pulled", extra={"model": model_name})
+            _logger.info("ollama_model_pulled", model=model_name)
         except Exception:
-            _logger.debug("ollama_pull_failed", extra={"model": model_name})
+            _logger.debug("ollama_pull_failed", model=model_name)
 
     def get_openrouter_generation(self, generation_id: str) -> dict[str, object] | None:
         """Get OpenRouter generation info for cost tracking.
@@ -1992,7 +2001,7 @@ class ProviderSettingsWidget(QFrame):
                 loop.run_until_complete(provider.disconnect())
                 loop.close()
         except Exception:
-            _logger.debug("openrouter_generation_fetch_failed", exc_info=True, extra={"generation_id": generation_id})
+            _logger.debug("openrouter_generation_fetch_failed", exc_info=True, generation_id=generation_id)
             return None
 
     def get_xpu_optimal_dtype(self) -> str | None:

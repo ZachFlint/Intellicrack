@@ -97,7 +97,8 @@ def _unhandled_exception_hook(
     """
     _logger.critical(
         "unhandled_exception",
-        extra={"exc_type": exc_type.__name__, "exc_value": str(exc_value)},
+        exc_type=exc_type.__name__,
+        exc_value=str(exc_value),
         exc_info=(exc_type, exc_value, exc_tb),
     )
     _original_excepthook(exc_type, exc_value, exc_tb)
@@ -185,31 +186,31 @@ class MainWindow(QMainWindow):
         self._script_validator: object | None = None
         self._model_discovery: ModelDiscovery | None = None
 
-        _logger.debug("loading_icon_manager", extra={})
+        _logger.debug("loading_icon_manager")
         self._icon_manager = IconManager.get_instance()
-        _logger.debug("loading_font_manager", extra={})
+        _logger.debug("loading_font_manager")
         self._font_manager = FontManager.get_instance()
-        _logger.debug("loading_theme_manager", extra={})
+        _logger.debug("loading_theme_manager")
         self._theme_manager = ThemeManager.get_instance()
 
-        _logger.debug("loading_fonts", extra={})
+        _logger.debug("loading_fonts")
         self._font_manager.load_fonts()
 
         self._icon_manager.preload_icons(["app", "binary", "tools", "provider", "sandbox", "process"])
 
         self._initialize_model_cache()
 
-        _logger.info("ui_init_setup_ui", extra={})
+        _logger.info("ui_init_setup_ui")
         self._setup_ui()
-        _logger.info("ui_init_setup_menus", extra={})
+        _logger.info("ui_init_setup_menus")
         self._setup_menus()
-        _logger.info("ui_init_setup_toolbar", extra={})
+        _logger.info("ui_init_setup_toolbar")
         self._setup_toolbar()
-        _logger.info("ui_init_setup_statusbar", extra={})
+        _logger.info("ui_init_setup_statusbar")
         self._setup_statusbar()
-        _logger.info("ui_init_connect_signals", extra={})
+        _logger.info("ui_init_connect_signals")
         self._connect_signals()
-        _logger.info("ui_init_configure_orchestrator", extra={})
+        _logger.info("ui_init_configure_orchestrator")
         self._configure_orchestrator()
 
         self.setWindowTitle("Intellicrack")
@@ -419,9 +420,9 @@ class MainWindow(QMainWindow):
         script_state = self._tool_panel.get_script_panel_state()
         selected_id, current_script = script_state
         if selected_id is not None:
-            _logger.debug("scripts_panel_state", extra={"selected": selected_id})
+            _logger.debug("scripts_panel_state", selected=selected_id)
         if current_script is not None:
-            _logger.debug("current_script", extra={"script_name": current_script[0]})
+            _logger.debug("current_script", script_name=current_script[0])
         self._tool_panel.activate_scripts_tab()
 
     def _on_view_stack(self) -> None:
@@ -766,19 +767,19 @@ class MainWindow(QMainWindow):
             script_mgr = ScriptManager(scripts_dir)
             self._orchestrator.set_script_manager(script_mgr)
         except OSError as e:
-            _logger.debug("script_manager_init_skipped", extra={"error": str(e)})
+            _logger.debug("script_manager_init_skipped", error=str(e))
 
         available_tools = self._orchestrator.get_available_tool_names()
-        _logger.info("orchestrator_tools_available", extra={"tools": available_tools})
+        _logger.info("orchestrator_tools_available", tools=available_tools)
 
         tool_reg = getattr(self._orchestrator, "_tool_registry", None)
         if tool_reg is not None:
             self._tool_panel.set_tool_registry(tool_reg)
-            _logger.info("tool_registry_wired_to_panel", extra={"registry": type(tool_reg).__name__})
+            _logger.info("tool_registry_wired_to_panel", registry=type(tool_reg).__name__)
 
         bridge = self._orchestrator.get_typed_bridge("process")
         if bridge is not None:
-            _logger.debug("process_bridge_available", extra={"bridge_type": "process"})
+            _logger.debug("process_bridge_available", bridge_type="process")
 
         try:
             tools_dir = get_config_dir() / "tools"
@@ -787,10 +788,10 @@ class MainWindow(QMainWindow):
             self._tool_installer = installer
             _logger.info(
                 "tool_installer_initialized",
-                extra={"tools_dir": str(tools_dir)},
+                tools_dir=str(tools_dir),
             )
         except OSError as e:
-            _logger.debug("tool_installer_init_skipped", extra={"error": str(e)})
+            _logger.debug("tool_installer_init_skipped", error=str(e))
 
     async def _refresh_tool_status(self) -> dict[str, object]:
         """Refresh tool installation status asynchronously.
@@ -806,7 +807,7 @@ class MainWindow(QMainWindow):
         result = {str(k): v for k, v in statuses.items()}
         _logger.info(
             "tool_status_refreshed",
-            extra={"tool_count": len(result)},
+            tool_count=len(result),
         )
         return result
 
@@ -870,7 +871,7 @@ class MainWindow(QMainWindow):
 
         active_pid = self._tool_panel.get_active_process_pid()
         if active_pid is not None:
-            _logger.debug("user_message_process_context", extra={"pid": active_pid})
+            _logger.debug("user_message_process_context", pid=active_pid)
 
         async def process() -> None:
             await self._orchestrator.process_user_input(text)
@@ -1023,7 +1024,7 @@ class MainWindow(QMainWindow):
             if not dialog.exec():
                 return
             description = dialog.get_description()
-            _logger.debug("new_session_dialog", extra={"description": description})
+            _logger.debug("new_session_dialog", description=description)
 
         provider_data: object = self._provider_combo.currentData()
         model = self._model_combo.currentText()
@@ -1222,10 +1223,8 @@ class MainWindow(QMainWindow):
         failure_pixmap = self._icon_manager.get_status_pixmap(False, 16)
         _logger.debug(
             "tool_status_icons",
-            extra={
-                "success_icon": not success_pixmap.isNull(),
-                "failure_icon": not failure_pixmap.isNull(),
-            },
+            success_icon=not success_pixmap.isNull(),
+            failure_icon=not failure_pixmap.isNull(),
         )
 
         try:
@@ -1234,7 +1233,7 @@ class MainWindow(QMainWindow):
             loop.close()
             _logger.info(
                 "tool_status_dialog_opened",
-                extra={"tool_count": len(tool_statuses)},
+                tool_count=len(tool_statuses),
             )
         except Exception:
             _logger.debug("tool_status_refresh_before_dialog_failed", exc_info=True)
@@ -1271,7 +1270,7 @@ class MainWindow(QMainWindow):
                 try:
                     config_enabled = self._config.is_tool_enabled(ToolName(tool_id.lower()))
                 except (ValueError, AttributeError):
-                    _logger.debug("tool_name_parse_fallback", extra={"tool_id": tool_id})
+                    _logger.debug("tool_name_parse_fallback", tool_id=tool_id)
                     config_enabled = True
             if enabled and path_value and config_enabled:
                 tools_to_init.append(tool_id)
@@ -1282,9 +1281,9 @@ class MainWindow(QMainWindow):
                 for tid in tools_to_init:
                     try:
                         await self._orchestrator.initialize_tool(tid)
-                        _logger.info("tool_reinitialized", extra={"tool_id": tid})
+                        _logger.info("tool_reinitialized", tool_id=tid)
                     except Exception as e:
-                        _logger.warning("tool_reinit_failed", extra={"tool_id": tid, "error": str(e)})
+                        _logger.warning("tool_reinit_failed", tool_id=tid, error=str(e))
 
             worker = AsyncWorker(_reinit_tools(), self)
             worker.finished.connect(self._on_tool_reinit_finished)
@@ -1309,7 +1308,7 @@ class MainWindow(QMainWindow):
         Args:
             error: The exception that occurred.
         """
-        _logger.warning("tool_reinit_batch_failed", extra={"error": str(error)})
+        _logger.warning("tool_reinit_batch_failed", error=str(error))
         self.status_update.emit("Tool re-initialization failed")
 
     def _on_configure_providers(self) -> None:
@@ -1350,7 +1349,7 @@ class MainWindow(QMainWindow):
             try:
                 pname = ProviderName(provider_id)
             except ValueError:
-                _logger.warning("unknown_provider_id", extra={"provider_id": provider_id})
+                _logger.warning("unknown_provider_id", provider_id=provider_id)
                 continue
 
             provider = registry.get(pname)
@@ -1366,11 +1365,12 @@ class MainWindow(QMainWindow):
                 for pname, creds in providers_to_connect:
                     try:
                         await registry.connect_provider(pname, creds)
-                        _logger.info("provider_reconnected", extra={"provider": pname.value})
+                        _logger.info("provider_reconnected", provider=pname.value)
                     except Exception as e:
                         _logger.warning(
                             "provider_reconnect_failed",
-                            extra={"provider": pname.value, "error": str(e)},
+                            provider=pname.value,
+                            error=str(e),
                         )
 
             worker = AsyncWorker(_reconnect_providers(), self)
@@ -1396,7 +1396,7 @@ class MainWindow(QMainWindow):
         Args:
             error: The exception that occurred.
         """
-        _logger.warning("provider_reconnect_batch_failed", extra={"error": str(error)})
+        _logger.warning("provider_reconnect_batch_failed", error=str(error))
         self.status_update.emit("Provider reconnection failed")
 
     def _on_refresh_models(self) -> None:
@@ -1510,7 +1510,7 @@ class MainWindow(QMainWindow):
             if model_detail is not None:
                 _logger.debug(
                     "model_detail_fetched",
-                    extra={"model_id": first_model.id},
+                    model_id=first_model.id,
                 )
 
         dialog = ModelSelectionDialog(models=model_infos, parent=self)
@@ -1609,18 +1609,16 @@ class MainWindow(QMainWindow):
         self._icon_manager.clear_cache()
         is_dark = self._theme_manager.is_dark_theme()
         theme_name = "dark" if is_dark else "light"
-        _logger.info("theme_toggled", extra={"theme": theme_name})
+        _logger.info("theme_toggled", theme=theme_name)
 
         heading_font = self._font_manager.get_heading_font(12)
         code_bold = self._font_manager.get_code_font_bold(10)
         ui_bold = self._font_manager.get_ui_font_bold(9)
         _logger.debug(
             "theme_fonts_resolved",
-            extra={
-                "heading": heading_font.family(),
-                "code_bold": code_bold.family(),
-                "ui_bold": ui_bold.family(),
-            },
+            heading=heading_font.family(),
+            code_bold=code_bold.family(),
+            ui_bold=ui_bold.family(),
         )
 
         code_highlighter = self._tool_panel.get_code_highlighter()
@@ -1672,7 +1670,7 @@ class MainWindow(QMainWindow):
                 return
             widget.start_tool()
         except Exception as e:
-            _logger.exception("tool_open_failed", extra={"tool_name": "x64dbg", "error": str(e)})
+            _logger.exception("tool_open_failed", tool_name="x64dbg", error=str(e))
             self._show_tool_error("x64dbg", f"Failed to open x64dbg panel: {e}")
 
     def _on_open_cutter(self) -> None:
@@ -1684,7 +1682,7 @@ class MainWindow(QMainWindow):
                 return
             widget.start_tool()
         except Exception as e:
-            _logger.exception("tool_open_failed", extra={"tool_name": "Cutter", "error": str(e)})
+            _logger.exception("tool_open_failed", tool_name="Cutter", error=str(e))
             self._show_tool_error("Cutter", f"Failed to open Cutter panel: {e}")
 
     def _on_open_hxd(self) -> None:
@@ -1696,7 +1694,7 @@ class MainWindow(QMainWindow):
                 return
             widget.start_tool()
         except Exception as e:
-            _logger.exception("tool_open_failed", extra={"tool_name": "HxD", "error": str(e)})
+            _logger.exception("tool_open_failed", tool_name="HxD", error=str(e))
             self._show_tool_error("Hex Editor", f"Failed to open hex editor panel: {e}")
 
     def _on_open_ghidra(self) -> None:
@@ -1714,7 +1712,7 @@ class MainWindow(QMainWindow):
                 return
             widget.start_tool()
         except Exception as e:
-            _logger.exception("tool_open_failed", extra={"tool_name": "Ghidra", "error": str(e)})
+            _logger.exception("tool_open_failed", tool_name="Ghidra", error=str(e))
             self._show_tool_error("Ghidra", f"Failed to open Ghidra panel: {e}")
 
     def _on_open_frida(self) -> None:
@@ -1747,7 +1745,7 @@ class MainWindow(QMainWindow):
 
                     set_handler(_frida_msg_handler)
         except Exception as e:
-            _logger.exception("tool_open_failed", extra={"tool_name": "Frida", "error": str(e)})
+            _logger.exception("tool_open_failed", tool_name="Frida", error=str(e))
             self._show_tool_error("Frida", f"Failed to open Frida panel: {e}")
 
     def _on_open_process(self) -> None:
@@ -1779,11 +1777,11 @@ class MainWindow(QMainWindow):
 
         sandbox_backend = self._tool_panel.get_sandbox_backend()
         if sandbox_backend is not None:
-            _logger.debug("sandbox_backend_available", extra={"backend_type": type(sandbox_backend).__name__})
+            _logger.debug("sandbox_backend_available", backend_type=type(sandbox_backend).__name__)
 
         sandbox_widget = self._tool_panel.get_active_tool_widget("sandbox")
         if sandbox_widget is not None:
-            _logger.debug("sandbox_widget_active", extra={"widget_type": type(sandbox_widget).__name__})
+            _logger.debug("sandbox_widget_active", widget_type=type(sandbox_widget).__name__)
 
     def _on_debug_current_binary(self) -> None:
         """Debug the currently loaded binary with x64dbg."""
@@ -1824,7 +1822,7 @@ class MainWindow(QMainWindow):
             tool_name: Name of the tool.
             message: Error message to display.
         """
-        _logger.error("tool_error", extra={"tool_name": tool_name, "error": message})
+        _logger.error("tool_error", tool_name=tool_name, error=message)
         QMessageBox.warning(
             self,
             f"{tool_name} Error",
@@ -1854,7 +1852,7 @@ class MainWindow(QMainWindow):
         del index
         provider: object = self._provider_combo.currentData()
         provider_value = provider.value if isinstance(provider, ProviderName) else None
-        _logger.info("provider_changed", extra={"provider": provider_value})
+        _logger.info("provider_changed", provider=provider_value)
 
     def _on_sandbox_toggled(self, checked: bool) -> None:
         """Handle sandbox toggle.

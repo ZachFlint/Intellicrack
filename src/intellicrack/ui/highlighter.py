@@ -1059,7 +1059,7 @@ def get_highlighter_for_language(
         Appropriate highlighter or None if not supported.
     """
     language_lower = language.lower()
-    _logger.debug("highlighter_requested", extra={"language": language_lower})
+    _logger.debug("highlighter_requested", language=language_lower)
 
     if language_lower in {"c", "cpp", "c++", "decompiled"}:
         return CSyntaxHighlighter(parent)

@@ -410,7 +410,7 @@ class SandboxBridge(ToolBridgeBase):
             last_error=None,
         )
 
-        _logger.info("sandbox_bridge_initialized", extra={"bridge": "sandbox"})
+        _logger.info("sandbox_bridge_initialized", bridge="sandbox")
 
     async def shutdown(self) -> None:
         """Shutdown the sandbox bridge and cleanup resources."""
@@ -419,7 +419,7 @@ class SandboxBridge(ToolBridgeBase):
             self._manager = None
 
         self._state = BridgeState()
-        _logger.info("sandbox_bridge_shutdown", extra={"bridge": "sandbox"})
+        _logger.info("sandbox_bridge_shutdown", bridge="sandbox")
 
     async def is_available(self) -> bool:
         """Check if sandbox functionality is available.
@@ -480,7 +480,7 @@ class SandboxBridge(ToolBridgeBase):
                 auto_start=True,
             )
 
-            _logger.info("sandbox_created", extra={"instance_id": instance.id, "type": sb_type})
+            _logger.info("sandbox_created", instance_id=instance.id, type=sb_type)
 
             return {
                 "instance_id": instance.id,
@@ -490,7 +490,7 @@ class SandboxBridge(ToolBridgeBase):
             }
 
         except SandboxError as e:
-            _logger.warning("sandbox_create_failed", extra={"error": str(e)})
+            _logger.warning("sandbox_create_failed", error=str(e))
             msg = f"{_ERR_CREATE_FAILED}: {e}"
             raise ToolError(msg) from e
 
@@ -510,9 +510,9 @@ class SandboxBridge(ToolBridgeBase):
 
         try:
             await manager.destroy(instance_id)
-            _logger.info("sandbox_destroyed", extra={"instance_id": instance_id})
+            _logger.info("sandbox_destroyed", instance_id=instance_id)
         except SandboxError as e:
-            _logger.warning("sandbox_destroy_failed", extra={"instance_id": instance_id, "error": str(e)})
+            _logger.warning("sandbox_destroy_failed", instance_id=instance_id, error=str(e))
             msg = f"{_ERR_DESTROY_FAILED}: {e}"
             raise ToolError(msg) from e
         else:
@@ -558,11 +558,9 @@ class SandboxBridge(ToolBridgeBase):
                 monitor=monitor,
             )
 
-            _logger.info(
-                "binary_execution_completed", extra={"instance_id": instance.id, "result": report.result, "exit_code": report.exit_code}
-            )
+            _logger.info("binary_execution_completed", instance_id=instance.id, result=report.result, exit_code=report.exit_code)
         except Exception as e:
-            _logger.warning("binary_execution_failed", extra={"error": str(e)})
+            _logger.warning("binary_execution_failed", error=str(e))
             msg = f"{_ERR_EXECUTION_FAILED}: {e}"
             raise ToolError(msg) from e
         else:
@@ -604,9 +602,9 @@ class SandboxBridge(ToolBridgeBase):
             )
 
             instance.touch()
-            _logger.info("command_executed", extra={"instance_id": instance_id, "exit_code": exit_code})
+            _logger.info("command_executed", instance_id=instance_id, exit_code=exit_code)
         except SandboxError as e:
-            _logger.warning("command_execution_failed", extra={"instance_id": instance_id, "error": str(e)})
+            _logger.warning("command_execution_failed", instance_id=instance_id, error=str(e))
             msg = f"{_ERR_CMD_EXEC_FAILED}: {e}"
             raise ToolError(msg) from e
         else:
@@ -650,9 +648,9 @@ class SandboxBridge(ToolBridgeBase):
         try:
             await instance.sandbox.copy_to_sandbox(source_path, dest)
             instance.touch()
-            _logger.info("file_copied_to_sandbox", extra={"source": source, "instance_id": instance_id, "dest": dest})
+            _logger.info("file_copied_to_sandbox", source=source, instance_id=instance_id, dest=dest)
         except SandboxError as e:
-            _logger.warning("copy_to_sandbox_failed", extra={"error": str(e)})
+            _logger.warning("copy_to_sandbox_failed", error=str(e))
             msg = f"{_ERR_COPY_TO_FAILED}: {e}"
             raise ToolError(msg) from e
         else:
@@ -694,9 +692,9 @@ class SandboxBridge(ToolBridgeBase):
         try:
             await instance.sandbox.copy_from_sandbox(source, dest_path)
             instance.touch()
-            _logger.info("file_copied_from_sandbox", extra={"instance_id": instance_id, "source": source, "dest": dest})
+            _logger.info("file_copied_from_sandbox", instance_id=instance_id, source=source, dest=dest)
         except SandboxError as e:
-            _logger.warning("copy_from_sandbox_failed", extra={"error": str(e)})
+            _logger.warning("copy_from_sandbox_failed", error=str(e))
             msg = f"{_ERR_COPY_FROM_FAILED}: {e}"
             raise ToolError(msg) from e
         else:
@@ -766,9 +764,9 @@ class SandboxBridge(ToolBridgeBase):
         try:
             snapshot_id = await instance.sandbox.take_snapshot(name)
             instance.touch()
-            _logger.info("snapshot_created", extra={"snapshot_name": name, "instance_id": instance_id, "snapshot_id": snapshot_id})
+            _logger.info("snapshot_created", snapshot_name=name, instance_id=instance_id, snapshot_id=snapshot_id)
         except SandboxError as e:
-            _logger.warning("snapshot_creation_failed", extra={"error": str(e)})
+            _logger.warning("snapshot_creation_failed", error=str(e))
             msg = f"{_ERR_SNAPSHOT_CREATE_FAILED}: {e}"
             raise ToolError(msg) from e
         else:
@@ -808,9 +806,9 @@ class SandboxBridge(ToolBridgeBase):
         try:
             await instance.sandbox.restore_snapshot(snapshot_id)
             instance.touch()
-            _logger.info("snapshot_restored", extra={"instance_id": instance_id, "snapshot_id": snapshot_id})
+            _logger.info("snapshot_restored", instance_id=instance_id, snapshot_id=snapshot_id)
         except SandboxError as e:
-            _logger.warning("snapshot_restore_failed", extra={"error": str(e)})
+            _logger.warning("snapshot_restore_failed", error=str(e))
             msg = f"{_ERR_SNAPSHOT_RESTORE_FAILED}: {e}"
             raise ToolError(msg) from e
         else:
@@ -849,10 +847,11 @@ class SandboxBridge(ToolBridgeBase):
             snapshots = await instance.sandbox.list_snapshots()
             _logger.info(
                 "snapshots_listed",
-                extra={"instance_id": instance_id, "count": len(snapshots)},
+                instance_id=instance_id,
+                count=len(snapshots),
             )
         except SandboxError as e:
-            _logger.warning("snapshot_list_failed", extra={"error": str(e)})
+            _logger.warning("snapshot_list_failed", error=str(e))
             msg = f"{_ERR_SNAPSHOT_LIST_FAILED}: {e}"
             raise ToolError(msg) from e
         else:
@@ -894,10 +893,11 @@ class SandboxBridge(ToolBridgeBase):
             instance.touch()
             _logger.info(
                 "snapshot_deleted",
-                extra={"instance_id": instance_id, "snapshot_name": name},
+                instance_id=instance_id,
+                snapshot_name=name,
             )
         except SandboxError as e:
-            _logger.warning("snapshot_delete_failed", extra={"error": str(e)})
+            _logger.warning("snapshot_delete_failed", error=str(e))
             msg = f"{_ERR_SNAPSHOT_DELETE_FAILED}: {e}"
             raise ToolError(msg) from e
         else:
@@ -940,9 +940,9 @@ class SandboxBridge(ToolBridgeBase):
 
             response = await qmp.cont()
             instance.touch()
-            _logger.info("vm_resumed", extra={"instance_id": instance_id})
+            _logger.info("vm_resumed", instance_id=instance_id)
         except SandboxError as e:
-            _logger.warning("vm_resume_failed", extra={"error": str(e)})
+            _logger.warning("vm_resume_failed", error=str(e))
             msg = f"{_ERR_CONT_FAILED}: {e}"
             raise ToolError(msg) from e
         else:
@@ -989,10 +989,11 @@ class SandboxBridge(ToolBridgeBase):
             messages = await agent.get_pending_messages()
             _logger.info(
                 "pending_messages_retrieved",
-                extra={"instance_id": instance_id, "count": len(messages)},
+                instance_id=instance_id,
+                count=len(messages),
             )
         except SandboxError as e:
-            _logger.warning("pending_messages_failed", extra={"error": str(e)})
+            _logger.warning("pending_messages_failed", error=str(e))
             msg = f"{_ERR_MESSAGES_FAILED}: {e}"
             raise ToolError(msg) from e
         else:

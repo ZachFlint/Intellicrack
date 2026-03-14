@@ -88,7 +88,8 @@ def find_window_by_pid(pid: int) -> int | None:
     if result_hwnd:
         _logger.debug(
             "win32_window_found",
-            extra={"pid": pid, "hwnd": hex(result_hwnd[0])},
+            pid=pid,
+            hwnd=hex(result_hwnd[0]),
         )
         return result_hwnd[0]
 
@@ -111,19 +112,19 @@ def embed_window(hwnd: int, parent: QWidget) -> QWidget | None:
     try:
         foreign_window: Any = QWindow.fromWinId(voidptr(hwnd))
         if foreign_window is None:
-            _logger.warning("win32_embed_from_winid_failed", extra={"hwnd": hex(hwnd)})
+            _logger.warning("win32_embed_from_winid_failed", hwnd=hex(hwnd))
             return None
 
         container: QWidget = QWidget.createWindowContainer(foreign_window, parent)
         container.setMinimumSize(200, 150)
 
     except Exception:
-        _logger.exception("win32_embed_failed", extra={"hwnd": hex(hwnd)})
+        _logger.exception("win32_embed_failed", hwnd=hex(hwnd))
         return None
 
     _logger.info(
         "win32_window_embedded",
-        extra={"hwnd": hex(hwnd)},
+        hwnd=hex(hwnd),
     )
     return container
 
@@ -165,7 +166,8 @@ def poll_and_embed(
         else:
             _logger.warning(
                 "win32_embed_polling_exhausted",
-                extra={"pid": pid, "attempts": attempt_count[0]},
+                pid=pid,
+                attempts=attempt_count[0],
             )
 
     QTimer.singleShot(interval_ms, _try_embed)

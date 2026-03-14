@@ -231,9 +231,9 @@ class IconManager:
         try:
             icons_dir = get_assets_path() / "icons"
             available = any(icons_dir.iterdir()) if icons_dir.exists() else False
-            _logger.debug("icons_availability_check", extra={"available": available, "path": str(icons_dir)})
+            _logger.debug("icons_availability_check", available=available, path=str(icons_dir))
         except (FileNotFoundError, PermissionError) as exc:
-            _logger.exception("icons_availability_check_failed", extra={"error": str(exc)})
+            _logger.exception("icons_availability_check_failed", error=str(exc))
             return False
         else:
             return available
@@ -250,10 +250,10 @@ class IconManager:
         """
         cache_key = f"{name}_{size}"
         if cache_key in self._icon_cache:
-            _logger.debug("icon_cache_hit", extra={"icon_name": name, "size": size})
+            _logger.debug("icon_cache_hit", icon_name=name, size=size)
             return self._icon_cache[cache_key]
 
-        _logger.debug("icon_cache_miss", extra={"icon_name": name, "size": size})
+        _logger.debug("icon_cache_miss", icon_name=name, size=size)
         icon = self._load_icon(name, size)
         self._icon_cache[cache_key] = icon
         return icon
@@ -275,13 +275,13 @@ class IconManager:
             if icon_path.exists():
                 icon = QIcon(str(icon_path))
                 if not icon.isNull():
-                    _logger.debug("icon_loaded_from_file", extra={"icon_name": name, "path": str(icon_path)})
+                    _logger.debug("icon_loaded_from_file", icon_name=name, path=str(icon_path))
                     return icon
-                _logger.warning("icon_load_failed", extra={"icon_path": str(icon_path)})
+                _logger.warning("icon_load_failed", icon_path=str(icon_path))
             else:
-                _logger.debug("icon_file_not_found", extra={"icon_name": name, "path": str(icon_path)})
+                _logger.debug("icon_file_not_found", icon_name=name, path=str(icon_path))
 
-        _logger.warning("icon_using_fallback", extra={"icon_name": name, "size": size})
+        _logger.warning("icon_using_fallback", icon_name=name, size=size)
         return IconManager._create_fallback_icon(name, size)
 
     @staticmethod
@@ -296,9 +296,9 @@ class IconManager:
             QIcon with rendered Unicode character or empty icon.
         """
         if fallback_char := UNICODE_FALLBACK.get(name, ""):
-            _logger.debug("fallback_icon_generated", extra={"icon_name": name, "char": fallback_char, "size": size})
+            _logger.debug("fallback_icon_generated", icon_name=name, char=fallback_char, size=size)
             return IconManager._render_text_icon(fallback_char, size)
-        _logger.warning("no_fallback_icon_available", extra={"icon_name": name})
+        _logger.warning("no_fallback_icon_available", icon_name=name)
         return QIcon()
 
     @staticmethod
@@ -353,10 +353,10 @@ class IconManager:
         """
         cache_key = (name, size)
         if cache_key in self._pixmap_cache:
-            _logger.debug("pixmap_cache_hit", extra={"icon_name": name, "size": size})
+            _logger.debug("pixmap_cache_hit", icon_name=name, size=size)
             return self._pixmap_cache[cache_key]
 
-        _logger.debug("pixmap_cache_miss", extra={"icon_name": name, "size": size})
+        _logger.debug("pixmap_cache_miss", icon_name=name, size=size)
         icon = self.get_icon(name, size)
         pixmap = icon.pixmap(QSize(size, size))
         self._pixmap_cache[cache_key] = pixmap
@@ -376,14 +376,14 @@ class IconManager:
             if icon_path.exists():
                 icon = QIcon(str(icon_path))
                 if not icon.isNull():
-                    _logger.debug("app_icon_loaded", extra={"path": str(icon_path)})
+                    _logger.debug("app_icon_loaded", path=str(icon_path))
                     self._icon_cache["app_icon"] = icon
                     return icon
-                _logger.warning("app_icon_load_failed", extra={"path": str(icon_path)})
+                _logger.warning("app_icon_load_failed", path=str(icon_path))
         except FileNotFoundError:
-            _logger.warning("app_icon_not_found", extra={})
+            _logger.warning("app_icon_not_found")
 
-        _logger.debug("app_icon_using_fallback", extra={})
+        _logger.debug("app_icon_using_fallback")
         fallback = IconManager._render_text_icon("IC", 256, QColor("#007acc"))
         self._icon_cache["app_icon"] = fallback
         return fallback
@@ -421,7 +421,8 @@ class IconManager:
         self._pixmap_cache.clear()
         _logger.debug(
             "icon_cache_cleared",
-            extra={"icons_cleared": icon_count, "pixmaps_cleared": pixmap_count},
+            icons_cleared=icon_count,
+            pixmaps_cleared=pixmap_count,
         )
 
     def preload_icons(self, names: list[str] | None = None) -> None:
@@ -442,7 +443,7 @@ class IconManager:
                 "file_save",
             ]
 
-        _logger.debug("preloading_icons", extra={"count": len(names)})
+        _logger.debug("preloading_icons", count=len(names))
         for name in names:
             self.get_icon(name)
 

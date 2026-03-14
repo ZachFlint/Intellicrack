@@ -35,8 +35,8 @@ def run() -> None:
         main_module = importlib.import_module("intellicrack.main")
         main_func = main_module.main
     except ImportError as e:
-        _logger.exception("import_failed", extra={"error": str(e)})
-        _logger.warning("dependency_check_hint", extra={"target_module": "intellicrack.main"})
+        _logger.exception("import_failed", error=str(e))
+        _logger.warning("dependency_check_hint", target_module="intellicrack.main")
         sys.exit(1)
 
     sys.exit(main_func())

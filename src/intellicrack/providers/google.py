@@ -70,7 +70,7 @@ class GoogleProvider(LLMProviderBase):
         super().__init__()
         self._client: genai.Client | None = None
         self._current_task: asyncio.Task[object] | None = None
-        self._logger = get_logger("providers.google")
+        self._logger = get_logger("providers.google").bind(provider="google")
 
     @property
     def name(self) -> ProviderName:
@@ -105,13 +105,14 @@ class GoogleProvider(LLMProviderBase):
             self._connected = True
             self._logger.info(
                 "google_connected",
-                extra={"has_custom_base": credentials.api_base is not None},
+                has_custom_base=credentials.api_base is not None,
             )
 
         except ClientError as e:
             self._logger.exception(
                 "google_connect_failed",
-                extra={"error": str(e), "code": e.code},
+                error=str(e),
+                code=e.code,
             )
             if e.code in {401, 403}:
                 raise AuthenticationError(_MSG_INVALID_API_KEY) from e
@@ -119,7 +120,7 @@ class GoogleProvider(LLMProviderBase):
         except Exception as e:
             self._logger.exception(
                 "google_connect_failed",
-                extra={"error": str(e)},
+                error=str(e),
             )
             raise ProviderError(_MSG_CONNECTION_FAILED) from e
         finally:
@@ -135,9 +136,9 @@ class GoogleProvider(LLMProviderBase):
             await super().disconnect()
             self._client = None
             self._current_task = None
-            self._logger.info("google_disconnected", extra={})
+            self._logger.info("google_disconnected")
         except Exception as exc:
-            self._logger.warning("disconnect_cleanup_error", extra={"error": str(exc)})
+            self._logger.warning("disconnect_cleanup_error", error=str(exc))
             self._connected = False
 
     async def list_models(self) -> list[ModelInfo]:
@@ -197,12 +198,12 @@ class GoogleProvider(LLMProviderBase):
             sorted_models = sorted(models, key=lambda m: m.id, reverse=True)
             self._logger.info(
                 "google_models_listed",
-                extra={"count": len(sorted_models)},
+                count=len(sorted_models),
             )
         except Exception as e:
             self._logger.warning(
                 "google_list_models_api_failed",
-                extra={"error": str(e)},
+                error=str(e),
             )
             raise ProviderError(_MSG_FETCH_MODELS_FAILED) from e
         else:
@@ -238,13 +239,11 @@ class GoogleProvider(LLMProviderBase):
         self._cancel_requested = False
         self._logger.debug(
             "google_chat_started",
-            extra={
-                "model": model,
-                "messages_count": len(messages),
-                "tools_count": len(tools) if tools else 0,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-            },
+            model=model,
+            messages_count=len(messages),
+            tools_count=len(tools) if tools else 0,
+            temperature=temperature,
+            max_tokens=max_tokens,
         )
 
         system_instruction = self._extract_system_instruction(messages)
@@ -286,10 +285,8 @@ class GoogleProvider(LLMProviderBase):
             for tc in tool_calls:
                 self._logger.debug(
                     "tool_call_parsed",
-                    extra={
-                        "tool_name": tc.tool_name,
-                        "arguments_count": len(tc.arguments),
-                    },
+                    tool_name=tc.tool_name,
+                    arguments_count=len(tc.arguments),
                 )
 
             message = Message(
@@ -308,18 +305,17 @@ class GoogleProvider(LLMProviderBase):
 
             self._logger.info(
                 "google_chat_completed",
-                extra={
-                    "model": model,
-                    "duration_ms": duration_ms,
-                    "tool_calls_count": len(tool_calls),
-                    "content_length": len(content),
-                },
+                model=model,
+                duration_ms=duration_ms,
+                tool_calls_count=len(tool_calls),
+                content_length=len(content),
             )
 
         except Exception as e:
             self._logger.exception(
                 "google_chat_failed",
-                extra={"model": model, "error": str(e)},
+                model=model,
+                error=str(e),
             )
             error_msg = str(e).lower()
             if "quota" in error_msg or "rate" in error_msg or "429" in error_msg:
@@ -358,13 +354,11 @@ class GoogleProvider(LLMProviderBase):
         self._cancel_requested = False
         self._logger.debug(
             "google_chat_stream_started",
-            extra={
-                "model": model,
-                "messages_count": len(messages),
-                "tools_count": len(tools) if tools else 0,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-            },
+            model=model,
+            messages_count=len(messages),
+            tools_count=len(tools) if tools else 0,
+            temperature=temperature,
+            max_tokens=max_tokens,
         )
 
         system_instruction = self._extract_system_instruction(messages)
@@ -401,7 +395,8 @@ class GoogleProvider(LLMProviderBase):
                 if self._cancel_requested:
                     self._logger.info(
                         "google_chat_stream_cancelled",
-                        extra={"model": model, "chunks_received": chunk_count},
+                        model=model,
+                        chunks_received=chunk_count,
                     )
                     break
                 last_chunk = chunk
@@ -428,13 +423,16 @@ class GoogleProvider(LLMProviderBase):
 
                 self._logger.info(
                     "google_chat_stream_completed",
-                    extra={"model": model, "chunks_received": chunk_count},
+                    model=model,
+                    chunks_received=chunk_count,
                 )
 
         except Exception as e:
             self._logger.exception(
                 "google_chat_stream_failed",
-                extra={"model": model, "error": str(e), "chunks_received": chunk_count},
+                model=model,
+                error=str(e),
+                chunks_received=chunk_count,
             )
             if not self._cancel_requested:
                 raise ProviderError(_MSG_STREAM_FAILED) from e
@@ -450,7 +448,7 @@ class GoogleProvider(LLMProviderBase):
             self._current_task.cancel()
         self._logger.info(
             "google_request_cancelled",
-            extra={"had_active_task": had_active_task},
+            had_active_task=had_active_task,
         )
 
     @staticmethod

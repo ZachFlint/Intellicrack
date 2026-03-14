@@ -26,11 +26,11 @@ from .base import (
     WatchpointInfo,
 )
 from .binary import BinaryBridge
+from .cutter import CutterBridge
 from .frida_bridge import FridaBridge
 from .ghidra import GhidraBridge
 from .installer import ToolInstaller
 from .process import ProcessBridge
-from .cutter import CutterBridge
 from .sandbox_bridge import SandboxBridge
 from .x64dbg import X64DbgBridge
 
@@ -40,6 +40,7 @@ __all__: list[str] = [
     "BinaryOperationsBridge",
     "BridgeCapabilities",
     "BridgeState",
+    "CutterBridge",
     "DebuggerBridge",
     "DisassemblyLine",
     "DynamicAnalysisBridge",
@@ -48,7 +49,6 @@ __all__: list[str] = [
     "InstrumentationBridge",
     "MemorySearchResult",
     "ProcessBridge",
-    "CutterBridge",
     "SandboxBridge",
     "StackFrame",
     "StaticAnalysisBridge",

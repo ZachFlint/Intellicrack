@@ -219,7 +219,7 @@ class SessionStore:
         """
         self._db_path = db_path
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        _logger.debug("session_store_init", extra={"db_path": str(db_path)})
+        _logger.debug("session_store_init", db_path=str(db_path))
         self._init_database()
 
     @contextmanager
@@ -234,22 +234,22 @@ class SessionStore:
         """
         conn = sqlite3.connect(str(self._db_path))
         conn.row_factory = sqlite3.Row
-        _logger.debug("db_connection_opened", extra={"db_path": str(self._db_path)})
+        _logger.debug("db_connection_opened", db_path=str(self._db_path))
         try:
             yield conn
             conn.commit()
-            _logger.debug("db_connection_committed", extra={"db_path": str(self._db_path)})
+            _logger.debug("db_connection_committed", db_path=str(self._db_path))
         except Exception:
             conn.rollback()
-            _logger.exception("db_connection_rollback", extra={"db_path": str(self._db_path)})
+            _logger.exception("db_connection_rollback", db_path=str(self._db_path))
             raise
         finally:
             conn.close()
-            _logger.debug("db_connection_closed", extra={"db_path": str(self._db_path)})
+            _logger.debug("db_connection_closed", db_path=str(self._db_path))
 
     def _init_database(self) -> None:
         """Initialize the database schema."""
-        _logger.debug("database_schema_init_start", extra={"db_path": str(self._db_path)})
+        _logger.debug("database_schema_init_start", db_path=str(self._db_path))
         with self._connection() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS sessions (
@@ -279,7 +279,7 @@ class SessionStore:
                 )
             """)
 
-            _logger.debug("database_schema_initialized", extra={"db_path": str(self._db_path)})
+            _logger.debug("database_schema_initialized", db_path=str(self._db_path))
 
     def save(self, session: Session) -> None:
         """Save a session to the database.
@@ -287,7 +287,7 @@ class SessionStore:
         Args:
             session: Session to save.
         """
-        _logger.debug("session_save_start", extra={"session_id": session.id})
+        _logger.debug("session_save_start", session_id=session.id)
         session_data = {
             "binaries": [self._serialize_binary(b) for b in session.binaries],
             "messages": [self._serialize_message(m) for m in session.messages],
@@ -326,7 +326,7 @@ class SessionStore:
                     (session.id, tag),
                 )
 
-        _logger.debug("session_saved", extra={"session_id": session.id})
+        _logger.debug("session_saved", session_id=session.id)
 
     def load(self, session_id: str) -> Session | None:
         """Load a session from the database.
@@ -337,7 +337,7 @@ class SessionStore:
         Returns:
             Session instance or None if not found.
         """
-        _logger.debug("session_load_query", extra={"session_id": session_id})
+        _logger.debug("session_load_query", session_id=session_id)
         with self._connection() as conn:
             row = conn.execute(
                 "SELECT * FROM sessions WHERE id = ?",
@@ -345,7 +345,7 @@ class SessionStore:
             ).fetchone()
 
             if row is None:
-                _logger.debug("session_load_not_found", extra={"session_id": session_id})
+                _logger.debug("session_load_not_found", session_id=session_id)
                 return None
 
             tags_rows = conn.execute(
@@ -373,7 +373,7 @@ class SessionStore:
                 patches=[self._deserialize_patch(p) for p in data.get("patches", [])],
             )
 
-            _logger.debug("session_loaded", extra={"session_id": session_id})
+            _logger.debug("session_loaded", session_id=session_id)
             return session
 
     def delete(self, session_id: str) -> bool:
@@ -385,7 +385,7 @@ class SessionStore:
         Returns:
             True if deleted, False if not found.
         """
-        _logger.debug("session_delete_query", extra={"session_id": session_id})
+        _logger.debug("session_delete_query", session_id=session_id)
         with self._connection() as conn:
             cursor = conn.execute(
                 "DELETE FROM sessions WHERE id = ?",
@@ -394,7 +394,7 @@ class SessionStore:
             deleted = cursor.rowcount > 0
 
         if deleted:
-            _logger.info("session_deleted", extra={"session_id": session_id})
+            _logger.info("session_deleted", session_id=session_id)
 
         return deleted
 
@@ -407,7 +407,7 @@ class SessionStore:
         Returns:
             List of session metadata.
         """
-        _logger.debug("session_list_all_query", extra={"limit": limit})
+        _logger.debug("session_list_all_query", limit=limit)
         with self._connection() as conn:
             rows = conn.execute(
                 """
@@ -435,7 +435,7 @@ class SessionStore:
                     )
                 )
 
-            _logger.debug("session_list_all_result", extra={"count": len(result)})
+            _logger.debug("session_list_all_result", count=len(result))
             return result
 
     def search_by_tag(self, tag: str) -> list[SessionMetadata]:
@@ -447,7 +447,7 @@ class SessionStore:
         Returns:
             List of matching session metadata.
         """
-        _logger.debug("session_search_by_tag_query", extra={"tag": tag})
+        _logger.debug("session_search_by_tag_query", tag=tag)
         with self._connection() as conn:
             rows = conn.execute(
                 """
@@ -476,7 +476,7 @@ class SessionStore:
                     )
                 )
 
-            _logger.debug("session_search_by_tag_result", extra={"tag": tag, "count": len(result)})
+            _logger.debug("session_search_by_tag_result", tag=tag, count=len(result))
             return result
 
     def cleanup_old(self, days: int = 30) -> int:
@@ -488,7 +488,7 @@ class SessionStore:
         Returns:
             Number of sessions deleted.
         """
-        _logger.debug("session_cleanup_old_start", extra={"days": days})
+        _logger.debug("session_cleanup_old_start", days=days)
         cutoff = datetime.now().isoformat()
 
         with self._connection() as conn:
@@ -503,7 +503,7 @@ class SessionStore:
             deleted = cursor.rowcount
 
         if deleted > 0:
-            _logger.info("sessions_cleaned_up", extra={"deleted_count": deleted})
+            _logger.info("sessions_cleaned_up", deleted_count=deleted)
 
         return deleted
 
@@ -716,11 +716,11 @@ class SessionStore:
         }
 
         path.parent.mkdir(parents=True, exist_ok=True)
-        _logger.debug("session_export_file_write", extra={"session_id": session.id, "path": str(path)})
+        _logger.debug("session_export_file_write", session_id=session.id, path=str(path))
         with open(path, "w", encoding="utf-8") as f:
             json.dump(export_data, f, indent=2, ensure_ascii=False)
 
-        _logger.info("session_exported", extra={"session_id": session.id, "path": str(path)})
+        _logger.info("session_exported", session_id=session.id, path=str(path))
 
     def import_from_json(self, path: Path) -> Session:
         """Import a session from a JSON file.
@@ -738,7 +738,7 @@ class SessionStore:
         if not path.exists():
             raise FileNotFoundError(_ERR_FILE_NOT_FOUND)
 
-        _logger.debug("session_import_file_read", extra={"path": str(path)})
+        _logger.debug("session_import_file_read", path=str(path))
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
 
@@ -753,7 +753,7 @@ class SessionStore:
                 tool_name = ToolName(key)
                 tool_states[tool_name] = self._deserialize_tool_state(value)
             except ValueError:
-                _logger.warning("unknown_tool_name_in_import", extra={"tool_name": key})
+                _logger.warning("unknown_tool_name_in_import", tool_name=key)
                 continue
 
         session = Session(
@@ -772,7 +772,7 @@ class SessionStore:
             patches=[self._deserialize_patch(p) for p in session_data.get("patches", [])],
         )
 
-        _logger.info("session_imported", extra={"session_id": session.id, "path": str(path)})
+        _logger.info("session_imported", session_id=session.id, path=str(path))
         return session
 
 
@@ -806,7 +806,7 @@ class SessionManager:
         self._auto_save = auto_save
         self._save_interval = save_interval
         self._save_task: asyncio.Task[None] | None = None
-        _logger.debug("session_manager_init", extra={"auto_save": auto_save, "save_interval": save_interval})
+        _logger.debug("session_manager_init", auto_save=auto_save, save_interval=save_interval)
 
     @property
     def current(self) -> Session | None:
@@ -843,7 +843,7 @@ class SessionManager:
         await self._start_auto_save()
 
         log_session_operation("create", session.id, provider=provider.value, model=model)
-        _logger.info("session_created", extra={"session_id": session.id})
+        _logger.info("session_created", session_id=session.id)
         return session
 
     async def load(self, session_id: str) -> Session | None:
@@ -863,7 +863,7 @@ class SessionManager:
         if session is not None:
             self._current = session
             await self._start_auto_save()
-            _logger.info("session_loaded", extra={"session_id": session_id})
+            _logger.info("session_loaded", session_id=session_id)
 
         return session
 
@@ -885,14 +885,14 @@ class SessionManager:
             session: Session to update.
         """
         self._store.save(session)
-        _logger.debug("session_updated", extra={"session_id": session.id})
+        _logger.debug("session_updated", session_id=session.id)
 
     async def save(self) -> None:
         """Save the current session."""
         if self._current is not None:
             self._store.save(self._current)
             log_session_operation("save", self._current.id)
-            _logger.debug("current_session_saved", extra={"session_id": self._current.id})
+            _logger.debug("current_session_saved", session_id=self._current.id)
 
     async def close(self) -> None:
         """Close the current session."""
@@ -900,7 +900,7 @@ class SessionManager:
 
         if self._current is not None:
             await self.save()
-            _logger.info("session_closed", extra={"session_id": self._current.id})
+            _logger.info("session_closed", session_id=self._current.id)
             self._current = None
 
     async def delete(self, session_id: str) -> bool:

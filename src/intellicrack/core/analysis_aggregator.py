@@ -154,7 +154,7 @@ class AnalysisAggregator:
         except Exception as exc:
             _logger.warning(
                 "binary_bridge_strings_failed",
-                extra={"error": str(exc)},
+                error=str(exc),
             )
             notes.append(f"BinaryBridge string extraction failed: {exc}")
 
@@ -182,7 +182,7 @@ class AnalysisAggregator:
         try:
             bridge = self._tools.get_ghidra_bridge() if bridge_name == "ghidra" else self._tools.get_cutter_bridge()
         except ToolError:
-            _logger.debug("static_bridge_unavailable", extra={"bridge": bridge_name})
+            _logger.debug("static_bridge_unavailable", bridge=bridge_name)
             return
 
         contributed = False
@@ -194,7 +194,8 @@ class AnalysisAggregator:
         except Exception as exc:
             _logger.warning(
                 "static_bridge_strings_failed",
-                extra={"bridge": bridge_name, "error": str(exc)},
+                bridge=bridge_name,
+                error=str(exc),
             )
             notes.append(f"{bridge_name} string search failed: {exc}")
 
@@ -205,7 +206,8 @@ class AnalysisAggregator:
         except Exception as exc:
             _logger.warning(
                 "static_bridge_imports_failed",
-                extra={"bridge": bridge_name, "error": str(exc)},
+                bridge=bridge_name,
+                error=str(exc),
             )
             notes.append(f"{bridge_name} import enumeration failed: {exc}")
 
@@ -216,7 +218,8 @@ class AnalysisAggregator:
         except Exception as exc:
             _logger.warning(
                 "static_bridge_exports_failed",
-                extra={"bridge": bridge_name, "error": str(exc)},
+                bridge=bridge_name,
+                error=str(exc),
             )
             notes.append(f"{bridge_name} export enumeration failed: {exc}")
 
@@ -227,7 +230,8 @@ class AnalysisAggregator:
         except Exception as exc:
             _logger.warning(
                 "static_bridge_functions_failed",
-                extra={"bridge": bridge_name, "error": str(exc)},
+                bridge=bridge_name,
+                error=str(exc),
             )
             notes.append(f"{bridge_name} function enumeration failed: {exc}")
 

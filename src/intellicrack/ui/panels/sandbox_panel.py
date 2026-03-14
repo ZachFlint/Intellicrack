@@ -212,7 +212,7 @@ class SandboxPanel(AnalysisPanelBase):
             sandbox: The SandboxBase implementation to use.
         """
         self._sandbox = sandbox
-        _logger.info("sandbox_backend_set", extra={"backend_type": type(sandbox).__name__})
+        _logger.info("sandbox_backend_set", backend_type=type(sandbox).__name__)
 
     def set_sandbox_manager(self, manager: SandboxManager) -> None:
         """Set the sandbox manager for type-aware creation.
@@ -224,7 +224,7 @@ class SandboxPanel(AnalysisPanelBase):
             manager: The SandboxManager instance.
         """
         self._sandbox_manager = manager
-        _logger.info("sandbox_manager_set", extra={"manager_type": type(manager).__name__})
+        _logger.info("sandbox_manager_set", manager_type=type(manager).__name__)
 
     def get_sandbox(self) -> SandboxBase | None:
         """Get the current sandbox backend.
@@ -268,7 +268,7 @@ class SandboxPanel(AnalysisPanelBase):
         """Create a new sandbox environment."""
         if self._sandbox_manager is not None:
             sandbox_type = self._selected_sandbox_type()
-            _logger.debug("sandbox_create_via_manager", extra={"sandbox_type": sandbox_type})
+            _logger.debug("sandbox_create_via_manager", sandbox_type=sandbox_type)
             self._create_btn.setEnabled(False)
             self._run_async(
                 self._sandbox_manager.create(sandbox_type=sandbox_type, auto_start=True),
@@ -279,10 +279,10 @@ class SandboxPanel(AnalysisPanelBase):
 
         if self._sandbox is None:
             self._log("[!] No sandbox backend configured")
-            _logger.warning("sandbox_create_failed_no_backend", extra={"reason": "no backend configured"})
+            _logger.warning("sandbox_create_failed_no_backend", reason="no backend configured")
             return
 
-        _logger.debug("sandbox_create_started", extra={"backend_type": type(self._sandbox).__name__})
+        _logger.debug("sandbox_create_started", backend_type=type(self._sandbox).__name__)
         self._create_btn.setEnabled(False)
         self._run_async(
             self._sandbox.start(),
@@ -321,7 +321,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._status_poll_timer.start(5000)
         self.sandbox_created.emit(self._sandbox_id)
         self.tool_started.emit()
-        _logger.info("sandbox_created", extra={"sandbox_id": self._sandbox_id})
+        _logger.info("sandbox_created", sandbox_id=self._sandbox_id)
 
         QTimer.singleShot(2000, self._connect_vnc_display)
 
@@ -333,14 +333,14 @@ class SandboxPanel(AnalysisPanelBase):
         """
         self._log(f"[-] Failed to create sandbox: {exc}")
         self._create_btn.setEnabled(True)
-        _logger.warning("sandbox_create_failed", extra={"error": str(exc)})
+        _logger.warning("sandbox_create_failed", error=str(exc))
 
     def _on_destroy(self) -> None:
         """Destroy the current sandbox environment."""
         if self._sandbox is None:
             return
 
-        _logger.debug("sandbox_destroy_started", extra={"sandbox_id": self._sandbox_id})
+        _logger.debug("sandbox_destroy_started", sandbox_id=self._sandbox_id)
         self._destroy_btn.setEnabled(False)
         self._run_async(
             self._sandbox.stop(),
@@ -361,7 +361,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._set_sandbox_controls_active(False)
         self._status_poll_timer.stop()
         self.tool_closed.emit()
-        _logger.info("sandbox_destroyed", extra={"sandbox_id": self._sandbox_id})
+        _logger.info("sandbox_destroyed", sandbox_id=self._sandbox_id)
 
     def _on_destroy_error(self, exc: object) -> None:
         """Handle sandbox destruction failure.
@@ -375,14 +375,14 @@ class SandboxPanel(AnalysisPanelBase):
         self._set_sandbox_controls_active(False)
         self._status_poll_timer.stop()
         self.tool_closed.emit()
-        _logger.warning("sandbox_destroy_failed", extra={"error": str(exc)})
+        _logger.warning("sandbox_destroy_failed", error=str(exc))
 
     def _on_restart(self) -> None:
         """Restart the sandbox environment."""
         if self._sandbox is None:
             return
 
-        _logger.debug("sandbox_restart_started", extra={"sandbox_id": self._sandbox_id})
+        _logger.debug("sandbox_restart_started", sandbox_id=self._sandbox_id)
         self._restart_btn.setEnabled(False)
         self._run_async(
             self._sandbox.restart(),
@@ -399,7 +399,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._log("[+] Sandbox restarted")
         self._clear_report_tabs()
         self._restart_btn.setEnabled(True)
-        _logger.info("sandbox_restarted", extra={"sandbox_id": self._sandbox_id})
+        _logger.info("sandbox_restarted", sandbox_id=self._sandbox_id)
 
     def _on_restart_error(self, exc: object) -> None:
         """Handle sandbox restart failure.
@@ -409,7 +409,7 @@ class SandboxPanel(AnalysisPanelBase):
         """
         self._log(f"[-] Failed to restart sandbox: {exc}")
         self._restart_btn.setEnabled(True)
-        _logger.warning("sandbox_restart_failed", extra={"error": str(exc)})
+        _logger.warning("sandbox_restart_failed", error=str(exc))
 
     def _on_browse_binary(self) -> None:
         """Browse for a binary to execute in the sandbox."""
@@ -444,7 +444,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._log(f"[*] Executing: {binary.name} {args}")
         self._clear_report_tabs()
         self._run_btn.setEnabled(False)
-        _logger.debug("sandbox_binary_execution_started", extra={"binary": binary.name, "exec_args": args})
+        _logger.debug("sandbox_binary_execution_started", binary=binary.name, exec_args=args)
 
         sandbox_dest = f"input/{binary.name}"
         self._pending_binary = binary
@@ -483,7 +483,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._log("[+] Execution started")
         self._run_btn.setEnabled(True)
         self.execution_completed.emit(binary_name)
-        _logger.info("sandbox_binary_executed", extra={"binary": binary_name})
+        _logger.info("sandbox_binary_executed", binary=binary_name)
 
     def _on_run_binary_error(self, exc: object) -> None:
         """Handle binary execution failure.
@@ -494,7 +494,7 @@ class SandboxPanel(AnalysisPanelBase):
         name_str = self._pending_binary.name if self._pending_binary.parts else "unknown"
         self._log(f"[-] Execution failed: {exc}")
         self._run_btn.setEnabled(True)
-        _logger.warning("sandbox_binary_execution_failed", extra={"binary": name_str, "error": str(exc)})
+        _logger.warning("sandbox_binary_execution_failed", binary=name_str, error=str(exc))
 
     def _on_take_snapshot(self) -> None:
         """Take a snapshot of the current sandbox state."""
@@ -519,7 +519,7 @@ class SandboxPanel(AnalysisPanelBase):
         item = QTreeWidgetItem([snapshot_id, "manual_snapshot", "now"])
         self._snapshots_tree.addTopLevelItem(item)
         self._snapshot_btn.setEnabled(True)
-        _logger.info("sandbox_snapshot_taken", extra={"snapshot_id": snapshot_id})
+        _logger.info("sandbox_snapshot_taken", snapshot_id=snapshot_id)
 
     def _on_take_snapshot_error(self, exc: object) -> None:
         """Handle snapshot failure.
@@ -529,7 +529,7 @@ class SandboxPanel(AnalysisPanelBase):
         """
         self._log(f"[-] Snapshot failed: {exc}")
         self._snapshot_btn.setEnabled(True)
-        _logger.warning("sandbox_snapshot_failed", extra={"error": str(exc)})
+        _logger.warning("sandbox_snapshot_failed", error=str(exc))
 
     def _on_restore_snapshot(self) -> None:
         """Restore the selected snapshot."""
@@ -560,7 +560,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._log(f"[+] Restored snapshot: {snapshot_id}")
         self._clear_report_tabs()
         self._restore_btn.setEnabled(True)
-        _logger.info("sandbox_snapshot_restored", extra={"snapshot_id": snapshot_id})
+        _logger.info("sandbox_snapshot_restored", snapshot_id=snapshot_id)
 
     def _on_restore_snapshot_error(self, exc: object) -> None:
         """Handle snapshot restore failure.
@@ -571,7 +571,7 @@ class SandboxPanel(AnalysisPanelBase):
         snapshot_id = getattr(self, "_pending_snapshot_id", "unknown")
         self._log(f"[-] Restore failed: {exc}")
         self._restore_btn.setEnabled(True)
-        _logger.warning("sandbox_snapshot_restore_failed", extra={"snapshot_id": snapshot_id, "error": str(exc)})
+        _logger.warning("sandbox_snapshot_restore_failed", snapshot_id=snapshot_id, error=str(exc))
 
     def _poll_status(self) -> None:
         """Poll the sandbox status periodically."""
@@ -604,12 +604,12 @@ class SandboxPanel(AnalysisPanelBase):
 
         vnc_port = getattr(self._sandbox, "vnc_port", None)
         if vnc_port is None:
-            _logger.debug("sandbox_vnc_port_not_available", extra={"sandbox_type": type(self._sandbox).__name__})
+            _logger.debug("sandbox_vnc_port_not_available", sandbox_type=type(self._sandbox).__name__)
             return
 
         self._log(f"[*] Connecting VNC display on port {vnc_port}...")
         self._vnc_widget.connect_to_server("127.0.0.1", int(vnc_port))
-        _logger.info("vnc_display_connecting", extra={"port": vnc_port})
+        _logger.info("vnc_display_connecting", port=vnc_port)
 
     def _disconnect_vnc_display(self) -> None:
         """Disconnect the VNC widget if connected."""
@@ -628,7 +628,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             report: The execution report to display.
         """
-        _logger.debug("execution_report_loading", extra={"report_type": type(report).__name__})
+        _logger.debug("execution_report_loading", report_type=type(report).__name__)
         self._clear_report_tabs()
 
         if hasattr(report, "file_changes"):
@@ -663,9 +663,7 @@ class SandboxPanel(AnalysisPanelBase):
         )
         _logger.info(
             "execution_report_loaded",
-            extra={
-                "file_changes": len(report.file_changes),
-                "registry_changes": len(report.registry_changes),
-                "network_events": len(report.network_activity),
-            },
+            file_changes=len(report.file_changes),
+            registry_changes=len(report.registry_changes),
+            network_events=len(report.network_activity),
         )

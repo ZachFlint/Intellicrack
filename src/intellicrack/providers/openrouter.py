@@ -71,7 +71,7 @@ class OpenRouterProvider(LLMProviderBase):
         super().__init__()
         self._client: httpx.AsyncClient | None = None
         self._api_key: str | None = None
-        self._logger = get_logger("providers.openrouter")
+        self._logger = get_logger("providers.openrouter").bind(provider="openrouter")
 
     @property
     def name(self) -> ProviderName:
@@ -113,18 +113,18 @@ class OpenRouterProvider(LLMProviderBase):
             self._connected = True
             self._logger.info(
                 "openrouter_connected",
-                extra={"has_custom_base": credentials.api_base is not None},
+                has_custom_base=credentials.api_base is not None,
             )
         except httpx.HTTPStatusError as e:
             self._logger.warning(
                 "openrouter_connect_failed",
-                extra={"status_code": e.response.status_code},
+                status_code=e.response.status_code,
             )
             if e.response.status_code == HTTP_UNAUTHORIZED:
                 raise AuthenticationError(_ERR_INVALID_KEY % e) from e
             raise ProviderError(_ERR_CONNECT_FAILED % e) from e
         except Exception as e:
-            self._logger.warning("openrouter_connect_failed", extra={"error": str(e)})
+            self._logger.warning("openrouter_connect_failed", error=str(e))
             raise ProviderError(_ERR_CONNECT_FAILED % e) from e
 
     async def disconnect(self) -> None:
@@ -135,9 +135,9 @@ class OpenRouterProvider(LLMProviderBase):
                 await self._client.aclose()
                 self._client = None
             self._api_key = None
-            self._logger.info("openrouter_disconnected", extra={"was_connected": True})
+            self._logger.info("openrouter_disconnected", was_connected=True)
         except Exception as exc:
-            self._logger.warning("disconnect_cleanup_error", extra={"error": str(exc)})
+            self._logger.warning("disconnect_cleanup_error", error=str(exc))
             self._connected = False
 
     async def list_models(self) -> list[ModelInfo]:
@@ -171,13 +171,13 @@ class OpenRouterProvider(LLMProviderBase):
                     try:
                         input_cost = float(input_cost) * 1000000
                     except (ValueError, TypeError):
-                        self._logger.debug("input_cost_parse_failed", extra={"model": model_id})
+                        self._logger.debug("input_cost_parse_failed", model=model_id)
                         input_cost = None
                 if output_cost is not None:
                     try:
                         output_cost = float(output_cost) * 1000000
                     except (ValueError, TypeError):
-                        self._logger.debug("output_cost_parse_failed", extra={"model": model_id})
+                        self._logger.debug("output_cost_parse_failed", model=model_id)
                         output_cost = None
 
                 architecture: dict[str, object] = model_data.get("architecture", {})
@@ -201,12 +201,12 @@ class OpenRouterProvider(LLMProviderBase):
             sorted_models = sorted(models, key=lambda m: m.id)
             self._logger.info(
                 "openrouter_models_listed",
-                extra={"count": len(sorted_models)},
+                count=len(sorted_models),
             )
         except Exception as e:
             self._logger.warning(
                 "openrouter_list_models_failed",
-                extra={"error": str(e)},
+                error=str(e),
             )
             raise ProviderError(_ERR_LIST_MODELS_FAILED % e) from e
         else:
@@ -246,13 +246,11 @@ class OpenRouterProvider(LLMProviderBase):
         tools_count = len(tools) if tools else 0
         self._logger.info(
             "openrouter_chat_started",
-            extra={
-                "model": model,
-                "messages_count": len(messages),
-                "tools_count": tools_count,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-            },
+            model=model,
+            messages_count=len(messages),
+            tools_count=tools_count,
+            temperature=temperature,
+            max_tokens=max_tokens,
         )
 
         log_provider_request(
@@ -282,14 +280,15 @@ class OpenRouterProvider(LLMProviderBase):
         except httpx.RequestError as e:
             self._logger.warning(
                 "openrouter_chat_request_error",
-                extra={"model": model, "error": str(e)},
+                model=model,
+                error=str(e),
             )
             raise ProviderError(_ERR_API_ERROR % e) from e
 
         if response.status_code == HTTP_RATE_LIMITED:
             self._logger.warning(
                 "openrouter_rate_limited",
-                extra={"model": model},
+                model=model,
             )
             raise RateLimitError(_ERR_RATE_LIMITED)
 
@@ -298,7 +297,8 @@ class OpenRouterProvider(LLMProviderBase):
         except httpx.HTTPStatusError as e:
             self._logger.warning(
                 "openrouter_chat_http_error",
-                extra={"model": model, "status_code": e.response.status_code},
+                model=model,
+                status_code=e.response.status_code,
             )
             raise ProviderError(_ERR_API_ERROR % e) from e
 
@@ -329,12 +329,10 @@ class OpenRouterProvider(LLMProviderBase):
 
         self._logger.info(
             "openrouter_chat_completed",
-            extra={
-                "model": model,
-                "tool_calls_count": len(tool_calls),
-                "duration_ms": round(duration_ms, 2),
-                "content_length": len(content),
-            },
+            model=model,
+            tool_calls_count=len(tool_calls),
+            duration_ms=round(duration_ms, 2),
+            content_length=len(content),
         )
 
         return message, tool_calls or None
@@ -400,13 +398,11 @@ class OpenRouterProvider(LLMProviderBase):
         tools_count = len(tools) if tools else 0
         self._logger.info(
             "openrouter_chat_stream_started",
-            extra={
-                "model": model,
-                "messages_count": len(messages),
-                "tools_count": tools_count,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-            },
+            model=model,
+            messages_count=len(messages),
+            tools_count=tools_count,
+            temperature=temperature,
+            max_tokens=max_tokens,
         )
 
         chunks_yielded = 0
@@ -433,7 +429,8 @@ class OpenRouterProvider(LLMProviderBase):
                     if self._cancel_requested:
                         self._logger.info(
                             "openrouter_chat_stream_cancelled",
-                            extra={"model": model, "chunks_yielded": chunks_yielded},
+                            model=model,
+                            chunks_yielded=chunks_yielded,
                         )
                         break
                     if line.startswith("data: "):
@@ -457,28 +454,31 @@ class OpenRouterProvider(LLMProviderBase):
                                             arguments=cast("str | None", fn.get("arguments")),
                                         )
                         except json.JSONDecodeError as exc:
-                            self._logger.debug("stream_json_parse_skipped", extra={"error": str(exc)})
+                            self._logger.debug("stream_json_parse_skipped", error=str(exc))
                             continue
 
             self._pending_tool_calls = tc_buffer.finalize()
 
             self._logger.info(
                 "openrouter_chat_stream_completed",
-                extra={"model": model, "chunks_yielded": chunks_yielded},
+                model=model,
+                chunks_yielded=chunks_yielded,
             )
 
         except Exception as e:
             if not self._cancel_requested:
                 self._logger.warning(
                     "openrouter_chat_stream_failed",
-                    extra={"model": model, "chunks_yielded": chunks_yielded, "error": str(e)},
+                    model=model,
+                    chunks_yielded=chunks_yielded,
+                    error=str(e),
                 )
                 raise ProviderError(_ERR_STREAM_FAILED % e) from e
 
     async def cancel_request(self) -> None:
         """Cancel any in-flight request."""
         self._cancel_requested = True
-        self._logger.info("openrouter_request_cancelled", extra={"connected": self._connected})
+        self._logger.info("openrouter_request_cancelled", connected=self._connected)
 
     @override
     def _convert_messages_to_provider_format(
@@ -535,7 +535,7 @@ class OpenRouterProvider(LLMProviderBase):
 
         self._logger.info(
             "openrouter_get_generation_started",
-            extra={"generation_id": generation_id},
+            generation_id=generation_id,
         )
 
         try:
@@ -547,12 +547,13 @@ class OpenRouterProvider(LLMProviderBase):
             result: dict[str, object] = cast("dict[str, object]", response.json())
             self._logger.info(
                 "openrouter_get_generation_completed",
-                extra={"generation_id": generation_id},
+                generation_id=generation_id,
             )
         except Exception as e:
             self._logger.warning(
                 "openrouter_get_generation_failed",
-                extra={"generation_id": generation_id, "error": str(e)},
+                generation_id=generation_id,
+                error=str(e),
             )
             raise ProviderError(_ERR_GET_GENERATION_FAILED % e) from e
         else:

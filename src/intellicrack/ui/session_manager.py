@@ -247,7 +247,7 @@ class SessionManagerDialog(QDialog):
                     session_data = self._metadata_to_dict(metadata)
                     self._sessions.append(session_data)
             except (AttributeError, TypeError) as e:
-                _logger.warning("session_list_failed_using_disk_fallback", extra={"error": str(e)})
+                _logger.warning("session_list_failed_using_disk_fallback", error=str(e))
                 self._load_sessions_from_disk()
         else:
             self._load_sessions_from_disk()
@@ -288,7 +288,7 @@ class SessionManagerDialog(QDialog):
                         font.setBold(True)
                         item.setFont(font)
 
-        _logger.info("session_list_refreshed", extra={"count": len(self._sessions)})
+        _logger.info("session_list_refreshed", count=len(self._sessions))
 
     def _load_sessions_from_disk(self) -> None:
         """Load sessions from disk storage."""
@@ -310,14 +310,14 @@ class SessionManagerDialog(QDialog):
                     try:
                         session_data["created_at"] = datetime.fromisoformat(session_data["created_at"])
                     except ValueError as e:
-                        _logger.debug("session_datetime_parse_failed", extra={"error": str(e)})
+                        _logger.debug("session_datetime_parse_failed", error=str(e))
                         session_data["created_at"] = datetime.now()
 
                 if "updated_at" in session_data and isinstance(session_data["updated_at"], str):
                     try:
                         session_data["updated_at"] = datetime.fromisoformat(session_data["updated_at"])
                     except ValueError as e:
-                        _logger.debug("session_datetime_parse_failed", extra={"error": str(e)})
+                        _logger.debug("session_datetime_parse_failed", error=str(e))
                         session_data["updated_at"] = datetime.now()
 
                 self._sessions.append(session_data)
@@ -325,7 +325,8 @@ class SessionManagerDialog(QDialog):
             except (json.JSONDecodeError, OSError) as e:
                 _logger.warning(
                     "session_file_load_failed",
-                    extra={"file": str(session_file), "error": str(e)},
+                    file=str(session_file),
+                    error=str(e),
                 )
                 continue
 
@@ -357,7 +358,7 @@ class SessionManagerDialog(QDialog):
                 "binary_count": metadata.binary_count,
             }
         except (AttributeError, TypeError) as e:
-            _logger.warning("metadata_conversion_failed", extra={"error": str(e)})
+            _logger.warning("metadata_conversion_failed", error=str(e))
             return {
                 "id": str(metadata) if metadata else "unknown",
                 "name": "Unknown Session",
@@ -386,7 +387,7 @@ class SessionManagerDialog(QDialog):
                 self._update_details(session)
                 self._load_btn.setEnabled(True)
                 self._delete_btn.setEnabled(session["id"] != self._current_session_id)
-                _logger.info("session_selected", extra={"session_id": session_id})
+                _logger.info("session_selected", session_id=session_id)
         else:
             self._clear_details()
             self._load_btn.setEnabled(False)
@@ -493,7 +494,7 @@ class SessionManagerDialog(QDialog):
         )
 
         if reply == QMessageBox.StandardButton.Yes:
-            _logger.debug("session_load_requested", extra={"session_id": session_id})
+            _logger.debug("session_load_requested", session_id=session_id)
             self.session_loaded.emit(session_id)
             self.accept()
 
@@ -529,7 +530,7 @@ class SessionManagerDialog(QDialog):
         )
 
         if reply == QMessageBox.StandardButton.Yes and self._delete_session_sync(session_id):
-            _logger.info("session_deleted", extra={"session_id": session_id})
+            _logger.info("session_deleted", session_id=session_id)
             self.session_deleted.emit(session_id)
             self._load_sessions()
 
@@ -549,7 +550,8 @@ class SessionManagerDialog(QDialog):
             except OSError as e:
                 _logger.warning(
                     "session_delete_failed",
-                    extra={"session_id": session_id, "error": str(e)},
+                    session_id=session_id,
+                    error=str(e),
                 )
                 QMessageBox.warning(
                     self,
@@ -608,7 +610,8 @@ class SessionManagerDialog(QDialog):
 
                 _logger.debug(
                     "session_exported",
-                    extra={"session_id": session_id, "path": path},
+                    session_id=session_id,
+                    path=path,
                 )
                 QMessageBox.information(
                     self,
@@ -618,7 +621,8 @@ class SessionManagerDialog(QDialog):
             except (OSError, TypeError) as e:
                 _logger.warning(
                     "session_export_failed",
-                    extra={"session_id": session_id, "error": str(e)},
+                    session_id=session_id,
+                    error=str(e),
                 )
                 QMessageBox.warning(
                     self,
@@ -724,7 +728,8 @@ class SessionManagerDialog(QDialog):
 
             _logger.debug(
                 "session_imported",
-                extra={"session_id": import_data.get("id"), "path": path},
+                session_id=import_data.get("id"),
+                path=path,
             )
             QMessageBox.information(
                 self,
@@ -736,7 +741,8 @@ class SessionManagerDialog(QDialog):
         except json.JSONDecodeError as e:
             _logger.warning(
                 "session_import_failed",
-                extra={"path": path, "error": str(e)},
+                path=path,
+                error=str(e),
             )
             QMessageBox.warning(
                 self,
@@ -746,7 +752,8 @@ class SessionManagerDialog(QDialog):
         except OSError as e:
             _logger.warning(
                 "session_import_failed",
-                extra={"path": path, "error": str(e)},
+                path=path,
+                error=str(e),
             )
             QMessageBox.warning(
                 self,
@@ -770,7 +777,8 @@ class SessionManagerDialog(QDialog):
 
         _logger.debug(
             "session_saved_to_disk",
-            extra={"session_id": session_id, "file": str(session_file)},
+            session_id=session_id,
+            file=str(session_file),
         )
 
     def get_selected_session_id(self) -> str | None:
@@ -832,7 +840,7 @@ class NewSessionDialog(QDialog):
     def _on_accepted(self) -> None:
         """Handle dialog acceptance and log session creation."""
         session_name = self.get_session_name()
-        _logger.info("session_created", extra={"session_id": session_name})
+        _logger.info("session_created", session_id=session_name)
         self.accept()
 
     def get_session_name(self) -> str:

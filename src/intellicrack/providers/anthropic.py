@@ -39,10 +39,8 @@ from .base import LLMProviderBase, create_anthropic_tool_schema
 
 
 if TYPE_CHECKING:
-    import logging
     from asyncio import Task
     from collections.abc import AsyncIterator
-
 
 _MSG_API_KEY_REQUIRED = "API key required"
 _MSG_NOT_CONNECTED = "Not connected"
@@ -71,7 +69,7 @@ class AnthropicProvider(LLMProviderBase):
         super().__init__()
         self._client: anthropic.AsyncAnthropic | None = None
         self._current_task: Task[Any] | None = None
-        self._logger: logging.Logger = get_logger("providers.anthropic")
+        self._logger = get_logger("providers.anthropic").bind(provider="anthropic")
 
     @property
     def name(self) -> ProviderName:
@@ -102,17 +100,17 @@ class AnthropicProvider(LLMProviderBase):
             )
             await self._client.models.list(limit=1)
         except anthropic.AuthenticationError as e:
-            self._logger.warning("anthropic_auth_failed", extra={"error": str(e)})
+            self._logger.warning("anthropic_auth_failed", error=str(e))
             raise AuthenticationError(_MSG_INVALID_API_KEY) from e
         except Exception as e:
-            self._logger.warning("anthropic_connect_failed", extra={"error": str(e)})
+            self._logger.warning("anthropic_connect_failed", error=str(e))
             raise ProviderError(_MSG_CONNECTION_FAILED) from e
         else:
             self._credentials = credentials
             self._connected = True
             self._logger.info(
                 "anthropic_connected",
-                extra={"has_custom_base": credentials.api_base is not None},
+                has_custom_base=credentials.api_base is not None,
             )
 
     async def disconnect(self) -> None:
@@ -121,9 +119,9 @@ class AnthropicProvider(LLMProviderBase):
             await super().disconnect()
             self._client = None
             self._current_task = None
-            self._logger.info("anthropic_disconnected", extra={})
+            self._logger.info("anthropic_disconnected")
         except Exception as exc:
-            self._logger.warning("disconnect_cleanup_error", extra={"error": str(exc)})
+            self._logger.warning("disconnect_cleanup_error", error=str(exc))
             self._connected = False
 
     async def list_models(self) -> list[ModelInfo]:
@@ -146,11 +144,11 @@ class AnthropicProvider(LLMProviderBase):
         except Exception as e:
             self._logger.warning(
                 "anthropic_list_models_api_failed",
-                extra={"error": str(e)},
+                error=str(e),
             )
             raise ProviderError(_MSG_FETCH_MODELS_FAILED) from e
         else:
-            self._logger.info("anthropic_models_listed", extra={"count": len(models)})
+            self._logger.info("anthropic_models_listed", count=len(models))
             return models
 
     async def _fetch_all_models(self) -> list[ModelInfo]:
@@ -266,10 +264,8 @@ class AnthropicProvider(LLMProviderBase):
                 tool_calls.append(tool_call)
                 self._logger.debug(
                     "tool_call_parsed",
-                    extra={
-                        "tool_name": tool_call.tool_name,
-                        "arguments_count": len(tool_call.arguments),
-                    },
+                    tool_name=tool_call.tool_name,
+                    arguments_count=len(tool_call.arguments),
                 )
 
         return content, tool_calls
@@ -339,10 +335,10 @@ class AnthropicProvider(LLMProviderBase):
                 duration_ms=duration_ms,
             )
         except anthropic.RateLimitError as e:
-            self._logger.warning("anthropic_rate_limited", extra={"error": str(e)})
+            self._logger.warning("anthropic_rate_limited", error=str(e))
             raise RateLimitError(_MSG_RATE_LIMITED) from e
         except Exception as e:
-            self._logger.warning("anthropic_request_failed", extra={"error": str(e)})
+            self._logger.warning("anthropic_request_failed", error=str(e))
             raise ProviderError(_MSG_REQUEST_FAILED) from e
 
     async def chat_stream(
@@ -415,11 +411,11 @@ class AnthropicProvider(LLMProviderBase):
                     self._pending_tool_calls = tool_calls
 
         except anthropic.RateLimitError as e:
-            self._logger.warning("anthropic_stream_rate_limited", extra={"error": str(e)})
+            self._logger.warning("anthropic_stream_rate_limited", error=str(e))
             raise RateLimitError(_MSG_RATE_LIMITED) from e
         except Exception as e:
             if not self._cancel_requested:
-                self._logger.warning("anthropic_stream_failed", extra={"error": str(e)})
+                self._logger.warning("anthropic_stream_failed", error=str(e))
                 raise ProviderError(_MSG_STREAM_FAILED) from e
 
     async def cancel_request(self) -> None:
@@ -429,7 +425,7 @@ class AnthropicProvider(LLMProviderBase):
         if self._current_task is not None and not self._current_task.done():
             self._current_task.cancel()
             had_task = True
-        self._logger.info("anthropic_request_cancelled", extra={"had_active_task": had_task})
+        self._logger.info("anthropic_request_cancelled", had_active_task=had_task)
 
     @override
     def _convert_messages_to_provider_format(

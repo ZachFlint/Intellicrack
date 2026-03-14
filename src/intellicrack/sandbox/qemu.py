@@ -205,14 +205,14 @@ class QMPClient:
                 self._reader.readline(),
                 timeout=_QMP_READ_TIMEOUT,
             )
-            _logger.debug("qmp_greeting_received", extra={"greeting": greeting.decode().strip()})
+            _logger.debug("qmp_greeting_received", greeting=greeting.decode().strip())
 
             await self._send_command({"execute": "qmp_capabilities"})
             self._connected = True
-            _logger.info("qmp_connected", extra={"host": self._host, "port": self._port})
+            _logger.info("qmp_connected", host=self._host, port=self._port)
 
         except Exception as e:
-            _logger.warning("qmp_connection_failed", extra={"error": str(e)})
+            _logger.warning("qmp_connection_failed", error=str(e))
             return False
         else:
             return True
@@ -224,7 +224,7 @@ class QMPClient:
                 self._writer.close()
                 await self._writer.wait_closed()
             except Exception as e:
-                _logger.debug("qmp_disconnect_error", extra={"error": str(e)})
+                _logger.debug("qmp_disconnect_error", error=str(e))
         self._reader = None
         self._writer = None
         self._connected = False
@@ -415,16 +415,16 @@ class GuestAgentClient:
 
                 self._reader_task = asyncio.create_task(self._read_messages())
 
-                _logger.info("guest_agent_connected", extra={"host": self._host, "port": self._port})
+                _logger.info("guest_agent_connected", host=self._host, port=self._port)
                 connected = True
                 break
 
             except (TimeoutError, OSError):
-                _logger.debug("guest_agent_connect_retry", extra={"host": self._host, "port": self._port})
+                _logger.debug("guest_agent_connect_retry", host=self._host, port=self._port)
                 await asyncio.sleep(retry_interval)
 
         if not connected:
-            _logger.warning("guest_agent_connection_failed", extra={"timeout_seconds": timeout})
+            _logger.warning("guest_agent_connection_failed", timeout_seconds=timeout)
         return connected
 
     async def disconnect(self) -> None:
@@ -442,7 +442,7 @@ class GuestAgentClient:
                 self._writer.close()
                 await self._writer.wait_closed()
             except Exception as e:
-                _logger.debug("agent_disconnect_error", extra={"error": str(e)})
+                _logger.debug("agent_disconnect_error", error=str(e))
 
         self._reader = None
         self._writer = None
@@ -468,13 +468,13 @@ class GuestAgentClient:
                     )
                     await self._message_queue.put(msg)
                 except json.JSONDecodeError:
-                    _logger.debug("agent_invalid_json", extra={"line": line.decode(errors="replace")})
+                    _logger.debug("agent_invalid_json", line=line.decode(errors="replace"))
 
             except asyncio.CancelledError:
                 _logger.debug("agent_read_cancelled", exc_info=True)
                 break
             except Exception as e:
-                _logger.debug("agent_read_error", extra={"error": str(e)})
+                _logger.debug("agent_read_error", error=str(e))
                 break
 
     async def send_command(
@@ -631,7 +631,7 @@ class QEMUSandbox(SandboxBase):
             snapshot_name=self._qemu_config.snapshot_name,
             shared_folder=self._qemu_config.shared_folder,
         )
-        _logger.info("vnc_display_enabled", extra={"vnc_port": self.vnc_port})
+        _logger.info("vnc_display_enabled", vnc_port=self.vnc_port)
 
     async def is_available(self) -> bool:
         """Check if QEMU is available.
@@ -643,7 +643,7 @@ class QEMUSandbox(SandboxBase):
         """
         qemu_path = await self._find_qemu()
         if qemu_path is None:
-            _logger.debug("qemu_executable_not_found", extra={"search_names": ["qemu-system-x86_64"]})
+            _logger.debug("qemu_executable_not_found", search_names=["qemu-system-x86_64"])
             return False
 
         self._qemu_path = qemu_path
@@ -651,7 +651,8 @@ class QEMUSandbox(SandboxBase):
 
         _logger.info(
             "qemu_available",
-            extra={"path": str(qemu_path), "accelerator": self._accelerator.value},
+            path=str(qemu_path),
+            accelerator=self._accelerator.value,
         )
         return True
 
@@ -724,7 +725,7 @@ class QEMUSandbox(SandboxBase):
                 )
                 stderr_bytes = whpx_test.stderr if isinstance(whpx_test.stderr, bytes) else whpx_test.stderr.encode()
                 if whpx_test.returncode == _RETURNCODE_SUCCESS or b"whpx" not in stderr_bytes.lower():
-                    _logger.info("whpx_acceleration_available", extra={"accelerator": "whpx"})
+                    _logger.info("whpx_acceleration_available", accelerator="whpx")
                     return AcceleratorType.WHPX
 
             if "kvm" in output.lower():
@@ -747,13 +748,13 @@ class QEMUSandbox(SandboxBase):
                     timeout=_ACCEL_TEST_TIMEOUT,
                 )
                 if kvm_test.returncode == _RETURNCODE_SUCCESS:
-                    _logger.info("kvm_acceleration_available", extra={"accelerator": "kvm"})
+                    _logger.info("kvm_acceleration_available", accelerator="kvm")
                     return AcceleratorType.KVM
 
         except Exception as e:
-            _logger.debug("acceleration_detection_failed", extra={"error": str(e)})
+            _logger.debug("acceleration_detection_failed", error=str(e))
 
-        _logger.info("using_tcg_software_emulation", extra={"accelerator": "tcg"})
+        _logger.info("using_tcg_software_emulation", accelerator="tcg")
         return AcceleratorType.TCG
 
     @staticmethod
@@ -790,7 +791,7 @@ class QEMUSandbox(SandboxBase):
         """
         if returncode != _RETURNCODE_SUCCESS:
             error_msg = stderr.decode() if stderr else "Unknown error"
-            _logger.warning("qemu_start_failed", extra={"error": error_msg})
+            _logger.warning("qemu_start_failed", error=error_msg)
             raise SandboxError(_ERR_QEMU_START)
 
     async def _connect_and_verify_qmp(self) -> None:
@@ -805,7 +806,7 @@ class QEMUSandbox(SandboxBase):
 
         status = await self._qmp.query_status()
         if not status.success:
-            _logger.warning("vm_status_query_failed", extra={"error": status.error})
+            _logger.warning("vm_status_query_failed", error=status.error)
             raise SandboxError(_ERR_VM_STATUS)
 
     async def _build_qemu_command(self) -> list[str]:
@@ -913,7 +914,7 @@ class QEMUSandbox(SandboxBase):
             SandboxError: If VM cannot be started.
         """
         if self._state.status == "running":
-            _logger.warning("qemu_sandbox_already_running", extra={"state": self._state.status})
+            _logger.warning("qemu_sandbox_already_running", state=self._state.status)
             return
 
         if not await self.is_available():
@@ -936,7 +937,7 @@ class QEMUSandbox(SandboxBase):
             await self._create_guest_agent_script()
 
             cmd = await self._build_qemu_command()
-            _logger.info("qemu_starting", extra={"command": " ".join(cmd)})
+            _logger.info("qemu_starting", command=" ".join(cmd))
 
             process = await asyncio.create_subprocess_exec(
                 *cmd,
@@ -966,17 +967,17 @@ class QEMUSandbox(SandboxBase):
                         except (ValueError, OSError):
                             _logger.debug(
                                 "pidfile_read_retry",
-                                extra={"attempt": attempt + 1},
+                                attempt=attempt + 1,
                             )
 
             if qemu_pid is None:
-                _logger.warning("qemu_pidfile_unreadable", extra={"pidfile": str(self._pidfile_path)})
+                _logger.warning("qemu_pidfile_unreadable", pidfile=str(self._pidfile_path))
                 await self._cleanup()
                 raise SandboxError(_ERR_PIDFILE_UNREADABLE)  # noqa: TRY301
 
             self._qemu_pid = qemu_pid
             self._state.pid = qemu_pid
-            _logger.info("qemu_started", extra={"pid": qemu_pid})
+            _logger.info("qemu_started", pid=qemu_pid)
 
             process_manager = ProcessManager.get_instance()
             process_manager.register_external_pid(
@@ -995,13 +996,13 @@ class QEMUSandbox(SandboxBase):
 
             self._state.status = "running"
             self._state.started_at = datetime.now()
-            _logger.info("qemu_sandbox_started_successfully", extra={"pid": self._qemu_pid, "state": self._state.status})
+            _logger.info("qemu_sandbox_started_successfully", pid=self._qemu_pid, state=self._state.status)
 
         except Exception as e:
             self._state.status = "error"
             self._state.last_error = str(e)
             await self._cleanup()
-            _logger.exception("qemu_sandbox_start_failed", extra={"error": str(e)})
+            _logger.exception("qemu_sandbox_start_failed", error=str(e))
             raise SandboxError(_ERR_SANDBOX_START) from e
 
     async def stop(self) -> None:
@@ -1011,7 +1012,7 @@ class QEMUSandbox(SandboxBase):
             SandboxError: If VM cannot be stopped.
         """
         if self._state.status == "stopped":
-            _logger.debug("qemu_sandbox_already_stopped", extra={"state": self._state.status})
+            _logger.debug("qemu_sandbox_already_stopped", state=self._state.status)
             return
 
         self._state.status = "stopping"
@@ -1038,12 +1039,12 @@ class QEMUSandbox(SandboxBase):
             self._state.status = "stopped"
             self._state.pid = None
             self._vnc_port = None
-            _logger.info("qemu_sandbox_stopped", extra={"state": self._state.status})
+            _logger.info("qemu_sandbox_stopped", state=self._state.status)
 
         except Exception as e:
             self._state.status = "error"
             self._state.last_error = str(e)
-            _logger.exception("qemu_sandbox_stop_failed", extra={"error": str(e)})
+            _logger.exception("qemu_sandbox_stop_failed", error=str(e))
             raise SandboxError(_ERR_SANDBOX_STOP) from e
 
     async def _cleanup(self) -> None:
@@ -1056,11 +1057,11 @@ class QEMUSandbox(SandboxBase):
                     pid = int(pid_content.strip())
                     try:
                         ProcessManager.terminate_tree(pid, graceful_timeout=2.0, force_timeout=2.0)
-                        _logger.debug("cleanup_killed_orphan_qemu_tree", extra={"pid": pid})
+                        _logger.debug("cleanup_killed_orphan_qemu_tree", pid=pid)
                     except psutil.NoSuchProcess:
-                        _logger.debug("cleanup_orphan_already_exited", extra={"pid": pid})
+                        _logger.debug("cleanup_orphan_already_exited", pid=pid)
                 except Exception as e:
-                    _logger.debug("cleanup_pid_check_failed", extra={"error": str(e)})
+                    _logger.debug("cleanup_pid_check_failed", error=str(e))
 
         if self._temp_dir is not None and self._temp_dir.exists():
             try:
@@ -1070,7 +1071,7 @@ class QEMUSandbox(SandboxBase):
                     ignore_errors=True,
                 )
             except Exception as e:
-                _logger.warning("temp_dir_cleanup_failed", extra={"error": str(e)})
+                _logger.warning("temp_dir_cleanup_failed", error=str(e))
 
         self._temp_dir = None
         self._shared_folder = None

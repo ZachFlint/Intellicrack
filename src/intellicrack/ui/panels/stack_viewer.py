@@ -139,7 +139,7 @@ class X64DbgStackSource:
                 )
                 frames.append(frame)
         except Exception:
-            _logger.exception("x64dbg_stack_frames_failed", extra={"bridge_type": "x64dbg"})
+            _logger.exception("x64dbg_stack_frames_failed", bridge_type="x64dbg")
             return []
         else:
             return frames
@@ -221,7 +221,7 @@ class FridaStackSource:
                 frames.append(frame)
             self._cached_frames = frames
         except Exception:
-            _logger.exception("frida_stack_frames_failed", extra={"bridge_type": "frida"})
+            _logger.exception("frida_stack_frames_failed", bridge_type="frida")
             return self._cached_frames
         else:
             return frames
@@ -451,7 +451,7 @@ class StackViewerPanel(QWidget):
         Args:
             source_name: Name of the selected source.
         """
-        _logger.debug("stack_source_changed", extra={"source": source_name})
+        _logger.debug("stack_source_changed", source=source_name)
         self._active_source = source_name
         self._update_status()
         self.refresh()
@@ -477,7 +477,7 @@ class StackViewerPanel(QWidget):
             address: Address to navigate to.
         """
         self.address_navigate.emit(address)
-        _logger.info("stack_frame_navigate", extra={"address": hex(address)})
+        _logger.info("stack_frame_navigate", address=hex(address))
 
     def _update_status(self) -> None:
         """Update connection status display."""
@@ -512,7 +512,7 @@ class StackViewerPanel(QWidget):
 
         frames = source.get_stack_frames()
         self._frame_table.set_frames(frames)
-        _logger.debug("stack_frames_refreshed", extra={"source": self._active_source, "frame_count": len(frames)})
+        _logger.debug("stack_frames_refreshed", source=self._active_source, frame_count=len(frames))
 
         self._frame_count_label.setText(f"{len(frames)} frames")
 
@@ -528,7 +528,7 @@ class StackViewerPanel(QWidget):
         source = self._sources.get("x64dbg")
         if isinstance(source, X64DbgStackSource):
             source.set_bridge(bridge)
-            _logger.info("bridge_attached", extra={"source": "x64dbg", "component": "stack_viewer"})
+            _logger.info("bridge_attached", source="x64dbg", component="stack_viewer")
 
     def set_frida_bridge(self, bridge: object) -> None:
         """Set the Frida bridge for stack retrieval.
@@ -539,7 +539,7 @@ class StackViewerPanel(QWidget):
         source = self._sources.get("Frida")
         if isinstance(source, FridaStackSource):
             source.set_bridge(bridge)
-            _logger.info("bridge_attached", extra={"source": "frida", "component": "stack_viewer"})
+            _logger.info("bridge_attached", source="frida", component="stack_viewer")
 
     def add_source(self, name: str, source: X64DbgStackSource | FridaStackSource) -> None:
         """Add a custom stack data source.

@@ -94,7 +94,7 @@ class ToolRegistry:
         self._installer = ToolInstaller(tools_dir)
         self._tools_dir = tools_dir
         self._initialized = False
-        _logger.debug("tool_registry_init", extra={"tools_dir": str(tools_dir)})
+        _logger.debug("tool_registry_init", tools_dir=str(tools_dir))
 
     @property
     def tools_directory(self) -> Path:
@@ -110,9 +110,9 @@ class ToolRegistry:
 
         Creates bridge instances for all supported tools.
         """
-        _logger.debug("tool_registry_initialize_entry", extra={"already_initialized": self._initialized})
+        _logger.debug("tool_registry_initialize_entry", already_initialized=self._initialized)
         if self._initialized:
-            _logger.debug("tool_registry_initialize_early_return", extra={"reason": "already_initialized"})
+            _logger.debug("tool_registry_initialize_early_return", reason="already_initialized")
             return
 
         from ..bridges.binary import BinaryBridge as _BinaryBridge
@@ -132,7 +132,7 @@ class ToolRegistry:
         self._bridges[ToolName.SANDBOX] = _SandboxBridge()
         _logger.debug(
             "bridges_instantiated",
-            extra={"bridge_names": [n.value for n in self._bridges]},
+            bridge_names=[n.value for n in self._bridges],
         )
 
         await self._bridges[ToolName.BINARY].initialize()
@@ -140,7 +140,7 @@ class ToolRegistry:
         await self._bridges[ToolName.FRIDA].initialize()
         await self._bridges[ToolName.SANDBOX].initialize()
 
-        _logger.info("tool_registry_initialized", extra={"bridge_count": len(self._bridges)})
+        _logger.info("tool_registry_initialized", bridge_count=len(self._bridges))
         self._initialized = True
 
     async def initialize_tool(
@@ -160,7 +160,7 @@ class ToolRegistry:
             True if initialization succeeded.
         """
         if name not in self._bridges:
-            _logger.error("unknown_tool", extra={"tool_name": name})
+            _logger.error("unknown_tool", tool_name=name)
             return False
 
         bridge = self._bridges[name]
@@ -178,10 +178,10 @@ class ToolRegistry:
                 await ghidra.initialize(tool_path, port=port)
             else:
                 await bridge.initialize(tool_path)
-            _logger.info("tool_initialized", extra={"tool_name": name.value, "tool_path": str(tool_path)})
+            _logger.info("tool_initialized", tool_name=name.value, tool_path=str(tool_path))
             success = True
         except Exception:
-            _logger.exception("tool_initialization_failed", extra={"tool_name": name.value})
+            _logger.exception("tool_initialization_failed", tool_name=name.value)
 
         return success
 
@@ -190,12 +190,12 @@ class ToolRegistry:
         for name, bridge in self._bridges.items():
             try:
                 await bridge.shutdown()
-                _logger.debug("bridge_shutdown", extra={"bridge_name": name.value})
+                _logger.debug("bridge_shutdown", bridge_name=name.value)
             except Exception as e:
-                _logger.warning("bridge_shutdown_error", extra={"bridge_name": name.value, "error": str(e)})
+                _logger.warning("bridge_shutdown_error", bridge_name=name.value, error=str(e))
 
         self._initialized = False
-        _logger.info("tool_registry_shutdown", extra={"bridge_count": len(self._bridges)})
+        _logger.info("tool_registry_shutdown", bridge_count=len(self._bridges))
 
     def get(self, name: ToolName) -> ToolBridgeBase | None:
         """Get a tool bridge by name.
@@ -208,9 +208,9 @@ class ToolRegistry:
         """
         bridge = self._bridges.get(name)
         if bridge is not None:
-            _logger.debug("bridge_cache_hit", extra={"tool_name": name.value})
+            _logger.debug("bridge_cache_hit", tool_name=name.value)
         else:
-            _logger.debug("bridge_cache_miss", extra={"tool_name": name.value})
+            _logger.debug("bridge_cache_miss", tool_name=name.value)
         return bridge
 
     def get_binary_bridge(self) -> BinaryBridge:
@@ -227,7 +227,7 @@ class ToolRegistry:
         bridge = self._bridges.get(ToolName.BINARY)
         if bridge is None or not isinstance(bridge, _BinaryBridge):
             raise ToolError(_ERR_BRIDGE_NA)
-        _logger.debug("get_binary_bridge_success", extra={"bridge_type": type(bridge).__name__})
+        _logger.debug("get_binary_bridge_success", bridge_type=type(bridge).__name__)
         return bridge
 
     def get_process_bridge(self) -> ProcessBridge:
@@ -244,7 +244,7 @@ class ToolRegistry:
         bridge = self._bridges.get(ToolName.PROCESS)
         if bridge is None or not isinstance(bridge, _ProcessBridge):
             raise ToolError(_ERR_BRIDGE_NA)
-        _logger.debug("get_process_bridge_success", extra={"bridge_type": type(bridge).__name__})
+        _logger.debug("get_process_bridge_success", bridge_type=type(bridge).__name__)
         return bridge
 
     def get_frida_bridge(self) -> FridaBridge:
@@ -261,7 +261,7 @@ class ToolRegistry:
         bridge = self._bridges.get(ToolName.FRIDA)
         if bridge is None or not isinstance(bridge, _FridaBridge):
             raise ToolError(_ERR_BRIDGE_NA)
-        _logger.debug("get_frida_bridge_success", extra={"bridge_type": type(bridge).__name__})
+        _logger.debug("get_frida_bridge_success", bridge_type=type(bridge).__name__)
         return bridge
 
     def get_ghidra_bridge(self) -> GhidraBridge:
@@ -278,7 +278,7 @@ class ToolRegistry:
         bridge = self._bridges.get(ToolName.GHIDRA)
         if bridge is None or not isinstance(bridge, _GhidraBridge):
             raise ToolError(_ERR_BRIDGE_NA)
-        _logger.debug("get_ghidra_bridge_success", extra={"bridge_type": type(bridge).__name__})
+        _logger.debug("get_ghidra_bridge_success", bridge_type=type(bridge).__name__)
         return bridge
 
     def get_cutter_bridge(self) -> CutterBridge:
@@ -295,7 +295,7 @@ class ToolRegistry:
         bridge = self._bridges.get(ToolName.CUTTER)
         if bridge is None or not isinstance(bridge, _CutterBridge):
             raise ToolError(_ERR_BRIDGE_NA)
-        _logger.debug("get_cutter_bridge_success", extra={"bridge_type": type(bridge).__name__})
+        _logger.debug("get_cutter_bridge_success", bridge_type=type(bridge).__name__)
         return bridge
 
     def get_x64dbg_bridge(self) -> X64DbgBridge:
@@ -312,7 +312,7 @@ class ToolRegistry:
         bridge = self._bridges.get(ToolName.X64DBG)
         if bridge is None or not isinstance(bridge, _X64DbgBridge):
             raise ToolError(_ERR_BRIDGE_NA)
-        _logger.debug("get_x64dbg_bridge_success", extra={"bridge_type": type(bridge).__name__})
+        _logger.debug("get_x64dbg_bridge_success", bridge_type=type(bridge).__name__)
         return bridge
 
     def get_sandbox_bridge(self) -> SandboxBridge:
@@ -329,7 +329,7 @@ class ToolRegistry:
         bridge = self._bridges.get(ToolName.SANDBOX)
         if bridge is None or not isinstance(bridge, _SandboxBridge):
             raise ToolError(_ERR_BRIDGE_NA)
-        _logger.debug("get_sandbox_bridge_success", extra={"bridge_type": type(bridge).__name__})
+        _logger.debug("get_sandbox_bridge_success", bridge_type=type(bridge).__name__)
         return bridge
 
     async def get_status(self, name: ToolName) -> ToolStatus:
@@ -341,10 +341,10 @@ class ToolRegistry:
         Returns:
             ToolStatus instance.
         """
-        _logger.debug("get_status_entry", extra={"tool_name": name.value})
+        _logger.debug("get_status_entry", tool_name=name.value)
         bridge = self._bridges.get(name)
         if bridge is None:
-            _logger.debug("get_status_not_registered", extra={"tool_name": name.value})
+            _logger.debug("get_status_not_registered", tool_name=name.value)
             return ToolStatus(
                 name=name,
                 available=False,
@@ -367,7 +367,8 @@ class ToolRegistry:
                 except Exception as e:
                     _logger.debug(
                         "tool_path_version_lookup_failed",
-                        extra={"tool_name": name.value, "error": str(e)},
+                        tool_name=name.value,
+                        error=str(e),
                     )
 
             return ToolStatus(
@@ -380,7 +381,7 @@ class ToolRegistry:
             )
 
         except Exception as e:
-            _logger.exception("tool_status_check_failed", extra={"tool": name})
+            _logger.exception("tool_status_check_failed", tool=name)
             return ToolStatus(
                 name=name,
                 available=False,
@@ -394,10 +395,10 @@ class ToolRegistry:
         Returns:
             List of ToolStatus instances.
         """
-        _logger.debug("get_all_status_entry", extra={"bridge_count": len(self._bridges)})
+        _logger.debug("get_all_status_entry", bridge_count=len(self._bridges))
         tasks = [self.get_status(name) for name in self._bridges]
         results: list[ToolStatus] = list(await asyncio.gather(*tasks))
-        _logger.debug("get_all_status_complete", extra={"status_count": len(results)})
+        _logger.debug("get_all_status_complete", status_count=len(results))
         return results
 
     def get_tool_definitions(self) -> list[ToolDefinition]:
@@ -406,16 +407,16 @@ class ToolRegistry:
         Returns:
             List of ToolDefinition instances.
         """
-        _logger.debug("get_tool_definitions_entry", extra={"bridge_count": len(self._bridges)})
+        _logger.debug("get_tool_definitions_entry", bridge_count=len(self._bridges))
         definitions: list[ToolDefinition] = []
 
         for bridge in self._bridges.values():
             try:
                 definitions.append(bridge.tool_definition)
             except Exception as e:
-                _logger.warning("tool_definition_retrieval_failed", extra={"error": str(e)})
+                _logger.warning("tool_definition_retrieval_failed", error=str(e))
 
-        _logger.debug("get_tool_definitions_complete", extra={"definition_count": len(definitions)})
+        _logger.debug("get_tool_definitions_complete", definition_count=len(definitions))
         return definitions
 
     def get_available_tools(self) -> list[ToolName]:
@@ -427,7 +428,8 @@ class ToolRegistry:
         tools = list(self._bridges.keys())
         _logger.debug(
             "get_available_tools",
-            extra={"tool_count": len(tools), "tool_names": [t.value for t in tools]},
+            tool_count=len(tools),
+            tool_names=[t.value for t in tools],
         )
         return tools
 
@@ -452,32 +454,35 @@ class ToolRegistry:
         """
         _logger.debug(
             "execute_tool_call_entry",
-            extra={"tool_name": tool_name, "function_name": function_name},
+            tool_name=tool_name,
+            function_name=function_name,
         )
         try:
             tool_enum = ToolName(tool_name.lower())
         except ValueError:
-            _logger.debug("execute_tool_call_invalid_name", extra={"tool_name": tool_name})
+            _logger.debug("execute_tool_call_invalid_name", tool_name=tool_name)
             raise ToolError(_ERR_UNKNOWN_TOOL) from None
 
-        _logger.debug("execute_tool_call_resolved", extra={"tool_enum": tool_enum.value})
+        _logger.debug("execute_tool_call_resolved", tool_enum=tool_enum.value)
         bridge = self._bridges.get(tool_enum)
         if bridge is None:
-            _logger.debug("execute_tool_call_not_registered", extra={"tool_name": tool_enum.value})
+            _logger.debug("execute_tool_call_not_registered", tool_name=tool_enum.value)
             raise ToolError(_ERR_NOT_REGISTERED)
 
         method = getattr(bridge, function_name, None)
         if method is None:
             _logger.debug(
                 "execute_tool_call_unknown_func",
-                extra={"tool_name": tool_enum.value, "function_name": function_name},
+                tool_name=tool_enum.value,
+                function_name=function_name,
             )
             raise ToolError(_ERR_UNKNOWN_FUNC)
 
         if not callable(method):
             _logger.debug(
                 "execute_tool_call_not_callable",
-                extra={"tool_name": tool_enum.value, "function_name": function_name},
+                tool_name=tool_enum.value,
+                function_name=function_name,
             )
             raise ToolError(_ERR_NOT_CALLABLE)
 
@@ -491,7 +496,7 @@ class ToolRegistry:
                 result = await asyncio.to_thread(method, **arguments)
         except Exception as e:
             success = False
-            _logger.exception("tool_call_failed", extra={"tool_name": tool_name, "function_name": function_name})
+            _logger.exception("tool_call_failed", tool_name=tool_name, function_name=function_name)
             raise ToolError(_ERR_CALL_FAILED) from e
         finally:
             elapsed_ms = (time.monotonic() - start) * 1000
@@ -521,15 +526,15 @@ class ToolRegistry:
         Returns:
             True if tool is ready.
         """
-        _logger.debug("ensure_tool_ready_entry", extra={"tool_name": name.value})
+        _logger.debug("ensure_tool_ready_entry", tool_name=name.value)
         bridge = self._bridges.get(name)
         if bridge is None:
-            _logger.debug("ensure_tool_ready_not_found", extra={"tool_name": name.value})
+            _logger.debug("ensure_tool_ready_not_found", tool_name=name.value)
             return False
 
         if await bridge.is_available():
-            _logger.debug("ensure_tool_ready_already_available", extra={"tool_name": name.value})
+            _logger.debug("ensure_tool_ready_already_available", tool_name=name.value)
             return True
 
-        _logger.debug("ensure_tool_ready_initializing", extra={"tool_name": name.value})
+        _logger.debug("ensure_tool_ready_initializing", tool_name=name.value)
         return await self.initialize_tool(name)

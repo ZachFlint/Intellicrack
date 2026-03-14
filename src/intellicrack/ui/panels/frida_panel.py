@@ -388,7 +388,7 @@ class FridaPanel(AnalysisPanelBase):
         """
         self._bridge = bridge
         bridge.set_message_handler(self._on_frida_message)
-        _logger.info("frida_bridge_set", extra={"bridge_type": type(bridge).__name__})
+        _logger.info("frida_bridge_set", bridge_type=type(bridge).__name__)
 
     def get_bridge(self) -> FridaBridge | None:
         """Get the current FridaBridge instance.
@@ -426,7 +426,7 @@ class FridaPanel(AnalysisPanelBase):
         """Attach to a target process."""
         if self._bridge is None:
             self._console.appendPlainText("[!] No Frida bridge available")
-            _logger.warning("frida_attach_failed_no_bridge", extra={"reason": "bridge not set"})
+            _logger.warning("frida_attach_failed_no_bridge", reason="bridge not set")
             return
 
         target = self._target_input.text().strip()
@@ -434,13 +434,13 @@ class FridaPanel(AnalysisPanelBase):
             self._console.appendPlainText("[!] Enter a PID or process name")
             return
 
-        _logger.debug("frida_attach_started", extra={"target": target})
+        _logger.debug("frida_attach_started", target=target)
         self._attach_btn.setEnabled(False)
 
         try:
             pid = int(target)
         except ValueError:
-            _logger.debug("frida_attach_by_name_fallback", extra={"target": target})
+            _logger.debug("frida_attach_by_name_fallback", target=target)
             self._run_async(
                 self._bridge.attach_by_name(target),
                 on_success=lambda _: self._on_attach_name_success(target),
@@ -462,7 +462,7 @@ class FridaPanel(AnalysisPanelBase):
         """
         self._attached_pid = pid
         self._console.appendPlainText(f"[+] Attached to PID {pid}")
-        _logger.info("frida_attached_pid", extra={"pid": pid})
+        _logger.info("frida_attached_pid", pid=pid)
         self._set_status("Attached")
         self._attach_btn.setEnabled(False)
         self._detach_btn.setEnabled(True)
@@ -475,7 +475,7 @@ class FridaPanel(AnalysisPanelBase):
             target: The process name attached to.
         """
         self._console.appendPlainText(f"[+] Attached to '{target}'")
-        _logger.info("frida_attached_name", extra={"process_name": target})
+        _logger.info("frida_attached_name", process_name=target)
         self._set_status("Attached")
         self._attach_btn.setEnabled(False)
         self._detach_btn.setEnabled(True)
@@ -489,7 +489,7 @@ class FridaPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._console.appendPlainText(f"[-] Attach failed: {exc}")
-        _logger.warning("frida_attach_failed", extra={"target": target, "error": str(exc)})
+        _logger.warning("frida_attach_failed", target=target, error=str(exc))
         self._attach_btn.setEnabled(True)
 
     def _on_detach(self) -> None:
@@ -497,7 +497,7 @@ class FridaPanel(AnalysisPanelBase):
         if self._bridge is None:
             return
 
-        _logger.debug("frida_detach_started", extra={"pid": self._attached_pid})
+        _logger.debug("frida_detach_started", pid=self._attached_pid)
         self._detach_btn.setEnabled(False)
 
         self._run_async(
@@ -509,7 +509,7 @@ class FridaPanel(AnalysisPanelBase):
     def _on_detach_success(self) -> None:
         """Handle successful detach."""
         self._console.appendPlainText("[+] Detached")
-        _logger.info("frida_detached", extra={"pid": self._attached_pid})
+        _logger.info("frida_detached", pid=self._attached_pid)
         self._attached_pid = None
         self._set_status("Not attached")
         self._attach_btn.setEnabled(True)
@@ -523,7 +523,7 @@ class FridaPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._console.appendPlainText(f"[-] Detach failed: {exc}")
-        _logger.warning("frida_detach_failed", extra={"error": str(exc)})
+        _logger.warning("frida_detach_failed", error=str(exc))
         self._attached_pid = None
         self._set_status("Not attached")
         self._attach_btn.setEnabled(True)
@@ -541,7 +541,7 @@ class FridaPanel(AnalysisPanelBase):
             self._console.appendPlainText("[!] Script is empty")
             return
 
-        _logger.debug("frida_script_execution_started", extra={"script_size": len(source)})
+        _logger.debug("frida_script_execution_started", script_size=len(source))
         self._run_btn.setEnabled(False)
 
         self._run_async(
@@ -562,7 +562,7 @@ class FridaPanel(AnalysisPanelBase):
         self._run_btn.setEnabled(False)
         self._stop_btn.setEnabled(True)
         self.script_executed.emit()
-        _logger.info("frida_script_executed", extra={"script_size": script_size})
+        _logger.info("frida_script_executed", script_size=script_size)
 
     def _on_run_script_error(self, exc: object) -> None:
         """Handle script execution failure.
@@ -571,7 +571,7 @@ class FridaPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._console.appendPlainText(f"[-] Script execution failed: {exc}")
-        _logger.warning("frida_script_execution_failed", extra={"error": str(exc)})
+        _logger.warning("frida_script_execution_failed", error=str(exc))
         self._run_btn.setEnabled(True)
 
     def _on_stop_script(self) -> None:
@@ -606,7 +606,7 @@ class FridaPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._console.appendPlainText(f"[-] Stop failed: {exc}")
-        _logger.warning("frida_script_stop_failed", extra={"error": str(exc)})
+        _logger.warning("frida_script_stop_failed", error=str(exc))
         self._stop_btn.setEnabled(True)
 
     def _on_clear_console(self) -> None:
@@ -679,7 +679,7 @@ class FridaPanel(AnalysisPanelBase):
         self._add_hook_btn.setEnabled(True)
         self._console.appendPlainText(f"[+] Hook installed: {target} at {addr_str}")
         self.hook_added.emit(addr_str)
-        _logger.info("frida_hook_installed", extra={"target": target, "hook_id": hook_id})
+        _logger.info("frida_hook_installed", target=target, hook_id=hook_id)
 
     def _on_hook_install_error(self, row: int, exc: object) -> None:
         """Handle hook installation failure.
@@ -693,7 +693,7 @@ class FridaPanel(AnalysisPanelBase):
             status_item.setText("Failed")
         self._add_hook_btn.setEnabled(True)
         self._console.appendPlainText(f"[-] Hook installation failed: {exc}")
-        _logger.warning("frida_hook_install_failed", extra={"error": str(exc)})
+        _logger.warning("frida_hook_install_failed", error=str(exc))
 
     def _on_remove_hook(self) -> None:
         """Remove the selected hook."""
@@ -721,7 +721,7 @@ class FridaPanel(AnalysisPanelBase):
             hook_id: The removed hook identifier.
         """
         self._console.appendPlainText(f"[+] Removed hook {hook_id}")
-        _logger.info("frida_hook_removed", extra={"hook_id": hook_id})
+        _logger.info("frida_hook_removed", hook_id=hook_id)
         if row_index < len(self._hook_ids):
             self._hook_ids.pop(row_index)
         self._hooks_table.removeRow(row_index)
@@ -735,7 +735,7 @@ class FridaPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._console.appendPlainText(f"[-] Failed to remove hook: {exc}")
-        _logger.warning("frida_hook_remove_failed", extra={"hook_id": hook_id, "error": str(exc)})
+        _logger.warning("frida_hook_remove_failed", hook_id=hook_id, error=str(exc))
         self._remove_hook_btn.setEnabled(True)
 
     def add_hook_entry(
@@ -763,7 +763,7 @@ class FridaPanel(AnalysisPanelBase):
         self._hooks_table.setItem(row, _HOOK_COL_STATUS, QTableWidgetItem(status))
         self._hook_ids.append(hook_id)
         self.hook_added.emit(address)
-        _logger.debug("frida_hook_entry_added", extra={"address": address, "target_module": module, "function": function})
+        _logger.debug("frida_hook_entry_added", address=address, target_module=module, function=function)
 
     def _on_device_changed(self, device_text: str) -> None:
         """Handle device selector change.
@@ -830,7 +830,7 @@ class FridaPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._console.appendPlainText(f"[-] Process enumeration failed: {exc}")
-        _logger.warning("frida_process_enum_failed", extra={"error": str(exc)})
+        _logger.warning("frida_process_enum_failed", error=str(exc))
         self._refresh_procs_btn.setEnabled(True)
 
     def _on_process_double_click(self) -> None:
@@ -891,7 +891,7 @@ class FridaPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._console.appendPlainText(f"[-] Thread enumeration failed: {exc}")
-        _logger.warning("frida_thread_enum_failed", extra={"error": str(exc)})
+        _logger.warning("frida_thread_enum_failed", error=str(exc))
         self._refresh_threads_btn.setEnabled(True)
 
     def _get_stalker_events_string(self) -> str:
@@ -954,7 +954,7 @@ class FridaPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._console.appendPlainText(f"[-] Stalker start failed: {exc}")
-        _logger.warning("frida_stalker_start_failed", extra={"error": str(exc)})
+        _logger.warning("frida_stalker_start_failed", error=str(exc))
         self._stalker_start_btn.setEnabled(True)
 
     def _on_stalker_stop(self) -> None:
@@ -968,7 +968,7 @@ class FridaPanel(AnalysisPanelBase):
             try:
                 thread_id = int(tid_text)
             except ValueError:
-                _logger.debug("stalker_stop_invalid_tid", extra={"tid_text": tid_text})
+                _logger.debug("stalker_stop_invalid_tid", tid_text=tid_text)
 
         self._stalker_stop_btn.setEnabled(False)
         self._run_async(
@@ -1007,7 +1007,7 @@ class FridaPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._console.appendPlainText(f"[-] Stalker stop failed: {exc}")
-        _logger.warning("frida_stalker_stop_failed", extra={"error": str(exc)})
+        _logger.warning("frida_stalker_stop_failed", error=str(exc))
         self._stalker_start_btn.setEnabled(True)
         self._stalker_stop_btn.setEnabled(False)
 
@@ -1019,7 +1019,7 @@ class FridaPanel(AnalysisPanelBase):
         self._run_async(
             self._bridge.enumerate_devices(),
             on_success=self._populate_device_combo,
-            on_error=lambda e: _logger.debug("device_enum_failed", extra={"error": str(e)}),
+            on_error=lambda e: _logger.debug("device_enum_failed", error=str(e)),
         )
 
     def _populate_device_combo(self, result: object) -> None:

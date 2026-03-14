@@ -553,7 +553,7 @@ class FunctionListPanel(QFrame):
             name = item.text().split("  ")[1]
             self.function_selected.emit(name, address)
         except (ValueError, IndexError):
-            _logger.warning("failed_to_parse_function_item", extra={"text": item.text()})
+            _logger.warning("failed_to_parse_function_item", text=item.text())
 
     def set_functions(self, functions: list[tuple[str, int]]) -> None:
         """Set the function list.
@@ -637,7 +637,7 @@ class XRefPanel(QFrame):
                 address = int(address_str, 16)
                 self.xref_selected.emit(address)
             except ValueError:
-                _logger.debug("xref_address_parse_failed", extra={"address": address_str})
+                _logger.debug("xref_address_parse_failed", address=address_str)
 
     def set_xrefs(
         self,
@@ -910,7 +910,7 @@ class ToolOutputPanel(QFrame):
             registry: ToolRegistry instance providing bridge accessors.
         """
         self._tool_registry = registry
-        _logger.info("tool_registry_set", extra={"registry_type": type(registry).__name__})
+        _logger.info("tool_registry_set", registry_type=type(registry).__name__)
 
     def add_analysis_panel(self) -> BridgeAnalysisPanel:
         """Add the bridge analysis panel as a tab.
@@ -926,7 +926,7 @@ class ToolOutputPanel(QFrame):
         self._analysis_panel = panel
         self._tab_widget.addTab(panel, "Analysis")
         self._panels["analysis"] = panel
-        _logger.info("analysis_panel_added", extra={"tab": "Analysis"})
+        _logger.info("analysis_panel_added", tab="Analysis")
         return panel
 
     def add_script_panel(self) -> QWidget:
@@ -953,7 +953,7 @@ class ToolOutputPanel(QFrame):
             self._pending_script_backend = None
             self._pending_script_validator = None
 
-        _logger.info("script_panel_added", extra={"tab": "Scripts"})
+        _logger.info("script_panel_added", tab="Scripts")
         return qwidget
 
     def add_stack_panel(self) -> QWidget:
@@ -976,7 +976,7 @@ class ToolOutputPanel(QFrame):
         if callable(add_source):
             add_source("orchestrator", self)
 
-        _logger.info("stack_panel_added", extra={"tab": "Stack"})
+        _logger.info("stack_panel_added", tab="Stack")
         return qwidget
 
     def add_hxd_tab(self) -> HxDWidgetProtocol | None:
@@ -997,9 +997,9 @@ class ToolOutputPanel(QFrame):
             self._hxd_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("hxd"))
             self._tab_widget.addTab(qwidget, "HxD Hex Editor")
             self._embedded_tools["hxd"] = qwidget
-            _logger.info("hxd_tab_added", extra={"tab": "HxD"})
+            _logger.info("hxd_tab_added", tab="HxD")
         except Exception as e:
-            _logger.warning("hxd_tab_add_failed", extra={"error": str(e)})
+            _logger.warning("hxd_tab_add_failed", error=str(e))
             return None
         else:
             return self._hxd_widget
@@ -1032,7 +1032,7 @@ class ToolOutputPanel(QFrame):
             if callable(reg_getter):
                 try:
                     bridge = reg_getter()
-                    _logger.info("x64dbg_bridge_from_registry", extra={"source": "registry"})
+                    _logger.info("x64dbg_bridge_from_registry", source="registry")
                 except Exception:
                     _logger.debug("x64dbg_bridge_registry_fallback", exc_info=True)
 
@@ -1041,17 +1041,17 @@ class ToolOutputPanel(QFrame):
                     bridge_module = importlib.import_module("intellicrack.bridges.x64dbg")
                     bridge = bridge_module.X64DbgBridge()
                 except Exception as bridge_err:
-                    _logger.warning("x64dbg_bridge_create_failed", extra={"error": str(bridge_err)})
+                    _logger.warning("x64dbg_bridge_create_failed", error=str(bridge_err))
 
             if bridge is not None:
                 self._x64dbg_widget.set_bridge(bridge)
                 self._x64dbg_bridge = bridge
                 self._wire_stack_viewer_bridges()
-                _logger.info("x64dbg_bridge_set", extra={"bridge_type": type(bridge).__name__})
+                _logger.info("x64dbg_bridge_set", bridge_type=type(bridge).__name__)
 
-            _logger.info("x64dbg_tab_added", extra={"is_64bit": is_64bit})
+            _logger.info("x64dbg_tab_added", is_64bit=is_64bit)
         except Exception as e:
-            _logger.warning("x64dbg_tab_add_failed", extra={"error": str(e)})
+            _logger.warning("x64dbg_tab_add_failed", error=str(e))
             return None
         else:
             return self._x64dbg_widget
@@ -1080,7 +1080,7 @@ class ToolOutputPanel(QFrame):
             if callable(reg_getter):
                 try:
                     bridge = reg_getter()
-                    _logger.info("cutter_bridge_from_registry", extra={"source": "registry"})
+                    _logger.info("cutter_bridge_from_registry", source="registry")
                 except Exception:
                     _logger.debug("cutter_bridge_registry_fallback", exc_info=True)
 
@@ -1089,16 +1089,16 @@ class ToolOutputPanel(QFrame):
                     bridge_module = importlib.import_module("intellicrack.bridges.cutter")
                     bridge = bridge_module.CutterBridge()
                 except Exception as bridge_err:
-                    _logger.warning("cutter_bridge_create_failed", extra={"error": str(bridge_err)})
+                    _logger.warning("cutter_bridge_create_failed", error=str(bridge_err))
 
             if bridge is not None:
                 self._cutter_widget.set_bridge(bridge)
                 self._cutter_bridge = bridge
-                _logger.info("cutter_bridge_set", extra={"bridge_type": type(bridge).__name__})
+                _logger.info("cutter_bridge_set", bridge_type=type(bridge).__name__)
 
-            _logger.info("cutter_tab_added", extra={"tab": "Cutter"})
+            _logger.info("cutter_tab_added", tab="Cutter")
         except Exception as e:
-            _logger.warning("cutter_tab_add_failed", extra={"error": str(e)})
+            _logger.warning("cutter_tab_add_failed", error=str(e))
             return None
         else:
             return self._cutter_widget
@@ -1127,7 +1127,7 @@ class ToolOutputPanel(QFrame):
             if callable(reg_getter):
                 try:
                     bridge = reg_getter()
-                    _logger.info("ghidra_bridge_from_registry", extra={"source": "registry"})
+                    _logger.info("ghidra_bridge_from_registry", source="registry")
                 except Exception:
                     _logger.debug("ghidra_bridge_registry_fallback", exc_info=True)
 
@@ -1136,16 +1136,16 @@ class ToolOutputPanel(QFrame):
                     bridge_module = importlib.import_module("intellicrack.bridges.ghidra")
                     bridge = bridge_module.GhidraBridge()
                 except Exception as bridge_err:
-                    _logger.warning("ghidra_bridge_create_failed", extra={"error": str(bridge_err)})
+                    _logger.warning("ghidra_bridge_create_failed", error=str(bridge_err))
 
             if bridge is not None:
                 self._ghidra_widget.set_bridge(bridge)
                 self._ghidra_bridge = bridge
-                _logger.info("ghidra_bridge_set", extra={"bridge_type": type(bridge).__name__})
+                _logger.info("ghidra_bridge_set", bridge_type=type(bridge).__name__)
 
-            _logger.info("ghidra_tab_added", extra={"tab": "Ghidra"})
+            _logger.info("ghidra_tab_added", tab="Ghidra")
         except Exception as e:
-            _logger.warning("ghidra_tab_add_failed", extra={"error": str(e)})
+            _logger.warning("ghidra_tab_add_failed", error=str(e))
             return None
         else:
             return self._ghidra_widget
@@ -1174,7 +1174,7 @@ class ToolOutputPanel(QFrame):
             if callable(reg_getter):
                 try:
                     bridge = reg_getter()
-                    _logger.info("frida_bridge_from_registry", extra={"source": "registry"})
+                    _logger.info("frida_bridge_from_registry", source="registry")
                 except Exception:
                     _logger.debug("frida_bridge_registry_fallback", exc_info=True)
 
@@ -1183,17 +1183,17 @@ class ToolOutputPanel(QFrame):
                     bridge_module = importlib.import_module("intellicrack.bridges.frida_bridge")
                     bridge = bridge_module.FridaBridge()
                 except Exception as bridge_err:
-                    _logger.warning("frida_bridge_create_failed", extra={"error": str(bridge_err)})
+                    _logger.warning("frida_bridge_create_failed", error=str(bridge_err))
 
             if bridge is not None:
                 self._frida_panel.set_bridge(bridge)
                 self._frida_bridge = bridge
                 self._wire_stack_viewer_bridges()
-                _logger.info("frida_bridge_set", extra={"bridge_type": type(bridge).__name__})
+                _logger.info("frida_bridge_set", bridge_type=type(bridge).__name__)
 
-            _logger.info("frida_tab_added", extra={"tab": "Frida"})
+            _logger.info("frida_tab_added", tab="Frida")
         except Exception as e:
-            _logger.warning("frida_tab_add_failed", extra={"error": str(e)})
+            _logger.warning("frida_tab_add_failed", error=str(e))
             return None
         else:
             return self._frida_panel
@@ -1216,9 +1216,9 @@ class ToolOutputPanel(QFrame):
             self._process_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("process"))
             self._tab_widget.addTab(qwidget, "Process")
             self._panels["process"] = qwidget
-            _logger.info("process_tab_added", extra={"tab": "Processes"})
+            _logger.info("process_tab_added", tab="Processes")
         except Exception as e:
-            _logger.warning("process_tab_add_failed", extra={"error": str(e)})
+            _logger.warning("process_tab_add_failed", error=str(e))
             return None
         else:
             return self._process_panel
@@ -1241,9 +1241,9 @@ class ToolOutputPanel(QFrame):
             self._binary_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("binary"))
             self._tab_widget.addTab(qwidget, "Binary")
             self._panels["binary"] = qwidget
-            _logger.info("binary_tab_added", extra={"tab": "Binary"})
+            _logger.info("binary_tab_added", tab="Binary")
         except Exception as e:
-            _logger.warning("binary_tab_add_failed", extra={"error": str(e)})
+            _logger.warning("binary_tab_add_failed", error=str(e))
             return None
         else:
             return self._binary_panel
@@ -1261,7 +1261,7 @@ class ToolOutputPanel(QFrame):
             sandbox_config_mod = importlib.import_module(".sandbox_config", "intellicrack.ui")
             dialog_cls = getattr(sandbox_config_mod, "SandboxConfigDialog", None)
             if dialog_cls is not None and not dialog_cls().is_sandbox_available():
-                _logger.info("sandbox_not_available_skipping_tab", extra={"tab": "Sandbox"})
+                _logger.info("sandbox_not_available_skipping_tab", tab="Sandbox")
                 return None
 
             panel_module = importlib.import_module(".panels.sandbox_panel", "intellicrack.ui")
@@ -1285,9 +1285,9 @@ class ToolOutputPanel(QFrame):
                 if layout is not None:
                     layout.addWidget(monitor)
 
-            _logger.info("sandbox_tab_added", extra={"tab": "Sandbox"})
+            _logger.info("sandbox_tab_added", tab="Sandbox")
         except Exception as e:
-            _logger.warning("sandbox_tab_add_failed", extra={"error": str(e)})
+            _logger.warning("sandbox_tab_add_failed", error=str(e))
             return None
         else:
             return self._sandbox_panel
@@ -1454,7 +1454,7 @@ class ToolOutputPanel(QFrame):
 
         if self._analysis_panel is not None:
             self._analysis_panel.set_analysis(analysis)
-            _logger.info("bridge_analysis_updated", extra={"has_panel": True})
+            _logger.info("bridge_analysis_updated", has_panel=True)
 
     def activate_analysis_tab(self) -> None:
         """Activate the bridge analysis tab."""
@@ -1500,7 +1500,8 @@ class ToolOutputPanel(QFrame):
                     _logger.warning(
                         "bridge_cleanup_error",
                         exc_info=True,
-                        extra={"bridge": bridge_attr, "method": method_name},
+                        bridge=bridge_attr,
+                        method=method_name,
                     )
 
     def _on_tab_close_requested(self, index: int) -> None:
@@ -1564,7 +1565,7 @@ class ToolOutputPanel(QFrame):
 
         self._tab_widget.removeTab(index)
         widget.deleteLater()
-        _logger.debug("tab_closed", extra={"tab_index": index})
+        _logger.debug("tab_closed", tab_index=index)
 
     def close_embedded_tools(self) -> None:
         """Close all embedded tool instances and null their references."""
@@ -1612,13 +1613,13 @@ class ToolOutputPanel(QFrame):
         for attr_name in ("_x64dbg_bridge", "_ghidra_bridge", "_cutter_bridge", "_frida_bridge"):
             if getattr(self, attr_name, None) is not None:
                 setattr(self, attr_name, None)
-                _logger.debug("bridge_reference_released", extra={"bridge": attr_name})
+                _logger.debug("bridge_reference_released", bridge=attr_name)
 
         self._embedded_tools.clear()
         self._panels.clear()
         self._tabs.clear()
 
-        _logger.info("embedded_tools_closed", extra={"panel_count": len(self._panels)})
+        _logger.info("embedded_tools_closed", panel_count=len(self._panels))
 
     def get_bridge_for_tool(self, tool_id: str) -> object | None:
         """Get the bridge instance for a specific tool.

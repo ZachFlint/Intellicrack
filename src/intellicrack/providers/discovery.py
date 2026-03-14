@@ -129,7 +129,7 @@ class DiscoveryCache:
             return None
 
         if time.time() > entry.expires_at:
-            self._logger.debug("cache_expired", extra={"provider": provider.value})
+            self._logger.debug("cache_expired", provider=provider.value)
             return None
 
         return entry.models
@@ -150,11 +150,9 @@ class DiscoveryCache:
         self._cache[provider] = entry
         self._logger.debug(
             "cache_set",
-            extra={
-                "model_count": len(models),
-                "provider": provider.value,
-                "ttl_seconds": self._ttl_seconds,
-            },
+            model_count=len(models),
+            provider=provider.value,
+            ttl_seconds=self._ttl_seconds,
         )
 
     def invalidate(self, provider: ProviderName | None = None) -> None:
@@ -165,10 +163,10 @@ class DiscoveryCache:
         """
         if provider is None:
             self._cache.clear()
-            self._logger.debug("cache_invalidated_all", extra={"cache_size": len(self._cache)})
+            self._logger.debug("cache_invalidated_all", cache_size=len(self._cache))
         elif provider in self._cache:
             del self._cache[provider]
-            self._logger.debug("cache_invalidated", extra={"provider": provider.value})
+            self._logger.debug("cache_invalidated", provider=provider.value)
 
     def is_expired(self, provider: ProviderName) -> bool:
         """Check if cache entry is expired.
@@ -235,10 +233,10 @@ class DiscoveryCache:
                 data["entries"] = entries_dict
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(json.dumps(data, indent=2), encoding="utf-8")
-                self._logger.info("cache_saved", extra={"path": str(path)})
+                self._logger.info("cache_saved", path=str(path))
 
             except Exception:
-                self._logger.exception("cache_save_failed", extra={"cache_path": str(path)})
+                self._logger.exception("cache_save_failed", cache_path=str(path))
 
     async def load_from_disk(self, path: Path) -> None:
         """Load cache from disk.
@@ -248,7 +246,7 @@ class DiscoveryCache:
         """
         async with self._lock:
             if not path.exists():
-                self._logger.debug("cache_file_not_found", extra={"path": str(path)})
+                self._logger.debug("cache_file_not_found", path=str(path))
                 return
 
             try:
@@ -256,7 +254,7 @@ class DiscoveryCache:
                 data = json.loads(content)
 
                 if data.get("version") != 1:
-                    self._logger.warning("unknown_cache_version", extra={"version": data.get("version")})
+                    self._logger.warning("unknown_cache_version", version=data.get("version"))
                     return
 
                 entries = data.get("entries", {})
@@ -292,14 +290,14 @@ class DiscoveryCache:
                         )
 
                     except (ValueError, KeyError) as e:
-                        self._logger.warning("cache_entry_load_failed", extra={"provider": provider_str, "error": str(e)})
+                        self._logger.warning("cache_entry_load_failed", provider=provider_str, error=str(e))
 
-                self._logger.info("cache_loaded", extra={"provider_count": len(self._cache), "path": str(path)})
+                self._logger.info("cache_loaded", provider_count=len(self._cache), path=str(path))
 
             except json.JSONDecodeError:
-                self._logger.exception("cache_parse_failed", extra={"cache_path": str(path)})
+                self._logger.exception("cache_parse_failed", cache_path=str(path))
             except Exception:
-                self._logger.exception("cache_load_failed", extra={"cache_path": str(path)})
+                self._logger.exception("cache_load_failed", cache_path=str(path))
 
 
 class ModelDiscovery:
@@ -362,7 +360,7 @@ class ModelDiscovery:
         registered = self._registry.list_registered()
 
         if not registered:
-            self._logger.warning("no_providers_registered", extra={"registry_size": len(registered)})
+            self._logger.warning("no_providers_registered", registry_size=len(registered))
             return results
 
         if force_refresh:
@@ -435,7 +433,7 @@ class ModelDiscovery:
                 )
 
             except TimeoutError:
-                self._logger.warning("discovery_timeout", extra={"provider": provider_name.value, "timeout": self._timeout})
+                self._logger.warning("discovery_timeout", provider=provider_name.value, timeout=self._timeout)
                 duration_ms = (time.time() - start_time) * 1000
                 return (
                     provider_name,
@@ -452,7 +450,7 @@ class ModelDiscovery:
 
             except Exception as e:
                 duration_ms = (time.time() - start_time) * 1000
-                self._logger.warning("discovery_failed", extra={"provider": provider_name.value, "error": str(e)})
+                self._logger.warning("discovery_failed", provider=provider_name.value, error=str(e))
                 return (
                     provider_name,
                     [],
@@ -471,7 +469,7 @@ class ModelDiscovery:
 
         for result in completed:
             if isinstance(result, BaseException):
-                self._logger.error("discovery_task_exception", extra={"error": str(result)})
+                self._logger.error("discovery_task_exception", error=str(result))
                 continue
             provider_name, models, event = result
             results[provider_name] = models
@@ -479,10 +477,8 @@ class ModelDiscovery:
 
         self._logger.info(
             "discovery_complete",
-            extra={
-                "provider_count": len(results),
-                "total_models": sum(len(m) for m in results.values()),
-            },
+            provider_count=len(results),
+            total_models=sum(len(m) for m in results.values()),
         )
 
         return results
@@ -508,11 +504,11 @@ class ModelDiscovery:
 
         provider_instance = self._registry.get(provider)
         if provider_instance is None:
-            self._logger.warning("provider_not_registered", extra={"provider": provider.value})
+            self._logger.warning("provider_not_registered", provider=provider.value)
             return []
 
         if not provider_instance.is_connected:
-            self._logger.warning("provider_not_connected", extra={"provider": provider.value})
+            self._logger.warning("provider_not_connected", provider=provider.value)
             return []
 
         start_time = time.time()
@@ -525,11 +521,12 @@ class ModelDiscovery:
         except TimeoutError:
             self._logger.warning(
                 "discovery_timeout",
-                extra={"provider": provider.value, "timeout_seconds": self._timeout},
+                provider=provider.value,
+                timeout_seconds=self._timeout,
             )
             return []
         except Exception:
-            self._logger.exception("discovery_failed", extra={"provider": provider.value})
+            self._logger.exception("discovery_failed", provider=provider.value)
             return []
         else:
             duration_ms = (time.time() - start_time) * 1000
@@ -598,7 +595,7 @@ class ModelDiscovery:
             try:
                 pattern = re.compile(criteria.model_id_pattern, re.IGNORECASE)
             except re.error as e:
-                self._logger.warning("invalid_regex_pattern", extra={"error": str(e)})
+                self._logger.warning("invalid_regex_pattern", error=str(e))
 
         for provider, models in all_models.items():
             if criteria.providers is not None and provider not in criteria.providers:

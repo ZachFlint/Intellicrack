@@ -237,7 +237,7 @@ class ScriptContext:
                 elif isinstance(strategy_raw, BypassStrategy):
                     strategy_desc = f"{strategy_raw.value} ({strategy_raw.description})"
             except ValueError:
-                _logger.debug("unknown_bypass_strategy", extra={"strategy": str(strategy_raw)})
+                _logger.debug("unknown_bypass_strategy", strategy=str(strategy_raw))
 
             lines.append(f"  - {name} @ 0x{addr:X} (strategy: {strategy_desc})")
 
@@ -312,9 +312,9 @@ class Script:
             path: File path to save to.
         """
         path.parent.mkdir(parents=True, exist_ok=True)
-        _logger.debug("directory_ensured", extra={"directory": str(path.parent)})
+        _logger.debug("directory_ensured", directory=str(path.parent))
         path.write_text(self.content, encoding="utf-8")
-        _logger.info("script_saved", extra={"path": str(path), "size": len(self.content)})
+        _logger.info("script_saved", path=str(path), size=len(self.content))
 
     def get_extension(self) -> str:
         """Get the appropriate file extension for this script type.
@@ -348,7 +348,7 @@ class ScriptValidator:
         try:
             ast.parse(content)
         except SyntaxError as e:
-            _logger.debug("python_syntax_error", extra={"line": e.lineno, "detail": e.msg})
+            _logger.debug("python_syntax_error", line=e.lineno, detail=e.msg)
             return False, f"Syntax error at line {e.lineno}: {e.msg}"
         else:
             return True, None
@@ -363,7 +363,7 @@ class ScriptValidator:
         Returns:
             Tuple of (is_valid, error_message).
         """
-        _logger.debug("validate_javascript_start", extra={"content_length": len(content)})
+        _logger.debug("validate_javascript_start", content_length=len(content))
         try:
             with tempfile.NamedTemporaryFile(
                 mode="w",
@@ -373,34 +373,34 @@ class ScriptValidator:
             ) as f:
                 f.write(content)
                 temp_path = f.name
-            _logger.debug("temp_file_created", extra={"path": temp_path, "suffix": ".js"})
+            _logger.debug("temp_file_created", path=temp_path, suffix=".js")
 
             process_manager = ProcessManager.get_instance()
             cmd = ["node", "--check", temp_path]
-            _logger.debug("subprocess_execute", extra={"command": cmd})
+            _logger.debug("subprocess_execute", command=cmd)
             result = process_manager.run_tracked(
                 cmd,
                 name="node-syntax-check",
                 timeout=10,
             )
-            _logger.debug("subprocess_completed", extra={"command": cmd, "exit_code": result.returncode})
+            _logger.debug("subprocess_completed", command=cmd, exit_code=result.returncode)
 
             Path(temp_path).unlink(missing_ok=True)
-            _logger.debug("temp_file_cleaned", extra={"path": temp_path})
+            _logger.debug("temp_file_cleaned", path=temp_path)
 
             if result.returncode == 0:
                 return True, None
             return False, result.stderr.strip()
 
         except FileNotFoundError:
-            _logger.debug("node_not_found", extra={"reason": "node binary not available, skipping validation"})
+            _logger.debug("node_not_found", reason="node binary not available, skipping validation")
             return True, None
         except Exception as exc:
             subprocess_mod = importlib.import_module("subprocess")
             if isinstance(exc, subprocess_mod.TimeoutExpired):
-                _logger.warning("validation_timeout", extra={"language": "javascript", "timeout_seconds": 10})
+                _logger.warning("validation_timeout", language="javascript", timeout_seconds=10)
                 return False, "Validation timed out"
-            _logger.debug("validation_exception", extra={"language": "javascript", "error": str(exc)})
+            _logger.debug("validation_exception", language="javascript", error=str(exc))
             return True, None
 
     @staticmethod
@@ -413,16 +413,16 @@ class ScriptValidator:
         Returns:
             Tuple of (is_valid, error_message).
         """
-        _logger.debug("validate_java_start", extra={"content_length": len(content)})
+        _logger.debug("validate_java_start", content_length=len(content))
         required_elements = ["import", "public", "void run("]
         for element in required_elements:
             if element not in content:
-                _logger.debug("validate_java_missing_element", extra={"element": element})
+                _logger.debug("validate_java_missing_element", element=element)
                 return False, f"Missing required element: {element}"
 
         brace_count = content.count("{") - content.count("}")
         if brace_count != 0:
-            _logger.debug("validate_java_unbalanced_braces", extra={"brace_count": brace_count})
+            _logger.debug("validate_java_unbalanced_braces", brace_count=brace_count)
             return False, f"Unbalanced braces: {brace_count:+d}"
 
         return True, None
@@ -443,13 +443,13 @@ class ScriptValidator:
         }
 
         if validator := validators.get(script.language):
-            _logger.debug("script_validation_start", extra={"script": script.name, "language": script.language.value})
+            _logger.debug("script_validation_start", script=script.name, language=script.language.value)
             is_valid, error = validator(script.content)
             script.verified = is_valid
-            _logger.debug("script_validation_result", extra={"script": script.name, "valid": is_valid, "error": error})
+            _logger.debug("script_validation_result", script=script.name, valid=is_valid, error=error)
             return is_valid, error
 
-        _logger.debug("script_validation_skipped", extra={"script": script.name, "language": script.language.value})
+        _logger.debug("script_validation_skipped", script=script.name, language=script.language.value)
         script.verified = True
         return True, None
 
@@ -485,11 +485,11 @@ class ScriptManager:
         if validate:
             is_valid, error = self._validator.validate(script)
             if not is_valid:
-                _logger.error("script_validation_failed", extra={"error": error})
+                _logger.error("script_validation_failed", error=error)
                 return False
 
         self.scripts[script.name] = script
-        _logger.info("script_added", extra={"script_name": script.name})
+        _logger.info("script_added", script_name=script.name)
         return True
 
     def get_script(self, name: str) -> Script | None:
@@ -515,7 +515,7 @@ class ScriptManager:
         if name not in self.scripts:
             return False
         del self.scripts[name]
-        _logger.info("script_deleted", extra={"script_name": name})
+        _logger.info("script_deleted", script_name=name)
         return True
 
     def list_scripts(self, script_type: ScriptType | None = None) -> list[str]:
@@ -549,11 +549,11 @@ class ScriptManager:
         if subdir:
             target_dir /= subdir
         target_dir.mkdir(parents=True, exist_ok=True)
-        _logger.debug("directory_ensured", extra={"directory": str(target_dir)})
+        _logger.debug("directory_ensured", directory=str(target_dir))
 
         filename = f"{name}{script.get_extension()}"
         path = target_dir / filename
-        _logger.debug("script_save_start", extra={"script": name, "path": str(path)})
+        _logger.debug("script_save_start", script=name, path=str(path))
         script.save(path)
         return path
 
@@ -567,11 +567,11 @@ class ScriptManager:
             Loaded script or None if failed.
         """
         if not path.exists():
-            _logger.debug("script_load_not_found", extra={"path": str(path)})
+            _logger.debug("script_load_not_found", path=str(path))
             return None
 
         content = path.read_text(encoding="utf-8")
-        _logger.debug("script_file_read", extra={"path": str(path), "size": len(content)})
+        _logger.debug("script_file_read", path=str(path), size=len(content))
 
         ext = path.suffix.lower()
         language_map = {
@@ -604,7 +604,7 @@ class ScriptManager:
         )
 
         self.scripts[script.name] = script
-        _logger.debug("script_loaded", extra={"script": script.name, "language": language.value, "path": str(path)})
+        _logger.debug("script_loaded", script=script.name, language=language.value, path=str(path))
         return script
 
     def ensure_script_saved(self, name: str) -> bool:
@@ -630,10 +630,10 @@ class ScriptManager:
         # First try to find where it might be saved
         # This is a bit tricky since save_script logic handles paths
         # We assume standard location in scripts_dir
-        _logger.debug("script_reload_start", extra={"script": name})
+        _logger.debug("script_reload_start", script=name)
         script = self.scripts.get(name)
         if not script:
-            _logger.debug("script_reload_not_in_cache", extra={"script": name})
+            _logger.debug("script_reload_not_in_cache", script=name)
             return False
 
         ext = script.get_extension()
@@ -641,12 +641,12 @@ class ScriptManager:
         path = self.scripts_dir / filename
 
         if not path.exists():
-            _logger.debug("script_reload_file_missing", extra={"script": name, "path": str(path)})
+            _logger.debug("script_reload_file_missing", script=name, path=str(path))
             return False
 
         if reloaded := self.load_script(path):
             self.scripts[name] = reloaded
-            _logger.debug("script_reloaded", extra={"script": name, "path": str(path)})
+            _logger.debug("script_reloaded", script=name, path=str(path))
             return True
         return False
 
@@ -668,13 +668,14 @@ class ScriptManager:
         if script is None:
             _logger.debug(
                 "record_execution_script_not_found",
-                extra={"script": script_name},
+                script=script_name,
             )
             return False
         script.add_execution_result(tool_name, result)
         _logger.debug(
             "execution_result_recorded",
-            extra={"script": script_name, "tool_name": tool_name},
+            script=script_name,
+            tool_name=tool_name,
         )
         return True
 

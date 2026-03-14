@@ -184,7 +184,7 @@ Returns:
       <data key="d4">Log the elapsed time for a module import.
 
 Args:
-    logger: Logger for timing output.
+    logger: BoundLogger for timing output.
     module_name: Fully-qualified module name that was imported.
     elapsed: Elapsed time in seconds.</data>
     </node>
@@ -201,7 +201,7 @@ Phase 2 imports the heavier UI resource modules (ThemeManager,
 IconManager, SplashScreen) and swaps in the full splash.
 
 Args:
-    logger: Logger for error reporting.
+    logger: BoundLogger for error reporting.
 
 Returns:
     Tuple of (app, splash) or None if imports failed.</data>
@@ -216,7 +216,7 @@ Returns:
 Args:
     registry: Provider registry to populate.
     credentials: Credential loader for API keys.
-    logger: Logger instance.</data>
+    logger: BoundLogger instance.</data>
     </node>
     <node id="src.intellicrack.main.main">
       <data key="d0">function</data>
@@ -237,7 +237,7 @@ Returns:
 
 Args:
     config: Application configuration.
-    logger: Logger instance.
+    logger: BoundLogger instance.
 
 Returns:
     Tuple of (script_manager, script_validator).</data>
@@ -252,7 +252,7 @@ Returns:
 Args:
     provider_registry: Provider registry for model queries.
     config: Application configuration.
-    logger: Logger instance.
+    logger: BoundLogger instance.
 
 Returns:
     Tuple of (model_discovery, discovery_cache_path).</data>
@@ -265,7 +265,7 @@ Returns:
       <data key="d4">Clear the global model cache during shutdown.
 
 Args:
-    logger: Logger instance.</data>
+    logger: BoundLogger instance.</data>
     </node>
     <node id="src.intellicrack.main._run_application">
       <data key="d0">function</data>
@@ -279,14 +279,14 @@ Args:
     app: Qt application instance.
     splash: Splash screen instance.
     process_manager: Process manager instance.
-    logger: Logger instance.
+    logger: BoundLogger instance.
 
 Returns:
     Application exit code.</data>
     </node>
     <node id="collections.abc" />
-    <node id="logging" />
     <node id="PyQt6.QtWidgets" />
+    <node id="structlog.stdlib" />
     <node id="intellicrack.core.config" />
     <node id="intellicrack.core.orchestrator" />
     <node id="intellicrack.core.process_manager" />
@@ -339,6 +339,7 @@ The architecture consists of:
     - Providers: LLM provider implementations (Anthropic, OpenAI, Google, Ollama, OpenRouter)
     - Bridges: Tool integrations (Ghidra, x64dbg, Frida, Cutter/R...</data>
     </node>
+    <node id="structlog" />
     <node id="src.intellicrack.__init__.__getattr__">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -7291,9 +7292,9 @@ Returns:
     True if the tool is enabled.</data>
     </node>
     <node id="inspect" />
+    <node id="logging" />
     <node id="datetime" />
     <node id="logging.handlers" />
-    <node id="structlog" />
     <node id="src.intellicrack.core.logging.ColoredConsoleRenderer">
       <data key="d0">class</data>
       <data key="d1">python</data>
@@ -7389,13 +7390,13 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">get_logger</data>
       <data key="d5">['self', 'name']</data>
-      <data key="d4">Get a standard logging.Logger instance.
+      <data key="d4">Get a structlog BoundLogger instance.
 
 Args:
     name: Optional child logger name. If None, returns the root logger.
 
 Returns:
-    Logger instance for the specified name.</data>
+    Structlog BoundLogger instance for structured logging.</data>
     </node>
     <node id="src.intellicrack.core.logging.get_structlog_logger">
       <data key="d0">function</data>
@@ -7403,6 +7404,9 @@ Returns:
       <data key="d3">get_structlog_logger</data>
       <data key="d5">['name']</data>
       <data key="d4">Get a structlog bound logger for structured logging.
+
+.. deprecated::
+    Use :func:`get_logger` instead, which now returns ``BoundLogger``.
 
 Args:
     name: Module name for the logger. If None, returns root app logger.
@@ -7611,6 +7615,7 @@ This module provides the central orchestration layer that coordinates
 between the user, LLM providers, and tool bridges to execute
 reverse engineering workflows.</data>
     </node>
+    <node id="structlog.contextvars" />
     <node id="src.intellicrack.core.orchestrator.OrchestratorConfig">
       <data key="d0">class</data>
       <data key="d1">python</data>
@@ -26417,11 +26422,11 @@ panels (Ghidra, x64dbg, Cutter) within the main application.</data>
     </node>
     <node id="intellicrack.ui.panels.analysis_panel" />
     <node id="intellicrack.ui.panels.binary_panel" />
+    <node id="intellicrack.ui.panels.cutter_panel" />
     <node id="intellicrack.ui.panels.frida_panel" />
     <node id="intellicrack.ui.panels.ghidra_panel" />
     <node id="intellicrack.ui.panels.hxd_panel" />
     <node id="intellicrack.ui.panels.process_panel" />
-    <node id="intellicrack.ui.panels.cutter_panel" />
     <node id="intellicrack.ui.panels.sandbox_panel" />
     <node id="intellicrack.ui.panels.script_manager" />
     <node id="intellicrack.ui.panels.stack_viewer" />
@@ -80406,10 +80411,10 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\conda-meta\python_abi-3.13-8_cp313.json</data>
       <data key="d3">python_abi-3.13-8_cp313.json</data>
     </node>
-    <node id=".pixi/envs/default/conda-meta/setuptools-82.0.0-pyh332efcf_0.json">
+    <node id=".pixi/envs/default/conda-meta/setuptools-82.0.1-pyh332efcf_0.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\conda-meta\setuptools-82.0.0-pyh332efcf_0.json</data>
-      <data key="d3">setuptools-82.0.0-pyh332efcf_0.json</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\conda-meta\setuptools-82.0.1-pyh332efcf_0.json</data>
+      <data key="d3">setuptools-82.0.1-pyh332efcf_0.json</data>
     </node>
     <node id=".pixi/envs/default/conda-meta/shellcheck-0.11.0-h57928b3_1.json">
       <data key="d0">config</data>
@@ -81556,9 +81561,9 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\docstring_parser-0.17.0.dist-info\licenses\LICENSE.md</data>
       <data key="d3">LICENSE.md</data>
     </node>
-    <node id=".pixi/envs/default/Lib/site-packages/frida_tools-14.6.0.dist-info/uv_build.json">
+    <node id=".pixi/envs/default/Lib/site-packages/frida_tools-14.6.1.dist-info/uv_build.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\frida_tools-14.6.0.dist-info\uv_build.json</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\frida_tools-14.6.1.dist-info\uv_build.json</data>
       <data key="d3">uv_build.json</data>
     </node>
     <node id=".pixi/envs/default/Lib/site-packages/glom/test/data/test_invalid.toml">
@@ -81581,9 +81586,9 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\glom\test\data\test_valid.yaml</data>
       <data key="d3">test_valid.yaml</data>
     </node>
-    <node id=".pixi/envs/default/Lib/site-packages/hf_xet-1.3.2.dist-info/sboms/hf_xet.cyclonedx.json">
+    <node id=".pixi/envs/default/Lib/site-packages/hf_xet-1.4.2.dist-info/sboms/hf_xet.cyclonedx.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\hf_xet-1.3.2.dist-info\sboms\hf_xet.cyclonedx.json</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\hf_xet-1.4.2.dist-info\sboms\hf_xet.cyclonedx.json</data>
       <data key="d3">hf_xet.cyclonedx.json</data>
     </node>
     <node id=".pixi/envs/default/Lib/site-packages/httpcore-1.0.9.dist-info/licenses/LICENSE.md">
@@ -81801,9 +81806,9 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\mkdocs\themes\readthedocs\mkdocs_theme.yml</data>
       <data key="d3">mkdocs_theme.yml</data>
     </node>
-    <node id=".pixi/envs/default/Lib/site-packages/mkdocs_get_deps-0.2.0.dist-info/licenses/LICENSE.md">
+    <node id=".pixi/envs/default/Lib/site-packages/mkdocs_get_deps-0.2.2.dist-info/licenses/LICENSE.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\mkdocs_get_deps-0.2.0.dist-info\licenses\LICENSE.md</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\mkdocs_get_deps-0.2.2.dist-info\licenses\LICENSE.md</data>
       <data key="d3">LICENSE.md</data>
     </node>
     <node id=".pixi/envs/default/Lib/site-packages/mkdocs_material_extensions-1.3.1.dist-info/licenses/LICENSE.md">
@@ -81831,49 +81836,49 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\numpy\random\LICENSE.md</data>
       <data key="d3">LICENSE.md</data>
     </node>
-    <node id=".pixi/envs/default/Lib/site-packages/numpy-2.4.2.dist-info/licenses/numpy/fft/pocketfft/LICENSE.md">
+    <node id=".pixi/envs/default/Lib/site-packages/numpy-2.4.3.dist-info/licenses/numpy/fft/pocketfft/LICENSE.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\numpy-2.4.2.dist-info\licenses\numpy\fft\pocketfft\LICENSE.md</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\numpy-2.4.3.dist-info\licenses\numpy\fft\pocketfft\LICENSE.md</data>
       <data key="d3">LICENSE.md</data>
     </node>
-    <node id=".pixi/envs/default/Lib/site-packages/numpy-2.4.2.dist-info/licenses/numpy/random/LICENSE.md">
+    <node id=".pixi/envs/default/Lib/site-packages/numpy-2.4.3.dist-info/licenses/numpy/random/LICENSE.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\numpy-2.4.2.dist-info\licenses\numpy\random\LICENSE.md</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\numpy-2.4.3.dist-info\licenses\numpy\random\LICENSE.md</data>
       <data key="d3">LICENSE.md</data>
     </node>
-    <node id=".pixi/envs/default/Lib/site-packages/numpy-2.4.2.dist-info/licenses/numpy/random/src/distributions/LICENSE.md">
+    <node id=".pixi/envs/default/Lib/site-packages/numpy-2.4.3.dist-info/licenses/numpy/random/src/distributions/LICENSE.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\numpy-2.4.2.dist-info\licenses\numpy\random\src\distributions\LICENSE.md</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\numpy-2.4.3.dist-info\licenses\numpy\random\src\distributions\LICENSE.md</data>
       <data key="d3">LICENSE.md</data>
     </node>
-    <node id=".pixi/envs/default/Lib/site-packages/numpy-2.4.2.dist-info/licenses/numpy/random/src/mt19937/LICENSE.md">
+    <node id=".pixi/envs/default/Lib/site-packages/numpy-2.4.3.dist-info/licenses/numpy/random/src/mt19937/LICENSE.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\numpy-2.4.2.dist-info\licenses\numpy\random\src\mt19937\LICENSE.md</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\numpy-2.4.3.dist-info\licenses\numpy\random\src\mt19937\LICENSE.md</data>
       <data key="d3">LICENSE.md</data>
     </node>
-    <node id=".pixi/envs/default/Lib/site-packages/numpy-2.4.2.dist-info/licenses/numpy/random/src/pcg64/LICENSE.md">
+    <node id=".pixi/envs/default/Lib/site-packages/numpy-2.4.3.dist-info/licenses/numpy/random/src/pcg64/LICENSE.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\numpy-2.4.2.dist-info\licenses\numpy\random\src\pcg64\LICENSE.md</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\numpy-2.4.3.dist-info\licenses\numpy\random\src\pcg64\LICENSE.md</data>
       <data key="d3">LICENSE.md</data>
     </node>
-    <node id=".pixi/envs/default/Lib/site-packages/numpy-2.4.2.dist-info/licenses/numpy/random/src/philox/LICENSE.md">
+    <node id=".pixi/envs/default/Lib/site-packages/numpy-2.4.3.dist-info/licenses/numpy/random/src/philox/LICENSE.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\numpy-2.4.2.dist-info\licenses\numpy\random\src\philox\LICENSE.md</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\numpy-2.4.3.dist-info\licenses\numpy\random\src\philox\LICENSE.md</data>
       <data key="d3">LICENSE.md</data>
     </node>
-    <node id=".pixi/envs/default/Lib/site-packages/numpy-2.4.2.dist-info/licenses/numpy/random/src/sfc64/LICENSE.md">
+    <node id=".pixi/envs/default/Lib/site-packages/numpy-2.4.3.dist-info/licenses/numpy/random/src/sfc64/LICENSE.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\numpy-2.4.2.dist-info\licenses\numpy\random\src\sfc64\LICENSE.md</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\numpy-2.4.3.dist-info\licenses\numpy\random\src\sfc64\LICENSE.md</data>
       <data key="d3">LICENSE.md</data>
     </node>
-    <node id=".pixi/envs/default/Lib/site-packages/numpy-2.4.2.dist-info/licenses/numpy/random/src/splitmix64/LICENSE.md">
+    <node id=".pixi/envs/default/Lib/site-packages/numpy-2.4.3.dist-info/licenses/numpy/random/src/splitmix64/LICENSE.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\numpy-2.4.2.dist-info\licenses\numpy\random\src\splitmix64\LICENSE.md</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\numpy-2.4.3.dist-info\licenses\numpy\random\src\splitmix64\LICENSE.md</data>
       <data key="d3">LICENSE.md</data>
     </node>
-    <node id=".pixi/envs/default/Lib/site-packages/numpy-2.4.2.dist-info/licenses/numpy/_core/src/npysort/x86-simd-sort/LICENSE.md">
+    <node id=".pixi/envs/default/Lib/site-packages/numpy-2.4.3.dist-info/licenses/numpy/_core/src/npysort/x86-simd-sort/LICENSE.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\numpy-2.4.2.dist-info\licenses\numpy\_core\src\npysort\x86-simd-sort\LICENSE.md</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\numpy-2.4.3.dist-info\licenses\numpy\_core\src\npysort\x86-simd-sort\LICENSE.md</data>
       <data key="d3">LICENSE.md</data>
     </node>
     <node id=".pixi/envs/default/Lib/site-packages/openai/resources/conversations/api.md">
@@ -82166,14 +82171,9 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\PyQt6\Qt6\qml\QtQuick3D\designer\propertyGroups.json</data>
       <data key="d3">propertyGroups.json</data>
     </node>
-    <node id=".pixi/envs/default/Lib/site-packages/QtPy-2.4.3.dist-info/AUTHORS.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\QtPy-2.4.3.dist-info\AUTHORS.md</data>
-      <data key="d3">AUTHORS.md</data>
-    </node>
-    <node id=".pixi/envs/default/Lib/site-packages/r2pipe-1.9.6.dist-info/uv_build.json">
+    <node id=".pixi/envs/default/Lib/site-packages/r2pipe-1.9.8.dist-info/uv_build.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\r2pipe-1.9.6.dist-info\uv_build.json</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\r2pipe-1.9.8.dist-info\uv_build.json</data>
       <data key="d3">uv_build.json</data>
     </node>
     <node id=".pixi/envs/default/Lib/site-packages/requests-stubs/METADATA.toml">
@@ -84173,10 +84173,10 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.main" target="collections.abc">
       <data key="d6">imports</data>
     </edge>
-    <edge source="src.intellicrack.main" target="logging">
+    <edge source="src.intellicrack.main" target="PyQt6.QtWidgets">
       <data key="d6">imports</data>
     </edge>
-    <edge source="src.intellicrack.main" target="PyQt6.QtWidgets">
+    <edge source="src.intellicrack.main" target="structlog.stdlib">
       <data key="d6">imports</data>
     </edge>
     <edge source="src.intellicrack.main" target="intellicrack.core.config">
@@ -84278,10 +84278,10 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.__init__" target="importlib">
       <data key="d6">imports</data>
     </edge>
-    <edge source="src.intellicrack.__init__" target="logging">
+    <edge source="src.intellicrack.__init__" target="typing">
       <data key="d6">imports</data>
     </edge>
-    <edge source="src.intellicrack.__init__" target="typing">
+    <edge source="src.intellicrack.__init__" target="structlog">
       <data key="d6">imports</data>
     </edge>
     <edge source="src.intellicrack.__init__" target="intellicrack._metadata">
@@ -84361,9 +84361,6 @@ and theme management for the Intellicrack application.</data>
     </edge>
     <edge source="src.intellicrack.bridges.base" target="src.intellicrack.bridges.base.BinaryOperationsBridge">
       <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.bridges.base" target="logging">
-      <data key="d6">imports</data>
     </edge>
     <edge source="src.intellicrack.bridges.base" target="collections.abc">
       <data key="d6">imports</data>
@@ -85274,7 +85271,7 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.core.process_manager" target="src.intellicrack.core.process_manager.ProcessManager">
       <data key="d6">defines</data>
     </edge>
-    <edge source="src.intellicrack.core.process_manager" target="logging">
+    <edge source="src.intellicrack.core.process_manager" target="structlog">
       <data key="d6">imports</data>
     </edge>
     <edge source="src.intellicrack.core.process_manager" target="src.intellicrack.core.process_manager.pid">
@@ -86705,6 +86702,9 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.bridges.__init__" target="src.intellicrack.bridges.binary">
       <data key="d6">imports</data>
     </edge>
+    <edge source="src.intellicrack.bridges.__init__" target="src.intellicrack.bridges.cutter">
+      <data key="d6">imports</data>
+    </edge>
     <edge source="src.intellicrack.bridges.__init__" target="src.intellicrack.bridges.frida_bridge">
       <data key="d6">imports</data>
     </edge>
@@ -86715,9 +86715,6 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">imports</data>
     </edge>
     <edge source="src.intellicrack.bridges.__init__" target="src.intellicrack.bridges.process">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="src.intellicrack.bridges.__init__" target="src.intellicrack.bridges.cutter">
       <data key="d6">imports</data>
     </edge>
     <edge source="src.intellicrack.bridges.__init__" target="src.intellicrack.bridges.sandbox_bridge">
@@ -87002,6 +86999,12 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.core.orchestrator" target="typing">
       <data key="d6">imports</data>
     </edge>
+    <edge source="src.intellicrack.core.orchestrator" target="uuid">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.orchestrator" target="structlog.contextvars">
+      <data key="d6">imports</data>
+    </edge>
     <edge source="src.intellicrack.core.orchestrator" target="src.intellicrack.bridges.schemas">
       <data key="d6">imports</data>
     </edge>
@@ -87277,9 +87280,6 @@ and theme management for the Intellicrack application.</data>
     </edge>
     <edge source="src.intellicrack.providers.base" target="src.intellicrack.providers.base.create_google_tool_schema">
       <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.providers.base" target="logging">
-      <data key="d6">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.base" target="collections.abc">
       <data key="d6">imports</data>
@@ -88273,9 +88273,6 @@ and theme management for the Intellicrack application.</data>
     </edge>
     <edge source="src.intellicrack.providers.anthropic" target="src.intellicrack.providers.anthropic.AnthropicProvider">
       <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.providers.anthropic" target="logging">
-      <data key="d6">imports</data>
     </edge>
     <edge source="src.intellicrack.providers.anthropic" target="asyncio">
       <data key="d6">imports</data>
@@ -94130,6 +94127,9 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.ui.panels.__init__" target="intellicrack.ui.panels.binary_panel">
       <data key="d6">imports</data>
     </edge>
+    <edge source="src.intellicrack.ui.panels.__init__" target="intellicrack.ui.panels.cutter_panel">
+      <data key="d6">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.panels.__init__" target="intellicrack.ui.panels.frida_panel">
       <data key="d6">imports</data>
     </edge>
@@ -94140,9 +94140,6 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.__init__" target="intellicrack.ui.panels.process_panel">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.__init__" target="intellicrack.ui.panels.cutter_panel">
       <data key="d6">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.__init__" target="intellicrack.ui.panels.sandbox_panel">

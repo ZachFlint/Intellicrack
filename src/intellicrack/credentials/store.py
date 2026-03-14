@@ -125,7 +125,7 @@ class CredentialStore:
         self._keyring_checked = True
 
         if _keyring_module is None:
-            _logger.warning("keyring_unavailable", extra={"reason": "library_not_installed"})
+            _logger.warning("keyring_unavailable", reason="library_not_installed")
             return False
 
         try:
@@ -137,14 +137,14 @@ class CredentialStore:
             if result == "test_value":
                 self._keyring = _keyring_module
                 self._keyring_available = True
-                _logger.info("keyring_backend_available", extra={"backend": _keyring_module.get_keyring().__class__.__name__})
+                _logger.info("keyring_backend_available", backend=_keyring_module.get_keyring().__class__.__name__)
         except Exception as e:
-            _logger.warning("keyring_unavailable", extra={"error": str(e)})
+            _logger.warning("keyring_unavailable", error=str(e))
             return False
         else:
             if self._keyring_available:
                 return True
-            _logger.warning("keyring_test_failed", extra={"reason": "value_mismatch"})
+            _logger.warning("keyring_test_failed", reason="value_mismatch")
         return False
 
     @cached_property
@@ -202,7 +202,7 @@ class CredentialStore:
                 project_id=parsed.get("project_id"),
             )
         except (json.JSONDecodeError, TypeError, KeyError) as e:
-            _logger.warning("credential_deserialize_failed", extra={"error": str(e)})
+            _logger.warning("credential_deserialize_failed", error=str(e))
             msg = f"Failed to deserialize credentials: {e}"
             raise CredentialStoreError(msg) from e
 
@@ -246,7 +246,7 @@ class CredentialStore:
                 source=CredentialSource(parsed["source"]),
             )
         except (json.JSONDecodeError, TypeError, KeyError, ValueError):
-            _logger.debug("metadata_deserialize_fallback", extra={"provider": provider.value})
+            _logger.debug("metadata_deserialize_fallback", provider=provider.value)
             now = datetime.now(UTC)
             return StoredCredential(
                 provider=provider,
@@ -279,7 +279,7 @@ class CredentialStore:
             data = await asyncio.to_thread(_fetch)
             return self._deserialize_credentials(data) if data else None
         except Exception as e:
-            _logger.warning("keyring_get_failed", extra={"provider": provider.value, "error": str(e)})
+            _logger.warning("keyring_get_failed", provider=provider.value, error=str(e))
             return None
 
     async def _set_to_keyring(
@@ -328,9 +328,9 @@ class CredentialStore:
 
         try:
             await asyncio.to_thread(_store)
-            _logger.info("credentials_stored", extra={"provider": provider.value, "store": "keyring"})
+            _logger.info("credentials_stored", provider=provider.value, store="keyring")
         except Exception as e:
-            _logger.warning("credential_store_failed", extra={"provider": provider.value, "error": str(e)})
+            _logger.warning("credential_store_failed", provider=provider.value, error=str(e))
             msg = f"Failed to store credentials: {e}"
             raise CredentialStoreError(msg) from e
 
@@ -357,7 +357,7 @@ class CredentialStore:
             data = await asyncio.to_thread(_fetch)
             return self._deserialize_metadata(data, provider) if data else None
         except Exception:
-            _logger.debug("metadata_get_failed", extra={"provider": provider.value})
+            _logger.debug("metadata_get_failed", provider=provider.value)
             return None
 
     async def get(self, provider: ProviderName) -> ProviderCredentials | None:
@@ -377,7 +377,7 @@ class CredentialStore:
                 if creds is not None and creds.api_key:
                     return creds
 
-            _logger.debug("credential_fallback_to_env", extra={"provider": provider.value})
+            _logger.debug("credential_fallback_to_env", provider=provider.value)
             return await asyncio.to_thread(self._fallback_loader.get_credentials, provider)
 
     async def get_or_raise(self, provider: ProviderName) -> ProviderCredentials:
@@ -450,18 +450,18 @@ class CredentialStore:
             try:
                 keyring.delete_password(self.SERVICE_NAME, key)
             except Exception:
-                _logger.debug("keyring_delete_credential_failed", extra={"provider": provider.value})
+                _logger.debug("keyring_delete_credential_failed", provider=provider.value)
                 return False
             try:
                 keyring.delete_password(self.SERVICE_NAME, metadata_key)
             except Exception:
-                _logger.debug("keyring_delete_metadata_failed", extra={"provider": provider.value})
+                _logger.debug("keyring_delete_metadata_failed", provider=provider.value)
             return True
 
         async with self._lock:
             result = await asyncio.to_thread(_delete)
             if result:
-                _logger.info("credentials_deleted", extra={"provider": provider.value, "store": "keyring"})
+                _logger.info("credentials_deleted", provider=provider.value, store="keyring")
             return result
 
     async def list_providers(self) -> list[StoredCredential]:
@@ -527,7 +527,7 @@ class CredentialStore:
                 if not overwrite:
                     existing = await self._get_from_keyring(provider)
                     if existing is not None and existing.api_key:
-                        _logger.info("credential_migration_skipped", extra={"provider": provider.value, "reason": "exists"})
+                        _logger.info("credential_migration_skipped", provider=provider.value, reason="exists")
                         results[provider] = True
                         continue
 
@@ -538,9 +538,9 @@ class CredentialStore:
                         source=CredentialSource.ENV_FILE,
                     )
                     results[provider] = True
-                    _logger.info("credentials_migrated", extra={"provider": provider.value, "from": "env", "to": "keyring"})
+                    _logger.info("credentials_migrated", provider=provider.value, source="env", destination="keyring")
                 except Exception:
-                    _logger.exception("credential_migration_failed", extra={"provider": provider.value})
+                    _logger.exception("credential_migration_failed", provider=provider.value)
                     results[provider] = False
 
         return results

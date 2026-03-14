@@ -415,7 +415,7 @@ class BinaryBridge(BinaryOperationsBridge):
             target_pid=None,
             last_error=None,
         )
-        _logger.info("bridge_initialized", extra={"bridge": "binary"})
+        _logger.info("bridge_initialized", bridge="binary")
 
     async def shutdown(self) -> None:
         """Shutdown and cleanup resources."""
@@ -426,7 +426,7 @@ class BinaryBridge(BinaryOperationsBridge):
         self._modified = False
         self._patches = []
         await super().shutdown()
-        _logger.info("bridge_shutdown", extra={"bridge": "binary"})
+        _logger.info("bridge_shutdown", bridge="binary")
 
     @override
     async def is_available(self) -> bool:
@@ -493,7 +493,7 @@ class BinaryBridge(BinaryOperationsBridge):
             self._state.binary_loaded = True
             self._state.target_path = self._binary_path
 
-            _logger.info("binary_loaded", extra={"path": str(path.name), "file_type": file_type, "arch": arch})
+            _logger.info("binary_loaded", path=str(path.name), file_type=file_type, arch=arch)
 
             return BinaryInfo(
                 path=self._binary_path,
@@ -511,7 +511,7 @@ class BinaryBridge(BinaryOperationsBridge):
             )
 
         except Exception as e:
-            _logger.exception("binary_load_failed", extra={"path": str(self._binary_path)})
+            _logger.exception("binary_load_failed", path=str(self._binary_path))
             raise ToolError(_ERR_LOAD_FAILED) from e
 
     def _detect_format(self) -> str:
@@ -784,7 +784,7 @@ class BinaryBridge(BinaryOperationsBridge):
 
         self._data[offset:end] = data
         self._modified = True
-        _logger.debug("bytes_written", extra={"length": len(data), "offset": hex(offset)})
+        _logger.debug("bytes_written", length=len(data), offset=hex(offset))
 
     async def apply_patch(self, patch: PatchInfo) -> bool:
         """Apply a patch to the binary.
@@ -813,11 +813,9 @@ class BinaryBridge(BinaryOperationsBridge):
         if original != patch.original_bytes:
             _logger.warning(
                 "patch_bytes_mismatch",
-                extra={
-                    "offset": hex(offset),
-                    "expected": patch.original_bytes.hex(),
-                    "found": original.hex(),
-                },
+                offset=hex(offset),
+                expected=patch.original_bytes.hex(),
+                found=original.hex(),
             )
 
         await self.write_bytes(offset, patch.new_bytes)
@@ -833,12 +831,10 @@ class BinaryBridge(BinaryOperationsBridge):
 
         _logger.info(
             "patch_applied",
-            extra={
-                "offset": hex(offset),
-                "original": original.hex(),
-                "new": patch.new_bytes.hex(),
-                "description": patch.description,
-            },
+            offset=hex(offset),
+            original=original.hex(),
+            new=patch.new_bytes.hex(),
+            description=patch.description,
         )
 
         return True
@@ -868,10 +864,10 @@ class BinaryBridge(BinaryOperationsBridge):
                     description=applied.description,
                     applied=False,
                 )
-                _logger.info("patch_reverted", extra={"address": hex(patch.address)})
+                _logger.info("patch_reverted", address=hex(patch.address))
                 return True
 
-        _logger.warning("patch_not_found", extra={"address": hex(patch.address)})
+        _logger.warning("patch_not_found", address=hex(patch.address))
         return False
 
     async def save(self, path: Path | None = None) -> Path:
@@ -894,7 +890,7 @@ class BinaryBridge(BinaryOperationsBridge):
             raise ToolError(_ERR_NO_SAVE_PATH)
 
         save_path.write_bytes(bytes(self._data))
-        _logger.info("binary_saved", extra={"path": str(save_path)})
+        _logger.info("binary_saved", path=str(save_path))
 
         if save_path == self._binary_path:
             self._modified = False

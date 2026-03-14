@@ -113,7 +113,7 @@ async def _fetch_model_config(model_id: str) -> dict[str, Any]:
             result: dict[str, Any] = response.json()
             return result
     except Exception:
-        _logger.debug("huggingface_config_fetch_failed", exc_info=True, extra={"url": url})
+        _logger.debug("huggingface_config_fetch_failed", exc_info=True, url=url)
         return {}
 
 
@@ -250,36 +250,32 @@ class LocalTransformersProvider(LLMProviderBase):
             self._windows_warnings = warnings
 
             for warning in warnings:
-                self._logger.warning("xpu_requirement_warning", extra={"warning": warning})
+                self._logger.warning("xpu_requirement_warning", warning=warning)
 
             if self._is_arc_b580:
                 device_info = await asyncio.to_thread(get_xpu_device_info, 0)
                 if device_info:
                     self._logger.info(
                         "xpu_connected_b580",
-                        extra={
-                            "device_name": device_info.device_name,
-                            "memory_gb": device_info.total_memory_bytes / (1024**3),
-                            "driver": device_info.driver_version,
-                        },
+                        device_name=device_info.device_name,
+                        memory_gb=device_info.total_memory_bytes / (1024**3),
+                        driver=device_info.driver_version,
                     )
             else:
-                self._logger.info("xpu_connected", extra={"device_type": self._device_type})
+                self._logger.info("xpu_connected", device_type=self._device_type)
         else:
             self._device_type = "cpu"
             if not self._xpu_available:
-                self._logger.info("xpu_not_available_using_cpu", extra={"device_type": "cpu"})
+                self._logger.info("xpu_not_available_using_cpu", device_type="cpu")
             else:
-                self._logger.info("cpu_preferred_over_xpu", extra={"device_type": "cpu"})
+                self._logger.info("cpu_preferred_over_xpu", device_type="cpu")
 
         self._connected = True
         self._logger.info(
             "local_transformers_connected",
-            extra={
-                "device_type": self._device_type,
-                "xpu_available": self._xpu_available,
-                "is_arc_b580": self._is_arc_b580,
-            },
+            device_type=self._device_type,
+            xpu_available=self._xpu_available,
+            is_arc_b580=self._is_arc_b580,
         )
 
     async def disconnect(self) -> None:
@@ -292,9 +288,9 @@ class LocalTransformersProvider(LLMProviderBase):
                 await asyncio.to_thread(clear_xpu_cache)
 
             await super().disconnect()
-            self._logger.info("local_transformers_disconnected", extra={"device_type": self._device_type})
+            self._logger.info("local_transformers_disconnected", device_type=self._device_type)
         except Exception as exc:
-            self._logger.warning("disconnect_cleanup_error", extra={"error": str(exc)})
+            self._logger.warning("disconnect_cleanup_error", error=str(exc))
             self._connected = False
 
     async def list_models(self) -> list[ModelInfo]:
@@ -335,11 +331,9 @@ class LocalTransformersProvider(LLMProviderBase):
                 if estimated > usable_vram:
                     self._logger.debug(
                         "model_excluded_insufficient_vram",
-                        extra={
-                            "model_id": model_id,
-                            "estimated_bytes": estimated,
-                            "available_bytes": usable_vram,
-                        },
+                        model_id=model_id,
+                        estimated_bytes=estimated,
+                        available_bytes=usable_vram,
                     )
                     continue
 
@@ -436,15 +430,13 @@ class LocalTransformersProvider(LLMProviderBase):
 
             self._logger.info(
                 "local_chat_completed",
-                extra={
-                    "model": model_id,
-                    "device": self._device_type,
-                    "duration_ms": duration_ms,
-                    "has_tool_calls": tool_calls is not None,
-                },
+                model=model_id,
+                device=self._device_type,
+                duration_ms=duration_ms,
+                has_tool_calls=tool_calls is not None,
             )
         except Exception as exc:
-            self._logger.exception("local_chat_failed", extra={"model": model_id, "error": str(exc)})
+            self._logger.exception("local_chat_failed", model=model_id, error=str(exc))
             raise ProviderError(_ERR_INFERENCE_FAILED % exc) from exc
         else:
             return message, tool_calls
@@ -495,7 +487,7 @@ class LocalTransformersProvider(LLMProviderBase):
 
         except Exception as exc:
             if not self._cancel_requested:
-                self._logger.exception("local_stream_failed", extra={"model": model_id, "error": str(exc)})
+                self._logger.exception("local_stream_failed", model=model_id, error=str(exc))
                 raise ProviderError(_ERR_STREAMING_FAILED % exc) from exc
 
     async def _ensure_model_loaded(self, model_id: str) -> None:
@@ -532,19 +524,17 @@ class LocalTransformersProvider(LLMProviderBase):
 
             self._logger.info(
                 "model_loaded",
-                extra={
-                    "model_id": model_id,
-                    "device": self._device_type,
-                    "dtype": self._loaded_model.dtype,
-                    "load_time_s": self._loaded_model.load_time_seconds,
-                },
+                model_id=model_id,
+                device=self._device_type,
+                dtype=self._loaded_model.dtype,
+                load_time_s=self._loaded_model.load_time_seconds,
             )
 
         except Exception as exc:
-            self._logger.exception("model_load_failed", extra={"model_id": model_id, "error": str(exc)})
+            self._logger.exception("model_load_failed", model_id=model_id, error=str(exc))
 
             if self._device_type == "xpu":
-                self._logger.warning("xpu_load_failed_falling_back_to_cpu", extra={"model_id": model_id})
+                self._logger.warning("xpu_load_failed_falling_back_to_cpu", model_id=model_id)
                 self._device_type = "cpu"
                 config = dataclass_replace(config, device="cpu")
                 try:
@@ -804,7 +794,7 @@ class LocalTransformersProvider(LLMProviderBase):
                 except Exception as exc:
                     self._logger.debug(
                         "chat_template_failed_using_fallback",
-                        extra={"error": str(exc)},
+                        error=str(exc),
                     )
 
         return self._format_prompt_chatml_fallback(chat_messages)
@@ -1013,9 +1003,9 @@ class LocalTransformersProvider(LLMProviderBase):
 
             gc.collect()
 
-            self._logger.info("model_unloaded", extra={"model_id": model_id})
+            self._logger.info("model_unloaded", model_id=model_id)
 
     def clear_cache(self) -> None:
         """Clear the model cache."""
         clear_global_cache()
-        self._logger.info("model_cache_cleared", extra={"provider": "local_transformers"})
+        self._logger.info("model_cache_cleared", provider="local_transformers")

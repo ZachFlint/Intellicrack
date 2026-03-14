@@ -15,9 +15,9 @@ from intellicrack.core.script_gen import (
     ScriptLanguage,
     ScriptManager,
     ScriptValidator,
+    get_cutter_reference,
     get_frida_api_reference,
     get_ghidra_api_reference,
-    get_cutter_reference,
     get_x64dbg_reference,
 )
 

@@ -80,7 +80,7 @@ class OllamaProvider(LLMProviderBase):
         self._local_available: bool = False
         self._cloud_available: bool = False
         self._connect_timeout: float = 300.0
-        self._logger = get_logger("providers.ollama")
+        self._logger = get_logger("providers.ollama").bind(provider="ollama")
 
     @property
     def name(self) -> ProviderName:
@@ -142,10 +142,10 @@ class OllamaProvider(LLMProviderBase):
             response = await self._local_client.get(f"{self._local_url}/api/tags")
             response.raise_for_status()
             self._local_available = True
-            self._logger.info("local_ollama_connected", extra={"url": self._local_url})
+            self._logger.info("local_ollama_connected", url=self._local_url)
         except Exception as e:
             self._local_available = False
-            self._logger.debug("local_ollama_unavailable", extra={"error": str(e)})
+            self._logger.debug("local_ollama_unavailable", error=str(e))
             if self._local_client:
                 await self._local_client.aclose()
                 self._local_client = None
@@ -163,19 +163,17 @@ class OllamaProvider(LLMProviderBase):
             response = await self._cloud_client.get(f"{self.CLOUD_API_URL}/tags")
             response.raise_for_status()
             self._cloud_available = True
-            self._logger.info("cloud_ollama_connected", extra={"cloud_url": self.CLOUD_API_URL})
+            self._logger.info("cloud_ollama_connected", cloud_url=self.CLOUD_API_URL)
         except httpx.HTTPStatusError as e:
             self._cloud_available = False
             if e.response.status_code == HTTPStatus.UNAUTHORIZED:
-                self._logger.warning("cloud_api_key_invalid", extra={"status_code": e.response.status_code})
+                self._logger.warning("cloud_api_key_invalid", status_code=e.response.status_code)
             else:
                 self._logger.warning(
                     "cloud_ollama_unavailable",
-                    extra={
-                        "error": str(e),
-                        "url": self.CLOUD_API_URL,
-                        "hint": "Set INTELLICRACK_OLLAMA_CLOUD_URL to a valid remote Ollama endpoint",
-                    },
+                    error=str(e),
+                    url=self.CLOUD_API_URL,
+                    hint="Set INTELLICRACK_OLLAMA_CLOUD_URL to a valid remote Ollama endpoint",
                 )
             if self._cloud_client:
                 await self._cloud_client.aclose()
@@ -184,11 +182,9 @@ class OllamaProvider(LLMProviderBase):
             self._cloud_available = False
             self._logger.warning(
                 "cloud_ollama_unavailable",
-                extra={
-                    "error": str(e),
-                    "url": self.CLOUD_API_URL,
-                    "hint": "Set INTELLICRACK_OLLAMA_CLOUD_URL to a valid remote Ollama endpoint",
-                },
+                error=str(e),
+                url=self.CLOUD_API_URL,
+                hint="Set INTELLICRACK_OLLAMA_CLOUD_URL to a valid remote Ollama endpoint",
             )
             if self._cloud_client:
                 await self._cloud_client.aclose()
@@ -206,9 +202,9 @@ class OllamaProvider(LLMProviderBase):
                 self._cloud_client = None
             self._local_available = False
             self._cloud_available = False
-            self._logger.info("ollama_disconnected", extra={"provider": "ollama"})
+            self._logger.info("ollama_disconnected", provider="ollama")
         except Exception as exc:
-            self._logger.warning("disconnect_cleanup_error", extra={"error": str(exc)})
+            self._logger.warning("disconnect_cleanup_error", error=str(exc))
             self._connected = False
 
     async def list_models(self) -> list[ModelInfo]:
@@ -274,7 +270,7 @@ class OllamaProvider(LLMProviderBase):
                 for model_name in model_names
             )
         except Exception as e:
-            self._logger.warning("local_models_list_failed", extra={"error": str(e)})
+            self._logger.warning("local_models_list_failed", error=str(e))
 
         return models
 
@@ -315,7 +311,7 @@ class OllamaProvider(LLMProviderBase):
                 for model_name in model_names
             )
         except Exception as e:
-            self._logger.warning("cloud_models_list_failed", extra={"error": str(e)})
+            self._logger.warning("cloud_models_list_failed", error=str(e))
 
         return models
 
@@ -384,7 +380,7 @@ class OllamaProvider(LLMProviderBase):
             except Exception:
                 self._logger.debug(
                     "ollama_show_failed",
-                    extra={"model": name},
+                    model=name,
                 )
             return name, 4096
 
@@ -490,10 +486,10 @@ class OllamaProvider(LLMProviderBase):
             response.raise_for_status()
             return cast("dict[str, Any]", response.json())
         except httpx.HTTPStatusError as e:
-            _logger.warning("ollama_api_error", extra={"error": str(e)})
+            _logger.warning("ollama_api_error", error=str(e))
             raise ProviderError(_ERR_API_ERROR % e) from e
         except Exception as e:
-            _logger.warning("ollama_request_failed", extra={"error": str(e)})
+            _logger.warning("ollama_request_failed", error=str(e))
             raise ProviderError(_ERR_REQUEST_FAILED % e) from e
 
     def _parse_ollama_tool_calls(self, data: dict[str, Any]) -> list[ToolCall]:
@@ -532,10 +528,8 @@ class OllamaProvider(LLMProviderBase):
             tool_calls.append(tool_call)
             self._logger.debug(
                 "tool_call_parsed",
-                extra={
-                    "tool_name": tool_call.tool_name,
-                    "arguments_count": len(tool_call.arguments),
-                },
+                tool_name=tool_call.tool_name,
+                arguments_count=len(tool_call.arguments),
             )
         return tool_calls
 
@@ -603,7 +597,7 @@ class OllamaProvider(LLMProviderBase):
                             if content := last_chunk_data.get("message", {}).get("content", ""):
                                 yield content
                         except json.JSONDecodeError as exc:
-                            self._logger.debug("stream_json_parse_skipped", extra={"error": str(exc)})
+                            self._logger.debug("stream_json_parse_skipped", error=str(exc))
                             continue
 
             if not self._cancel_requested and last_chunk_data:
@@ -613,7 +607,7 @@ class OllamaProvider(LLMProviderBase):
 
         except Exception as e:
             if not self._cancel_requested:
-                self._logger.warning("ollama_stream_failed", extra={"error": str(e)})
+                self._logger.warning("ollama_stream_failed", error=str(e))
                 raise ProviderError(_ERR_STREAM_FAILED % e) from e
 
     async def cancel_request(self) -> None:
@@ -694,5 +688,5 @@ class OllamaProvider(LLMProviderBase):
                             self._logger.warning("pull_status_json_decode_failed")
                             continue
         except Exception as e:
-            self._logger.warning("ollama_pull_failed", extra={"model": actual_model, "error": str(e)})
+            self._logger.warning("ollama_pull_failed", model=actual_model, error=str(e))
             raise ProviderError(_ERR_PULL_FAILED % (actual_model, e)) from e

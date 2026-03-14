@@ -114,7 +114,7 @@ class ToolInstallWorker(QThread):
         try:
             self._install_tool()
         except Exception as e:
-            _logger.exception("tool_install_failed", extra={"error": str(e)})
+            _logger.exception("tool_install_failed", error=str(e))
             self.install_finished.emit(False, f"Installation failed: {e}")
 
     def _install_tool(self) -> None:
@@ -161,11 +161,11 @@ class ToolInstallWorker(QThread):
                                 self.progress.emit(pct)
 
             except httpx.TimeoutException as exc:
-                _logger.exception("tool_download_timeout", extra={"tool_id": self._tool_id, "error": str(exc)})
+                _logger.exception("tool_download_timeout", tool_id=self._tool_id, error=str(exc))
                 self.install_finished.emit(False, "Download timed out")
                 return
             except httpx.ConnectError as exc:
-                _logger.exception("tool_download_connect_error", extra={"tool_id": self._tool_id, "error": str(exc)})
+                _logger.exception("tool_download_connect_error", tool_id=self._tool_id, error=str(exc))
                 self.install_finished.emit(False, "Could not connect to download server")
                 return
 
@@ -175,7 +175,7 @@ class ToolInstallWorker(QThread):
                 with zipfile.ZipFile(zip_path, "r") as zf:
                     zf.extractall(self._install_path)
             except zipfile.BadZipFile as exc:
-                _logger.exception("tool_extraction_bad_zip", extra={"tool_id": self._tool_id, "error": str(exc)})
+                _logger.exception("tool_extraction_bad_zip", tool_id=self._tool_id, error=str(exc))
                 self.install_finished.emit(False, "Downloaded file is not a valid ZIP archive")
                 return
 
@@ -315,7 +315,7 @@ class ToolInstallWorker(QThread):
         """Post-installation setup for Cutter."""
         cutter_exe = self._find_cutter_executable()
         if cutter_exe is not None:
-            _logger.debug("cutter_install_verified", extra={"path": str(cutter_exe)})
+            _logger.debug("cutter_install_verified", path=str(cutter_exe))
 
     def _find_cutter_executable(self) -> Path | None:
         """Locate the Cutter executable after extraction.
@@ -327,15 +327,17 @@ class ToolInstallWorker(QThread):
             self._install_path / "cutter.exe",
         ]
 
-        for item in self._install_path.iterdir():
-            if item.is_dir():
-                candidates.append(item / "cutter.exe")
+        candidates.extend(
+            item / "cutter.exe"
+            for item in self._install_path.iterdir()
+            if item.is_dir()
+        )
 
         for candidate in candidates:
             if candidate.exists():
                 return candidate
 
-        _logger.warning("cutter_executable_not_found_after_extraction", extra={})
+        _logger.warning("cutter_executable_not_found_after_extraction")
         return None
 
 
@@ -368,14 +370,12 @@ class ToolStatusCheckWorker(QThread):
     def run(self) -> None:
         """Run the status check in a separate thread."""
         try:
-            _logger.debug("tool_status_check_started", extra={"tool_id": self._tool_id, "tool_path": self._tool_path})
+            _logger.debug("tool_status_check_started", tool_id=self._tool_id, tool_path=self._tool_path)
             is_available, message = self._check_tool()
-            _logger.debug(
-                "tool_status_check_completed", extra={"tool_id": self._tool_id, "available": is_available, "status_message": message}
-            )
+            _logger.debug("tool_status_check_completed", tool_id=self._tool_id, available=is_available, status_message=message)
             self.status_checked.emit(self._tool_id, is_available, message)
         except Exception as e:
-            _logger.exception("tool_status_check_failed", extra={"tool_id": self._tool_id, "error": str(e)})
+            _logger.exception("tool_status_check_failed", tool_id=self._tool_id, error=str(e))
             self.status_checked.emit(self._tool_id, False, f"Check failed: {e}")
 
     def _check_tool(self) -> tuple[bool, str]:
@@ -516,11 +516,11 @@ class ToolStatusCheckWorker(QThread):
             if result.returncode == _RETURNCODE_SUCCESS:
                 return True, "Cutter available in PATH"
         except TimeoutExpired:
-            _logger.debug("cutter_path_check_timed_out", extra={})
+            _logger.debug("cutter_path_check_timed_out")
         except FileNotFoundError:
-            _logger.debug("cutter_executable_not_in_path", extra={})
+            _logger.debug("cutter_executable_not_in_path")
         except OSError as e:
-            _logger.debug("cutter_os_error", extra={"error": str(e)})
+            _logger.debug("cutter_os_error", error=str(e))
 
         return False, "Cutter executable not found"
 
@@ -839,7 +839,7 @@ class ToolSettingsWidget(QFrame):
                 result: dict[str, Any] = all_settings.get(self._tool_id, {})
                 return result
         except (json.JSONDecodeError, OSError):
-            _logger.warning("tool_settings_load_failed", extra={"tool_id": self._tool_id})
+            _logger.warning("tool_settings_load_failed", tool_id=self._tool_id)
             return {}
 
     def _browse_path(self) -> None:
@@ -963,7 +963,7 @@ class ToolSettingsWidget(QFrame):
                 with open(self._config_path, encoding="utf-8") as f:
                     all_settings = json.load(f)
             except (json.JSONDecodeError, OSError):
-                _logger.warning("tool_settings_load_for_save_failed", extra={"tool_id": self._tool_id})
+                _logger.warning("tool_settings_load_for_save_failed", tool_id=self._tool_id)
                 all_settings = {}
 
         all_settings[self._tool_id] = self.get_settings()
@@ -972,7 +972,7 @@ class ToolSettingsWidget(QFrame):
             with open(self._config_path, "w", encoding="utf-8") as f:
                 json.dump(all_settings, f, indent=2)
         except OSError as e:
-            _logger.warning("tool_settings_save_failed", extra={"tool_id": self._tool_id, "error": str(e)})
+            _logger.warning("tool_settings_save_failed", tool_id=self._tool_id, error=str(e))
             QMessageBox.warning(
                 self,
                 "Save Error",

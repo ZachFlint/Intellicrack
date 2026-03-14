@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Fri, Mar 13, 2026 05:04:52 PM
+Generated: Sat, Mar 14, 2026 12:53:32 PM
 Directory: D:\Intellicrack
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -15388,7 +15388,6 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 ├── QWEN.md
 ├── README.md
 ├── REMOVE_NUL.cmd
-├── requirements.txt
 ├── SECURITY.md
 ├── simple_pyqt_test.py
 ├── test_import_check.py

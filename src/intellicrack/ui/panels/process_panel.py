@@ -334,7 +334,7 @@ class _ProcessRefreshWorker(QThread):
                     "thread_count": thread_count,
                 })
         except Exception as e:
-            _logger.warning("process_enumeration_failed", extra={"error": str(e)})
+            _logger.warning("process_enumeration_failed", error=str(e))
 
         self.refresh_finished.emit(result)
 
@@ -425,7 +425,7 @@ class ProcessPanel(QWidget):
         if selection_model is not None:
             selection_model.currentChanged.connect(self._on_process_selection_changed)
         else:
-            _logger.warning("process_table_selection_model_unavailable", extra={"widget": "process_table"})
+            _logger.warning("process_table_selection_model_unavailable", widget="process_table")
         proc_h = self._process_table.horizontalHeader()
         if proc_h is not None:
             proc_h.setSectionResizeMode(_PROC_COL_NAME, QHeaderView.ResizeMode.Stretch)
@@ -471,14 +471,14 @@ class ProcessPanel(QWidget):
         to prevent concurrent enumeration.
         """
         if self._refresh_worker is not None and self._refresh_worker.isRunning():
-            _logger.debug("process_refresh_skipped_already_running", extra={"reason": "worker active"})
+            _logger.debug("process_refresh_skipped_already_running", reason="worker active")
             return
 
         if self._refresh_worker is not None:
             self._refresh_worker.deleteLater()
             self._refresh_worker = None
 
-        _logger.debug("process_list_refresh_started", extra={"source": "user_action"})
+        _logger.debug("process_list_refresh_started", source="user_action")
         current_filter = self._search_input.text().strip().lower()
 
         self._refresh_btn.setEnabled(False)
@@ -531,7 +531,7 @@ class ProcessPanel(QWidget):
         visible_count = len(processes)
         set_sorting_enabled(self._process_table, enable=True)
         self._proc_count_label.setText(f"{visible_count} processes")
-        _logger.debug("process_list_refreshed", extra={"visible_count": visible_count})
+        _logger.debug("process_list_refreshed", visible_count=visible_count)
 
     def _on_filter_changed(self, _text: str) -> None:
         """Handle search filter text changes.
@@ -580,7 +580,7 @@ class ProcessPanel(QWidget):
         Args:
             pid: Process ID to inspect.
         """
-        _logger.debug("process_details_loading", extra={"pid": pid})
+        _logger.debug("process_details_loading", pid=pid)
         self._modules_tree.clear()
         modules = _enumerate_modules(pid)
         for mod in modules:
@@ -621,7 +621,7 @@ class ProcessPanel(QWidget):
     def _on_attach(self) -> None:
         """Signal that the selected process should be attached to."""
         if self._selected_pid is not None:
-            _logger.info("process_attach_requested", extra={"pid": self._selected_pid})
+            _logger.info("process_attach_requested", pid=self._selected_pid)
             self.process_attached.emit(self._selected_pid)
             self.tool_started.emit()
 
@@ -634,11 +634,11 @@ class ProcessPanel(QWidget):
             if handle := _kernel32.OpenProcess(_PROCESS_TERMINATE, False, self._selected_pid):
                 _kernel32.TerminateProcess(handle, 1)
                 _kernel32.CloseHandle(handle)
-                _logger.info("process_terminated", extra={"pid": self._selected_pid})
+                _logger.info("process_terminated", pid=self._selected_pid)
                 self._selected_pid = None
                 QTimer.singleShot(500, self._on_refresh)
         except Exception as e:
-            _logger.exception("process_terminate_failed", extra={"pid": self._selected_pid, "error": str(e)})
+            _logger.exception("process_terminate_failed", pid=self._selected_pid, error=str(e))
 
     def get_selected_pid(self) -> int | None:
         """Get the currently selected process ID.

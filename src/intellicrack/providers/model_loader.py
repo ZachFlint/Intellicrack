@@ -171,7 +171,7 @@ class ModelCache:
         with self._lock:
             if cache_key in self._cache:
                 self._cache.move_to_end(cache_key)
-                _logger.debug("model_cache_hit", extra={"model_id": model_id, "dtype": dtype})
+                _logger.debug("model_cache_hit", model_id=model_id, dtype=dtype)
                 return self._cache[cache_key]
         return None
 
@@ -196,12 +196,10 @@ class ModelCache:
             self._current_memory_bytes += loaded_model.memory_usage_bytes
             _logger.debug(
                 "model_cached",
-                extra={
-                    "model_id": loaded_model.model_id,
-                    "dtype": loaded_model.dtype,
-                    "memory_mb": loaded_model.memory_usage_bytes // (1024 * 1024),
-                    "total_cached_mb": self._current_memory_bytes // (1024 * 1024),
-                },
+                model_id=loaded_model.model_id,
+                dtype=loaded_model.dtype,
+                memory_mb=loaded_model.memory_usage_bytes // (1024 * 1024),
+                total_cached_mb=self._current_memory_bytes // (1024 * 1024),
             )
 
     def remove(self, model_id: str, dtype: str, device_type: str) -> bool:
@@ -232,7 +230,7 @@ class ModelCache:
             self._cache.clear()
             self._current_memory_bytes = 0
             gc.collect()
-        _logger.info("model_cache_cleared", extra={"cache_size": len(self._cache)})
+        _logger.info("model_cache_cleared", cache_size=len(self._cache))
 
     def get_memory_usage(self) -> int:
         """Get current memory usage.
@@ -269,10 +267,8 @@ class ModelCache:
             _unload_model(oldest_model)
             _logger.debug(
                 "model_evicted",
-                extra={
-                    "model_id": oldest_model.model_id,
-                    "memory_freed_mb": oldest_model.memory_usage_bytes // (1024 * 1024),
-                },
+                model_id=oldest_model.model_id,
+                memory_freed_mb=oldest_model.memory_usage_bytes // (1024 * 1024),
             )
 
 
@@ -291,9 +287,9 @@ def _unload_model(loaded_model: LoadedModel) -> None:
             if _torch is not None and hasattr(_torch, "xpu") and _torch.xpu.is_available():
                 _torch.xpu.empty_cache()
         except Exception as inner_exc:
-            _logger.debug("xpu_cache_clear_on_unload_failed", extra={"error": str(inner_exc)})
+            _logger.debug("xpu_cache_clear_on_unload_failed", error=str(inner_exc))
     except Exception as exc:
-        _logger.debug("model_unload_failed", extra={"error": str(exc)})
+        _logger.debug("model_unload_failed", error=str(exc))
 
 
 def estimate_model_memory(
@@ -329,15 +325,13 @@ def estimate_model_memory(
 
     _logger.debug(
         "model_memory_estimated",
-        extra={
-            "model_id": model_id,
-            "dtype": dtype,
-            "param_count": param_count,
-            "bytes_per_param": bytes_per_param,
-            "include_activations": include_activations,
-            "estimated_bytes": base_memory,
-            "estimated_mb": base_memory // (1024 * 1024),
-        },
+        model_id=model_id,
+        dtype=dtype,
+        param_count=param_count,
+        bytes_per_param=bytes_per_param,
+        include_activations=include_activations,
+        estimated_bytes=base_memory,
+        estimated_mb=base_memory // (1024 * 1024),
     )
 
     return base_memory
@@ -379,11 +373,9 @@ def _estimate_parameter_count(model_id: str) -> int:
         if pattern in model_lower:
             _logger.debug(
                 "parameter_count_estimated",
-                extra={
-                    "model_id": model_id,
-                    "estimated_params": count,
-                    "estimated_params_b": round(count / 1_000_000_000, 1),
-                },
+                model_id=model_id,
+                estimated_params=count,
+                estimated_params_b=round(count / 1_000_000_000, 1),
             )
             return count
 
@@ -410,11 +402,9 @@ def _estimate_parameter_count(model_id: str) -> int:
 
     _logger.debug(
         "parameter_count_estimated",
-        extra={
-            "model_id": model_id,
-            "estimated_params": result,
-            "estimated_params_b": round(result / 1_000_000_000, 1),
-        },
+        model_id=model_id,
+        estimated_params=result,
+        estimated_params_b=round(result / 1_000_000_000, 1),
     )
 
     return result
@@ -440,12 +430,10 @@ def select_dtype_for_memory(
         if estimated < available_memory_bytes:
             _logger.debug(
                 "dtype_selected_preferred",
-                extra={
-                    "model_id": model_id,
-                    "selected_dtype": preferred_dtype,
-                    "estimated_bytes": estimated,
-                    "available_bytes": available_memory_bytes,
-                },
+                model_id=model_id,
+                selected_dtype=preferred_dtype,
+                estimated_bytes=estimated,
+                available_bytes=available_memory_bytes,
             )
             return preferred_dtype
 
@@ -454,22 +442,18 @@ def select_dtype_for_memory(
         if estimated < available_memory_bytes:
             _logger.debug(
                 "dtype_selected_auto",
-                extra={
-                    "model_id": model_id,
-                    "selected_dtype": dtype,
-                    "estimated_bytes": estimated,
-                    "available_bytes": available_memory_bytes,
-                },
+                model_id=model_id,
+                selected_dtype=dtype,
+                estimated_bytes=estimated,
+                available_bytes=available_memory_bytes,
             )
             return dtype
 
     _logger.debug(
         "dtype_selected_fallback",
-        extra={
-            "model_id": model_id,
-            "selected_dtype": "int4",
-            "available_bytes": available_memory_bytes,
-        },
+        model_id=model_id,
+        selected_dtype="int4",
+        available_bytes=available_memory_bytes,
     )
     return "int4"
 
@@ -519,11 +503,9 @@ def load_model_for_xpu(
 
     _logger.info(
         "model_loading_xpu",
-        extra={
-            "model_id": config.model_id,
-            "dtype": dtype_str,
-            "device": str(device),
-        },
+        model_id=config.model_id,
+        dtype=dtype_str,
+        device=str(device),
     )
 
     try:
@@ -572,15 +554,13 @@ def load_model_for_xpu(
 
         _logger.info(
             "model_loaded_xpu",
-            extra={
-                "model_id": config.model_id,
-                "dtype": dtype_str,
-                "load_time_seconds": load_time,
-                "memory_mb": memory_usage // (1024 * 1024),
-            },
+            model_id=config.model_id,
+            dtype=dtype_str,
+            load_time_seconds=load_time,
+            memory_mb=memory_usage // (1024 * 1024),
         )
     except Exception as exc:
-        _logger.warning("xpu_model_load_failed", extra={"model_id": config.model_id, "error": str(exc)})
+        _logger.warning("xpu_model_load_failed", model_id=config.model_id, error=str(exc))
         clear_xpu_cache()
         raise RuntimeError(_ERR_LOAD_XPU_FAILED % (config.model_id, exc)) from exc
     else:
@@ -624,10 +604,8 @@ def load_model_for_cpu(
 
     _logger.info(
         "model_loading_cpu",
-        extra={
-            "model_id": config.model_id,
-            "dtype": dtype_str,
-        },
+        model_id=config.model_id,
+        dtype=dtype_str,
     )
 
     try:
@@ -672,15 +650,13 @@ def load_model_for_cpu(
 
         _logger.info(
             "model_loaded_cpu",
-            extra={
-                "model_id": config.model_id,
-                "dtype": dtype_str,
-                "load_time_seconds": load_time,
-                "memory_mb": memory_usage // (1024 * 1024),
-            },
+            model_id=config.model_id,
+            dtype=dtype_str,
+            load_time_seconds=load_time,
+            memory_mb=memory_usage // (1024 * 1024),
         )
     except Exception as exc:
-        _logger.warning("cpu_model_load_failed", extra={"model_id": config.model_id, "error": str(exc)})
+        _logger.warning("cpu_model_load_failed", model_id=config.model_id, error=str(exc))
         gc.collect()
         raise RuntimeError(_ERR_LOAD_CPU_FAILED % (config.model_id, exc)) from exc
     else:
@@ -734,7 +710,7 @@ def _get_quantization_config(dtype_str: str) -> object:
     if BitsAndBytesConfig is None:
         _logger.warning(
             "bitsandbytes_config_unavailable",
-            extra={"dtype": dtype_str},
+            dtype=dtype_str,
         )
         if dtype_str == "int8":
             return {"load_in_8bit": True}

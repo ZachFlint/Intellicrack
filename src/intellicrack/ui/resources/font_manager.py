@@ -90,7 +90,7 @@ class FontManager:
             True if at least one font was loaded successfully.
         """
         if self._fonts_loaded:
-            _logger.debug("fonts_already_loaded", extra={"families_count": len(self._loaded_families)})
+            _logger.debug("fonts_already_loaded", families_count=len(self._loaded_families))
             return bool(self._loaded_families)
 
         self._fonts_loaded = True
@@ -98,7 +98,7 @@ class FontManager:
 
         try:
             if not resource_exists("fonts"):
-                _logger.warning("fonts_directory_not_found", extra={"resource_key": "fonts"})
+                _logger.warning("fonts_directory_not_found", resource_key="fonts")
                 self._setup_fallback_fonts()
                 return False
 
@@ -113,12 +113,12 @@ class FontManager:
                 self._setup_fallback_fonts()
                 fonts_loaded = False
             else:
-                _logger.info("custom_fonts_loaded", extra={"count": len(self._loaded_families)})
+                _logger.info("custom_fonts_loaded", count=len(self._loaded_families))
                 self._setup_fonts_from_loaded()
                 fonts_loaded = True
 
         except (FileNotFoundError, PermissionError) as e:
-            _logger.warning("font_loading_error", extra={"error": str(e)})
+            _logger.warning("font_loading_error", error=str(e))
             self._setup_fallback_fonts()
             fonts_loaded = False
 
@@ -131,9 +131,9 @@ class FontManager:
             if config_path.exists():
                 with open(config_path, encoding="utf-8") as f:
                     self._font_config = cast("dict[str, object]", json.load(f))
-                    _logger.debug("font_config_loaded", extra={"config": self._font_config})
+                    _logger.debug("font_config_loaded", config=self._font_config)
         except (json.JSONDecodeError, OSError) as e:
-            _logger.debug("font_config_load_failed", extra={"error": str(e)})
+            _logger.debug("font_config_load_failed", error=str(e))
             self._font_config = {}
 
     def _load_font_file(self, font_path: Path) -> bool:
@@ -148,12 +148,12 @@ class FontManager:
         font_id = QFontDatabase.addApplicationFont(str(font_path))
 
         if font_id < 0:
-            _logger.warning("font_load_failed", extra={"path": str(font_path)})
+            _logger.warning("font_load_failed", path=str(font_path))
             return False
 
         if families := QFontDatabase.applicationFontFamilies(font_id):
             self._loaded_families.extend(families)
-            _logger.debug("font_families_loaded", extra={"families": families, "file": font_path.name})
+            _logger.debug("font_families_loaded", families=families, file=font_path.name)
             return True
 
         return False
@@ -181,11 +181,9 @@ class FontManager:
         self._ui_font_family = ui_font if ui_font != "sans-serif" else DEFAULT_UI_FONT
         _logger.warning(
             "using_fallback_fonts",
-            extra={
-                "code_font": self._code_font_family,
-                "ui_font": self._ui_font_family,
-                "default_ui_font": DEFAULT_UI_FONT,
-            },
+            code_font=self._code_font_family,
+            ui_font=self._ui_font_family,
+            default_ui_font=DEFAULT_UI_FONT,
         )
 
     @staticmethod
@@ -222,7 +220,7 @@ class FontManager:
         if not self._fonts_loaded:
             self.load_fonts()
 
-        _logger.debug("get_code_font", extra={"family": self._code_font_family, "size": size})
+        _logger.debug("get_code_font", family=self._code_font_family, size=size)
         font = QFont(self._code_font_family, size)
         font.setStyleHint(QFont.StyleHint.Monospace)
         font.setFixedPitch(True)
@@ -253,7 +251,7 @@ class FontManager:
         if not self._fonts_loaded:
             self.load_fonts()
 
-        _logger.debug("get_ui_font", extra={"family": self._ui_font_family, "size": size})
+        _logger.debug("get_ui_font", family=self._ui_font_family, size=size)
         font = QFont(self._ui_font_family, size)
         font.setStyleHint(QFont.StyleHint.SansSerif)
         return font

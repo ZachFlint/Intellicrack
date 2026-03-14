@@ -370,7 +370,7 @@ class OAuthCallbackServer:
 
         self._thread = threading.Thread(target=serve, daemon=True)
         self._thread.start()
-        _logger.info("oauth_callback_server_started", extra={"port": self._port})
+        _logger.info("oauth_callback_server_started", port=self._port)
 
     def wait_for_callback(self) -> tuple[str, str]:
         """Wait for OAuth callback and return code and state.
@@ -411,7 +411,7 @@ class OAuthCallbackServer:
         if self._thread:
             self._thread.join(timeout=1.0)
             self._thread = None
-        _logger.info("oauth_callback_server_stopped", extra={})
+        _logger.info("oauth_callback_server_stopped")
 
 
 class OAuthManager:
@@ -551,7 +551,7 @@ class OAuthManager:
         async with self._lock:
             self._pending_states[oauth_state.state] = oauth_state
 
-        _logger.info("oauth_flow_started", extra={"provider": config.provider.value})
+        _logger.info("oauth_flow_started", provider=config.provider.value)
 
         if open_browser:
             webbrowser.open(auth_url)
@@ -595,7 +595,7 @@ class OAuthManager:
         )
 
         await self._store_token(oauth_state.provider, token)
-        _logger.info("oauth_flow_completed", extra={"provider": oauth_state.provider.value})
+        _logger.info("oauth_flow_completed", provider=oauth_state.provider.value)
 
         return token
 
@@ -656,15 +656,15 @@ class OAuthManager:
             )
             _logger.debug(
                 "oauth_code_exchange_success",
-                extra={"has_refresh_token": token.refresh_token is not None},
+                has_refresh_token=token.refresh_token is not None,
             )
         except httpx.HTTPStatusError as e:
-            _logger.warning("oauth_code_exchange_http_error", extra={"status_code": e.response.status_code, "error": str(e)})
+            _logger.warning("oauth_code_exchange_http_error", status_code=e.response.status_code, error=str(e))
             error_body = e.response.text
             msg = f"Token exchange failed: {e.response.status_code} - {error_body}"
             raise OAuthTokenError(msg) from e
         except Exception as e:
-            _logger.warning("oauth_code_exchange_failed", extra={"error": str(e)})
+            _logger.warning("oauth_code_exchange_failed", error=str(e))
             msg = f"Token exchange failed: {e}"
             raise OAuthTokenError(msg) from e
         else:
@@ -678,11 +678,11 @@ class OAuthManager:
             token: Token to store.
         """
         if self._credential_store is None:
-            _logger.warning("oauth_token_store_unavailable", extra={"reason": "no_credential_store"})
+            _logger.warning("oauth_token_store_unavailable", reason="no_credential_store")
             return
 
         if not self._credential_store.keyring_available:
-            _logger.warning("oauth_token_store_unavailable", extra={"reason": "keyring_unavailable"})
+            _logger.warning("oauth_token_store_unavailable", reason="keyring_unavailable")
             return
 
         try:
@@ -698,10 +698,10 @@ class OAuthManager:
                 key_name=f"oauth_{provider.value}",
                 source=CredentialSource.OAUTH,
             )
-            _logger.debug("oauth_token_store_success", extra={"provider": provider.value})
-            _logger.info("oauth_token_stored", extra={"provider": provider.value})
+            _logger.debug("oauth_token_store_success", provider=provider.value)
+            _logger.info("oauth_token_stored", provider=provider.value)
         except Exception:
-            _logger.exception("oauth_token_store_failed", extra={"provider": provider.value})
+            _logger.exception("oauth_token_store_failed", provider=provider.value)
 
     async def _load_token(self, provider: OAuthProvider) -> OAuthToken | None:
         """Load OAuth token from credential store.
@@ -724,9 +724,9 @@ class OAuthManager:
 
             token_data = json.loads(creds.api_key)
             token = OAuthToken.from_dict(token_data)
-            _logger.debug("oauth_token_load_success", extra={"provider": provider.value})
+            _logger.debug("oauth_token_load_success", provider=provider.value)
         except Exception:
-            _logger.exception("oauth_token_load_failed", extra={"provider": provider.value})
+            _logger.exception("oauth_token_load_failed", provider=provider.value)
             return None
         else:
             return token
@@ -755,7 +755,7 @@ class OAuthManager:
             try:
                 token = await self.refresh_token(provider, effective_config)
             except OAuthTokenError:
-                _logger.warning("token_refresh_failed", extra={"provider": provider.value})
+                _logger.warning("token_refresh_failed", provider=provider.value)
                 return None
 
         return None if token.is_expired else token
@@ -816,13 +816,13 @@ class OAuthManager:
             )
 
             await self._store_token(provider, new_token)
-            _logger.info("oauth_token_refreshed", extra={"provider": provider.value})
+            _logger.info("oauth_token_refreshed", provider=provider.value)
         except httpx.HTTPStatusError as e:
-            _logger.warning("oauth_token_refresh_http_error", extra={"status_code": e.response.status_code, "error": str(e)})
+            _logger.warning("oauth_token_refresh_http_error", status_code=e.response.status_code, error=str(e))
             msg = f"Token refresh failed: {e.response.status_code}"
             raise OAuthTokenError(msg) from e
         except Exception as e:
-            _logger.warning("oauth_token_refresh_failed", extra={"error": str(e)})
+            _logger.warning("oauth_token_refresh_failed", error=str(e))
             msg = f"Token refresh failed: {e}"
             raise OAuthTokenError(msg) from e
         else:
@@ -849,16 +849,16 @@ class OAuthManager:
                     config.revoke_url,
                     data={"token": token.access_token},
                 )
-                _logger.info("oauth_token_revoked", extra={"provider": provider.value})
+                _logger.info("oauth_token_revoked", provider=provider.value)
             except Exception as e:
-                _logger.warning("oauth_token_revocation_failed", extra={"error": str(e)})
+                _logger.warning("oauth_token_revocation_failed", error=str(e))
 
         if self._credential_store:
             provider_name = _oauth_provider_to_name(provider)
             try:
                 await self._credential_store.delete(provider_name)
             except Exception:
-                _logger.exception("oauth_token_delete_failed", extra={"provider": provider.value})
+                _logger.exception("oauth_token_delete_failed", provider=provider.value)
 
         return True
 

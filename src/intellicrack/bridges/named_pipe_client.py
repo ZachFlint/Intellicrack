@@ -103,18 +103,19 @@ class NamedPipeClient:
             return
 
         pipe_name = self._config.pipe_name
-        _logger.info("pipe_connecting", extra={"pipe_name": pipe_name})
+        _logger.info("pipe_connecting", pipe_name=pipe_name)
 
         try:
             self._handle = await asyncio.wait_for(
                 asyncio.to_thread(self._open_handle),
                 timeout=self._config.connect_timeout,
             )
-            _logger.info("pipe_connected", extra={"pipe_name": pipe_name})
+            _logger.info("pipe_connected", pipe_name=pipe_name)
         except TimeoutError as exc:
             _logger.warning(
                 "pipe_connection_failed",
-                extra={"pipe_name": pipe_name, "error": "connection timeout"},
+                pipe_name=pipe_name,
+                error="connection timeout",
             )
             error_message = "Timed out connecting to named pipe"
             raise ToolError(error_message) from exc
@@ -124,7 +125,7 @@ class NamedPipeClient:
         if self._handle is None:
             return
         pipe_name = self._config.pipe_name
-        _logger.info("pipe_disconnecting", extra={"pipe_name": pipe_name})
+        _logger.info("pipe_disconnecting", pipe_name=pipe_name)
         await asyncio.to_thread(self._close_handle)
         self._handle = None
 
@@ -150,7 +151,7 @@ class NamedPipeClient:
             "params": params or {},
         }
 
-        _logger.debug("pipe_command_sent", extra={"command": command})
+        _logger.debug("pipe_command_sent", command=command)
 
         async with self._lock:
             await self._send_message(request)
@@ -205,7 +206,7 @@ class NamedPipeClient:
         try:
             payload: object = json.loads(data.decode("utf-8"))
         except json.JSONDecodeError as exc:
-            _logger.warning("pipe_invalid_json_payload", extra={"error": str(exc)})
+            _logger.warning("pipe_invalid_json_payload", error=str(exc))
             error_message = f"Invalid JSON payload: {exc}"
             raise ToolError(error_message) from exc
 
@@ -235,7 +236,8 @@ class NamedPipeClient:
             self._cancel_io()
             _logger.warning(
                 "pipe_error",
-                extra={"operation": "read", "error": "read timeout"},
+                operation="read",
+                error="read timeout",
             )
             error_message = "Timed out reading from pipe"
             raise ToolError(error_message) from exc
@@ -258,21 +260,16 @@ class NamedPipeClient:
             self._cancel_io()
             _logger.warning(
                 "pipe_error",
-                extra={"operation": "write", "error": "write timeout"},
+                operation="write",
+                error="write timeout",
             )
             error_message = "Timed out writing to pipe"
             raise ToolError(error_message) from exc
 
     _PIPE_ERROR_HINTS: ClassVar[dict[int, str]] = {
-        2: (
-            "The x64dbg bridge plugin is not running. Ensure x64dbg is open"
-            " and the Intellicrack plugin is loaded"
-        ),
+        2: ("The x64dbg bridge plugin is not running. Ensure x64dbg is open and the Intellicrack plugin is loaded"),
         5: "Access denied. Try running Intellicrack as administrator",
-        231: (
-            "All pipe instances are busy. Another client may already be"
-            " connected"
-        ),
+        231: ("All pipe instances are busy. Another client may already be connected"),
     }
 
     def _open_handle(self) -> int:
@@ -291,7 +288,9 @@ class NamedPipeClient:
             hint = self._PIPE_ERROR_HINTS.get(error, "")
             _logger.error(
                 "pipe_connection_failed",
-                extra={"pipe_name": pipe_name, "error": f"pipe not available (code {error})", "hint": hint},
+                pipe_name=pipe_name,
+                error=f"pipe not available (code {error})",
+                hint=hint,
             )
             error_message = f"Named pipe not available (error {error})"
             if hint:
@@ -313,7 +312,9 @@ class NamedPipeClient:
             hint = self._PIPE_ERROR_HINTS.get(error, "")
             _logger.error(
                 "pipe_connection_failed",
-                extra={"pipe_name": pipe_name, "error": f"failed to open (code {error})", "hint": hint},
+                pipe_name=pipe_name,
+                error=f"failed to open (code {error})",
+                hint=hint,
             )
             error_message = f"Failed to open pipe (error {error})"
             if hint:
@@ -335,7 +336,7 @@ class NamedPipeClient:
         kernel32 = ctypes.windll.kernel32
         data = bytearray()
         remaining = size
-        _logger.debug("pipe_read_started", extra={"requested_bytes": size})
+        _logger.debug("pipe_read_started", requested_bytes=size)
 
         while remaining > 0:
             chunk_size = min(_CHUNK_SIZE, remaining)
@@ -352,25 +353,28 @@ class NamedPipeClient:
                 error = ctypes.get_last_error()
                 _logger.error(
                     "pipe_error",
-                    extra={"operation": "read", "error": f"read failed (code {error})"},
+                    operation="read",
+                    error=f"read failed (code {error})",
                 )
                 error_message = f"Pipe read failed (error {error})"
                 raise ToolError(error_message)
             if bytes_read.value == 0:
                 _logger.error(
                     "pipe_error",
-                    extra={"operation": "read", "error": "pipe closed unexpectedly"},
+                    operation="read",
+                    error="pipe closed unexpectedly",
                 )
                 error_message = "Pipe closed"
                 raise ToolError(error_message)
             _logger.debug(
                 "pipe_read_chunk",
-                extra={"chunk_bytes": bytes_read.value, "remaining": remaining - bytes_read.value},
+                chunk_bytes=bytes_read.value,
+                remaining=remaining - bytes_read.value,
             )
             data.extend(buffer.raw[: bytes_read.value])
             remaining -= bytes_read.value
 
-        _logger.debug("pipe_read_complete", extra={"total_bytes": size})
+        _logger.debug("pipe_read_complete", total_bytes=size)
         return bytes(data)
 
     def _write_sync(self, data: bytes) -> None:
@@ -381,7 +385,7 @@ class NamedPipeClient:
         kernel32 = ctypes.windll.kernel32
         total = len(data)
         offset = 0
-        _logger.debug("pipe_write_started", extra={"total_bytes": total})
+        _logger.debug("pipe_write_started", total_bytes=total)
 
         while offset < total:
             chunk = data[offset : offset + _CHUNK_SIZE]
@@ -397,25 +401,27 @@ class NamedPipeClient:
                 error = ctypes.get_last_error()
                 _logger.error(
                     "pipe_error",
-                    extra={"operation": "write", "error": f"write failed (code {error})"},
+                    operation="write",
+                    error=f"write failed (code {error})",
                 )
                 error_message = f"Pipe write failed (error {error})"
                 raise ToolError(error_message)
             _logger.debug(
                 "pipe_write_chunk",
-                extra={"chunk_bytes": bytes_written.value, "offset": offset + bytes_written.value},
+                chunk_bytes=bytes_written.value,
+                offset=offset + bytes_written.value,
             )
             offset += bytes_written.value
 
-        _logger.debug("pipe_write_complete", extra={"total_bytes": total})
+        _logger.debug("pipe_write_complete", total_bytes=total)
 
     def _cancel_io(self) -> None:
         if self._handle is None:
             return
-        _logger.debug("pipe_cancelling_io", extra={"handle": self._handle})
+        _logger.debug("pipe_cancelling_io", handle=self._handle)
         cancel = getattr(ctypes.windll.kernel32, "CancelIoEx", None)
         if cancel is None:
-            _logger.debug("pipe_cancel_unavailable", extra={"function": "CancelIoEx"})
+            _logger.debug("pipe_cancel_unavailable", function="CancelIoEx")
             return
         cancel(self._handle, None)
-        _logger.debug("pipe_io_cancelled", extra={"handle": self._handle})
+        _logger.debug("pipe_io_cancelled", handle=self._handle)

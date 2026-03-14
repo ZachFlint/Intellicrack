@@ -541,9 +541,9 @@ class FridaBridge(InstrumentationBridge):
                 target_pid=None,
                 last_error=None,
             )
-            _logger.info("frida_bridge_initialized", extra={"bridge": "frida"})
+            _logger.info("frida_bridge_initialized", bridge="frida")
         except Exception as e:
-            _logger.warning("frida_init_failed", extra={"error": str(e)})
+            _logger.warning("frida_init_failed", error=str(e))
             self._state.connected = False
             self._state.tool_running = False
             self._state.last_error = str(e)
@@ -557,7 +557,7 @@ class FridaBridge(InstrumentationBridge):
                 try:
                     await self._unload_script(script_id)
                 except Exception:
-                    _logger.exception("stalker_script_unload_failed", extra={"thread_id": tid})
+                    _logger.exception("stalker_script_unload_failed", thread_id=tid)
         self._stalker_scripts.clear()
         self._stalker_traces.clear()
 
@@ -572,28 +572,28 @@ class FridaBridge(InstrumentationBridge):
             try:
                 await self._unload_script(alloc_script_id)
             except Exception:
-                _logger.exception("alloc_script_unload_failed", extra={"address": hex(alloc_addr)})
+                _logger.exception("alloc_script_unload_failed", address=hex(alloc_addr))
         self._alloc_scripts.clear()
 
         for script_id in list(self._scripts.keys()):
             try:
                 await self._unload_script(script_id)
             except Exception:
-                _logger.exception("script_unload_failed", extra={"script_id": script_id})
+                _logger.exception("script_unload_failed", script_id=script_id)
 
         if self._session is not None:
             try:
                 await asyncio.to_thread(self._session.detach)
             except Exception:
-                _logger.exception("session_detach_failed", extra={"bridge": "frida"})
+                _logger.exception("session_detach_failed", bridge="frida")
             self._session = None
 
         if self._spawned_pid is not None and self._device is not None:
             try:
                 await asyncio.to_thread(self._device.kill, self._spawned_pid)
-                _logger.info("spawned_process_killed", extra={"pid": self._spawned_pid})
+                _logger.info("spawned_process_killed", pid=self._spawned_pid)
             except Exception:
-                _logger.exception("spawned_process_kill_failed", extra={"pid": self._spawned_pid})
+                _logger.exception("spawned_process_kill_failed", pid=self._spawned_pid)
 
             process_manager = ProcessManager.get_instance()
             process_manager.unregister_external_pid(self._spawned_pid)
@@ -607,7 +607,7 @@ class FridaBridge(InstrumentationBridge):
         with self._crashes_lock:
             self._crashes.clear()
         await super().shutdown()
-        _logger.info("frida_bridge_shutdown", extra={"bridge": "frida"})
+        _logger.info("frida_bridge_shutdown", bridge="frida")
 
     @override
     async def is_available(self) -> bool:
@@ -619,7 +619,7 @@ class FridaBridge(InstrumentationBridge):
         try:
             await asyncio.to_thread(frida.get_local_device)
         except Exception as e:
-            _logger.debug("frida_availability_check_failed", extra={"error": str(e)})
+            _logger.debug("frida_availability_check_failed", error=str(e))
             return False
         else:
             return True
@@ -651,12 +651,12 @@ class FridaBridge(InstrumentationBridge):
             self._state.process_attached = True
             self._state.target_pid = pid
 
-            _logger.info("process_attached", extra={"pid": pid})
+            _logger.info("process_attached", pid=pid)
         except frida.ProcessNotFoundError as e:
-            _logger.warning("frida_process_not_found", extra={"pid": pid, "error": str(e)})
+            _logger.warning("frida_process_not_found", pid=pid, error=str(e))
             raise ToolError(_ERR_PROCESS_NOT_FOUND) from e
         except Exception as e:
-            _logger.warning("frida_attach_failed", extra={"pid": pid, "error": str(e)})
+            _logger.warning("frida_attach_failed", pid=pid, error=str(e))
             raise ToolError(_ERR_ATTACH_FAILED) from e
 
     async def attach_by_name(self, name: str) -> None:
@@ -678,7 +678,7 @@ class FridaBridge(InstrumentationBridge):
         try:
             processes = await asyncio.to_thread(device.enumerate_processes)
         except Exception as e:
-            _logger.warning("frida_enumerate_processes_failed", extra={"error": str(e)})
+            _logger.warning("frida_enumerate_processes_failed", error=str(e))
             raise ToolError(_ERR_ATTACH_FAILED) from e
 
         target_pid: int | None = next((proc.pid for proc in processes if proc.name == name), None)
@@ -691,10 +691,10 @@ class FridaBridge(InstrumentationBridge):
                 name,
             )
         except frida.ProcessNotFoundError as e:
-            _logger.warning("frida_process_not_found_by_name", extra={"process_name": name, "error": str(e)})
+            _logger.warning("frida_process_not_found_by_name", process_name=name, error=str(e))
             raise ToolError(_ERR_PROCESS_NOT_FOUND) from e
         except Exception as e:
-            _logger.warning("frida_attach_by_name_failed", extra={"process_name": name, "error": str(e)})
+            _logger.warning("frida_attach_by_name_failed", process_name=name, error=str(e))
             raise ToolError(_ERR_ATTACH_FAILED) from e
 
         self._pid = target_pid
@@ -703,7 +703,7 @@ class FridaBridge(InstrumentationBridge):
         self._state.process_attached = True
         self._state.target_pid = self._pid
 
-        _logger.info("process_attached_by_name", extra={"process_name": name, "pid": self._pid})
+        _logger.info("process_attached_by_name", process_name=name, pid=self._pid)
 
     async def spawn(
         self,
@@ -740,7 +740,7 @@ class FridaBridge(InstrumentationBridge):
                 argv=spawn_argv,
             )
         except Exception as e:
-            _logger.warning("frida_spawn_failed", extra={"path": str(path), "error": str(e)})
+            _logger.warning("frida_spawn_failed", path=str(path), error=str(e))
             raise ToolError(_ERR_ATTACH_FAILED) from e
 
         try:
@@ -765,14 +765,15 @@ class FridaBridge(InstrumentationBridge):
             self._state.target_path = path
             self._state.target_pid = pid
 
-            _logger.info("process_spawned", extra={"process_name": path.name, "pid": pid})
+            _logger.info("process_spawned", process_name=path.name, pid=pid)
         except Exception as e:
             try:
                 await asyncio.to_thread(device.kill, pid)
             except Exception as kill_err:
                 _logger.warning(
                     "failed_to_kill_leaked_process",
-                    extra={"pid": pid, "error": str(kill_err)},
+                    pid=pid,
+                    error=str(kill_err),
                 )
             raise ToolError(_ERR_ATTACH_FAILED) from e
         else:
@@ -789,9 +790,9 @@ class FridaBridge(InstrumentationBridge):
 
         try:
             await asyncio.to_thread(self._device.resume, self._pid)
-            _logger.info("process_resumed", extra={"pid": self._pid})
+            _logger.info("process_resumed", pid=self._pid)
         except Exception as e:
-            _logger.warning("frida_resume_failed", extra={"pid": self._pid, "error": str(e)})
+            _logger.warning("frida_resume_failed", pid=self._pid, error=str(e))
             raise ToolError(_ERR_NOT_ATTACHED) from e
 
     async def detach(self, kill_spawned: bool = True) -> None:
@@ -804,7 +805,7 @@ class FridaBridge(InstrumentationBridge):
             ToolError: If detachment fails.
         """
         if self._session is None:
-            _logger.warning("detach_no_session", extra={"bridge": "frida"})
+            _logger.warning("detach_no_session", bridge="frida")
             return
 
         try:
@@ -817,9 +818,9 @@ class FridaBridge(InstrumentationBridge):
             if kill_spawned and self._spawned_pid is not None and self._device is not None:
                 try:
                     await asyncio.to_thread(self._device.kill, self._spawned_pid)
-                    _logger.info("spawned_process_killed", extra={"pid": self._spawned_pid})
+                    _logger.info("spawned_process_killed", pid=self._spawned_pid)
                 except Exception:
-                    _logger.exception("spawned_process_kill_failed", extra={"pid": self._spawned_pid})
+                    _logger.exception("spawned_process_kill_failed", pid=self._spawned_pid)
 
                 process_manager = ProcessManager.get_instance()
                 process_manager.unregister_external_pid(self._spawned_pid)
@@ -832,9 +833,9 @@ class FridaBridge(InstrumentationBridge):
             self._state.process_attached = False
             self._state.target_pid = None
 
-            _logger.info("process_detached", extra={"bridge": "frida"})
+            _logger.info("process_detached", bridge="frida")
         except Exception as e:
-            _logger.warning("frida_detach_failed", extra={"error": str(e)})
+            _logger.warning("frida_detach_failed", error=str(e))
             raise ToolError(_ERR_NOT_ATTACHED) from e
 
     async def read_memory(self, address: int, size: int) -> bytes:
@@ -899,7 +900,7 @@ class FridaBridge(InstrumentationBridge):
         if "error" in result:
             raise ToolError(_ERR_WRITE_FAILED)
 
-        _logger.debug("memory_written", extra={"length": len(data), "address": hex(address)})
+        _logger.debug("memory_written", length=len(data), address=hex(address))
         return len(data)
 
     async def get_memory_regions(self, protection: str = "---") -> list[MemoryRegion]:
@@ -1209,7 +1210,7 @@ class FridaBridge(InstrumentationBridge):
         )
         self._hooks[hook_id] = hook_info
 
-        _logger.info("hook_installed", extra={"hook_id": hook_id, "target": target})
+        _logger.info("hook_installed", hook_id=hook_id, target=target)
         return hook_info
 
     async def remove_hook(self, hook_id: str) -> bool:
@@ -1222,13 +1223,13 @@ class FridaBridge(InstrumentationBridge):
             True if removed successfully, False if hook not found.
         """
         if hook_id not in self._scripts:
-            _logger.warning("hook_not_found", extra={"hook_id": hook_id})
+            _logger.warning("hook_not_found", hook_id=hook_id)
             return False
 
         await self._unload_script(hook_id)
         del self._hooks[hook_id]
 
-        _logger.info("hook_removed", extra={"hook_id": hook_id})
+        _logger.info("hook_removed", hook_id=hook_id)
         return True
 
     async def get_hooks(self) -> list[HookInfo]:
@@ -1294,7 +1295,7 @@ class FridaBridge(InstrumentationBridge):
         await asyncio.to_thread(script.load)
 
         self._scripts[script_id] = script
-        _logger.info("persistent_script_loaded", extra={"script_id": script_id})
+        _logger.info("persistent_script_loaded", script_id=script_id)
         return script_id
 
     async def unload_script(self, script_id: str) -> bool:
@@ -1307,11 +1308,11 @@ class FridaBridge(InstrumentationBridge):
             True if unloaded, False if script not found.
         """
         if script_id not in self._scripts:
-            _logger.warning("script_not_found_for_unload", extra={"script_id": script_id})
+            _logger.warning("script_not_found_for_unload", script_id=script_id)
             return False
 
         await self._unload_script(script_id)
-        _logger.info("script_unloaded", extra={"script_id": script_id})
+        _logger.info("script_unloaded", script_id=script_id)
         return True
 
     async def intercept_return(self, target: str, return_value: int) -> HookInfo:
@@ -1410,7 +1411,7 @@ class FridaBridge(InstrumentationBridge):
         try:
             await asyncio.wait_for(event.wait(), timeout=timeout)
         except TimeoutError:
-            _logger.warning("frida_script_execution_timeout", extra={"timeout": timeout})
+            _logger.warning("frida_script_execution_timeout", timeout=timeout)
             result["error"] = "Script execution timed out"
 
         await asyncio.to_thread(script.unload)
@@ -1428,7 +1429,7 @@ class FridaBridge(InstrumentationBridge):
             try:
                 await asyncio.to_thread(script.unload)
             except Exception:
-                _logger.exception("script_unload_failed", extra={"script_id": script_id})
+                _logger.exception("script_unload_failed", script_id=script_id)
             del self._scripts[script_id]
 
     async def unload_all_scripts(self) -> None:
@@ -1619,7 +1620,7 @@ class FridaBridge(InstrumentationBridge):
         self._scripts[script_id] = script
         self._alloc_scripts[addr] = script_id
 
-        _logger.info("memory_allocated", extra={"address": hex(addr), "size": size})
+        _logger.info("memory_allocated", address=hex(addr), size=size)
         return addr
 
     async def protect_memory(self, address: int, size: int, protection: str) -> bool:
@@ -1657,13 +1658,17 @@ class FridaBridge(InstrumentationBridge):
         if not success:
             _logger.warning(
                 "memory_protect_failed",
-                extra={"address": hex(address), "size": size, "protection": protection},
+                address=hex(address),
+                size=size,
+                protection=protection,
             )
             return False
 
         _logger.debug(
             "memory_protected",
-            extra={"address": hex(address), "size": size, "protection": protection},
+            address=hex(address),
+            size=size,
+            protection=protection,
         )
         return True
 
@@ -1927,7 +1932,7 @@ class FridaBridge(InstrumentationBridge):
         )
         self._hooks[hook_id] = hook_info
 
-        _logger.info("function_replaced", extra={"hook_id": hook_id, "target": target})
+        _logger.info("function_replaced", hook_id=hook_id, target=target)
         return hook_info
 
     async def enumerate_processes(self) -> list[dict[str, object]]:
@@ -2091,9 +2096,7 @@ class FridaBridge(InstrumentationBridge):
                     if msg_type == "stalker_batch":
                         raw_evts = payload_dict.get("events")
                         if isinstance(raw_evts, list):
-                            self._parse_stalker_batch(
-                                captured_tid, cast("list[object]", raw_evts)
-                            )
+                            self._parse_stalker_batch(captured_tid, cast("list[object]", raw_evts))
             if self._message_handler:
                 raw: dict[str, object] = dict(cast("dict[str, object]", message))
                 self._message_handler(raw)
@@ -2106,7 +2109,9 @@ class FridaBridge(InstrumentationBridge):
 
         _logger.info(
             "stalker_follow_started",
-            extra={"thread_id": effective_tid, "events": events, "limit": limit},
+            thread_id=effective_tid,
+            events=events,
+            limit=limit,
         )
 
         return script_id
@@ -2150,7 +2155,8 @@ class FridaBridge(InstrumentationBridge):
 
         _logger.info(
             "stalker_unfollow_complete",
-            extra={"thread_id": effective_tid, "event_count": len(collected_events)},
+            thread_id=effective_tid,
+            event_count=len(collected_events),
         )
 
         return StalkerTrace(
@@ -2201,7 +2207,7 @@ class FridaBridge(InstrumentationBridge):
             self._child_gating_enabled = True
             _logger.info("child_gating_enabled")
         except Exception as e:
-            _logger.warning("child_gating_enable_failed", extra={"error": str(e)})
+            _logger.warning("child_gating_enable_failed", error=str(e))
             raise ToolError(_ERR_CHILD_GATING_FAILED) from e
 
     async def disable_child_gating(self) -> None:
@@ -2223,7 +2229,7 @@ class FridaBridge(InstrumentationBridge):
                 self._gated_children.clear()
             _logger.info("child_gating_disabled")
         except Exception as e:
-            _logger.warning("child_gating_disable_failed", extra={"error": str(e)})
+            _logger.warning("child_gating_disable_failed", error=str(e))
             raise ToolError(_ERR_CHILD_GATING_FAILED) from e
 
     async def get_pending_children(self) -> list[ChildProcessInfo]:
@@ -2251,9 +2257,9 @@ class FridaBridge(InstrumentationBridge):
             await asyncio.to_thread(self._device.resume, pid)
             with self._gated_children_lock:
                 self._gated_children = [c for c in self._gated_children if c.pid != pid]
-            _logger.info("child_resumed", extra={"pid": pid})
+            _logger.info("child_resumed", pid=pid)
         except Exception as e:
-            _logger.warning("child_resume_failed", extra={"pid": pid, "error": str(e)})
+            _logger.warning("child_resume_failed", pid=pid, error=str(e))
             raise ToolError(_ERR_CHILD_GATING_FAILED) from e
 
     async def enable_crash_reporting(self) -> None:
@@ -2291,7 +2297,7 @@ class FridaBridge(InstrumentationBridge):
             self._device.on("process-crashed", on_process_crashed)
             _logger.info("crash_reporting_enabled")
         except Exception as e:
-            _logger.warning("crash_reporting_enable_failed", extra={"error": str(e)})
+            _logger.warning("crash_reporting_enable_failed", error=str(e))
             raise ToolError(_ERR_CRASH_REPORTING_FAILED) from e
 
     async def get_crashes(self) -> list[CrashInfo]:
@@ -2359,14 +2365,14 @@ class FridaBridge(InstrumentationBridge):
                 remote_host: str = host if host is not None else ""
                 device = await asyncio.to_thread(manager.add_remote_device, remote_host)
         except Exception as e:
-            _logger.warning("device_connect_failed", extra={"device_type": device_type, "error": str(e)})
+            _logger.warning("device_connect_failed", device_type=device_type, error=str(e))
             raise ToolError(_ERR_DEVICE_FAILED) from e
 
         self._device = device
         self._state.connected = True
         self._state.tool_running = True
 
-        _logger.info("device_connected", extra={"device_type": device_type, "device_id": str(device.id)})
+        _logger.info("device_connected", device_type=device_type, device_id=str(device.id))
 
         return FridaDeviceInfo(
             id=str(device.id),

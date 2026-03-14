@@ -653,9 +653,9 @@ class PreferencesDialog(QDialog):
         if self._config_path is not None:
             try:
                 new_config.save(self._config_path)
-                _logger.info("configuration_saved", extra={"path": str(self._config_path)})
+                _logger.info("configuration_saved", path=str(self._config_path))
             except Exception as e:
-                _logger.exception("configuration_save_failed", extra={"error": str(e)})
+                _logger.exception("configuration_save_failed", error=str(e))
 
     def _build_config(self) -> Config:
         """Build a new Config from all widget settings.

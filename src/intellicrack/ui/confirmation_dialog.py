@@ -63,7 +63,8 @@ class ToolConfirmationDialog(QDialog):
         self._remember_similar = False
         _logger.debug(
             "tool_confirmation_dialog_opened",
-            extra={"tool": call.tool_name, "function": call.function_name},
+            tool=call.tool_name,
+            function=call.function_name,
         )
         self._setup_ui()
 
@@ -237,11 +238,9 @@ class ToolConfirmationDialog(QDialog):
         self._remember_similar = self._remember_checkbox.isChecked()
         _logger.info(
             "tool_call_approved",
-            extra={
-                "tool": self._call.tool_name,
-                "function": self._call.function_name,
-                "remember": self._remember_similar,
-            },
+            tool=self._call.tool_name,
+            function=self._call.function_name,
+            remember=self._remember_similar,
         )
         self.accept()
 
@@ -251,10 +250,8 @@ class ToolConfirmationDialog(QDialog):
         self._remember_similar = self._remember_checkbox.isChecked()
         _logger.info(
             "tool_call_denied",
-            extra={
-                "tool": self._call.tool_name,
-                "function": self._call.function_name,
-                "remember": self._remember_similar,
-            },
+            tool=self._call.tool_name,
+            function=self._call.function_name,
+            remember=self._remember_similar,
         )
         self.reject()

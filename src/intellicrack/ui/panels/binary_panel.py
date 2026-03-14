@@ -334,7 +334,7 @@ class BinaryPanel(QWidget):
         """
         path = Path(file_path) if isinstance(file_path, str) else file_path
         if not path.exists():
-            _logger.warning("binary_file_not_found", extra={"path": str(path)})
+            _logger.warning("binary_file_not_found", path=str(path))
             return False
 
         file_size = path.stat().st_size
@@ -352,13 +352,13 @@ class BinaryPanel(QWidget):
                 return False
 
         if file_size > _MAX_DISPLAY_SIZE:
-            _logger.warning("binary_file_too_large", extra={"size": file_size})
+            _logger.warning("binary_file_too_large", size=file_size)
 
         try:
             with open(path, "rb") as f:
                 self._file_data = bytearray(f.read())
         except OSError as e:
-            _logger.warning("binary_file_read_failed", extra={"error": str(e)})
+            _logger.warning("binary_file_read_failed", error=str(e))
             return False
 
         self._file_path = path
@@ -372,7 +372,7 @@ class BinaryPanel(QWidget):
         self._extract_strings()
         self._update_patches_table()
 
-        _logger.info("binary_loaded", extra={"path": str(path), "size": len(self._file_data)})
+        _logger.info("binary_loaded", path=str(path), size=len(self._file_data))
         return True
 
     def _populate_hex_view(self, start_offset: int) -> None:
@@ -615,7 +615,7 @@ class BinaryPanel(QWidget):
                 self._sections_tree.addTopLevelItem(item)
 
         except (struct.error, IndexError) as e:
-            _logger.debug("pe_section_parse_error", extra={"error": str(e)})
+            _logger.debug("pe_section_parse_error", error=str(e))
 
         self._parse_pe_imports_exports()
 
@@ -673,7 +673,7 @@ class BinaryPanel(QWidget):
             self._walk_pe_idt(idt_offset, is_pe32_plus, sec_info)
 
         except (struct.error, IndexError, ValueError):
-            _logger.debug("pe_import_struct_parse_error", extra={"offset": self._current_offset})
+            _logger.debug("pe_import_struct_parse_error", offset=self._current_offset)
 
     def _build_pe_section_map(self, pe_offset: int) -> list[tuple[int, int, int]]:
         """Build a section map for RVA-to-offset conversion.
@@ -800,7 +800,7 @@ class BinaryPanel(QWidget):
     def _parse_elf_sections(self) -> None:
         """Parse ELF sections using LIEF."""
         if lief is None:
-            _logger.debug("lief_not_available_for_elf_parsing", extra={"format_type": "ELF"})
+            _logger.debug("lief_not_available_for_elf_parsing", format_type="ELF")
             self._sections_tree.addTopLevelItem(QTreeWidgetItem(["(ELF detected, install lief for section parsing)", "", "", ""]))
             return
 
@@ -849,12 +849,12 @@ class BinaryPanel(QWidget):
                 self._exports_tree.addTopLevelItem(item)
 
         except Exception as e:
-            _logger.debug("elf_section_parse_error", extra={"error": str(e)})
+            _logger.debug("elf_section_parse_error", error=str(e))
 
     def _parse_macho_sections(self) -> None:
         """Parse Mach-O sections using LIEF."""
         if lief is None:
-            _logger.debug("lief_not_available_for_macho_parsing", extra={"format_type": "Mach-O"})
+            _logger.debug("lief_not_available_for_macho_parsing", format_type="Mach-O")
             self._sections_tree.addTopLevelItem(QTreeWidgetItem(["(Mach-O detected, install lief for section parsing)", "", "", ""]))
             return
 
@@ -887,7 +887,7 @@ class BinaryPanel(QWidget):
                 self._exports_tree.addTopLevelItem(item)
 
         except Exception as e:
-            _logger.debug("macho_section_parse_error", extra={"error": str(e)})
+            _logger.debug("macho_section_parse_error", error=str(e))
 
     @staticmethod
     def _macho_protection_flags(segment: object) -> str:
@@ -1011,11 +1011,11 @@ class BinaryPanel(QWidget):
         try:
             offset = int(text, 16) if text.startswith(("0x", "0X")) else int(text)
         except ValueError:
-            _logger.debug("hex_goto_invalid_offset", extra={"input": text})
+            _logger.debug("hex_goto_invalid_offset", input=text)
             return
 
         offset = max(0, min(offset, len(self._file_data) - 1))
-        _logger.debug("hex_goto_offset", extra={"offset": f"0x{offset:08X}"})
+        _logger.debug("hex_goto_offset", offset=f"0x{offset:08X}")
         self._populate_hex_view(offset)
 
     def _on_search(self) -> None:
@@ -1027,7 +1027,7 @@ class BinaryPanel(QWidget):
         try:
             hex_bytes = bytes.fromhex(text.replace(" ", ""))
         except ValueError:
-            _logger.debug("invalid_hex_search_pattern", extra={"input": text})
+            _logger.debug("invalid_hex_search_pattern", input=text)
             return
 
         start = self._current_offset + 1
@@ -1036,7 +1036,7 @@ class BinaryPanel(QWidget):
             idx = self._file_data.find(hex_bytes, 0)
 
         if idx >= 0:
-            _logger.debug("hex_search_found", extra={"offset": f"0x{idx:08X}", "pattern_size": len(hex_bytes)})
+            _logger.debug("hex_search_found", offset=f"0x{idx:08X}", pattern_size=len(hex_bytes))
             self._populate_hex_view(idx)
             self._offset_input.setText(f"0x{idx:08X}")
 
@@ -1077,7 +1077,7 @@ class BinaryPanel(QWidget):
         self._update_patches_table()
         self.patch_applied.emit(offset, new_bytes)
 
-        _logger.info("patch_applied", extra={"offset": f"0x{offset:08X}", "size": len(new_bytes)})
+        _logger.info("patch_applied", offset=f"0x{offset:08X}", size=len(new_bytes))
 
     def _on_revert_patch(self) -> None:
         """Revert the most recent patch."""
@@ -1090,7 +1090,7 @@ class BinaryPanel(QWidget):
 
         self._populate_hex_view(self._current_offset)
         self._update_patches_table()
-        _logger.info("patch_reverted", extra={"offset": f"0x{offset:08X}"})
+        _logger.info("patch_reverted", offset=f"0x{offset:08X}")
 
     def _on_save(self) -> None:
         """Save the modified binary to disk."""
@@ -1109,10 +1109,10 @@ class BinaryPanel(QWidget):
         try:
             with open(path_str, "wb") as f:
                 f.write(self._file_data)
-            _logger.info("binary_saved", extra={"path": path_str})
+            _logger.info("binary_saved", path=path_str)
             QMessageBox.information(self, "Saved", f"Binary saved to {path_str}")
         except OSError as e:
-            _logger.warning("binary_save_failed", extra={"error": str(e)})
+            _logger.warning("binary_save_failed", error=str(e))
             QMessageBox.warning(self, "Save Failed", str(e))
 
     def _on_section_double_clicked(self, item: QTreeWidgetItem, _column: int) -> None:

@@ -1032,9 +1032,9 @@ class ThemeManager:
         try:
             styles_dir = get_assets_path() / "styles"
             available = styles_dir.exists()
-            _logger.debug("styles_availability_check", extra={"available": available, "path": str(styles_dir)})
+            _logger.debug("styles_availability_check", available=available, path=str(styles_dir))
         except FileNotFoundError as exc:
-            _logger.exception("styles_availability_check_failed", extra={"error": str(exc)})
+            _logger.exception("styles_availability_check_failed", error=str(exc))
             return False
         else:
             return available
@@ -1049,7 +1049,7 @@ class ThemeManager:
             True if theme was applied successfully.
         """
         if theme not in {THEME_DARK, THEME_LIGHT}:
-            _logger.warning("unknown_theme", extra={"theme": theme, "default": DEFAULT_THEME})
+            _logger.warning("unknown_theme", theme=theme, default=DEFAULT_THEME)
             theme = DEFAULT_THEME
 
         stylesheet = self.get_stylesheet(theme)
@@ -1058,10 +1058,10 @@ class ThemeManager:
         if isinstance(app_instance, QApplication):
             app_instance.setStyleSheet(stylesheet)
             self._current_theme = theme
-            _logger.info("theme_applied", extra={"theme": theme})
+            _logger.info("theme_applied", theme=theme)
             return True
 
-        _logger.warning("no_qapplication_instance", extra={})
+        _logger.warning("no_qapplication_instance")
         return False
 
     def get_stylesheet(self, theme: str) -> str:
@@ -1074,10 +1074,10 @@ class ThemeManager:
             CSS stylesheet string.
         """
         if theme in self._theme_cache:
-            _logger.debug("theme_cache_hit", extra={"theme": theme})
+            _logger.debug("theme_cache_hit", theme=theme)
             return self._theme_cache[theme]
 
-        _logger.debug("theme_cache_miss", extra={"theme": theme})
+        _logger.debug("theme_cache_miss", theme=theme)
         stylesheet = self._load_stylesheet(theme)
         self._theme_cache[theme] = stylesheet
         return stylesheet
@@ -1099,15 +1099,16 @@ class ThemeManager:
                     with open(style_path, encoding="utf-8") as f:
                         content = f.read()
                         if content.strip():
-                            _logger.debug("stylesheet_loaded", extra={"path": str(style_path)})
+                            _logger.debug("stylesheet_loaded", path=str(style_path))
                             return content
             except OSError as e:
                 _logger.warning(
                     "stylesheet_load_failed",
-                    extra={"style_file": filename, "error": str(e)},
+                    style_file=filename,
+                    error=str(e),
                 )
 
-        _logger.debug("using_fallback_stylesheet", extra={"theme": theme})
+        _logger.debug("using_fallback_stylesheet", theme=theme)
         return DARK_THEME_FALLBACK if theme == THEME_DARK else LIGHT_THEME_FALLBACK
 
     def toggle_theme(self) -> str:
@@ -1118,7 +1119,7 @@ class ThemeManager:
         """
         old_theme = self._current_theme
         new_theme = THEME_LIGHT if self._current_theme == THEME_DARK else THEME_DARK
-        _logger.debug("theme_toggling", extra={"from_theme": old_theme, "to_theme": new_theme})
+        _logger.debug("theme_toggling", from_theme=old_theme, to_theme=new_theme)
         self.apply_theme(new_theme)
         return new_theme
 
@@ -1143,7 +1144,7 @@ class ThemeManager:
         """Clear the stylesheet cache."""
         cache_count = len(self._theme_cache)
         self._theme_cache.clear()
-        _logger.debug("theme_cache_cleared", extra={"entries_cleared": cache_count})
+        _logger.debug("theme_cache_cleared", entries_cleared=cache_count)
 
     @staticmethod
     def get_available_themes() -> list[str]:

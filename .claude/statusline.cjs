@@ -32,7 +32,7 @@ process.stdin.on('end', () => {
         const linesRemoved = data.cost?.total_lines_removed || 0;
 
         const totalTokens = calculateSessionTokens(sessionId, transcriptPath);
-        const contextPercentage = calculateContextPercentage(transcriptPath, modelId);
+        const contextPercentage = calculateContextPercentage(transcriptPath, modelId, data.context_window);
 
         const formattedTokens = formatTokenCount(totalTokens);
         const { text: contextText, color: contextColor } =
@@ -145,16 +145,19 @@ function calculateSessionTokens(sessionId, transcriptPath) {
 
 function getModelContextLimit(modelId) {
     const modelLimits = {
+        'claude-opus-4-6': 1000000,
+        'claude-opus-4-5': 1000000,
+        'claude-opus-4-1': 1000000,
+        'claude-opus-4': 1000000,
+        'claude-sonnet-4-6': 200000,
         'claude-sonnet-4-5': 200000,
         'claude-sonnet-4': 200000,
-        'claude-opus-4-1': 200000,
-        'claude-opus-4': 200000,
         'claude-haiku-4-5': 200000,
         'claude-haiku-4': 200000,
     };
 
     for (const [key, limit] of Object.entries(modelLimits)) {
-        if (modelId && modelId.includes(key)) {
+        if (modelId && modelId.toLowerCase().includes(key)) {
             return limit;
         }
     }
@@ -162,7 +165,25 @@ function getModelContextLimit(modelId) {
     return 200000;
 }
 
-function calculateContextPercentage(transcriptPath, modelId) {
+function calculateContextPercentage(transcriptPath, modelId, contextWindow) {
+    if (contextWindow && typeof contextWindow.used_percentage === 'number') {
+        return contextWindow.used_percentage;
+    }
+
+    if (
+        contextWindow &&
+        contextWindow.current_usage &&
+        typeof contextWindow.context_window_size === 'number' &&
+        contextWindow.context_window_size > 0
+    ) {
+        const usage = contextWindow.current_usage;
+        const totalInputTokens =
+            (usage.input_tokens || 0) +
+            (usage.cache_read_input_tokens || 0) +
+            (usage.cache_creation_input_tokens || 0);
+        return Math.min((totalInputTokens / contextWindow.context_window_size) * 100, 100);
+    }
+
     if (!transcriptPath || !fs.existsSync(transcriptPath)) {
         return 0;
     }
@@ -209,7 +230,10 @@ function calculateContextPercentage(transcriptPath, modelId) {
             (usage.cache_read_input_tokens || 0) +
             (usage.cache_creation_input_tokens || 0);
 
-        const contextLimit = getModelContextLimit(modelId);
+        const contextLimit =
+            (contextWindow && contextWindow.context_window_size > 0
+                ? contextWindow.context_window_size
+                : null) || getModelContextLimit(modelId);
         const percentage = (totalInputTokens / contextLimit) * 100;
         return Math.min(percentage, 100);
     } catch (error) {

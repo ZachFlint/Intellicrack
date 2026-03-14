@@ -124,7 +124,7 @@ class CutterPanel(AnalysisPanelBase):
             try:
                 run_bridge_coroutine(self._bridge.shutdown())
             except Exception:
-                _logger.exception("cutter_shutdown_failed", extra={"bridge_type": "cutter"})
+                _logger.exception("cutter_shutdown_failed", bridge_type="cutter")
 
     def _create_code_zone(self) -> QSplitter:
         """Create the top zone: functions sidebar + code tabs.
@@ -319,7 +319,7 @@ class CutterPanel(AnalysisPanelBase):
             bridge: The CutterBridge to use.
         """
         self._bridge = bridge
-        _logger.info("cutter_bridge_set", extra={"bridge_type": type(bridge).__name__})
+        _logger.info("cutter_bridge_set", bridge_type=type(bridge).__name__)
 
     def get_bridge(self) -> CutterBridge | None:
         """Get the current CutterBridge instance.
@@ -346,7 +346,7 @@ class CutterPanel(AnalysisPanelBase):
             return False
 
         if not binary_path.exists():
-            _logger.warning("cutter_file_not_found", extra={"path": str(binary_path)})
+            _logger.warning("cutter_file_not_found", path=str(binary_path))
             return False
 
         self._current_binary = binary_path
@@ -369,7 +369,7 @@ class CutterPanel(AnalysisPanelBase):
         """
         if self._bridge is None:
             self._set_status("No bridge configured")
-            _logger.warning("cutter_start_no_bridge", extra={"reason": "bridge not set"})
+            _logger.warning("cutter_start_no_bridge", reason="bridge not set")
             self.tool_started.emit()
             return True
 
@@ -385,7 +385,7 @@ class CutterPanel(AnalysisPanelBase):
         """Handle successful bridge initialization."""
         self._set_status("Connected")
         self.tool_started.emit()
-        _logger.info("cutter_initialized", extra={"bridge_type": "cutter"})
+        _logger.info("cutter_initialized", bridge_type="cutter")
 
     def _on_initialize_error(self, exc: object) -> None:
         """Handle bridge initialization failure.
@@ -394,7 +394,7 @@ class CutterPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._set_status(f"Init failed: {exc}")
-        _logger.warning("cutter_init_failed", extra={"error": str(exc)})
+        _logger.warning("cutter_init_failed", error=str(exc))
         self.tool_started.emit()
 
     def _on_binary_loaded(self, binary_path: Path) -> None:
@@ -404,7 +404,7 @@ class CutterPanel(AnalysisPanelBase):
             binary_path: The loaded binary path.
         """
         self._set_status(f"Loaded: {binary_path.name}")
-        _logger.info("cutter_binary_loaded", extra={"path": binary_path.name})
+        _logger.info("cutter_binary_loaded", path=binary_path.name)
         self._load_btn.setEnabled(True)
         self._on_analyze()
 
@@ -416,7 +416,7 @@ class CutterPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._set_status(f"Load failed: {exc}")
-        _logger.warning("cutter_load_failed", extra={"path": binary_path.name, "error": str(exc)})
+        _logger.warning("cutter_load_failed", path=binary_path.name, error=str(exc))
         self._load_btn.setEnabled(True)
 
     def _on_load_binary(self) -> None:
@@ -454,7 +454,7 @@ class CutterPanel(AnalysisPanelBase):
     def _on_analysis_complete(self) -> None:
         """Handle successful analysis by refreshing all data views."""
         self._set_status("Analysis complete")
-        _logger.info("cutter_analysis_complete", extra={"bridge_type": "cutter"})
+        _logger.info("cutter_analysis_complete", bridge_type="cutter")
         self._analyze_btn.setEnabled(True)
         self._on_refresh_functions()
         self._refresh_imports()
@@ -468,7 +468,7 @@ class CutterPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._set_status(f"Analysis failed: {exc}")
-        _logger.warning("cutter_analysis_failed", extra={"error": str(exc)})
+        _logger.warning("cutter_analysis_failed", error=str(exc))
         self._analyze_btn.setEnabled(True)
 
     def _on_refresh_functions(self) -> None:
@@ -508,11 +508,11 @@ class CutterPanel(AnalysisPanelBase):
         set_sorting_enabled(self._func_tree, True)
         self._func_count_label.setText(f"Functions ({len(functions)})")
         self._refresh_funcs_btn.setEnabled(True)
-        _logger.debug("cutter_functions_refreshed", extra={"count": len(functions)})
+        _logger.debug("cutter_functions_refreshed", count=len(functions))
 
     def _on_refresh_funcs_error(self) -> None:
         """Handle function refresh failure."""
-        _logger.warning("cutter_refresh_functions_failed", extra={"bridge_type": "cutter"})
+        _logger.warning("cutter_refresh_functions_failed", bridge_type="cutter")
         self._refresh_funcs_btn.setEnabled(True)
 
     def _on_filter_changed(self, _text: str) -> None:
@@ -537,19 +537,19 @@ class CutterPanel(AnalysisPanelBase):
         self._run_async(
             self._bridge.decompile(address),
             on_success=self._apply_decompiled,
-            on_error=lambda _: _logger.warning("cutter_decompile_failed", extra={"address": hex(address)}),
+            on_error=lambda _: _logger.warning("cutter_decompile_failed", address=hex(address)),
         )
 
         self._run_async(
             self._bridge.disassemble(address),
             on_success=self._apply_disassembly,
-            on_error=lambda _: _logger.warning("cutter_disassemble_failed", extra={"address": hex(address)}),
+            on_error=lambda _: _logger.warning("cutter_disassemble_failed", address=hex(address)),
         )
 
         self._run_async(
             self._bridge.get_function_graph(address),
             on_success=self._apply_graph,
-            on_error=lambda _: _logger.warning("cutter_graph_failed", extra={"address": hex(address)}),
+            on_error=lambda _: _logger.warning("cutter_graph_failed", address=hex(address)),
         )
 
         self._show_xrefs(address)
@@ -568,7 +568,7 @@ class CutterPanel(AnalysisPanelBase):
         self._run_async(
             self._bridge.decompile(address),
             on_success=self._apply_decompiled,
-            on_error=lambda _: _logger.warning("cutter_decompile_failed", extra={"address": hex(address)}),
+            on_error=lambda _: _logger.warning("cutter_decompile_failed", address=hex(address)),
         )
         self._code_tabs.setCurrentIndex(1)
 
@@ -586,7 +586,7 @@ class CutterPanel(AnalysisPanelBase):
         self._run_async(
             self._bridge.get_function_graph(address),
             on_success=self._apply_graph,
-            on_error=lambda _: _logger.warning("cutter_graph_failed", extra={"address": hex(address)}),
+            on_error=lambda _: _logger.warning("cutter_graph_failed", address=hex(address)),
         )
         self._code_tabs.setCurrentIndex(2)
 
@@ -784,7 +784,7 @@ class CutterPanel(AnalysisPanelBase):
         Args:
             pattern: The pattern that failed.
         """
-        _logger.warning("cutter_string_search_failed", extra={"pattern": pattern})
+        _logger.warning("cutter_string_search_failed", pattern=pattern)
         self._string_search_btn.setEnabled(True)
 
     def _on_search_strings(self) -> None:
@@ -806,13 +806,13 @@ class CutterPanel(AnalysisPanelBase):
         self._run_async(
             self._bridge.get_xrefs_to(address),
             on_success=self._apply_xrefs_to,
-            on_error=lambda _: _logger.warning("cutter_xrefs_to_failed", extra={"address": hex(address)}),
+            on_error=lambda _: _logger.warning("cutter_xrefs_to_failed", address=hex(address)),
         )
 
         self._run_async(
             self._bridge.get_xrefs_from(address),
             on_success=self._apply_xrefs_from,
-            on_error=lambda _: _logger.warning("cutter_xrefs_from_failed", extra={"address": hex(address)}),
+            on_error=lambda _: _logger.warning("cutter_xrefs_from_failed", address=hex(address)),
         )
 
     def _apply_xrefs_to(self, result: object) -> None:
@@ -892,5 +892,5 @@ class CutterPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._console_output.appendPlainText(f"[error] {exc}")
-        _logger.warning("cutter_command_failed", extra={"error": str(exc)})
+        _logger.warning("cutter_command_failed", error=str(exc))
         self._console_run_btn.setEnabled(True)
