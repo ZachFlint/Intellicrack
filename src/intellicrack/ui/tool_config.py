@@ -501,9 +501,10 @@ class ToolStatusCheckWorker(QThread):
             if candidate.exists():
                 return True, "Cutter installed"
 
-        for item in tool_path.iterdir() if tool_path.exists() else []:
-            if item.is_dir() and (item / "cutter.exe").exists():
-                return True, "Cutter installed"
+        if tool_path.exists():
+            for item in tool_path.iterdir():
+                if item.is_dir() and (item / "cutter.exe").exists():
+                    return True, "Cutter installed"
 
         try:
             process_manager = ProcessManager.get_instance()

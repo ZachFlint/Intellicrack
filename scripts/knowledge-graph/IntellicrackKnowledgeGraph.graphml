@@ -5668,6 +5668,19 @@ Returns:
 Returns:
     The keystone module, or None if not installed.</data>
     </node>
+    <node id="src.intellicrack.bridges.x64dbg._is_str_obj_dict">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_is_str_obj_dict</data>
+      <data key="d5">['data']</data>
+      <data key="d4">Narrow an object to dict[str, object].
+
+Args:
+    data: Object to check.
+
+Returns:
+    True if data is a dict with string keys.</data>
+    </node>
     <node id="src.intellicrack.bridges.x64dbg._read_process_memory_block">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -86385,6 +86398,9 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.x64dbg.get_keystone">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.x64dbg._is_str_obj_dict">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.bridges.x64dbg" target="src.intellicrack.bridges.x64dbg._read_process_memory_block">
