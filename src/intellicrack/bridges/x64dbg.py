@@ -15,7 +15,7 @@ import asyncio
 import struct
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, TypeGuard
 
 from intellicrack.core._subprocess import (
     PIPE,
@@ -157,6 +157,18 @@ _ERR_GET_PARENT_PID_FAILED = "failed to get parent PID"
 BreakpointType = Literal["software", "hardware", "memory"]
 MemoryProtection = Literal["read", "write", "execute"]
 PipeCommandResult = str | int | float | bool | dict[str, object] | list[object] | None
+
+
+def _is_str_obj_dict(data: object) -> TypeGuard[dict[str, object]]:
+    """Narrow an object to dict[str, object].
+
+    Args:
+        data: Object to check.
+
+    Returns:
+        True if data is a dict with string keys.
+    """
+    return isinstance(data, dict)
 
 
 def _read_process_memory_block(
@@ -1622,21 +1634,36 @@ class X64DbgBridge(DebuggerBridge):
         """
         merged = dict(self._breakpoints)
 
-        if self._pipe_client is not None and self._pipe_client.connected:
+        if self._pipe_client is not None and self._pipe_client.is_connected:
             try:
                 result = await self._send_pipe_command("bp_list")
                 if isinstance(result, list):
                     for bp_data in result:
-                        if isinstance(bp_data, dict):
-                            addr = int(bp_data.get("address", 0))
+                        if _is_str_obj_dict(bp_data):
+                            raw_addr = bp_data.get("address")
+                            addr = raw_addr if isinstance(raw_addr, int) else 0
                             if addr not in merged:
+                                raw_type = bp_data.get("type")
+                                bp_type_str = raw_type if isinstance(raw_type, str) else "software"
+                                raw_enabled = bp_data.get("enabled")
+                                raw_hits = bp_data.get("hit_count")
+                                raw_cond = bp_data.get("condition")
+                                bp_type_val: Literal["software", "hardware", "memory"]
+                                if bp_type_str == "hardware":
+                                    bp_type_val = "hardware"
+                                elif bp_type_str == "memory":
+                                    bp_type_val = "memory"
+                                else:
+                                    bp_type_val = "software"
                                 merged[addr] = BreakpointInfo(
+                                    id=self._next_bp_id,
                                     address=addr,
-                                    bp_type=str(bp_data.get("type", "software")),
-                                    enabled=bool(bp_data.get("enabled", True)),
-                                    hit_count=int(bp_data.get("hit_count", 0)),
-                                    condition=bp_data.get("condition"),
+                                    bp_type=bp_type_val,
+                                    enabled=raw_enabled if isinstance(raw_enabled, bool) else True,
+                                    hit_count=raw_hits if isinstance(raw_hits, int) else 0,
+                                    condition=raw_cond if isinstance(raw_cond, str) else None,
                                 )
+                                self._next_bp_id += 1
             except ToolError:
                 _logger.debug("bp_list_pipe_unavailable")
 
@@ -1714,24 +1741,29 @@ class X64DbgBridge(DebuggerBridge):
         """
         merged = dict(self._watchpoints)
 
-        if self._pipe_client is not None and self._pipe_client.connected:
+        if self._pipe_client is not None and self._pipe_client.is_connected:
             try:
                 result = await self._send_pipe_command("wp_list")
                 if isinstance(result, list):
                     for wp_data in result:
-                        if isinstance(wp_data, dict):
-                            wp_addr = int(wp_data.get("address", 0))
+                        if _is_str_obj_dict(wp_data):
+                            raw_wp_addr = wp_data.get("address")
+                            wp_addr = raw_wp_addr if isinstance(raw_wp_addr, int) else 0
                             existing = any(w.address == wp_addr for w in merged.values())
                             if not existing:
                                 wp_id = self._next_wp_id
                                 self._next_wp_id += 1
+                                raw_size = wp_data.get("size")
+                                raw_wp_type = wp_data.get("type")
+                                raw_wp_enabled = wp_data.get("enabled")
+                                raw_wp_hits = wp_data.get("hit_count")
                                 merged[wp_id] = WatchpointInfo(
                                     id=wp_id,
                                     address=wp_addr,
-                                    size=int(wp_data.get("size", 1)),
-                                    watch_type=str(wp_data.get("type", "write")),
-                                    enabled=bool(wp_data.get("enabled", True)),
-                                    hit_count=int(wp_data.get("hit_count", 0)),
+                                    size=raw_size if isinstance(raw_size, int) else 1,
+                                    watch_type=raw_wp_type if isinstance(raw_wp_type, str) else "write",
+                                    enabled=raw_wp_enabled if isinstance(raw_wp_enabled, bool) else True,
+                                    hit_count=raw_wp_hits if isinstance(raw_wp_hits, int) else 0,
                                 )
             except ToolError:
                 _logger.debug("wp_list_pipe_unavailable")
@@ -2617,7 +2649,7 @@ class X64DbgBridge(DebuggerBridge):
         regs = await self.get_registers()
         current_ip = regs.rip if self._is_64bit else regs.rip & DWORD_MASK
 
-        disasm = await self.disassemble(current_ip, 1)
+        disasm = await self.disassemble_at(current_ip, 1)
         if not disasm:
             msg = f"Cannot disassemble instruction at {hex(current_ip)}"
             raise ToolError(msg)
@@ -2744,6 +2776,7 @@ class X64DbgBridge(DebuggerBridge):
         bp = self._breakpoints.get(address)
         if bp is not None:
             self._breakpoints[address] = BreakpointInfo(
+                id=bp.id,
                 address=bp.address,
                 bp_type=bp.bp_type,
                 enabled=True,
@@ -2765,6 +2798,7 @@ class X64DbgBridge(DebuggerBridge):
         bp = self._breakpoints.get(address)
         if bp is not None:
             self._breakpoints[address] = BreakpointInfo(
+                id=bp.id,
                 address=bp.address,
                 bp_type=bp.bp_type,
                 enabled=False,
