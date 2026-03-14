@@ -145,7 +145,7 @@ class HxDPanel(AnalysisPanelBase):
             return False
 
         if not path.exists():
-            _logger.warning("hxd_file_not_found", extra={"path": str(path)})
+            _logger.warning("hxd_file_not_found", path=str(path))
             return False
 
         self._terminate_existing()
@@ -175,7 +175,7 @@ class HxDPanel(AnalysisPanelBase):
                     layout.addWidget(container)
                 self._embedded_container = container
                 self.tool_started.emit()
-                _logger.info("hxd_window_embedded", extra={"file": str(path)})
+                _logger.info("hxd_window_embedded", file=str(path))
 
             poll_and_embed(
                 pid=self._process.pid,
@@ -185,10 +185,10 @@ class HxDPanel(AnalysisPanelBase):
                 interval_ms=500,
             )
 
-            _logger.info("hxd_launched", extra={"file": str(path)})
+            _logger.info("hxd_launched", file=str(path))
 
         except Exception:
-            _logger.exception("hxd_launch_failed", extra={"path": str(path)})
+            _logger.exception("hxd_launch_failed", path=str(path))
             return False
         else:
             return True
@@ -239,7 +239,7 @@ class HxDPanel(AnalysisPanelBase):
             )
 
         except Exception:
-            _logger.exception("hxd_start_failed", extra={"tool": "HxD"})
+            _logger.exception("hxd_start_failed", tool="HxD")
             return False
         else:
             return True
@@ -276,7 +276,7 @@ class HxDPanel(AnalysisPanelBase):
             process_manager.unregister(process_pid)
 
             self._process = None
-            _logger.debug("hxd_process_terminated", extra={"pid": process_pid})
+            _logger.debug("hxd_process_terminated", pid=process_pid)
 
     def _show_not_installed_dialog(self) -> None:
         """Show a dialog informing the user that HxD is not installed."""
@@ -290,4 +290,4 @@ class HxDPanel(AnalysisPanelBase):
         )
         msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg_box.exec()
-        _logger.warning("hxd_not_installed_shown", extra={"download_url": _HXD_DOWNLOAD_URL})
+        _logger.warning("hxd_not_installed_shown", download_url=_HXD_DOWNLOAD_URL)

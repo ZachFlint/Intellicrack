@@ -292,18 +292,16 @@ class Config:
         Returns:
             Loaded Config instance with defaults for missing values.
         """
-        _logger.debug("config_load_started", extra={"path": str(path)})
+        _logger.debug("config_load_started", path=str(path))
         with path.open("rb") as f:
             data = tomllib.load(f)
 
         config = cls._from_dict(data)
         _logger.info(
             "config_loaded",
-            extra={
-                "path": str(path),
-                "providers_count": len(config.providers),
-                "tools_count": len(config.tools),
-            },
+            path=str(path),
+            providers_count=len(config.providers),
+            tools_count=len(config.tools),
         )
         return config
 
@@ -328,7 +326,8 @@ class Config:
         except ValueError:
             _logger.warning(
                 "config_invalid_provider_name",
-                extra={"value": default_provider_str, "fallback": ProviderName.ANTHROPIC.value},
+                value=default_provider_str,
+                fallback=ProviderName.ANTHROPIC.value,
             )
             default_provider = ProviderName.ANTHROPIC
 
@@ -338,7 +337,8 @@ class Config:
         except ValueError:
             _logger.warning(
                 "config_invalid_confirmation_level",
-                extra={"value": confirmation_str, "fallback": ConfirmationLevel.DESTRUCTIVE.value},
+                value=confirmation_str,
+                fallback=ConfirmationLevel.DESTRUCTIVE.value,
             )
             confirmation_level = ConfirmationLevel.DESTRUCTIVE
 
@@ -359,7 +359,7 @@ class Config:
             try:
                 provider_name = ProviderName(name_str)
             except ValueError:
-                _logger.warning("config_unknown_provider_skipped", extra={"value": name_str})
+                _logger.warning("config_unknown_provider_skipped", value=name_str)
                 continue
 
             if provider_name in providers:
@@ -388,7 +388,7 @@ class Config:
             try:
                 tool_name = ToolName(name_str)
             except ValueError:
-                _logger.warning("config_unknown_tool_skipped", extra={"value": name_str})
+                _logger.warning("config_unknown_tool_skipped", value=name_str)
                 continue
 
             if tool_name in tools:
@@ -490,18 +490,18 @@ class Config:
         Raises:
             ImportError: If tomli_w is not installed.
         """
-        _logger.debug("config_save_started", extra={"path": str(path)})
+        _logger.debug("config_save_started", path=str(path))
         try:
             tomli_w = importlib.import_module("tomli_w")
         except ImportError as err:
-            _logger.warning("config_save_failed", extra={"reason": "tomli_w_not_installed"})
+            _logger.warning("config_save_failed", reason="tomli_w_not_installed")
             raise ImportError(_ERR_TOMLI_W_REQUIRED) from err
 
         data = self._to_dict()
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("wb") as f:
             tomli_w.dump(data, f)
-        _logger.info("config_saved", extra={"path": str(path)})
+        _logger.info("config_saved", path=str(path))
 
     def _to_dict(self) -> dict[str, Any]:
         """Convert Config to dictionary for TOML serialization.
@@ -588,7 +588,7 @@ class Config:
             directory.mkdir(parents=True, exist_ok=True)
             _logger.info(
                 "config_directory_ensured",
-                extra={"path": str(directory)},
+                path=str(directory),
             )
 
     def get_provider_config(self, provider: ProviderName) -> ProviderConfig:

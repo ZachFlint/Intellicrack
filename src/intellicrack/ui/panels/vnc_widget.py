@@ -109,18 +109,16 @@ class RFBClient:
             self._connected = True
 
         except Exception:
-            _logger.exception("vnc_connect_failed", extra={"host": host, "port": port})
+            _logger.exception("vnc_connect_failed", host=host, port=port)
             return False
 
         _logger.info(
             "vnc_connected",
-            extra={
-                "host": host,
-                "port": port,
-                "width": self.width,
-                "height": self.height,
-                "server_name": self.server_name,
-            },
+            host=host,
+            port=port,
+            width=self.width,
+            height=self.height,
+            server_name=self.server_name,
         )
         return True
 
@@ -135,7 +133,7 @@ class RFBClient:
             raise ConnectionError(msg)
 
         server_version = await self._reader.read(12)
-        _logger.debug("vnc_server_version", extra={"version": server_version.decode(errors="replace").strip()})
+        _logger.debug("vnc_server_version", version=server_version.decode(errors="replace").strip())
         self._writer.write(_RFB_VERSION)
         await self._writer.drain()
 
@@ -159,7 +157,7 @@ class RFBClient:
             reason_len_data = await self._reader.read(4)
             reason_len = struct.unpack("!I", reason_len_data)[0]
             reason = (await self._reader.read(reason_len)).decode(errors="replace")
-            _logger.warning("vnc_security_failed", extra={"reason": reason})
+            _logger.warning("vnc_security_failed", reason=reason)
             return False
 
         sec_types = await self._reader.read(num_types)
@@ -184,11 +182,11 @@ class RFBClient:
             result_data = await self._reader.read(4)
             result = struct.unpack("!I", result_data)[0]
             if result != 0:
-                _logger.warning("vnc_auth_failed", extra={"security_type": "VNC Authentication"})
+                _logger.warning("vnc_auth_failed", security_type="VNC Authentication")
                 return False
             return True
 
-        _logger.warning("vnc_no_supported_security", extra={"types": list(sec_types)})
+        _logger.warning("vnc_no_supported_security", types=list(sec_types))
         return False
 
     async def _client_init(self) -> tuple[int, int, str]:
@@ -287,7 +285,7 @@ class RFBClient:
             _logger.warning("vnc_message_timeout")
             return False
         except Exception:
-            _logger.exception("vnc_message_error", extra={"connected": self._connected})
+            _logger.exception("vnc_message_error", connected=self._connected)
             self._connected = False
             return False
 
@@ -314,7 +312,7 @@ class RFBClient:
                     return
                 self._apply_raw_rect(x, y, w, h, pixel_data)
             else:
-                _logger.debug("vnc_unsupported_encoding", extra={"encoding": encoding})
+                _logger.debug("vnc_unsupported_encoding", encoding=encoding)
 
     async def _read_raw_pixels(self, total_bytes: int) -> bytes | None:
         """Read raw pixel data from the stream.
@@ -504,12 +502,12 @@ class VNCWidget(QWidget):
             if success:
                 self.connection_status_changed.emit(True)
                 self._update_timer.start(_FB_UPDATE_INTERVAL_MS)
-                _logger.info("vnc_widget_connected", extra={"host": host, "port": port})
+                _logger.info("vnc_widget_connected", host=host, port=port)
             else:
                 self.connection_status_changed.emit(False)
-                _logger.warning("vnc_widget_connect_failed", extra={"host": host, "port": port})
+                _logger.warning("vnc_widget_connect_failed", host=host, port=port)
         except Exception:
-            _logger.exception("vnc_widget_connect_error", extra={"host": host, "port": port})
+            _logger.exception("vnc_widget_connect_error", host=host, port=port)
             self.connection_status_changed.emit(False)
 
     def disconnect_from_server(self) -> None:

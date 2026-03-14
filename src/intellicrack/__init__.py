@@ -27,8 +27,9 @@ Example:
 from __future__ import annotations
 
 import importlib
-import logging
 from typing import TYPE_CHECKING
+
+import structlog
 
 from intellicrack._metadata import (
     __author__,
@@ -84,8 +85,7 @@ def __getattr__(name: str) -> object:
         msg = f"module {__name__!r} has no attribute {name!r}"
         raise AttributeError(msg)
 
-    lazy_logger = logging.getLogger("intellicrack")
-    lazy_logger.debug("lazy_import_resolved", extra={"attribute": name})
+    structlog.get_logger("intellicrack").debug("lazy_import_resolved", attribute=name)
     return attr
 
 

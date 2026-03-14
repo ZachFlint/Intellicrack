@@ -73,7 +73,7 @@ class HuggingFaceProvider(LLMProviderBase):
         self._client: httpx.AsyncClient | None = None
         self._api_token: str | None = None
         self._base_url: str = self.BASE_URL
-        self._logger = get_logger("providers.huggingface")
+        self._logger = get_logger("providers.huggingface").bind(provider="huggingface")
 
     @property
     def name(self) -> ProviderName:
@@ -124,12 +124,12 @@ class HuggingFaceProvider(LLMProviderBase):
             self._connected = True
             self._logger.info(
                 "huggingface_connected",
-                extra={"has_custom_base": credentials.api_base is not None},
+                has_custom_base=credentials.api_base is not None,
             )
         except httpx.HTTPStatusError as e:
             self._logger.warning(
                 "huggingface_connect_failed",
-                extra={"status_code": e.response.status_code},
+                status_code=e.response.status_code,
             )
             if e.response.status_code == HTTP_UNAUTHORIZED:
                 raise AuthenticationError(_ERR_CREDENTIAL_INVALID % e) from e
@@ -137,7 +137,7 @@ class HuggingFaceProvider(LLMProviderBase):
         except Exception as e:
             self._logger.warning(
                 "huggingface_connect_failed",
-                extra={"error_type": type(e).__name__},
+                error_type=type(e).__name__,
             )
             raise ProviderError(_ERR_CONNECT_FAILED % e) from e
 
@@ -153,10 +153,10 @@ class HuggingFaceProvider(LLMProviderBase):
             self._base_url = self.BASE_URL
             self._logger.info(
                 "huggingface_disconnected",
-                extra={"was_connected": was_connected},
+                was_connected=was_connected,
             )
         except Exception as exc:
-            self._logger.warning("disconnect_cleanup_error", extra={"error": str(exc)})
+            self._logger.warning("disconnect_cleanup_error", error=str(exc))
             self._connected = False
 
     async def list_models(self) -> list[ModelInfo]:
@@ -236,12 +236,12 @@ class HuggingFaceProvider(LLMProviderBase):
 
             self._logger.info(
                 "huggingface_models_listed",
-                extra={"count": len(models)},
+                count=len(models),
             )
         except Exception as e:
             self._logger.warning(
                 "huggingface_list_models_failed",
-                extra={"error_type": type(e).__name__},
+                error_type=type(e).__name__,
             )
             raise ProviderError(_ERR_LIST_MODELS_FAILED % e) from e
         else:
@@ -308,13 +308,11 @@ class HuggingFaceProvider(LLMProviderBase):
 
         self._logger.info(
             "huggingface_chat_completed",
-            extra={
-                "model": model,
-                "messages_count": len(messages),
-                "tool_calls_count": len(tool_calls),
-                "duration_ms": round(duration_ms, 2),
-                "has_tools": tools is not None,
-            },
+            model=model,
+            messages_count=len(messages),
+            tool_calls_count=len(tool_calls),
+            duration_ms=round(duration_ms, 2),
+            has_tools=tools is not None,
         )
 
         return self._build_chat_response(
@@ -355,14 +353,15 @@ class HuggingFaceProvider(LLMProviderBase):
         except httpx.HTTPStatusError as e:
             self._logger.warning(
                 "huggingface_chat_http_error",
-                extra={"model": model, "status_code": e.response.status_code},
+                model=model,
+                status_code=e.response.status_code,
             )
             raise ProviderError(_ERR_API_ERROR % e) from e
 
         if response.status_code == HTTP_RATE_LIMITED:
             self._logger.warning(
                 "huggingface_rate_limited",
-                extra={"model": model},
+                model=model,
             )
             raise RateLimitError(_ERR_RATE_LIMITED)
         if response.status_code == HTTP_SERVICE_UNAVAILABLE:
@@ -375,7 +374,8 @@ class HuggingFaceProvider(LLMProviderBase):
         except httpx.HTTPStatusError as e:
             self._logger.warning(
                 "huggingface_chat_http_error",
-                extra={"model": model, "status_code": e.response.status_code},
+                model=model,
+                status_code=e.response.status_code,
             )
             raise ProviderError(_ERR_API_ERROR % e) from e
 
@@ -384,7 +384,8 @@ class HuggingFaceProvider(LLMProviderBase):
         except (json.JSONDecodeError, ValueError) as e:
             self._logger.warning(
                 "huggingface_json_decode_error",
-                extra={"model": model, "status_code": response.status_code},
+                model=model,
+                status_code=response.status_code,
             )
             raise ProviderError(_ERR_API_ERROR % f"Invalid JSON response: {e}") from e
         return result
@@ -418,10 +419,8 @@ class HuggingFaceProvider(LLMProviderBase):
             tool_calls.append(tool_call)
             self._logger.debug(
                 "tool_call_parsed",
-                extra={
-                    "tool_name": tool_call.tool_name,
-                    "arguments_count": len(tool_call.arguments),
-                },
+                tool_name=tool_call.tool_name,
+                arguments_count=len(tool_call.arguments),
             )
         return tool_calls
 
@@ -457,11 +456,9 @@ class HuggingFaceProvider(LLMProviderBase):
 
         self._logger.info(
             "huggingface_stream_started",
-            extra={
-                "model": model,
-                "messages_count": len(messages),
-                "has_tools": tools is not None,
-            },
+            model=model,
+            messages_count=len(messages),
+            has_tools=tools is not None,
         )
 
         chunk_count = 0
@@ -489,7 +486,8 @@ class HuggingFaceProvider(LLMProviderBase):
                     if self._cancel_requested:
                         self._logger.info(
                             "huggingface_stream_cancelled",
-                            extra={"model": model, "chunks_received": chunk_count},
+                            model=model,
+                            chunks_received=chunk_count,
                         )
                         break
                     if line.startswith("data: "):
@@ -504,12 +502,13 @@ class HuggingFaceProvider(LLMProviderBase):
                                     chunk_count += 1
                                     yield content
                         except json.JSONDecodeError as exc:
-                            self._logger.debug("stream_json_parse_skipped", extra={"error": str(exc)})
+                            self._logger.debug("stream_json_parse_skipped", error=str(exc))
                             continue
 
             self._logger.info(
                 "huggingface_stream_completed",
-                extra={"model": model, "chunks_received": chunk_count},
+                model=model,
+                chunks_received=chunk_count,
             )
 
         except ProviderError:
@@ -518,7 +517,8 @@ class HuggingFaceProvider(LLMProviderBase):
             if not self._cancel_requested:
                 self._logger.warning(
                     "huggingface_stream_failed",
-                    extra={"model": model, "error_type": type(e).__name__},
+                    model=model,
+                    error_type=type(e).__name__,
                 )
                 raise ProviderError(_ERR_STREAM_FAILED % e) from e
 
@@ -527,7 +527,7 @@ class HuggingFaceProvider(LLMProviderBase):
         self._cancel_requested = True
         self._logger.info(
             "huggingface_cancel_requested",
-            extra={"was_connected": self._connected},
+            was_connected=self._connected,
         )
 
     def _check_stream_response_status(self, response: httpx.Response, model: str) -> None:
@@ -543,7 +543,7 @@ class HuggingFaceProvider(LLMProviderBase):
         if response.status_code == HTTP_SERVICE_UNAVAILABLE:
             self._logger.warning(
                 "huggingface_model_loading",
-                extra={"model": model},
+                model=model,
             )
             raise ProviderError(_ERR_MODEL_LOADING_WAIT)
 

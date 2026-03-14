@@ -478,7 +478,9 @@ class GhidraBridge(StaticAnalysisBridge):
                     description="Define a new struct data type with named fields",
                     parameters=[
                         ToolParameter(name="name", type="string", description="Structure name", required=True),
-                        ToolParameter(name="fields", type="array", description="List of {name, type, size} field definitions", required=True),
+                        ToolParameter(
+                            name="fields", type="array", description="List of {name, type, size} field definitions", required=True
+                        ),
                     ],
                     returns="Structure definition result",
                 ),
@@ -510,7 +512,9 @@ class GhidraBridge(StaticAnalysisBridge):
                     description="Get function call graph from an address to a specified depth",
                     parameters=[
                         ToolParameter(name="address", type="integer", description="Root function address", required=True),
-                        ToolParameter(name="depth", type="integer", description="Maximum call depth to traverse", required=False, default=2),
+                        ToolParameter(
+                            name="depth", type="integer", description="Maximum call depth to traverse", required=False, default=2
+                        ),
                     ],
                     returns="Call graph tree structure",
                 ),
@@ -531,7 +535,9 @@ class GhidraBridge(StaticAnalysisBridge):
                     description="Patch bytes at an address in the program",
                     parameters=[
                         ToolParameter(name="address", type="integer", description="Address to write at", required=True),
-                        ToolParameter(name="data", type="string", description="Hex string of bytes (e.g. '90 90 90' or '909090')", required=True),
+                        ToolParameter(
+                            name="data", type="string", description="Hex string of bytes (e.g. '90 90 90' or '909090')", required=True
+                        ),
                     ],
                     returns="Write result with bytes written",
                 ),
@@ -586,10 +592,10 @@ class GhidraBridge(StaticAnalysisBridge):
             )
             self._state.connected = True
             self._state.tool_running = True
-            _logger.info("ghidra_bridge_connected", extra={"port": self._port})
+            _logger.info("ghidra_bridge_connected", port=self._port)
 
         except ImportError as imp_err:
-            _logger.warning("ghidra_bridge_not_installed", extra={"bridge": "ghidra"})
+            _logger.warning("ghidra_bridge_not_installed", bridge="ghidra")
             self._bridge = None
             self._state.connected = False
             self._state.tool_running = False
@@ -597,7 +603,7 @@ class GhidraBridge(StaticAnalysisBridge):
             raise ToolError(error_message) from imp_err
 
         except Exception as exc:
-            _logger.exception("ghidra_connect_failed", extra={"error": str(exc)})
+            _logger.exception("ghidra_connect_failed", error=str(exc))
             self._bridge = None
             self._state.connected = False
             self._state.tool_running = False
@@ -618,7 +624,7 @@ class GhidraBridge(StaticAnalysisBridge):
                     timeout=10,
                 )
             except TimeoutError:
-                _logger.warning("ghidra_process_terminate_timeout", extra={"pid": pid})
+                _logger.warning("ghidra_process_terminate_timeout", pid=pid)
                 self._process.kill()
                 await asyncio.to_thread(self._process.wait)
 
@@ -635,14 +641,14 @@ class GhidraBridge(StaticAnalysisBridge):
             except OSError as e:
                 _logger.debug(
                     "bridge_script_cleanup_failed",
-                    extra={"error": str(e)},
+                    error=str(e),
                 )
             self._bridge_script_path = None
 
         self._bridge = None
         self._binary_path = None
         await super().shutdown()
-        _logger.info("ghidra_bridge_shutdown", extra={"bridge": "ghidra"})
+        _logger.info("ghidra_bridge_shutdown", bridge="ghidra")
 
     async def is_available(self) -> bool:
         """Check if Ghidra is available.
@@ -695,7 +701,7 @@ class GhidraBridge(StaticAnalysisBridge):
             bridge_script.name,
         ]
 
-        _logger.info("ghidra_headless_starting", extra={"command": " ".join(cmd)})
+        _logger.info("ghidra_headless_starting", command=" ".join(cmd))
 
         def _start_process() -> Popen[bytes]:
             return Popen(
@@ -729,9 +735,9 @@ class GhidraBridge(StaticAnalysisBridge):
             )
             self._state.connected = True
             self._state.tool_running = True
-            _logger.info("ghidra_headless_connected", extra={"port": self._port})
+            _logger.info("ghidra_headless_connected", port=self._port)
         except Exception as e:
-            _logger.warning("ghidra_connect_failed", extra={"port": self._port, "error": str(e)})
+            _logger.warning("ghidra_connect_failed", port=self._port, error=str(e))
             error_message = f"Failed to connect to Ghidra: {e}"
             self._state.last_error = error_message
             raise ToolError(error_message) from e
@@ -768,7 +774,8 @@ class GhidraBridge(StaticAnalysisBridge):
                 if result == 0:
                     _logger.info(
                         "ghidra_bridge_port_ready",
-                        extra={"port": self._port, "attempts": attempt},
+                        port=self._port,
+                        attempts=attempt,
                     )
                     return
             finally:
@@ -776,7 +783,9 @@ class GhidraBridge(StaticAnalysisBridge):
 
             _logger.debug(
                 "ghidra_bridge_port_polling",
-                extra={"port": self._port, "attempt": attempt, "elapsed": elapsed},
+                port=self._port,
+                attempt=attempt,
+                elapsed=elapsed,
             )
             await asyncio.sleep(poll_interval)
             elapsed += poll_interval
@@ -831,7 +840,7 @@ ghidra_bridge_server.GhidraBridgeServer(
             try:
                 await self._execute_remote(f'importFile(java.io.File("{path.as_posix()}"))')
             except Exception:
-                _logger.exception("ghidra_remote_import_failed", extra={"binary_path": str(path)})
+                _logger.exception("ghidra_remote_import_failed", binary_path=str(path))
 
         data = path.read_bytes()
         md5 = hashlib.md5(data, usedforsecurity=False).hexdigest()
@@ -845,7 +854,7 @@ ghidra_bridge_server.GhidraBridgeServer(
         self._state.binary_loaded = True
         self._state.target_path = self._binary_path
 
-        _logger.info("binary_loaded", extra={"path": path.name})
+        _logger.info("binary_loaded", path=path.name)
 
         entry_point = 0
         sections: list[SectionInfo] = []
@@ -856,7 +865,7 @@ ghidra_bridge_server.GhidraBridgeServer(
             try:
                 entry_point, sections, imports, exports = await self._extract_binary_metadata()
             except Exception:
-                _logger.exception("ghidra_metadata_extraction_failed", extra={"binary_path": str(path)})
+                _logger.exception("ghidra_metadata_extraction_failed", binary_path=str(path))
 
         return BinaryInfo(
             path=self._binary_path,
@@ -1078,9 +1087,9 @@ metadata
 
         try:
             await self._execute_remote("analyzeAll(currentProgram)")
-            _logger.info("ghidra_analysis_complete", extra={"bridge": "ghidra"})
+            _logger.info("ghidra_analysis_complete", bridge="ghidra")
         except Exception as e:
-            _logger.warning("ghidra_analysis_failed", extra={"error": str(e)})
+            _logger.warning("ghidra_analysis_failed", error=str(e))
             error_message = f"Analysis failed: {e}"
             raise ToolError(error_message) from e
 
@@ -1142,7 +1151,7 @@ metadata
                 )
 
         except Exception:
-            _logger.exception("get_functions_failed", extra={"filter_pattern": filter_pattern})
+            _logger.exception("get_functions_failed", filter_pattern=filter_pattern)
             return []
 
         return functions
@@ -1233,7 +1242,7 @@ metadata
             )
 
         except Exception:
-            _logger.exception("get_function_failed", extra={"address": hex(address)})
+            _logger.exception("get_function_failed", address=hex(address))
             return None
 
     async def decompile(self, address: int) -> str:
@@ -1275,7 +1284,7 @@ metadata
             return str(result) if result else "Decompilation failed"
 
         except Exception as e:
-            _logger.warning("ghidra_decompilation_failed", extra={"error": str(e)})
+            _logger.warning("ghidra_decompilation_failed", error=str(e))
             error_message = f"Decompilation failed: {e}"
             raise ToolError(error_message) from e
 
@@ -1336,7 +1345,7 @@ metadata
             ]
 
         except Exception:
-            _logger.exception("disassembly_failed", extra={"address": hex(address), "count": count})
+            _logger.exception("disassembly_failed", address=hex(address), count=count)
             return []
 
     async def get_xrefs_to(self, address: int) -> list[CrossReference]:
@@ -1383,7 +1392,7 @@ metadata
             ]
 
         except Exception:
-            _logger.exception("get_xrefs_to_failed", extra={"address": hex(address)})
+            _logger.exception("get_xrefs_to_failed", address=hex(address))
             return []
 
     async def get_xrefs_from(self, address: int) -> list[CrossReference]:
@@ -1430,7 +1439,7 @@ metadata
             ]
 
         except Exception:
-            _logger.exception("get_xrefs_from_failed", extra={"address": hex(address)})
+            _logger.exception("get_xrefs_from_failed", address=hex(address))
             return []
 
     async def search_strings(self, pattern: str) -> list[StringInfo]:
@@ -1479,7 +1488,7 @@ metadata
             ]
 
         except Exception:
-            _logger.exception("string_search_failed", extra={"pattern": pattern})
+            _logger.exception("string_search_failed", pattern=pattern)
             return []
 
     async def search_bytes(self, pattern: bytes) -> list[int]:
@@ -1520,7 +1529,7 @@ metadata
             if isinstance(result, list):
                 return [int(addr) for addr in cast("list[int | float | str]", result)]
         except Exception:
-            _logger.exception("byte_search_failed", extra={"pattern_length": len(pattern)})
+            _logger.exception("byte_search_failed", pattern_length=len(pattern))
         return []
 
     async def rename_function(self, address: int, new_name: str) -> bool:
@@ -1551,11 +1560,11 @@ metadata
             """)
 
         except Exception as e:
-            _logger.warning("ghidra_rename_failed", extra={"address": hex(address), "error": str(e)})
+            _logger.warning("ghidra_rename_failed", address=hex(address), error=str(e))
             error_message = f"Rename failed: {e}"
             raise ToolError(error_message) from e
 
-        _logger.info("function_renamed", extra={"address": hex(address), "new_name": new_name})
+        _logger.info("function_renamed", address=hex(address), new_name=new_name)
         return True
 
     async def add_comment(
@@ -1600,11 +1609,11 @@ metadata
             """)
 
         except Exception as e:
-            _logger.warning("ghidra_add_comment_failed", extra={"address": hex(address), "error": str(e)})
+            _logger.warning("ghidra_add_comment_failed", address=hex(address), error=str(e))
             error_message = f"Add comment failed: {e}"
             raise ToolError(error_message) from e
 
-        _logger.info("comment_added", extra={"address": hex(address)})
+        _logger.info("comment_added", address=hex(address))
         return True
 
     async def get_imports(self) -> list[ImportInfo]:
@@ -1647,7 +1656,7 @@ metadata
             ]
 
         except Exception:
-            _logger.exception("get_imports_failed", extra={"binary_path": str(self._binary_path)})
+            _logger.exception("get_imports_failed", binary_path=str(self._binary_path))
             return []
 
     async def get_exports(self) -> list[ExportInfo]:
@@ -1689,7 +1698,7 @@ metadata
             ]
 
         except Exception:
-            _logger.exception("get_exports_failed", extra={"binary_path": str(self._binary_path)})
+            _logger.exception("get_exports_failed", binary_path=str(self._binary_path))
             return []
 
     async def get_data_type(self, address: int) -> DataTypeInfo | None:
@@ -1755,7 +1764,7 @@ metadata
             )
 
         except Exception:
-            _logger.exception("get_data_type_failed", extra={"address": hex(address)})
+            _logger.exception("get_data_type_failed", address=hex(address))
             return None
 
     async def set_data_type(self, address: int, data_type: str) -> bool:
@@ -1799,7 +1808,7 @@ metadata
             return bool(result)
 
         except Exception as e:
-            _logger.warning("ghidra_set_data_type_failed", extra={"address": hex(address), "error": str(e)})
+            _logger.warning("ghidra_set_data_type_failed", address=hex(address), error=str(e))
             error_message = f"Failed to set data type: {e}"
             raise ToolError(error_message) from e
 
@@ -1879,7 +1888,7 @@ metadata
             """)
             return cast("list[dict[str, Any]]", result) if result else []
         except Exception:
-            _logger.exception("get_labels_failed", extra={"address": hex(address)})
+            _logger.exception("get_labels_failed", address=hex(address))
             return []
 
     async def create_bookmark(self, address: int, category: str, comment: str) -> dict[str, Any]:
@@ -2082,9 +2091,7 @@ metadata
             raise ToolError(error_message)
         return cast("dict[str, Any]", result)
 
-    async def set_function_variable_type(
-        self, func_address: int, var_name: str, new_type: str
-    ) -> dict[str, Any]:
+    async def set_function_variable_type(self, func_address: int, var_name: str, new_type: str) -> dict[str, Any]:
         """Change the data type of a local variable in a function.
 
         Args:
@@ -2381,7 +2388,7 @@ metadata
                 return {"address": hex(address), "callees": [], "callers": []}
             return cast("dict[str, Any]", result)
         except Exception:
-            _logger.exception("get_call_graph_failed", extra={"address": hex(address)})
+            _logger.exception("get_call_graph_failed", address=hex(address))
             return {"address": hex(address), "callees": [], "callers": []}
 
     async def get_segments(self) -> list[dict[str, Any]]:
@@ -2567,6 +2574,6 @@ metadata
                 code,
             )
         except Exception as e:
-            _logger.warning("ghidra_remote_exec_failed", extra={"error": str(e)})
+            _logger.warning("ghidra_remote_exec_failed", error=str(e))
             error_message = f"Remote execution failed: {e}"
             raise ToolError(error_message) from e

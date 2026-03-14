@@ -221,7 +221,8 @@ class CutterBridge(StaticAnalysisBridge):
         except TimeoutError:
             _logger.warning(
                 "r2_command_timeout",
-                extra={"command": command, "timeout": _R2_COMMAND_TIMEOUT},
+                command=command,
+                timeout=_R2_COMMAND_TIMEOUT,
             )
             msg = f"{_ERR_CMD_TIMEOUT} after {_R2_COMMAND_TIMEOUT}s: {command}"
             raise ToolError(msg) from None
@@ -570,7 +571,7 @@ class CutterBridge(StaticAnalysisBridge):
             target_pid=None,
             last_error=None,
         )
-        _logger.info("cutter_bridge_initialized", extra={"bridge": "cutter"})
+        _logger.info("cutter_bridge_initialized", bridge="cutter")
 
     async def shutdown(self) -> None:
         """Shutdown Cutter bridge and cleanup resources."""
@@ -578,7 +579,7 @@ class CutterBridge(StaticAnalysisBridge):
             try:
                 await asyncio.to_thread(self._r2.quit)
             except Exception as e:
-                _logger.warning("cutter_close_failed", extra={"error": str(e)})
+                _logger.warning("cutter_close_failed", error=str(e))
             self._r2 = None
 
         if self._r2_pid is not None:
@@ -589,7 +590,7 @@ class CutterBridge(StaticAnalysisBridge):
         self._binary_path = None
         self._analyzed = False
         await super().shutdown()
-        _logger.info("cutter_bridge_shutdown", extra={"bridge": "cutter"})
+        _logger.info("cutter_bridge_shutdown", bridge="cutter")
 
     @override
     async def is_available(self) -> bool:
@@ -603,7 +604,7 @@ class CutterBridge(StaticAnalysisBridge):
             r2 = await asyncio.to_thread(r2pipe.open, "-")
             version: str | None = await asyncio.to_thread(r2.cmd, "?V")
         except Exception as e:
-            _logger.debug("cutter_availability_check_failed", extra={"error": str(e)})
+            _logger.debug("cutter_availability_check_failed", error=str(e))
             return False
         else:
             return bool(version)
@@ -612,7 +613,7 @@ class CutterBridge(StaticAnalysisBridge):
                 try:
                     await asyncio.to_thread(r2.quit)
                 except Exception as e:
-                    _logger.debug("cutter_cleanup_failed", extra={"error": str(e)})
+                    _logger.debug("cutter_cleanup_failed", error=str(e))
 
     async def _close_existing_r2(self) -> None:
         """Close existing Rizin session and unregister process."""
@@ -648,7 +649,7 @@ class CutterBridge(StaticAnalysisBridge):
             process_type=ProcessType.EXTERNAL_TOOL,
             metadata={"binary": str(path)},
         )
-        _logger.debug("cutter_process_registered", extra={"pid": self._r2_pid})
+        _logger.debug("cutter_process_registered", pid=self._r2_pid)
 
     async def _extract_hashes(self) -> tuple[str, str]:
         """Extract MD5 and SHA256 hashes from loaded binary.
@@ -723,7 +724,7 @@ class CutterBridge(StaticAnalysisBridge):
             self._state.binary_loaded = True
             self._state.target_path = self._binary_path
 
-            _logger.info("binary_loaded", extra={"path": path.name, "file_type": file_type, "arch": arch, "bits": bits})
+            _logger.info("binary_loaded", path=path.name, file_type=file_type, arch=arch, bits=bits)
 
             return BinaryInfo(
                 path=self._binary_path,
@@ -741,7 +742,7 @@ class CutterBridge(StaticAnalysisBridge):
             )
 
         except Exception as e:
-            _logger.exception("binary_load_failed", extra={"path": str(self._binary_path)})
+            _logger.exception("binary_load_failed", path=str(self._binary_path))
             raise ToolError(_ERR_LOAD_FAILED) from e
 
     async def analyze(self, level: str = "normal") -> None:
@@ -763,10 +764,10 @@ class CutterBridge(StaticAnalysisBridge):
         }
         cmd = cmd_map.get(level, "aaa")
 
-        _logger.info("analysis_starting", extra={"level": level})
+        _logger.info("analysis_starting", level=level)
         await self._r2_cmd(cmd)
         self._analyzed = True
-        _logger.info("analysis_complete", extra={"bridge": "cutter", "level": level})
+        _logger.info("analysis_complete", bridge="cutter", level=level)
 
     async def get_functions(
         self,
@@ -1140,7 +1141,7 @@ class CutterBridge(StaticAnalysisBridge):
             List of section info.
         """
         if self._r2 is None:
-            _logger.error("cutter_unavailable", extra={"operation": "_get_sections_internal"})
+            _logger.error("cutter_unavailable", operation="_get_sections_internal")
             return []
 
         sections = await self._cmd_json("iSj")
@@ -1164,7 +1165,7 @@ class CutterBridge(StaticAnalysisBridge):
             List of import info.
         """
         if self._r2 is None:
-            _logger.error("cutter_unavailable", extra={"operation": "_get_imports_internal"})
+            _logger.error("cutter_unavailable", operation="_get_imports_internal")
             return []
 
         imports = await self._cmd_json("iij")
@@ -1186,7 +1187,7 @@ class CutterBridge(StaticAnalysisBridge):
             List of export info.
         """
         if self._r2 is None:
-            _logger.error("cutter_unavailable", extra={"operation": "_get_exports_internal"})
+            _logger.error("cutter_unavailable", operation="_get_exports_internal")
             return []
 
         exports = await self._cmd_json("iEj")
@@ -1244,7 +1245,7 @@ class CutterBridge(StaticAnalysisBridge):
             raise ToolError(_ERR_NOT_ANALYZED)
 
         await self._r2_cmd(f"afn {new_name} @ {address}")
-        _logger.info("function_renamed", extra={"address": hex(address), "new_name": new_name})
+        _logger.info("function_renamed", address=hex(address), new_name=new_name)
         return True
 
     async def add_comment(
@@ -1274,7 +1275,7 @@ class CutterBridge(StaticAnalysisBridge):
 
         escaped = comment.replace('"', '\\"')
         await self._r2_cmd(f'CC "{escaped}" @ {address}')
-        _logger.info("comment_added", extra={"address": hex(address)})
+        _logger.info("comment_added", address=hex(address))
         return True
 
     async def write_bytes(self, address: int, data: bytes) -> None:
@@ -1292,7 +1293,7 @@ class CutterBridge(StaticAnalysisBridge):
 
         hex_data = data.hex()
         await self._r2_cmd(f"wx {hex_data} @ {address}")
-        _logger.debug("bytes_written", extra={"length": len(data), "address": hex(address)})
+        _logger.debug("bytes_written", length=len(data), address=hex(address))
 
     async def assemble_at(self, address: int, instruction: str) -> bytes:
         """Assemble instruction at address.
@@ -1343,7 +1344,7 @@ class CutterBridge(StaticAnalysisBridge):
             Parsed JSON as list of dicts.
         """
         if self._r2 is None:
-            _logger.error("cutter_unavailable", extra={"operation": "_cmd_json"})
+            _logger.error("cutter_unavailable", operation="_cmd_json")
             return []
 
         result = await self._r2_cmd(command)
@@ -1354,7 +1355,7 @@ class CutterBridge(StaticAnalysisBridge):
         try:
             parsed = json.loads(result)
         except json.JSONDecodeError:
-            _logger.exception("json_parse_failed", extra={"command": command})
+            _logger.exception("json_parse_failed", command=command)
             return []
         else:
             if isinstance(parsed, list):

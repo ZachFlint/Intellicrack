@@ -52,7 +52,7 @@ def _resolve(obj: object, method_name: str) -> Callable[..., Any]:
     if not hasattr(obj, method_name):
         cls_name = type(obj).__name__
         msg = f"{cls_name} has no method '{method_name}'; PyQt6 binding may be incompatible"
-        _logger.warning("qt_method_missing", extra={"class": cls_name, "method": method_name})
+        _logger.warning("qt_method_missing", class_name=cls_name, method=method_name)
         raise AttributeError(msg)
     method: Callable[..., Any] = getattr(obj, method_name)
     return method
@@ -69,7 +69,7 @@ def get_screen_geometry(app: QApplication) -> tuple[int, int, int, int] | None:
     """
     screen: object = _resolve(app, _PRIMARY_SCREEN)()
     if screen is None:
-        _logger.debug("no_primary_screen_detected", extra={"app_type": type(app).__name__})
+        _logger.debug("no_primary_screen_detected", app_type=type(app).__name__)
         return None
     rect: object = _resolve(screen, _AVAILABLE_GEOMETRY)()
     x: int = _resolve(rect, "x")()

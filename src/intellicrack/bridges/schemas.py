@@ -652,13 +652,16 @@ def validate_and_convert(
     if has_errors:
         _logger.warning(
             "tool_validation_failed",
-            extra={"tool": str(tool.tool_name), "error_count": len(errors)},
+            tool=str(tool.tool_name),
+            error_count=len(errors),
         )
         return [], errors
 
     schemas = get_schema_for_provider(tool, provider)
     _logger.debug(
         "schema_converted",
-        extra={"tool": str(tool.tool_name), "provider": str(provider), "schema_count": len(schemas)},
+        tool=str(tool.tool_name),
+        provider=str(provider),
+        schema_count=len(schemas),
     )
     return schemas, errors

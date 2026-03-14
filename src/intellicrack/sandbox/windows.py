@@ -127,7 +127,7 @@ class WindowsSandbox(SandboxBase):
                 timeout=_WHERE_TIMEOUT,
             )
             if result.returncode != _RETURNCODE_SUCCESS:
-                _logger.debug("windows_sandbox_exe_not_found", extra={"exe": self.SANDBOX_EXE})
+                _logger.debug("windows_sandbox_exe_not_found", exe=self.SANDBOX_EXE)
                 return False
 
             features_result = await process_manager.run_tracked_async(
@@ -141,14 +141,14 @@ class WindowsSandbox(SandboxBase):
             )
 
             if "Enabled" in features_result.stdout:
-                _logger.info("windows_sandbox_available", extra={"feature_state": "Enabled"})
+                _logger.info("windows_sandbox_available", feature_state="Enabled")
                 is_available = True
             else:
-                _logger.warning("windows_sandbox_feature_not_enabled", extra={"feature": "Containers-DisposableClientVM"})
+                _logger.warning("windows_sandbox_feature_not_enabled", feature="Containers-DisposableClientVM")
                 is_available = False
 
         except Exception as e:
-            _logger.warning("windows_sandbox_availability_check_failed", extra={"error": str(e)})
+            _logger.warning("windows_sandbox_availability_check_failed", error=str(e))
             return False
         else:
             return is_available
@@ -163,7 +163,7 @@ class WindowsSandbox(SandboxBase):
             SandboxError: If sandbox cannot be started.
         """
         if self._state.status == "running":
-            _logger.warning("sandbox_already_running", extra={"sandbox_type": "windows"})
+            _logger.warning("sandbox_already_running", sandbox_type="windows")
             return
 
         log_sandbox_operation("start", "windows")
@@ -192,7 +192,7 @@ class WindowsSandbox(SandboxBase):
             self._wsb_path = self._temp_dir / "intellicrack.wsb"
             await self._generate_wsb_config()
 
-            _logger.info("windows_sandbox_starting", extra={"config_path": str(self._wsb_path)})
+            _logger.info("windows_sandbox_starting", config_path=str(self._wsb_path))
 
             self._process = await asyncio.to_thread(
                 Popen,
@@ -220,10 +220,10 @@ class WindowsSandbox(SandboxBase):
             self._state.started_at = datetime.now()
             self._state.pid = self._process.pid
 
-            _logger.info("windows_sandbox_started", extra={"pid": self._process.pid})
+            _logger.info("windows_sandbox_started", pid=self._process.pid)
 
         except Exception as e:
-            _logger.warning("windows_sandbox_start_failed", extra={"error": str(e)})
+            _logger.warning("windows_sandbox_start_failed", error=str(e))
             self._state.status = "error"
             self._state.last_error = str(e)
             await self._cleanup()
@@ -238,7 +238,7 @@ class WindowsSandbox(SandboxBase):
             SandboxError: If sandbox cannot be stopped cleanly.
         """
         if self._state.status == "stopped":
-            _logger.debug("sandbox_already_stopped", extra={"sandbox_type": "windows"})
+            _logger.debug("sandbox_already_stopped", sandbox_type="windows")
             return
 
         self._state.status = "stopping"
@@ -257,7 +257,7 @@ class WindowsSandbox(SandboxBase):
                 except Exception:
                     _logger.warning(
                         "pid_taskkill_failed_trying_image_name",
-                        extra={"pid": pid},
+                        pid=pid,
                     )
                     await process_manager.run_tracked_async(
                         ["taskkill", "/F", "/IM", "WindowsSandbox.exe"],
@@ -271,7 +271,7 @@ class WindowsSandbox(SandboxBase):
                         timeout=_PROCESS_WAIT_TIMEOUT,
                     )
                 except TimeoutError:
-                    _logger.warning("sandbox_process_terminate_timeout", extra={"pid": pid})
+                    _logger.warning("sandbox_process_terminate_timeout", pid=pid)
                     self._process.kill()
                     await asyncio.to_thread(self._process.wait)
 
@@ -282,10 +282,10 @@ class WindowsSandbox(SandboxBase):
 
             self._state.status = "stopped"
             self._state.pid = None
-            _logger.info("windows_sandbox_stopped", extra={"sandbox_type": "windows"})
+            _logger.info("windows_sandbox_stopped", sandbox_type="windows")
 
         except Exception as e:
-            _logger.warning("windows_sandbox_stop_failed", extra={"error": str(e)})
+            _logger.warning("windows_sandbox_stop_failed", error=str(e))
             self._state.status = "error"
             self._state.last_error = str(e)
             raise SandboxError(_ERR_STOP_FAILED) from e
@@ -300,7 +300,7 @@ class WindowsSandbox(SandboxBase):
                     ignore_errors=True,
                 )
             except Exception as e:
-                _logger.warning("temp_dir_cleanup_failed", extra={"error": str(e)})
+                _logger.warning("temp_dir_cleanup_failed", error=str(e))
 
         self._temp_dir = None
         self._shared_folder = None
@@ -359,7 +359,7 @@ class WindowsSandbox(SandboxBase):
         with open(self._wsb_path, "wb") as f:
             tree.write(f, encoding="utf-8", xml_declaration=True)
 
-        _logger.debug("wsb_config_generated", extra={"path": str(self._wsb_path)})
+        _logger.debug("wsb_config_generated", path=str(self._wsb_path))
 
     async def _create_monitor_scripts(self) -> None:
         """Create behavioral monitoring scripts for the sandbox."""
@@ -486,7 +486,7 @@ start /min powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File "%~dp0pr
 """
         start_monitors_cmd.write_text(start_monitors_script, encoding="utf-8")
 
-        _logger.debug("monitoring_scripts_created", extra={"path": str(self._monitor_folder)})
+        _logger.debug("monitoring_scripts_created", path=str(self._monitor_folder))
 
     async def run_command(
         self,
@@ -548,7 +548,7 @@ call "{sandbox_script_path}"
                     result_text = result_path.read_text(encoding="utf-8").strip()
                     exit_code = int(result_text) if result_text.isdigit() else _RETURNCODE_FAILURE
                 except Exception as e:
-                    _logger.debug("result_read_failed", extra={"error": str(e)})
+                    _logger.debug("result_read_failed", error=str(e))
                 else:
                     return (exit_code, "", "")
 
@@ -612,13 +612,13 @@ call "{sandbox_script_path}"
             )
             result = "success"
         except SandboxTimeoutError as e:
-            _logger.warning("sandbox_execution_timeout", extra={"binary": binary_path.name, "timeout": effective_timeout})
+            _logger.warning("sandbox_execution_timeout", binary=binary_path.name, timeout=effective_timeout)
             exit_code = _RETURNCODE_FAILURE
             result = "timeout"
             stderr = str(e)
             stdout = ""
         except SandboxError as e:
-            _logger.warning("sandbox_execution_error", extra={"binary": binary_path.name, "error": str(e)})
+            _logger.warning("sandbox_execution_error", binary=binary_path.name, error=str(e))
             exit_code = _RETURNCODE_FAILURE
             result = "error"
             stderr = str(e)
@@ -677,7 +677,7 @@ call "{sandbox_script_path}"
                         )
                     )
         except Exception as e:
-            _logger.warning("file_log_parse_failed", extra={"error": str(e)})
+            _logger.warning("file_log_parse_failed", error=str(e))
 
         return changes
 
@@ -710,7 +710,7 @@ call "{sandbox_script_path}"
                         )
                     )
         except Exception as e:
-            _logger.warning("registry_log_parse_failed", extra={"error": str(e)})
+            _logger.warning("registry_log_parse_failed", error=str(e))
 
         return changes
 
@@ -749,7 +749,7 @@ call "{sandbox_script_path}"
                         )
                     )
         except Exception as e:
-            _logger.warning("network_log_parse_failed", extra={"error": str(e)})
+            _logger.warning("network_log_parse_failed", error=str(e))
 
         return activities
 
@@ -784,7 +784,7 @@ call "{sandbox_script_path}"
                         )
                     )
         except Exception as e:
-            _logger.warning("process_log_parse_failed", extra={"error": str(e)})
+            _logger.warning("process_log_parse_failed", error=str(e))
 
         return activities
 
@@ -809,9 +809,9 @@ call "{sandbox_script_path}"
 
         try:
             await asyncio.to_thread(shutil.copy2, source, dest_path)
-            _logger.debug("file_copied_to_sandbox", extra={"source": str(source), "dest": dest})
+            _logger.debug("file_copied_to_sandbox", source=str(source), dest=dest)
         except Exception as e:
-            _logger.warning("copy_to_sandbox_failed", extra={"source": str(source), "dest": dest, "error": str(e)})
+            _logger.warning("copy_to_sandbox_failed", source=str(source), dest=dest, error=str(e))
             raise SandboxError(_ERR_COPY_TO_SANDBOX_FAILED) from e
 
     async def copy_from_sandbox(self, source: str, dest: Path) -> None:
@@ -836,7 +836,7 @@ call "{sandbox_script_path}"
 
         try:
             await asyncio.to_thread(shutil.copy2, source_path, dest)
-            _logger.debug("file_copied_from_sandbox", extra={"source": source, "dest": str(dest)})
+            _logger.debug("file_copied_from_sandbox", source=source, dest=str(dest))
         except Exception as e:
-            _logger.warning("copy_from_sandbox_failed", extra={"source": source, "dest": str(dest), "error": str(e)})
+            _logger.warning("copy_from_sandbox_failed", source=source, dest=str(dest), error=str(e))
             raise SandboxError(_ERR_COPY_FROM_SANDBOX_FAILED) from e

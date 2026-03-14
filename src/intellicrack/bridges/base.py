@@ -20,7 +20,6 @@ from ..core.logging import get_logger
 
 
 if TYPE_CHECKING:
-    import logging
     from collections.abc import Sequence
     from pathlib import Path
 
@@ -252,7 +251,7 @@ class ToolBridgeBase(abc.ABC):
         """Initialize the base bridge."""
         self._state: BridgeState = BridgeState()
         self._capabilities: BridgeCapabilities = BridgeCapabilities()
-        self._logger: logging.Logger = get_logger(f"bridges.{self.__class__.__name__.lower()}")
+        self._logger = get_logger(f"bridges.{self.__class__.__name__.lower()}").bind(bridge=self.__class__.__name__.lower())
 
     @property
     @abc.abstractmethod
@@ -314,7 +313,7 @@ class ToolBridgeBase(abc.ABC):
 
     async def shutdown(self) -> None:
         """Shutdown the tool and cleanup resources."""
-        self._logger.info("bridge_shutdown", extra={"bridge_class": self.__class__.__name__})
+        self._logger.info("bridge_shutdown", bridge_class=self.__class__.__name__)
         self._state = BridgeState()
 
     @abc.abstractmethod

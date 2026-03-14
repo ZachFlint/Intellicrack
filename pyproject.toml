@@ -40,104 +40,26 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-  "psutil>=7.2.2,<8",
-  "torch",
-  "flake8-pyproject",
-  "build",
-  "pyclean",
-  "black",
-  "pylint",
-  "autopep8",
-  "flake8",
-  "ruff",
-  "isort",
-  "pycodestyle",
-  "bandit",
-  "blinter",
-  "vulture",
-  "pyupgrade",
-  "pydocstyle",
-  "sourcery",
-  "wemake-python-styleguide",
-  "darglint",
-  "pyroma",
-  "mypy-extensions",
-  "dead",
-  "uncalled",
-  "deadcode",
-  "pygount",
-  "pytest-deadfixtures",
-  "basedpyright",
-  "monkeytype",
-  "ty",
-  "mccabe",
-  "xenon",
-  "safety",
-  "yamllint",
-  "jsonlint",
-  "pytest",
-  "pytest-cov",
-  "pytest-mock",
-  "pytest-asyncio",
-  "pytest-xdist",
-  "pytest-timeout",
-  "pytest-qt",
-  "pytest-benchmark",
-  "pytest-html",
-  "pytest-randomly",
-  "pytest-sugar",
-  "pytest-env",
-  "pytest-instafail",
-  "hypothesis",
-  "tox",
-  "nox",
-  "coverage",
-  "freezegun",
-  "responses",
-  "faker",
-  "radon",
-  "sphinx",
-  "sphinx-rtd-theme",
-  "sphinx-autodoc-typehints",
-  "sphinx-copybutton",
-  "sphinx-tabs",
-  "sphinxcontrib-mermaid",
-  "sphinx-autobuild",
-  "pdoc3",
-  "mkdocs-material",
-  "pymdown-extensions",
-  "myst-parser",
-  "ipdb",
-  "line-profiler",
-  "memory-profiler",
-  "py-spy",
-  "snakeviz",
-  "pyinstrument",
-  "scalene",
-  "pre-commit",
-  "commitizen",
-  "bumpversion",
-  "pipdeptree",
-  "rope",
-  "astor",
-  "yapf",
-  "pip-audit",
-  "nodeenv",
-  "twine",
-  "setuptools-scm",
-  "poetry",
-  "pycallgraph2",
-  "pre-commit-hooks",
-  "interrogate",
-  "deptry",
-  "codespell",
-  "detect-secrets",
+  "psutil",
+  "PyQt6",
+  "structlog",
+  "httpx",
+  "anthropic",
+  "openai",
+  "google-genai",
+  "pefile",
+  "capstone",
+  "keystone-engine",
+  "lief",
+  "frida",
+  "frida-tools",
+  "ghidra-bridge",
+  "r2pipe",
+  "tomli-w",
 ]
 
 [project.optional-dependencies]
 dev = [
-  "build",
-  "pyclean",
   "black",
   "pylint",
   "autopep8",
@@ -155,20 +77,46 @@ dev = [
   "wemake-python-styleguide",
   "darglint",
   "pyroma",
-  "mypy-extensions",
+  "yapf",
+  "mccabe",
+  "xenon",
+  "codespell",
+  "detect-secrets",
+  "safety",
+  "yamllint",
+  "jsonlint",
+  "interrogate",
+  "deptry",
+  "radon",
   "dead",
   "uncalled",
   "deadcode",
   "pygount",
-  "pytest-deadfixtures",
   "basedpyright",
+  "mypy",
+  "mypy-extensions",
   "monkeytype",
   "ty",
-  "mccabe",
-  "xenon",
-  "safety",
-  "yamllint",
-  "jsonlint",
+  "pyannotate",
+  "types-requests",
+  "types-pyyaml",
+  "build",
+  "pyclean",
+  "pre-commit",
+  "pre-commit-hooks",
+  "commitizen",
+  "bumpversion",
+  "setuptools-scm",
+  "twine",
+  "rope",
+  "astor",
+  "nodeenv",
+  "pipdeptree",
+  "pip-audit",
+  "poetry",
+  "validate-pyproject",
+]
+test = [
   "pytest",
   "pytest-cov",
   "pytest-mock",
@@ -182,6 +130,7 @@ dev = [
   "pytest-sugar",
   "pytest-env",
   "pytest-instafail",
+  "pytest-deadfixtures",
   "hypothesis",
   "tox",
   "nox",
@@ -189,7 +138,8 @@ dev = [
   "freezegun",
   "responses",
   "faker",
-  "radon",
+]
+docs = [
   "sphinx",
   "sphinx-rtd-theme",
   "sphinx-autodoc-typehints",
@@ -201,6 +151,8 @@ dev = [
   "mkdocs-material",
   "pymdown-extensions",
   "myst-parser",
+]
+profile = [
   "ipdb",
   "line-profiler",
   "memory-profiler",
@@ -208,24 +160,15 @@ dev = [
   "snakeviz",
   "pyinstrument",
   "scalene",
-  "pre-commit",
-  "commitizen",
-  "bumpversion",
-  "pipdeptree",
-  "rope",
-  "astor",
-  "yapf",
-  "pip-audit",
-  "nodeenv",
-  "twine",
-  "setuptools-scm",
-  "poetry",
   "pycallgraph2",
-  "pre-commit-hooks",
-  "interrogate",
-  "deptry",
-  "codespell",
-  "detect-secrets",
+]
+ml = [
+  "torch",
+  "transformers",
+  "accelerate",
+  "bitsandbytes",
+  "sentencepiece",
+  "safetensors",
 ]
 
 [project.urls]
@@ -253,147 +196,151 @@ preview = [ "pixi-build" ]
 python = "3.13.*"
 git = ">=2.53.0,<3"
 just = ">=1.46.0,<2"
-shellcheck = ">=0.11.0,<0.12"
-nodejs = ">=24.14.0,<24.15"
+shellcheck = ">=0.11.0,<1"
+nodejs = ">=24.14.0,<25"
 yarn = ">=4.12.0,<5"
-markdownlint-cli = ">=0.48.0,<0.49"
-taplo = ">=0.10.0,<0.11"
-yamlfmt = ">=0.21.0,<0.22"
-pixi-pycharm = ">=0.0.10,<0.0.11"
+markdownlint-cli = ">=0.48.0,<1"
+taplo = ">=0.10.0,<1"
+yamlfmt = ">=0.21.0,<1"
+pixi-pycharm = ">=0.0.10,<1"
 capstone = ">=5.0.7,<6"
 
 [tool.pixi.pypi-dependencies]
-validate-pyproject = ">=0.25,<0.26"
 intellicrack = { path = ".", editable = true }
+# Build/packaging
 pip = ">=26.0.1, <27"
 wheel = ">=0.46.3, <0.47"
 setuptools = "*"
-networkx = ">=3.6.1, <4"
-anyio = ">=4.12.1, <5"
-types-requests = ">=2.32.4.20260107, <3"
-types-pyyaml = ">=6.0.12.20250915, <7"
-pytest = ">=9.0.2, <10"
-mypy = ">=1.19.1, <2"
-markdown-it-py = ">=4.0.0, <5"
-anthropic = ">=0.84.0, <0.85"
-openai = ">=2.26.0, <3"
-google-genai = ">=1.66.0, <2"
-ollama = ">=0.6.1, <0.7"
-httpx = ">=0.28.1, <0.29"
+build = "*"
+pyclean = "*"
+# Runtime deps (version-bounded)
 PyQt6 = ">=6.10.2, <7"
-qdarkstyle = ">=3.2.3, <4"
-pygments = ">=2.19.2, <3"
 pefile = ">=2024.8.26, <2025"
-lief = ">=0.17.4, <0.18"
+lief = ">=0.17.5, <0.18"
 capstone = "*"
 keystone-engine = ">=0.9.2, <0.10"
-frida = ">=17.7.3, <18"
-frida-tools = ">=14.6.0, <15"
-r2pipe = ">=1.9.6, <2"
+frida = ">=17.8.1, <18"
+frida-tools = ">=14.6.1, <15"
+r2pipe = ">=1.9.8, <2"
 ghidra-bridge = ">=1.0.0, <2"
-python-dotenv = ">=1.2.2, <2"
-tomli = ">=2.4.0, <3"
-rich = ">=14.3.3, <15"
+anthropic = ">=0.84.0, <0.85"
+openai = ">=2.28.0, <3"
+google-genai = ">=1.67.0, <2"
+httpx = ">=0.28.1, <0.29"
+structlog = ">=25.5.0, <26"
+pydantic = ">=2.12.5, <3"
 tomli-w = ">=1.2.0, <2"
+# Transitive / environment packages (keep bounded)
+networkx = ">=3.6.1, <4"
+anyio = ">=4.12.1, <5"
+markdown-it-py = ">=4.0.0, <5"
+pygments = ">=2.19.2, <3"
+rich = ">=14.3.3, <15"
+python-dotenv = ">=1.2.2, <2"
 aiofiles = ">=25.1.0, <26"
 aiosqlite = ">=0.22.1, <0.23"
-pydantic = ">=2.12.5, <3"
-build = ">=1.4.0, <2"
-pyclean = ">=3.5.0, <4"
-black = ">=26.3.0, <27"
-pylint = ">=4.0.5, <5"
-autopep8 = ">=2.3.2, <3"
-flake8 = ">=7.3.0, <8"
-ruff = ">=0.15.5, <0.16"
-isort = ">=8.0.1, <9"
-pycodestyle = ">=2.14.0, <3"
-bandit = ">=1.9.4, <2"
-blinter = ">=1.0.112, <2"
-vulture = ">=2.15, <3"
-pyupgrade = ">=3.21.2, <4"
-pydocstyle = ">=6.3.0, <7"
-sourcery = ">=1.43.0, <2"
-wemake-python-styleguide = ">=1.6.1, <2"
-darglint = ">=1.8.1, <2"
-pyroma = ">=5.0.1, <6"
-mypy-extensions = ">=1.1.0, <2"
-dead = ">=2.1.0, <3"
-uncalled = ">=0.1.8, <0.2"
-deadcode = ">=2.4.1, <3"
-pygount = ">=3.1.1, <4"
-pytest-deadfixtures = ">=3.1.0, <4"
-basedpyright = ">=1.38.2, <2"
-monkeytype = ">=23.3.0, <24"
-ty = ">=0.0.21, <0.0.22"
-mccabe = ">=0.7.0, <0.8"
-xenon = ">=0.9.3, <0.10"
-safety = ">=3.7.0, <4"
-yamllint = ">=1.38.0, <2"
-jsonlint = ">=0.1, <0.2"
-pytest-cov = ">=7.0.0, <8"
-pytest-mock = ">=3.15.1, <4"
-pytest-asyncio = ">=1.3.0, <2"
-pytest-xdist = ">=3.8.0, <4"
-pytest-timeout = ">=2.4.0, <3"
-pytest-qt = ">=4.5.0, <5"
-pytest-benchmark = ">=5.2.3, <6"
-pytest-html = ">=4.2.0, <5"
-pytest-randomly = ">=4.0.1, <5"
-pytest-sugar = ">=1.1.1, <2"
-pytest-env = ">=1.5.0, <2"
-pytest-instafail = ">=0.5.0, <0.6"
-hypothesis = ">=6.151.9, <7"
-tox = ">=4.49.0, <5"
-nox = ">=2026.2.9, <2027"
-coverage = ">=7.13.4, <8"
-freezegun = ">=1.5.5, <2"
-responses = ">=0.26.0, <0.27"
-faker = ">=40.8.0, <41"
-radon = ">=6.0.1, <7"
-sphinx = ">=9.1.0, <10"
-sphinx-rtd-theme = ">=3.1.0, <4"
-sphinx-autodoc-typehints = ">=3.9.7, <4"
-sphinx-copybutton = ">=0.5.2, <0.6"
-sphinx-tabs = ">=3.5.0, <4"
-sphinxcontrib-mermaid = ">=2.0.1, <3"
-sphinx-autobuild = ">=2025.8.25, <2026"
-pdoc3 = ">=0.11.6, <0.12"
-mkdocs-material = ">=9.7.4, <10"
-pymdown-extensions = ">=10.21, <11"
-myst-parser = ">=5.0.0, <6"
-ipdb = ">=0.13.13, <0.14"
-line-profiler = ">=5.0.2, <6"
-memory-profiler = ">=0.61.0, <0.62"
-py-spy = ">=0.4.1, <0.5"
-snakeviz = ">=2.2.2, <3"
-pyinstrument = ">=5.1.2, <6"
-scalene = ">=2.1.4, <3"
-pre-commit = ">=4.5.1, <5"
-commitizen = ">=4.13.9, <5"
-bumpversion = ">=0.6.0, <0.7"
-pipdeptree = ">=2.31.0, <3"
-rope = ">=1.14.0, <2"
-astor = ">=0.8.1, <0.9"
-yapf = ">=0.43.0, <0.44"
-pip-audit = ">=2.10.0, <3"
-nodeenv = ">=1.10.0, <2"
-twine = ">=6.2.0, <7"
-setuptools-scm = ">=9.2.2, <10"
-poetry = ">=2.3.2, <3"
-pycallgraph2 = ">=1.1.3, <2"
-pre-commit-hooks = ">=6.0.0, <7"
-interrogate = ">=1.7.0, <2"
-deptry = ">=0.24.0, <0.25"
-codespell = ">=2.4.2, <3"
-detect-secrets = ">=1.5.0, <2"
 mcp = ">=1.26.0, <2"
-pyannotate = ">=1.2.0, <2"
-structlog = ">=25.5.0, <26"
+ollama = ">=0.6.1, <0.7"
+# ML deps (bounded)
 transformers = ">=5.3.0, <6"
 accelerate = ">=1.13.0, <2"
 bitsandbytes = ">=0.49.2, <0.50"
 sentencepiece = ">=0.2.1, <0.3"
 safetensors = ">=0.7.0, <0.8"
+# Dev tools (unbounded - float to latest)
+validate-pyproject = "*"
+types-requests = "*"
+types-pyyaml = "*"
+pytest = "*"
+mypy = "*"
+black = "*"
+pylint = "*"
+autopep8 = "*"
+flake8 = "*"
+ruff = "*"
+isort = "*"
+pycodestyle = "*"
+bandit = "*"
+blinter = "*"
+vulture = "*"
+pyupgrade = "*"
+pydocstyle = "*"
+sourcery = "*"
+wemake-python-styleguide = "*"
+darglint = "*"
+pyroma = "*"
+mypy-extensions = "*"
+dead = "*"
+uncalled = "*"
+deadcode = "*"
+pygount = "*"
+pytest-deadfixtures = "*"
+basedpyright = "*"
+monkeytype = "*"
+ty = "*"
+mccabe = "*"
+xenon = "*"
+safety = "*"
+yamllint = "*"
+jsonlint = "*"
+pytest-cov = "*"
+pytest-mock = "*"
+pytest-asyncio = "*"
+pytest-xdist = "*"
+pytest-timeout = "*"
+pytest-qt = "*"
+pytest-benchmark = "*"
+pytest-html = "*"
+pytest-randomly = "*"
+pytest-sugar = "*"
+pytest-env = "*"
+pytest-instafail = "*"
+hypothesis = "*"
+tox = "*"
+nox = "*"
+coverage = "*"
+freezegun = "*"
+responses = "*"
+faker = "*"
+radon = "*"
+sphinx = "*"
+sphinx-rtd-theme = "*"
+sphinx-autodoc-typehints = "*"
+sphinx-copybutton = "*"
+sphinx-tabs = "*"
+sphinxcontrib-mermaid = "*"
+sphinx-autobuild = "*"
+pdoc3 = "*"
+mkdocs-material = "*"
+pymdown-extensions = "*"
+myst-parser = "*"
+ipdb = "*"
+line-profiler = "*"
+memory-profiler = "*"
+py-spy = "*"
+snakeviz = "*"
+pyinstrument = "*"
+scalene = "*"
+pre-commit = "*"
+commitizen = "*"
+bumpversion = "*"
+pipdeptree = "*"
+rope = "*"
+astor = "*"
+yapf = "*"
+pip-audit = "*"
+nodeenv = "*"
+twine = "*"
+setuptools-scm = "*"
+poetry = "*"
+pycallgraph2 = "*"
+pre-commit-hooks = "*"
+interrogate = "*"
+deptry = "*"
+codespell = "*"
+detect-secrets = "*"
+pyannotate = "*"
+flake8-pyproject = "*"
 
 [tool.pixi.pypi-options]
 extra-index-urls = [ "https://download.pytorch.org/whl/xpu" ]
@@ -856,7 +803,7 @@ exclude = [
 
 [tool.deptry]
 known_first_party = [ "intellicrack" ]
-pep621_dev_dependency_groups = [ "dev" ]
+pep621_dev_dependency_groups = [ "dev", "test", "docs", "profile", "ml" ]
 extend_exclude = [
   "tests",
   "docs",

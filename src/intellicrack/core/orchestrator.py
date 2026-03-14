@@ -18,6 +18,9 @@ from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Literal
+from uuid import uuid4
+
+import structlog.contextvars
 
 from ..bridges.schemas import (
     build_schema_parameters,
@@ -277,7 +280,8 @@ class Orchestrator:
         if provider_instance is None or not provider_instance.is_connected:
             _logger.warning(
                 "provider_not_found",
-                extra={"provider": provider.value, "connected": getattr(provider_instance, "is_connected", None)},
+                provider=provider.value,
+                connected=getattr(provider_instance, "is_connected", None),
             )
             error_message = f"Provider not available: {provider.value}"
             raise ValueError(error_message)
@@ -295,9 +299,17 @@ class Orchestrator:
         self._current_session = session
         self._state = "idle"
 
+        structlog.contextvars.bind_contextvars(
+            session_id=session.id,
+            provider=provider.value,
+            model=model,
+        )
+
         _logger.info(
             "session_started",
-            extra={"session_id": session.id, "provider": provider.value, "model": model},
+            session_id=session.id,
+            provider=provider.value,
+            model=model,
         )
 
         return session
@@ -322,7 +334,13 @@ class Orchestrator:
         self._current_session = session
         self._state = "idle"
 
-        _logger.info("session_loaded", extra={"session_id": session_id})
+        structlog.contextvars.bind_contextvars(
+            session_id=session.id,
+            provider=session.provider.value,
+            model=session.model,
+        )
+
+        _logger.info("session_loaded", session_id=session_id)
         return session
 
     async def _load_binary(self, path: Path) -> BinaryInfo:
@@ -334,12 +352,14 @@ class Orchestrator:
         Returns:
             Binary information.
         """
-        _logger.debug("binary_load_started", extra={"path": str(path)})
+        _logger.debug("binary_load_started", path=str(path))
         binary_bridge = self._tools.get_binary_bridge()
         info = await binary_bridge.load_file(path)
         _logger.debug(
             "binary_load_completed",
-            extra={"path": str(path), "file_type": info.file_type, "architecture": info.architecture},
+            path=str(path),
+            file_type=info.file_type,
+            architecture=info.architecture,
         )
         return info
 
@@ -369,6 +389,9 @@ class Orchestrator:
         self._stats.total_requests += 1
         start_time = time.time()
 
+        request_id = uuid4().hex[:12]
+        structlog.contextvars.bind_contextvars(request_id=request_id)
+
         user_message = Message(
             role="user",
             content=text,
@@ -382,9 +405,10 @@ class Orchestrator:
         try:
             await self._run_agent_loop()
         except asyncio.CancelledError:
-            _logger.info("request_cancelled", extra={"state": self._state})
+            _logger.info("request_cancelled", state=self._state)
             self._state = "cancelled"
         finally:
+            structlog.contextvars.unbind_contextvars("request_id")
             elapsed_ms = (time.time() - start_time) * 1000
             self._stats.record_response_time(elapsed_ms)
 
@@ -421,7 +445,7 @@ class Orchestrator:
                 raise asyncio.CancelledError()
 
             iteration += 1
-            _logger.debug("agent_loop_iteration", extra={"iteration": iteration})
+            _logger.debug("agent_loop_iteration", iteration=iteration)
 
             messages = self._build_messages()
 
@@ -438,7 +462,7 @@ class Orchestrator:
                     self._on_message(response)
 
             if not tool_calls:
-                _logger.debug("agent_loop_complete", extra={"reason": "no_tool_calls"})
+                _logger.debug("agent_loop_complete", reason="no_tool_calls")
                 break
 
             tool_results = await self._execute_tool_calls(tool_calls)
@@ -452,11 +476,11 @@ class Orchestrator:
             self._current_session.messages.append(tool_message)
 
             if all(not r.success for r in tool_results):
-                _logger.warning("agent_loop_stopping", extra={"reason": "all_tool_calls_failed"})
+                _logger.warning("agent_loop_stopping", reason="all_tool_calls_failed")
                 break
 
         if iteration >= self._config.max_iterations:
-            _logger.warning("agent_loop_max_iterations", extra={"max_iterations": self._config.max_iterations})
+            _logger.warning("agent_loop_max_iterations", max_iterations=self._config.max_iterations)
 
     def _is_final_response_expected(self) -> bool:
         """Determine whether a final response is expected.
@@ -489,7 +513,8 @@ class Orchestrator:
         messages = [system_message, *self._current_session.messages]
         _logger.debug(
             "messages_built",
-            extra={"message_count": len(messages), "system_prompt_length": len(system_prompt)},
+            message_count=len(messages),
+            system_prompt_length=len(system_prompt),
         )
         return messages
 
@@ -738,14 +763,13 @@ class Orchestrator:
             tools_available=tools_available,
             is_final_response=is_final_response,
         )
+        structlog.contextvars.bind_contextvars(llm_streaming=use_streaming)
         _logger.debug(
             "llm_call_started",
-            extra={
-                "model": self._current_session.model,
-                "input_tokens": input_tokens,
-                "streaming": use_streaming,
-                "tool_count": len(tools),
-            },
+            model=self._current_session.model,
+            input_tokens=input_tokens,
+            streaming=use_streaming,
+            tool_count=len(tools),
         )
         result: tuple[Message, list[ToolCall] | None]
         if use_streaming:
@@ -766,12 +790,11 @@ class Orchestrator:
         self._stats.total_tokens_used += output_tokens
         _logger.debug(
             "llm_call_completed",
-            extra={
-                "response_length": len(response.content),
-                "output_tokens": output_tokens,
-                "has_tool_calls": tool_calls_result is not None,
-            },
+            response_length=len(response.content),
+            output_tokens=output_tokens,
+            has_tool_calls=tool_calls_result is not None,
         )
+        structlog.contextvars.unbind_contextvars("llm_streaming")
 
         return result
 
@@ -850,11 +873,9 @@ class Orchestrator:
 
         _logger.debug(
             "llm_stream_completed",
-            extra={
-                "chunk_count": len(content_parts),
-                "content_length": len(content),
-                "tool_calls_count": len(pending_calls),
-            },
+            chunk_count=len(content_parts),
+            content_length=len(content),
+            tool_calls_count=len(pending_calls),
         )
         return Message(
             role="assistant",
@@ -896,10 +917,8 @@ class Orchestrator:
 
         _logger.debug(
             "llm_response_parsed",
-            extra={
-                "content_length": len(response.content),
-                "tool_call_count": len(tool_calls) if tool_calls else 0,
-            },
+            content_length=len(response.content),
+            tool_call_count=len(tool_calls) if tool_calls else 0,
         )
 
         return response, tool_calls
@@ -961,6 +980,12 @@ class Orchestrator:
         start_time = time.time()
         self._stats.total_tool_calls += 1
 
+        structlog.contextvars.bind_contextvars(
+            tool_call_id=call.id,
+            tool_name=call.tool_name,
+            tool_function=call.function_name,
+        )
+
         try:
             result = await self._tools.execute_tool_call(
                 tool_name=call.tool_name,
@@ -973,11 +998,9 @@ class Orchestrator:
 
             _logger.info(
                 "tool_call_success",
-                extra={
-                    "tool": call.tool_name,
-                    "function": call.function_name,
-                    "duration_ms": round(elapsed_ms, 2),
-                },
+                tool=call.tool_name,
+                function=call.function_name,
+                duration_ms=round(elapsed_ms, 2),
             )
 
             if self._script_manager is not None:
@@ -1001,7 +1024,8 @@ class Orchestrator:
 
             _logger.exception(
                 "tool_call_failed",
-                extra={"tool": call.tool_name, "function": call.function_name},
+                tool=call.tool_name,
+                function=call.function_name,
             )
 
             return ToolResult(
@@ -1011,6 +1035,8 @@ class Orchestrator:
                 error=str(e),
                 duration_ms=elapsed_ms,
             )
+        finally:
+            structlog.contextvars.unbind_contextvars("tool_call_id", "tool_name", "tool_function")
 
     @staticmethod
     def _validate_tool_schemas(
@@ -1033,11 +1059,9 @@ class Orchestrator:
             for err in errors:
                 _logger.warning(
                     "tool_schema_validation_error",
-                    extra={
-                        "tool": tool.tool_name.value,
-                        "error": str(err),
-                        "provider": provider_name.value,
-                    },
+                    tool=tool.tool_name.value,
+                    error=str(err),
+                    provider=provider_name.value,
                 )
             for func in tool.functions:
                 param_schema = build_schema_parameters(
@@ -1046,19 +1070,15 @@ class Orchestrator:
                 )
                 _logger.debug(
                     "tool_function_params_built",
-                    extra={
-                        "function": func.name,
-                        "param_count": len(func.parameters),
-                        "schema_keys": list(param_schema.keys()),
-                    },
+                    function=func.name,
+                    param_count=len(func.parameters),
+                    schema_keys=list(param_schema.keys()),
                 )
         all_schemas = get_all_schemas_for_provider(tools, provider_name)
         _logger.debug(
             "tool_schemas_prepared",
-            extra={
-                "provider": provider_name.value,
-                "schema_count": len(all_schemas),
-            },
+            provider=provider_name.value,
+            schema_count=len(all_schemas),
         )
 
     async def _should_confirm(self, call: ToolCall) -> bool:
@@ -1073,23 +1093,23 @@ class Orchestrator:
         if self._config.confirmation_level == ConfirmationLevel.NONE:
             _logger.debug(
                 "confirmation_skipped",
-                extra={"function": call.function_name, "reason": "level_none"},
+                function=call.function_name,
+                reason="level_none",
             )
             return False
         if self._config.confirmation_level == ConfirmationLevel.ALL:
             _logger.debug(
                 "confirmation_required",
-                extra={"function": call.function_name, "reason": "level_all"},
+                function=call.function_name,
+                reason="level_all",
             )
             return True
         is_destructive = self._is_destructive_operation(call)
         _logger.debug(
             "confirmation_check",
-            extra={
-                "function": call.function_name,
-                "level": self._config.confirmation_level.value,
-                "is_destructive": is_destructive,
-            },
+            function=call.function_name,
+            level=self._config.confirmation_level.value,
+            is_destructive=is_destructive,
         )
         return is_destructive
 
@@ -1137,7 +1157,7 @@ class Orchestrator:
             self._state = "processing"
             return result
 
-        _logger.warning("confirmation_auto_declined", extra={"reason": "no_callback"})
+        _logger.warning("confirmation_auto_declined", reason="no_callback")
         self._state = "processing"
         return False
 
@@ -1152,7 +1172,7 @@ class Orchestrator:
 
     async def cancel(self) -> None:
         """Cancel current operation."""
-        _logger.info("operation_cancelling", extra={"state": self._state})
+        _logger.info("operation_cancelling", state=self._state)
         self._cancel_event.set()
 
         provider = self._providers.get(self._current_session.provider) if self._current_session else None
@@ -1160,17 +1180,17 @@ class Orchestrator:
             provider_name = self._current_session.provider.value if self._current_session else "unknown"
             try:
                 await provider.cancel_request()
-                _logger.debug("cancel_provider_request_sent", extra={"provider": provider_name})
+                _logger.debug("cancel_provider_request_sent", provider=provider_name)
             except Exception:
-                _logger.exception("cancel_provider_request_failed", extra={"provider": provider_name})
+                _logger.exception("cancel_provider_request_failed", provider=provider_name)
 
         if self._pending_confirmation and not self._pending_confirmation.future.done():
             call_id = self._pending_confirmation.call.id
             try:
                 self._pending_confirmation.future.set_result(False)
-                _logger.debug("cancel_pending_confirmation_declined", extra={"call_id": call_id})
+                _logger.debug("cancel_pending_confirmation_declined", call_id=call_id)
             except Exception:
-                _logger.exception("cancel_pending_confirmation_failed", extra={"call_id": call_id})
+                _logger.exception("cancel_pending_confirmation_failed", call_id=call_id)
 
     async def add_binary(self, path: Path, run_bridge_analysis: bool = True) -> BinaryInfo:
         """Add a binary to the current session.
@@ -1217,10 +1237,10 @@ class Orchestrator:
             aggregator = AnalysisAggregator(self._tools)
             analysis = await aggregator.aggregate(binary_info.name, binary_info)
         except Exception as e:
-            _logger.warning("bridge_analysis_failed", extra={"binary": binary_info.name, "error": str(e)})
+            _logger.warning("bridge_analysis_failed", binary=binary_info.name, error=str(e))
             return None
         else:
-            _logger.info("bridge_analysis_completed", extra={"binary": binary_info.name})
+            _logger.info("bridge_analysis_completed", binary=binary_info.name)
             return analysis
 
     async def reanalyze_bridge_analysis(self, binary_name: str | None = None) -> BridgeAnalysisSummary | None:
@@ -1413,7 +1433,7 @@ class Orchestrator:
         try:
             bridge: object | None = getattr(self._tools, getter_name)()
         except Exception:
-            _logger.debug("bridge_getter_failed", exc_info=True, extra={"tool_name": tool_name, "getter": getter_name})
+            _logger.debug("bridge_getter_failed", exc_info=True, tool_name=tool_name, getter=getter_name)
             return None
         else:
             return bridge
@@ -1537,20 +1557,20 @@ class Orchestrator:
     async def shutdown(self) -> None:
         """Shutdown the orchestrator and cleanup resources."""
         if self._shutdown_called:
-            _logger.debug("orchestrator_shutdown_already_called", extra={"state": self._state})
+            _logger.debug("orchestrator_shutdown_already_called", state=self._state)
             return
         self._shutdown_called = True
-        _logger.info("orchestrator_shutdown_started", extra={"state": self._state})
+        _logger.info("orchestrator_shutdown_started", state=self._state)
 
         try:
             await self.cancel()
         except Exception:
-            _logger.exception("shutdown_cancel_failed", extra={"state": self._state})
+            _logger.exception("shutdown_cancel_failed", state=self._state)
 
         try:
             await self._tools.shutdown()
         except Exception:
-            _logger.exception("shutdown_tools_cleanup_failed", extra={"state": self._state})
+            _logger.exception("shutdown_tools_cleanup_failed", state=self._state)
 
         if self._current_session:
             try:
@@ -1558,9 +1578,11 @@ class Orchestrator:
             except Exception:
                 _logger.exception(
                     "shutdown_session_save_failed",
-                    extra={"session_id": self._current_session.id, "state": self._state},
+                    session_id=self._current_session.id,
+                    state=self._state,
                 )
 
         self._current_session = None
         self._state = "idle"
-        _logger.info("orchestrator_shutdown_completed", extra={"state": self._state})
+        structlog.contextvars.clear_contextvars()
+        _logger.info("orchestrator_shutdown_completed", state=self._state)

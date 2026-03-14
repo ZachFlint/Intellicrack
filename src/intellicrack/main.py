@@ -23,9 +23,9 @@ from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
-    from logging import Logger
 
     from PyQt6.QtWidgets import QApplication
+    from structlog.stdlib import BoundLogger
 
     from intellicrack.core.config import Config, LogConfig
     from intellicrack.core.orchestrator import Orchestrator
@@ -160,7 +160,7 @@ def _import_config_class() -> type[Config]:
     return cast("type[Config]", mod.Config)
 
 
-def _import_logging_funcs() -> tuple[Callable[[str], Logger], Callable[[LogConfig], None]]:
+def _import_logging_funcs() -> tuple[Callable[[str], BoundLogger], Callable[[LogConfig], None]]:
     """Import logging functions dynamically.
 
     Returns:
@@ -168,7 +168,7 @@ def _import_logging_funcs() -> tuple[Callable[[str], Logger], Callable[[LogConfi
     """
     mod = importlib.import_module("intellicrack.core.logging")
     return cast(
-        "tuple[Callable[[str], Logger], Callable[[LogConfig], None]]",
+        "tuple[Callable[[str], BoundLogger], Callable[[LogConfig], None]]",
         (mod.get_logger, mod.setup_logging),
     )
 
@@ -279,19 +279,19 @@ def _import_main_window() -> type[MainWindow]:
     return cast("type[MainWindow]", mod.MainWindow)
 
 
-def _log_import_time(logger: Logger, module_name: str, elapsed: float) -> None:
+def _log_import_time(logger: BoundLogger, module_name: str, elapsed: float) -> None:
     """Log the elapsed time for a module import.
 
     Args:
-        logger: Logger for timing output.
+        logger: BoundLogger for timing output.
         module_name: Fully-qualified module name that was imported.
         elapsed: Elapsed time in seconds.
     """
-    logger.debug("import_timing", extra={"imported_module": module_name, "elapsed_s": round(elapsed, 3)})
+    logger.debug("import_timing", imported_module=module_name, elapsed_s=round(elapsed, 3))
 
 
 def _setup_qt_and_splash(
-    logger: Logger,
+    logger: BoundLogger,
 ) -> tuple[QApplication, SplashScreen] | None:
     """Set up Qt application with theme, icons, and splash screen.
 
@@ -301,7 +301,7 @@ def _setup_qt_and_splash(
     IconManager, SplashScreen) and swaps in the full splash.
 
     Args:
-        logger: Logger for error reporting.
+        logger: BoundLogger for error reporting.
 
     Returns:
         Tuple of (app, splash) or None if imports failed.
@@ -311,8 +311,8 @@ def _setup_qt_and_splash(
         qt_app_cls = _import_qt_app()
         _log_import_time(logger, "PyQt6.QtWidgets", time.perf_counter() - t0)
     except ImportError as e:
-        logger.exception("dependency_import_failed", extra={"error": str(e)})
-        logger.warning("install_hint", extra={"command": "pixi install"})
+        logger.exception("dependency_import_failed", error=str(e))
+        logger.warning("install_hint", command="pixi install")
         return None
 
     try:
@@ -358,7 +358,7 @@ def _setup_qt_and_splash(
         splash.show_animated()
         app.processEvents()
     except Exception as e:
-        logger.exception("qt_initialization_failed", extra={"error": str(e)})
+        logger.exception("qt_initialization_failed", error=str(e))
         return None
     else:
         return app, splash
@@ -367,14 +367,14 @@ def _setup_qt_and_splash(
 async def _initialize_providers(
     registry: ProviderRegistry,
     credentials: CredentialLoader,
-    logger: Logger,
+    logger: BoundLogger,
 ) -> None:
     """Initialize and connect LLM providers.
 
     Args:
         registry: Provider registry to populate.
         credentials: Credential loader for API keys.
-        logger: Logger instance.
+        logger: BoundLogger instance.
     """
     types_mod = importlib.import_module("intellicrack.core.types")
     provider_name_enum = types_mod.ProviderName
@@ -408,25 +408,24 @@ async def _initialize_providers(
                         provider.connect(creds),
                         timeout=_PROVIDER_CONNECT_TIMEOUT,
                     )
-                    logger.info("provider_connected", extra={"provider": provider_name.value})
+                    logger.info("provider_connected", provider=provider_name.value)
                     registry.register(provider)
                 except TimeoutError:
                     logger.warning(
                         "provider_connect_timeout",
-                        extra={"provider": provider_name.value, "timeout": _PROVIDER_CONNECT_TIMEOUT},
+                        provider=provider_name.value,
+                        timeout=_PROVIDER_CONNECT_TIMEOUT,
                     )
             else:
-                logger.debug("no_credentials", extra={"provider": provider_name.value})
+                logger.debug("no_credentials", provider=provider_name.value)
                 registry.register(provider)
 
         except Exception as e:
             logger.exception(
                 "provider_init_failed",
-                extra={
-                    "provider": provider_name.value,
-                    "error": str(e),
-                    "error_type": type(e).__name__,
-                },
+                provider=provider_name.value,
+                error=str(e),
+                error_type=type(e).__name__,
             )
 
     await asyncio.gather(*(_init_one(pn, pc) for pn, pc in providers))
@@ -453,11 +452,11 @@ def main() -> int:
 
     setup_logging(config.log)
     logger = get_logger("main")
-    logger.info("app_starting", extra={"version": _APP_VERSION, "log_level": config.log.level})
+    logger.info("app_starting", version=_APP_VERSION, log_level=config.log.level)
 
     process_manager = pm_cls.get_instance()
     process_manager.install_handlers()
-    logger.debug("process_manager_initialized", extra={"handlers_installed": True})
+    logger.debug("process_manager_initialized", handlers_installed=True)
 
     result = _setup_qt_and_splash(logger)
     if result is None:
@@ -496,12 +495,12 @@ def main() -> int:
         loop.close()
 
 
-def _init_script_engine(config: Config, logger: Logger) -> tuple[object, object]:
+def _init_script_engine(config: Config, logger: BoundLogger) -> tuple[object, object]:
     """Initialize the script engine subsystem.
 
     Args:
         config: Application configuration.
-        logger: Logger instance.
+        logger: BoundLogger instance.
 
     Returns:
         Tuple of (script_manager, script_validator).
@@ -517,14 +516,14 @@ def _init_script_engine(config: Config, logger: Logger) -> tuple[object, object]
 async def _init_model_discovery(
     provider_registry: ProviderRegistry,
     config: Config,
-    logger: Logger,
+    logger: BoundLogger,
 ) -> tuple[object, Path]:
     """Initialize the model discovery subsystem.
 
     Args:
         provider_registry: Provider registry for model queries.
         config: Application configuration.
-        logger: Logger instance.
+        logger: BoundLogger instance.
 
     Returns:
         Tuple of (model_discovery, discovery_cache_path).
@@ -540,11 +539,11 @@ async def _init_model_discovery(
     return model_discovery, discovery_cache
 
 
-def _clear_model_cache(logger: Logger) -> None:
+def _clear_model_cache(logger: BoundLogger) -> None:
     """Clear the global model cache during shutdown.
 
     Args:
-        logger: Logger instance.
+        logger: BoundLogger instance.
     """
     model_cache_mod = importlib.import_module("intellicrack.providers.model_loader")
     get_cache = getattr(model_cache_mod, "get_global_model_cache", None)
@@ -564,7 +563,7 @@ async def _run_application(
     app: QApplication,
     splash: SplashScreen,
     process_manager: ProcessManager,
-    logger: Logger,
+    logger: BoundLogger,
 ) -> int:
     """Run the main application logic.
 
@@ -573,7 +572,7 @@ async def _run_application(
         app: Qt application instance.
         splash: Splash screen instance.
         process_manager: Process manager instance.
-        logger: Logger instance.
+        logger: BoundLogger instance.
 
     Returns:
         Application exit code.

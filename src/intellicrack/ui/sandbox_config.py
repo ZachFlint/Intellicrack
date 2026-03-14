@@ -148,13 +148,13 @@ class SandboxTestWorker(QThread):
         except SubprocessError as e:
             _logger.exception(
                 "sandbox_test_error",
-                extra={"error": str(e)},
+                error=str(e),
             )
             self.finished.emit(False, f"Sandbox process error: {e}")
         except FileNotFoundError:
             _logger.exception(
                 "sandbox_test_error",
-                extra={"error": "WindowsSandbox.exe not found"},
+                error="WindowsSandbox.exe not found",
             )
             self.finished.emit(
                 False,
@@ -163,7 +163,7 @@ class SandboxTestWorker(QThread):
         except PermissionError:
             _logger.exception(
                 "sandbox_test_error",
-                extra={"error": "permission_denied"},
+                error="permission_denied",
             )
             self.finished.emit(
                 False,
@@ -172,7 +172,7 @@ class SandboxTestWorker(QThread):
         except OSError as e:
             _logger.exception(
                 "sandbox_test_error",
-                extra={"error": str(e)},
+                error=str(e),
             )
             self.finished.emit(False, f"Failed to launch sandbox: {e}")
         finally:
@@ -183,7 +183,7 @@ class SandboxTestWorker(QThread):
                 except Exception:
                     _logger.debug(
                         "sandbox_test_terminate_failed",
-                        extra={"pid": pid},
+                        pid=pid,
                     )
                 ProcessManager.get_instance().unregister(pid)
             if self._wsb_file and self._wsb_file.exists():
@@ -398,7 +398,9 @@ class SandboxConfigDialog(QDialog):
         if sys.platform != "win32":
             _logger.info(
                 "sandbox_config_validated",
-                extra={"valid": False, "reason": "non_windows_platform", "platform": sys.platform},
+                valid=False,
+                reason="non_windows_platform",
+                platform=sys.platform,
             )
             self._set_unavailable("Windows Sandbox is only available on Windows")
             return
@@ -420,31 +422,36 @@ class SandboxConfigDialog(QDialog):
             if "Enabled" in result.stdout:
                 _logger.info(
                     "sandbox_config_validated",
-                    extra={"valid": True, "sandbox_available": True},
+                    valid=True,
+                    sandbox_available=True,
                 )
                 self._set_available()
             else:
                 _logger.info(
                     "sandbox_config_validated",
-                    extra={"valid": False, "reason": "feature_not_enabled"},
+                    valid=False,
+                    reason="feature_not_enabled",
                 )
                 self._set_unavailable("Windows Sandbox feature is not enabled")
         except TimeoutExpired:
             _logger.exception(
                 "sandbox_config_error",
-                extra={"operation": "availability_check", "error": "timeout"},
+                operation="availability_check",
+                error="timeout",
             )
             self._set_unavailable("Timeout checking Windows Sandbox status")
         except FileNotFoundError:
             _logger.exception(
                 "sandbox_config_error",
-                extra={"operation": "availability_check", "error": "powershell_not_found"},
+                operation="availability_check",
+                error="powershell_not_found",
             )
             self._set_unavailable("PowerShell not found")
         except OSError as e:
             _logger.exception(
                 "sandbox_config_error",
-                extra={"operation": "availability_check", "error": str(e)},
+                operation="availability_check",
+                error=str(e),
             )
             self._set_unavailable(f"Could not determine Windows Sandbox status: {e}")
 
@@ -524,13 +531,16 @@ class SandboxConfigDialog(QDialog):
 
                 _logger.info(
                     "sandbox_config_loaded",
-                    extra={"config_file": str(self.CONFIG_FILE), "settings_count": len(settings)},
+                    config_file=str(self.CONFIG_FILE),
+                    settings_count=len(settings),
                 )
 
             except (json.JSONDecodeError, OSError) as e:
                 _logger.exception(
                     "sandbox_config_error",
-                    extra={"operation": "load", "error": str(e), "config_file": str(self.CONFIG_FILE)},
+                    operation="load",
+                    error=str(e),
+                    config_file=str(self.CONFIG_FILE),
                 )
                 self._shared_folder_input.setText(str(default_shared))
         else:
@@ -662,7 +672,8 @@ class SandboxConfigDialog(QDialog):
 
             _logger.info(
                 "sandbox_config_saved",
-                extra={"config_file": str(self.CONFIG_FILE), "settings_count": len(settings)},
+                config_file=str(self.CONFIG_FILE),
+                settings_count=len(settings),
             )
 
             self.settings_updated.emit()
@@ -670,7 +681,9 @@ class SandboxConfigDialog(QDialog):
         except OSError as e:
             _logger.exception(
                 "sandbox_config_error",
-                extra={"operation": "save", "error": str(e), "config_file": str(self.CONFIG_FILE)},
+                operation="save",
+                error=str(e),
+                config_file=str(self.CONFIG_FILE),
             )
             QMessageBox.warning(
                 self,
@@ -814,7 +827,8 @@ class SandboxMonitorWidget(QFrame):
             except Exception as e:
                 _logger.exception(
                     "sandbox_stop_error",
-                    extra={"method": "manager", "error": str(e)},
+                    method="manager",
+                    error=str(e),
                 )
                 self.append_output(f"[Error stopping sandbox: {e}]")
         elif self._sandbox_pid is not None:
@@ -836,7 +850,9 @@ class SandboxMonitorWidget(QFrame):
             except (TimeoutExpired, OSError) as e:
                 _logger.exception(
                     "sandbox_stop_error",
-                    extra={"method": "pid_kill", "pid": self._sandbox_pid, "error": str(e)},
+                    method="pid_kill",
+                    pid=self._sandbox_pid,
+                    error=str(e),
                 )
                 self.append_output(f"[Error terminating sandbox: {e}]")
         else:
@@ -868,6 +884,7 @@ class SandboxMonitorWidget(QFrame):
         except (TimeoutExpired, OSError) as e:
             _logger.exception(
                 "sandbox_stop_error",
-                extra={"method": "name_kill", "error": str(e)},
+                method="name_kill",
+                error=str(e),
             )
             self.append_output(f"[Error: {e}]")

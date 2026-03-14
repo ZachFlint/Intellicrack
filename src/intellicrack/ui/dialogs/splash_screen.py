@@ -134,11 +134,11 @@ class SplashScreen(QSplashScreen):
                     )
                     _logger.debug(
                         "splash_image_loaded",
-                        extra={"path": str(splash_path)},
+                        path=str(splash_path),
                     )
                     return scaled
         except FileNotFoundError:
-            _logger.debug("splash_image_not_found_using_fallback", extra={})
+            _logger.debug("splash_image_not_found_using_fallback")
 
         return SplashScreen._create_fallback_pixmap(width, height, dpi_scale)
 

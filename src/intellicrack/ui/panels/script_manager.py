@@ -661,7 +661,7 @@ class ScriptManagerPanel(QWidget):
         self._editor.set_content(script.content)
         self._modified = False
         self._status_bar.showMessage(f"Loaded: {script.name}")
-        _logger.debug("script_loaded", extra={"script_id": script_id, "script_name": script.name})
+        _logger.debug("script_loaded", script_id=script_id, script_name=script.name)
 
     def _on_content_changed(self) -> None:
         """Handle editor content change."""
@@ -689,7 +689,7 @@ class ScriptManagerPanel(QWidget):
         self._editor.set_content(template)
         self._modified = False
         self._status_bar.showMessage("New script created")
-        _logger.debug("script_new_created", extra={"script_type": script_type})
+        _logger.debug("script_new_created", script_type=script_type)
 
     def _on_save(self) -> None:
         """Handle save button."""
@@ -718,7 +718,7 @@ class ScriptManagerPanel(QWidget):
             ensure_saved(name)
 
         self._status_bar.showMessage(f"Saved: {name}")
-        _logger.info("script_saved", extra={"script_name": name, "script_type": script_type})
+        _logger.info("script_saved", script_name=name, script_type=script_type)
 
     def _on_delete(self) -> None:
         """Handle delete button."""
@@ -743,7 +743,7 @@ class ScriptManagerPanel(QWidget):
             self._editor.set_content("")
             self._modified = False
             self._status_bar.showMessage("Script deleted")
-            _logger.info("script_deleted", extra={"script_id": deleted_id})
+            _logger.info("script_deleted", script_id=deleted_id)
 
     def _on_load_file(self) -> None:
         """Handle load file button."""
@@ -761,7 +761,7 @@ class ScriptManagerPanel(QWidget):
             try:
                 content = Path(file_path).read_text(encoding="utf-8")
             except Exception:
-                _logger.exception("script_file_load_failed", extra={"path": file_path})
+                _logger.exception("script_file_load_failed", path=file_path)
                 QMessageBox.critical(self, "Error", "Failed to load file. Check logs for details.")
             else:
                 self._editor.set_content(content)
@@ -785,7 +785,7 @@ class ScriptManagerPanel(QWidget):
         try:
             is_valid, error_msg = self._validator.validate(script)
         except Exception:
-            _logger.exception("script_validation_failed", extra={"script_name": name})
+            _logger.exception("script_validation_failed", script_name=name)
             self._status_bar.showMessage("Validation error. Check logs for details.")
             self._status_bar.setStyleSheet("background-color: #f14c4c; color: white;")
         else:
@@ -812,7 +812,7 @@ class ScriptManagerPanel(QWidget):
             QMessageBox.warning(self, "Error", "Cannot execute empty script.")
             return
 
-        _logger.info("script_execute_requested", extra={"script_name": name, "script_type": script_type})
+        _logger.info("script_execute_requested", script_name=name, script_type=script_type)
         self._status_bar.showMessage(f"Executing: {name}...")
         self.script_execute.emit(name, script_type, content)
 
@@ -830,7 +830,7 @@ class ScriptManagerPanel(QWidget):
             if script := manager.get_script(script_id):
                 self._script_list.add_script(script_id, script.name, script.script_type)
 
-        _logger.info("script_manager_backend_attached", extra={"script_count": len(manager.list_scripts())})
+        _logger.info("script_manager_backend_attached", script_count=len(manager.list_scripts()))
 
     def get_current_script(self) -> tuple[str, str, str] | None:
         """Get the current script data.

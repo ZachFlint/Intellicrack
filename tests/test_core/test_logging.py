@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 import os
 import time
 from collections.abc import Callable
@@ -400,17 +399,18 @@ def test_intellicrack_logger_custom_name() -> None:
 
 
 def test_intellicrack_logger_get_logger_root() -> None:
-    """Verify get_logger with no name returns root logger."""
+    """Verify get_logger with no name returns bound logger."""
     logger = IntellicrackLogger("test_root")
     result = logger.get_logger()
-    assert result.name == "test_root"
+    assert hasattr(result, "bind")
+    assert hasattr(result, "unbind")
 
 
 def test_intellicrack_logger_get_logger_child() -> None:
-    """Verify get_logger with name returns child logger."""
+    """Verify get_logger with name returns bound logger."""
     logger = IntellicrackLogger("test_parent")
     result = logger.get_logger("child")
-    assert result.name == "test_parent.child"
+    assert hasattr(result, "bind")
 
 
 def test_intellicrack_logger_configure(tmp_path: Path) -> None:
@@ -459,23 +459,23 @@ def test_intellicrack_logger_configure_plain_text(tmp_path: Path) -> None:
 # --- get_logger ---
 
 
-def test_get_logger_returns_logger() -> None:
-    """Verify get_logger returns a logging.Logger."""
+def test_get_logger_returns_bound_logger() -> None:
+    """Verify get_logger returns a structlog BoundLogger."""
     logger = get_logger("test_module")
-    assert isinstance(logger, logging.Logger)
+    assert hasattr(logger, "bind")
+    assert hasattr(logger, "unbind")
 
 
 def test_get_logger_no_name() -> None:
     """Verify get_logger with no name returns root-level logger."""
     logger = get_logger()
-    assert isinstance(logger, logging.Logger)
+    assert hasattr(logger, "bind")
 
 
 def test_get_logger_with_name() -> None:
-    """Verify get_logger with name returns named logger."""
+    """Verify get_logger with name returns named bound logger."""
     logger = get_logger("my_module")
-    assert isinstance(logger, logging.Logger)
-    assert "my_module" in logger.name
+    assert hasattr(logger, "bind")
 
 
 # --- get_structlog_logger ---

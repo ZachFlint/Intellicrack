@@ -248,7 +248,7 @@ class AnalysisPanelBase(QWidget):
             on_success: Callback receiving the result on the main thread.
             on_error: Callback receiving the exception on the main thread.
         """
-        _logger.debug("run_async_dispatched", extra={"panel": type(self).__name__})
+        _logger.debug("run_async_dispatched", panel=type(self).__name__)
         run_bridge_coroutine_async(coro, on_success, on_error, self)
 
     def start_tool(self) -> bool:
@@ -257,7 +257,7 @@ class AnalysisPanelBase(QWidget):
         Returns:
             True always since native panels are always ready.
         """
-        _logger.debug("tool_started", extra={"panel": type(self).__name__})
+        _logger.debug("tool_started", panel=type(self).__name__)
         self.tool_started.emit()
         return True
 
@@ -267,7 +267,7 @@ class AnalysisPanelBase(QWidget):
         Returns:
             True if cleanup completed.
         """
-        _logger.debug("tool_stopping", extra={"panel": type(self).__name__})
+        _logger.debug("tool_stopping", panel=type(self).__name__)
         self._cleanup()
         self.tool_closed.emit()
         return True

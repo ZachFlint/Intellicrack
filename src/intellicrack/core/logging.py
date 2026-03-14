@@ -121,7 +121,7 @@ def cleanup_old_logs(log_dir: Path, retention_days: int) -> int:
                 log_file.unlink()
                 deleted_count += 1
         except OSError:
-            logging.getLogger(__name__).debug("log_cleanup_file_error", extra={"file": str(log_file)})
+            get_logger("logging").debug("log_cleanup_file_error", file=str(log_file))
             continue
 
     return deleted_count
@@ -314,18 +314,17 @@ class IntellicrackLogger:
             json_file=json_file,
         )
 
-    def get_logger(self, name: str | None = None) -> logging.Logger:
-        """Get a standard logging.Logger instance.
+    def get_logger(self, name: str | None = None) -> structlog.stdlib.BoundLogger:
+        """Get a structlog BoundLogger instance.
 
         Args:
             name: Optional child logger name. If None, returns the root logger.
 
         Returns:
-            Logger instance for the specified name.
+            Structlog BoundLogger instance for structured logging.
         """
-        if name is None:
-            return logging.getLogger(self.name)
-        return logging.getLogger(f"{self.name}.{name}")
+        logger_name = self.name if name is None else f"{self.name}.{name}"
+        return cast("structlog.stdlib.BoundLogger", structlog.get_logger(logger_name))
 
 
 class _LoggerState:
@@ -364,28 +363,8 @@ def setup_logging(config: LogConfig) -> IntellicrackLogger:
     return logger
 
 
-def get_logger(name: str | None = None) -> logging.Logger:
-    """Get a logger instance for a module.
-
-    Args:
-        name: Module name for the logger. If None, returns root app logger.
-
-    Returns:
-        Logger instance. Falls back to a basic logger if not configured.
-    """
-    if _logger_state.app_logger is not None:
-        return _logger_state.app_logger.get_logger(name)
-    fallback = logging.getLogger("intellicrack")
-    if not fallback.handlers:
-        handler = logging.StreamHandler(sys.stdout)
-        handler.setFormatter(logging.Formatter("%(asctime)s | %(levelname)s | %(message)s"))
-        fallback.addHandler(handler)
-        fallback.setLevel(logging.INFO)
-    return fallback.getChild(name) if name else fallback
-
-
-def get_structlog_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
-    """Get a structlog bound logger for structured logging.
+def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
+    """Get a structlog BoundLogger instance for a module.
 
     Args:
         name: Module name for the logger. If None, returns root app logger.
@@ -393,8 +372,25 @@ def get_structlog_logger(name: str | None = None) -> structlog.stdlib.BoundLogge
     Returns:
         Structlog BoundLogger instance for structured logging.
     """
+    if _logger_state.app_logger is not None:
+        return _logger_state.app_logger.get_logger(name)
     logger_name = f"intellicrack.{name}" if name else "intellicrack"
     return cast("structlog.stdlib.BoundLogger", structlog.get_logger(logger_name))
+
+
+def get_structlog_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
+    """Get a structlog bound logger for structured logging.
+
+    .. deprecated::
+        Use :func:`get_logger` instead, which now returns ``BoundLogger``.
+
+    Args:
+        name: Module name for the logger. If None, returns root app logger.
+
+    Returns:
+        Structlog BoundLogger instance for structured logging.
+    """
+    return get_logger(name)
 
 
 def log_tool_call(
@@ -413,7 +409,7 @@ def log_tool_call(
         duration_ms: Optional execution duration in milliseconds.
         success: Optional success indicator.
     """
-    slog = get_structlog_logger("tools")
+    slog = get_logger("tools")
     log_data: dict[str, Any] = {
         "tool": tool_name,
         "function": function_name,
@@ -479,7 +475,7 @@ def log_provider_request(
         messages_count: Number of messages in the request.
         tools_count: Number of tools available.
     """
-    slog = get_structlog_logger("providers")
+    slog = get_logger("providers")
     slog.info(
         "llm_request_started",
         provider=provider,
@@ -505,7 +501,7 @@ def log_provider_response(
         duration_ms: Response time in milliseconds.
         tokens_used: Optional number of tokens used.
     """
-    slog = get_structlog_logger("providers")
+    slog = get_logger("providers")
     log_data: dict[str, Any] = {
         "provider": provider,
         "model": model,
@@ -530,7 +526,7 @@ def log_binary_operation(
         path: Path to the binary file.
         **kwargs: Additional operation-specific context.
     """
-    slog = get_structlog_logger("binary")
+    slog = get_logger("binary")
     slog.info(f"binary_{operation}", path=str(path), **kwargs)
 
 
@@ -546,7 +542,7 @@ def log_sandbox_operation(
         sandbox_type: Type of sandbox (windows, qemu, etc.).
         **kwargs: Additional operation-specific context.
     """
-    slog = get_structlog_logger("sandbox")
+    slog = get_logger("sandbox")
     slog.info(f"sandbox_{operation}", sandbox_type=sandbox_type, **kwargs)
 
 
@@ -562,7 +558,7 @@ def log_session_operation(
         session_id: Optional session identifier.
         **kwargs: Additional operation-specific context.
     """
-    slog = get_structlog_logger("session")
+    slog = get_logger("session")
     log_data: dict[str, object] = dict(kwargs)
     if session_id:
         log_data["session_id"] = session_id
@@ -581,7 +577,7 @@ def log_analysis_operation(
         target: Target being analyzed.
         **kwargs: Additional analysis-specific context.
     """
-    slog = get_structlog_logger("analysis")
+    slog = get_logger("analysis")
     slog.info(f"analysis_{operation}", target=target, **kwargs)
 
 
@@ -611,7 +607,7 @@ class OperationTimer:
         self.logger_name = logger_name
         self.context = context
         self._start_time: float = 0.0
-        self._slog = get_structlog_logger(logger_name)
+        self._slog = get_logger(logger_name)
 
     @property
     def elapsed_ms(self) -> float:
@@ -620,7 +616,7 @@ class OperationTimer:
         Returns:
             Elapsed time in milliseconds, or 0.0 if the timer has not started.
         """
-        if self._start_time == 0.0:
+        if self._start_time <= 0.0:
             return 0.0
         return (time.perf_counter() - self._start_time) * 1000
 

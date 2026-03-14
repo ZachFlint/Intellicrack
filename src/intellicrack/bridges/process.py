@@ -465,9 +465,9 @@ class ProcessBridge(ToolBridgeBase):
                 target_pid=None,
                 last_error=None,
             )
-            _logger.info("process_bridge_initialized", extra={"bridge": "process"})
+            _logger.info("process_bridge_initialized", bridge="process")
         except Exception as e:
-            _logger.exception("process_bridge_init_failed", extra={"bridge": "process"})
+            _logger.exception("process_bridge_init_failed", bridge="process")
             self._state = BridgeState(
                 connected=False,
                 tool_running=False,
@@ -484,7 +484,7 @@ class ProcessBridge(ToolBridgeBase):
         self._kernel32 = None
         self._psapi = None
         await super().shutdown()
-        _logger.info("process_bridge_shutdown", extra={"bridge": "process"})
+        _logger.info("process_bridge_shutdown", bridge="process")
 
     @override
     async def is_available(self) -> bool:
@@ -496,7 +496,7 @@ class ProcessBridge(ToolBridgeBase):
         try:
             _ = ctypes.windll.kernel32
         except AttributeError as e:
-            _logger.debug("kernel32_check_failed", extra={"error": str(e)})
+            _logger.debug("kernel32_check_failed", error=str(e))
             return False
         else:
             return True
@@ -603,7 +603,7 @@ class ProcessBridge(ToolBridgeBase):
         self._state.process_attached = True
         self._state.target_pid = pid
 
-        _logger.info("process_opened", extra={"pid": pid, "access": access})
+        _logger.info("process_opened", pid=pid, access=access)
         return True
 
     async def close(self) -> bool:
@@ -616,7 +616,7 @@ class ProcessBridge(ToolBridgeBase):
             self._kernel32.CloseHandle(self._process_handle)
             self._process_handle = None
             self._attached_pid = None
-            _logger.info("process_handle_closed", extra={"bridge": "process"})
+            _logger.info("process_handle_closed", bridge="process")
 
         self._state.connected = True
         self._state.tool_running = True
@@ -656,7 +656,7 @@ class ProcessBridge(ToolBridgeBase):
             if not result:
                 raise ToolError(_ERR_TERMINATE_FAILED)
 
-            _logger.info("process_terminated", extra={"pid": pid or self._attached_pid})
+            _logger.info("process_terminated", pid=pid or self._attached_pid)
             return True
 
         finally:
@@ -691,7 +691,7 @@ class ProcessBridge(ToolBridgeBase):
                 self._kernel32.SuspendThread(handle)
                 self._kernel32.CloseHandle(handle)
 
-        _logger.info("process_suspended", extra={"pid": target_pid, "thread_count": len(threads)})
+        _logger.info("process_suspended", pid=target_pid, thread_count=len(threads))
         return True
 
     async def resume(self, pid: int | None = None) -> bool:
@@ -720,7 +720,7 @@ class ProcessBridge(ToolBridgeBase):
                 self._kernel32.ResumeThread(handle)
                 self._kernel32.CloseHandle(handle)
 
-        _logger.info("process_resumed", extra={"pid": target_pid, "thread_count": len(threads)})
+        _logger.info("process_resumed", pid=target_pid, thread_count=len(threads))
         return True
 
     async def read_memory(self, address: int, size: int) -> bytes:
@@ -787,7 +787,7 @@ class ProcessBridge(ToolBridgeBase):
         if not result:
             raise ToolError(_ERR_WRITE_FAILED)
 
-        _logger.info("memory_written", extra={"bytes_written": bytes_written.value, "address": hex(address)})
+        _logger.info("memory_written", bytes_written=bytes_written.value, address=hex(address))
         return bytes_written.value
 
     async def allocate(
@@ -837,7 +837,7 @@ class ProcessBridge(ToolBridgeBase):
         if not address:
             raise ToolError(_ERR_ALLOC_FAILED)
 
-        _logger.info("memory_allocated", extra={"size": size, "address": hex(address), "protection": protection})
+        _logger.info("memory_allocated", size=size, address=hex(address), protection=protection)
         return address
 
     async def free(self, address: int) -> bool:
@@ -868,7 +868,7 @@ class ProcessBridge(ToolBridgeBase):
         if not result:
             raise ToolError(_ERR_FREE_FAILED)
 
-        _logger.info("memory_freed", extra={"address": hex(address)})
+        _logger.info("memory_freed", address=hex(address))
         return True
 
     async def protect(
@@ -921,9 +921,7 @@ class ProcessBridge(ToolBridgeBase):
         rev_prot_map = {v: k for k, v in prot_map.items()}
         old_prot_str = rev_prot_map.get(old_prot.value, "unknown")
 
-        _logger.info(
-            "memory_protection_changed", extra={"address": hex(address), "old_protection": old_prot_str, "new_protection": protection}
-        )
+        _logger.info("memory_protection_changed", address=hex(address), old_protection=old_prot_str, new_protection=protection)
         return old_prot_str
 
     async def get_modules(self, pid: int | None = None) -> list[ModuleInfo]:
@@ -952,7 +950,7 @@ class ProcessBridge(ToolBridgeBase):
 
         if snapshot == -1:
             error_code = ctypes.get_last_error()
-            _logger.error("module_snapshot_failed", extra={"pid": target_pid, "error_code": error_code})
+            _logger.error("module_snapshot_failed", pid=target_pid, error_code=error_code)
             return []
 
         modules: list[ModuleInfo] = []
@@ -1014,7 +1012,7 @@ class ProcessBridge(ToolBridgeBase):
 
         if snapshot == -1:
             error_code = ctypes.get_last_error()
-            _logger.error("thread_snapshot_failed", extra={"error_code": error_code})
+            _logger.error("thread_snapshot_failed", error_code=error_code)
             return []
 
         threads: list[ThreadInfo] = []
@@ -1158,7 +1156,7 @@ class ProcessBridge(ToolBridgeBase):
                         matches.append(region.base_address + i)
 
             except ToolError as e:
-                _logger.warning("pattern_search_failed", extra={"error": str(e)})
+                _logger.warning("pattern_search_failed", error=str(e))
                 continue
 
         return matches
@@ -1219,7 +1217,7 @@ class ProcessBridge(ToolBridgeBase):
             self._kernel32.WaitForSingleObject(thread_handle, 5000)
             self._kernel32.CloseHandle(thread_handle)
 
-            _logger.info("dll_injected", extra={"dll_path": dll_path})
+            _logger.info("dll_injected", dll_path=dll_path)
             return True
 
         finally:

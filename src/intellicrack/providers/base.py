@@ -33,14 +33,11 @@ from ..core.types import (
 
 
 if TYPE_CHECKING:
-    import logging
     from collections.abc import AsyncIterator, Awaitable, Callable
 
     from ..core.types import ProviderName
 
-
 _T = TypeVar("_T")
-
 
 _logger = get_logger("providers.base")
 
@@ -117,7 +114,7 @@ def parse_tool_call(
         try:
             parsed_args = json.loads(raw_arguments)
         except json.JSONDecodeError:
-            _logger.warning("tool_call_args_json_decode_failed", extra={"function": function_name})
+            _logger.warning("tool_call_args_json_decode_failed", function=function_name)
             parsed_args = {}
     else:
         parsed_args = dict(raw_arguments)
@@ -150,7 +147,7 @@ class LLMProviderBase(ABC):
         self._connected: bool = False
         self._cancel_requested: bool = False
         self._pending_tool_calls: list[ToolCall] = []
-        self._logger: logging.Logger = get_logger("providers.base")
+        self._logger = get_logger("providers.base")
 
     @property
     @abstractmethod
@@ -191,7 +188,7 @@ class LLMProviderBase(ABC):
         self._credentials = None
         self._cancel_requested = False
         self._pending_tool_calls.clear()
-        self._logger.debug("provider_base_disconnected", extra={})
+        self._logger.debug("provider_base_disconnected")
 
     @abstractmethod
     async def list_models(self) -> list[ModelInfo]:
@@ -327,12 +324,10 @@ class LLMProviderBase(ABC):
                 jitter = random.uniform(0, delay * 0.1)  # noqa: S311
                 self._logger.warning(
                     "provider_retry_backoff",
-                    extra={
-                        "attempt": attempt + 1,
-                        "max_retries": max_retries,
-                        "delay": delay + jitter,
-                        "error": str(exc),
-                    },
+                    attempt=attempt + 1,
+                    max_retries=max_retries,
+                    delay=delay + jitter,
+                    error=str(exc),
                 )
                 await asyncio.sleep(delay + jitter)
         msg = "retry_with_backoff exhausted without capturing an exception"
@@ -585,7 +580,7 @@ def _build_schema_property(
     Returns:
         JSONSchemaProperty with the specified values.
     """
-    _logger.debug("build_schema_property", extra={"param_type": param_type, "has_enum": enum_values is not None})
+    _logger.debug("build_schema_property", param_type=param_type, has_enum=enum_values is not None)
     prop: JSONSchemaProperty = {
         "type": param_type,
         "description": description,
@@ -608,7 +603,7 @@ def create_anthropic_tool_schema(
     Returns:
         List of tools in Anthropic's format.
     """
-    _logger.debug("create_anthropic_tool_schema", extra={"function_count": len(tool.functions)})
+    _logger.debug("create_anthropic_tool_schema", function_count=len(tool.functions))
     tools: list[AnthropicToolSchema] = []
 
     for func in tool.functions:
@@ -636,7 +631,7 @@ def create_anthropic_tool_schema(
         }
         tools.append(tool_schema)
 
-    _logger.debug("create_anthropic_tool_schema_complete", extra={"tools_created": len(tools)})
+    _logger.debug("create_anthropic_tool_schema_complete", tools_created=len(tools))
     return tools
 
 
@@ -651,7 +646,7 @@ def create_openai_tool_schema(
     Returns:
         List of tools in OpenAI's format.
     """
-    _logger.debug("create_openai_tool_schema", extra={"function_count": len(tool.functions)})
+    _logger.debug("create_openai_tool_schema", function_count=len(tool.functions))
     tools: list[OpenAIToolSchema] = []
 
     for func in tool.functions:
@@ -682,7 +677,7 @@ def create_openai_tool_schema(
         }
         tools.append(tool_schema)
 
-    _logger.debug("create_openai_tool_schema_complete", extra={"tools_created": len(tools)})
+    _logger.debug("create_openai_tool_schema_complete", tools_created=len(tools))
     return tools
 
 
@@ -697,7 +692,7 @@ def create_google_tool_schema(
     Returns:
         List of function declarations in Google's format with uppercase types.
     """
-    _logger.debug("create_google_tool_schema", extra={"function_count": len(tool.functions)})
+    _logger.debug("create_google_tool_schema", function_count=len(tool.functions))
     tools: list[GoogleFunctionDeclaration] = []
 
     for func in tool.functions:
@@ -725,7 +720,7 @@ def create_google_tool_schema(
         }
         tools.append(tool_schema)
 
-    _logger.debug("create_google_tool_schema_complete", extra={"tools_created": len(tools)})
+    _logger.debug("create_google_tool_schema_complete", tools_created=len(tools))
     return tools
 
 

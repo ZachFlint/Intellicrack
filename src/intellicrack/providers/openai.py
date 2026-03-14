@@ -92,7 +92,7 @@ class OpenAIProvider(LLMProviderBase):
         super().__init__()
         self._client: openai.AsyncOpenAI | None = None
         self._current_task: asyncio.Task[object] | None = None
-        self._logger = get_logger("providers.openai")
+        self._logger = get_logger("providers.openai").bind(provider="openai")
 
     @property
     def name(self) -> ProviderName:
@@ -128,22 +128,20 @@ class OpenAIProvider(LLMProviderBase):
             self._connected = True
             self._logger.info(
                 "openai_connected",
-                extra={
-                    "has_custom_base": credentials.api_base is not None,
-                    "has_organization": credentials.organization_id is not None,
-                    "has_project": credentials.project_id is not None,
-                },
+                has_custom_base=credentials.api_base is not None,
+                has_organization=credentials.organization_id is not None,
+                has_project=credentials.project_id is not None,
             )
         except openai.AuthenticationError as e:
             self._logger.exception(
                 "openai_connect_auth_failed",
-                extra={"error": str(e)},
+                error=str(e),
             )
             raise AuthenticationError(_ERR_INVALID_KEY % e) from e
         except Exception as e:
             self._logger.exception(
                 "openai_connect_failed",
-                extra={"error": str(e)},
+                error=str(e),
             )
             raise ProviderError(_ERR_CONNECT_FAILED % e) from e
 
@@ -153,9 +151,9 @@ class OpenAIProvider(LLMProviderBase):
             await super().disconnect()
             self._client = None
             self._current_task = None
-            self._logger.info("openai_disconnected", extra={"success": True})
+            self._logger.info("openai_disconnected", success=True)
         except Exception as exc:
-            self._logger.warning("disconnect_cleanup_error", extra={"error": str(exc)})
+            self._logger.warning("disconnect_cleanup_error", error=str(exc))
             self._connected = False
 
     @staticmethod
@@ -256,12 +254,12 @@ class OpenAIProvider(LLMProviderBase):
             sorted_models = sorted(models, key=lambda m: m.id, reverse=True)
             self._logger.info(
                 "openai_models_listed",
-                extra={"count": len(sorted_models)},
+                count=len(sorted_models),
             )
         except Exception as e:
             self._logger.exception(
                 "openai_list_models_failed",
-                extra={"error": str(e)},
+                error=str(e),
             )
             raise ProviderError(_ERR_LIST_MODELS_FAILED % e) from e
         else:
@@ -372,19 +370,22 @@ class OpenAIProvider(LLMProviderBase):
         except openai.RateLimitError as e:
             self._logger.exception(
                 "openai_chat_rate_limited",
-                extra={"model": model, "error": str(e)},
+                model=model,
+                error=str(e),
             )
             raise RateLimitError(_ERR_RATE_LIMITED % e) from e
         except openai.APIError as e:
             self._logger.exception(
                 "openai_chat_api_error",
-                extra={"model": model, "error": str(e)},
+                model=model,
+                error=str(e),
             )
             raise ProviderError(_ERR_API_ERROR % e) from e
         except Exception as e:
             self._logger.exception(
                 "openai_chat_failed",
-                extra={"model": model, "error": str(e)},
+                model=model,
+                error=str(e),
             )
             raise ProviderError(_ERR_REQUEST_FAILED % e) from e
 
@@ -415,10 +416,8 @@ class OpenAIProvider(LLMProviderBase):
             tool_calls.append(tool_call)
             self._logger.debug(
                 "tool_call_parsed",
-                extra={
-                    "tool_name": tool_call.tool_name,
-                    "arguments_count": len(tool_call.arguments),
-                },
+                tool_name=tool_call.tool_name,
+                arguments_count=len(tool_call.arguments),
             )
         return tool_calls
 
@@ -499,20 +498,23 @@ class OpenAIProvider(LLMProviderBase):
         except openai.RateLimitError as e:
             self._logger.exception(
                 "openai_stream_rate_limited",
-                extra={"model": model, "error": str(e)},
+                model=model,
+                error=str(e),
             )
             raise RateLimitError(_ERR_RATE_LIMITED % e) from e
         except openai.APIError as e:
             self._logger.exception(
                 "openai_stream_api_error",
-                extra={"model": model, "error": str(e)},
+                model=model,
+                error=str(e),
             )
             raise ProviderError(_ERR_API_ERROR % e) from e
         except Exception as e:
             if not self._cancel_requested:
                 self._logger.exception(
                     "openai_stream_failed",
-                    extra={"model": model, "error": str(e)},
+                    model=model,
+                    error=str(e),
                 )
                 raise ProviderError(_ERR_STREAM_FAILED % e) from e
 
@@ -523,7 +525,7 @@ class OpenAIProvider(LLMProviderBase):
             self._current_task.cancel()
         self._logger.info(
             "openai_request_cancelled",
-            extra={"had_active_task": self._current_task is not None},
+            had_active_task=self._current_task is not None,
         )
 
     @override

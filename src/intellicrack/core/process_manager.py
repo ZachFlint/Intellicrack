@@ -31,8 +31,9 @@ from .logging import get_logger
 
 
 if TYPE_CHECKING:
-    import logging
     from collections.abc import Coroutine
+
+    import structlog
 
 _module_logger = get_logger("process_manager")
 
@@ -172,7 +173,7 @@ class ProcessManager:
             cls._instance = None
 
     @staticmethod
-    def _get_logger() -> logging.Logger:
+    def _get_logger() -> structlog.stdlib.BoundLogger:
         """Get the module logger.
 
         Returns:
@@ -204,7 +205,7 @@ class ProcessManager:
                 if hasattr(signal, "SIGBREAK"):
                     signal.signal(signal.SIGBREAK, self._signal_handler)
             except (ValueError, OSError) as e:
-                _module_logger.debug("signal_handler_install_failed", extra={"error": str(e)})
+                _module_logger.debug("signal_handler_install_failed", error=str(e))
 
         ProcessManager._get_logger().debug("handlers_installed")
 
@@ -238,7 +239,7 @@ class ProcessManager:
             frame: The current stack frame, or None.
         """
         logger = ProcessManager._get_logger()
-        logger.info("signal_received", extra={"signal": signum})
+        logger.info("signal_received", signal=signum)
 
         self._shutdown_event.set()
 
@@ -287,7 +288,7 @@ class ProcessManager:
                 all_procs_psutil.append(proc)
                 all_procs_psutil.extend(proc.children(recursive=True))
             except psutil.NoSuchProcess:
-                _module_logger.debug("process_already_exited", extra={"pid": pid})
+                _module_logger.debug("process_already_exited", pid=pid)
         # Deduplicate based on PID
         seen_pids: set[int] = set()
         unique_procs: list[psutil.Process] = []
@@ -300,18 +301,18 @@ class ProcessManager:
             try:
                 p.terminate()
             except psutil.NoSuchProcess:
-                _module_logger.debug("terminate_process_already_exited", extra={"pid": p.pid})
+                _module_logger.debug("terminate_process_already_exited", pid=p.pid)
 
         # 2. Wait for graceful termination
         _, alive = psutil.wait_procs(unique_procs, timeout=self.DEFAULT_GRACEFUL_TIMEOUT)
 
         if alive:
-            logger.warning("sync_cleanup_force_kill", extra={"count": len(alive)})
+            logger.warning("sync_cleanup_force_kill", count=len(alive))
             for p in alive:
                 try:
                     p.kill()
                 except psutil.NoSuchProcess:
-                    _module_logger.debug("kill_process_already_exited", extra={"pid": p.pid})
+                    _module_logger.debug("kill_process_already_exited", pid=p.pid)
             psutil.wait_procs(alive, timeout=self.DEFAULT_FORCE_TIMEOUT)
 
         with self._process_lock:
@@ -377,7 +378,7 @@ class ProcessManager:
             try:
                 p.terminate()
             except psutil.NoSuchProcess:
-                _module_logger.debug("terminate_tree_process_exited", extra={"pid": p.pid})
+                _module_logger.debug("terminate_tree_process_exited", pid=p.pid)
 
         _, alive = psutil.wait_procs(all_procs, timeout=graceful_timeout)
 
@@ -386,7 +387,7 @@ class ProcessManager:
                 try:
                     p.kill()
                 except psutil.NoSuchProcess:
-                    _module_logger.debug("kill_tree_process_exited", extra={"pid": p.pid})
+                    _module_logger.debug("kill_tree_process_exited", pid=p.pid)
             psutil.wait_procs(alive, timeout=force_timeout)
 
     def register(
@@ -424,7 +425,9 @@ class ProcessManager:
 
         ProcessManager._get_logger().debug(
             "process_registered",
-            extra={"process_name": name, "pid": pid, "type": process_type.value},
+            process_name=name,
+            pid=pid,
+            type=process_type.value,
         )
 
         return pid
@@ -444,7 +447,8 @@ class ProcessManager:
         if tracked is not None:
             ProcessManager._get_logger().debug(
                 "process_unregistered",
-                extra={"process_name": tracked.name, "pid": pid},
+                process_name=tracked.name,
+                pid=pid,
             )
 
         return tracked
@@ -501,14 +505,14 @@ class ProcessManager:
 
         tracked = self.get_tracked(pid)
         if tracked is None:
-            logger.warning("process_not_found", extra={"pid": pid})
+            logger.warning("process_not_found", pid=pid)
             return False
 
         if not tracked.is_running:
             self.unregister(pid)
             return True
 
-        logger.debug("process_terminating", extra={"process_name": tracked.name, "pid": pid})
+        logger.debug("process_terminating", process_name=tracked.name, pid=pid)
 
         if tracked.cleanup_callback is not None:
             try:
@@ -518,7 +522,7 @@ class ProcessManager:
                     self.unregister(pid)
                     return True
             except Exception as e:
-                logger.warning("cleanup_callback_failed", extra={"process_name": tracked.name, "error": str(e)})
+                logger.warning("cleanup_callback_failed", process_name=tracked.name, error=str(e))
 
         process = tracked.process
 
@@ -560,11 +564,11 @@ class ProcessManager:
                 await asyncio.to_thread(process.wait, timeout=0.1)
             except TimeoutExpired:
                 # Should not happen if psutil worked, but as fallback
-                logger.warning("process_zombie_fallback", extra={"process_name": name})
+                logger.warning("process_zombie_fallback", process_name=name)
                 process.kill()
                 await asyncio.to_thread(process.wait)
 
-        logger.debug("process_terminated_tree", extra={"process_name": name})
+        logger.debug("process_terminated_tree", process_name=name)
 
     @staticmethod
     async def _terminate_async_subprocess(
@@ -593,14 +597,14 @@ class ProcessManager:
         try:
             await asyncio.wait_for(process.wait(), timeout=0.1)
         except TimeoutError:
-            logger.warning("async_process_zombie_fallback", extra={"process_name": name})
+            logger.warning("async_process_zombie_fallback", process_name=name)
             process.kill()
             try:
                 await process.wait()
             except Exception:
                 _module_logger.warning("zombie_wait_fallback_failed", exc_info=True)
 
-        logger.debug("async_process_terminated_tree", extra={"process_name": name})
+        logger.debug("async_process_terminated_tree", process_name=name)
 
     async def cleanup_all_async(
         self,
@@ -629,19 +633,19 @@ class ProcessManager:
 
         for pid in pids:
             if self.is_shutdown_requested():
-                logger.info("cleanup_interrupted_by_shutdown", extra={"remaining": len(pids)})
+                logger.info("cleanup_interrupted_by_shutdown", remaining=len(pids))
                 break
             try:
                 await self.terminate_process(pid, graceful_timeout, force_timeout)
             except Exception as e:
-                logger.warning("cleanup_pid_failed", extra={"pid": pid, "error": str(e)})
+                logger.warning("cleanup_pid_failed", pid=pid, error=str(e))
 
         for ext_pid in external_pids:
             try:
-                logger.debug("external_pid_terminating", extra={"pid": ext_pid})
+                logger.debug("external_pid_terminating", pid=ext_pid)
                 await asyncio.to_thread(self.terminate_external_pid, ext_pid, True)
             except Exception as e:
-                logger.warning("external_pid_terminate_failed", extra={"pid": ext_pid, "error": str(e)})
+                logger.warning("external_pid_terminate_failed", pid=ext_pid, error=str(e))
 
         with self._process_lock:
             self._external_pids.clear()
@@ -665,7 +669,7 @@ class ProcessManager:
     def request_shutdown(self) -> None:
         """Request a graceful shutdown of all tracked processes."""
         logger = ProcessManager._get_logger()
-        logger.info("shutdown_requested", extra={})
+        logger.info("shutdown_requested")
         self._shutdown_event.set()
 
     @property
@@ -764,7 +768,7 @@ class ProcessManager:
             returncode = process.returncode
 
         except TimeoutExpired:
-            logger.warning("process_timeout", extra={"process_name": name, "pid": pid})
+            logger.warning("process_timeout", process_name=name, pid=pid)
             process.kill()
             process.wait()
             self.unregister(pid)
@@ -858,7 +862,7 @@ class ProcessManager:
 
         with self._process_lock:
             if pid in self._processes or pid in self._external_pids:
-                logger.debug("pid_already_registered", extra={"pid": pid})
+                logger.debug("pid_already_registered", pid=pid)
                 return
 
             self._external_pids[pid] = {
@@ -870,7 +874,9 @@ class ProcessManager:
 
         logger.debug(
             "external_pid_registered",
-            extra={"process_name": name, "pid": pid, "type": process_type.value},
+            process_name=name,
+            pid=pid,
+            type=process_type.value,
         )
 
     def unregister_external_pid(self, pid: int) -> bool:
@@ -885,7 +891,7 @@ class ProcessManager:
         with self._process_lock:
             if pid in self._external_pids:
                 del self._external_pids[pid]
-                ProcessManager._get_logger().debug("external_pid_unregistered", extra={"pid": pid})
+                ProcessManager._get_logger().debug("external_pid_unregistered", pid=pid)
                 return True
         return False
 
@@ -914,18 +920,20 @@ class ProcessManager:
             self.unregister_external_pid(pid)
             logger.debug(
                 "external_pid_terminated",
-                extra={"process_name": name, "pid": pid},
+                process_name=name,
+                pid=pid,
             )
 
         except psutil.NoSuchProcess:
-            logger.warning("external_pid_already_gone", extra={"pid": pid})
+            logger.warning("external_pid_already_gone", pid=pid)
             self.unregister_external_pid(pid)
             return False
 
         except Exception as e:
             logger.warning(
                 "external_pid_terminate_error",
-                extra={"pid": pid, "error": str(e)},
+                pid=pid,
+                error=str(e),
             )
             return False
 

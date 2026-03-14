@@ -59,16 +59,16 @@ def _find_env_file() -> Path:
 
     _logger.debug(
         "env_file_search",
-        extra={"paths_checked": [str(p) for p in search_paths]},
+        paths_checked=[str(p) for p in search_paths],
     )
 
     for path in search_paths:
         if path.exists():
-            _logger.info("env_file_found", extra={"path": str(path)})
+            _logger.info("env_file_found", path=str(path))
             return path
 
     default_path = project_root / ".env"
-    _logger.debug("env_file_not_found", extra={"default_path": str(default_path)})
+    _logger.debug("env_file_not_found", default_path=str(default_path))
     return default_path
 
 
@@ -168,7 +168,7 @@ class CredentialLoader:
         if not self.env_path.exists():
             _logger.debug(
                 "env_file_missing",
-                extra={"path": str(self.env_path)},
+                path=str(self.env_path),
             )
             return
 
@@ -198,7 +198,8 @@ class CredentialLoader:
 
         _logger.info(
             "env_variables_loaded",
-            extra={"path": str(self.env_path), "count": loaded_count},
+            path=str(self.env_path),
+            count=loaded_count,
         )
 
     def reload(self) -> None:
@@ -207,10 +208,10 @@ class CredentialLoader:
         Call this method to pick up changes to the .env file
         without restarting the application.
         """
-        _logger.debug("env_file_reloading", extra={"path": str(self.env_path)})
+        _logger.debug("env_file_reloading", path=str(self.env_path))
         self._env_vars.clear()
         self._load_env_file()
-        _logger.info("env_file_reloaded", extra={"path": str(self.env_path)})
+        _logger.info("env_file_reloaded", path=str(self.env_path))
 
     def get_credentials(self, provider: ProviderName) -> ProviderCredentials | None:
         """Get credentials for a specific provider.
@@ -225,7 +226,7 @@ class CredentialLoader:
         if mapping is None:
             _logger.debug(
                 "credential_provider_unknown",
-                extra={"provider": provider.value},
+                provider=provider.value,
             )
             return None
 
@@ -236,13 +237,14 @@ class CredentialLoader:
                 if api_key:
                     _logger.debug(
                         "credential_found_via_alias",
-                        extra={"provider": provider.value, "alias": alias},
+                        provider=provider.value,
+                        alias=alias,
                     )
                     break
         if not api_key:
             _logger.debug(
                 "credential_not_found",
-                extra={"provider": provider.value},
+                provider=provider.value,
             )
             return None
 
@@ -260,12 +262,10 @@ class CredentialLoader:
 
         _logger.debug(
             "credential_retrieved",
-            extra={
-                "provider": provider.value,
-                "has_api_base": api_base is not None,
-                "has_organization_id": organization_id is not None,
-                "has_project_id": project_id is not None,
-            },
+            provider=provider.value,
+            has_api_base=api_base is not None,
+            has_organization_id=organization_id is not None,
+            has_project_id=project_id is not None,
         )
 
         return ProviderCredentials(
@@ -303,7 +303,8 @@ class CredentialLoader:
         if mapping is None:
             _logger.debug(
                 "credential_validation_failed",
-                extra={"provider": provider.value, "reason": "unknown_provider"},
+                provider=provider.value,
+                reason="unknown_provider",
             )
             return False, f"Unknown provider: {provider.value}"
 
@@ -316,7 +317,8 @@ class CredentialLoader:
         if not api_key:
             _logger.debug(
                 "credential_validation_failed",
-                extra={"provider": provider.value, "reason": "missing_key"},
+                provider=provider.value,
+                reason="missing_key",
             )
             return False, f"Missing {mapping.api_key_var}"
 
@@ -324,13 +326,15 @@ class CredentialLoader:
         if validation_result is not None:
             _logger.warning(
                 "credential_validation_failed",
-                extra={"provider": provider.value, "reason": "invalid_format"},
+                provider=provider.value,
+                reason="invalid_format",
             )
             return False, validation_result
 
         _logger.debug(
             "credential_validated",
-            extra={"provider": provider.value, "valid": True},
+            provider=provider.value,
+            valid=True,
         )
         return True, None
 
@@ -347,7 +351,8 @@ class CredentialLoader:
                 configured.append(provider)
         _logger.debug(
             "configured_providers_listed",
-            extra={"count": len(configured), "providers": [p.value for p in configured]},
+            count=len(configured),
+            providers=[p.value for p in configured],
         )
         return configured
 
@@ -364,7 +369,8 @@ class CredentialLoader:
                 missing.append(provider)
         _logger.debug(
             "missing_providers_listed",
-            extra={"count": len(missing), "providers": [p.value for p in missing]},
+            count=len(missing),
+            providers=[p.value for p in missing],
         )
         return missing
 
@@ -404,7 +410,7 @@ class CredentialLoader:
             value: The value to save.
         """
         self.set_env_var(name, value)
-        _logger.debug("env_file_write_started", extra={"path": str(self.env_path), "variable": name})
+        _logger.debug("env_file_write_started", path=str(self.env_path), variable=name)
 
         lines: list[str] = []
         key_found = False
@@ -431,11 +437,9 @@ class CredentialLoader:
 
         _logger.info(
             "env_file_saved",
-            extra={
-                "path": str(self.env_path),
-                "variable": name,
-                "updated_existing": key_found,
-            },
+            path=str(self.env_path),
+            variable=name,
+            updated_existing=key_found,
         )
 
 
@@ -480,11 +484,11 @@ OPENROUTER_API_KEY=sk-or-v1-...
 # OLLAMA_API_KEY=  # Usually not needed for local
 """
 
-    _logger.debug("env_template_creating", extra={"path": str(path)})
+    _logger.debug("env_template_creating", path=str(path))
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as f:
         f.write(template)
-    _logger.debug("env_template_created", extra={"path": str(path)})
+    _logger.debug("env_template_created", path=str(path))
 
 
 @functools.lru_cache(maxsize=1)

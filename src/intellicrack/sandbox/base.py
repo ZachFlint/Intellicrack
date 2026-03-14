@@ -279,7 +279,7 @@ class SandboxBase:
         Returns:
             True if sandbox can be used.
         """
-        _logger.debug("base_sandbox_is_available_called", extra={"class_name": type(self).__name__})
+        _logger.debug("base_sandbox_is_available_called", class_name=type(self).__name__)
         return False
 
     async def start(self) -> None:
@@ -288,7 +288,7 @@ class SandboxBase:
         Raises:
             SandboxError: If sandbox cannot be started.
         """
-        _logger.debug("base_sandbox_start_called", extra={"class_name": type(self).__name__})
+        _logger.debug("base_sandbox_start_called", class_name=type(self).__name__)
         raise SandboxError(
             _ERR_SANDBOX_NOT_IMPL,
             _ERR_SANDBOX_NOT_IMPL_DETAIL,
@@ -301,7 +301,7 @@ class SandboxBase:
             SandboxError: If sandbox cannot be stopped.
         """
         if self._state.status == "stopped":
-            _logger.debug("sandbox_already_stopped", extra={"sandbox_type": "base"})
+            _logger.debug("sandbox_already_stopped", sandbox_type="base")
             return
 
         raise SandboxError(
@@ -335,7 +335,8 @@ class SandboxBase:
         """
         _logger.debug(
             "base_sandbox_execute_called",
-            extra={"class_name": type(self).__name__, "command": command},
+            class_name=type(self).__name__,
+            command=command,
         )
         del timeout, working_directory
         raise SandboxError(
@@ -366,7 +367,8 @@ class SandboxBase:
         """
         _logger.debug(
             "base_sandbox_run_binary_called",
-            extra={"class_name": type(self).__name__, "binary_path": str(binary_path)},
+            class_name=type(self).__name__,
+            binary_path=str(binary_path),
         )
         del args, timeout, monitor
         raise SandboxError(
@@ -386,7 +388,9 @@ class SandboxBase:
         """
         _logger.debug(
             "base_sandbox_copy_to_sandbox_called",
-            extra={"class_name": type(self).__name__, "source": str(source), "dest": dest},
+            class_name=type(self).__name__,
+            source=str(source),
+            dest=dest,
         )
         raise SandboxError(
             _ERR_FILE_COPY_NOT_IMPL,
@@ -405,7 +409,9 @@ class SandboxBase:
         """
         _logger.debug(
             "base_sandbox_copy_from_sandbox_called",
-            extra={"class_name": type(self).__name__, "source": source, "dest": str(dest)},
+            class_name=type(self).__name__,
+            source=source,
+            dest=str(dest),
         )
         raise SandboxError(
             _ERR_FILE_COPY_NOT_IMPL,
@@ -426,7 +432,8 @@ class SandboxBase:
         """
         _logger.debug(
             "base_sandbox_take_snapshot_called",
-            extra={"class_name": type(self).__name__, "snapshot_name": name},
+            class_name=type(self).__name__,
+            snapshot_name=name,
         )
         raise SandboxError(_ERR_SNAPSHOTS_NOT_SUPPORTED)
 
@@ -441,7 +448,8 @@ class SandboxBase:
         """
         _logger.debug(
             "base_sandbox_restore_snapshot_called",
-            extra={"class_name": type(self).__name__, "snapshot_id": snapshot_id},
+            class_name=type(self).__name__,
+            snapshot_id=snapshot_id,
         )
         raise SandboxError(_ERR_SNAPSHOTS_NOT_SUPPORTED)
 
@@ -453,7 +461,7 @@ class SandboxBase:
         """
         _logger.debug(
             "base_sandbox_list_snapshots_called",
-            extra={"class_name": type(self).__name__},
+            class_name=type(self).__name__,
         )
         raise SandboxError(_ERR_SNAPSHOTS_NOT_SUPPORTED)
 
@@ -468,6 +476,7 @@ class SandboxBase:
         """
         _logger.debug(
             "base_sandbox_delete_snapshot_called",
-            extra={"class_name": type(self).__name__, "snapshot_name": name},
+            class_name=type(self).__name__,
+            snapshot_name=name,
         )
         raise SandboxError(_ERR_SNAPSHOTS_NOT_SUPPORTED)

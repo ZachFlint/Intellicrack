@@ -251,7 +251,7 @@ class ToolInstaller:
         """
         tool_info = TOOL_REGISTRY.get(tool)
         if tool_info is None:
-            _logger.warning("unknown_tool", extra={"tool": str(tool)})
+            _logger.warning("unknown_tool", tool=str(tool))
             return None
 
         if tool == ToolName.FRIDA:
@@ -265,14 +265,14 @@ class ToolInstaller:
                 for exe in tool_info.executables:
                     exe_path = common_path / exe
                     if exe_path.exists():
-                        _logger.info("tool_found", extra={"tool": tool_info.display_name, "path": str(exe_path)})
+                        _logger.info("tool_found", tool=tool_info.display_name, path=str(exe_path))
                         return common_path
 
         for exe in tool_info.executables:
             found = shutil.which(exe)
             if found is not None:
                 found_path = Path(found).parent
-                _logger.info("tool_found_in_path", extra={"tool": tool_info.display_name, "path": str(found_path)})
+                _logger.info("tool_found_in_path", tool=tool_info.display_name, path=str(found_path))
                 return found_path
 
         tool_dir: Path = self.tools_directory / str(tool.value)
@@ -280,7 +280,7 @@ class ToolInstaller:
             for exe in tool_info.executables:
                 exe_path = tool_dir / exe
                 if exe_path.exists():
-                    _logger.info("tool_found_in_tools_dir", extra={"tool": tool_info.display_name, "path": str(tool_dir)})
+                    _logger.info("tool_found_in_tools_dir", tool=tool_info.display_name, path=str(tool_dir))
                     return tool_dir
 
                 subdir: Path
@@ -288,10 +288,10 @@ class ToolInstaller:
                     if subdir.is_dir():
                         exe_path = subdir / exe
                         if exe_path.exists():
-                            _logger.info("tool_found", extra={"tool": tool_info.display_name, "path": str(subdir)})
+                            _logger.info("tool_found", tool=tool_info.display_name, path=str(subdir))
                             return subdir
 
-        _logger.debug("tool_not_found", extra={"tool": tool_info.display_name})
+        _logger.debug("tool_not_found", tool=tool_info.display_name)
         return None
 
     @staticmethod
@@ -309,10 +309,10 @@ class ToolInstaller:
                 timeout=10,
             )
             if result.returncode == 0:
-                _logger.info("frida_installed", extra={"version": result.stdout.strip()})
+                _logger.info("frida_installed", version=result.stdout.strip())
                 return Path("frida-python")
         except (TimeoutExpired, FileNotFoundError) as e:
-            _logger.debug("frida_check_failed", extra={"error": str(e)})
+            _logger.debug("frida_check_failed", error=str(e))
         return None
 
     async def get_version(self, tool: ToolName, path: Path) -> ToolVersion | None:
@@ -360,7 +360,7 @@ class ToolInstaller:
                 return self._parse_version(version_str)
 
         except (TimeoutExpired, OSError) as e:
-            _logger.debug("version_check_failed", extra={"tool": str(tool), "error": str(e)})
+            _logger.debug("version_check_failed", tool=str(tool), error=str(e))
 
         return None
 
@@ -382,7 +382,7 @@ class ToolInstaller:
         if not props_path.is_file():
             _logger.debug(
                 "ghidra_properties_not_found",
-                extra={"path": str(props_path)},
+                path=str(props_path),
             )
             return None
 
@@ -391,7 +391,8 @@ class ToolInstaller:
         except OSError as e:
             _logger.debug(
                 "ghidra_properties_read_failed",
-                extra={"path": str(props_path), "error": str(e)},
+                path=str(props_path),
+                error=str(e),
             )
             return None
 
@@ -407,13 +408,14 @@ class ToolInstaller:
                         version.patch = int(match[3])
                 _logger.debug(
                     "ghidra_version_detected",
-                    extra={"version": version_str, "path": str(props_path)},
+                    version=version_str,
+                    path=str(props_path),
                 )
                 return version
 
         _logger.debug(
             "ghidra_version_key_missing",
-            extra={"path": str(props_path)},
+            path=str(props_path),
         )
         return None
 
@@ -467,7 +469,9 @@ class ToolInstaller:
                         return True
                     _logger.warning(
                         "version_below_minimum",
-                        extra={"tool": tool_info.display_name, "version": str(version), "min_version": tool_info.min_version},
+                        tool=tool_info.display_name,
+                        version=str(version),
+                        min_version=tool_info.min_version,
                     )
                     return False
                 return True
@@ -500,7 +504,7 @@ class ToolInstaller:
             )
 
         try:
-            _logger.info("tool_installing", extra={"tool": tool_info.display_name})
+            _logger.info("tool_installing", tool=tool_info.display_name)
 
             download_url = await self._get_latest_release_url(tool)
             if download_url is None:
@@ -521,7 +525,7 @@ class ToolInstaller:
             download_path.unlink(missing_ok=True)
 
             version = await self.get_version(tool, install_path)
-            _logger.info("tool_installed", extra={"tool": tool_info.display_name, "version": str(version), "path": str(install_path)})
+            _logger.info("tool_installed", tool=tool_info.display_name, version=str(version), path=str(install_path))
 
             return InstallResult(
                 success=True,
@@ -530,7 +534,7 @@ class ToolInstaller:
             )
 
         except Exception as e:
-            _logger.exception("tool_install_failed", extra={"tool": tool_info.display_name})
+            _logger.exception("tool_install_failed", tool=tool_info.display_name)
             return InstallResult(success=False, error=str(e))
 
     async def _install_frida(self) -> InstallResult:
@@ -540,7 +544,7 @@ class ToolInstaller:
             InstallResult with installation status.
         """
         try:
-            _logger.info("frida_pip_installing", extra={"tool": "frida"})
+            _logger.info("frida_pip_installing", tool="frida")
             process_manager = ProcessManager.get_instance()
 
             result = await process_manager.run_tracked_async(
@@ -556,7 +560,7 @@ class ToolInstaller:
                     timeout=10,
                 )
                 version = self._parse_version(version_result.stdout.strip())
-                _logger.info("frida_installed", extra={"version": str(version)})
+                _logger.info("frida_installed", version=str(version))
                 return InstallResult(
                     success=True,
                     path=Path("frida-python"),
@@ -616,7 +620,7 @@ class ToolInstaller:
                     return download_url
 
         except Exception:
-            _logger.exception("release_info_fetch_failed", extra={"tool": tool.value})
+            _logger.exception("release_info_fetch_failed", tool=tool.value)
 
         return None
 
@@ -635,7 +639,7 @@ class ToolInstaller:
             filename = url.rsplit("/", maxsplit=1)[-1]
             temp_path = Path(tempfile.gettempdir()) / filename
 
-            _logger.info("download_starting", extra={"file_name": filename})
+            _logger.info("download_starting", file_name=filename)
 
             async with client.stream("GET", url) as response:
                 response.raise_for_status()
@@ -649,12 +653,12 @@ class ToolInstaller:
                         if total > 0:
                             percent = (downloaded / total) * 100
                             if downloaded % _ONE_MB < _PROGRESS_CHUNK:
-                                _logger.debug("download_progress", extra={"percent": round(percent, 1)})
+                                _logger.debug("download_progress", percent=round(percent, 1))
 
-            _logger.info("download_completed", extra={"file_name": filename, "bytes": downloaded})
+            _logger.info("download_completed", file_name=filename, bytes=downloaded)
 
         except Exception:
-            _logger.exception("download_failed", extra={"url": url})
+            _logger.exception("download_failed", url=url)
             return None
         else:
             return temp_path
@@ -678,7 +682,7 @@ class ToolInstaller:
         tool_dir = self.tools_directory / tool.value
         tool_dir.mkdir(parents=True, exist_ok=True)
 
-        _logger.info("extraction_starting", extra={"path": str(tool_dir)})
+        _logger.info("extraction_starting", path=str(tool_dir))
 
         try:
             await asyncio.to_thread(
@@ -688,7 +692,7 @@ class ToolInstaller:
             )
             subdirs = [d for d in tool_dir.iterdir() if d.is_dir()]
         except Exception as e:
-            _logger.exception("extraction_failed", extra={"archive": str(archive_path), "tool": tool.value})
+            _logger.exception("extraction_failed", archive=str(archive_path), tool=tool.value)
             raise ToolError(_ERR_EXTRACT_FAILED_FMT) from e
         else:
             return subdirs[0] if len(subdirs) == 1 else tool_dir
@@ -721,7 +725,7 @@ class ToolInstaller:
         if path is not None:
             if await self.verify_tool(tool, path):
                 return path
-            _logger.warning("tool_verification_failed", extra={"tool": str(tool)})
+            _logger.warning("tool_verification_failed", tool=str(tool))
 
         result = await self.install_tool(tool)
         if result.success and result.path is not None:
@@ -767,9 +771,7 @@ def _find_cmake() -> Path | None:
     if found is not None:
         return Path(found)
 
-    vswhere = Path(os.environ.get("PROGRAMFILES(X86)", r"C:\Program Files (x86)")) / (
-        "Microsoft Visual Studio/Installer/vswhere.exe"
-    )
+    vswhere = Path(os.environ.get("PROGRAMFILES(X86)", r"C:\Program Files (x86)")) / ("Microsoft Visual Studio/Installer/vswhere.exe")
     if not vswhere.is_file():
         return None
 
@@ -784,10 +786,7 @@ def _find_cmake() -> Path | None:
         )
         vs_path = result.stdout.strip()
         if vs_path:
-            cmake_path = (
-                Path(vs_path)
-                / "Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe"
-            )
+            cmake_path = Path(vs_path) / "Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe"
             if cmake_path.is_file():
                 return cmake_path
     except (OSError, TimeoutExpired):
@@ -850,7 +849,7 @@ def build_x64dbg_plugin(plugin_dir: Path, x64dbg_path: Path) -> bool:
     if cmake_path is None:
         _logger.warning(
             "plugin_build_skipped",
-            extra={"reason": "cmake not found"},
+            reason="cmake not found",
         )
         return False
 
@@ -858,13 +857,14 @@ def build_x64dbg_plugin(plugin_dir: Path, x64dbg_path: Path) -> bool:
     if generator is None:
         _logger.warning(
             "plugin_build_skipped",
-            extra={"reason": "no Visual Studio generator detected"},
+            reason="no Visual Studio generator detected",
         )
         return False
 
     _logger.info(
         "plugin_build_starting",
-        extra={"generator": generator, "plugin_dir": str(plugin_dir)},
+        generator=generator,
+        plugin_dir=str(plugin_dir),
     )
 
     archs: list[tuple[str, str, str]] = [
@@ -907,13 +907,14 @@ def build_x64dbg_plugin(plugin_dir: Path, x64dbg_path: Path) -> bool:
             )
             _logger.info(
                 "plugin_build_succeeded",
-                extra={"arch": arch_label},
+                arch=arch_label,
             )
             built = True
         except (CalledProcessError, OSError) as exc:
             _logger.warning(
                 "plugin_build_failed",
-                extra={"arch": arch_label, "error": str(exc)},
+                arch=arch_label,
+                error=str(exc),
             )
 
     return built
@@ -962,18 +963,15 @@ def deploy_x64dbg_plugin(x64dbg_path: Path, tools_directory: Path) -> bool:
     if not plugin_dir.is_dir():
         _logger.debug(
             "plugin_source_dir_missing",
-            extra={"path": str(plugin_dir)},
+            path=str(plugin_dir),
         )
         return False
 
-    any_source_found = any(
-        _find_plugin_source(plugin_dir, fn) is not None
-        for _, fn, _ in _PLUGIN_ARCHS
-    )
+    any_source_found = any(_find_plugin_source(plugin_dir, fn) is not None for _, fn, _ in _PLUGIN_ARCHS)
     if not any_source_found:
         _logger.info(
             "plugin_binaries_missing_attempting_build",
-            extra={"plugin_dir": str(plugin_dir)},
+            plugin_dir=str(plugin_dir),
         )
         build_x64dbg_plugin(plugin_dir, x64dbg_path)
 
@@ -983,7 +981,7 @@ def deploy_x64dbg_plugin(x64dbg_path: Path, tools_directory: Path) -> bool:
         if source is None:
             _logger.debug(
                 "plugin_binary_not_found",
-                extra={"plugin_filename": filename},
+                plugin_filename=filename,
             )
             continue
 
@@ -993,7 +991,7 @@ def deploy_x64dbg_plugin(x64dbg_path: Path, tools_directory: Path) -> bool:
         if target.is_file() and target.stat().st_mtime >= source.stat().st_mtime:
             _logger.debug(
                 "plugin_already_up_to_date",
-                extra={"target": str(target)},
+                target=str(target),
             )
             deployed = True
             continue
@@ -1003,13 +1001,15 @@ def deploy_x64dbg_plugin(x64dbg_path: Path, tools_directory: Path) -> bool:
             shutil.copy2(source, target)
             _logger.info(
                 "plugin_deployed",
-                extra={"source": str(source), "target": str(target)},
+                source=str(source),
+                target=str(target),
             )
             deployed = True
         except OSError as exc:
             _logger.warning(
                 "plugin_deploy_failed",
-                extra={"target": str(target), "error": str(exc)},
+                target=str(target),
+                error=str(exc),
             )
 
     return deployed

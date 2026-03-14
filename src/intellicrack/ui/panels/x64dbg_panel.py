@@ -197,7 +197,7 @@ class X64DbgPanel(AnalysisPanelBase):
                 try:
                     run_bridge_coroutine(self._bridge.stop())
                 except Exception:
-                    _logger.exception("x64dbg_stop_failed", extra={"bridge_type": "x64dbg"})
+                    _logger.exception("x64dbg_stop_failed", bridge_type="x64dbg")
 
     def _create_disasm_section(self) -> QWidget:
         """Create the disassembly display section.
@@ -390,7 +390,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._bridge = bridge
         if hasattr(bridge, "register_event_callback"):
             bridge.register_event_callback(self._on_debug_event)
-        _logger.info("x64dbg_bridge_set", extra={"bridge_type": type(bridge).__name__})
+        _logger.info("x64dbg_bridge_set", bridge_type=type(bridge).__name__)
         self._update_controls_state()
 
     def _update_controls_state(self) -> None:
@@ -434,7 +434,7 @@ class X64DbgPanel(AnalysisPanelBase):
             True if loading was initiated.
         """
         if self._bridge is None:
-            _logger.warning("x64dbg_debug_no_bridge", extra={"reason": "bridge not set"})
+            _logger.warning("x64dbg_debug_no_bridge", reason="bridge not set")
             return False
 
         self._load_btn.setEnabled(False)
@@ -452,7 +452,7 @@ class X64DbgPanel(AnalysisPanelBase):
             file_path: The loaded file path.
         """
         self._set_status(f"Loaded: {file_path.name}")
-        _logger.info("x64dbg_file_loaded", extra={"path": file_path.name})
+        _logger.info("x64dbg_file_loaded", path=file_path.name)
         self._load_btn.setEnabled(True)
         self._sync_64bit_toggle()
         self._update_controls_state()
@@ -466,7 +466,7 @@ class X64DbgPanel(AnalysisPanelBase):
 
         pid = self._bridge.debugger_pid
         if pid is None:
-            _logger.debug("x64dbg_embed_skipped_no_pid", extra={"reason": "debugger_pid is None"})
+            _logger.debug("x64dbg_embed_skipped_no_pid", reason="debugger_pid is None")
             return
 
         def _on_embedded(container: QWidget) -> None:
@@ -480,7 +480,7 @@ class X64DbgPanel(AnalysisPanelBase):
                 layout.addWidget(container)
             self._embedded_container = container
             self._main_tabs.setCurrentWidget(self._embed_host)
-            _logger.info("x64dbg_window_embedded", extra={"pid": pid})
+            _logger.info("x64dbg_window_embedded", pid=pid)
 
         poll_and_embed(
             pid=pid,
@@ -498,7 +498,7 @@ class X64DbgPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._set_status(f"Load failed: {exc}")
-        _logger.warning("x64dbg_load_failed", extra={"path": file_path.name, "error": str(exc)})
+        _logger.warning("x64dbg_load_failed", path=file_path.name, error=str(exc))
         self._load_btn.setEnabled(True)
 
     def _on_debug_event(self, event_type: str, _message: dict[str, object]) -> None:
@@ -541,7 +541,7 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             pid = int(pid_text)
         except ValueError:
-            _logger.debug("invalid_pid_input", extra={"input": pid_text})
+            _logger.debug("invalid_pid_input", input=pid_text)
             self._console_output.appendPlainText(f"[!] Invalid PID: {pid_text}")
             return
 
@@ -560,7 +560,7 @@ class X64DbgPanel(AnalysisPanelBase):
         """
         self._set_status(f"Attached: PID {pid}")
         self._console_output.appendPlainText(f"[+] Attached to PID {pid}")
-        _logger.info("x64dbg_attached", extra={"pid": pid})
+        _logger.info("x64dbg_attached", pid=pid)
         self._attach_btn.setEnabled(True)
         self._sync_64bit_toggle()
         self._update_controls_state()
@@ -573,7 +573,7 @@ class X64DbgPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._console_output.appendPlainText(f"[-] Attach failed: {exc}")
-        _logger.warning("x64dbg_attach_failed", extra={"error": str(exc)})
+        _logger.warning("x64dbg_attach_failed", error=str(exc))
         self._attach_btn.setEnabled(True)
 
     def _on_run(self) -> None:
@@ -601,7 +601,7 @@ class X64DbgPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._console_output.appendPlainText(f"[-] Run failed: {exc}")
-        _logger.warning("x64dbg_run_failed", extra={"error": str(exc)})
+        _logger.warning("x64dbg_run_failed", error=str(exc))
         self._run_btn.setEnabled(True)
 
     def _on_pause(self) -> None:
@@ -630,7 +630,7 @@ class X64DbgPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._console_output.appendPlainText(f"[-] Pause failed: {exc}")
-        _logger.warning("x64dbg_pause_failed", extra={"error": str(exc)})
+        _logger.warning("x64dbg_pause_failed", error=str(exc))
         self._pause_btn.setEnabled(True)
 
     def _on_stop(self) -> None:
@@ -658,7 +658,7 @@ class X64DbgPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._console_output.appendPlainText(f"[-] Stop failed: {exc}")
-        _logger.warning("x64dbg_stop_failed", extra={"error": str(exc)})
+        _logger.warning("x64dbg_stop_failed", error=str(exc))
         self._stop_btn.setEnabled(True)
 
     def _on_step_into(self) -> None:
@@ -719,7 +719,7 @@ class X64DbgPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._console_output.appendPlainText(f"[-] Step {direction} failed: {exc}")
-        _logger.warning("x64dbg_step_%s_failed", direction, extra={"error": str(exc)})
+        _logger.warning("x64dbg_step_%s_failed", direction, error=str(exc))
         self._step_into_btn.setEnabled(True)
         self._step_over_btn.setEnabled(True)
         self._step_out_btn.setEnabled(True)
@@ -755,7 +755,7 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             address = int(addr_text, 16) if addr_text.startswith("0x") else int(addr_text, 0)
         except ValueError:
-            _logger.debug("invalid_breakpoint_address", extra={"input": addr_text})
+            _logger.debug("invalid_breakpoint_address", input=addr_text)
             self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
             return
 
@@ -774,7 +774,7 @@ class X64DbgPanel(AnalysisPanelBase):
             result: The breakpoint ID from the bridge.
         """
         self._console_output.appendPlainText(f"[+] Breakpoint #{result} set at 0x{address:X}")
-        _logger.info("x64dbg_bp_set", extra={"address": hex(address)})
+        _logger.info("x64dbg_bp_set", address=hex(address))
         self._add_bp_btn.setEnabled(True)
         self._refresh_breakpoints()
 
@@ -785,7 +785,7 @@ class X64DbgPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._console_output.appendPlainText(f"[-] Failed to set breakpoint: {exc}")
-        _logger.warning("x64dbg_bp_set_failed", extra={"error": str(exc)})
+        _logger.warning("x64dbg_bp_set_failed", error=str(exc))
         self._add_bp_btn.setEnabled(True)
 
     def _on_remove_breakpoint(self) -> None:
@@ -821,7 +821,7 @@ class X64DbgPanel(AnalysisPanelBase):
             address: The removed breakpoint address.
         """
         self._console_output.appendPlainText(f"[+] Breakpoint removed at 0x{address:X}")
-        _logger.info("x64dbg_bp_removed", extra={"address": hex(address)})
+        _logger.info("x64dbg_bp_removed", address=hex(address))
         self._remove_bp_btn.setEnabled(True)
         self._refresh_breakpoints()
 
@@ -832,7 +832,7 @@ class X64DbgPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._console_output.appendPlainText(f"[-] Failed to remove breakpoint: {exc}")
-        _logger.warning("x64dbg_bp_remove_failed", extra={"error": str(exc)})
+        _logger.warning("x64dbg_bp_remove_failed", error=str(exc))
         self._remove_bp_btn.setEnabled(True)
 
     def _on_register_edited(self, row: int, column: int) -> None:
@@ -856,7 +856,7 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             value = int(val_text, 16) if val_text.startswith("0x") else int(val_text, 0)
         except ValueError:
-            _logger.debug("invalid_register_value", extra={"register": reg_name, "input": val_text})
+            _logger.debug("invalid_register_value", register=reg_name, input=val_text)
             self._console_output.appendPlainText(f"[!] Invalid value for {reg_name}: {val_text}")
             return
 
@@ -885,7 +885,7 @@ class X64DbgPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._console_output.appendPlainText(f"[-] Failed to set {reg_name}: {exc}")
-        _logger.warning("x64dbg_set_register_failed", extra={"register": reg_name, "error": str(exc)})
+        _logger.warning("x64dbg_set_register_failed", register=reg_name, error=str(exc))
         self._reg_table.setEnabled(True)
 
     def _on_read_memory(self) -> None:
@@ -903,14 +903,14 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             address = int(addr_text, 16) if addr_text.startswith("0x") else int(addr_text, 0)
         except ValueError:
-            _logger.debug("invalid_memory_address", extra={"input": addr_text})
+            _logger.debug("invalid_memory_address", input=addr_text)
             self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
             return
 
         try:
             size = int(size_text) if size_text else 256
         except ValueError:
-            _logger.debug("invalid_memory_size_using_default", extra={"input": size_text})
+            _logger.debug("invalid_memory_size_using_default", input=size_text)
             size = 256
 
         self._mem_read_btn.setEnabled(False)
@@ -938,7 +938,7 @@ class X64DbgPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._console_output.appendPlainText(f"[-] Memory read failed: {exc}")
-        _logger.warning("x64dbg_mem_read_failed", extra={"error": str(exc)})
+        _logger.warning("x64dbg_mem_read_failed", error=str(exc))
         self._mem_read_btn.setEnabled(True)
 
     def _on_execute_command(self) -> None:
@@ -976,7 +976,7 @@ class X64DbgPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._console_output.appendPlainText(f"[-] Command failed: {exc}")
-        _logger.warning("x64dbg_command_failed", extra={"error": str(exc)})
+        _logger.warning("x64dbg_command_failed", error=str(exc))
 
     def _refresh_state(self) -> None:
         """Refresh registers, modules, threads, and state after change."""
@@ -1041,7 +1041,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._run_async(
             self._bridge.disassemble_at(address, 30),
             on_success=self._apply_disassembly,
-            on_error=lambda _: _logger.warning("x64dbg_refresh_disasm_failed", extra={"address": hex(address)}),
+            on_error=lambda _: _logger.warning("x64dbg_refresh_disasm_failed", address=hex(address)),
         )
 
     def _apply_disassembly(self, result: object) -> None:
