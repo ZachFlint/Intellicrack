@@ -325,7 +325,7 @@ tzdata==2025.3
 umf==1.0.2
 uncalled==0.1.8
 urllib3==2.6.3
-uvicorn==0.41.0
+uvicorn==0.42.0
 validate_pyproject==0.25
 virtualenv==21.2.0
 vulture==2.15
