@@ -29,7 +29,7 @@ cachetools==7.0.5
 certifi==2026.2.25
 cffi==2.0.0
 cfgv==3.5.0
-chardet==5.2.0
+chardet==7.1.0
 charset_normalizer==3.4.5
 cleo==2.1.0
 click==8.3.1
