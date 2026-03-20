@@ -104,6 +104,9 @@ class ModelConfig:
         trust_remote_code: Whether to trust remote code.
         use_flash_attention: Whether to use flash attention if available.
         quantization_config: Optional quantization configuration.
+        revision: Git revision (commit hash, tag, or branch) to pin
+            downloads to a specific snapshot of the model repository.
+            When ``None``, HuggingFace defaults to the ``main`` branch.
     """
 
     model_id: str
@@ -113,6 +116,7 @@ class ModelConfig:
     trust_remote_code: bool = False
     use_flash_attention: bool = False
     quantization_config: dict[str, object] | None = None
+    revision: str | None = None
 
 
 class ModelCache:
@@ -512,6 +516,7 @@ def load_model_for_xpu(
         tokenizer = AutoTokenizer.from_pretrained(
             config.model_id,
             trust_remote_code=config.trust_remote_code,
+            revision=config.revision,
         )
 
         if tokenizer.pad_token is None:
@@ -528,7 +533,11 @@ def load_model_for_xpu(
         else:
             load_kwargs["torch_dtype"] = torch_dtype
 
-        model = AutoModelForCausalLM.from_pretrained(config.model_id, **load_kwargs)
+        model = AutoModelForCausalLM.from_pretrained(
+            config.model_id,
+            revision=config.revision,
+            **load_kwargs,
+        )
 
         if dtype_str not in {"int8", "int4"}:
             model = model.to(device)
@@ -612,6 +621,7 @@ def load_model_for_cpu(
         tokenizer = AutoTokenizer.from_pretrained(
             config.model_id,
             trust_remote_code=config.trust_remote_code,
+            revision=config.revision,
         )
 
         if tokenizer.pad_token is None:
@@ -628,7 +638,11 @@ def load_model_for_cpu(
         else:
             load_kwargs["torch_dtype"] = torch_dtype
 
-        model = AutoModelForCausalLM.from_pretrained(config.model_id, **load_kwargs)
+        model = AutoModelForCausalLM.from_pretrained(
+            config.model_id,
+            revision=config.revision,
+            **load_kwargs,
+        )
         model.eval()
 
         load_time = time.perf_counter() - start_time

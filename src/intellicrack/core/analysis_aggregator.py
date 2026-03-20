@@ -70,6 +70,7 @@ class AnalysisAggregator:
         Returns:
             BridgeAnalysisSummary with data from all contributing bridges.
         """
+        _logger.info("aggregation_starting", binary_name=binary_name)
         strings: list[StringInfo] = []
         imports: list[ImportInfo] = list(binary_info.imports)
         exports: list[ExportInfo] = list(binary_info.exports)
@@ -106,6 +107,13 @@ class AnalysisAggregator:
             source_bridges.append("binary_info")
             notes.append("No bridges connected; using BinaryInfo metadata only")
 
+        _logger.info(
+            "aggregation_completed",
+            binary_name=binary_name,
+            source_bridges=source_bridges,
+            strings_count=len(strings),
+            functions_count=len(functions),
+        )
         return BridgeAnalysisSummary(
             binary_name=binary_name,
             strings=strings,

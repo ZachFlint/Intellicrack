@@ -30,10 +30,12 @@ from ..core.types import (
     ProviderError,
     ProviderName,
     RateLimitError,
+    ThinkingConfig,
     ToolCall,
+    ToolChoice,
     ToolDefinition,
 )
-from .base import LLMProviderBase, create_openai_tool_schema
+from .base import LLMProviderBase, ToolCallBufferManager, create_openai_tool_schema
 
 
 _ERR_NOT_CONNECTED = "Not connected to HuggingFace"
@@ -254,6 +256,9 @@ class HuggingFaceProvider(LLMProviderBase):
         tools: list[ToolDefinition] | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
+        tool_choice: ToolChoice | None = None,
+        thinking: ThinkingConfig | None = None,
+        enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
         """Send a chat completion request through HuggingFace Inference API.
 
@@ -263,6 +268,9 @@ class HuggingFaceProvider(LLMProviderBase):
             tools: Available tools for function calling.
             temperature: Sampling temperature (0.0 to 2.0).
             max_tokens: Maximum tokens in response.
+            tool_choice: How the model should select tools.
+            thinking: Extended thinking configuration (ignored by HuggingFace).
+            enable_cache: Whether to enable prompt caching (ignored by HuggingFace).
 
         Returns:
             Tuple of (assistant message, tool calls if any).
@@ -274,6 +282,10 @@ class HuggingFaceProvider(LLMProviderBase):
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False
+        if thinking is not None and thinking.enabled:
+            self._logger.debug("huggingface_thinking_ignored")
+        if enable_cache:
+            self._logger.debug("huggingface_cache_ignored")
 
         hf_messages = self._convert_messages_to_provider_format(messages)
 
@@ -293,6 +305,8 @@ class HuggingFaceProvider(LLMProviderBase):
         }
         if tools:
             request_body["tools"] = self._convert_tools_to_provider_format(tools)
+        if tool_choice is not None and tools:
+            request_body["tool_choice"] = self._convert_tool_choice_to_openai_format(tool_choice)
 
         start_time = time.perf_counter()
         data = await self._make_hf_api_call(model=model, request_body=request_body)
@@ -431,6 +445,9 @@ class HuggingFaceProvider(LLMProviderBase):
         tools: list[ToolDefinition] | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
+        tool_choice: ToolChoice | None = None,
+        thinking: ThinkingConfig | None = None,
+        enable_cache: bool = False,
     ) -> AsyncIterator[str]:
         """Stream a chat completion response from HuggingFace.
 
@@ -440,6 +457,9 @@ class HuggingFaceProvider(LLMProviderBase):
             tools: Available tools for function calling.
             temperature: Sampling temperature.
             max_tokens: Maximum tokens in response.
+            tool_choice: How the model should select tools.
+            thinking: Extended thinking configuration (ignored by HuggingFace).
+            enable_cache: Whether to enable prompt caching (ignored by HuggingFace).
 
         Yields:
             Text chunks as they arrive from the API.
@@ -451,6 +471,10 @@ class HuggingFaceProvider(LLMProviderBase):
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False
+        if thinking is not None and thinking.enabled:
+            self._logger.debug("huggingface_stream_thinking_ignored")
+        if enable_cache:
+            self._logger.debug("huggingface_stream_cache_ignored")
 
         hf_messages = self._convert_messages_to_provider_format(messages)
 
@@ -462,6 +486,7 @@ class HuggingFaceProvider(LLMProviderBase):
         )
 
         chunk_count = 0
+        tc_buffer = ToolCallBufferManager()
         try:
             request_body: dict[str, object] = {
                 "model": model,
@@ -473,6 +498,8 @@ class HuggingFaceProvider(LLMProviderBase):
 
             if tools:
                 request_body["tools"] = self._convert_tools_to_provider_format(tools)
+            if tool_choice is not None and tools:
+                request_body["tool_choice"] = self._convert_tool_choice_to_openai_format(tool_choice)
 
             async with self._client.stream(
                 "POST",
@@ -501,9 +528,20 @@ class HuggingFaceProvider(LLMProviderBase):
                                 if content := delta.get("content", ""):
                                     chunk_count += 1
                                     yield content
+                                if tc_deltas := delta.get("tool_calls"):
+                                    for tc_d in tc_deltas:
+                                        fn: dict[str, str] = tc_d.get("function") or {}
+                                        tc_buffer.accumulate(
+                                            index=tc_d.get("index", 0),
+                                            call_id=tc_d.get("id"),
+                                            name=fn.get("name"),
+                                            arguments=fn.get("arguments"),
+                                        )
                         except json.JSONDecodeError as exc:
                             self._logger.debug("stream_json_parse_skipped", error=str(exc))
                             continue
+
+            self._pending_tool_calls = tc_buffer.finalize()
 
             self._logger.info(
                 "huggingface_stream_completed",

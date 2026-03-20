@@ -30,7 +30,10 @@ from ..core.types import (
     ProviderError,
     ProviderName,
     RateLimitError,
+    ThinkingConfig,
     ToolCall,
+    ToolChoice,
+    ToolChoiceMode,
     ToolDefinition,
 )
 from .base import LLMProviderBase, create_google_tool_schema
@@ -216,6 +219,9 @@ class GoogleProvider(LLMProviderBase):
         tools: list[ToolDefinition] | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
+        tool_choice: ToolChoice | None = None,
+        thinking: ThinkingConfig | None = None,
+        enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
         """Send a chat completion request to Gemini.
 
@@ -225,6 +231,9 @@ class GoogleProvider(LLMProviderBase):
             tools: Optional list of tool definitions for function calling.
             temperature: Sampling temperature between 0.0 and 1.0.
             max_tokens: Maximum number of tokens in the response.
+            tool_choice: How the model should select tools.
+            thinking: Extended thinking configuration (ignored by Google).
+            enable_cache: Whether to enable prompt caching.
 
         Returns:
             A tuple containing the assistant message and optional tool calls.
@@ -246,6 +255,11 @@ class GoogleProvider(LLMProviderBase):
             max_tokens=max_tokens,
         )
 
+        if thinking is not None and thinking.enabled:
+            self._logger.debug("google_thinking_ignored")
+        if enable_cache:
+            self._logger.debug("google_cache_ignored")
+
         system_instruction = self._extract_system_instruction(messages)
         gemini_contents = self._convert_messages_to_provider_format(messages)
         gemini_tools = self._build_tool_declarations(tools) if tools else None
@@ -265,6 +279,7 @@ class GoogleProvider(LLMProviderBase):
                 max_tokens,
                 gemini_tools,
                 system_instruction,
+                tool_choice=tool_choice,
             )
 
             client = self._client
@@ -332,6 +347,9 @@ class GoogleProvider(LLMProviderBase):
         tools: list[ToolDefinition] | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
+        tool_choice: ToolChoice | None = None,
+        thinking: ThinkingConfig | None = None,
+        enable_cache: bool = False,
     ) -> AsyncIterator[str]:
         """Stream a chat completion response from Gemini.
 
@@ -341,6 +359,9 @@ class GoogleProvider(LLMProviderBase):
             tools: Optional list of tool definitions for function calling.
             temperature: Sampling temperature between 0.0 and 1.0.
             max_tokens: Maximum number of tokens in the response.
+            tool_choice: How the model should select tools.
+            thinking: Extended thinking configuration (ignored by Google).
+            enable_cache: Whether to enable prompt caching.
 
         Yields:
             Text chunks as they arrive from the API.
@@ -372,6 +393,7 @@ class GoogleProvider(LLMProviderBase):
                 max_tokens,
                 gemini_tools,
                 system_instruction,
+                tool_choice=tool_choice,
             )
 
             client = self._client
@@ -472,6 +494,7 @@ class GoogleProvider(LLMProviderBase):
         max_tokens: int,
         gemini_tools: list[types.Tool] | None,
         system_instruction: str | None = None,
+        tool_choice: ToolChoice | None = None,
     ) -> types.GenerateContentConfig:
         """Create a GenerateContentConfig with the given parameters.
 
@@ -480,6 +503,7 @@ class GoogleProvider(LLMProviderBase):
             max_tokens: Maximum output tokens.
             gemini_tools: Optional list of tool declarations.
             system_instruction: Optional system instruction text.
+            tool_choice: How the model should select tools.
 
         Returns:
             Configured GenerateContentConfig instance.
@@ -489,11 +513,35 @@ class GoogleProvider(LLMProviderBase):
             tools_for_config = []
             tools_for_config.extend(gemini_tools)
 
+        tool_config: types.ToolConfig | None = None
+        if tool_choice is not None and gemini_tools is not None:
+            fc_mode = types.FunctionCallingConfigMode
+            if tool_choice.mode == ToolChoiceMode.AUTO:
+                tool_config = types.ToolConfig(
+                    function_calling_config=types.FunctionCallingConfig(mode=fc_mode.AUTO)
+                )
+            elif tool_choice.mode == ToolChoiceMode.NONE:
+                tool_config = types.ToolConfig(
+                    function_calling_config=types.FunctionCallingConfig(mode=fc_mode.NONE)
+                )
+            elif tool_choice.mode == ToolChoiceMode.REQUIRED:
+                tool_config = types.ToolConfig(
+                    function_calling_config=types.FunctionCallingConfig(mode=fc_mode.ANY)
+                )
+            elif tool_choice.mode == ToolChoiceMode.SPECIFIC and tool_choice.function_name:
+                tool_config = types.ToolConfig(
+                    function_calling_config=types.FunctionCallingConfig(
+                        mode=fc_mode.ANY,
+                        allowed_function_names=[tool_choice.function_name],
+                    )
+                )
+
         return types.GenerateContentConfig(
             temperature=temperature,
             max_output_tokens=max_tokens,
             tools=tools_for_config,
             system_instruction=system_instruction,
+            tool_config=tool_config,
         )
 
     @staticmethod

@@ -1002,7 +1002,7 @@ class QEMUSandbox(SandboxBase):
             self._state.status = "error"
             self._state.last_error = str(e)
             await self._cleanup()
-            _logger.exception("qemu_sandbox_start_failed", error=str(e))
+            _logger.warning("qemu_sandbox_start_failed", error=str(e))
             raise SandboxError(_ERR_SANDBOX_START) from e
 
     async def stop(self) -> None:
@@ -1044,7 +1044,7 @@ class QEMUSandbox(SandboxBase):
         except Exception as e:
             self._state.status = "error"
             self._state.last_error = str(e)
-            _logger.exception("qemu_sandbox_stop_failed", error=str(e))
+            _logger.warning("qemu_sandbox_stop_failed", error=str(e))
             raise SandboxError(_ERR_SANDBOX_STOP) from e
 
     async def _cleanup(self) -> None:
@@ -1596,7 +1596,7 @@ echo $? > "/mnt/shared/output/{result_name}"
             Tuple of (exit_code, stdout, stderr).
 
         Raises:
-            SandboxError: If the command times out.
+            SandboxTimeoutError: If the command times out.
         """
         start_time = time.time()
         while time.time() - start_time < timeout:
@@ -1870,7 +1870,7 @@ echo $? > "/mnt/shared/output/{result_name}"
             await asyncio.to_thread(shutil.copy2, source, dest_path)
             _logger.debug("file_copied_to_sandbox", extra={"source": str(source), "dest": dest})
         except Exception as e:
-            _logger.exception("copy_to_sandbox_failed", extra={"source": str(source), "dest": dest})
+            _logger.warning("copy_to_sandbox_failed", error=str(e), source=str(source), dest=dest)
             raise SandboxError(_ERR_COPY_TO_SANDBOX) from e
 
     async def copy_from_sandbox(self, source: str, dest: Path) -> None:
@@ -1898,7 +1898,7 @@ echo $? > "/mnt/shared/output/{result_name}"
             await asyncio.to_thread(shutil.copy2, source_path, dest)
             _logger.debug("file_copied_from_sandbox", extra={"source": source, "dest": str(dest)})
         except Exception as e:
-            _logger.exception("copy_from_sandbox_failed", extra={"source": source, "dest": str(dest)})
+            _logger.warning("copy_from_sandbox_failed", error=str(e), source=source, dest=str(dest))
             raise SandboxError(_ERR_COPY_FROM_SANDBOX) from e
 
     async def take_snapshot(self, name: str) -> str:

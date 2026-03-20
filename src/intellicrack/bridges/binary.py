@@ -511,7 +511,7 @@ class BinaryBridge(BinaryOperationsBridge):
             )
 
         except Exception as e:
-            _logger.exception("binary_load_failed", path=str(self._binary_path))
+            _logger.warning("binary_load_failed", path=str(self._binary_path), error=str(e))
             raise ToolError(_ERR_LOAD_FAILED) from e
 
     def _detect_format(self) -> str:
@@ -759,6 +759,7 @@ class BinaryBridge(BinaryOperationsBridge):
         if offset < 0 or offset >= len(self._data):
             raise ToolError(_ERR_INVALID_OFFSET)
 
+        _logger.debug("bytes_read", offset=hex(offset), size=size)
         end = min(offset + size, len(self._data))
         return bytes(self._data[offset:end])
 
@@ -961,6 +962,7 @@ class BinaryBridge(BinaryOperationsBridge):
         if self._data is None:
             raise ToolError(_ERR_NO_BINARY)
 
+        _logger.debug("wildcard_pattern_search_starting", pattern=hex_pattern, start_offset=start_offset)
         hex_pattern = hex_pattern.replace(" ", "")
         regex_pattern = "".join(
             ("." if hex_pattern[i : i + 2] == "??" else re.escape(chr(int(hex_pattern[i : i + 2], 16))))
@@ -976,6 +978,7 @@ class BinaryBridge(BinaryOperationsBridge):
             if len(results) >= max_results:
                 break
 
+        _logger.debug("wildcard_search_completed", matches=len(results))
         return results
 
     async def disassemble_at_offset(
@@ -998,6 +1001,7 @@ class BinaryBridge(BinaryOperationsBridge):
         if self._data is None:
             raise ToolError(_ERR_NO_BINARY)
 
+        _logger.debug("disassembly_starting", offset=hex(offset), count=count)
         arch, is_64 = self._detect_architecture()
 
         if arch in {"x86", "x86_64"}:
@@ -1040,6 +1044,7 @@ class BinaryBridge(BinaryOperationsBridge):
         if self._data is None:
             raise ToolError(_ERR_NO_BINARY)
 
+        _logger.debug("checksum_calculating", algorithm=algorithm)
         if algorithm == "md5":
             return hashlib.md5(self._data, usedforsecurity=False).hexdigest()
         if algorithm == "sha256":
@@ -1058,6 +1063,7 @@ class BinaryBridge(BinaryOperationsBridge):
         Raises:
             ToolError: If conversion fails.
         """
+        _logger.debug("rva_to_offset_converting", rva=hex(rva))
         if self._pe is not None:
             return int(self._pe.get_offset_from_rva(rva))
 
@@ -1080,6 +1086,7 @@ class BinaryBridge(BinaryOperationsBridge):
         Raises:
             ToolError: If conversion fails.
         """
+        _logger.debug("offset_to_rva_converting", offset=hex(offset))
         if self._pe is not None:
             return int(self._pe.get_rva_from_offset(offset))
 
@@ -1109,4 +1116,6 @@ class BinaryBridge(BinaryOperationsBridge):
         data = bytes(self._data)
 
         ascii_pattern = re.compile(rb"[\x20-\x7e]{" + str(min_length).encode() + rb",}")
-        return [(match.start(), match.group().decode("ascii")) for match in ascii_pattern.finditer(data)]
+        results = [(match.start(), match.group().decode("ascii")) for match in ascii_pattern.finditer(data)]
+        _logger.debug("strings_extracted", count=len(results), min_length=min_length)
+        return results

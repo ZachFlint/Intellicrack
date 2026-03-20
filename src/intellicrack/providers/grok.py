@@ -26,7 +26,9 @@ from ..core.types import (
     ProviderError,
     ProviderName,
     RateLimitError,
+    ThinkingConfig,
     ToolCall,
+    ToolChoice,
     ToolDefinition,
 )
 from .base import LLMProviderBase, ToolCallBufferManager, create_openai_tool_schema
@@ -47,7 +49,7 @@ if TYPE_CHECKING:
     import asyncio
     from collections.abc import AsyncIterator
 
-    from openai.types.chat import ChatCompletionMessageParam, ChatCompletionToolParam
+    from openai.types.chat import ChatCompletionMessageParam, ChatCompletionToolChoiceOptionParam, ChatCompletionToolParam
     from openai.types.chat.chat_completion import ChatCompletion
     from openai.types.chat.chat_completion_message import ChatCompletionMessage
 
@@ -239,6 +241,9 @@ class GrokProvider(LLMProviderBase):
         tools: list[ToolDefinition] | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
+        tool_choice: ToolChoice | None = None,
+        thinking: ThinkingConfig | None = None,
+        enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
         """Send a chat completion request to Grok.
 
@@ -248,6 +253,9 @@ class GrokProvider(LLMProviderBase):
             tools: Available tools for function calling.
             temperature: Sampling temperature.
             max_tokens: Maximum tokens in response.
+            tool_choice: How the model should select tools.
+            thinking: Extended thinking configuration (ignored by Grok).
+            enable_cache: Whether to enable prompt caching (ignored by Grok).
 
         Returns:
             Tuple of (assistant message, tool calls if any).
@@ -268,6 +276,17 @@ class GrokProvider(LLMProviderBase):
             grok_tools_raw = self._convert_tools_to_provider_format(tools)
             grok_tools_typed = cast("list[ChatCompletionToolParam]", grok_tools_raw)
 
+        tool_choice_param: ChatCompletionToolChoiceOptionParam | None = None
+        if tool_choice is not None and grok_tools_typed:
+            tool_choice_param = cast(
+                "ChatCompletionToolChoiceOptionParam",
+                self._convert_tool_choice_to_openai_format(tool_choice),
+            )
+        if thinking is not None and thinking.enabled:
+            self._logger.debug("grok_thinking_ignored")
+        if enable_cache:
+            self._logger.debug("grok_cache_ignored")
+
         log_provider_request(
             provider="grok",
             model=model,
@@ -282,6 +301,7 @@ class GrokProvider(LLMProviderBase):
             temperature=temperature,
             max_tokens=max_tokens,
             tools=grok_tools_typed,
+            tool_choice=tool_choice_param,
         )
         duration_ms = (time.perf_counter() - start_time) * 1000
 
@@ -305,6 +325,7 @@ class GrokProvider(LLMProviderBase):
         temperature: float,
         max_tokens: int,
         tools: list[ChatCompletionToolParam] | None,
+        tool_choice: ChatCompletionToolChoiceOptionParam | None = None,
     ) -> ChatCompletion:
         """Execute the Grok API chat completion call with error handling.
 
@@ -314,6 +335,7 @@ class GrokProvider(LLMProviderBase):
             temperature: Sampling temperature.
             max_tokens: Maximum tokens in response.
             tools: Formatted tools for the API, or None.
+            tool_choice: How the model should select tools.
 
         Returns:
             The chat completion response object.
@@ -326,6 +348,15 @@ class GrokProvider(LLMProviderBase):
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         try:
+            if tools and tool_choice is not None:
+                return await self._client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    tools=tools,
+                    tool_choice=tool_choice,
+                )
             if tools:
                 return await self._client.chat.completions.create(
                     model=model,
@@ -390,6 +421,9 @@ class GrokProvider(LLMProviderBase):
         tools: list[ToolDefinition] | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
+        tool_choice: ToolChoice | None = None,
+        thinking: ThinkingConfig | None = None,
+        enable_cache: bool = False,
     ) -> AsyncIterator[str]:
         """Stream a chat completion response from Grok.
 
@@ -399,6 +433,9 @@ class GrokProvider(LLMProviderBase):
             tools: Available tools for function calling.
             temperature: Sampling temperature.
             max_tokens: Maximum tokens in response.
+            tool_choice: How the model should select tools.
+            thinking: Extended thinking configuration (ignored by Grok).
+            enable_cache: Whether to enable prompt caching (ignored by Grok).
 
         Yields:
             Text chunks as they arrive.
@@ -411,6 +448,10 @@ class GrokProvider(LLMProviderBase):
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False
+        if thinking is not None and thinking.enabled:
+            self._logger.debug("grok_stream_thinking_ignored")
+        if enable_cache:
+            self._logger.debug("grok_stream_cache_ignored")
 
         grok_messages_raw = self._convert_messages_to_provider_format(messages)
         grok_messages_typed = cast("list[ChatCompletionMessageParam]", grok_messages_raw)
@@ -420,8 +461,25 @@ class GrokProvider(LLMProviderBase):
             grok_tools_raw = self._convert_tools_to_provider_format(tools)
             grok_tools_typed = cast("list[ChatCompletionToolParam]", grok_tools_raw)
 
+        tool_choice_value: ChatCompletionToolChoiceOptionParam | None = None
+        if tool_choice is not None and grok_tools_typed:
+            tool_choice_value = cast(
+                "ChatCompletionToolChoiceOptionParam",
+                self._convert_tool_choice_to_openai_format(tool_choice),
+            )
+
         try:
-            if grok_tools_typed:
+            if grok_tools_typed and tool_choice_value is not None:
+                stream = await self._client.chat.completions.create(
+                    model=model,
+                    messages=grok_messages_typed,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    stream=True,
+                    tools=grok_tools_typed,
+                    tool_choice=tool_choice_value,
+                )
+            elif grok_tools_typed:
                 stream = await self._client.chat.completions.create(
                     model=model,
                     messages=grok_messages_typed,

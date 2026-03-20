@@ -854,6 +854,8 @@ class FridaBridge(InstrumentationBridge):
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
+        _logger.debug("memory_read_starting", address=hex(address), size=size)
+
         script_code = f"""
         var data = ptr({address}).readByteArray({size});
         send({{ type: 'memory' }}, data);
@@ -918,6 +920,7 @@ class FridaBridge(InstrumentationBridge):
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
+        _logger.debug("memory_regions_enumerating", protection=protection)
         script_code = (
             "var ranges = Process.enumerateRanges('" + protection + "');\n"
             "var result = ranges.map(function(r) {\n"
@@ -959,6 +962,7 @@ class FridaBridge(InstrumentationBridge):
                     )
                 )
 
+        _logger.debug("memory_regions_enumerated", count=len(regions))
         return regions
 
     async def scan_memory(self, pattern: bytes) -> list[MemorySearchResult]:
@@ -976,6 +980,7 @@ class FridaBridge(InstrumentationBridge):
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
+        _logger.debug("memory_scan_starting", pattern_length=len(pattern))
         hex_pattern = " ".join(f"{b:02x}" for b in pattern)
 
         script_code = f"""
@@ -1018,6 +1023,7 @@ class FridaBridge(InstrumentationBridge):
                     )
                 )
 
+        _logger.debug("memory_scan_completed", matches=len(matches))
         return matches
 
     async def enumerate_modules(self) -> list[ModuleInfo]:
@@ -1072,6 +1078,7 @@ class FridaBridge(InstrumentationBridge):
                     )
                 )
 
+        _logger.debug("modules_enumerated", count=len(modules))
         return modules
 
     async def enumerate_exports(self, module_name: str) -> list[ExportInfo]:
@@ -1129,6 +1136,7 @@ class FridaBridge(InstrumentationBridge):
                     )
                 )
 
+        _logger.debug("exports_enumerated", module=module_name, count=len(exports))
         return exports
 
     async def hook_function(
@@ -1137,7 +1145,7 @@ class FridaBridge(InstrumentationBridge):
         on_enter: str | None = None,
         on_leave: str | None = None,
     ) -> HookInfo:
-        """Hook a function by name or address.
+        """Attach a hook to a function by name or address.
 
         Args:
             target: Function name (module!func) or hex address.
@@ -1238,6 +1246,7 @@ class FridaBridge(InstrumentationBridge):
         Returns:
             List of hook information.
         """
+        _logger.debug("hooks_listed", count=len(self._hooks))
         return list(self._hooks.values())
 
     async def execute_script(self, script: str) -> str:
@@ -1255,6 +1264,7 @@ class FridaBridge(InstrumentationBridge):
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
+        _logger.debug("script_executing", script_length=len(script))
         result = await self._execute_script_and_wait(script)
 
         if "error" in result:
@@ -1316,7 +1326,7 @@ class FridaBridge(InstrumentationBridge):
         return True
 
     async def intercept_return(self, target: str, return_value: int) -> HookInfo:
-        """Hook a function and modify its return value.
+        """Intercept a function and replace its return value.
 
         Args:
             target: Function to hook.
@@ -1325,6 +1335,7 @@ class FridaBridge(InstrumentationBridge):
         Returns:
             Hook information.
         """
+        _logger.debug("intercept_return_setting", target=target, return_value=return_value)
         on_leave = f"retval.replace({return_value});"
         return await self.hook_function(
             target=target,
@@ -1351,6 +1362,7 @@ class FridaBridge(InstrumentationBridge):
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
+        _logger.debug("function_calling", address=hex(address), arg_count=len(args) if args else 0)
         args_list = args or []
         args_code = ", ".join(f"ptr({a})" for a in args_list)
 
@@ -1434,6 +1446,7 @@ class FridaBridge(InstrumentationBridge):
 
     async def unload_all_scripts(self) -> None:
         """Unload all active scripts."""
+        _logger.debug("unloading_all_scripts", count=len(self._scripts))
         for script_id in list(self._scripts.keys()):
             await self._unload_script(script_id)
 
@@ -1446,6 +1459,7 @@ class FridaBridge(InstrumentationBridge):
         Args:
             handler: Callback function for messages.
         """
+        _logger.debug("message_handler_set")
         self._message_handler = handler
 
     @override
@@ -1507,6 +1521,7 @@ class FridaBridge(InstrumentationBridge):
                     )
                 )
 
+        _logger.debug("imports_enumerated", module=module_name, count=len(imports))
         return imports
 
     @override
@@ -1559,6 +1574,7 @@ class FridaBridge(InstrumentationBridge):
                     )
                 )
 
+        _logger.debug("threads_enumerated", count=len(threads))
         return threads
 
     async def allocate_memory(self, size: int) -> int:
@@ -1706,7 +1722,9 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_MODULE_NOT_FOUND)
 
         addr_str = str(addr_val)
-        return int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+        base = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+        _logger.debug("base_address_found", module=module_name, base=hex(base))
+        return base
 
     async def resolve_symbol(self, address: int) -> SymbolInfo:
         """Resolve debug symbol information from an address.
@@ -1747,6 +1765,7 @@ class FridaBridge(InstrumentationBridge):
         addr_str = str(result.get("address", str(address)))
         resolved_addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
 
+        _logger.debug("symbol_resolved", address=hex(resolved_addr), symbol_name=str(name_val) if name_val else None)
         return SymbolInfo(
             name=str(name_val) if name_val else f"sub_{address:x}",
             address=resolved_addr,
@@ -1813,6 +1832,7 @@ class FridaBridge(InstrumentationBridge):
                     )
                 )
 
+        _logger.debug("functions_found", func_name=name, count=len(symbols))
         return symbols
 
     async def resolve_api(self, query: str) -> list[ApiResolverMatch]:
@@ -1864,6 +1884,7 @@ class FridaBridge(InstrumentationBridge):
                     )
                 )
 
+        _logger.debug("api_resolved", query=query, matches=len(matches))
         return matches
 
     async def replace_function(self, target: str, replacement_code: str) -> HookInfo:
@@ -1954,6 +1975,7 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_NO_DEVICE)
 
         processes = await asyncio.to_thread(device.enumerate_processes)
+        _logger.debug("processes_enumerated", count=len(processes))
         return [{"pid": proc.pid, "name": proc.name} for proc in processes]
 
     @staticmethod
@@ -2189,6 +2211,7 @@ class FridaBridge(InstrumentationBridge):
                 path=getattr(child, "path", None),
                 argv=list(getattr(child, "argv", [])),
             )
+            _logger.info("child_process_added", child_pid=child_pid, parent_pid=child_parent_pid)
             with self._gated_children_lock:
                 self._gated_children.append(info)
             if self._message_handler:
@@ -2239,7 +2262,9 @@ class FridaBridge(InstrumentationBridge):
             List of pending child process information.
         """
         with self._gated_children_lock:
-            return list(self._gated_children)
+            result = list(self._gated_children)
+        _logger.debug("pending_children_queried", count=len(result))
+        return result
 
     async def resume_child(self, pid: int) -> None:
         """Resume a gated child process.
@@ -2281,6 +2306,7 @@ class FridaBridge(InstrumentationBridge):
                 parameters=dict(getattr(crash, "parameters", {})),
                 timestamp=time.time(),
             )
+            _logger.warning("process_crashed", crash_pid=crash_pid, summary=info.summary)
             with self._crashes_lock:
                 self._crashes.append(info)
             if self._message_handler:
@@ -2307,7 +2333,9 @@ class FridaBridge(InstrumentationBridge):
             List of crash information.
         """
         with self._crashes_lock:
-            return list(self._crashes)
+            result = list(self._crashes)
+        _logger.debug("crashes_queried", count=len(result))
+        return result
 
     async def enumerate_devices(self) -> list[FridaDeviceInfo]:
         """List all available Frida devices.
@@ -2317,6 +2345,7 @@ class FridaBridge(InstrumentationBridge):
         """
         _ = self._state
         devices = await asyncio.to_thread(frida.enumerate_devices)
+        _logger.debug("devices_enumerated", count=len(devices))
         return [
             FridaDeviceInfo(
                 id=str(d.id),

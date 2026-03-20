@@ -148,7 +148,7 @@ class TestFindPattern:
         Args:
             attached_bridge: X64DbgBridge with attached_pid.
         """
-        marker = b"\x48\x89\x5C\x24\x08"
+        marker = b"\x48\x89\x5c\x24\x08"
         buf = ctypes.create_string_buffer(marker)
         buf_addr = ctypes.addressof(buf)
 
@@ -164,7 +164,7 @@ class TestFindPattern:
         Args:
             attached_bridge: X64DbgBridge with attached_pid.
         """
-        marker = b"\xCC\xCC\xCC\xCC"
+        marker = b"\xcc\xcc\xcc\xcc"
         buf = ctypes.create_string_buffer(marker)
         buf_addr = ctypes.addressof(buf)
 
@@ -180,7 +180,7 @@ class TestFindPattern:
         Args:
             attached_bridge: X64DbgBridge with attached_pid.
         """
-        marker = b"\xDE\xAD\xBE\xEF"
+        marker = b"\xde\xad\xbe\xef"
         buf = ctypes.create_string_buffer(marker)
         buf_addr = ctypes.addressof(buf)
 
@@ -216,7 +216,7 @@ class TestScanMemory:
         Args:
             attached_bridge: X64DbgBridge with attached_pid.
         """
-        marker = b"\xCA\xFE\xBA\xBE"
+        marker = b"\xca\xfe\xba\xbe"
         buf = ctypes.create_string_buffer(marker)
         _buf_addr = ctypes.addressof(buf)
 
@@ -231,7 +231,7 @@ class TestScanMemory:
         Args:
             attached_bridge: X64DbgBridge with attached_pid.
         """
-        marker = b"\xAB\xCD\xEF\x01"
+        marker = b"\xab\xcd\xef\x01"
         buf = ctypes.create_string_buffer(marker)
         _buf_addr = ctypes.addressof(buf)
 
@@ -317,9 +317,7 @@ class TestDumpMemoryToFile:
         buf_addr = ctypes.addressof(buf)
 
         dump_file = tmp_path / "dump.bin"
-        result = await attached_bridge.dump_memory_to_file(
-            buf_addr, len(marker), str(dump_file)
-        )
+        result = await attached_bridge.dump_memory_to_file(buf_addr, len(marker), str(dump_file))
         assert result["success"] is True
         assert result["bytes_written"] == len(marker)
         assert dump_file.exists()
@@ -359,8 +357,14 @@ class TestPEParsing:
         """
         sections = await attached_bridge.get_module_sections(_TEST_MODULE)
         required_fields = {
-            "name", "virtual_address", "virtual_size",
-            "raw_size", "characteristics", "readable", "writable", "executable",
+            "name",
+            "virtual_address",
+            "virtual_size",
+            "raw_size",
+            "characteristics",
+            "readable",
+            "writable",
+            "executable",
         }
         for section in sections:
             assert required_fields.issubset(section.keys()), (
@@ -424,9 +428,7 @@ class TestParseSectionEntry:
 
     def test_parse_text_section(self) -> None:
         """Test parsing a crafted .text section header."""
-        sec_data = self._build_section(
-            b".text\x00", 0x1000, 0x1000, 0x800, self._TEXT_CHARACTERISTICS
-        )
+        sec_data = self._build_section(b".text\x00", 0x1000, 0x1000, 0x800, self._TEXT_CHARACTERISTICS)
         parse_fn = getattr(X64DbgBridge, "_parse_section_entry")
         result = parse_fn(sec_data, 0, self._BASE_ADDRESS)
 
@@ -439,9 +441,7 @@ class TestParseSectionEntry:
 
     def test_parse_data_section(self) -> None:
         """Test parsing a crafted .data section header."""
-        sec_data = self._build_section(
-            b".data\x00", 0x2000, 0x3000, 0x1000, self._DATA_CHARACTERISTICS
-        )
+        sec_data = self._build_section(b".data\x00", 0x2000, 0x3000, 0x1000, self._DATA_CHARACTERISTICS)
         parse_fn = getattr(X64DbgBridge, "_parse_section_entry")
         result = parse_fn(sec_data, 0, self._BASE_ADDRESS)
 

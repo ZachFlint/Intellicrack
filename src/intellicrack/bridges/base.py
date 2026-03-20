@@ -929,7 +929,7 @@ class InstrumentationBridge(DynamicAnalysisBridge):
         on_enter: str | None = None,
         on_leave: str | None = None,
     ) -> HookInfo:
-        """Hook a function by name or address.
+        """Attach a hook to a function by name or address.
 
         Args:
             target: Function name (module!func) or hex address.
@@ -992,7 +992,7 @@ class InstrumentationBridge(DynamicAnalysisBridge):
 
     @abc.abstractmethod
     async def intercept_return(self, target: str, return_value: int) -> HookInfo:
-        """Hook a function and modify its return value.
+        """Intercept a function and replace its return value.
 
         Args:
             target: Function to hook.

@@ -335,7 +335,7 @@ class SandboxManager:
         Returns:
             Idle instance or None if not found.
         """
-        return next(
+        found = next(
             (
                 instance
                 for instance in self._instances.values()
@@ -343,6 +343,8 @@ class SandboxManager:
             ),
             None,
         )
+        _logger.debug("idle_instance_search", sandbox_type=sandbox_type, found=found is not None)
+        return found
 
     async def _find_oldest_idle(self) -> SandboxInstance | None:
         """Find the oldest idle sandbox instance.
@@ -358,6 +360,7 @@ class SandboxManager:
                 oldest = instance
                 oldest_time = instance.last_used
 
+        _logger.debug("oldest_idle_search", found=oldest is not None)
         return oldest
 
     async def cleanup_stale(self, max_idle_seconds: int = 3600) -> int:
@@ -369,6 +372,7 @@ class SandboxManager:
         Returns:
             Number of instances cleaned up.
         """
+        _logger.debug("stale_cleanup_starting", max_idle_seconds=max_idle_seconds, total_instances=len(self._instances))
         now = datetime.now()
         stale_ids: list[str] = []
 
@@ -391,6 +395,11 @@ class SandboxManager:
         Returns:
             Status dictionary with instance information.
         """
+        _logger.debug(
+            "sandbox_status_queried",
+            total_count=len(self._instances),
+            active_count=sum(1 for i in self._instances.values() if i.state.status == "running"),
+        )
         available_types = await self.get_available_types()
 
         instance_info = [

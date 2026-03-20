@@ -1,26 +1,66 @@
 {
   "tool": "flake8",
-  "generated": "2026-03-08T16:24:58.512664",
-  "total_findings": 8,
-  "total_files": 7,
+  "generated": "2026-03-14T15:22:57.078952",
+  "total_findings": 11,
+  "total_files": 8,
   "files": [
+    {
+      "path": "tests/test_bridges\\test_x64dbg_new_methods.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 206,
+          "column": 9,
+          "code": "F841",
+          "message": "local variable '_buf_addr' is assigned to but never used",
+          "raw": "tests/test_bridges\\test_x64dbg_new_methods.py:206:9: F841 local variable '_buf_addr' is assigned to but never used"
+        },
+        {
+          "line": 221,
+          "column": 9,
+          "code": "F841",
+          "message": "local variable '_buf_addr' is assigned to but never used",
+          "raw": "tests/test_bridges\\test_x64dbg_new_methods.py:221:9: F841 local variable '_buf_addr' is assigned to but never used"
+        },
+        {
+          "line": 236,
+          "column": 9,
+          "code": "F841",
+          "message": "local variable '_buf_addr' is assigned to but never used",
+          "raw": "tests/test_bridges\\test_x64dbg_new_methods.py:236:9: F841 local variable '_buf_addr' is assigned to but never used"
+        }
+      ]
+    },
     {
       "path": "src/intellicrack/providers\\xpu_utils.py",
       "count": 2,
       "findings": [
         {
-          "line": 539,
+          "line": 543,
           "column": 141,
           "code": "E501",
           "message": "line too long (146 > 140 characters)",
-          "raw": "src/intellicrack/providers\\xpu_utils.py:539:141: E501 line too long (146 > 140 characters)"
+          "raw": "src/intellicrack/providers\\xpu_utils.py:543:141: E501 line too long (146 > 140 characters)"
         },
         {
-          "line": 568,
+          "line": 572,
           "column": 141,
           "code": "E501",
           "message": "line too long (179 > 140 characters)",
-          "raw": "src/intellicrack/providers\\xpu_utils.py:568:141: E501 line too long (179 > 140 characters)"
+          "raw": "src/intellicrack/providers\\xpu_utils.py:572:141: E501 line too long (179 > 140 characters)"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/bridges\\ghidra.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 2366,
+          "column": 141,
+          "code": "E501",
+          "message": "line too long (146 > 140 characters)",
+          "raw": "src/intellicrack/bridges\\ghidra.py:2366:141: E501 line too long (146 > 140 characters)"
         }
       ]
     },
@@ -55,11 +95,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 490,
+          "line": 488,
           "column": 13,
           "code": "F824",
           "message": "`nonlocal content_label` is unused: name is never assigned in scope",
-          "raw": "src/intellicrack/ui\\chat.py:490:13: F824 `nonlocal content_label` is unused: name is never assigned in scope"
+          "raw": "src/intellicrack/ui\\chat.py:488:13: F824 `nonlocal content_label` is unused: name is never assigned in scope"
         }
       ]
     },
@@ -68,24 +108,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 97,
+          "line": 82,
           "column": 141,
           "code": "E501",
           "message": "line too long (142 > 140 characters)",
-          "raw": "src/intellicrack/ui\\tool_config.py:97:141: E501 line too long (142 > 140 characters)"
-        }
-      ]
-    },
-    {
-      "path": "tests/test_core\\test_logging.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 593,
-          "column": 13,
-          "code": "E117",
-          "message": "over-indented",
-          "raw": "tests/test_core\\test_logging.py:593:13: E117 over-indented"
+          "raw": "src/intellicrack/ui\\tool_config.py:82:141: E501 line too long (142 > 140 characters)"
         }
       ]
     },

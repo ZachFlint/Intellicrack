@@ -327,11 +327,7 @@ class ToolInstallWorker(QThread):
             self._install_path / "cutter.exe",
         ]
 
-        candidates.extend(
-            item / "cutter.exe"
-            for item in self._install_path.iterdir()
-            if item.is_dir()
-        )
+        candidates.extend(item / "cutter.exe" for item in self._install_path.iterdir() if item.is_dir())
 
         for candidate in candidates:
             if candidate.exists():

@@ -24,7 +24,6 @@ This module only provides:
 from __future__ import annotations
 
 import ast
-import importlib
 import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -33,6 +32,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, ClassVar, Literal
 
+from ._subprocess import TimeoutExpired
 from .logging import get_logger
 from .process_manager import ProcessManager
 
@@ -396,8 +396,7 @@ class ScriptValidator:
             _logger.debug("node_not_found", reason="node binary not available, skipping validation")
             return True, None
         except Exception as exc:
-            subprocess_mod = importlib.import_module("subprocess")
-            if isinstance(exc, subprocess_mod.TimeoutExpired):
+            if isinstance(exc, TimeoutExpired):
                 _logger.warning("validation_timeout", language="javascript", timeout_seconds=10)
                 return False, "Validation timed out"
             _logger.debug("validation_exception", language="javascript", error=str(exc))
@@ -405,7 +404,7 @@ class ScriptValidator:
 
     @staticmethod
     def validate_java(content: str) -> tuple[bool, str | None]:
-        """Basic validation for Java/Ghidra scripts.
+        """Validate Java/Ghidra script structure.
 
         Args:
             content: Java script content.

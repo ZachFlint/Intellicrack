@@ -1,31 +1,8 @@
-3 findings in IntellicrackStructure.hta
-
-IntellicrackStructure.hta: [trailing-whitespace] [FIXED] Fixed
-
-IntellicrackStructure.hta: [end-of-file-fixer] [FIXED] Fixed
-
-IntellicrackStructure.hta: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
 2 findings in reports/csv/precommit-hooks_findings.csv
 
 reports/csv/precommit-hooks_findings.csv: [trailing-whitespace] [FIXED] Fixed
 
 reports/csv/precommit-hooks_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-2 findings in .complexipy_cache/c4ed0630d647fefad77d0754b11ca463.json
-
-.complexipy_cache/c4ed0630d647fefad77d0754b11ca463.json: [end-of-file-fixer] [FIXED] Fixed
-
-.complexipy_cache/c4ed0630d647fefad77d0754b11ca463.json: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-2 findings in IntellicrackKnowledgeGraph.html
-
-IntellicrackKnowledgeGraph.html: [end-of-file-fixer] [FIXED] Fixed
-
-IntellicrackKnowledgeGraph.html: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 2 findings in reports/json/bandit_findings.json
@@ -238,20 +215,6 @@ reports/sarif/precommit-hooks_findings.sarif: [end-of-file-fixer] [FIXED] Fixed
 reports/sarif/precommit-hooks_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
-2 findings in reports/txt/bandit_findings.txt
-
-reports/txt/bandit_findings.txt: [end-of-file-fixer] [FIXED] Fixed
-
-reports/txt/bandit_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-2 findings in reports/txt/basedpyright_findings.txt
-
-reports/txt/basedpyright_findings.txt: [end-of-file-fixer] [FIXED] Fixed
-
-reports/txt/basedpyright_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
 2 findings in reports/txt/blinter_findings.txt
 
 reports/txt/blinter_findings.txt: [end-of-file-fixer] [FIXED] Fixed
@@ -280,25 +243,11 @@ reports/txt/deadcode_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 reports/txt/deadcode_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
-2 findings in reports/txt/deptry_findings.txt
-
-reports/txt/deptry_findings.txt: [end-of-file-fixer] [FIXED] Fixed
-
-reports/txt/deptry_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
 2 findings in reports/txt/flake8_findings.txt
 
 reports/txt/flake8_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 reports/txt/flake8_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-2 findings in reports/txt/jsonlint_findings.txt
-
-reports/txt/jsonlint_findings.txt: [end-of-file-fixer] [FIXED] Fixed
-
-reports/txt/jsonlint_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 2 findings in reports/txt/markdownlint_findings.txt
@@ -336,13 +285,6 @@ reports/txt/psscriptanalyzer_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 reports/txt/psscriptanalyzer_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
-2 findings in reports/txt/pydocstyle_findings.txt
-
-reports/txt/pydocstyle_findings.txt: [end-of-file-fixer] [FIXED] Fixed
-
-reports/txt/pydocstyle_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
 2 findings in reports/txt/radon_findings.txt
 
 reports/txt/radon_findings.txt: [end-of-file-fixer] [FIXED] Fixed
@@ -355,13 +297,6 @@ reports/txt/radon_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line end
 reports/txt/ruff_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 reports/txt/ruff_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-2 findings in reports/txt/semgrep_findings.txt
-
-reports/txt/semgrep_findings.txt: [end-of-file-fixer] [FIXED] Fixed
-
-reports/txt/semgrep_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 2 findings in reports/txt/shellcheck_findings.txt
@@ -413,33 +348,14 @@ reports/txt/yamllint_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 reports/txt/yamllint_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
-2 findings in reports/xml/basedpyright_findings.xml
+1 findings in reports/txt/bandit_findings.txt
 
-reports/xml/basedpyright_findings.xml: [end-of-file-fixer] [FIXED] Fixed
-
-reports/xml/basedpyright_findings.xml: [mixed-line-ending] [FIXED] fixed mixed line endings
+reports/txt/bandit_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 
-2 findings in reports/xml/semgrep_findings.xml
+1 findings in reports/txt/basedpyright_findings.txt
 
-reports/xml/semgrep_findings.xml: [end-of-file-fixer] [FIXED] Fixed
-
-reports/xml/semgrep_findings.xml: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-1 findings in scripts/generate_tree.py
-
-scripts/generate_tree.py: [trailing-whitespace] [FIXED] Fixed
-
-
-1 findings in scripts/knowledge-graph/visualize_architecture.py
-
-scripts/knowledge-graph/visualize_architecture.py: [trailing-whitespace] [FIXED] Fixed
-
-
-1 findings in coverage.json
-
-coverage.json: [end-of-file-fixer] [FIXED] Fixed
+reports/txt/basedpyright_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 
 1 findings in reports/txt/codespell_findings.txt
@@ -452,9 +368,29 @@ reports/txt/codespell_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 reports/txt/dead_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 
+1 findings in reports/txt/deptry_findings.txt
+
+reports/txt/deptry_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+
 1 findings in reports/txt/interrogate_findings.txt
 
 reports/txt/interrogate_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+
+1 findings in reports/txt/jsonlint_findings.txt
+
+reports/txt/jsonlint_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+
+1 findings in reports/txt/pydocstyle_findings.txt
+
+reports/txt/pydocstyle_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+
+1 findings in reports/txt/semgrep_findings.txt
+
+reports/txt/semgrep_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 
 1 findings in reports/txt/taplo_findings.txt
@@ -465,6 +401,11 @@ reports/txt/taplo_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 1 findings in reports/xml/bandit_findings.xml
 
 reports/xml/bandit_findings.xml: [end-of-file-fixer] [FIXED] Fixed
+
+
+1 findings in reports/xml/basedpyright_findings.xml
+
+reports/xml/basedpyright_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 
 
 1 findings in reports/xml/blinter_findings.xml
@@ -555,6 +496,11 @@ reports/xml/radon_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 1 findings in reports/xml/ruff_findings.xml
 
 reports/xml/ruff_findings.xml: [end-of-file-fixer] [FIXED] Fixed
+
+
+1 findings in reports/xml/semgrep_findings.xml
+
+reports/xml/semgrep_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 
 
 1 findings in reports/xml/shellcheck_findings.xml
@@ -667,11 +613,6 @@ reports/xml/yamllint_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 .yarnrc.yml: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
-1 findings in IntellicrackStructure.txt
-
-IntellicrackStructure.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
 1 findings in package.json
 
 package.json: [mixed-line-ending] [FIXED] fixed mixed line endings
@@ -685,11 +626,6 @@ pyrightconfig.json: [mixed-line-ending] [FIXED] fixed mixed line endings
 1 findings in qodana.yaml
 
 qodana.yaml: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-1 findings in scripts/knowledge-graph/IntellicrackKnowledgeGraph.dot
-
-scripts/knowledge-graph/IntellicrackKnowledgeGraph.dot: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 1 findings in src/intellicrack/assets/configs/anthropic_claude3.json

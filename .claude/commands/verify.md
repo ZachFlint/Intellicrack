@@ -13,12 +13,11 @@ added/changed) review of your implementation using the following checklist. For
 each point, you must explicitly confirm adherence or justify any deviation.
 
 **1. Scope and Purpose Verification:** **_(Apply this section only if the
-changes directly impact core cracking, analysis, or protection-defeating
-features.)_**
+changes directly impact core analysis, tool integration, or bridge features.)_**
 
-- [ ] **Primary Objective:** Does the implemented feature SOLELY and EXCLUSIVELY
-      target the analysis and defeat of software licensing, registration, or
-      copy protection mechanisms?
+- [ ] **Primary Objective:** Does the implemented feature strengthen
+      Intellicrack's role as a unified bridge for binary analysis tools, AI
+      providers, and workflow orchestration?
 - [ ] **Scope Limitation:** Confirm that the code introduces NO capabilities
       related to malware, system exploits, network attacks, or data theft.
 

@@ -1,11 +1,11 @@
 {
   "tool": "blinter",
-  "generated": "2026-03-08T16:21:12.472178",
+  "generated": "2026-03-14T15:20:30.333622",
   "total_findings": 3,
   "total_files": 3,
   "files": [
     {
-      "path": "D:\\Intellicrack\\CLI Coding\\UpdateTools.cmd",
+      "path": "D:\\Intellicrack\\CLI Coding\\Scripts\\UpdateTools.cmd",
       "count": 1,
       "findings": [
         {

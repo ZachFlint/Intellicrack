@@ -1,6 +1,6 @@
 {
   "tool": "markdownlint",
-  "generated": "2026-03-08T16:25:49.049506",
+  "generated": "2026-03-14T15:23:45.420433",
   "total_findings": 62,
   "total_files": 5,
   "files": [
@@ -263,8 +263,8 @@
           "line": 18,
           "column": 81,
           "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 99]",
-          "raw": "README.md:18:81 error MD013/line-length Line length [Expected: 80; Actual: 99]"
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 104]",
+          "raw": "README.md:18:81 error MD013/line-length Line length [Expected: 80; Actual: 104]"
         },
         {
           "line": 19,

@@ -30,7 +30,9 @@ from ..core.types import (
     ProviderCredentials,
     ProviderError,
     ProviderName,
+    ThinkingConfig,
     ToolCall,
+    ToolChoice,
     ToolDefinition,
 )
 from .base import LLMProviderBase, create_openai_tool_schema
@@ -355,7 +357,7 @@ class LocalTransformersProvider(LLMProviderBase):
                     name=f"[Local] {model_id.rsplit('/', maxsplit=1)[-1]}",
                     provider=ProviderName.LOCAL_TRANSFORMERS,
                     context_window=context_window,
-                    supports_tools=False,
+                    supports_tools=True,
                     supports_vision=supports_vision,
                     supports_streaming=True,
                     input_cost_per_1m_tokens=None,
@@ -372,6 +374,9 @@ class LocalTransformersProvider(LLMProviderBase):
         tools: list[ToolDefinition] | None = None,
         temperature: float = _DEFAULT_TEMPERATURE,
         max_tokens: int = _DEFAULT_MAX_NEW_TOKENS,
+        tool_choice: ToolChoice | None = None,
+        thinking: ThinkingConfig | None = None,
+        enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
         """Send a chat completion request.
 
@@ -381,6 +386,9 @@ class LocalTransformersProvider(LLMProviderBase):
             tools: Available tools for function calling.
             temperature: Sampling temperature (0.0 to 1.0).
             max_tokens: Maximum tokens in response.
+            tool_choice: How the model should select tools (ignored locally).
+            thinking: Extended thinking configuration (ignored locally).
+            enable_cache: Whether to enable prompt caching (ignored locally).
 
         Returns:
             Tuple of (assistant message, tool calls if any).
@@ -392,6 +400,12 @@ class LocalTransformersProvider(LLMProviderBase):
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         self._cancel_requested = False
+        if tool_choice is not None:
+            self._logger.debug("local_transformers_tool_choice_ignored", mode=tool_choice.mode.value)
+        if thinking is not None and thinking.enabled:
+            self._logger.debug("local_transformers_thinking_ignored")
+        if enable_cache:
+            self._logger.debug("local_transformers_cache_ignored")
 
         model_id = model or _DEFAULT_MODEL
 
@@ -436,7 +450,7 @@ class LocalTransformersProvider(LLMProviderBase):
                 has_tool_calls=tool_calls is not None,
             )
         except Exception as exc:
-            self._logger.exception("local_chat_failed", model=model_id, error=str(exc))
+            self._logger.warning("local_chat_failed", model=model_id, error=str(exc))
             raise ProviderError(_ERR_INFERENCE_FAILED % exc) from exc
         else:
             return message, tool_calls
@@ -448,8 +462,14 @@ class LocalTransformersProvider(LLMProviderBase):
         tools: list[ToolDefinition] | None = None,
         temperature: float = _DEFAULT_TEMPERATURE,
         max_tokens: int = _DEFAULT_MAX_NEW_TOKENS,
+        tool_choice: ToolChoice | None = None,
+        thinking: ThinkingConfig | None = None,
+        enable_cache: bool = False,
     ) -> AsyncIterator[str]:
         """Stream a chat completion response.
+
+        After streaming completes, accumulated text is parsed for tool
+        calls when tools are provided.
 
         Args:
             messages: Conversation history.
@@ -457,6 +477,9 @@ class LocalTransformersProvider(LLMProviderBase):
             tools: Available tools for function calling.
             temperature: Sampling temperature (0.0 to 1.0).
             max_tokens: Maximum tokens in response.
+            tool_choice: How the model should select tools (ignored locally).
+            thinking: Extended thinking configuration (ignored locally).
+            enable_cache: Whether to enable prompt caching (ignored locally).
 
         Yields:
             Text chunks as they are generated.
@@ -468,6 +491,12 @@ class LocalTransformersProvider(LLMProviderBase):
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         self._cancel_requested = False
+        if tool_choice is not None:
+            self._logger.debug("local_stream_tool_choice_ignored", mode=tool_choice.mode.value)
+        if thinking is not None and thinking.enabled:
+            self._logger.debug("local_stream_thinking_ignored")
+        if enable_cache:
+            self._logger.debug("local_stream_cache_ignored")
 
         model_id = model or _DEFAULT_MODEL
 
@@ -480,14 +509,22 @@ class LocalTransformersProvider(LLMProviderBase):
             formatted_messages = self._convert_messages_to_provider_format(messages)
             prompt = self._format_prompt(formatted_messages, tools)
 
+            accumulated_chunks: list[str] = []
             async for chunk in self._stream_generate(prompt, temperature, max_tokens):
                 if self._cancel_requested:
                     break
+                accumulated_chunks.append(chunk)
                 yield chunk
+
+            if tools and not self._cancel_requested:
+                full_text = "".join(accumulated_chunks)
+                parsed_calls = self._parse_tool_calls(full_text)
+                if parsed_calls:
+                    self._pending_tool_calls = parsed_calls
 
         except Exception as exc:
             if not self._cancel_requested:
-                self._logger.exception("local_stream_failed", model=model_id, error=str(exc))
+                self._logger.warning("local_stream_failed", model=model_id, error=str(exc))
                 raise ProviderError(_ERR_STREAMING_FAILED % exc) from exc
 
     async def _ensure_model_loaded(self, model_id: str) -> None:
@@ -554,7 +591,7 @@ class LocalTransformersProvider(LLMProviderBase):
         temperature: float,
         max_tokens: int,
     ) -> str:
-        """Synchronous text generation.
+        """Generate text synchronously.
 
         Args:
             prompt: Input prompt.

@@ -30,10 +30,13 @@ from ..bridges.schemas import (
 from .analysis_aggregator import AnalysisAggregator
 from .logging import get_logger, log_analysis_operation
 from .types import (
+    CacheConfig,
     ConfirmationLevel,
     Message,
     PatchInfo,
     ProviderName,
+    ThinkingConfig,
+    ToolChoice,
     ToolName,
     ToolResult,
 )
@@ -69,6 +72,9 @@ class OrchestratorConfig:
         max_tokens: Maximum tokens in LLM response.
         stream_responses: Whether to stream LLM responses.
         stream_mode: Streaming mode ("auto", "always", "never").
+        tool_choice: How the model should select tools.
+        thinking: Extended thinking configuration.
+        cache: Prompt caching configuration.
     """
 
     confirmation_level: ConfirmationLevel = ConfirmationLevel.DESTRUCTIVE
@@ -78,6 +84,9 @@ class OrchestratorConfig:
     max_tokens: int = 4096
     stream_responses: bool = True
     stream_mode: Literal["auto", "always", "never"] = "auto"
+    tool_choice: ToolChoice | None = None
+    thinking: ThinkingConfig | None = None
+    cache: CacheConfig | None = None
 
 
 @dataclass
@@ -438,6 +447,7 @@ class Orchestrator:
 
         tool_definitions = self._tools.get_tool_definitions()
         self._validate_tool_schemas(tool_definitions, provider)
+        context_window = await self._get_model_context_window(provider)
         iteration = 0
 
         while iteration < self._config.max_iterations:
@@ -448,6 +458,7 @@ class Orchestrator:
             _logger.debug("agent_loop_iteration", iteration=iteration)
 
             messages = self._build_messages()
+            messages = self.trim_messages_to_context_window(messages, context_window)
 
             response, tool_calls = await self._call_llm(
                 provider=provider,
@@ -729,6 +740,67 @@ class Orchestrator:
         """
         return len(text) // 4
 
+    async def _get_model_context_window(self, provider: LLMProvider) -> int:
+        """Retrieve the context window for the current model.
+
+        Queries the provider's model list and finds the matching model ID.
+        Falls back to 128000 if the model is not found.
+
+        Args:
+            provider: The LLM provider to query.
+
+        Returns:
+            Context window size in tokens.
+        """
+        if self._current_session is None:
+            return 128000
+        try:
+            models = await provider.list_models()
+            for model_info in models:
+                if model_info.id == self._current_session.model:
+                    return model_info.context_window
+        except Exception:
+            _logger.debug("context_window_lookup_failed")
+        return 128000
+
+    @staticmethod
+    def trim_messages_to_context_window(
+        messages: list[Message],
+        context_window: int,
+    ) -> list[Message]:
+        """Remove oldest non-system messages until within context budget.
+
+        Keeps 85% of the context window as the token budget to leave
+        headroom for the response.
+
+        Args:
+            messages: List of messages to trim.
+            context_window: Maximum context window in tokens.
+
+        Returns:
+            Trimmed list of messages.
+        """
+        budget = int(context_window * 0.85)
+        total = sum(Orchestrator._estimate_tokens(m.content) for m in messages)
+        while total > budget and len(messages) > 1:
+            oldest_idx = next(
+                (i for i, m in enumerate(messages) if m.role != "system"),
+                -1,
+            )
+            if oldest_idx < 0:
+                break
+            removed = messages.pop(oldest_idx)
+            removed_tokens = Orchestrator._estimate_tokens(removed.content)
+            total -= removed_tokens
+            _logger.debug(
+                "message_trimmed_for_context",
+                role=removed.role,
+                tokens_freed=removed_tokens,
+                remaining_tokens=total,
+                budget=budget,
+            )
+        return messages
+
     async def _call_llm(
         self,
         provider: LLMProvider,
@@ -771,18 +843,26 @@ class Orchestrator:
             streaming=use_streaming,
             tool_count=len(tools),
         )
+        enable_cache = self._config.cache is not None and self._config.cache.enabled
+
         result: tuple[Message, list[ToolCall] | None]
         if use_streaming:
             result = await self._stream_response(
                 provider=provider,
                 messages=messages,
                 tools=tools,
+                tool_choice=self._config.tool_choice,
+                thinking=self._config.thinking,
+                enable_cache=enable_cache,
             )
         else:
             result = await self._non_stream_response(
                 provider=provider,
                 messages=messages,
                 tools=tools,
+                tool_choice=self._config.tool_choice,
+                thinking=self._config.thinking,
+                enable_cache=enable_cache,
             )
 
         response, tool_calls_result = result
@@ -827,6 +907,9 @@ class Orchestrator:
         provider: LLMProvider,
         messages: list[Message],
         tools: list[ToolDefinition],
+        tool_choice: ToolChoice | None = None,
+        thinking: ThinkingConfig | None = None,
+        enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
         """Stream a response from the LLM.
 
@@ -838,6 +921,9 @@ class Orchestrator:
             provider: LLM provider to use.
             messages: Conversation messages.
             tools: Available tool definitions.
+            tool_choice: How the model should select tools.
+            thinking: Extended thinking configuration.
+            enable_cache: Whether to enable prompt caching.
 
         Returns:
             Tuple of (response message, tool calls if any).
@@ -858,6 +944,9 @@ class Orchestrator:
             tools=tools,
             temperature=self._config.temperature,
             max_tokens=self._config.max_tokens,
+            tool_choice=tool_choice,
+            thinking=thinking,
+            enable_cache=enable_cache,
         ):
             if self._cancel_event.is_set():
                 raise asyncio.CancelledError()
@@ -889,6 +978,9 @@ class Orchestrator:
         provider: LLMProvider,
         messages: list[Message],
         tools: list[ToolDefinition],
+        tool_choice: ToolChoice | None = None,
+        thinking: ThinkingConfig | None = None,
+        enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
         """Request a non-streaming response from the LLM.
 
@@ -896,6 +988,9 @@ class Orchestrator:
             provider: LLM provider to use.
             messages: Conversation messages.
             tools: Available tool definitions.
+            tool_choice: How the model should select tools.
+            thinking: Extended thinking configuration.
+            enable_cache: Whether to enable prompt caching.
 
         Returns:
             Tuple of (response message, tool calls if any).
@@ -913,6 +1008,9 @@ class Orchestrator:
             tools=tools,
             temperature=self._config.temperature,
             max_tokens=self._config.max_tokens,
+            tool_choice=tool_choice,
+            thinking=thinking,
+            enable_cache=enable_cache,
         )
 
         _logger.debug(
@@ -1255,6 +1353,7 @@ class Orchestrator:
         if self._current_session is None:
             return None
 
+        _logger.info("bridge_reanalysis_requested", binary_name=binary_name)
         if binary_name:
             for binary in self._current_session.binaries:
                 if binary.name == binary_name:
@@ -1295,6 +1394,7 @@ class Orchestrator:
             error_message = f"Binary index out of range: {index}"
             raise IndexError(error_message)
 
+        _logger.info("active_binary_changed", index=index)
         self._current_session.active_binary_index = index
         await self._sessions.update(self._current_session)
 
@@ -1311,6 +1411,7 @@ class Orchestrator:
             error_message = "No active session"
             raise RuntimeError(error_message)
 
+        _logger.info("patch_added", address=hex(patch.address), description=patch.description)
         self._current_session.patches.append(patch)
         await self._sessions.update(self._current_session)
 
@@ -1374,6 +1475,7 @@ class Orchestrator:
         Returns:
             List of tool status dictionaries.
         """
+        _logger.debug("tool_status_queried")
         statuses = await self._tools.get_all_status()
         return [
             {
@@ -1447,6 +1549,7 @@ class Orchestrator:
         Returns:
             True if initialization succeeded.
         """
+        _logger.info("tool_initialization_requested", tool_name=str(tool_name))
         if isinstance(tool_name, str):
             tool_name = ToolName(tool_name.lower())
 
@@ -1457,6 +1560,7 @@ class Orchestrator:
 
         Delegates to the session manager to persist the current session state.
         """
+        _logger.debug("session_save_requested")
         await self._sessions.save()
 
     def set_confirmation_level(self, level: ConfirmationLevel) -> None:
@@ -1473,6 +1577,7 @@ class Orchestrator:
         Returns:
             Dictionary containing session, metrics, and tool status.
         """
+        _logger.debug("system_status_queried")
         return {
             "state": self.state,
             "session_id": self.current_session.id if self.current_session else None,
@@ -1498,6 +1603,7 @@ class Orchestrator:
 
     async def refresh_session_state(self) -> None:
         """Refresh the session state including bridge analysis."""
+        _logger.debug("session_state_refreshing")
         await self.reanalyze_bridge_analysis()
 
     async def register_manual_patch(
@@ -1515,6 +1621,7 @@ class Orchestrator:
             new_bytes: New bytes.
             description: Description.
         """
+        _logger.info("manual_patch_registered", address=hex(address), description=description)
         patch = PatchInfo(
             address=address,
             original_bytes=original_bytes,
@@ -1546,6 +1653,7 @@ class Orchestrator:
             error_message = "No active session"
             raise RuntimeError(error_message)
 
+        _logger.info("binary_activation_by_name", binary_name=name)
         for i, binary in enumerate(self._current_session.binaries):
             if binary.name == name:
                 await self.set_active_binary(i)

@@ -1,4 +1,4 @@
-1 findings in D:\Intellicrack\CLI Coding\UpdateTools.cmd
+1 findings in D:\Intellicrack\CLI Coding\Scripts\UpdateTools.cmd
 
 Line 1: Unix line endings detected (E018)
 

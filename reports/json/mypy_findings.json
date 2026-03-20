@@ -1,732 +1,276 @@
 {
   "tool": "mypy",
-  "generated": "2026-03-08T16:28:40.432999",
-  "total_findings": 158,
-  "total_files": 38,
+  "generated": "2026-03-14T15:26:30.226503",
+  "total_findings": 80,
+  "total_files": 24,
   "files": [
     {
-      "path": "src\\intellicrack\\bridges\\radare2.py",
+      "path": "src\\intellicrack\\bridges\\cutter.py",
       "count": 33,
       "findings": [
         {
-          "line": 168,
+          "line": 169,
           "column": null,
           "severity": "error",
           "code": "redundant-cast",
           "message": "Redundant cast to \"list[Any]\"",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:168: error: Redundant cast to \"list[Any]\"  [redundant-cast]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:169: error: Redundant cast to \"list[Any]\"  [redundant-cast]"
         },
         {
-          "line": 186,
+          "line": 187,
           "column": null,
           "severity": "error",
           "code": "valid-type",
           "message": "Function \"r2pipe.open\" is not valid as a type",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:186: error: Function \"r2pipe.open\" is not valid as a type  [valid-type]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:187: error: Function \"r2pipe.open\" is not valid as a type  [valid-type]"
         },
         {
-          "line": 186,
+          "line": 187,
           "column": null,
           "severity": "note",
           "code": "",
           "message": "Perhaps you need \"Callable[...]\" or a callback protocol?",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:186: note: Perhaps you need \"Callable[...]\" or a callback protocol?"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:187: note: Perhaps you need \"Callable[...]\" or a callback protocol?"
         },
         {
-          "line": 215,
+          "line": 216,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:215: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:216: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 577,
+          "line": 579,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:577: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 600,
-          "column": null,
-          "severity": "error",
-          "code": "valid-type",
-          "message": "Function \"r2pipe.open\" is not valid as a type",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:600: error: Function \"r2pipe.open\" is not valid as a type  [valid-type]"
-        },
-        {
-          "line": 600,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Perhaps you need \"Callable[...]\" or a callback protocol?",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:600: note: Perhaps you need \"Callable[...]\" or a callback protocol?"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:579: error: Statement is unreachable  [unreachable]"
         },
         {
           "line": 602,
+          "column": null,
+          "severity": "error",
+          "code": "valid-type",
+          "message": "Function \"r2pipe.open\" is not valid as a type",
+          "raw": "src\\intellicrack\\bridges\\cutter.py:602: error: Function \"r2pipe.open\" is not valid as a type  [valid-type]"
+        },
+        {
+          "line": 602,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Perhaps you need \"Callable[...]\" or a callback protocol?",
+          "raw": "src\\intellicrack\\bridges\\cutter.py:602: note: Perhaps you need \"Callable[...]\" or a callback protocol?"
+        },
+        {
+          "line": 604,
           "column": null,
           "severity": "error",
           "code": "func-returns-value",
           "message": "Function does not return a value (it only ever returns None)",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:602: error: Function does not return a value (it only ever returns None)  [func-returns-value]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:604: error: Function does not return a value (it only ever returns None)  [func-returns-value]"
         },
         {
-          "line": 602,
+          "line": 604,
           "column": null,
           "severity": "error",
           "code": "arg-type",
           "message": "Argument 1 to \"to_thread\" has incompatible type \"Callable[[str, list[str] | None], open_sync]\"; expected \"Callable[[str, list[str] | None], None]\"",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:602: error: Argument 1 to \"to_thread\" has incompatible type \"Callable[[str, list[str] | None], open_sync]\"; expected \"Callable[[str, list[str] | None], None]\"  [arg-type]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:604: error: Argument 1 to \"to_thread\" has incompatible type \"Callable[[str, list[str] | None], open_sync]\"; expected \"Callable[[str, list[str] | None], None]\"  [arg-type]"
         },
         {
-          "line": 603,
+          "line": 605,
           "column": null,
           "severity": "error",
           "code": "attr-defined",
           "message": "\"None\" has no attribute \"cmd\"",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:603: error: \"None\" has no attribute \"cmd\"  [attr-defined]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:605: error: \"None\" has no attribute \"cmd\"  [attr-defined]"
         },
         {
-          "line": 611,
+          "line": 613,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:611: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:613: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 619,
+          "line": 621,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:619: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:621: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 706,
+          "line": 708,
           "column": null,
           "severity": "error",
           "code": "func-returns-value",
           "message": "Function does not return a value (it only ever returns None)",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:706: error: Function does not return a value (it only ever returns None)  [func-returns-value]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:708: error: Function does not return a value (it only ever returns None)  [func-returns-value]"
         },
         {
-          "line": 706,
+          "line": 708,
           "column": null,
           "severity": "error",
           "code": "arg-type",
           "message": "Argument 1 to \"to_thread\" has incompatible type \"Callable[[str, list[str] | None], open_sync]\"; expected \"Callable[[str, list[str] | None], None]\"",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:706: error: Argument 1 to \"to_thread\" has incompatible type \"Callable[[str, list[str] | None], open_sync]\"; expected \"Callable[[str, list[str] | None], None]\"  [arg-type]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:708: error: Argument 1 to \"to_thread\" has incompatible type \"Callable[[str, list[str] | None], open_sync]\"; expected \"Callable[[str, list[str] | None], None]\"  [arg-type]"
         },
         {
-          "line": 758,
+          "line": 760,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:758: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:760: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 787,
+          "line": 789,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:787: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:789: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 830,
+          "line": 832,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:830: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:832: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 902,
+          "line": 904,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:902: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:904: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 935,
+          "line": 937,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:935: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:937: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 974,
+          "line": 976,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:974: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:976: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1016,
+          "line": 1018,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:1016: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1018: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1058,
+          "line": 1060,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:1058: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1060: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1105,
+          "line": 1107,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:1105: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1107: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1127,
+          "line": 1129,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:1127: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1129: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1145,
+          "line": 1147,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:1145: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1147: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1169,
+          "line": 1171,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:1169: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1171: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1191,
+          "line": 1193,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:1191: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1193: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1242,
+          "line": 1244,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:1242: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1244: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1271,
+          "line": 1273,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:1271: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1273: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1292,
+          "line": 1294,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:1292: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1294: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1312,
+          "line": 1314,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:1312: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1314: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1348,
+          "line": 1350,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:1348: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1350: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1389,
+          "line": 1391,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\radare2.py:1389: error: Statement is unreachable  [unreachable]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\graph_view.py",
-      "count": 21,
-      "findings": [
-        {
-          "line": 135,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Argument 1 of \"paint\" is incompatible with supertype \"PyQt6.QtWidgets.QGraphicsRectItem\"; supertype defines the argument type as \"QPainter | None\"",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:135: error: Argument 1 of \"paint\" is incompatible with supertype \"PyQt6.QtWidgets.QGraphicsRectItem\"; supertype defines the argument type as \"QPainter | None\"  [override]"
-        },
-        {
-          "line": 135,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "This violates the Liskov substitution principle",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:135: note: This violates the Liskov substitution principle"
-        },
-        {
-          "line": 135,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:135: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides"
-        },
-        {
-          "line": 135,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Argument 1 of \"paint\" is incompatible with supertype \"PyQt6.QtWidgets.QGraphicsItem\"; supertype defines the argument type as \"QPainter | None\"",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:135: error: Argument 1 of \"paint\" is incompatible with supertype \"PyQt6.QtWidgets.QGraphicsItem\"; supertype defines the argument type as \"QPainter | None\"  [override]"
-        },
-        {
-          "line": 136,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Argument 2 of \"paint\" is incompatible with supertype \"PyQt6.QtWidgets.QGraphicsRectItem\"; supertype defines the argument type as \"QStyleOptionGraphicsItem | None\"",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:136: error: Argument 2 of \"paint\" is incompatible with supertype \"PyQt6.QtWidgets.QGraphicsRectItem\"; supertype defines the argument type as \"QStyleOptionGraphicsItem | None\"  [override]"
-        },
-        {
-          "line": 136,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "This violates the Liskov substitution principle",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:136: note: This violates the Liskov substitution principle"
-        },
-        {
-          "line": 136,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:136: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides"
-        },
-        {
-          "line": 136,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Argument 2 of \"paint\" is incompatible with supertype \"PyQt6.QtWidgets.QGraphicsItem\"; supertype defines the argument type as \"QStyleOptionGraphicsItem | None\"",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:136: error: Argument 2 of \"paint\" is incompatible with supertype \"PyQt6.QtWidgets.QGraphicsItem\"; supertype defines the argument type as \"QStyleOptionGraphicsItem | None\"  [override]"
-        },
-        {
-          "line": 254,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Argument 1 of \"paint\" is incompatible with supertype \"PyQt6.QtWidgets.QGraphicsPathItem\"; supertype defines the argument type as \"QPainter | None\"",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:254: error: Argument 1 of \"paint\" is incompatible with supertype \"PyQt6.QtWidgets.QGraphicsPathItem\"; supertype defines the argument type as \"QPainter | None\"  [override]"
-        },
-        {
-          "line": 254,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "This violates the Liskov substitution principle",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:254: note: This violates the Liskov substitution principle"
-        },
-        {
-          "line": 254,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:254: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides"
-        },
-        {
-          "line": 254,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Argument 1 of \"paint\" is incompatible with supertype \"PyQt6.QtWidgets.QGraphicsItem\"; supertype defines the argument type as \"QPainter | None\"",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:254: error: Argument 1 of \"paint\" is incompatible with supertype \"PyQt6.QtWidgets.QGraphicsItem\"; supertype defines the argument type as \"QPainter | None\"  [override]"
-        },
-        {
-          "line": 255,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Argument 2 of \"paint\" is incompatible with supertype \"PyQt6.QtWidgets.QGraphicsPathItem\"; supertype defines the argument type as \"QStyleOptionGraphicsItem | None\"",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:255: error: Argument 2 of \"paint\" is incompatible with supertype \"PyQt6.QtWidgets.QGraphicsPathItem\"; supertype defines the argument type as \"QStyleOptionGraphicsItem | None\"  [override]"
-        },
-        {
-          "line": 255,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "This violates the Liskov substitution principle",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:255: note: This violates the Liskov substitution principle"
-        },
-        {
-          "line": 255,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:255: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides"
-        },
-        {
-          "line": 255,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Argument 2 of \"paint\" is incompatible with supertype \"PyQt6.QtWidgets.QGraphicsItem\"; supertype defines the argument type as \"QStyleOptionGraphicsItem | None\"",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:255: error: Argument 2 of \"paint\" is incompatible with supertype \"PyQt6.QtWidgets.QGraphicsItem\"; supertype defines the argument type as \"QStyleOptionGraphicsItem | None\"  [override]"
-        },
-        {
-          "line": 480,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Argument 1 of \"wheelEvent\" is incompatible with supertype \"PyQt6.QtWidgets.QGraphicsView\"; supertype defines the argument type as \"QWheelEvent | None\"",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:480: error: Argument 1 of \"wheelEvent\" is incompatible with supertype \"PyQt6.QtWidgets.QGraphicsView\"; supertype defines the argument type as \"QWheelEvent | None\"  [override]"
-        },
-        {
-          "line": 480,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "This violates the Liskov substitution principle",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:480: note: This violates the Liskov substitution principle"
-        },
-        {
-          "line": 480,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:480: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides"
-        },
-        {
-          "line": 480,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Argument 1 of \"wheelEvent\" is incompatible with supertype \"PyQt6.QtWidgets.QAbstractScrollArea\"; supertype defines the argument type as \"QWheelEvent | None\"",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:480: error: Argument 1 of \"wheelEvent\" is incompatible with supertype \"PyQt6.QtWidgets.QAbstractScrollArea\"; supertype defines the argument type as \"QWheelEvent | None\"  [override]"
-        },
-        {
-          "line": 480,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Argument 1 of \"wheelEvent\" is incompatible with supertype \"PyQt6.QtWidgets.QWidget\"; supertype defines the argument type as \"QWheelEvent | None\"",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:480: error: Argument 1 of \"wheelEvent\" is incompatible with supertype \"PyQt6.QtWidgets.QWidget\"; supertype defines the argument type as \"QWheelEvent | None\"  [override]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\highlighter.py",
-      "count": 12,
-      "findings": [
-        {
-          "line": 225,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Argument 1 of \"highlightBlock\" is incompatible with supertype \"PyQt6.QtGui.QSyntaxHighlighter\"; supertype defines the argument type as \"str | None\"",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:225: error: Argument 1 of \"highlightBlock\" is incompatible with supertype \"PyQt6.QtGui.QSyntaxHighlighter\"; supertype defines the argument type as \"str | None\"  [override]"
-        },
-        {
-          "line": 225,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "This violates the Liskov substitution principle",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:225: note: This violates the Liskov substitution principle"
-        },
-        {
-          "line": 225,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:225: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides"
-        },
-        {
-          "line": 568,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Argument 1 of \"highlightBlock\" is incompatible with supertype \"PyQt6.QtGui.QSyntaxHighlighter\"; supertype defines the argument type as \"str | None\"",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:568: error: Argument 1 of \"highlightBlock\" is incompatible with supertype \"PyQt6.QtGui.QSyntaxHighlighter\"; supertype defines the argument type as \"str | None\"  [override]"
-        },
-        {
-          "line": 568,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "This violates the Liskov substitution principle",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:568: note: This violates the Liskov substitution principle"
-        },
-        {
-          "line": 568,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:568: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides"
-        },
-        {
-          "line": 771,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Argument 1 of \"highlightBlock\" is incompatible with supertype \"PyQt6.QtGui.QSyntaxHighlighter\"; supertype defines the argument type as \"str | None\"",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:771: error: Argument 1 of \"highlightBlock\" is incompatible with supertype \"PyQt6.QtGui.QSyntaxHighlighter\"; supertype defines the argument type as \"str | None\"  [override]"
-        },
-        {
-          "line": 771,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "This violates the Liskov substitution principle",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:771: note: This violates the Liskov substitution principle"
-        },
-        {
-          "line": 771,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:771: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides"
-        },
-        {
-          "line": 998,
-          "column": null,
-          "severity": "error",
-          "code": "override",
-          "message": "Argument 1 of \"highlightBlock\" is incompatible with supertype \"PyQt6.QtGui.QSyntaxHighlighter\"; supertype defines the argument type as \"str | None\"",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:998: error: Argument 1 of \"highlightBlock\" is incompatible with supertype \"PyQt6.QtGui.QSyntaxHighlighter\"; supertype defines the argument type as \"str | None\"  [override]"
-        },
-        {
-          "line": 998,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "This violates the Liskov substitution principle",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:998: note: This violates the Liskov substitution principle"
-        },
-        {
-          "line": 998,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:998: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\session_manager.py",
-      "count": 11,
-      "findings": [
-        {
-          "line": 131,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setVisible\"",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:131: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setVisible\"  [union-attr]"
-        },
-        {
-          "line": 132,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setStretchLastSection\"",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:132: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setStretchLastSection\"  [union-attr]"
-        },
-        {
-          "line": 134,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:134: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
-        },
-        {
-          "line": 135,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:135: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
-        },
-        {
-          "line": 136,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:136: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
-        },
-        {
-          "line": 137,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:137: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
-        },
-        {
-          "line": 372,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QItemSelectionModel | None\" has no attribute \"selectedRows\"",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:372: error: Item \"None\" of \"QItemSelectionModel | None\" has no attribute \"selectedRows\"  [union-attr]"
-        },
-        {
-          "line": 461,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QItemSelectionModel | None\" has no attribute \"selectedRows\"",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:461: error: Item \"None\" of \"QItemSelectionModel | None\" has no attribute \"selectedRows\"  [union-attr]"
-        },
-        {
-          "line": 493,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QItemSelectionModel | None\" has no attribute \"selectedRows\"",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:493: error: Item \"None\" of \"QItemSelectionModel | None\" has no attribute \"selectedRows\"  [union-attr]"
-        },
-        {
-          "line": 554,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QItemSelectionModel | None\" has no attribute \"selectedRows\"",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:554: error: Item \"None\" of \"QItemSelectionModel | None\" has no attribute \"selectedRows\"  [union-attr]"
-        },
-        {
-          "line": 767,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QItemSelectionModel | None\" has no attribute \"selectedRows\"",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:767: error: Item \"None\" of \"QItemSelectionModel | None\" has no attribute \"selectedRows\"  [union-attr]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\binary_panel.py",
-      "count": 10,
-      "findings": [
-        {
-          "line": 47,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:47: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
-        },
-        {
-          "line": 272,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setVisible\"",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:272: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setVisible\"  [union-attr]"
-        },
-        {
-          "line": 274,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:274: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
-        },
-        {
-          "line": 275,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:275: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
-        },
-        {
-          "line": 276,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:276: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
-        },
-        {
-          "line": 303,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:303: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
-        },
-        {
-          "line": 310,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:310: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
-        },
-        {
-          "line": 620,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:620: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 796,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:796: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 850,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:850: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1391: error: Statement is unreachable  [unreachable]"
         }
       ]
     },
@@ -767,36 +311,36 @@
           "raw": "src\\intellicrack\\ui\\provider_config.py:85: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], str]\")  [assignment]"
         },
         {
-          "line": 1943,
+          "line": 1952,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:1943: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1952: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1960,
+          "line": 1969,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:1960: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1969: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1980,
+          "line": 1989,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:1980: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1989: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 2005,
+          "line": 2014,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:2005: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\ui\\provider_config.py:2014: error: Statement is unreachable  [unreachable]"
         }
       ]
     },
@@ -863,86 +407,40 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py",
-      "count": 5,
-      "findings": [
-        {
-          "line": 228,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:228: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
-        },
-        {
-          "line": 236,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:236: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
-        },
-        {
-          "line": 243,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:243: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
-        },
-        {
-          "line": 250,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:250: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
-        },
-        {
-          "line": 296,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:296: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\radare2_panel.py",
+      "path": "src\\intellicrack\\ui\\panels\\binary_panel.py",
       "count": 4,
       "findings": [
         {
-          "line": 197,
+          "line": 47,
           "column": null,
           "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:197: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:47: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
         },
         {
-          "line": 223,
+          "line": 627,
           "column": null,
           "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:223: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:627: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 230,
+          "line": 803,
           "column": null,
           "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:230: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:803: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 237,
+          "line": 857,
           "column": null,
           "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\radare2_panel.py:237: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:857: error: Statement is unreachable  [unreachable]"
         }
       ]
     },
@@ -967,140 +465,20 @@
           "raw": "src\\intellicrack\\ui\\app.py:66: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[int], None]\")  [assignment]"
         },
         {
-          "line": 282,
+          "line": 283,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\app.py:282: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\ui\\app.py:283: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 720,
+          "line": 713,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\app.py:720: error: Statement is unreachable  [unreachable]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\sandbox\\qemu.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 205,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"StreamReader | None\" has no attribute \"readline\"",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:205: error: Item \"None\" of \"StreamReader | None\" has no attribute \"readline\"  [union-attr]"
-        },
-        {
-          "line": 634,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"QEMUConfig\" has no attribute \"vnc_port\"",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:634: error: \"QEMUConfig\" has no attribute \"vnc_port\"  [attr-defined]"
-        },
-        {
-          "line": 916,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"SandboxState\" has no attribute \"value\"",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:916: error: \"SandboxState\" has no attribute \"value\"  [attr-defined]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 170,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setVisible\"",
-          "raw": "src\\intellicrack\\ui\\panels\\analysis_panel.py:170: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setVisible\"  [union-attr]"
-        },
-        {
-          "line": 175,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setStretchLastSection\"",
-          "raw": "src\\intellicrack\\ui\\panels\\analysis_panel.py:175: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setStretchLastSection\"  [union-attr]"
-        },
-        {
-          "line": 176,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\analysis_panel.py:176: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 164,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:164: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
-        },
-        {
-          "line": 190,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:190: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
-        },
-        {
-          "line": 197,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:197: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\tools.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 404,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QTextDocument | None\" has no attribute \"findBlockByLineNumber\"",
-          "raw": "src\\intellicrack\\ui\\tools.py:404: error: Item \"None\" of \"QTextDocument | None\" has no attribute \"findBlockByLineNumber\"  [union-attr]"
-        },
-        {
-          "line": 1844,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\tools.py:1844: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 1846,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QTextDocument | None\" has no attribute \"findChild\"",
-          "raw": "src\\intellicrack\\ui\\tools.py:1846: error: Item \"None\" of \"QTextDocument | None\" has no attribute \"findChild\"  [union-attr]"
+          "raw": "src\\intellicrack\\ui\\app.py:713: error: Statement is unreachable  [unreachable]"
         }
       ]
     },
@@ -1123,28 +501,6 @@
           "code": "comparison-overlap",
           "message": "Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")",
           "raw": "tests\\test_ui\\test_font_manager.py:182: error: Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")  [comparison-overlap]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\process_panel.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 429,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:429: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
-        },
-        {
-          "line": 445,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:445: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
         }
       ]
     },
@@ -1193,28 +549,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\chat.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 522,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QScrollBar | None\" has no attribute \"setValue\"",
-          "raw": "src\\intellicrack\\ui\\chat.py:522: error: Item \"None\" of \"QScrollBar | None\" has no attribute \"setValue\"  [union-attr]"
-        },
-        {
-          "line": 522,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QScrollBar | None\" has no attribute \"maximum\"",
-          "raw": "src\\intellicrack\\ui\\chat.py:522: error: Item \"None\" of \"QScrollBar | None\" has no attribute \"maximum\"  [union-attr]"
-        }
-      ]
-    },
-    {
       "path": "tests\\test_bridges\\test_x64dbg.py",
       "count": 2,
       "findings": [
@@ -1259,34 +593,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\win32_embed.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 111,
-          "column": null,
-          "severity": "error",
-          "code": "arg-type",
-          "message": "Argument 1 to \"fromWinId\" of \"QWindow\" has incompatible type \"int\"; expected \"voidptr\"",
-          "raw": "src\\intellicrack\\ui\\win32_embed.py:111: error: Argument 1 to \"fromWinId\" of \"QWindow\" has incompatible type \"int\"; expected \"voidptr\"  [arg-type]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\stack_viewer.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 283,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setVisible\"",
-          "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py:283: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setVisible\"  [union-attr]"
-        }
-      ]
-    },
-    {
       "path": "tests\\test_ui\\test_graph_view.py",
       "count": 1,
       "findings": [
@@ -1305,12 +611,26 @@
       "count": 1,
       "findings": [
         {
-          "line": 377,
+          "line": 400,
           "column": null,
           "severity": "error",
           "code": "arg-type",
           "message": "Argument 2 to \"get\" of \"Mapping\" has incompatible type \"str | None\"; expected \"str\"",
-          "raw": "src\\intellicrack\\credentials\\env_loader.py:377: error: Argument 2 to \"get\" of \"Mapping\" has incompatible type \"str | None\"; expected \"str\"  [arg-type]"
+          "raw": "src\\intellicrack\\credentials\\env_loader.py:400: error: Argument 2 to \"get\" of \"Mapping\" has incompatible type \"str | None\"; expected \"str\"  [arg-type]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\sandbox\\qemu.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 205,
+          "column": null,
+          "severity": "error",
+          "code": "union-attr",
+          "message": "Item \"None\" of \"StreamReader | None\" has no attribute \"readline\"",
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:205: error: Item \"None\" of \"StreamReader | None\" has no attribute \"readline\"  [union-attr]"
         }
       ]
     },
@@ -1325,20 +645,6 @@
           "code": "no-untyped-def",
           "message": "Function is missing a type annotation for one or more arguments",
           "raw": "tests\\test_providers\\test_openrouter_provider.py:217: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\ollama.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 603,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"object\" has no attribute \"get\"",
-          "raw": "src\\intellicrack\\providers\\ollama.py:603: error: \"object\" has no attribute \"get\"  [attr-defined]"
         }
       ]
     },
@@ -1399,20 +705,6 @@
       ]
     },
     {
-      "path": "tests\\test_providers\\test_google_provider.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 194,
-          "column": null,
-          "severity": "error",
-          "code": "no-untyped-def",
-          "message": "Function is missing a type annotation for one or more arguments",
-          "raw": "tests\\test_providers\\test_google_provider.py:194: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
-        }
-      ]
-    },
-    {
       "path": "tests\\test_providers\\test_model_discovery.py",
       "count": 1,
       "findings": [
@@ -1423,6 +715,20 @@
           "code": "no-untyped-def",
           "message": "Function is missing a type annotation for one or more arguments",
           "raw": "tests\\test_providers\\test_model_discovery.py:112: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_providers\\test_google_provider.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 194,
+          "column": null,
+          "severity": "error",
+          "code": "no-untyped-def",
+          "message": "Function is missing a type annotation for one or more arguments",
+          "raw": "tests\\test_providers\\test_google_provider.py:194: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
         }
       ]
     },
@@ -1441,16 +747,16 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\frida_panel.py",
+      "path": "tests\\test_ui\\test_sandbox_panel_fixes.py",
       "count": 1,
       "findings": [
         {
-          "line": 217,
+          "line": 75,
           "column": null,
           "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py:217: error: Item \"None\" of \"QHeaderView | None\" has no attribute \"setSectionResizeMode\"  [union-attr]"
+          "code": "arg-type",
+          "message": "Argument 1 to \"set_sandbox_manager\" of \"SandboxPanel\" has incompatible type \"object\"; expected \"SandboxManager\"",
+          "raw": "tests\\test_ui\\test_sandbox_panel_fixes.py:75: error: Argument 1 to \"set_sandbox_manager\" of \"SandboxPanel\" has incompatible type \"object\"; expected \"SandboxManager\"  [arg-type]"
         }
       ]
     },
@@ -1465,20 +771,6 @@
           "code": "assignment",
           "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
           "raw": "src\\intellicrack\\providers\\local_transformers.py:63: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
-        }
-      ]
-    },
-    {
-      "path": "tests\\test_ui\\test_sandbox_panel_fixes.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 75,
-          "column": null,
-          "severity": "error",
-          "code": "arg-type",
-          "message": "Argument 1 to \"set_sandbox_manager\" of \"SandboxPanel\" has incompatible type \"object\"; expected \"SandboxManager\"",
-          "raw": "tests\\test_ui\\test_sandbox_panel_fixes.py:75: error: Argument 1 to \"set_sandbox_manager\" of \"SandboxPanel\" has incompatible type \"object\"; expected \"SandboxManager\"  [arg-type]"
         }
       ]
     },

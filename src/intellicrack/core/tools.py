@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from ..bridges.cutter import CutterBridge
     from ..bridges.frida_bridge import FridaBridge
     from ..bridges.ghidra import GhidraBridge
+    from ..bridges.hex_editor import HexEditorBridge
     from ..bridges.process import ProcessBridge
     from ..bridges.sandbox_bridge import SandboxBridge
     from ..bridges.x64dbg import X64DbgBridge
@@ -130,6 +131,10 @@ class ToolRegistry:
         self._bridges[ToolName.CUTTER] = _CutterBridge()
         self._bridges[ToolName.X64DBG] = _X64DbgBridge()
         self._bridges[ToolName.SANDBOX] = _SandboxBridge()
+
+        from ..bridges.hex_editor import HexEditorBridge as _HexEditorBridge
+
+        self._bridges[ToolName.HEX_EDITOR] = _HexEditorBridge()
         _logger.debug(
             "bridges_instantiated",
             bridge_names=[n.value for n in self._bridges],
@@ -139,6 +144,7 @@ class ToolRegistry:
         await self._bridges[ToolName.PROCESS].initialize()
         await self._bridges[ToolName.FRIDA].initialize()
         await self._bridges[ToolName.SANDBOX].initialize()
+        await self._bridges[ToolName.HEX_EDITOR].initialize()
 
         _logger.info("tool_registry_initialized", bridge_count=len(self._bridges))
         self._initialized = True
@@ -165,7 +171,7 @@ class ToolRegistry:
 
         bridge = self._bridges[name]
 
-        if name in {ToolName.BINARY, ToolName.PROCESS, ToolName.FRIDA, ToolName.SANDBOX}:
+        if name in {ToolName.BINARY, ToolName.PROCESS, ToolName.FRIDA, ToolName.SANDBOX, ToolName.HEX_EDITOR}:
             if not await bridge.is_available():
                 await bridge.initialize()
             return await bridge.is_available()
@@ -332,6 +338,23 @@ class ToolRegistry:
         _logger.debug("get_sandbox_bridge_success", bridge_type=type(bridge).__name__)
         return bridge
 
+    def get_hex_editor_bridge(self) -> HexEditorBridge:
+        """Get the hex editor bridge.
+
+        Returns:
+            HexEditorBridge instance.
+
+        Raises:
+            ToolError: If bridge not available.
+        """
+        from ..bridges.hex_editor import HexEditorBridge as _HexEditorBridge
+
+        bridge = self._bridges.get(ToolName.HEX_EDITOR)
+        if bridge is None or not isinstance(bridge, _HexEditorBridge):
+            raise ToolError(_ERR_BRIDGE_NA)
+        _logger.debug("get_hex_editor_bridge_success", bridge_type=type(bridge).__name__)
+        return bridge
+
     async def get_status(self, name: ToolName) -> ToolStatus:
         """Get status of a tool.
 
@@ -496,7 +519,7 @@ class ToolRegistry:
                 result = await asyncio.to_thread(method, **arguments)
         except Exception as e:
             success = False
-            _logger.exception("tool_call_failed", tool_name=tool_name, function_name=function_name)
+            _logger.warning("tool_call_failed", tool_name=tool_name, function_name=function_name, error=str(e))
             raise ToolError(_ERR_CALL_FAILED) from e
         finally:
             elapsed_ms = (time.monotonic() - start) * 1000

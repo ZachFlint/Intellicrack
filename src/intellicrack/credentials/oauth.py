@@ -208,6 +208,11 @@ class OAuthToken:
         if data.get("expires_at"):
             expires_at = datetime.fromisoformat(data["expires_at"])
 
+        _logger.debug(
+            "oauth_token_deserialized",
+            has_refresh=bool(data.get("refresh_token")),
+            has_expiry=bool(data.get("expires_at")),
+        )
         return cls(
             access_token=data["access_token"],
             refresh_token=data.get("refresh_token"),
@@ -276,6 +281,7 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         """Handle GET request from OAuth redirect."""
+        _logger.debug("oauth_callback_received")
         parsed = urllib.parse.urlparse(self.path)
         params = urllib.parse.parse_qs(parsed.query)
 
@@ -946,7 +952,7 @@ async def authorize_google(
     client_secret: str | None = None,
     scopes: tuple[str, ...] | None = None,
 ) -> ProviderCredentials:
-    """Convenience function to authorize with Google.
+    """Authorize with Google and return provider credentials.
 
     Args:
         client_id: Google OAuth client ID.

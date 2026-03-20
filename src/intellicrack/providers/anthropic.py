@@ -19,11 +19,12 @@ from anthropic.types import (
     Message as AnthropicMessage,
     MessageParam,
     TextBlock,
+    ThinkingBlock,
     ToolParam,
     ToolUseBlock,
 )
 
-from ..core.logging import get_logger, log_provider_request
+from ..core.logging import get_logger, log_provider_request, log_provider_response
 from ..core.types import (
     AuthenticationError,
     Message,
@@ -32,7 +33,10 @@ from ..core.types import (
     ProviderError,
     ProviderName,
     RateLimitError,
+    ThinkingConfig,
     ToolCall,
+    ToolChoice,
+    ToolChoiceMode,
     ToolDefinition,
 )
 from .base import LLMProviderBase, create_anthropic_tool_schema
@@ -163,14 +167,17 @@ class AnthropicProvider(LLMProviderBase):
 
         models: list[ModelInfo] = []
         after_id: str | None = None
+        page_count = 0
 
         while True:
             page = await client.models.list(after_id=after_id) if after_id else await client.models.list()
             models.extend(self._build_model_info(m.id, getattr(m, "display_name", m.id)) for m in page.data)
+            page_count += 1
             if not page.has_more:
                 break
             after_id = page.last_id
 
+        self._logger.debug("anthropic_models_fetched", page_count=page_count, model_count=len(models))
         return models
 
     @staticmethod
@@ -210,6 +217,9 @@ class AnthropicProvider(LLMProviderBase):
         messages: list[MessageParam],
         system_prompt: str | None,
         tools: list[dict[str, object]] | None,
+        tool_choice: ToolChoice | None = None,
+        thinking: ThinkingConfig | None = None,
+        enable_cache: bool = False,
     ) -> dict[str, Any]:
         """Build keyword arguments for the Anthropic messages API.
 
@@ -220,6 +230,9 @@ class AnthropicProvider(LLMProviderBase):
             messages: Formatted message list.
             system_prompt: Optional system prompt text.
             tools: Optional formatted tools list.
+            tool_choice: Tool selection mode.
+            thinking: Extended thinking configuration.
+            enable_cache: Whether to enable prompt caching.
 
         Returns:
             Keyword arguments dict for messages.create or messages.stream.
@@ -235,26 +248,53 @@ class AnthropicProvider(LLMProviderBase):
         if tools:
             provider_tools: list[ToolParam] = cast("list[ToolParam]", tools)
             kwargs["tools"] = provider_tools
+
+        if tool_choice is not None and tools:
+            if tool_choice.mode == ToolChoiceMode.AUTO:
+                kwargs["tool_choice"] = {"type": "auto"}
+            elif tool_choice.mode == ToolChoiceMode.REQUIRED:
+                kwargs["tool_choice"] = {"type": "any"}
+            elif tool_choice.mode == ToolChoiceMode.NONE:
+                kwargs.pop("tools", None)
+            elif tool_choice.mode == ToolChoiceMode.SPECIFIC and tool_choice.function_name:
+                kwargs["tool_choice"] = {"type": "tool", "name": tool_choice.function_name}
+
+        if thinking is not None and thinking.enabled:
+            kwargs["thinking"] = {"type": "enabled", "budget_tokens": thinking.budget_tokens}
+            kwargs["temperature"] = 1.0
+            kwargs["max_tokens"] = max(kwargs["max_tokens"], thinking.budget_tokens + 1024)
+
+        if enable_cache and system_prompt is not None:
+            kwargs["system"] = [
+                {
+                    "type": "text",
+                    "text": system_prompt,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ]
         return kwargs
 
     def _parse_response_blocks(
         self,
         response: AnthropicMessage,
-    ) -> tuple[str, list[ToolCall]]:
-        """Extract text content and tool calls from response content blocks.
+    ) -> tuple[str, list[ToolCall], str]:
+        """Extract text, tool calls, and thinking from response content blocks.
 
         Args:
             response: The Anthropic API response message.
 
         Returns:
-            Tuple of (concatenated text content, list of parsed tool calls).
+            Tuple of (text content, parsed tool calls, thinking text).
         """
         content = ""
         tool_calls: list[ToolCall] = []
+        thinking_text = ""
 
         for block in response.content:
             if isinstance(block, TextBlock):
                 content += block.text
+            elif isinstance(block, ThinkingBlock):
+                thinking_text += block.thinking
             elif isinstance(block, ToolUseBlock):
                 tool_call = self._parse_tool_call_common(
                     call_id=block.id,
@@ -268,7 +308,7 @@ class AnthropicProvider(LLMProviderBase):
                     arguments_count=len(tool_call.arguments),
                 )
 
-        return content, tool_calls
+        return content, tool_calls, thinking_text
 
     async def chat(
         self,
@@ -277,6 +317,9 @@ class AnthropicProvider(LLMProviderBase):
         tools: list[ToolDefinition] | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
+        tool_choice: ToolChoice | None = None,
+        thinking: ThinkingConfig | None = None,
+        enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
         """Send a chat completion request to Claude.
 
@@ -286,6 +329,9 @@ class AnthropicProvider(LLMProviderBase):
             tools: Available tools for function calling.
             temperature: Sampling temperature.
             max_tokens: Maximum tokens in response.
+            tool_choice: How the model should select tools.
+            thinking: Extended thinking configuration.
+            enable_cache: Whether to enable prompt caching.
 
         Returns:
             Tuple of (assistant message, tool calls if any).
@@ -321,12 +367,29 @@ class AnthropicProvider(LLMProviderBase):
             messages=typed_messages,
             system_prompt=system_prompt,
             tools=anthropic_tools,
+            tool_choice=tool_choice,
+            thinking=thinking,
+            enable_cache=enable_cache,
         )
 
         try:
             response = cast("AnthropicMessage", await self._client.messages.create(**api_kwargs))
             duration_ms = (time.perf_counter() - start_time) * 1000
-            content, tool_calls = self._parse_response_blocks(response)
+            content, tool_calls, thinking_text = self._parse_response_blocks(response)
+            if thinking_text:
+                message = Message(
+                    role="assistant",
+                    content=content,
+                    tool_calls=tool_calls or None,
+                    thinking_content=thinking_text,
+                )
+                log_provider_response(
+                    provider="anthropic",
+                    model=model,
+                    tool_calls_count=len(tool_calls),
+                    duration_ms=duration_ms,
+                )
+                return message, tool_calls or None
             return self._build_chat_response(
                 provider="anthropic",
                 model=model,
@@ -348,6 +411,9 @@ class AnthropicProvider(LLMProviderBase):
         tools: list[ToolDefinition] | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
+        tool_choice: ToolChoice | None = None,
+        thinking: ThinkingConfig | None = None,
+        enable_cache: bool = False,
     ) -> AsyncIterator[str]:
         """Stream a chat completion response from Claude.
 
@@ -357,6 +423,9 @@ class AnthropicProvider(LLMProviderBase):
             tools: Available tools for function calling.
             temperature: Sampling temperature.
             max_tokens: Maximum tokens in response.
+            tool_choice: How the model should select tools.
+            thinking: Extended thinking configuration.
+            enable_cache: Whether to enable prompt caching.
 
         Yields:
             Text chunks as they arrive.
@@ -370,6 +439,7 @@ class AnthropicProvider(LLMProviderBase):
 
         self._cancel_requested = False
 
+        log_provider_request("anthropic", model, len(messages), len(tools or []))
         system_prompt = self.get_system_prompt(messages)
         anthropic_messages = self._convert_messages_to_provider_format(messages)
         typed_messages = cast("list[MessageParam]", anthropic_messages)
@@ -384,6 +454,9 @@ class AnthropicProvider(LLMProviderBase):
             messages=typed_messages,
             system_prompt=system_prompt,
             tools=anthropic_tools,
+            tool_choice=tool_choice,
+            thinking=thinking,
+            enable_cache=enable_cache,
         )
 
         try:
@@ -407,6 +480,11 @@ class AnthropicProvider(LLMProviderBase):
                                     function_name=block.name,
                                     arguments=args,
                                 )
+                            )
+                        elif block.type == "thinking" and hasattr(block, "thinking"):
+                            self._logger.debug(
+                                "stream_thinking_captured",
+                                length=len(block.thinking),
                             )
                     self._pending_tool_calls = tool_calls
 
@@ -445,6 +523,7 @@ class AnthropicProvider(LLMProviderBase):
             converted = self._convert_single_message(msg)
             if converted is not None:
                 result.append(converted)
+        self._logger.debug("messages_converted", input_count=len(messages), output_count=len(result))
         return result
 
     def _convert_single_message(self, msg: Message) -> dict[str, object] | None:

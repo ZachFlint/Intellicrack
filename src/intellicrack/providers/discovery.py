@@ -356,6 +356,7 @@ class ModelDiscovery:
         Returns:
             Dictionary mapping provider names to their available models.
         """
+        self._logger.info("discovery_starting", force_refresh=force_refresh)
         results: dict[ProviderName, list[ModelInfo]] = {}
         registered = self._registry.list_registered()
 

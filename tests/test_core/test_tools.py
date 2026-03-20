@@ -314,8 +314,6 @@ async def test_tool_definitions_have_functions(tmp_path: Path) -> None:
 
     defs = reg.get_tool_definitions()
     for tool_def in defs:
-        assert len(tool_def.functions) > 0, (
-            f"Tool {tool_def.tool_name} has no functions"
-        )
+        assert len(tool_def.functions) > 0, f"Tool {tool_def.tool_name} has no functions"
 
     await reg.shutdown()

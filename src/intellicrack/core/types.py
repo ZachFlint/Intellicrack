@@ -28,6 +28,7 @@ __all__ = [
     "BinaryInfo",
     "BreakpointInfo",
     "BridgeAnalysisSummary",
+    "CacheConfig",
     "ChildProcessInfo",
     "ConfigurationError",
     "ConfirmationLevel",
@@ -61,8 +62,11 @@ __all__ = [
     "StalkerTrace",
     "StringInfo",
     "SymbolInfo",
+    "ThinkingConfig",
     "ThreadInfo",
     "ToolCall",
+    "ToolChoice",
+    "ToolChoiceMode",
     "ToolDefinition",
     "ToolError",
     "ToolFunction",
@@ -85,6 +89,7 @@ class ToolName(enum.Enum):
     PROCESS = "process"
     BINARY = "binary"
     SANDBOX = "sandbox"
+    HEX_EDITOR = "hex_editor"
 
 
 class ProviderName(enum.Enum):
@@ -106,6 +111,61 @@ class ConfirmationLevel(enum.Enum):
     NONE = "none"
     DESTRUCTIVE = "destructive"
     ALL = "all"
+
+
+class ToolChoiceMode(enum.Enum):
+    """How the LLM should decide whether to call a tool.
+
+    Attributes:
+        AUTO: Let the model decide whether to call tools.
+        NONE: Prevent the model from calling any tools.
+        REQUIRED: Force the model to call at least one tool.
+        SPECIFIC: Force the model to call a specific named tool.
+    """
+
+    AUTO = "auto"
+    NONE = "none"
+    REQUIRED = "required"
+    SPECIFIC = "specific"
+
+
+@dataclass
+class ToolChoice:
+    """Specifies how the LLM should select tools.
+
+    Attributes:
+        mode: The tool selection mode.
+        function_name: Required when mode is SPECIFIC, ignored otherwise.
+    """
+
+    mode: ToolChoiceMode
+    function_name: str | None = None
+
+
+@dataclass
+class ThinkingConfig:
+    """Configuration for extended thinking (chain-of-thought).
+
+    Attributes:
+        enabled: Whether extended thinking is active.
+        budget_tokens: Maximum tokens the model may use for thinking.
+    """
+
+    enabled: bool = False
+    budget_tokens: int = 10000
+
+
+@dataclass
+class CacheConfig:
+    """Configuration for prompt caching.
+
+    Attributes:
+        enabled: Whether prompt caching is active.
+        ttl_seconds: Time-to-live for cached content in seconds.
+    """
+
+    enabled: bool = False
+    ttl_seconds: int = 3600
 
 
 @dataclass
@@ -153,6 +213,7 @@ class Message:
         content: Text content of the message.
         tool_calls: Tool calls made by this message (if assistant).
         tool_results: Results of tool calls (if tool response).
+        thinking_content: Extended thinking text from the model, if any.
         timestamp: When the message was created.
     """
 
@@ -160,6 +221,7 @@ class Message:
     content: str
     tool_calls: list[ToolCall] | None = None
     tool_results: list[ToolResult] | None = None
+    thinking_content: str | None = None
     timestamp: datetime = field(default_factory=datetime.now)
 
 

@@ -107,7 +107,7 @@ ICON_MAP: Final[dict[str, str]] = {
     "computer": "computer-icon.png",
     "desktop": "desktop-icon.png",
     "detailed_view": "detailed-view.png",
-    "dialog_password": "dialog-password.png",
+    "dialog_auth": "dialog-password.png",
     "document_edit": "document-edit.png",
     "document_open": "document-open.png",
     "document_save": "document-save.png",

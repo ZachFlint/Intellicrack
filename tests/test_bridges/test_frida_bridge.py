@@ -391,14 +391,10 @@ def worker_thread(frida_bridge: FridaBridge) -> Generator[int]:
     Yields:
         The thread ID of the busy worker thread.
     """
-    tids_before: set[int] = {
-        t.tid for t in cast("list[ThreadInfo]", _run_async(frida_bridge.enumerate_threads()))
-    }
+    tids_before: set[int] = {t.tid for t in cast("list[ThreadInfo]", _run_async(frida_bridge.enumerate_threads()))}
     script_id: str = _run_async(frida_bridge.execute_persistent_script(_WORKER_THREAD_JS))
     time.sleep(_BRIDGE_SLEEP)
-    tids_after: set[int] = {
-        t.tid for t in cast("list[ThreadInfo]", _run_async(frida_bridge.enumerate_threads()))
-    }
+    tids_after: set[int] = {t.tid for t in cast("list[ThreadInfo]", _run_async(frida_bridge.enumerate_threads()))}
     new_tids = tids_after - tids_before
     assert len(new_tids) >= 1, "worker thread must appear in thread list after creation"
     yield next(iter(new_tids))
@@ -478,9 +474,7 @@ def test_enumerate_threads(frida_bridge: FridaBridge) -> None:
 def test_enumerate_imports_kernel32(frida_bridge: FridaBridge) -> None:
     """Verify enumerate_imports returns real imports from kernel32.dll."""
     result = cast("list[ImportInfo]", _run_async(frida_bridge.enumerate_imports("kernel32.dll")))
-    assert len(result) >= _KERNEL32_MIN_IMPORTS, (
-        f"kernel32 should have many imports, got {len(result)}"
-    )
+    assert len(result) >= _KERNEL32_MIN_IMPORTS, f"kernel32 should have many imports, got {len(result)}"
     resolved_count = 0
     seen_functions: set[str] = set()
     for imp in result:
@@ -489,9 +483,7 @@ def test_enumerate_imports_kernel32(frida_bridge: FridaBridge) -> None:
         seen_functions.add(imp.function)
         if imp.address > 0:
             resolved_count += 1
-    assert resolved_count >= _KERNEL32_MIN_IMPORTS, (
-        f"at least {_KERNEL32_MIN_IMPORTS} imports should resolve, got {resolved_count}"
-    )
+    assert resolved_count >= _KERNEL32_MIN_IMPORTS, f"at least {_KERNEL32_MIN_IMPORTS} imports should resolve, got {resolved_count}"
     assert "NtCreateFile" in seen_functions or "RtlInitUnicodeString" in seen_functions, (
         "kernel32 imports should contain well-known ntdll functions"
     )
@@ -502,9 +494,7 @@ def test_find_base_address_ntdll(frida_bridge: FridaBridge) -> None:
     """Verify find_base_address returns ntdll.dll base in high address range."""
     result = _run_async(frida_bridge.find_base_address("ntdll.dll"))
     assert isinstance(result, int)
-    assert result >= _NTDLL_BASE_MIN, (
-        f"ntdll base 0x{result:X} should be in high system DLL range (>= 0x{_NTDLL_BASE_MIN:X})"
-    )
+    assert result >= _NTDLL_BASE_MIN, f"ntdll base 0x{result:X} should be in high system DLL range (>= 0x{_NTDLL_BASE_MIN:X})"
     assert result % 0x10000 == 0, f"base 0x{result:X} must be 64KB-aligned (PE section alignment)"
 
 
@@ -514,9 +504,7 @@ def test_find_base_address_kernel32(frida_bridge: FridaBridge) -> None:
     k32_base = _run_async(frida_bridge.find_base_address("kernel32.dll"))
     ntdll_base = _run_async(frida_bridge.find_base_address("ntdll.dll"))
     assert isinstance(k32_base, int)
-    assert k32_base >= _NTDLL_BASE_MIN, (
-        f"kernel32 base 0x{k32_base:X} should be in high system DLL range"
-    )
+    assert k32_base >= _NTDLL_BASE_MIN, f"kernel32 base 0x{k32_base:X} should be in high system DLL range"
     assert k32_base % 0x10000 == 0, f"base 0x{k32_base:X} must be 64KB-aligned"
     assert k32_base != ntdll_base, "kernel32 and ntdll must have different bases"
 
@@ -527,9 +515,7 @@ def test_get_memory_regions(frida_bridge: FridaBridge) -> None:
     from intellicrack.core.types import MemoryRegion  # noqa: PLC0415
 
     result = cast("list[MemoryRegion]", _run_async(frida_bridge.get_memory_regions()))
-    assert len(result) >= _NOTEPAD_MIN_REGIONS, (
-        f"notepad should have many memory regions, got {len(result)}"
-    )
+    assert len(result) >= _NOTEPAD_MIN_REGIONS, f"notepad should have many memory regions, got {len(result)}"
     has_executable = False
     has_readable = False
     for region in result:
@@ -569,13 +555,9 @@ def test_resolve_symbol(frida_bridge: FridaBridge) -> None:
     func_addr = matches[0].address
     result = _run_async(frida_bridge.resolve_symbol(func_addr))
     assert isinstance(result, SymbolInfo)
-    assert result.address == func_addr, (
-        f"resolved address 0x{result.address:X} must match query 0x{func_addr:X}"
-    )
+    assert result.address == func_addr, f"resolved address 0x{result.address:X} must match query 0x{func_addr:X}"
     assert result.name, "resolved function must have a symbol name"
-    assert "NtCreateFile" in result.name, (
-        f"symbol name should contain NtCreateFile, got '{result.name}'"
-    )
+    assert "NtCreateFile" in result.name, f"symbol name should contain NtCreateFile, got '{result.name}'"
     assert result.module_name is not None, "known function should resolve with a module name"
 
 
@@ -586,9 +568,7 @@ def test_find_functions_named(frida_bridge: FridaBridge) -> None:
     assert len(result) >= 1, "NtCreateFile must exist in ntdll on every Windows system"
     sym = result[0]
     assert isinstance(sym, SymbolInfo)
-    assert sym.address >= _NTDLL_BASE_MIN, (
-        f"NtCreateFile address 0x{sym.address:X} should be in system DLL range"
-    )
+    assert sym.address >= _NTDLL_BASE_MIN, f"NtCreateFile address 0x{sym.address:X} should be in system DLL range"
     assert sym.name, "resolved symbol must have a name"
 
 
@@ -601,9 +581,7 @@ def test_allocate_memory(frida_bridge: FridaBridge) -> None:
     probe = bytes([0xDE, 0xAD])
     _run_async(frida_bridge.write_memory(addr, probe))
     readback: bytes = _run_async(frida_bridge.read_memory(addr, len(probe)))
-    assert readback == probe, (
-        f"alloc'd memory at 0x{addr:X} should be writable: wrote {probe!r}, read {readback!r}"
-    )
+    assert readback == probe, f"alloc'd memory at 0x{addr:X} should be writable: wrote {probe!r}, read {readback!r}"
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
@@ -640,12 +618,15 @@ def test_hook_and_remove(frida_bridge: FridaBridge) -> None:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_stalker_follow_and_unfollow(
-    frida_bridge: FridaBridge, worker_thread: int,
+    frida_bridge: FridaBridge,
+    worker_thread: int,
 ) -> None:
     """Verify stalker_follow collects real call events from a busy worker thread."""
     trace_id: str = _run_async(
         frida_bridge.stalker_follow(
-            thread_id=worker_thread, events="call", limit=_STALKER_LIMIT,
+            thread_id=worker_thread,
+            events="call",
+            limit=_STALKER_LIMIT,
         )
     )
     assert isinstance(trace_id, str)
@@ -653,23 +634,14 @@ def test_stalker_follow_and_unfollow(
 
     time.sleep(_STALKER_SLEEP)
 
-    trace: StalkerTrace = _run_async(
-        frida_bridge.stalker_unfollow(thread_id=worker_thread)
-    )
+    trace: StalkerTrace = _run_async(frida_bridge.stalker_unfollow(thread_id=worker_thread))
     assert isinstance(trace, StalkerTrace)
     assert trace.thread_id == worker_thread
-    assert trace.event_count > 0, (
-        f"Stalker must have collected events from worker thread {worker_thread} "
-        f"after {_STALKER_SLEEP}s, got 0"
-    )
-    assert len(trace.events) == trace.event_count, (
-        f"events list length {len(trace.events)} must match event_count {trace.event_count}"
-    )
+    assert trace.event_count > 0, f"Stalker must have collected events from worker thread {worker_thread} after {_STALKER_SLEEP}s, got 0"
+    assert len(trace.events) == trace.event_count, f"events list length {len(trace.events)} must match event_count {trace.event_count}"
     first_event = trace.events[0]
     assert isinstance(first_event, StalkerEvent)
-    assert first_event.event_type == "call", (
-        f"expected 'call' event type, got '{first_event.event_type}'"
-    )
+    assert first_event.event_type == "call", f"expected 'call' event type, got '{first_event.event_type}'"
     assert first_event.from_address > 0, "call event must have a non-zero source address"
 
 

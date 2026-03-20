@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import time
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, cast, override
@@ -31,7 +32,9 @@ from ..core.types import (
     ProviderCredentials,
     ProviderError,
     ProviderName,
+    ThinkingConfig,
     ToolCall,
+    ToolChoice,
     ToolDefinition,
 )
 from .base import LLMProviderBase, create_openai_tool_schema
@@ -221,6 +224,7 @@ class OllamaProvider(LLMProviderBase):
         if not self._connected:
             raise ProviderError(_MSG_NOT_CONNECTED)
 
+        self._logger.debug("ollama_listing_models")
         models: list[ModelInfo] = []
 
         if self._local_available and self._local_client:
@@ -243,32 +247,36 @@ class OllamaProvider(LLMProviderBase):
         if not self._local_client:
             return models
 
+        self._logger.debug("local_models_fetching", url=self._local_url)
         try:
             response = await self._local_client.get(f"{self._local_url}/api/tags")
             response.raise_for_status()
             data = response.json()
 
             model_names = [m.get("name", "") for m in data.get("models", []) if m.get("name")]
-            ctx_windows = await self._fetch_context_windows(
+            model_metadata = await self._fetch_model_metadata(
                 self._local_client,
                 self._local_url,
                 model_names,
             )
 
-            models.extend(
-                ModelInfo(
-                    id=f"local/{model_name}",
-                    name=f"[Local] {model_name}",
-                    provider=ProviderName.OLLAMA,
-                    context_window=ctx_windows.get(model_name, 4096),
-                    supports_tools=True,
-                    supports_vision=True,
-                    supports_streaming=True,
-                    input_cost_per_1m_tokens=None,
-                    output_cost_per_1m_tokens=None,
+            for model_name in model_names:
+                ctx_window, has_tools = model_metadata.get(model_name, (4096, False))
+                name_lower = model_name.lower()
+                has_vision = any(v in name_lower for v in ("vision", "llava"))
+                models.append(
+                    ModelInfo(
+                        id=f"local/{model_name}",
+                        name=f"[Local] {model_name}",
+                        provider=ProviderName.OLLAMA,
+                        context_window=ctx_window,
+                        supports_tools=has_tools,
+                        supports_vision=has_vision,
+                        supports_streaming=True,
+                        input_cost_per_1m_tokens=None,
+                        output_cost_per_1m_tokens=None,
+                    )
                 )
-                for model_name in model_names
-            )
         except Exception as e:
             self._logger.warning("local_models_list_failed", error=str(e))
 
@@ -290,26 +298,29 @@ class OllamaProvider(LLMProviderBase):
             data = response.json()
 
             model_names = [m.get("name", "") for m in data.get("models", []) if m.get("name")]
-            ctx_windows = await self._fetch_context_windows(
+            model_metadata = await self._fetch_model_metadata(
                 self._cloud_client,
                 self.CLOUD_API_URL,
                 model_names,
             )
 
-            models.extend(
-                ModelInfo(
-                    id=f"cloud/{model_name}",
-                    name=f"[Cloud] {model_name}",
-                    provider=ProviderName.OLLAMA,
-                    context_window=ctx_windows.get(model_name, 4096),
-                    supports_tools=True,
-                    supports_vision=True,
-                    supports_streaming=True,
-                    input_cost_per_1m_tokens=None,
-                    output_cost_per_1m_tokens=None,
+            for model_name in model_names:
+                ctx_window, has_tools = model_metadata.get(model_name, (4096, False))
+                name_lower = model_name.lower()
+                has_vision = any(v in name_lower for v in ("vision", "llava"))
+                models.append(
+                    ModelInfo(
+                        id=f"cloud/{model_name}",
+                        name=f"[Cloud] {model_name}",
+                        provider=ProviderName.OLLAMA,
+                        context_window=ctx_window,
+                        supports_tools=has_tools,
+                        supports_vision=has_vision,
+                        supports_streaming=True,
+                        input_cost_per_1m_tokens=None,
+                        output_cost_per_1m_tokens=None,
+                    )
                 )
-                for model_name in model_names
-            )
         except Exception as e:
             self._logger.warning("cloud_models_list_failed", error=str(e))
 
@@ -344,15 +355,17 @@ class OllamaProvider(LLMProviderBase):
 
         raise ProviderError(_ERR_NO_CLIENT)
 
-    async def _fetch_context_windows(
+    async def _fetch_model_metadata(
         self,
         client: httpx.AsyncClient,
         base_url: str,
         model_names: list[str],
-    ) -> dict[str, int]:
-        """Fetch context window sizes from /api/show for each model.
+    ) -> dict[str, tuple[int, bool]]:
+        """Fetch context window sizes and tool support from /api/show.
 
-        Uses ``asyncio.gather`` to query models in parallel.
+        Uses ``asyncio.gather`` to query models in parallel.  Tool support
+        is detected by searching the model template for the Ollama
+        ``{{ .Tools }}`` directive.
 
         Args:
             client: The httpx client to use.
@@ -360,10 +373,12 @@ class OllamaProvider(LLMProviderBase):
             model_names: List of model names to query.
 
         Returns:
-            Mapping of model name to context window size.
+            Mapping of model name to (context_window, supports_tools) tuple.
         """
 
-        async def _query_single(name: str) -> tuple[str, int]:
+        async def _query_single(name: str) -> tuple[str, int, bool]:
+            ctx_window = 4096
+            has_tools = False
             try:
                 resp = await client.post(
                     f"{base_url}/api/show",
@@ -376,16 +391,19 @@ class OllamaProvider(LLMProviderBase):
                     parts = line.strip().split()
                     min_parts = 2
                     if len(parts) >= min_parts and parts[0] == "num_ctx":
-                        return name, int(parts[1])
+                        ctx_window = int(parts[1])
+                template: str = show_data.get("template", "")
+                if re.search(r"\{\{-?\s*\.Tools\s*-?\}\}", template):
+                    has_tools = True
             except Exception:
                 self._logger.debug(
                     "ollama_show_failed",
                     model=name,
                 )
-            return name, 4096
+            return name, ctx_window, has_tools
 
         results = await asyncio.gather(*[_query_single(n) for n in model_names])
-        return dict(results)
+        return {name: (ctx, tools) for name, ctx, tools in results}
 
     async def chat(
         self,
@@ -394,6 +412,9 @@ class OllamaProvider(LLMProviderBase):
         tools: list[ToolDefinition] | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
+        tool_choice: ToolChoice | None = None,
+        thinking: ThinkingConfig | None = None,
+        enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
         """Send a chat completion request to Ollama.
 
@@ -405,6 +426,9 @@ class OllamaProvider(LLMProviderBase):
             tools: Available tools for function calling.
             temperature: Sampling temperature.
             max_tokens: Maximum tokens in response.
+            tool_choice: How the model should select tools (ignored by Ollama).
+            thinking: Extended thinking configuration (ignored by Ollama).
+            enable_cache: Whether to enable prompt caching (ignored by Ollama).
 
         Returns:
             Tuple of (assistant message, tool calls if any).
@@ -416,6 +440,12 @@ class OllamaProvider(LLMProviderBase):
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         self._cancel_requested = False
+        if tool_choice is not None:
+            self._logger.debug("ollama_tool_choice_ignored", mode=tool_choice.mode.value)
+        if thinking is not None and thinking.enabled:
+            self._logger.debug("ollama_thinking_ignored")
+        if enable_cache:
+            self._logger.debug("ollama_cache_ignored")
 
         client, base_url, actual_model = self._get_client_and_model(model)
         ollama_messages = self._convert_messages_to_provider_format(messages)
@@ -540,10 +570,15 @@ class OllamaProvider(LLMProviderBase):
         tools: list[ToolDefinition] | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
+        tool_choice: ToolChoice | None = None,
+        thinking: ThinkingConfig | None = None,
+        enable_cache: bool = False,
     ) -> AsyncIterator[str]:
         """Stream a chat completion response from Ollama.
 
         Automatically routes to local or cloud based on model prefix.
+        When tools are provided, falls back to a non-streaming request
+        internally to ensure reliable tool call capture.
 
         Args:
             messages: Conversation history.
@@ -551,6 +586,9 @@ class OllamaProvider(LLMProviderBase):
             tools: Available tools for function calling.
             temperature: Sampling temperature.
             max_tokens: Maximum tokens in response.
+            tool_choice: How the model should select tools (ignored by Ollama).
+            thinking: Extended thinking configuration (ignored by Ollama).
+            enable_cache: Whether to enable prompt caching (ignored by Ollama).
 
         Yields:
             Text chunks as they arrive.
@@ -562,6 +600,26 @@ class OllamaProvider(LLMProviderBase):
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         self._cancel_requested = False
+        if tool_choice is not None:
+            self._logger.debug("ollama_tool_choice_ignored", mode=tool_choice.mode.value)
+        if thinking is not None and thinking.enabled:
+            self._logger.debug("ollama_thinking_ignored")
+        if enable_cache:
+            self._logger.debug("ollama_cache_ignored")
+
+        if tools:
+            response_msg, tool_calls_result = await self.chat(
+                messages=messages,
+                model=model,
+                tools=tools,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+            if response_msg.content:
+                yield response_msg.content
+            if tool_calls_result:
+                self._pending_tool_calls = list(tool_calls_result)
+            return
 
         client, base_url, actual_model = self._get_client_and_model(model)
         ollama_messages = self._convert_messages_to_provider_format(messages)
@@ -576,9 +634,6 @@ class OllamaProvider(LLMProviderBase):
                     "num_predict": max_tokens,
                 },
             }
-
-            if tools:
-                request_body["tools"] = self._convert_tools_to_provider_format(tools)
 
             last_chunk_data: dict[str, Any] = {}
             async with client.stream(

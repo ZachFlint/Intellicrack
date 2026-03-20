@@ -1,4 +1,4 @@
-7 findings in src\intellicrack\core\types.py
+5 findings in src\intellicrack\core\types.py
 
 src\intellicrack\core\types.py: Unused function display_type
 
@@ -9,10 +9,6 @@ src\intellicrack\core\types.py: Unused function is_executable
 src\intellicrack\core\types.py: Unused function is_readable
 
 src\intellicrack\core\types.py: Unused function is_writable
-
-src\intellicrack\core\types.py: Unused function signature
-
-src\intellicrack\core\types.py: Unused function summary
 
 
 4 findings in src\intellicrack\core\process_manager.py
@@ -35,6 +31,15 @@ src\intellicrack\ui\panels\vnc_widget.py: Unused function mouseMoveEvent
 src\intellicrack\ui\panels\vnc_widget.py: Unused function mouseReleaseEvent
 
 src\intellicrack\ui\panels\vnc_widget.py: Unused function paintEvent
+
+
+3 findings in src\intellicrack\bridges\base.py
+
+src\intellicrack\bridges\base.py: Unused function has_capability
+
+src\intellicrack\bridges\base.py: Unused function supports_arch
+
+src\intellicrack\bridges\base.py: Unused function supports_format
 
 
 3 findings in src\intellicrack\credentials\oauth.py
@@ -73,13 +78,6 @@ src\intellicrack\ui\resources\theme_manager.py: Unused function get_available_th
 src\intellicrack\ui\resources\theme_manager.py: Unused function reset_instance
 
 
-2 findings in src\intellicrack\bridges\base.py
-
-src\intellicrack\bridges\base.py: Unused function supports_arch
-
-src\intellicrack\bridges\base.py: Unused function supports_format
-
-
 2 findings in src\intellicrack\providers\local_transformers.py
 
 src\intellicrack\providers\local_transformers.py: Unused function current_model_id
@@ -92,6 +90,11 @@ src\intellicrack\providers\local_transformers.py: Unused function is_b580_detect
 src\intellicrack\providers\ollama.py: Unused function cloud_available
 
 src\intellicrack\providers\ollama.py: Unused function local_available
+
+
+1 findings in src\intellicrack\core\logging.py
+
+src\intellicrack\core\logging.py: Unused function get_structlog_logger
 
 
 1 findings in src\intellicrack\core\script_gen.py
@@ -132,6 +135,11 @@ src\intellicrack\ui\highlighter.py: Unused function highlightBlock
 1 findings in src\intellicrack\ui\panels\binary_panel.py
 
 src\intellicrack\ui\panels\binary_panel.py: Unused function wheelEvent
+
+
+1 findings in src\intellicrack\ui\panels\frida_panel.py
+
+src\intellicrack\ui\panels\frida_panel.py: Unused function refresh_devices
 
 
 1 findings in src\intellicrack\ui\panels\graph_view.py
