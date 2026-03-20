@@ -306,9 +306,15 @@ class HexEditorWidget(QAbstractScrollArea):
         return b""
 
     def _paint_hex_byte(
-        self, painter: QPainter, row_idx: int, y: int,
-        col: int, byte_val: int, byte_offset: int,
-        sel_start: int, sel_end: int,
+        self,
+        painter: QPainter,
+        row_idx: int,
+        y: int,
+        col: int,
+        byte_val: int,
+        byte_offset: int,
+        sel_start: int,
+        sel_end: int,
     ) -> None:
         """Paint a single byte in the hex column.
 
@@ -346,9 +352,15 @@ class HexEditorWidget(QAbstractScrollArea):
             painter.drawRect(nibble_x - 1, row_idx * self._line_height, self._char_width, self._line_height - 1)
 
     def _paint_ascii_byte(
-        self, painter: QPainter, row_idx: int, y: int,
-        col: int, byte_val: int, byte_offset: int,
-        sel_start: int, sel_end: int,
+        self,
+        painter: QPainter,
+        row_idx: int,
+        y: int,
+        col: int,
+        byte_val: int,
+        byte_offset: int,
+        sel_start: int,
+        sel_end: int,
     ) -> None:
         """Paint a single byte in the ASCII column.
 

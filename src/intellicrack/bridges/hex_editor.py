@@ -147,8 +147,16 @@ class HexEditorBridge(ToolBridgeBase):
                     description="Search for text with encoding support.",
                     parameters=[
                         ToolParameter(name="text", type="string", description="Text to search for."),
-                        ToolParameter(name="encoding", type="string", description="Encoding (utf-8, utf-16le, ascii).", required=False, default="utf-8"),
-                        ToolParameter(name="case_sensitive", type="boolean", description="Case-sensitive match.", required=False, default=True),
+                        ToolParameter(
+                            name="encoding",
+                            type="string",
+                            description="Encoding (utf-8, utf-16le, ascii).",
+                            required=False,
+                            default="utf-8",
+                        ),
+                        ToolParameter(
+                            name="case_sensitive", type="boolean", description="Case-sensitive match.", required=False, default=True
+                        ),
                         ToolParameter(name="max_results", type="integer", description="Maximum results.", required=False, default=100),
                     ],
                     returns="List of {offset, length} dicts",
@@ -183,7 +191,9 @@ class HexEditorBridge(ToolBridgeBase):
                 ToolFunction(
                     name="hex_editor.calculate_hash",
                     description="Calculate hash of the entire document.",
-                    parameters=[ToolParameter(name="algorithm", type="string", description="Hash algorithm.", required=False, default="sha256")],
+                    parameters=[
+                        ToolParameter(name="algorithm", type="string", description="Hash algorithm.", required=False, default="sha256")
+                    ],
                     returns="Hex digest string",
                 ),
                 ToolFunction(
@@ -243,14 +253,18 @@ class HexEditorBridge(ToolBridgeBase):
                     name="hex_editor.copy_as",
                     description="Format bytes at cursor/selection in a specific format.",
                     parameters=[
-                        ToolParameter(name="format", type="string", description="Output format.", enum=["hex", "c_array", "python", "base64"]),
+                        ToolParameter(
+                            name="format", type="string", description="Output format.", enum=["hex", "c_array", "python", "base64"]
+                        ),
                     ],
                     returns="Formatted string",
                 ),
                 ToolFunction(
                     name="hex_editor.save",
                     description="Save the document.",
-                    parameters=[ToolParameter(name="path", type="string", description="Save path (uses original if omitted).", required=False)],
+                    parameters=[
+                        ToolParameter(name="path", type="string", description="Save path (uses original if omitted).", required=False)
+                    ],
                     returns="True if saved",
                 ),
             ],
@@ -665,11 +679,7 @@ class HexEditorBridge(ToolBridgeBase):
         if not isinstance(result, list):
             return []
         typed_list = cast("list[object]", result)
-        return [
-            cast("dict[str, Any]", entry)
-            for entry in typed_list
-            if isinstance(entry, dict)
-        ]
+        return [cast("dict[str, Any]", entry) for entry in typed_list if isinstance(entry, dict)]
 
     async def list_templates(self) -> list[dict[str, str]]:
         """List all available struct templates.
@@ -817,10 +827,7 @@ class HexEditorBridge(ToolBridgeBase):
 
         bookmarks = self._document.list_bookmarks()
         _logger.debug("bookmarks_listed", count=len(bookmarks))
-        return [
-            {"offset": b[0], "length": b[1], "label": b[2], "color": b[3]}
-            for b in bookmarks
-        ]
+        return [{"offset": b[0], "length": b[1], "label": b[2], "color": b[3]} for b in bookmarks]
 
     async def save(self, path: str | None = None) -> bool:
         """Save the document.

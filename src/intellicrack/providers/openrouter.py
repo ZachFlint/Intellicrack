@@ -186,18 +186,10 @@ class OpenRouterProvider(LLMProviderBase):
                 modality = str(architecture.get("modality", ""))
                 supports_vision = "image" in modality
 
-                supported_params: list[str] = [
-                    str(p) for p in model_data.get("supported_parameters", [])
-                ]
-                supports_tools = (
-                    "tools" in supported_params
-                    or "tool_choice" in supported_params
-                )
+                supported_params: list[str] = [str(p) for p in model_data.get("supported_parameters", [])]
+                supports_tools = "tools" in supported_params or "tool_choice" in supported_params
                 if not supports_tools and not supported_params:
-                    supports_tools = any(
-                        family in model_id.lower()
-                        for family in ("claude", "gpt", "gemini", "llama-3", "qwen")
-                    )
+                    supports_tools = any(family in model_id.lower() for family in ("claude", "gpt", "gemini", "llama-3", "qwen"))
 
                 models.append(
                     ModelInfo(
