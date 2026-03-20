@@ -1,60 +1,60 @@
 {
   "tool": "mccabe",
-  "generated": "2026-03-14T15:23:17.588006",
-  "total_findings": 49,
-  "total_files": 28,
+  "generated": "2026-03-20T11:26:20.043696",
+  "total_findings": 54,
+  "total_files": 30,
   "files": [
     {
       "path": "src/intellicrack/ui\\tools.py",
       "count": 6,
       "findings": [
         {
-          "line": 1007,
+          "line": 1015,
           "column": 5,
           "code": "C901",
           "complexity": 11,
           "message": "'ToolOutputPanel.add_x64dbg_tab' is too complex (11)",
-          "raw": "src/intellicrack/ui\\tools.py:1007:5: C901 'ToolOutputPanel.add_x64dbg_tab' is too complex (11)"
+          "raw": "src/intellicrack/ui\\tools.py:1015:5: C901 'ToolOutputPanel.add_x64dbg_tab' is too complex (11)"
         },
         {
-          "line": 1059,
+          "line": 1067,
           "column": 5,
           "code": "C901",
           "complexity": 11,
           "message": "'ToolOutputPanel.add_cutter_tab' is too complex (11)",
-          "raw": "src/intellicrack/ui\\tools.py:1059:5: C901 'ToolOutputPanel.add_cutter_tab' is too complex (11)"
+          "raw": "src/intellicrack/ui\\tools.py:1067:5: C901 'ToolOutputPanel.add_cutter_tab' is too complex (11)"
         },
         {
-          "line": 1106,
+          "line": 1114,
           "column": 5,
           "code": "C901",
           "complexity": 11,
           "message": "'ToolOutputPanel.add_ghidra_tab' is too complex (11)",
-          "raw": "src/intellicrack/ui\\tools.py:1106:5: C901 'ToolOutputPanel.add_ghidra_tab' is too complex (11)"
+          "raw": "src/intellicrack/ui\\tools.py:1114:5: C901 'ToolOutputPanel.add_ghidra_tab' is too complex (11)"
         },
         {
-          "line": 1153,
+          "line": 1161,
           "column": 5,
           "code": "C901",
           "complexity": 11,
           "message": "'ToolOutputPanel.add_frida_tab' is too complex (11)",
-          "raw": "src/intellicrack/ui\\tools.py:1153:5: C901 'ToolOutputPanel.add_frida_tab' is too complex (11)"
+          "raw": "src/intellicrack/ui\\tools.py:1161:5: C901 'ToolOutputPanel.add_frida_tab' is too complex (11)"
         },
         {
-          "line": 1507,
+          "line": 1514,
           "column": 5,
           "code": "C901",
           "complexity": 12,
           "message": "'ToolOutputPanel._on_tab_close_requested' is too complex (12)",
-          "raw": "src/intellicrack/ui\\tools.py:1507:5: C901 'ToolOutputPanel._on_tab_close_requested' is too complex (12)"
+          "raw": "src/intellicrack/ui\\tools.py:1514:5: C901 'ToolOutputPanel._on_tab_close_requested' is too complex (12)"
         },
         {
-          "line": 1570,
+          "line": 1577,
           "column": 5,
           "code": "C901",
           "complexity": 14,
           "message": "'ToolOutputPanel.close_embedded_tools' is too complex (14)",
-          "raw": "src/intellicrack/ui\\tools.py:1570:5: C901 'ToolOutputPanel.close_embedded_tools' is too complex (14)"
+          "raw": "src/intellicrack/ui\\tools.py:1577:5: C901 'ToolOutputPanel.close_embedded_tools' is too complex (14)"
         }
       ]
     },
@@ -63,36 +63,36 @@
       "count": 4,
       "findings": [
         {
-          "line": 1254,
+          "line": 1256,
           "column": 5,
           "code": "C901",
           "complexity": 11,
           "message": "'MainWindow._apply_tool_settings' is too complex (11)",
-          "raw": "src/intellicrack/ui\\app.py:1254:5: C901 'MainWindow._apply_tool_settings' is too complex (11)"
+          "raw": "src/intellicrack/ui\\app.py:1256:5: C901 'MainWindow._apply_tool_settings' is too complex (11)"
         },
         {
-          "line": 1327,
+          "line": 1329,
           "column": 5,
           "code": "C901",
           "complexity": 11,
           "message": "'MainWindow._apply_provider_settings' is too complex (11)",
-          "raw": "src/intellicrack/ui\\app.py:1327:5: C901 'MainWindow._apply_provider_settings' is too complex (11)"
+          "raw": "src/intellicrack/ui\\app.py:1329:5: C901 'MainWindow._apply_provider_settings' is too complex (11)"
         },
         {
-          "line": 1402,
+          "line": 1404,
           "column": 5,
           "code": "C901",
           "complexity": 11,
           "message": "'MainWindow._on_refresh_models' is too complex (11)",
-          "raw": "src/intellicrack/ui\\app.py:1402:5: C901 'MainWindow._on_refresh_models' is too complex (11)"
+          "raw": "src/intellicrack/ui\\app.py:1404:5: C901 'MainWindow._on_refresh_models' is too complex (11)"
         },
         {
-          "line": 1718,
+          "line": 1720,
           "column": 5,
           "code": "C901",
           "complexity": 11,
           "message": "'MainWindow._on_open_frida' is too complex (11)",
-          "raw": "src/intellicrack/ui\\app.py:1718:5: C901 'MainWindow._on_open_frida' is too complex (11)"
+          "raw": "src/intellicrack/ui\\app.py:1720:5: C901 'MainWindow._on_open_frida' is too complex (11)"
         }
       ]
     },
@@ -109,20 +109,80 @@
           "raw": "src/intellicrack/providers\\discovery.py:345:5: C901 'ModelDiscovery.discover_all' is too complex (12)"
         },
         {
-          "line": 578,
+          "line": 579,
           "column": 5,
           "code": "C901",
           "complexity": 13,
           "message": "'ModelDiscovery.filter' is too complex (13)",
-          "raw": "src/intellicrack/providers\\discovery.py:578:5: C901 'ModelDiscovery.filter' is too complex (13)"
+          "raw": "src/intellicrack/providers\\discovery.py:579:5: C901 'ModelDiscovery.filter' is too complex (13)"
         },
         {
-          "line": 686,
+          "line": 687,
           "column": 5,
           "code": "C901",
           "complexity": 12,
           "message": "'ModelDiscovery.get_recommended_model' is too complex (12)",
-          "raw": "src/intellicrack/providers\\discovery.py:686:5: C901 'ModelDiscovery.get_recommended_model' is too complex (12)"
+          "raw": "src/intellicrack/providers\\discovery.py:687:5: C901 'ModelDiscovery.get_recommended_model' is too complex (12)"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/providers\\local_transformers.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 458,
+          "column": 5,
+          "code": "C901",
+          "complexity": 13,
+          "message": "'LocalTransformersProvider.chat_stream' is too complex (13)",
+          "raw": "src/intellicrack/providers\\local_transformers.py:458:5: C901 'LocalTransformersProvider.chat_stream' is too complex (13)"
+        },
+        {
+          "line": 640,
+          "column": 5,
+          "code": "C901",
+          "complexity": 11,
+          "message": "'LocalTransformersProvider._stream_generate' is too complex (11)",
+          "raw": "src/intellicrack/providers\\local_transformers.py:640:5: C901 'LocalTransformersProvider._stream_generate' is too complex (11)"
+        },
+        {
+          "line": 919,
+          "column": 5,
+          "code": "C901",
+          "complexity": 14,
+          "message": "'LocalTransformersProvider._parse_tool_calls' is too complex (14)",
+          "raw": "src/intellicrack/providers\\local_transformers.py:919:5: C901 'LocalTransformersProvider._parse_tool_calls' is too complex (14)"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/providers\\openrouter.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 145,
+          "column": 5,
+          "code": "C901",
+          "complexity": 12,
+          "message": "'OpenRouterProvider.list_models' is too complex (12)",
+          "raw": "src/intellicrack/providers\\openrouter.py:145:5: C901 'OpenRouterProvider.list_models' is too complex (12)"
+        },
+        {
+          "line": 222,
+          "column": 5,
+          "code": "C901",
+          "complexity": 12,
+          "message": "'OpenRouterProvider.chat' is too complex (12)",
+          "raw": "src/intellicrack/providers\\openrouter.py:222:5: C901 'OpenRouterProvider.chat' is too complex (12)"
+        },
+        {
+          "line": 387,
+          "column": 5,
+          "code": "C901",
+          "complexity": 19,
+          "message": "'OpenRouterProvider.chat_stream' is too complex (19)",
+          "raw": "src/intellicrack/providers\\openrouter.py:387:5: C901 'OpenRouterProvider.chat_stream' is too complex (19)"
         }
       ]
     },
@@ -213,64 +273,20 @@
       "count": 2,
       "findings": [
         {
-          "line": 328,
+          "line": 343,
           "column": 5,
           "code": "C901",
           "complexity": 13,
           "message": "'GoogleProvider.chat_stream' is too complex (13)",
-          "raw": "src/intellicrack/providers\\google.py:328:5: C901 'GoogleProvider.chat_stream' is too complex (13)"
+          "raw": "src/intellicrack/providers\\google.py:343:5: C901 'GoogleProvider.chat_stream' is too complex (13)"
         },
         {
-          "line": 537,
+          "line": 579,
           "column": 5,
           "code": "C901",
           "complexity": 11,
           "message": "'GoogleProvider._convert_messages_to_provider_format' is too complex (11)",
-          "raw": "src/intellicrack/providers\\google.py:537:5: C901 'GoogleProvider._convert_messages_to_provider_format' is too complex (11)"
-        }
-      ]
-    },
-    {
-      "path": "src/intellicrack/providers\\local_transformers.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 603,
-          "column": 5,
-          "code": "C901",
-          "complexity": 11,
-          "message": "'LocalTransformersProvider._stream_generate' is too complex (11)",
-          "raw": "src/intellicrack/providers\\local_transformers.py:603:5: C901 'LocalTransformersProvider._stream_generate' is too complex (11)"
-        },
-        {
-          "line": 882,
-          "column": 5,
-          "code": "C901",
-          "complexity": 14,
-          "message": "'LocalTransformersProvider._parse_tool_calls' is too complex (14)",
-          "raw": "src/intellicrack/providers\\local_transformers.py:882:5: C901 'LocalTransformersProvider._parse_tool_calls' is too complex (14)"
-        }
-      ]
-    },
-    {
-      "path": "src/intellicrack/providers\\openrouter.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 143,
-          "column": 5,
-          "code": "C901",
-          "complexity": 11,
-          "message": "'OpenRouterProvider.list_models' is too complex (11)",
-          "raw": "src/intellicrack/providers\\openrouter.py:143:5: C901 'OpenRouterProvider.list_models' is too complex (11)"
-        },
-        {
-          "line": 368,
-          "column": 5,
-          "code": "C901",
-          "complexity": 16,
-          "message": "'OpenRouterProvider.chat_stream' is too complex (16)",
-          "raw": "src/intellicrack/providers\\openrouter.py:368:5: C901 'OpenRouterProvider.chat_stream' is too complex (16)"
+          "raw": "src/intellicrack/providers\\google.py:579:5: C901 'GoogleProvider._convert_messages_to_provider_format' is too complex (11)"
         }
       ]
     },
@@ -293,6 +309,28 @@
           "complexity": 12,
           "message": "'BinaryPanel._parse_elf_sections' is too complex (12)",
           "raw": "src/intellicrack/ui\\panels\\binary_panel.py:800:5: C901 'BinaryPanel._parse_elf_sections' is too complex (12)"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui\\panels\\hex_editor_widget.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 421,
+          "column": 5,
+          "code": "C901",
+          "complexity": 23,
+          "message": "'HexEditorWidget.keyPressEvent' is too complex (23)",
+          "raw": "src/intellicrack/ui\\panels\\hex_editor_widget.py:421:5: C901 'HexEditorWidget.keyPressEvent' is too complex (23)"
+        },
+        {
+          "line": 865,
+          "column": 5,
+          "code": "C901",
+          "complexity": 11,
+          "message": "'HexEditorWidget.copy_as' is too complex (11)",
+          "raw": "src/intellicrack/ui\\panels\\hex_editor_widget.py:865:5: C901 'HexEditorWidget.copy_as' is too complex (11)"
         }
       ]
     },
@@ -373,12 +411,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 1113,
+          "line": 1116,
           "column": 5,
           "code": "C901",
           "complexity": 11,
           "message": "'ProcessBridge.search_pattern' is too complex (11)",
-          "raw": "src/intellicrack/bridges\\process.py:1113:5: C901 'ProcessBridge.search_pattern' is too complex (11)"
+          "raw": "src/intellicrack/bridges\\process.py:1116:5: C901 'ProcessBridge.search_pattern' is too complex (11)"
         }
       ]
     },
@@ -387,12 +425,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 2565,
+          "line": 2580,
           "column": 5,
           "code": "C901",
           "complexity": 13,
           "message": "'X64DbgBridge.find_pattern' is too complex (13)",
-          "raw": "src/intellicrack/bridges\\x64dbg.py:2565:5: C901 'X64DbgBridge.find_pattern' is too complex (13)"
+          "raw": "src/intellicrack/bridges\\x64dbg.py:2580:5: C901 'X64DbgBridge.find_pattern' is too complex (13)"
         }
       ]
     },
@@ -401,12 +439,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 161,
+          "line": 169,
           "column": 5,
           "code": "C901",
           "complexity": 12,
           "message": "'AnalysisAggregator._collect_from_static_bridge' is too complex (12)",
-          "raw": "src/intellicrack/core\\analysis_aggregator.py:161:5: C901 'AnalysisAggregator._collect_from_static_bridge' is too complex (12)"
+          "raw": "src/intellicrack/core\\analysis_aggregator.py:169:5: C901 'AnalysisAggregator._collect_from_static_bridge' is too complex (12)"
         }
       ]
     },
@@ -415,12 +453,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 420,
+          "line": 429,
           "column": 5,
           "code": "C901",
           "complexity": 11,
           "message": "'Orchestrator._run_agent_loop' is too complex (11)",
-          "raw": "src/intellicrack/core\\orchestrator.py:420:5: C901 'Orchestrator._run_agent_loop' is too complex (11)"
+          "raw": "src/intellicrack/core\\orchestrator.py:429:5: C901 'Orchestrator._run_agent_loop' is too complex (11)"
         }
       ]
     },
@@ -429,12 +467,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 268,
+          "line": 270,
           "column": 5,
           "code": "C901",
           "complexity": 14,
           "message": "'ProcessManager._sync_cleanup' is too complex (14)",
-          "raw": "src/intellicrack/core\\process_manager.py:268:5: C901 'ProcessManager._sync_cleanup' is too complex (14)"
+          "raw": "src/intellicrack/core\\process_manager.py:270:5: C901 'ProcessManager._sync_cleanup' is too complex (14)"
         }
       ]
     },
@@ -443,12 +481,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 436,
+          "line": 459,
           "column": 5,
           "code": "C901",
           "complexity": 11,
           "message": "'ToolRegistry.execute_tool_call' is too complex (11)",
-          "raw": "src/intellicrack/core\\tools.py:436:5: C901 'ToolRegistry.execute_tool_call' is too complex (11)"
+          "raw": "src/intellicrack/core\\tools.py:459:5: C901 'ToolRegistry.execute_tool_call' is too complex (11)"
         }
       ]
     },
@@ -457,12 +495,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 344,
+          "line": 407,
           "column": 5,
           "code": "C901",
-          "complexity": 12,
-          "message": "'AnthropicProvider.chat_stream' is too complex (12)",
-          "raw": "src/intellicrack/providers\\anthropic.py:344:5: C901 'AnthropicProvider.chat_stream' is too complex (12)"
+          "complexity": 13,
+          "message": "'AnthropicProvider.chat_stream' is too complex (13)",
+          "raw": "src/intellicrack/providers\\anthropic.py:407:5: C901 'AnthropicProvider.chat_stream' is too complex (13)"
         }
       ]
     },
@@ -471,12 +509,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 386,
+          "line": 417,
           "column": 5,
           "code": "C901",
-          "complexity": 15,
-          "message": "'GrokProvider.chat_stream' is too complex (15)",
-          "raw": "src/intellicrack/providers\\grok.py:386:5: C901 'GrokProvider.chat_stream' is too complex (15)"
+          "complexity": 19,
+          "message": "'GrokProvider.chat_stream' is too complex (19)",
+          "raw": "src/intellicrack/providers\\grok.py:417:5: C901 'GrokProvider.chat_stream' is too complex (19)"
         }
       ]
     },
@@ -485,12 +523,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 427,
+          "line": 441,
           "column": 5,
           "code": "C901",
-          "complexity": 15,
-          "message": "'HuggingFaceProvider.chat_stream' is too complex (15)",
-          "raw": "src/intellicrack/providers\\huggingface.py:427:5: C901 'HuggingFaceProvider.chat_stream' is too complex (15)"
+          "complexity": 20,
+          "message": "'HuggingFaceProvider.chat_stream' is too complex (20)",
+          "raw": "src/intellicrack/providers\\huggingface.py:441:5: C901 'HuggingFaceProvider.chat_stream' is too complex (20)"
         }
       ]
     },
@@ -513,12 +551,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 536,
+          "line": 566,
           "column": 5,
           "code": "C901",
-          "complexity": 13,
-          "message": "'OllamaProvider.chat_stream' is too complex (13)",
-          "raw": "src/intellicrack/providers\\ollama.py:536:5: C901 'OllamaProvider.chat_stream' is too complex (13)"
+          "complexity": 18,
+          "message": "'OllamaProvider.chat_stream' is too complex (18)",
+          "raw": "src/intellicrack/providers\\ollama.py:566:5: C901 'OllamaProvider.chat_stream' is too complex (18)"
         }
       ]
     },
@@ -527,12 +565,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 424,
+          "line": 458,
           "column": 5,
           "code": "C901",
-          "complexity": 14,
-          "message": "'OpenAIProvider.chat_stream' is too complex (14)",
-          "raw": "src/intellicrack/providers\\openai.py:424:5: C901 'OpenAIProvider.chat_stream' is too complex (14)"
+          "complexity": 18,
+          "message": "'OpenAIProvider.chat_stream' is too complex (18)",
+          "raw": "src/intellicrack/providers\\openai.py:458:5: C901 'OpenAIProvider.chat_stream' is too complex (18)"
         }
       ]
     },
@@ -555,12 +593,26 @@
       "count": 1,
       "findings": [
         {
-          "line": 388,
+          "line": 390,
           "column": 5,
           "code": "C901",
           "complexity": 11,
           "message": "'CFGGraphScene._compute_layers' is too complex (11)",
-          "raw": "src/intellicrack/ui\\panels\\graph_view.py:388:5: C901 'CFGGraphScene._compute_layers' is too complex (11)"
+          "raw": "src/intellicrack/ui\\panels\\graph_view.py:390:5: C901 'CFGGraphScene._compute_layers' is too complex (11)"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui\\panels\\hex_editor_panel.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 458,
+          "column": 5,
+          "code": "C901",
+          "complexity": 12,
+          "message": "'HexEditorPanel._on_search' is too complex (12)",
+          "raw": "src/intellicrack/ui\\panels\\hex_editor_panel.py:458:5: C901 'HexEditorPanel._on_search' is too complex (12)"
         }
       ]
     }

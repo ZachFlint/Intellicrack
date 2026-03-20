@@ -1,6 +1,6 @@
 {
   "tool": "yamllint",
-  "generated": "2026-03-14T15:23:53.680268",
+  "generated": "2026-03-20T11:27:04.975050",
   "total_findings": 48,
   "total_files": 16,
   "files": [
@@ -225,12 +225,12 @@
           "raw": ".\\.github\\workflows\\ci.yml:29:121: [warning] line too long (130 > 120 characters)  (line-length)"
         },
         {
-          "line": 156,
+          "line": 158,
           "column": 121,
           "severity": "warning",
           "code": "",
           "message": "line too long (121 > 120 characters)  (line-length)",
-          "raw": ".\\.github\\workflows\\ci.yml:156:121: [warning] line too long (121 > 120 characters)  (line-length)"
+          "raw": ".\\.github\\workflows\\ci.yml:158:121: [warning] line too long (121 > 120 characters)  (line-length)"
         }
       ]
     },

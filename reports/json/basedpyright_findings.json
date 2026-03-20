@@ -1,7 +1,36 @@
 {
   "tool": "basedpyright",
-  "generated": "2026-03-14T15:25:31.305031",
-  "total_findings": 0,
-  "total_files": 0,
-  "files": []
+  "generated": "2026-03-20T11:28:56.377245",
+  "total_findings": 2,
+  "total_files": 2,
+  "files": [
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\bridges\\hex_editor.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 28,
+          "column": 12,
+          "severity": "warning",
+          "rule": "reportMissingImports",
+          "message": "Import \"intellicrack_hexcore\" could not be resolved",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\hex_editor.py:28:12: [warning] Import \"intellicrack_hexcore\" could not be resolved"
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_panel.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 57,
+          "column": 12,
+          "severity": "warning",
+          "rule": "reportMissingImports",
+          "message": "Import \"intellicrack_hexcore\" could not be resolved",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_panel.py:57:12: [warning] Import \"intellicrack_hexcore\" could not be resolved"
+        }
+      ]
+    }
+  ]
 }

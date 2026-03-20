@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Fri, Mar 20, 2026 11:23:01 AM
+Generated: Fri, Mar 20, 2026 11:45:37 AM
 Directory: D:\Intellicrack
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -10,6 +10,8 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 ----------------------------------------
 
 ├── .benchmarks/
+├── .complexipy_cache/
+│   └── c4ed0630d647fefad77d0754b11ca463.json
 ├── .fleet/
 │   └── settings.json
 ├── .github/

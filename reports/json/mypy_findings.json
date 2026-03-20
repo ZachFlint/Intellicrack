@@ -1,8 +1,8 @@
 {
   "tool": "mypy",
-  "generated": "2026-03-14T15:26:30.226503",
-  "total_findings": 80,
-  "total_files": 24,
+  "generated": "2026-03-20T11:30:35.785954",
+  "total_findings": 93,
+  "total_files": 27,
   "files": [
     {
       "path": "src\\intellicrack\\bridges\\cutter.py",
@@ -105,140 +105,132 @@
           "raw": "src\\intellicrack\\bridges\\cutter.py:621: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 708,
+          "line": 711,
           "column": null,
           "severity": "error",
           "code": "func-returns-value",
           "message": "Function does not return a value (it only ever returns None)",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:708: error: Function does not return a value (it only ever returns None)  [func-returns-value]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:711: error: Function does not return a value (it only ever returns None)  [func-returns-value]"
         },
         {
-          "line": 708,
+          "line": 711,
           "column": null,
           "severity": "error",
           "code": "arg-type",
           "message": "Argument 1 to \"to_thread\" has incompatible type \"Callable[[str, list[str] | None], open_sync]\"; expected \"Callable[[str, list[str] | None], None]\"",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:708: error: Argument 1 to \"to_thread\" has incompatible type \"Callable[[str, list[str] | None], open_sync]\"; expected \"Callable[[str, list[str] | None], None]\"  [arg-type]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:711: error: Argument 1 to \"to_thread\" has incompatible type \"Callable[[str, list[str] | None], open_sync]\"; expected \"Callable[[str, list[str] | None], None]\"  [arg-type]"
         },
         {
-          "line": 760,
+          "line": 763,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:760: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:763: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 789,
+          "line": 792,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:789: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:792: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 832,
+          "line": 836,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:832: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:836: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 904,
+          "line": 910,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:904: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:910: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 937,
+          "line": 944,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:937: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:944: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 976,
+          "line": 984,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:976: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:984: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1018,
+          "line": 1027,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1018: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1027: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1060,
+          "line": 1070,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1060: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1070: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1107,
+          "line": 1118,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1107: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1118: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1129,
+          "line": 1142,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1129: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1142: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1147,
+          "line": 1162,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1147: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1162: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1171,
+          "line": 1186,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1171: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1186: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1193,
+          "line": 1208,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1193: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1208: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1244,
+          "line": 1265,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1244: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 1273,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1273: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1265: error: Statement is unreachable  [unreachable]"
         },
         {
           "line": 1294,
@@ -249,28 +241,122 @@
           "raw": "src\\intellicrack\\bridges\\cutter.py:1294: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1314,
+          "line": 1315,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1314: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1315: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1350,
+          "line": 1335,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1350: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1335: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1391,
+          "line": 1373,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1391: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1373: error: Statement is unreachable  [unreachable]"
+        },
+        {
+          "line": 1415,
+          "column": null,
+          "severity": "error",
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1415: error: Statement is unreachable  [unreachable]"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_providers\\test_registry.py",
+      "count": 10,
+      "findings": [
+        {
+          "line": 73,
+          "column": null,
+          "severity": "error",
+          "code": "override",
+          "message": "Signature of \"chat\" incompatible with supertype \"intellicrack.providers.base.LLMProviderBase\"",
+          "raw": "tests\\test_providers\\test_registry.py:73: error: Signature of \"chat\" incompatible with supertype \"intellicrack.providers.base.LLMProviderBase\"  [override]"
+        },
+        {
+          "line": 73,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Superclass:",
+          "raw": "tests\\test_providers\\test_registry.py:73: note:      Superclass:"
+        },
+        {
+          "line": 73,
+          "column": null,
+          "severity": "note",
+          "code": "ToolCall] | None]",
+          "message": "def chat(self, messages: list[Message], model: str, tools: list[ToolDefinition] | None = ..., temperature: float = ..., max_tokens: int = ..., tool_choice: ToolChoice | None = ..., thinking: ThinkingConfig | None = ..., enable_cache: bool = ...) -> Coroutine[Any, Any, tuple[Message, list",
+          "raw": "tests\\test_providers\\test_registry.py:73: note:          def chat(self, messages: list[Message], model: str, tools: list[ToolDefinition] | None = ..., temperature: float = ..., max_tokens: int = ..., tool_choice: ToolChoice | None = ..., thinking: ThinkingConfig | None = ..., enable_cache: bool = ...) -> Coroutine[Any, Any, tuple[Message, list[ToolCall] | None]]"
+        },
+        {
+          "line": 73,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Subclass:",
+          "raw": "tests\\test_providers\\test_registry.py:73: note:      Subclass:"
+        },
+        {
+          "line": 73,
+          "column": null,
+          "severity": "note",
+          "code": "ToolCall] | None]",
+          "message": "def chat(self, messages: list[Message], model: str, tools: list[ToolDefinition] | None = ..., temperature: float = ..., max_tokens: int = ...) -> Coroutine[Any, Any, tuple[Message, list",
+          "raw": "tests\\test_providers\\test_registry.py:73: note:          def chat(self, messages: list[Message], model: str, tools: list[ToolDefinition] | None = ..., temperature: float = ..., max_tokens: int = ...) -> Coroutine[Any, Any, tuple[Message, list[ToolCall] | None]]"
+        },
+        {
+          "line": 96,
+          "column": null,
+          "severity": "error",
+          "code": "override",
+          "message": "Signature of \"chat_stream\" incompatible with supertype \"intellicrack.providers.base.LLMProviderBase\"",
+          "raw": "tests\\test_providers\\test_registry.py:96: error: Signature of \"chat_stream\" incompatible with supertype \"intellicrack.providers.base.LLMProviderBase\"  [override]"
+        },
+        {
+          "line": 96,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Superclass:",
+          "raw": "tests\\test_providers\\test_registry.py:96: note:      Superclass:"
+        },
+        {
+          "line": 96,
+          "column": null,
+          "severity": "note",
+          "code": "str",
+          "message": "def chat_stream(self, messages: list[Message], model: str, tools: list[ToolDefinition] | None = ..., temperature: float = ..., max_tokens: int = ..., tool_choice: ToolChoice | None = ..., thinking: ThinkingConfig | None = ..., enable_cache: bool = ...) -> AsyncIterator",
+          "raw": "tests\\test_providers\\test_registry.py:96: note:          def chat_stream(self, messages: list[Message], model: str, tools: list[ToolDefinition] | None = ..., temperature: float = ..., max_tokens: int = ..., tool_choice: ToolChoice | None = ..., thinking: ThinkingConfig | None = ..., enable_cache: bool = ...) -> AsyncIterator[str]"
+        },
+        {
+          "line": 96,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Subclass:",
+          "raw": "tests\\test_providers\\test_registry.py:96: note:      Subclass:"
+        },
+        {
+          "line": 96,
+          "column": null,
+          "severity": "note",
+          "code": "str",
+          "message": "def chat_stream(self, messages: list[Message], model: str, tools: list[ToolDefinition] | None = ..., temperature: float = ..., max_tokens: int = ...) -> AsyncIterator",
+          "raw": "tests\\test_providers\\test_registry.py:96: note:          def chat_stream(self, messages: list[Message], model: str, tools: list[ToolDefinition] | None = ..., temperature: float = ..., max_tokens: int = ...) -> AsyncIterator[str]"
         }
       ]
     },
@@ -465,20 +551,20 @@
           "raw": "src\\intellicrack\\ui\\app.py:66: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[int], None]\")  [assignment]"
         },
         {
-          "line": 283,
+          "line": 285,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\app.py:283: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\ui\\app.py:285: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 713,
+          "line": 715,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\app.py:713: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\ui\\app.py:715: error: Statement is unreachable  [unreachable]"
         }
       ]
     },
@@ -593,6 +679,28 @@
       ]
     },
     {
+      "path": "tests\\test_ui\\test_app_embedded_tools.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 148,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"MainWindow\" has no attribute \"_hxd_btn\"",
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:148: error: \"MainWindow\" has no attribute \"_hxd_btn\"  [attr-defined]"
+        },
+        {
+          "line": 220,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"MainWindow\" has no attribute \"_on_open_hxd\"",
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:220: error: \"MainWindow\" has no attribute \"_on_open_hxd\"  [attr-defined]"
+        }
+      ]
+    },
+    {
       "path": "tests\\test_ui\\test_graph_view.py",
       "count": 1,
       "findings": [
@@ -635,6 +743,20 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\bridges\\hex_editor.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 755,
+          "column": null,
+          "severity": "error",
+          "code": "no-redef",
+          "message": "Name \"data\" already defined on line 749",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:755: error: Name \"data\" already defined on line 749  [no-redef]"
+        }
+      ]
+    },
+    {
       "path": "tests\\test_providers\\test_openrouter_provider.py",
       "count": 1,
       "findings": [
@@ -659,6 +781,20 @@
           "code": "no-untyped-def",
           "message": "Function is missing a type annotation for one or more arguments",
           "raw": "tests\\test_providers\\test_huggingface_provider.py:202: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\model_loader.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 28,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
+          "raw": "src\\intellicrack\\providers\\model_loader.py:28: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
         }
       ]
     },
@@ -705,6 +841,34 @@
       ]
     },
     {
+      "path": "tests\\test_ui\\test_sandbox_panel_fixes.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 75,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 1 to \"set_sandbox_manager\" of \"SandboxPanel\" has incompatible type \"object\"; expected \"SandboxManager\"",
+          "raw": "tests\\test_ui\\test_sandbox_panel_fixes.py:75: error: Argument 1 to \"set_sandbox_manager\" of \"SandboxPanel\" has incompatible type \"object\"; expected \"SandboxManager\"  [arg-type]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\local_transformers.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 65,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:65: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
+        }
+      ]
+    },
+    {
       "path": "tests\\test_providers\\test_model_discovery.py",
       "count": 1,
       "findings": [
@@ -729,48 +893,6 @@
           "code": "no-untyped-def",
           "message": "Function is missing a type annotation for one or more arguments",
           "raw": "tests\\test_providers\\test_google_provider.py:194: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\model_loader.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 28,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:28: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
-        }
-      ]
-    },
-    {
-      "path": "tests\\test_ui\\test_sandbox_panel_fixes.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 75,
-          "column": null,
-          "severity": "error",
-          "code": "arg-type",
-          "message": "Argument 1 to \"set_sandbox_manager\" of \"SandboxPanel\" has incompatible type \"object\"; expected \"SandboxManager\"",
-          "raw": "tests\\test_ui\\test_sandbox_panel_fixes.py:75: error: Argument 1 to \"set_sandbox_manager\" of \"SandboxPanel\" has incompatible type \"object\"; expected \"SandboxManager\"  [arg-type]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\local_transformers.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 63,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:63: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
         }
       ]
     },

@@ -1,8 +1,8 @@
 {
   "tool": "uncalled",
-  "generated": "2026-03-14T15:24:00.767487",
-  "total_findings": 46,
-  "total_files": 24,
+  "generated": "2026-03-20T11:27:13.716926",
+  "total_findings": 51,
+  "total_files": 26,
   "files": [
     {
       "path": "src\\intellicrack\\core\\types.py",
@@ -67,6 +67,36 @@
           "column": null,
           "message": "Unused function: reset_instance",
           "raw": "src\\intellicrack\\core\\process_manager.py: Unused function reset_instance"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: mouseMoveEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function mouseMoveEvent"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: mouseReleaseEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function mouseReleaseEvent"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: paintEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function paintEvent"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: wheelEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function wheelEvent"
         }
       ]
     },
@@ -277,6 +307,18 @@
           "column": null,
           "message": "Unused function: prepare_ai_prompt",
           "raw": "src\\intellicrack\\core\\script_gen.py: Unused function prepare_ai_prompt"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\tools.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_hex_editor_bridge",
+          "raw": "src\\intellicrack\\core\\tools.py: Unused function get_hex_editor_bridge"
         }
       ]
     },

@@ -1,1 +1,8 @@
-No findings.
+1 findings in d:\Intellicrack\src\intellicrack\bridges\hex_editor.py
+
+d:\Intellicrack\src\intellicrack\bridges\hex_editor.py:28:12: [warning] Import "intellicrack_hexcore" could not be resolved
+
+
+1 findings in d:\Intellicrack\src\intellicrack\ui\panels\hex_editor_panel.py
+
+d:\Intellicrack\src\intellicrack\ui\panels\hex_editor_panel.py:57:12: [warning] Import "intellicrack_hexcore" could not be resolved

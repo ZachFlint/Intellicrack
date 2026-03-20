@@ -1,8 +1,8 @@
 {
   "tool": "complexipy",
-  "generated": "2026-03-14T15:23:38.717330",
-  "total_findings": 63,
-  "total_files": 32,
+  "generated": "2026-03-20T11:26:47.191224",
+  "total_findings": 70,
+  "total_files": 34,
   "files": [
     {
       "path": "src\\intellicrack\\bridges\\x64dbg.py",
@@ -271,6 +271,36 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\providers\\local_transformers.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "LocalTransformersProvider::_stream_generate",
+          "complexity": 17,
+          "message": "LocalTransformersProvider::_stream_generate - cognitive complexity 17 (exceeds threshold)",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py: LocalTransformersProvider::_stream_generate - cognitive complexity 17 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "LocalTransformersProvider::chat_stream",
+          "complexity": 21,
+          "message": "LocalTransformersProvider::chat_stream - cognitive complexity 21 (exceeds threshold)",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py: LocalTransformersProvider::chat_stream - cognitive complexity 21 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "LocalTransformersProvider::_parse_tool_calls",
+          "complexity": 23,
+          "message": "LocalTransformersProvider::_parse_tool_calls - cognitive complexity 23 (exceeds threshold)",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py: LocalTransformersProvider::_parse_tool_calls - cognitive complexity 23 (exceeds threshold)"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\sandbox\\qemu.py",
       "count": 3,
       "findings": [
@@ -297,6 +327,36 @@
           "complexity": 20,
           "message": "GuestAgentClient::send_command - cognitive complexity 20 (exceeds threshold)",
           "raw": "src\\intellicrack\\sandbox\\qemu.py: GuestAgentClient::send_command - cognitive complexity 20 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorPanel::_on_search",
+          "complexity": 20,
+          "message": "HexEditorPanel::_on_search - cognitive complexity 20 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py: HexEditorPanel::_on_search - cognitive complexity 20 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorPanel::_populate_imports",
+          "complexity": 28,
+          "message": "HexEditorPanel::_populate_imports - cognitive complexity 28 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py: HexEditorPanel::_populate_imports - cognitive complexity 28 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorPanel::_populate_exports",
+          "complexity": 29,
+          "message": "HexEditorPanel::_populate_exports - cognitive complexity 29 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py: HexEditorPanel::_populate_exports - cognitive complexity 29 (exceeds threshold)"
         }
       ]
     },
@@ -345,28 +405,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\providers\\local_transformers.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "LocalTransformersProvider::_stream_generate",
-          "complexity": 17,
-          "message": "LocalTransformersProvider::_stream_generate - cognitive complexity 17 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py: LocalTransformersProvider::_stream_generate - cognitive complexity 17 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "LocalTransformersProvider::_parse_tool_calls",
-          "complexity": 23,
-          "message": "LocalTransformersProvider::_parse_tool_calls - cognitive complexity 23 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py: LocalTransformersProvider::_parse_tool_calls - cognitive complexity 23 (exceeds threshold)"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\providers\\ollama.py",
       "count": 2,
       "findings": [
@@ -382,9 +420,31 @@
           "line": null,
           "column": null,
           "name": "OllamaProvider::chat_stream",
-          "complexity": 27,
-          "message": "OllamaProvider::chat_stream - cognitive complexity 27 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\ollama.py: OllamaProvider::chat_stream - cognitive complexity 27 (exceeds threshold)"
+          "complexity": 34,
+          "message": "OllamaProvider::chat_stream - cognitive complexity 34 (exceeds threshold)",
+          "raw": "src\\intellicrack\\providers\\ollama.py: OllamaProvider::chat_stream - cognitive complexity 34 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\openrouter.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "OpenRouterProvider::list_models",
+          "complexity": 18,
+          "message": "OpenRouterProvider::list_models - cognitive complexity 18 (exceeds threshold)",
+          "raw": "src\\intellicrack\\providers\\openrouter.py: OpenRouterProvider::list_models - cognitive complexity 18 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "OpenRouterProvider::chat_stream",
+          "complexity": 60,
+          "message": "OpenRouterProvider::chat_stream - cognitive complexity 60 (exceeds threshold)",
+          "raw": "src\\intellicrack\\providers\\openrouter.py: OpenRouterProvider::chat_stream - cognitive complexity 60 (exceeds threshold)"
         }
       ]
     },
@@ -407,6 +467,28 @@
           "complexity": 47,
           "message": "get_xpu_device_info - cognitive complexity 47 (exceeds threshold)",
           "raw": "src\\intellicrack\\providers\\xpu_utils.py: get_xpu_device_info - cognitive complexity 47 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorWidget::copy_as",
+          "complexity": 18,
+          "message": "HexEditorWidget::copy_as - cognitive complexity 18 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: HexEditorWidget::copy_as - cognitive complexity 18 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorWidget::keyPressEvent",
+          "complexity": 41,
+          "message": "HexEditorWidget::keyPressEvent - cognitive complexity 41 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: HexEditorWidget::keyPressEvent - cognitive complexity 41 (exceeds threshold)"
         }
       ]
     },
@@ -512,9 +594,9 @@
           "line": null,
           "column": null,
           "name": "AnthropicProvider::chat_stream",
-          "complexity": 26,
-          "message": "AnthropicProvider::chat_stream - cognitive complexity 26 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\anthropic.py: AnthropicProvider::chat_stream - cognitive complexity 26 (exceeds threshold)"
+          "complexity": 28,
+          "message": "AnthropicProvider::chat_stream - cognitive complexity 28 (exceeds threshold)",
+          "raw": "src\\intellicrack\\providers\\anthropic.py: AnthropicProvider::chat_stream - cognitive complexity 28 (exceeds threshold)"
         }
       ]
     },
@@ -540,9 +622,9 @@
           "line": null,
           "column": null,
           "name": "GrokProvider::chat_stream",
-          "complexity": 29,
-          "message": "GrokProvider::chat_stream - cognitive complexity 29 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\grok.py: GrokProvider::chat_stream - cognitive complexity 29 (exceeds threshold)"
+          "complexity": 36,
+          "message": "GrokProvider::chat_stream - cognitive complexity 36 (exceeds threshold)",
+          "raw": "src\\intellicrack\\providers\\grok.py: GrokProvider::chat_stream - cognitive complexity 36 (exceeds threshold)"
         }
       ]
     },
@@ -554,9 +636,9 @@
           "line": null,
           "column": null,
           "name": "HuggingFaceProvider::chat_stream",
-          "complexity": 38,
-          "message": "HuggingFaceProvider::chat_stream - cognitive complexity 38 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\huggingface.py: HuggingFaceProvider::chat_stream - cognitive complexity 38 (exceeds threshold)"
+          "complexity": 60,
+          "message": "HuggingFaceProvider::chat_stream - cognitive complexity 60 (exceeds threshold)",
+          "raw": "src\\intellicrack\\providers\\huggingface.py: HuggingFaceProvider::chat_stream - cognitive complexity 60 (exceeds threshold)"
         }
       ]
     },
@@ -582,23 +664,9 @@
           "line": null,
           "column": null,
           "name": "OpenAIProvider::chat_stream",
-          "complexity": 29,
-          "message": "OpenAIProvider::chat_stream - cognitive complexity 29 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\openai.py: OpenAIProvider::chat_stream - cognitive complexity 29 (exceeds threshold)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\openrouter.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "OpenRouterProvider::chat_stream",
-          "complexity": 54,
-          "message": "OpenRouterProvider::chat_stream - cognitive complexity 54 (exceeds threshold)",
-          "raw": "src\\intellicrack\\providers\\openrouter.py: OpenRouterProvider::chat_stream - cognitive complexity 54 (exceeds threshold)"
+          "complexity": 36,
+          "message": "OpenAIProvider::chat_stream - cognitive complexity 36 (exceeds threshold)",
+          "raw": "src\\intellicrack\\providers\\openai.py: OpenAIProvider::chat_stream - cognitive complexity 36 (exceeds threshold)"
         }
       ]
     },
