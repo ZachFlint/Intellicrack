@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Fri, Mar 20, 2026 11:21:12 AM
+Generated: Fri, Mar 20, 2026 11:23:01 AM
 Directory: D:\Intellicrack
 
 This document provides a simple text-based tree structure of the Intellicrack project.

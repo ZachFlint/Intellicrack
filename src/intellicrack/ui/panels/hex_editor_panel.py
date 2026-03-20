@@ -359,13 +359,30 @@ class HexEditorPanel(AnalysisPanelBase):
             typed_result = cast("dict[str, object]", result)
 
             display_order = [
-                "int8", "uint8", "ascii_char", "utf8_char",
-                "int16_le", "uint16_le", "int16_be", "uint16_be",
-                "int32_le", "uint32_le", "int32_be", "uint32_be",
-                "float32_le", "float32_be",
-                "int64_le", "uint64_le", "int64_be", "uint64_be",
-                "float64_le", "float64_be",
-                "unix_timestamp", "dos_date", "dos_time", "filetime",
+                "int8",
+                "uint8",
+                "ascii_char",
+                "utf8_char",
+                "int16_le",
+                "uint16_le",
+                "int16_be",
+                "uint16_be",
+                "int32_le",
+                "uint32_le",
+                "int32_be",
+                "uint32_be",
+                "float32_le",
+                "float32_be",
+                "int64_le",
+                "uint64_le",
+                "int64_be",
+                "uint64_be",
+                "float64_le",
+                "float64_be",
+                "unix_timestamp",
+                "dos_date",
+                "dos_time",
+                "filetime",
             ]
 
             for key in display_order:
@@ -384,7 +401,10 @@ class HexEditorPanel(AnalysisPanelBase):
     def _on_open_file(self) -> None:
         """Open a file selection dialog and load the chosen file."""
         file_path_result = QFileDialog.getOpenFileName(
-            self, "Open Binary File", "", "All Files (*)",
+            self,
+            "Open Binary File",
+            "",
+            "All Files (*)",
         )
         file_path_str = file_path_result[0] if file_path_result else ""
         if file_path_str:

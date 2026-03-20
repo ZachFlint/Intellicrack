@@ -517,17 +517,11 @@ class GoogleProvider(LLMProviderBase):
         if tool_choice is not None and gemini_tools is not None:
             fc_mode = types.FunctionCallingConfigMode
             if tool_choice.mode == ToolChoiceMode.AUTO:
-                tool_config = types.ToolConfig(
-                    function_calling_config=types.FunctionCallingConfig(mode=fc_mode.AUTO)
-                )
+                tool_config = types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode=fc_mode.AUTO))
             elif tool_choice.mode == ToolChoiceMode.NONE:
-                tool_config = types.ToolConfig(
-                    function_calling_config=types.FunctionCallingConfig(mode=fc_mode.NONE)
-                )
+                tool_config = types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode=fc_mode.NONE))
             elif tool_choice.mode == ToolChoiceMode.REQUIRED:
-                tool_config = types.ToolConfig(
-                    function_calling_config=types.FunctionCallingConfig(mode=fc_mode.ANY)
-                )
+                tool_config = types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode=fc_mode.ANY))
             elif tool_choice.mode == ToolChoiceMode.SPECIFIC and tool_choice.function_name:
                 tool_config = types.ToolConfig(
                     function_calling_config=types.FunctionCallingConfig(

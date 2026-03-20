@@ -191,9 +191,7 @@ class TestStreamingToolCalls:
     ) -> None:
         """HuggingFace stream should capture tool calls via ToolCallBufferManager."""
         tools = _make_test_tool()
-        messages = _make_messages(
-            "Use the binary.get_file_size tool to check notepad.exe"
-        )
+        messages = _make_messages("Use the binary.get_file_size tool to check notepad.exe")
 
         _chunks = [
             chunk
@@ -214,9 +212,7 @@ class TestStreamingToolCalls:
     ) -> None:
         """Ollama stream should capture tool calls via non-streaming fallback."""
         tools = _make_test_tool()
-        messages = _make_messages(
-            "Use binary.get_file_size to get the size of C:\\Windows\\notepad.exe"
-        )
+        messages = _make_messages("Use binary.get_file_size to get the size of C:\\Windows\\notepad.exe")
 
         _chunks = [
             chunk
@@ -318,9 +314,7 @@ class TestExtendedThinking:
         anthropic_provider: AnthropicProvider,
     ) -> None:
         """Anthropic should return thinking_content when thinking is enabled."""
-        messages = _make_messages(
-            "What are the first 5 prime numbers? Think step by step."
-        )
+        messages = _make_messages("What are the first 5 prime numbers? Think step by step.")
         thinking = ThinkingConfig(enabled=True, budget_tokens=5000)
 
         response, _ = await anthropic_provider.chat(
