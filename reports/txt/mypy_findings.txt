@@ -24,47 +24,70 @@ src\intellicrack\bridges\cutter.py:613: error: Statement is unreachable  [unreac
 
 src\intellicrack\bridges\cutter.py:621: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:708: error: Function does not return a value (it only ever returns None)  [func-returns-value]
+src\intellicrack\bridges\cutter.py:711: error: Function does not return a value (it only ever returns None)  [func-returns-value]
 
-src\intellicrack\bridges\cutter.py:708: error: Argument 1 to "to_thread" has incompatible type "Callable[[str, list[str] | None], open_sync]"; expected "Callable[[str, list[str] | None], None]"  [arg-type]
+src\intellicrack\bridges\cutter.py:711: error: Argument 1 to "to_thread" has incompatible type "Callable[[str, list[str] | None], open_sync]"; expected "Callable[[str, list[str] | None], None]"  [arg-type]
 
-src\intellicrack\bridges\cutter.py:760: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:763: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:789: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:792: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:832: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:836: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:904: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:910: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:937: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:944: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:976: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:984: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1018: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1027: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1060: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1070: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1107: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1118: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1129: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1142: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1147: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1162: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1171: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1186: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1193: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1208: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1244: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:1273: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1265: error: Statement is unreachable  [unreachable]
 
 src\intellicrack\bridges\cutter.py:1294: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1314: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1315: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1350: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1335: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1391: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1373: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\cutter.py:1415: error: Statement is unreachable  [unreachable]
+
+
+10 findings in tests\test_providers\test_registry.py
+
+tests\test_providers\test_registry.py:73: error: Signature of "chat" incompatible with supertype "intellicrack.providers.base.LLMProviderBase"  [override]
+
+tests\test_providers\test_registry.py:73: note:      Superclass:
+
+tests\test_providers\test_registry.py:73: note:          def chat(self, messages: list[Message], model: str, tools: list[ToolDefinition] | None = ..., temperature: float = ..., max_tokens: int = ..., tool_choice: ToolChoice | None = ..., thinking: ThinkingConfig | None = ..., enable_cache: bool = ...) -> Coroutine[Any, Any, tuple[Message, list[ToolCall] | None]]
+
+tests\test_providers\test_registry.py:73: note:      Subclass:
+
+tests\test_providers\test_registry.py:73: note:          def chat(self, messages: list[Message], model: str, tools: list[ToolDefinition] | None = ..., temperature: float = ..., max_tokens: int = ...) -> Coroutine[Any, Any, tuple[Message, list[ToolCall] | None]]
+
+tests\test_providers\test_registry.py:96: error: Signature of "chat_stream" incompatible with supertype "intellicrack.providers.base.LLMProviderBase"  [override]
+
+tests\test_providers\test_registry.py:96: note:      Superclass:
+
+tests\test_providers\test_registry.py:96: note:          def chat_stream(self, messages: list[Message], model: str, tools: list[ToolDefinition] | None = ..., temperature: float = ..., max_tokens: int = ..., tool_choice: ToolChoice | None = ..., thinking: ThinkingConfig | None = ..., enable_cache: bool = ...) -> AsyncIterator[str]
+
+tests\test_providers\test_registry.py:96: note:      Subclass:
+
+tests\test_providers\test_registry.py:96: note:          def chat_stream(self, messages: list[Message], model: str, tools: list[ToolDefinition] | None = ..., temperature: float = ..., max_tokens: int = ...) -> AsyncIterator[str]
 
 
 8 findings in src\intellicrack\ui\provider_config.py
@@ -120,9 +143,9 @@ src\intellicrack\ui\app.py:65: error: Incompatible types in assignment (expressi
 
 src\intellicrack\ui\app.py:66: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], None]")  [assignment]
 
-src\intellicrack\ui\app.py:283: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\app.py:285: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\app.py:713: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\app.py:715: error: Statement is unreachable  [unreachable]
 
 
 2 findings in tests\test_ui\test_font_manager.py
@@ -160,6 +183,13 @@ tests\test_providers\test_local_transformers_provider.py:496: error: Argument 1 
 tests\test_providers\test_local_transformers_provider.py:509: error: Argument 1 to "_format_prompt" of "LocalTransformersProvider" has incompatible type "list[dict[str, str]]"; expected "list[dict[str, object]]"  [arg-type]
 
 
+2 findings in tests\test_ui\test_app_embedded_tools.py
+
+tests\test_ui\test_app_embedded_tools.py:148: error: "MainWindow" has no attribute "_hxd_btn"  [attr-defined]
+
+tests\test_ui\test_app_embedded_tools.py:220: error: "MainWindow" has no attribute "_on_open_hxd"  [attr-defined]
+
+
 1 findings in tests\test_ui\test_graph_view.py
 
 tests\test_ui\test_graph_view.py:335: error: Item "None" of "QGraphicsScene | None" has no attribute "items"  [union-attr]
@@ -175,6 +205,11 @@ src\intellicrack\credentials\env_loader.py:400: error: Argument 2 to "get" of "M
 src\intellicrack\sandbox\qemu.py:205: error: Item "None" of "StreamReader | None" has no attribute "readline"  [union-attr]
 
 
+1 findings in src\intellicrack\bridges\hex_editor.py
+
+src\intellicrack\bridges\hex_editor.py:755: error: Name "data" already defined on line 749  [no-redef]
+
+
 1 findings in tests\test_providers\test_openrouter_provider.py
 
 tests\test_providers\test_openrouter_provider.py:217: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
@@ -183,6 +218,11 @@ tests\test_providers\test_openrouter_provider.py:217: error: Function is missing
 1 findings in tests\test_providers\test_huggingface_provider.py
 
 tests\test_providers\test_huggingface_provider.py:202: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
+
+
+1 findings in src\intellicrack\providers\model_loader.py
+
+src\intellicrack\providers\model_loader.py:28: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
 
 
 1 findings in tests\test_providers\test_openai_provider.py
@@ -200,6 +240,16 @@ tests\test_providers\test_grok_provider.py:193: error: Function is missing a typ
 tests\test_providers\test_anthropic_provider.py:193: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
 
 
+1 findings in tests\test_ui\test_sandbox_panel_fixes.py
+
+tests\test_ui\test_sandbox_panel_fixes.py:75: error: Argument 1 to "set_sandbox_manager" of "SandboxPanel" has incompatible type "object"; expected "SandboxManager"  [arg-type]
+
+
+1 findings in src\intellicrack\providers\local_transformers.py
+
+src\intellicrack\providers\local_transformers.py:65: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
+
+
 1 findings in tests\test_providers\test_model_discovery.py
 
 tests\test_providers\test_model_discovery.py:112: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
@@ -208,21 +258,6 @@ tests\test_providers\test_model_discovery.py:112: error: Function is missing a t
 1 findings in tests\test_providers\test_google_provider.py
 
 tests\test_providers\test_google_provider.py:194: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
-
-
-1 findings in src\intellicrack\providers\model_loader.py
-
-src\intellicrack\providers\model_loader.py:28: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
-
-
-1 findings in tests\test_ui\test_sandbox_panel_fixes.py
-
-tests\test_ui\test_sandbox_panel_fixes.py:75: error: Argument 1 to "set_sandbox_manager" of "SandboxPanel" has incompatible type "object"; expected "SandboxManager"  [arg-type]
-
-
-1 findings in src\intellicrack\providers\local_transformers.py
-
-src\intellicrack\providers\local_transformers.py:63: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
 
 
 1 findings in tests\test_ui\test_vnc_widget.py

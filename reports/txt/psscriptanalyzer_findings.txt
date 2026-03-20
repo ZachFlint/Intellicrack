@@ -125,103 +125,6 @@ D:\Intellicrack\tools\AdobeInjector\Source\Rebranded\build.ps1:473:1: [Warning] 
 D:\Intellicrack\tools\AdobeInjector\Source\Rebranded\build.ps1:66:10: [Warning] The cmdlet 'Download-File' uses an unapproved verb. (PSUseApprovedVerbs)
 
 
-47 findings in D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:8:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:9:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:10:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:11:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:13:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:14:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:15:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:16:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:18:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:19:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:20:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:21:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:23:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:24:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:25:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:26:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:28:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:29:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:30:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:31:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:33:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:34:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:35:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:36:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:38:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:39:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:40:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:41:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:43:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:44:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:45:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:46:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:48:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:49:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:50:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:51:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:54:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:55:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:56:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:57:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:59:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:60:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:61:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:62:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:63:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:64:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-D:\Intellicrack\CLI Coding\Scripts\UpdateTools.ps1:65:1: [Warning] File 'UpdateTools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
-
 43 findings in D:\Intellicrack\tools\AdobeInjector\Source\GenP.v3.7.1\v3.7.1-Source\build.ps1
 
 D:\Intellicrack\tools\AdobeInjector\Source\GenP.v3.7.1\v3.7.1-Source\build.ps1:53:9: [Warning] File 'build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
@@ -323,12 +226,6 @@ D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\data\support\setupu
 
 D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\data\support\setuputils.ps1:98:3: [Warning] File 'setuputils.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
 
-D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\data\support\setuputils.ps1:16:10: [Warning] The cmdlet 'Find-App-Properties' uses a plural noun. A singular noun should be used instead. (PSUseSingularNouns)
-
-D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\data\support\setuputils.ps1:66:10: [Warning] The cmdlet 'Compute-Ssh-Args' uses a plural noun. A singular noun should be used instead. (PSUseSingularNouns)
-
-D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\data\support\setuputils.ps1:104:10: [Warning] The cmdlet 'Mitigate-Scp-PyModules' uses a plural noun. A singular noun should be used instead. (PSUseSingularNouns)
-
 D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\data\support\setuputils.ps1:34:10: [Warning] The cmdlet 'Ghidra-Module-PyPath' uses an unapproved verb. (PSUseApprovedVerbs)
 
 D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\data\support\setuputils.ps1:50:10: [Warning] The cmdlet 'Ghidra-Module-PyDist' uses an unapproved verb. (PSUseApprovedVerbs)
@@ -338,6 +235,12 @@ D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\data\support\setupu
 D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\data\support\setuputils.ps1:84:10: [Warning] The cmdlet 'Check-Result-And-Prompt-Mitigation' uses an unapproved verb. (PSUseApprovedVerbs)
 
 D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\data\support\setuputils.ps1:104:10: [Warning] The cmdlet 'Mitigate-Scp-PyModules' uses an unapproved verb. (PSUseApprovedVerbs)
+
+D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\data\support\setuputils.ps1:16:10: [Warning] The cmdlet 'Find-App-Properties' uses a plural noun. A singular noun should be used instead. (PSUseSingularNouns)
+
+D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\data\support\setuputils.ps1:66:10: [Warning] The cmdlet 'Compute-Ssh-Args' uses a plural noun. A singular noun should be used instead. (PSUseSingularNouns)
+
+D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\data\support\setuputils.ps1:104:10: [Warning] The cmdlet 'Mitigate-Scp-PyModules' uses a plural noun. A singular noun should be used instead. (PSUseSingularNouns)
 
 
 12 findings in D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\data\support\lldbsetuputils.ps1

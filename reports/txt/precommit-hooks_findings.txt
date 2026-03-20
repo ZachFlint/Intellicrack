@@ -5,6 +5,20 @@ reports/csv/precommit-hooks_findings.csv: [trailing-whitespace] [FIXED] Fixed
 reports/csv/precommit-hooks_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
+2 findings in IntellicrackKnowledgeGraph.html
+
+IntellicrackKnowledgeGraph.html: [end-of-file-fixer] [FIXED] Fixed
+
+IntellicrackKnowledgeGraph.html: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in IntellicrackStructure.hta
+
+IntellicrackStructure.hta: [end-of-file-fixer] [FIXED] Fixed
+
+IntellicrackStructure.hta: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
 2 findings in reports/json/bandit_findings.json
 
 reports/json/bandit_findings.json: [end-of-file-fixer] [FIXED] Fixed
@@ -215,11 +229,25 @@ reports/sarif/precommit-hooks_findings.sarif: [end-of-file-fixer] [FIXED] Fixed
 reports/sarif/precommit-hooks_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
+2 findings in reports/txt/basedpyright_findings.txt
+
+reports/txt/basedpyright_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+reports/txt/basedpyright_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
 2 findings in reports/txt/blinter_findings.txt
 
 reports/txt/blinter_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 reports/txt/blinter_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/txt/codespell_findings.txt
+
+reports/txt/codespell_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+reports/txt/codespell_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 2 findings in reports/txt/complexipy_findings.txt
@@ -241,6 +269,13 @@ reports/txt/darglint_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line 
 reports/txt/deadcode_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 reports/txt/deadcode_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/txt/deptry_findings.txt
+
+reports/txt/deptry_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+reports/txt/deptry_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 2 findings in reports/txt/flake8_findings.txt
@@ -290,13 +325,6 @@ reports/txt/psscriptanalyzer_findings.txt: [mixed-line-ending] [FIXED] fixed mix
 reports/txt/radon_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 reports/txt/radon_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-2 findings in reports/txt/ruff_findings.txt
-
-reports/txt/ruff_findings.txt: [end-of-file-fixer] [FIXED] Fixed
-
-reports/txt/ruff_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 2 findings in reports/txt/shellcheck_findings.txt
@@ -353,24 +381,9 @@ reports/txt/yamllint_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line 
 reports/txt/bandit_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 
-1 findings in reports/txt/basedpyright_findings.txt
-
-reports/txt/basedpyright_findings.txt: [end-of-file-fixer] [FIXED] Fixed
-
-
-1 findings in reports/txt/codespell_findings.txt
-
-reports/txt/codespell_findings.txt: [end-of-file-fixer] [FIXED] Fixed
-
-
 1 findings in reports/txt/dead_findings.txt
 
 reports/txt/dead_findings.txt: [end-of-file-fixer] [FIXED] Fixed
-
-
-1 findings in reports/txt/deptry_findings.txt
-
-reports/txt/deptry_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 
 1 findings in reports/txt/interrogate_findings.txt
@@ -386,6 +399,11 @@ reports/txt/jsonlint_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 1 findings in reports/txt/pydocstyle_findings.txt
 
 reports/txt/pydocstyle_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+
+1 findings in reports/txt/ruff_findings.txt
+
+reports/txt/ruff_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 
 1 findings in reports/txt/semgrep_findings.txt
@@ -543,6 +561,56 @@ reports/xml/xenon_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 reports/xml/yamllint_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 
 
+1 findings in .claude/agents/gemini-analyzer.md
+
+.claude/agents/gemini-analyzer.md: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in .claude/agents/intellicrack-code-reviewer.md
+
+.claude/agents/intellicrack-code-reviewer.md: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in .claude/agents/intellicrack-developer.md
+
+.claude/agents/intellicrack-developer.md: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in .claude/agents/test-reviewer.md
+
+.claude/agents/test-reviewer.md: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in .claude/agents/test-writer.md
+
+.claude/agents/test-writer.md: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in .claude/commands/lint.md
+
+.claude/commands/lint.md: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in .claude/commands/verify.md
+
+.claude/commands/verify.md: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in .claude/hooks/principles.js
+
+.claude/hooks/principles.js: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in .claude/hooks/sessionstart.js
+
+.claude/hooks/sessionstart.js: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in .claude/output-styles/Intellicrack-Developer.md
+
+.claude/output-styles/Intellicrack-Developer.md: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
 1 findings in .github/dependabot.yml
 
 .github/dependabot.yml: [mixed-line-ending] [FIXED] fixed mixed line endings
@@ -613,9 +681,74 @@ reports/xml/yamllint_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 .yarnrc.yml: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
+1 findings in CLI Coding/Launcher/Cargo.toml
+
+CLI Coding/Launcher/Cargo.toml: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in CLI Coding/Launcher/build.rs
+
+CLI Coding/Launcher/build.rs: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in CLI Coding/Launcher/src/main.rs
+
+CLI Coding/Launcher/src/main.rs: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in CLI Coding/Scripts/Aider.ps1
+
+CLI Coding/Scripts/Aider.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in CLI Coding/Scripts/Grok.ps1
+
+CLI Coding/Scripts/Grok.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in CLI Coding/Scripts/Kimi.ps1
+
+CLI Coding/Scripts/Kimi.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in CLI Coding/Scripts/Kiro.ps1
+
+CLI Coding/Scripts/Kiro.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in CLI Coding/Scripts/OpenCode.ps1
+
+CLI Coding/Scripts/OpenCode.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in CLI Coding/Scripts/Qodo.ps1
+
+CLI Coding/Scripts/Qodo.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in CLI Coding/config.toml
+
+CLI Coding/config.toml: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in IntellicrackStructure.txt
+
+IntellicrackStructure.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in justfile
+
+justfile: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
 1 findings in package.json
 
 package.json: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in pyproject.toml
+
+pyproject.toml: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 1 findings in pyrightconfig.json
@@ -626,6 +759,111 @@ pyrightconfig.json: [mixed-line-ending] [FIXED] fixed mixed line endings
 1 findings in qodana.yaml
 
 qodana.yaml: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in requirements.txt
+
+requirements.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in scripts/build-cli-launcher.cmd
+
+scripts/build-cli-launcher.cmd: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in scripts/fix_pyqt6_stubs.py
+
+scripts/fix_pyqt6_stubs.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in scripts/knowledge-graph/IntellicrackKnowledgeGraph.dot
+
+scripts/knowledge-graph/IntellicrackKnowledgeGraph.dot: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack-hexcore/Cargo.toml
+
+src/intellicrack-hexcore/Cargo.toml: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack-hexcore/intellicrack_hexcore.pyi
+
+src/intellicrack-hexcore/intellicrack_hexcore.pyi: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack-hexcore/pyproject.toml
+
+src/intellicrack-hexcore/pyproject.toml: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack-hexcore/src/data_inspector.rs
+
+src/intellicrack-hexcore/src/data_inspector.rs: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack-hexcore/src/diff.rs
+
+src/intellicrack-hexcore/src/diff.rs: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack-hexcore/src/hash.rs
+
+src/intellicrack-hexcore/src/hash.rs: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack-hexcore/src/lib.rs
+
+src/intellicrack-hexcore/src/lib.rs: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack-hexcore/src/mmap_io.rs
+
+src/intellicrack-hexcore/src/mmap_io.rs: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack-hexcore/src/piece_table.rs
+
+src/intellicrack-hexcore/src/piece_table.rs: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack-hexcore/src/search.rs
+
+src/intellicrack-hexcore/src/search.rs: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack-hexcore/src/templates/common.rs
+
+src/intellicrack-hexcore/src/templates/common.rs: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack-hexcore/src/templates/elf.rs
+
+src/intellicrack-hexcore/src/templates/elf.rs: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack-hexcore/src/templates/mod.rs
+
+src/intellicrack-hexcore/src/templates/mod.rs: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack-hexcore/src/templates/pe.rs
+
+src/intellicrack-hexcore/src/templates/pe.rs: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack-hexcore/src/templates/zip.rs
+
+src/intellicrack-hexcore/src/templates/zip.rs: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack-hexcore/src/undo.rs
+
+src/intellicrack-hexcore/src/undo.rs: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/__main__.py
+
+src/intellicrack/__main__.py: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 1 findings in src/intellicrack/assets/configs/anthropic_claude3.json
@@ -681,6 +919,436 @@ src/intellicrack/assets/configs/vulnerability_assessment.json: [mixed-line-endin
 1 findings in src/intellicrack/assets/fonts/font_config.json
 
 src/intellicrack/assets/fonts/font_config.json: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/bridges/__init__.py
+
+src/intellicrack/bridges/__init__.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/bridges/base.py
+
+src/intellicrack/bridges/base.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/bridges/binary.py
+
+src/intellicrack/bridges/binary.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/bridges/cutter.py
+
+src/intellicrack/bridges/cutter.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/bridges/frida_bridge.py
+
+src/intellicrack/bridges/frida_bridge.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/bridges/ghidra.py
+
+src/intellicrack/bridges/ghidra.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/bridges/hex_editor.py
+
+src/intellicrack/bridges/hex_editor.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/bridges/installer.py
+
+src/intellicrack/bridges/installer.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/bridges/named_pipe_client.py
+
+src/intellicrack/bridges/named_pipe_client.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/bridges/process.py
+
+src/intellicrack/bridges/process.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/bridges/sandbox_bridge.py
+
+src/intellicrack/bridges/sandbox_bridge.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/bridges/schemas.py
+
+src/intellicrack/bridges/schemas.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/bridges/x64dbg.py
+
+src/intellicrack/bridges/x64dbg.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/core/_subprocess.py
+
+src/intellicrack/core/_subprocess.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/core/_xml_gen.py
+
+src/intellicrack/core/_xml_gen.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/core/_xml_gen.pyi
+
+src/intellicrack/core/_xml_gen.pyi: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/core/analysis_aggregator.py
+
+src/intellicrack/core/analysis_aggregator.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/core/config.py
+
+src/intellicrack/core/config.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/core/orchestrator.py
+
+src/intellicrack/core/orchestrator.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/core/process_manager.py
+
+src/intellicrack/core/process_manager.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/core/script_gen.py
+
+src/intellicrack/core/script_gen.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/core/session.py
+
+src/intellicrack/core/session.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/core/tools.py
+
+src/intellicrack/core/tools.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/core/types.py
+
+src/intellicrack/core/types.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/credentials/env_loader.py
+
+src/intellicrack/credentials/env_loader.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/credentials/oauth.py
+
+src/intellicrack/credentials/oauth.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/credentials/store.py
+
+src/intellicrack/credentials/store.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/main.py
+
+src/intellicrack/main.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/providers/anthropic.py
+
+src/intellicrack/providers/anthropic.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/providers/base.py
+
+src/intellicrack/providers/base.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/providers/discovery.py
+
+src/intellicrack/providers/discovery.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/providers/google.py
+
+src/intellicrack/providers/google.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/providers/grok.py
+
+src/intellicrack/providers/grok.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/providers/huggingface.py
+
+src/intellicrack/providers/huggingface.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/providers/local_transformers.py
+
+src/intellicrack/providers/local_transformers.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/providers/model_loader.py
+
+src/intellicrack/providers/model_loader.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/providers/ollama.py
+
+src/intellicrack/providers/ollama.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/providers/openai.py
+
+src/intellicrack/providers/openai.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/providers/openrouter.py
+
+src/intellicrack/providers/openrouter.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/providers/registry.py
+
+src/intellicrack/providers/registry.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/providers/xpu_utils.py
+
+src/intellicrack/providers/xpu_utils.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/sandbox/base.py
+
+src/intellicrack/sandbox/base.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/sandbox/manager.py
+
+src/intellicrack/sandbox/manager.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/sandbox/qemu.py
+
+src/intellicrack/sandbox/qemu.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/sandbox/windows.py
+
+src/intellicrack/sandbox/windows.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/_screen_compat.py
+
+src/intellicrack/ui/_screen_compat.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/app.py
+
+src/intellicrack/ui/app.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/chat.py
+
+src/intellicrack/ui/chat.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/confirmation_dialog.py
+
+src/intellicrack/ui/confirmation_dialog.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/dialogs/splash_screen.py
+
+src/intellicrack/ui/dialogs/splash_screen.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/highlighter.py
+
+src/intellicrack/ui/highlighter.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/panels/__init__.py
+
+src/intellicrack/ui/panels/__init__.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/panels/analysis_panel.py
+
+src/intellicrack/ui/panels/analysis_panel.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/panels/async_bridge.py
+
+src/intellicrack/ui/panels/async_bridge.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/panels/base_panel.py
+
+src/intellicrack/ui/panels/base_panel.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/panels/binary_panel.py
+
+src/intellicrack/ui/panels/binary_panel.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/panels/cutter_panel.py
+
+src/intellicrack/ui/panels/cutter_panel.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/panels/frida_panel.py
+
+src/intellicrack/ui/panels/frida_panel.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/panels/ghidra_panel.py
+
+src/intellicrack/ui/panels/ghidra_panel.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/panels/graph_view.py
+
+src/intellicrack/ui/panels/graph_view.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/panels/hex_editor_panel.py
+
+src/intellicrack/ui/panels/hex_editor_panel.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/panels/hex_editor_widget.py
+
+src/intellicrack/ui/panels/hex_editor_widget.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/panels/hxd_panel.py
+
+src/intellicrack/ui/panels/hxd_panel.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/panels/process_panel.py
+
+src/intellicrack/ui/panels/process_panel.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/panels/qt_compat.py
+
+src/intellicrack/ui/panels/qt_compat.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/panels/sandbox_panel.py
+
+src/intellicrack/ui/panels/sandbox_panel.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/panels/script_manager.py
+
+src/intellicrack/ui/panels/script_manager.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/panels/stack_viewer.py
+
+src/intellicrack/ui/panels/stack_viewer.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/panels/vnc_widget.py
+
+src/intellicrack/ui/panels/vnc_widget.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/panels/x64dbg_panel.py
+
+src/intellicrack/ui/panels/x64dbg_panel.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/preferences.py
+
+src/intellicrack/ui/preferences.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/provider_config.py
+
+src/intellicrack/ui/provider_config.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/resources/font_manager.py
+
+src/intellicrack/ui/resources/font_manager.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/resources/icon_manager.py
+
+src/intellicrack/ui/resources/icon_manager.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/resources/resource_helper.py
+
+src/intellicrack/ui/resources/resource_helper.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/resources/theme_manager.py
+
+src/intellicrack/ui/resources/theme_manager.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/sandbox_config.py
+
+src/intellicrack/ui/sandbox_config.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/session_manager.py
+
+src/intellicrack/ui/session_manager.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/tool_config.py
+
+src/intellicrack/ui/tool_config.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/tools.py
+
+src/intellicrack/ui/tools.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in src/intellicrack/ui/win32_embed.py
+
+src/intellicrack/ui/win32_embed.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in tests/test_bridges/test_frida_bridge.py
+
+tests/test_bridges/test_frida_bridge.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in tests/test_bridges/test_ghidra.py
+
+tests/test_bridges/test_ghidra.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in tests/test_bridges/test_x64dbg_new_methods.py
+
+tests/test_bridges/test_x64dbg_new_methods.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in tests/test_core/test_tools.py
+
+tests/test_core/test_tools.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in tests/test_providers/test_agentic_capabilities.py
+
+tests/test_providers/test_agentic_capabilities.py: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 1 findings in tools/pmd-bin-7.8.0/sbom/pmd-7.8.0-cyclonedx.json

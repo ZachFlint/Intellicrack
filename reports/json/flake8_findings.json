@@ -1,8 +1,8 @@
 {
   "tool": "flake8",
-  "generated": "2026-03-14T15:22:57.078952",
-  "total_findings": 11,
-  "total_files": 8,
+  "generated": "2026-03-20T11:25:57.401023",
+  "total_findings": 13,
+  "total_files": 9,
   "files": [
     {
       "path": "tests/test_bridges\\test_x64dbg_new_methods.py",
@@ -52,15 +52,35 @@
       ]
     },
     {
+      "path": "tests/test_providers\\test_agentic_capabilities.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 196,
+          "column": 9,
+          "code": "F841",
+          "message": "local variable '_chunks' is assigned to but never used",
+          "raw": "tests/test_providers\\test_agentic_capabilities.py:196:9: F841 local variable '_chunks' is assigned to but never used"
+        },
+        {
+          "line": 217,
+          "column": 9,
+          "code": "F841",
+          "message": "local variable '_chunks' is assigned to but never used",
+          "raw": "tests/test_providers\\test_agentic_capabilities.py:217:9: F841 local variable '_chunks' is assigned to but never used"
+        }
+      ]
+    },
+    {
       "path": "src/intellicrack/bridges\\ghidra.py",
       "count": 1,
       "findings": [
         {
-          "line": 2366,
+          "line": 2379,
           "column": 141,
           "code": "E501",
           "message": "line too long (146 > 140 characters)",
-          "raw": "src/intellicrack/bridges\\ghidra.py:2366:141: E501 line too long (146 > 140 characters)"
+          "raw": "src/intellicrack/bridges\\ghidra.py:2379:141: E501 line too long (146 > 140 characters)"
         }
       ]
     },

@@ -1,6 +1,8 @@
-1 findings in D:\Intellicrack\CLI Coding\Scripts\UpdateTools.cmd
+2 findings in D:\Intellicrack\scripts\build-cli-launcher.cmd
 
-Line 1: Unix line endings detected (E018)
+Line 7: Missing error handling (W025)
+
+Line 7: Unvalidated path traversal (SEC011)
 
 
 1 findings in D:\Intellicrack\Intellicrack.cmd

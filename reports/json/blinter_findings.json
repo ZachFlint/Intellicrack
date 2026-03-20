@@ -1,20 +1,28 @@
 {
   "tool": "blinter",
-  "generated": "2026-03-14T15:20:30.333622",
-  "total_findings": 3,
+  "generated": "2026-03-20T11:23:26.376305",
+  "total_findings": 4,
   "total_files": 3,
   "files": [
     {
-      "path": "D:\\Intellicrack\\CLI Coding\\Scripts\\UpdateTools.cmd",
-      "count": 1,
+      "path": "D:\\Intellicrack\\scripts\\build-cli-launcher.cmd",
+      "count": 2,
       "findings": [
         {
-          "line": 1,
+          "line": 7,
           "column": 0,
-          "severity": "error",
-          "code": "E018",
-          "message": "Unix line endings detected",
-          "raw": "Line 1: Unix line endings detected (E018)"
+          "severity": "warning",
+          "code": "W025",
+          "message": "Missing error handling",
+          "raw": "Line 7: Missing error handling (W025)"
+        },
+        {
+          "line": 7,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC011",
+          "message": "Unvalidated path traversal",
+          "raw": "Line 7: Unvalidated path traversal (SEC011)"
         }
       ]
     },

@@ -1,8 +1,8 @@
 {
   "tool": "ty",
-  "generated": "2026-03-14T15:21:00.334334",
-  "total_findings": 78,
-  "total_files": 30,
+  "generated": "2026-03-20T11:23:53.979462",
+  "total_findings": 87,
+  "total_files": 34,
   "files": [
     {
       "path": "src\\intellicrack\\providers\\model_loader.py",
@@ -151,56 +151,63 @@
     },
     {
       "path": "src\\intellicrack\\providers\\anthropic.py",
-      "count": 7,
+      "count": 8,
       "findings": [
         {
-          "line": 402,
+          "line": 475,
           "column": 60,
           "code": "unresolved-attribute",
           "message": "Attribute `input` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:402:60: error[unresolved-attribute] Attribute `input` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
+          "raw": "src\\intellicrack\\providers\\anthropic.py:475:60: error[unresolved-attribute] Attribute `input` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
         },
         {
-          "line": 405,
+          "line": 478,
           "column": 40,
           "code": "unresolved-attribute",
           "message": "Attribute `id` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:405:40: error[unresolved-attribute] Attribute `id` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
+          "raw": "src\\intellicrack\\providers\\anthropic.py:478:40: error[unresolved-attribute] Attribute `id` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
         },
         {
-          "line": 406,
+          "line": 479,
           "column": 47,
           "code": "unresolved-attribute",
           "message": "Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:406:47: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
+          "raw": "src\\intellicrack\\providers\\anthropic.py:479:47: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
         },
         {
-          "line": 406,
+          "line": 479,
           "column": 82,
           "code": "unresolved-attribute",
           "message": "Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:406:82: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
+          "raw": "src\\intellicrack\\providers\\anthropic.py:479:82: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
         },
         {
-          "line": 406,
+          "line": 479,
           "column": 98,
           "code": "unresolved-attribute",
           "message": "Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:406:98: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
+          "raw": "src\\intellicrack\\providers\\anthropic.py:479:98: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
         },
         {
-          "line": 407,
+          "line": 480,
           "column": 51,
           "code": "unresolved-attribute",
           "message": "Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:407:51: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
+          "raw": "src\\intellicrack\\providers\\anthropic.py:480:51: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`"
         },
         {
-          "line": 494,
+          "line": 487,
+          "column": 44,
+          "code": "invalid-argument-type",
+          "message": "Argument to function `len` is incorrect: Expected `Sized`, found `object`",
+          "raw": "src\\intellicrack\\providers\\anthropic.py:487:44: error[invalid-argument-type] Argument to function `len` is incorrect: Expected `Sized`, found `object`"
+        },
+        {
+          "line": 573,
           "column": 17,
           "code": "invalid-argument-type",
           "message": "Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str | dict[str, Any]], None, None]`",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:494:17: error[invalid-argument-type] Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str | dict[str, Any]], None, None]`"
+          "raw": "src\\intellicrack\\providers\\anthropic.py:573:17: error[invalid-argument-type] Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str | dict[str, Any]], None, None]`"
         }
       ]
     },
@@ -209,39 +216,39 @@
       "count": 5,
       "findings": [
         {
-          "line": 63,
+          "line": 65,
           "column": 14,
           "code": "invalid-assignment",
           "message": "Object of type `None` is not assignable to `<module 'torch'>`",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:63:14: error[invalid-assignment] Object of type `None` is not assignable to `<module 'torch'>`"
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:65:14: error[invalid-assignment] Object of type `None` is not assignable to `<module 'torch'>`"
         },
         {
-          "line": 588,
+          "line": 625,
           "column": 23,
           "code": "call-non-callable",
           "message": "Object of type `Tensor` is not callable",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:588:23: error[call-non-callable] Object of type `Tensor` is not callable"
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:625:23: error[call-non-callable] Object of type `Tensor` is not callable"
         },
         {
-          "line": 666,
+          "line": 703,
           "column": 21,
           "code": "invalid-argument-type",
           "message": "Argument to function `to_thread` is incorrect: Expected `tuple[tuple[Tensor, ...], ...] | None`, found `None | Cache`",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:666:21: error[invalid-argument-type] Argument to function `to_thread` is incorrect: Expected `tuple[tuple[Tensor, ...], ...] | None`, found `None | Cache`"
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:703:21: error[invalid-argument-type] Argument to function `to_thread` is incorrect: Expected `tuple[tuple[Tensor, ...], ...] | None`, found `None | Cache`"
         },
         {
-          "line": 669,
+          "line": 706,
           "column": 22,
           "code": "not-subscriptable",
           "message": "Cannot subscript object of type `None` with no `__getitem__` method",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:669:22: error[not-subscriptable] Cannot subscript object of type `None` with no `__getitem__` method"
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:706:22: error[not-subscriptable] Cannot subscript object of type `None` with no `__getitem__` method"
         },
         {
-          "line": 788,
+          "line": 825,
           "column": 47,
           "code": "invalid-assignment",
           "message": "Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:788:47: error[invalid-assignment] Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`"
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:825:47: error[invalid-assignment] Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`"
         }
       ]
     },
@@ -305,18 +312,18 @@
           "raw": "src\\intellicrack\\bridges\\binary.py:717:24: error[unresolved-attribute] Object of type `object` has no attribute `symbols`"
         },
         {
-          "line": 1020,
+          "line": 1024,
           "column": 50,
           "code": "missing-argument",
           "message": "No argument provided for required parameter `offset` of function `disasm`",
-          "raw": "src\\intellicrack\\bridges\\binary.py:1020:50: error[missing-argument] No argument provided for required parameter `offset` of function `disasm`"
+          "raw": "src\\intellicrack\\bridges\\binary.py:1024:50: error[missing-argument] No argument provided for required parameter `offset` of function `disasm`"
         },
         {
-          "line": 1020,
+          "line": 1024,
           "column": 60,
           "code": "invalid-argument-type",
           "message": "Argument to function `disasm` is incorrect: Expected `Cs`, found `bytes`",
-          "raw": "src\\intellicrack\\bridges\\binary.py:1020:60: error[invalid-argument-type] Argument to function `disasm` is incorrect: Expected `Cs`, found `bytes`"
+          "raw": "src\\intellicrack\\bridges\\binary.py:1024:60: error[invalid-argument-type] Argument to function `disasm` is incorrect: Expected `Cs`, found `bytes`"
         }
       ]
     },
@@ -351,6 +358,33 @@
           "code": "invalid-assignment",
           "message": "Object of type `None` is not assignable to `def get_optimal_dtype_for_xpu() -> str`",
           "raw": "src\\intellicrack\\ui\\provider_config.py:85:33: error[invalid-assignment] Object of type `None` is not assignable to `def get_optimal_dtype_for_xpu() -> str`"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 47,
+          "column": 14,
+          "code": "invalid-assignment",
+          "message": "Object of type `None` is not assignable to `<module 'pefile'>`",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:47:14: error[invalid-assignment] Object of type `None` is not assignable to `<module 'pefile'>`"
+        },
+        {
+          "line": 57,
+          "column": 12,
+          "code": "unresolved-import",
+          "message": "Cannot resolve imported module `intellicrack_hexcore`",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:57:12: error[unresolved-import] Cannot resolve imported module `intellicrack_hexcore`"
+        },
+        {
+          "line": 134,
+          "column": 9,
+          "code": "invalid-method-override",
+          "message": "Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:134:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`"
         }
       ]
     },
@@ -426,18 +460,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 258,
+          "line": 260,
           "column": 13,
           "code": "call-top-callable",
           "message": "Object of type `Top[(...) -> object]` is not safe to call; its signature is not known",
-          "raw": "src\\intellicrack\\core\\process_manager.py:258:13: error[call-top-callable] Object of type `Top[(...) -> object]` is not safe to call; its signature is not known"
+          "raw": "src\\intellicrack\\core\\process_manager.py:260:13: error[call-top-callable] Object of type `Top[(...) -> object]` is not safe to call; its signature is not known"
         },
         {
-          "line": 530,
+          "line": 532,
           "column": 56,
           "code": "invalid-argument-type",
           "message": "Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`",
-          "raw": "src\\intellicrack\\core\\process_manager.py:530:56: error[invalid-argument-type] Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`"
+          "raw": "src\\intellicrack\\core\\process_manager.py:532:56: error[invalid-argument-type] Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`"
         }
       ]
     },
@@ -542,6 +576,46 @@
       ]
     },
     {
+      "path": "tests\\test_providers\\test_registry.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 73,
+          "column": 15,
+          "code": "invalid-method-override",
+          "message": "Invalid override of method `chat`: Definition is incompatible with `LLMProviderBase.chat`",
+          "raw": "tests\\test_providers\\test_registry.py:73:15: error[invalid-method-override] Invalid override of method `chat`: Definition is incompatible with `LLMProviderBase.chat`"
+        },
+        {
+          "line": 96,
+          "column": 15,
+          "code": "invalid-method-override",
+          "message": "Invalid override of method `chat_stream`: Definition is incompatible with `LLMProviderBase.chat_stream`",
+          "raw": "tests\\test_providers\\test_registry.py:96:15: error[invalid-method-override] Invalid override of method `chat_stream`: Definition is incompatible with `LLMProviderBase.chat_stream`"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_ui\\test_app_embedded_tools.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 148,
+          "column": 27,
+          "code": "unresolved-attribute",
+          "message": "Object of type `MainWindow` has no attribute `_hxd_btn`",
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:148:27: error[unresolved-attribute] Object of type `MainWindow` has no attribute `_hxd_btn`"
+        },
+        {
+          "line": 220,
+          "column": 9,
+          "code": "unresolved-attribute",
+          "message": "Object of type `MainWindow` has no attribute `_on_open_hxd`",
+          "raw": "tests\\test_ui\\test_app_embedded_tools.py:220:9: error[unresolved-attribute] Object of type `MainWindow` has no attribute `_on_open_hxd`"
+        }
+      ]
+    },
+    {
       "path": "tests\\test_ui\\test_tools_logic.py",
       "count": 2,
       "findings": [
@@ -558,6 +632,19 @@
           "code": "invalid-argument-type",
           "message": "Argument to bound method `__init__` is incorrect: Expected `Orchestrator`, found `object`",
           "raw": "tests\\test_ui\\test_tools_logic.py:98:42: error[invalid-argument-type] Argument to bound method `__init__` is incorrect: Expected `Orchestrator`, found `object`"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\bridges\\hex_editor.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 28,
+          "column": 12,
+          "code": "unresolved-import",
+          "message": "Cannot resolve imported module `intellicrack_hexcore`",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:28:12: error[unresolved-import] Cannot resolve imported module `intellicrack_hexcore`"
         }
       ]
     },
@@ -605,11 +692,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 495,
+          "line": 533,
           "column": 21,
           "code": "invalid-argument-type",
           "message": "Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str], None, None]`",
-          "raw": "src\\intellicrack\\providers\\base.py:495:21: error[invalid-argument-type] Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str], None, None]`"
+          "raw": "src\\intellicrack\\providers\\base.py:533:21: error[invalid-argument-type] Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str], None, None]`"
         }
       ]
     },

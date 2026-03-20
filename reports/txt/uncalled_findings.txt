@@ -22,6 +22,17 @@ src\intellicrack\core\process_manager.py: Unused function request_shutdown
 src\intellicrack\core\process_manager.py: Unused function reset_instance
 
 
+4 findings in src\intellicrack\ui\panels\hex_editor_widget.py
+
+src\intellicrack\ui\panels\hex_editor_widget.py: Unused function mouseMoveEvent
+
+src\intellicrack\ui\panels\hex_editor_widget.py: Unused function mouseReleaseEvent
+
+src\intellicrack\ui\panels\hex_editor_widget.py: Unused function paintEvent
+
+src\intellicrack\ui\panels\hex_editor_widget.py: Unused function wheelEvent
+
+
 4 findings in src\intellicrack\ui\panels\vnc_widget.py
 
 src\intellicrack\ui\panels\vnc_widget.py: Unused function keyReleaseEvent
@@ -100,6 +111,11 @@ src\intellicrack\core\logging.py: Unused function get_structlog_logger
 1 findings in src\intellicrack\core\script_gen.py
 
 src\intellicrack\core\script_gen.py: Unused function prepare_ai_prompt
+
+
+1 findings in src\intellicrack\core\tools.py
+
+src\intellicrack\core\tools.py: Unused function get_hex_editor_bridge
 
 
 1 findings in src\intellicrack\providers\discovery.py

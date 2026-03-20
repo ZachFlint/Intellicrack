@@ -30870,6 +30870,11 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.claude\output-styles\Intellicrack-Developer.md</data>
       <data key="d3">Intellicrack-Developer.md</data>
     </node>
+    <node id=".complexipy_cache/c4ed0630d647fefad77d0754b11ca463.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.complexipy_cache\c4ed0630d647fefad77d0754b11ca463.json</data>
+      <data key="d3">c4ed0630d647fefad77d0754b11ca463.json</data>
+    </node>
     <node id=".fleet/settings.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.fleet\settings.json</data>
@@ -33510,6 +33515,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\cache_creation.meta.json</data>
       <data key="d3">cache_creation.meta.json</data>
     </node>
+    <node id=".mypy_cache/3.13/anthropic/types/capability_support.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\capability_support.data.json</data>
+      <data key="d3">capability_support.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/capability_support.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\capability_support.meta.json</data>
+      <data key="d3">capability_support.meta.json</data>
+    </node>
     <node id=".mypy_cache/3.13/anthropic/types/citations_config.data.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\citations_config.data.json</data>
@@ -33900,6 +33915,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\content_block_stop_event.meta.json</data>
       <data key="d3">content_block_stop_event.meta.json</data>
     </node>
+    <node id=".mypy_cache/3.13/anthropic/types/context_management_capability.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\context_management_capability.data.json</data>
+      <data key="d3">context_management_capability.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/context_management_capability.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\context_management_capability.meta.json</data>
+      <data key="d3">context_management_capability.meta.json</data>
+    </node>
     <node id=".mypy_cache/3.13/anthropic/types/direct_caller.data.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\direct_caller.data.json</data>
@@ -33939,6 +33964,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\document_block_param.meta.json</data>
       <data key="d3">document_block_param.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/effort_capability.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\effort_capability.data.json</data>
+      <data key="d3">effort_capability.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/effort_capability.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\effort_capability.meta.json</data>
+      <data key="d3">effort_capability.meta.json</data>
     </node>
     <node id=".mypy_cache/3.13/anthropic/types/encrypted_code_execution_result_block.data.json">
       <data key="d0">config</data>
@@ -34129,6 +34164,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\model.meta.json</data>
       <data key="d3">model.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/model_capabilities.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\model_capabilities.data.json</data>
+      <data key="d3">model_capabilities.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/model_capabilities.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\model_capabilities.meta.json</data>
+      <data key="d3">model_capabilities.meta.json</data>
     </node>
     <node id=".mypy_cache/3.13/anthropic/types/model_info.data.json">
       <data key="d0">config</data>
@@ -34580,6 +34625,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\thinking_block_param.meta.json</data>
       <data key="d3">thinking_block_param.meta.json</data>
     </node>
+    <node id=".mypy_cache/3.13/anthropic/types/thinking_capability.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\thinking_capability.data.json</data>
+      <data key="d3">thinking_capability.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/thinking_capability.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\thinking_capability.meta.json</data>
+      <data key="d3">thinking_capability.meta.json</data>
+    </node>
     <node id=".mypy_cache/3.13/anthropic/types/thinking_config_adaptive_param.data.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\thinking_config_adaptive_param.data.json</data>
@@ -34629,6 +34684,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\thinking_delta.meta.json</data>
       <data key="d3">thinking_delta.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/thinking_types.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\thinking_types.data.json</data>
+      <data key="d3">thinking_types.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/thinking_types.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\thinking_types.meta.json</data>
+      <data key="d3">thinking_types.meta.json</data>
     </node>
     <node id=".mypy_cache/3.13/anthropic/types/tool_bash_20250124_param.data.json">
       <data key="d0">config</data>
@@ -34960,6 +35025,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\web_fetch_tool_20260209_param.meta.json</data>
       <data key="d3">web_fetch_tool_20260209_param.meta.json</data>
     </node>
+    <node id=".mypy_cache/3.13/anthropic/types/web_fetch_tool_20260309_param.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\web_fetch_tool_20260309_param.data.json</data>
+      <data key="d3">web_fetch_tool_20260309_param.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/web_fetch_tool_20260309_param.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\web_fetch_tool_20260309_param.meta.json</data>
+      <data key="d3">web_fetch_tool_20260309_param.meta.json</data>
+    </node>
     <node id=".mypy_cache/3.13/anthropic/types/web_fetch_tool_result_block.data.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\web_fetch_tool_result_block.data.json</data>
@@ -35279,6 +35354,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_cache_creation.meta.json</data>
       <data key="d3">beta_cache_creation.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/beta/beta_capability_support.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_capability_support.data.json</data>
+      <data key="d3">beta_capability_support.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/beta/beta_capability_support.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_capability_support.meta.json</data>
+      <data key="d3">beta_capability_support.meta.json</data>
     </node>
     <node id=".mypy_cache/3.13/anthropic/types/beta/beta_citations_config_param.data.json">
       <data key="d0">config</data>
@@ -35720,6 +35805,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_content_block_source_param.meta.json</data>
       <data key="d3">beta_content_block_source_param.meta.json</data>
     </node>
+    <node id=".mypy_cache/3.13/anthropic/types/beta/beta_context_management_capability.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_context_management_capability.data.json</data>
+      <data key="d3">beta_context_management_capability.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/beta/beta_context_management_capability.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_context_management_capability.meta.json</data>
+      <data key="d3">beta_context_management_capability.meta.json</data>
+    </node>
     <node id=".mypy_cache/3.13/anthropic/types/beta/beta_context_management_config_param.data.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_context_management_config_param.data.json</data>
@@ -35779,6 +35874,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_document_block.meta.json</data>
       <data key="d3">beta_document_block.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/beta/beta_effort_capability.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_effort_capability.data.json</data>
+      <data key="d3">beta_effort_capability.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/beta/beta_effort_capability.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_effort_capability.meta.json</data>
+      <data key="d3">beta_effort_capability.meta.json</data>
     </node>
     <node id=".mypy_cache/3.13/anthropic/types/beta/beta_encrypted_code_execution_result_block.data.json">
       <data key="d0">config</data>
@@ -36079,6 +36184,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_metadata_param.meta.json</data>
       <data key="d3">beta_metadata_param.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/beta/beta_model_capabilities.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_model_capabilities.data.json</data>
+      <data key="d3">beta_model_capabilities.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/beta/beta_model_capabilities.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_model_capabilities.meta.json</data>
+      <data key="d3">beta_model_capabilities.meta.json</data>
     </node>
     <node id=".mypy_cache/3.13/anthropic/types/beta/beta_model_info.data.json">
       <data key="d0">config</data>
@@ -36550,6 +36665,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_thinking_block_param.meta.json</data>
       <data key="d3">beta_thinking_block_param.meta.json</data>
     </node>
+    <node id=".mypy_cache/3.13/anthropic/types/beta/beta_thinking_capability.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_thinking_capability.data.json</data>
+      <data key="d3">beta_thinking_capability.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/beta/beta_thinking_capability.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_thinking_capability.meta.json</data>
+      <data key="d3">beta_thinking_capability.meta.json</data>
+    </node>
     <node id=".mypy_cache/3.13/anthropic/types/beta/beta_thinking_config_adaptive_param.data.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_thinking_config_adaptive_param.data.json</data>
@@ -36609,6 +36734,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_thinking_turns_param.meta.json</data>
       <data key="d3">beta_thinking_turns_param.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/beta/beta_thinking_types.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_thinking_types.data.json</data>
+      <data key="d3">beta_thinking_types.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/beta/beta_thinking_types.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_thinking_types.meta.json</data>
+      <data key="d3">beta_thinking_types.meta.json</data>
     </node>
     <node id=".mypy_cache/3.13/anthropic/types/beta/beta_tool_bash_20241022_param.data.json">
       <data key="d0">config</data>
@@ -36999,6 +37134,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_web_fetch_tool_20260209_param.meta.json</data>
       <data key="d3">beta_web_fetch_tool_20260209_param.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/beta/beta_web_fetch_tool_20260309_param.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_web_fetch_tool_20260309_param.data.json</data>
+      <data key="d3">beta_web_fetch_tool_20260309_param.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/beta/beta_web_fetch_tool_20260309_param.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\beta\beta_web_fetch_tool_20260309_param.meta.json</data>
+      <data key="d3">beta_web_fetch_tool_20260309_param.meta.json</data>
     </node>
     <node id=".mypy_cache/3.13/anthropic/types/beta/beta_web_fetch_tool_result_block.data.json">
       <data key="d0">config</data>
@@ -37669,6 +37814,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\shared\error_response.meta.json</data>
       <data key="d3">error_response.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/shared/error_type.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\shared\error_type.data.json</data>
+      <data key="d3">error_type.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/anthropic/types/shared/error_type.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\anthropic\types\shared\error_type.meta.json</data>
+      <data key="d3">error_type.meta.json</data>
     </node>
     <node id=".mypy_cache/3.13/anthropic/types/shared/gateway_timeout_error.data.json">
       <data key="d0">config</data>
@@ -41190,6 +41345,26 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\error_event.meta.json</data>
       <data key="d3">error_event.meta.json</data>
     </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/file_citation.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\file_citation.data.json</data>
+      <data key="d3">file_citation.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/file_citation.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\file_citation.meta.json</data>
+      <data key="d3">file_citation.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/file_citation_param.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\file_citation_param.data.json</data>
+      <data key="d3">file_citation_param.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/file_citation_param.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\file_citation_param.meta.json</data>
+      <data key="d3">file_citation_param.meta.json</data>
+    </node>
     <node id=".mypy_cache/3.13/google/genai/_interactions/types/file_search_call_content.data.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\file_search_call_content.data.json</data>
@@ -41309,6 +41484,86 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\generation_config_param.meta.json</data>
       <data key="d3">generation_config_param.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/google_maps_call_arguments.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\google_maps_call_arguments.data.json</data>
+      <data key="d3">google_maps_call_arguments.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/google_maps_call_arguments.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\google_maps_call_arguments.meta.json</data>
+      <data key="d3">google_maps_call_arguments.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/google_maps_call_arguments_param.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\google_maps_call_arguments_param.data.json</data>
+      <data key="d3">google_maps_call_arguments_param.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/google_maps_call_arguments_param.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\google_maps_call_arguments_param.meta.json</data>
+      <data key="d3">google_maps_call_arguments_param.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/google_maps_call_content.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\google_maps_call_content.data.json</data>
+      <data key="d3">google_maps_call_content.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/google_maps_call_content.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\google_maps_call_content.meta.json</data>
+      <data key="d3">google_maps_call_content.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/google_maps_call_content_param.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\google_maps_call_content_param.data.json</data>
+      <data key="d3">google_maps_call_content_param.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/google_maps_call_content_param.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\google_maps_call_content_param.meta.json</data>
+      <data key="d3">google_maps_call_content_param.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/google_maps_result.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\google_maps_result.data.json</data>
+      <data key="d3">google_maps_result.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/google_maps_result.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\google_maps_result.meta.json</data>
+      <data key="d3">google_maps_result.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/google_maps_result_content.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\google_maps_result_content.data.json</data>
+      <data key="d3">google_maps_result_content.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/google_maps_result_content.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\google_maps_result_content.meta.json</data>
+      <data key="d3">google_maps_result_content.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/google_maps_result_content_param.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\google_maps_result_content_param.data.json</data>
+      <data key="d3">google_maps_result_content_param.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/google_maps_result_content_param.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\google_maps_result_content_param.meta.json</data>
+      <data key="d3">google_maps_result_content_param.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/google_maps_result_param.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\google_maps_result_param.data.json</data>
+      <data key="d3">google_maps_result_param.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/google_maps_result_param.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\google_maps_result_param.meta.json</data>
+      <data key="d3">google_maps_result_param.meta.json</data>
     </node>
     <node id=".mypy_cache/3.13/google/genai/_interactions/types/google_search_call_arguments.data.json">
       <data key="d0">config</data>
@@ -41560,6 +41815,26 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\model_param.meta.json</data>
       <data key="d3">model_param.meta.json</data>
     </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/place_citation.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\place_citation.data.json</data>
+      <data key="d3">place_citation.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/place_citation.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\place_citation.meta.json</data>
+      <data key="d3">place_citation.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/place_citation_param.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\place_citation_param.data.json</data>
+      <data key="d3">place_citation_param.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/place_citation_param.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\place_citation_param.meta.json</data>
+      <data key="d3">place_citation_param.meta.json</data>
+    </node>
     <node id=".mypy_cache/3.13/google/genai/_interactions/types/speech_config.data.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\speech_config.data.json</data>
@@ -41699,6 +41974,26 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\turn_param.meta.json</data>
       <data key="d3">turn_param.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/url_citation.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\url_citation.data.json</data>
+      <data key="d3">url_citation.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/url_citation.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\url_citation.meta.json</data>
+      <data key="d3">url_citation.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/url_citation_param.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\url_citation_param.data.json</data>
+      <data key="d3">url_citation_param.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/types/url_citation_param.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\types\url_citation_param.meta.json</data>
+      <data key="d3">url_citation_param.meta.json</data>
     </node>
     <node id=".mypy_cache/3.13/google/genai/_interactions/types/url_context_call_arguments.data.json">
       <data key="d0">config</data>
@@ -43070,6 +43365,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\intellicrack\bridges\ghidra.meta.json</data>
       <data key="d3">ghidra.meta.json</data>
     </node>
+    <node id=".mypy_cache/3.13/intellicrack/bridges/hex_editor.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\intellicrack\bridges\hex_editor.data.json</data>
+      <data key="d3">hex_editor.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/intellicrack/bridges/hex_editor.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\intellicrack\bridges\hex_editor.meta.json</data>
+      <data key="d3">hex_editor.meta.json</data>
+    </node>
     <node id=".mypy_cache/3.13/intellicrack/bridges/installer.data.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\intellicrack\bridges\installer.data.json</data>
@@ -43739,6 +44044,26 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\intellicrack\ui\panels\graph_view.meta.json</data>
       <data key="d3">graph_view.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/intellicrack/ui/panels/hex_editor_panel.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\intellicrack\ui\panels\hex_editor_panel.data.json</data>
+      <data key="d3">hex_editor_panel.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/intellicrack/ui/panels/hex_editor_panel.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\intellicrack\ui\panels\hex_editor_panel.meta.json</data>
+      <data key="d3">hex_editor_panel.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/intellicrack/ui/panels/hex_editor_widget.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\intellicrack\ui\panels\hex_editor_widget.data.json</data>
+      <data key="d3">hex_editor_widget.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/intellicrack/ui/panels/hex_editor_widget.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\intellicrack\ui\panels\hex_editor_widget.meta.json</data>
+      <data key="d3">hex_editor_widget.meta.json</data>
     </node>
     <node id=".mypy_cache/3.13/intellicrack/ui/panels/hxd_panel.data.json">
       <data key="d0">config</data>
@@ -64099,6 +64424,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\tests\test_providers\conftest.meta.json</data>
       <data key="d3">conftest.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/tests/test_providers/test_agentic_capabilities.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\tests\test_providers\test_agentic_capabilities.data.json</data>
+      <data key="d3">test_agentic_capabilities.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/tests/test_providers/test_agentic_capabilities.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\tests\test_providers\test_agentic_capabilities.meta.json</data>
+      <data key="d3">test_agentic_capabilities.meta.json</data>
     </node>
     <node id=".mypy_cache/3.13/tests/test_providers/test_anthropic_provider.data.json">
       <data key="d0">config</data>
