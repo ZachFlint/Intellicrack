@@ -1262,6 +1262,7 @@ class X64DbgBridge(DebuggerBridge):
     async def _close_connection(self) -> None:
         """Close named pipe connection."""
         if self._pipe_client is not None:
+            _logger.debug("pipe_connection_closing")
             await self._pipe_client.close()
             self._pipe_client = None
 
@@ -1465,6 +1466,7 @@ class X64DbgBridge(DebuggerBridge):
         Args:
             pid: Process ID.
         """
+        _logger.info("x64dbg_attaching", pid=pid)
         is_64 = await asyncio.to_thread(self._detect_process_arch, pid)
 
         if self._process is None:
@@ -1477,6 +1479,7 @@ class X64DbgBridge(DebuggerBridge):
         self._state.tool_running = True
         self._state.process_attached = True
         self._state.target_pid = pid
+        _logger.info("x64dbg_attached", pid=pid)
 
     @staticmethod
     def _detect_process_arch(pid: int) -> bool:
@@ -1542,6 +1545,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             New instruction pointer.
         """
+        _logger.debug("step_into_executing")
         await self._send_pipe_command("step_into")
         await asyncio.sleep(0.05)
         regs = await self.get_registers()
@@ -1553,6 +1557,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             New instruction pointer.
         """
+        _logger.debug("step_over_executing")
         await self._send_pipe_command("step_over")
         await asyncio.sleep(0.05)
         regs = await self.get_registers()
@@ -1564,6 +1569,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             New instruction pointer.
         """
+        _logger.debug("step_out_executing")
         await self._send_pipe_command("step_out")
         await asyncio.sleep(0.05)
         regs = await self.get_registers()
@@ -1867,6 +1873,7 @@ class X64DbgBridge(DebuggerBridge):
         Raises:
             ToolError: If read fails.
         """
+        _logger.debug("memory_read_starting", address=hex(address), size=size)
         if sys.platform != "win32":
             msg = "Windows API not available"
             raise ToolError(msg)
@@ -2039,6 +2046,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             True if freed.
         """
+        _logger.debug("memory_free_starting", address=hex(address))
         if sys.platform != "win32":
             return False
 
@@ -2078,6 +2086,7 @@ class X64DbgBridge(DebuggerBridge):
         Raises:
             ToolError: If not on Windows, not attached, or API call fails.
         """
+        _logger.debug("memory_regions_enumerating")
         if sys.platform != "win32":
             msg = f"get_memory_regions {_ERR_REQUIRES_WINDOWS}"
             raise ToolError(msg, tool_name="x64dbg")
@@ -2171,6 +2180,9 @@ class X64DbgBridge(DebuggerBridge):
 
         Returns:
             Disassembly lines. Returns empty list on error.
+
+        Raises:
+            ToolError: If capstone disassembler is not available.
         """
         capstone = get_capstone()
         if capstone is None:
@@ -2217,6 +2229,7 @@ class X64DbgBridge(DebuggerBridge):
         Raises:
             ToolError: If assembly fails.
         """
+        _logger.info("instruction_assembling", address=hex(address), instruction=instruction)
         keystone = get_keystone()
         if keystone is None:
             msg = "Keystone assembler not available. Not in conda-forge; install with: pixi run pip install keystone-engine"
@@ -2357,6 +2370,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             Command output.
         """
+        _logger.debug("command_executing", command=command)
         return await self._send_command(command)
 
     async def spawn(self, path: Path, args: Sequence[str] | None = None) -> int:
@@ -2369,6 +2383,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             Process ID.
         """
+        _logger.info("process_spawning", path=str(path))
         args_str = " ".join(args) if args else None
         await self.load(path, args_str)
         return self._attached_pid or 0
@@ -2572,6 +2587,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             List of match dicts with 'address' and 'offset' keys.
         """
+        _logger.debug("pattern_search_starting", pattern=pattern)
         tokens = pattern.replace("  ", " ").strip().split(" ")
         if len(tokens) == 1 and len(tokens[0]) > HEX_BYTE_LENGTH:
             raw = tokens[0]
@@ -2601,7 +2617,8 @@ class X64DbgBridge(DebuggerBridge):
                 continue
             try:
                 data = await self.read_memory(region.base_address, min(region.size, MAX_MEMORY_READ_SIZE))
-            except ToolError:
+            except ToolError as exc:
+                _logger.debug("pattern_search_region_read_failed", base=hex(region.base_address), error=str(exc))
                 continue
 
             for i in range(len(data) - pat_len + 1):
@@ -2614,6 +2631,7 @@ class X64DbgBridge(DebuggerBridge):
                     addr = region.base_address + i
                     matches.append({"address": hex(addr), "offset": addr})
 
+        _logger.debug("pattern_search_completed", matches=len(matches))
         return matches
 
     async def run_to(self, address: int) -> dict[str, Any]:
@@ -2625,6 +2643,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             Dict with success status and target address.
         """
+        _logger.debug("run_to_executing", address=hex(address))
         await self._send_pipe_command("exec", {"command": f"runto {hex(address)}"})
         return {"success": True, "target": hex(address)}
 
@@ -2634,6 +2653,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             Dict with success status.
         """
+        _logger.debug("execute_til_return_starting")
         await self._send_pipe_command("exec", {"command": "erun"})
         return {"success": True}
 
@@ -2646,6 +2666,7 @@ class X64DbgBridge(DebuggerBridge):
         Raises:
             ToolError: If disassembly fails or no instructions at current IP.
         """
+        _logger.info("instruction_skipping")
         regs = await self.get_registers()
         current_ip = regs.rip if self._is_64bit else regs.rip & DWORD_MASK
 
@@ -2677,6 +2698,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             Dict with success status and new IP.
         """
+        _logger.info("instruction_pointer_setting", address=hex(address))
         reg_name = "rip" if self._is_64bit else "eip"
         await self._send_pipe_command("exec", {"command": f"{reg_name}={hex(address)}"})
         return {"success": True, "instruction_pointer": hex(address)}
@@ -2691,6 +2713,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             Dict with address, text, and success status.
         """
+        _logger.debug("label_setting", address=hex(address), label_text=text)
         await self._send_pipe_command("exec", {"command": f"lblset {hex(address)}, {text}"})
         return {"address": hex(address), "text": text, "success": True}
 
@@ -2706,7 +2729,8 @@ class X64DbgBridge(DebuggerBridge):
         """
         try:
             result = await self._send_pipe_command("exec", {"command": "lbllist"})
-        except ToolError:
+        except ToolError as exc:
+            _logger.debug("labels_list_failed", error=str(exc))
             return []
 
         labels: list[dict[str, Any]] = []
@@ -2732,6 +2756,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             Dict with address, text, and success status.
         """
+        _logger.debug("comment_setting", address=hex(address))
         await self._send_pipe_command("exec", {"command": f"cmtset {hex(address)}, {text}"})
         return {"address": hex(address), "text": text, "success": True}
 
@@ -2747,7 +2772,8 @@ class X64DbgBridge(DebuggerBridge):
         """
         try:
             result = await self._send_pipe_command("exec", {"command": "cmtlist"})
-        except ToolError:
+        except ToolError as exc:
+            _logger.debug("comments_list_failed", error=str(exc))
             return []
 
         comments: list[dict[str, Any]] = []
@@ -2772,6 +2798,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             Dict with address and success status.
         """
+        _logger.debug("breakpoint_enabling", address=hex(address))
         await self._send_pipe_command("exec", {"command": f"be {hex(address)}"})
         bp = self._breakpoints.get(address)
         if bp is not None:
@@ -2794,6 +2821,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             Dict with address and success status.
         """
+        _logger.debug("breakpoint_disabling", address=hex(address))
         await self._send_pipe_command("exec", {"command": f"bd {hex(address)}"})
         bp = self._breakpoints.get(address)
         if bp is not None:
@@ -2818,6 +2846,7 @@ class X64DbgBridge(DebuggerBridge):
             Dict with target and success status.
         """
         target = f"{module}.{function}"
+        _logger.info("api_breakpoint_setting", target=target)
         await self._send_pipe_command("exec", {"command": f"bpx {target}"})
         return {"success": True, "target": target}
 
@@ -2831,10 +2860,8 @@ class X64DbgBridge(DebuggerBridge):
 
         Returns:
             Dict with path and bytes_written count.
-
-        Raises:
-            ToolError: If memory read fails.
         """
+        _logger.info("memory_dumping", address=hex(address), size=size, path=path)
         data = await self.read_memory(address, size)
         output_path = Path(path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -2856,6 +2883,7 @@ class X64DbgBridge(DebuggerBridge):
         modules = await self.get_modules()
         for mod in modules:
             if mod.name.lower() == module_name.lower():
+                _logger.debug("module_base_resolved", module_name=module_name, address=hex(mod.base_address))
                 return mod.base_address
         msg = f"Module {module_name!r} not found"
         raise ToolError(msg)
@@ -2874,6 +2902,7 @@ class X64DbgBridge(DebuggerBridge):
         Raises:
             ToolError: If DOS or PE signature is invalid.
         """
+        _logger.debug("pe_header_reading", base_address=hex(base_address), module_name=module_name)
         dos_header = await self.read_memory(base_address, 64)
         if dos_header[:2] != b"MZ":
             msg = f"Invalid DOS header in {module_name}"
@@ -2927,10 +2956,8 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             List of section dicts with name, virtual_address, virtual_size,
             raw_size, and characteristics.
-
-        Raises:
-            ToolError: If module not found or PE parsing fails.
         """
+        _logger.debug("module_sections_reading", module=module_name)
         base_address = await self._resolve_module_base(module_name)
         pe_offset, pe_header = await self._read_pe_header(base_address, module_name)
 
@@ -2999,16 +3026,15 @@ class X64DbgBridge(DebuggerBridge):
 
         Returns:
             List of export dicts with ordinal, name, and address.
-
-        Raises:
-            ToolError: If module not found or PE parsing fails.
         """
+        _logger.debug("module_exports_reading", module=module_name)
         base_address = await self._resolve_module_base(module_name)
         _, pe_header = await self._read_pe_header(base_address, module_name, size=512)
 
         try:
             addr_table, name_ptrs, ordinal_table, num_names, ordinal_base, _ = await self._read_export_tables(base_address, pe_header)
-        except ToolError:
+        except ToolError as exc:
+            _logger.debug("export_tables_read_failed", module=module_name, error=str(exc))
             return []
 
         exports: list[dict[str, Any]] = []
@@ -3061,6 +3087,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             Dict with success status.
         """
+        _logger.debug("trace_stopping")
         await self._send_pipe_command("exec", {"command": "StopRunTrace"})
         return {"success": True}
 
@@ -3075,6 +3102,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             Dict with code, handling, and success status.
         """
+        _logger.info("exception_config_set", code=hex(code), handling=handling)
         handling_map = {"break": 1, "ignore": 0, "log": 2}
         handling_code = handling_map.get(handling, 1)
         await self._send_pipe_command("exec", {"command": f"SetExceptionBPX {hex(code)}, {handling_code}"})

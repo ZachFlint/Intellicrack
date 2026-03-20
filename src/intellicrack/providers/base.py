@@ -27,7 +27,10 @@ from ..core.types import (
     ProviderCredentials,
     ProviderError,
     RateLimitError,
+    ThinkingConfig,
     ToolCall,
+    ToolChoice,
+    ToolChoiceMode,
     ToolDefinition,
 )
 
@@ -40,6 +43,7 @@ if TYPE_CHECKING:
 _T = TypeVar("_T")
 
 _logger = get_logger("providers.base")
+_secure_rng = random.SystemRandom()
 
 
 class JSONSchemaProperty(TypedDict, total=False):
@@ -209,6 +213,9 @@ class LLMProviderBase(ABC):
         tools: list[ToolDefinition] | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
+        tool_choice: ToolChoice | None = None,
+        thinking: ThinkingConfig | None = None,
+        enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
         """Send a chat completion request.
 
@@ -218,6 +225,9 @@ class LLMProviderBase(ABC):
             tools: Available tools for function calling.
             temperature: Sampling temperature (0.0 to 1.0).
             max_tokens: Maximum tokens in response.
+            tool_choice: How the model should select tools.
+            thinking: Extended thinking configuration.
+            enable_cache: Whether to enable prompt caching.
 
         Returns:
             Tuple of (assistant message, tool calls if any).
@@ -236,6 +246,9 @@ class LLMProviderBase(ABC):
         tools: list[ToolDefinition] | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
+        tool_choice: ToolChoice | None = None,
+        thinking: ThinkingConfig | None = None,
+        enable_cache: bool = False,
     ) -> AsyncIterator[str]:
         """Stream a chat completion response.
 
@@ -245,6 +258,9 @@ class LLMProviderBase(ABC):
             tools: Available tools for function calling.
             temperature: Sampling temperature (0.0 to 1.0).
             max_tokens: Maximum tokens in response.
+            tool_choice: How the model should select tools.
+            thinking: Extended thinking configuration.
+            enable_cache: Whether to enable prompt caching.
 
         Yields:
             Text chunks as they arrive.
@@ -321,7 +337,7 @@ class LLMProviderBase(ABC):
                 if attempt >= max_retries:
                     raise
                 delay = min(base_delay * (2**attempt), max_delay)
-                jitter = random.uniform(0, delay * 0.1)  # noqa: S311
+                jitter = _secure_rng.uniform(0, delay * 0.1)
                 self._logger.warning(
                     "provider_retry_backoff",
                     attempt=attempt + 1,
@@ -434,6 +450,29 @@ class LLMProviderBase(ABC):
             The result as a string, JSON-encoded if not already a string.
         """
         return result if isinstance(result, str) else json.dumps(result)
+
+    @staticmethod
+    def _convert_tool_choice_to_openai_format(
+        tool_choice: ToolChoice,
+    ) -> str | dict[str, object]:
+        """Convert a ToolChoice to the OpenAI-compatible tool_choice parameter.
+
+        Args:
+            tool_choice: The tool choice configuration.
+
+        Returns:
+            A string or dict suitable for the ``tool_choice`` API parameter.
+        """
+        if tool_choice.mode == ToolChoiceMode.AUTO:
+            return "auto"
+        if tool_choice.mode == ToolChoiceMode.NONE:
+            return "none"
+        if tool_choice.mode == ToolChoiceMode.REQUIRED:
+            return "required"
+        return {
+            "type": "function",
+            "function": {"name": tool_choice.function_name or ""},
+        }
 
     @staticmethod
     def _convert_messages_to_openai_format(

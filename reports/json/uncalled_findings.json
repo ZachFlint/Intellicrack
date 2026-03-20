@@ -1,12 +1,12 @@
 {
   "tool": "uncalled",
-  "generated": "2026-03-08T16:26:03.203662",
-  "total_findings": 45,
-  "total_files": 22,
+  "generated": "2026-03-14T15:24:00.767487",
+  "total_findings": 46,
+  "total_files": 24,
   "files": [
     {
       "path": "src\\intellicrack\\core\\types.py",
-      "count": 7,
+      "count": 5,
       "findings": [
         {
           "line": null,
@@ -37,18 +37,6 @@
           "column": null,
           "message": "Unused function: is_writable",
           "raw": "src\\intellicrack\\core\\types.py: Unused function is_writable"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: signature",
-          "raw": "src\\intellicrack\\core\\types.py: Unused function signature"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: summary",
-          "raw": "src\\intellicrack\\core\\types.py: Unused function summary"
         }
       ]
     },
@@ -109,6 +97,30 @@
           "column": null,
           "message": "Unused function: paintEvent",
           "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py: Unused function paintEvent"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\bridges\\base.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: has_capability",
+          "raw": "src\\intellicrack\\bridges\\base.py: Unused function has_capability"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: supports_arch",
+          "raw": "src\\intellicrack\\bridges\\base.py: Unused function supports_arch"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: supports_format",
+          "raw": "src\\intellicrack\\bridges\\base.py: Unused function supports_format"
         }
       ]
     },
@@ -209,24 +221,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\bridges\\base.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: supports_arch",
-          "raw": "src\\intellicrack\\bridges\\base.py: Unused function supports_arch"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: supports_format",
-          "raw": "src\\intellicrack\\bridges\\base.py: Unused function supports_format"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\providers\\local_transformers.py",
       "count": 2,
       "findings": [
@@ -259,6 +253,18 @@
           "column": null,
           "message": "Unused function: local_available",
           "raw": "src\\intellicrack\\providers\\ollama.py: Unused function local_available"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\logging.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_structlog_logger",
+          "raw": "src\\intellicrack\\core\\logging.py: Unused function get_structlog_logger"
         }
       ]
     },
@@ -355,6 +361,18 @@
           "column": null,
           "message": "Unused function: wheelEvent",
           "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: Unused function wheelEvent"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\frida_panel.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: refresh_devices",
+          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py: Unused function refresh_devices"
         }
       ]
     },

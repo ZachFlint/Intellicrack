@@ -618,6 +618,7 @@ class CutterBridge(StaticAnalysisBridge):
     async def _close_existing_r2(self) -> None:
         """Close existing Rizin session and unregister process."""
         if self._r2 is not None:
+            _logger.debug("r2_session_closing")
             await asyncio.to_thread(self._r2.quit)
             if self._r2_pid is not None:
                 process_manager = ProcessManager.get_instance()
@@ -666,6 +667,7 @@ class CutterBridge(StaticAnalysisBridge):
                 md5 = _get_str(h, "hash")
             elif hash_type == "sha256":
                 sha256 = _get_str(h, "hash")
+        _logger.debug("binary_hashes_extracted")
         return md5, sha256
 
     async def _extract_binary_metadata(self) -> tuple[str, str, int, int]:
@@ -685,6 +687,7 @@ class CutterBridge(StaticAnalysisBridge):
         entry_offset = _get_int(bin_info, "entry", 0)
         entry = baddr + entry_offset
 
+        _logger.debug("binary_metadata_extracted", file_type=file_type, arch=arch)
         return file_type, arch, bits, entry
 
     async def load_binary(self, path: Path) -> BinaryInfo:
@@ -742,7 +745,7 @@ class CutterBridge(StaticAnalysisBridge):
             )
 
         except Exception as e:
-            _logger.exception("binary_load_failed", path=str(self._binary_path))
+            _logger.warning("binary_load_failed", path=str(self._binary_path), error=str(e))
             raise ToolError(_ERR_LOAD_FAILED) from e
 
     async def analyze(self, level: str = "normal") -> None:
@@ -813,6 +816,7 @@ class CutterBridge(StaticAnalysisBridge):
                 )
             )
 
+        _logger.debug("functions_queried", filter_pattern=filter_pattern, result_count=len(result))
         return result
 
     async def get_function(self, address: int) -> FunctionInfo | None:
@@ -836,6 +840,7 @@ class CutterBridge(StaticAnalysisBridge):
         func_info = await self._cmd_json("afij")
 
         if not func_info:
+            _logger.debug("function_queried", address=hex(address), found=False)
             return None
 
         f = func_info[0]
@@ -875,6 +880,7 @@ class CutterBridge(StaticAnalysisBridge):
                     )
                 )
 
+        _logger.debug("function_queried", address=hex(address), found=True)
         return FunctionInfo(
             name=_get_str(f, "name"),
             address=_get_int(f, "offset"),
@@ -904,6 +910,7 @@ class CutterBridge(StaticAnalysisBridge):
         if not self._analyzed:
             raise ToolError(_ERR_NOT_ANALYZED)
 
+        _logger.debug("decompile_requested", address=hex(address))
         await self._r2_cmd(f"s {address}")
         result = await self._r2_cmd("pdc")
 
@@ -937,6 +944,7 @@ class CutterBridge(StaticAnalysisBridge):
         if not self._analyzed:
             raise ToolError(_ERR_NOT_ANALYZED)
 
+        _logger.debug("disassemble_requested", address=hex(address), count=count)
         await self._r2_cmd(f"s {address}")
         insns = await self._cmd_json(f"pdj {count}")
 
@@ -999,6 +1007,7 @@ class CutterBridge(StaticAnalysisBridge):
                 )
             )
 
+        _logger.debug("xrefs_to_queried", address=hex(address), result_count=len(result))
         return result
 
     async def get_xrefs_from(self, address: int) -> list[CrossReference]:
@@ -1041,6 +1050,7 @@ class CutterBridge(StaticAnalysisBridge):
                 )
             )
 
+        _logger.debug("xrefs_from_queried", address=hex(address), result_count=len(result))
         return result
 
     async def search_strings(self, pattern: str) -> list[StringInfo]:
@@ -1088,6 +1098,7 @@ class CutterBridge(StaticAnalysisBridge):
                     )
                 )
 
+        _logger.debug("string_search_completed", pattern=pattern, result_count=len(result))
         return result
 
     async def search_bytes(self, pattern: bytes) -> list[int]:
@@ -1110,7 +1121,9 @@ class CutterBridge(StaticAnalysisBridge):
         hex_pattern = pattern.hex()
         results = await self._cmd_json(f"/xj {hex_pattern}")
 
-        return [_get_int(r, "offset") for r in results]
+        addrs = [_get_int(r, "offset") for r in results]
+        _logger.debug("byte_search_completed", pattern_length=len(pattern), result_count=len(addrs))
+        return addrs
 
     async def search_bytes_wildcard(self, hex_pattern: str) -> list[int]:
         """Search for byte pattern with wildcards.
@@ -1132,7 +1145,9 @@ class CutterBridge(StaticAnalysisBridge):
         clean_pattern = hex_pattern.replace(" ", "").replace("??", "..")
         results = await self._cmd_json(f"/xj {clean_pattern}")
 
-        return [_get_int(r, "offset") for r in results]
+        addrs = [_get_int(r, "offset") for r in results]
+        _logger.debug("wildcard_byte_search_completed", hex_pattern=hex_pattern, result_count=len(addrs))
+        return addrs
 
     async def _get_sections_internal(self) -> list[SectionInfo]:
         """Get section information.
@@ -1208,7 +1223,9 @@ class CutterBridge(StaticAnalysisBridge):
         Returns:
             List of import information.
         """
-        return await self._get_imports_internal() if self._analyzed else []
+        result = await self._get_imports_internal() if self._analyzed else []
+        _logger.debug("imports_queried", result_count=len(result))
+        return result
 
     async def get_exports(self) -> list[ExportInfo]:
         """Get exported functions.
@@ -1216,7 +1233,9 @@ class CutterBridge(StaticAnalysisBridge):
         Returns:
             List of export information.
         """
-        return await self._get_exports_internal() if self._analyzed else []
+        result = await self._get_exports_internal() if self._analyzed else []
+        _logger.debug("exports_queried", result_count=len(result))
+        return result
 
     async def get_sections(self) -> list[SectionInfo]:
         """Get binary section information.
@@ -1224,7 +1243,9 @@ class CutterBridge(StaticAnalysisBridge):
         Returns:
             List of section info.
         """
-        return await self._get_sections_internal() if self._analyzed else []
+        result = await self._get_sections_internal() if self._analyzed else []
+        _logger.debug("sections_queried", result_count=len(result))
+        return result
 
     async def rename_function(self, address: int, new_name: str) -> bool:
         """Rename a function.
@@ -1321,6 +1342,7 @@ class CutterBridge(StaticAnalysisBridge):
         if not result or "Cannot" in result:
             raise ToolError(_ERR_ASSEMBLE_FAILED)
 
+        _logger.info("instruction_assembled", instruction=instruction)
         return bytes.fromhex(result.strip())
 
     async def execute_command(self, command: str) -> str:
@@ -1332,6 +1354,7 @@ class CutterBridge(StaticAnalysisBridge):
         Returns:
             Command output.
         """
+        _logger.debug("raw_command_executed", command=command)
         return await self._r2_cmd(command)
 
     async def _cmd_json(self, command: str) -> list[dict[str, Any]]:
@@ -1371,6 +1394,7 @@ class CutterBridge(StaticAnalysisBridge):
         Returns:
             Output of seek command.
         """
+        _logger.debug("seek_to_address", address=hex(address))
         return await self.execute_command(f"s {address}")
 
     async def get_function_graph(self, address: int) -> list[dict[str, Any]]:
@@ -1388,6 +1412,7 @@ class CutterBridge(StaticAnalysisBridge):
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
 
+        _logger.debug("function_graph_queried", address=hex(address))
         result = await self._cmd_json(f"agj @ {hex(address)}")
         if result:
             first = result[0]

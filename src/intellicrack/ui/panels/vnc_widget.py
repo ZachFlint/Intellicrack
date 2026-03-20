@@ -222,9 +222,6 @@ class RFBClient:
 
         Args:
             incremental: Whether to request incremental update.
-
-        Raises:
-            ConnectionError: If not connected.
         """
         if self._writer is None or not self._connected:
             return
@@ -292,11 +289,7 @@ class RFBClient:
         return False
 
     async def _handle_framebuffer_update(self) -> None:
-        """Process a FramebufferUpdate message and update the QImage.
-
-        Raises:
-            ConnectionError: If reader not available.
-        """
+        """Process a FramebufferUpdate message and update the QImage."""
         if self._reader is None or self.framebuffer is None:
             return
 

@@ -153,6 +153,7 @@ class ProcessManager:
         self._atexit_registered = False
         self._shutdown_event = threading.Event()
         self._initialized = True
+        _module_logger.debug("process_manager_initialized")
 
     @classmethod
     def get_instance(cls) -> ProcessManager:
@@ -166,6 +167,7 @@ class ProcessManager:
     @classmethod
     def reset_instance(cls) -> None:
         """Reset the singleton instance (for testing)."""
+        _module_logger.debug("process_manager_resetting")
         with cls._lock:
             if cls._instance is not None:
                 cls._instance._cleanup_in_progress = False
@@ -266,7 +268,7 @@ class ProcessManager:
         self._sync_cleanup()
 
     def _sync_cleanup(self) -> None:
-        """Synchronous cleanup for use outside async context."""
+        """Clean up resources synchronously for use outside async context."""
         if self._cleanup_in_progress:
             return
 
@@ -740,6 +742,7 @@ class ProcessManager:
         stdout_pipe = PIPE if capture_output else None
         stderr_pipe = PIPE if capture_output else None
 
+        logger.debug("subprocess_started", process_name=name, command=args[0])
         process = Popen(
             args,
             stdout=stdout_pipe,
@@ -766,6 +769,7 @@ class ProcessManager:
             stderr_result = stderr_data.decode("utf-8", errors="replace") if text else stderr_data
 
             returncode = process.returncode
+            logger.debug("subprocess_completed", process_name=name, returncode=returncode)
 
         except TimeoutExpired:
             logger.warning("process_timeout", process_name=name, pid=pid)

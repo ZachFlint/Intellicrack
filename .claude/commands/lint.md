@@ -18,7 +18,7 @@ Lint the entire Intellicrack project with `ruff check` and fix every single find
 
 ### Unused Imports and Variables — IMPLEMENT, Don't Remove
 
-**This is critical.** When ruff flags an unused import or unused variable, your **first priority** is to find a way to use it that genuinely improves Intellicrack's functionality, usability, or robustness. This is a binary analysis and licensing protection cracking platform — almost every import and variable exists for a reason or can serve a real purpose.
+**This is critical.** When ruff flags an unused import or unused variable, your **first priority** is to find a way to use it that genuinely improves Intellicrack's functionality, usability, or robustness. This is a binary analysis platform that bridges external tools and AI providers — almost every import and variable exists for a reason or can serve a real purpose.
 
 - **Unused imports**: Before removing, determine what the import provides and whether it should be used in the module. If the import brings in a capability that the module logically should use (e.g., a binary analysis function, a protection detection routine, a utility that would improve error handling or functionality), **write the code that uses it**. Only remove an import if there is genuinely no implementable use for it in that module's context.
 - **Unused variables**: Before removing, determine if the variable captures a value that should be acted on — a return value that should be checked, a result that should be logged, a computation that should feed into downstream logic. **Write the code that uses the variable** to improve functionality. Only remove or prefix with `_` if the variable truly has no actionable purpose.

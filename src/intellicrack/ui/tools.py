@@ -83,10 +83,10 @@ class ToolWidget(Protocol):
 
 
 @runtime_checkable
-class HxDWidgetProtocol(ToolWidget, Protocol):
-    """Protocol for HxD hex editor widget integration."""
+class HexEditorPanelProtocol(ToolWidget, Protocol):
+    """Protocol for the built-in hex editor panel."""
 
-    def load_file(self, file_path: Path) -> bool:
+    def load_file(self, file_path: Path | str) -> bool:
         """Load a file into the hex editor.
 
         Args:
@@ -97,6 +97,14 @@ class HxDWidgetProtocol(ToolWidget, Protocol):
         """
         _ = (self, file_path)
         return False
+
+    def goto_offset(self, offset: int) -> None:
+        """Navigate to a byte offset.
+
+        Args:
+            offset: Target byte offset.
+        """
+        _ = (self, offset)
 
 
 @runtime_checkable
@@ -294,7 +302,7 @@ OutputType = Literal[
     "analysis",
     "scripts",
     "stack",
-    "hxd",
+    "hex_editor",
     "cutter",
     "process",
     "binary",
@@ -883,7 +891,7 @@ class ToolOutputPanel(QFrame):
         self._analysis_panel: BridgeAnalysisPanel | None = None
         self._script_panel: ScriptManagerPanel | None = None
         self._stack_panel: StackViewerPanel | None = None
-        self._hxd_widget: HxDWidgetProtocol | None = None
+        self._hex_editor_panel: HexEditorPanelProtocol | None = None
         self._x64dbg_widget: X64DbgWidgetProtocol | None = None
         self._cutter_widget: CutterWidgetProtocol | None = None
         self._ghidra_widget: GhidraWidgetProtocol | None = None
@@ -979,30 +987,30 @@ class ToolOutputPanel(QFrame):
         _logger.info("stack_panel_added", tab="Stack")
         return qwidget
 
-    def add_hxd_tab(self) -> HxDWidgetProtocol | None:
-        """Add the real HxD hex editor as an embedded panel tab.
+    def add_hex_editor_tab(self) -> HexEditorPanelProtocol | None:
+        """Add the built-in hex editor as a panel tab.
 
         Returns:
-            The created HxDPanel cast as HxDWidgetProtocol, or None on failure.
+            The created HexEditorPanel or None on failure.
         """
-        if self._hxd_widget is not None:
-            return self._hxd_widget
+        if self._hex_editor_panel is not None:
+            return self._hex_editor_panel
 
         try:
-            panel_module = importlib.import_module(".panels.hxd_panel", "intellicrack.ui")
-            raw_widget = panel_module.HxDPanel()
-            self._hxd_widget = cast("HxDWidgetProtocol", raw_widget)
+            panel_module = importlib.import_module(".panels.hex_editor_panel", "intellicrack.ui")
+            raw_widget = panel_module.HexEditorPanel()
+            self._hex_editor_panel = cast("HexEditorPanelProtocol", raw_widget)
             qwidget = cast("QWidget", raw_widget)
-            self._hxd_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("hxd"))
-            self._hxd_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("hxd"))
-            self._tab_widget.addTab(qwidget, "HxD Hex Editor")
-            self._embedded_tools["hxd"] = qwidget
-            _logger.info("hxd_tab_added", tab="HxD")
+            self._hex_editor_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("hex_editor"))
+            self._hex_editor_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("hex_editor"))
+            self._tab_widget.addTab(qwidget, "Hex Editor")
+            self._embedded_tools["hex_editor"] = qwidget
+            _logger.info("hex_editor_tab_added", tab="Hex Editor")
         except Exception as e:
-            _logger.warning("hxd_tab_add_failed", error=str(e))
+            _logger.warning("hex_editor_tab_add_failed", error=str(e))
             return None
         else:
-            return self._hxd_widget
+            return self._hex_editor_panel
 
     def add_x64dbg_tab(self, is_64bit: bool = True) -> X64DbgWidgetProtocol | None:
         """Add the x64dbg debugger as a native panel tab.
@@ -1337,8 +1345,8 @@ class ToolOutputPanel(QFrame):
             self._activate_tab_by_widget(cast("QWidget", self._binary_panel))
         return success
 
-    def open_in_hxd(self, file_path: Path | str) -> bool:
-        """Open a file in the embedded HxD hex editor.
+    def open_in_hex_editor(self, file_path: Path | str) -> bool:
+        """Open a file in the built-in hex editor.
 
         Args:
             file_path: Path to the file to open.
@@ -1346,18 +1354,17 @@ class ToolOutputPanel(QFrame):
         Returns:
             True if the file was opened successfully.
         """
-        if self._hxd_widget is None:
-            widget = self.add_hxd_tab()
+        if self._hex_editor_panel is None:
+            widget = self.add_hex_editor_tab()
             if widget is None:
                 return False
 
-        if self._hxd_widget is None:
+        if self._hex_editor_panel is None:
             return False
 
-        path = Path(file_path) if isinstance(file_path, str) else file_path
-        success = self._hxd_widget.load_file(path)
+        success = self._hex_editor_panel.load_file(file_path)
         if success:
-            self._activate_tab_by_widget(cast("QWidget", self._hxd_widget))
+            self._activate_tab_by_widget(cast("QWidget", self._hex_editor_panel))
         return success
 
     def open_in_x64dbg(
@@ -1521,7 +1528,7 @@ class ToolOutputPanel(QFrame):
             ("_ghidra_widget", "_ghidra_bridge"),
             ("_cutter_widget", "_cutter_bridge"),
             ("_x64dbg_widget", "_x64dbg_bridge"),
-            ("_hxd_widget", None),
+            ("_hex_editor_panel", None),
             ("_frida_panel", "_frida_bridge"),
             ("_process_panel", None),
             ("_binary_panel", None),
@@ -1569,9 +1576,9 @@ class ToolOutputPanel(QFrame):
 
     def close_embedded_tools(self) -> None:
         """Close all embedded tool instances and null their references."""
-        if self._hxd_widget is not None:
-            self._hxd_widget.stop_tool()
-            self._hxd_widget = None
+        if self._hex_editor_panel is not None:
+            self._hex_editor_panel.stop_tool()
+            self._hex_editor_panel = None
 
         if self._x64dbg_widget is not None:
             self._x64dbg_widget.stop_tool()

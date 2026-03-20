@@ -893,6 +893,7 @@ ghidra_bridge_server.GhidraBridgeServer(
         if self._bridge is None:
             return 0, [], [], []
 
+        _logger.debug("ghidra_metadata_extraction_started")
         result = await self._execute_remote(
             """
 import math
@@ -1021,6 +1022,12 @@ metadata
             for exp in exports_data
         ]
 
+        _logger.debug(
+            "ghidra_metadata_extraction_completed",
+            section_count=len(sections),
+            import_count=len(imports),
+            export_count=len(exports),
+        )
         return entry_point, sections, imports, exports
 
     @staticmethod
@@ -1820,10 +1827,8 @@ metadata
 
         Returns:
             String representation of the script result.
-
-        Raises:
-            ToolError: If execution fails.
         """
+        _logger.debug("script_executing", code_length=len(code))
         result = await self._execute_remote(code)
         return str(result) if result is not None else ""
 
@@ -1844,6 +1849,7 @@ metadata
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
+        _logger.debug("label_setting", address=hex(address), label_name=name)
         await self._execute_remote(f"""
             from ghidra.program.model.symbol import SourceType
             addr = toAddr({address})
@@ -1909,6 +1915,7 @@ metadata
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
+        _logger.debug("bookmark_creating", address=hex(address), category=category)
         await self._execute_remote(f"""
             bm = currentProgram.getBookmarkManager()
             bm.setBookmark(toAddr({address}), "Note", {json.dumps(category)}, {json.dumps(comment)})
@@ -1971,6 +1978,7 @@ metadata
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
+        _logger.info("function_creating", address=hex(address), func_name=name)
         name_arg = json.dumps(name) if name else "None"
         try:
             result = await self._execute_remote(f"""
@@ -2006,6 +2014,7 @@ metadata
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
+        _logger.info("function_deleting", address=hex(address))
         try:
             await self._execute_remote(f"""
                 addr = toAddr({address})
@@ -2044,6 +2053,7 @@ metadata
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
+        _logger.info("function_signature_editing", address=hex(address), new_name=name, return_type=return_type)
         rt_literal = json.dumps(return_type) if return_type else "None"
         cc_literal = json.dumps(calling_convention) if calling_convention else "None"
         name_literal = json.dumps(name) if name else "None"
@@ -2109,6 +2119,7 @@ metadata
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
+        _logger.debug("variable_type_setting", func_address=hex(func_address), var_name=var_name, new_type=new_type)
         try:
             result = await self._execute_remote(f"""
                 from ghidra.program.model.symbol import SourceType
@@ -2155,6 +2166,7 @@ metadata
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
+        _logger.info("structure_defining", struct_name=name, field_count=len(fields))
         fields_json = json.dumps(fields)
         try:
             result = await self._execute_remote(f"""
@@ -2248,6 +2260,7 @@ metadata
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
+        _logger.debug("structure_applying", address=hex(address), struct_name=struct_name)
         try:
             result = await self._execute_remote(f"""
                 addr = toAddr({address})
@@ -2484,6 +2497,7 @@ metadata
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
+        _logger.debug("bytes_writing", address=hex(address), data_length=len(data.replace(" ", "")) // 2)
         clean_hex = data.replace(" ", "")
         byte_values = [int(clean_hex[i : i + 2], 16) for i in range(0, len(clean_hex), 2)]
         byte_list_str = ", ".join(str(b) for b in byte_values)
@@ -2513,11 +2527,13 @@ metadata
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
+        _logger.debug("undo_requested")
         try:
             result = await self._execute_remote("""
                 currentProgram.undo()
                 True
             """)
+            _logger.debug("undo_performed", success=bool(result))
             return {"success": bool(result)}
         except Exception as e:
             error_message = f"Undo failed: {e}"
@@ -2536,11 +2552,13 @@ metadata
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
+        _logger.debug("redo_requested")
         try:
             result = await self._execute_remote("""
                 currentProgram.redo()
                 True
             """)
+            _logger.debug("redo_performed", success=bool(result))
             return {"success": bool(result)}
         except Exception as e:
             error_message = f"Redo failed: {e}"

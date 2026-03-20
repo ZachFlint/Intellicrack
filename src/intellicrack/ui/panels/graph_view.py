@@ -290,6 +290,7 @@ class CFGGraphScene(QGraphicsScene):
         Args:
             blocks: List of basic block dicts from r2 ``agj`` output.
         """
+        _logger.debug("graph_loading", block_count=len(blocks))
         self.clear()
         self._block_items.clear()
 
@@ -340,6 +341,7 @@ class CFGGraphScene(QGraphicsScene):
             y_offset += max_height + _LAYER_SPACING_V
 
         self._create_edges(block_map)
+        _logger.debug("graph_loaded", blocks=len(self._block_items), layers=len(layers))
 
     def _create_edges(self, block_map: dict[int, dict[str, Any]]) -> None:
         """Create edge items between blocks based on jump/fail targets.
@@ -399,6 +401,7 @@ class CFGGraphScene(QGraphicsScene):
         if not block_map:
             return {}
 
+        _logger.debug("layers_computing", block_count=len(block_map))
         all_addrs = set(block_map.keys())
         successors: dict[int, list[int]] = defaultdict(list)
         referenced: set[int] = set()
@@ -467,6 +470,9 @@ class CFGGraphView(QGraphicsView):
 
         Returns:
             The CFGGraphScene instance.
+
+        Raises:
+            TypeError: If the scene is not a CFGGraphScene.
         """
         scene = self.scene()
         if isinstance(scene, CFGGraphScene):

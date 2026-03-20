@@ -516,6 +516,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If enumeration fails.
         """
+        _logger.debug("processes_listing", filter_name=filter_name)
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
@@ -736,6 +737,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If read fails.
         """
+        _logger.debug("memory_read_starting", address=hex(address), size=size)
         if self._process_handle is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -1049,6 +1051,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.debug("memory_map_reading")
         if self._process_handle is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -1126,6 +1129,7 @@ class ProcessBridge(ToolBridgeBase):
         Returns:
             List of matching addresses.
         """
+        _logger.debug("pattern_search_starting", pattern=pattern)
         pattern_bytes: list[int | None] = []
 
         for part in pattern.split():
@@ -1173,6 +1177,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If injection fails.
         """
+        _logger.info("dll_injecting", dll_path=dll_path)
         if self._process_handle is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -1232,6 +1237,7 @@ class ProcessBridge(ToolBridgeBase):
         Returns:
             Process info or None if not found.
         """
+        _logger.debug("process_info_reading", pid=pid)
         target_pid = pid or self._attached_pid
         if target_pid is None:
             return None

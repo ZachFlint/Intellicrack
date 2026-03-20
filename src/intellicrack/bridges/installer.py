@@ -692,7 +692,7 @@ class ToolInstaller:
             )
             subdirs = [d for d in tool_dir.iterdir() if d.is_dir()]
         except Exception as e:
-            _logger.exception("extraction_failed", archive=str(archive_path), tool=tool.value)
+            _logger.warning("extraction_failed", archive=str(archive_path), tool=tool.value, error=str(e))
             raise ToolError(_ERR_EXTRACT_FAILED_FMT) from e
         else:
             return subdirs[0] if len(subdirs) == 1 else tool_dir

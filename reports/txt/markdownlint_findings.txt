@@ -73,7 +73,7 @@ README.md:16:81 error MD013/line-length Line length [Expected: 80; Actual: 128]
 
 README.md:17:81 error MD013/line-length Line length [Expected: 80; Actual: 123]
 
-README.md:18:81 error MD013/line-length Line length [Expected: 80; Actual: 99]
+README.md:18:81 error MD013/line-length Line length [Expected: 80; Actual: 104]
 
 README.md:19:81 error MD013/line-length Line length [Expected: 80; Actual: 107]
 

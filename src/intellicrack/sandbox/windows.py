@@ -15,11 +15,11 @@ import asyncio
 import shutil
 import tempfile
 import time
-import xml.etree.ElementTree as ET  # noqa: S405
 from datetime import datetime
 from pathlib import Path
 
 from intellicrack.core._subprocess import CREATE_NEW_CONSOLE, PIPE, Popen
+from intellicrack.core._xml_gen import Element, ElementTree, SubElement, indent
 
 from ..core.logging import get_logger, log_sandbox_operation
 from ..core.process_manager import ProcessManager, ProcessType
@@ -316,45 +316,45 @@ class WindowsSandbox(SandboxBase):
         if self._wsb_path is None or self._shared_folder is None:
             raise SandboxError(_ERR_SANDBOX_PATHS_NOT_INIT)
 
-        config = ET.Element("Configuration")
+        config = Element("Configuration")
 
-        mapped_folders = ET.SubElement(config, "MappedFolders")
-        folder = ET.SubElement(mapped_folders, "MappedFolder")
-        ET.SubElement(folder, "HostFolder").text = str(self._shared_folder)
-        ET.SubElement(folder, "SandboxFolder").text = self.SANDBOX_SHARED_PATH
-        ET.SubElement(folder, "ReadOnly").text = "false"
+        mapped_folders = SubElement(config, "MappedFolders")
+        folder = SubElement(mapped_folders, "MappedFolder")
+        SubElement(folder, "HostFolder").text = str(self._shared_folder)
+        SubElement(folder, "SandboxFolder").text = self.SANDBOX_SHARED_PATH
+        SubElement(folder, "ReadOnly").text = "false"
 
         for host_path, sandbox_path, read_only in self._config.shared_folders:
-            folder = ET.SubElement(mapped_folders, "MappedFolder")
-            ET.SubElement(folder, "HostFolder").text = str(host_path)
-            ET.SubElement(folder, "SandboxFolder").text = sandbox_path
-            ET.SubElement(folder, "ReadOnly").text = "true" if read_only else "false"
+            folder = SubElement(mapped_folders, "MappedFolder")
+            SubElement(folder, "HostFolder").text = str(host_path)
+            SubElement(folder, "SandboxFolder").text = sandbox_path
+            SubElement(folder, "ReadOnly").text = "true" if read_only else "false"
 
         networking = "Enable" if self._config.network_enabled else "Disable"
-        ET.SubElement(config, "Networking").text = networking
+        SubElement(config, "Networking").text = networking
 
         if self._config.memory_limit_mb > 0:
-            ET.SubElement(config, "MemoryInMB").text = str(self._config.memory_limit_mb)
+            SubElement(config, "MemoryInMB").text = str(self._config.memory_limit_mb)
 
         vgpu = "Enable" if self._config.video_enabled else "Disable"
-        ET.SubElement(config, "vGPU").text = vgpu
+        SubElement(config, "vGPU").text = vgpu
 
         audio = "Enable" if self._config.audio_enabled else "Disable"
-        ET.SubElement(config, "AudioInput").text = audio
+        SubElement(config, "AudioInput").text = audio
 
         clipboard = "Enable" if self._config.clipboard_enabled else "Disable"
-        ET.SubElement(config, "ClipboardRedirection").text = clipboard
+        SubElement(config, "ClipboardRedirection").text = clipboard
 
         printer = "Enable" if self._config.printer_enabled else "Disable"
-        ET.SubElement(config, "PrinterRedirection").text = printer
+        SubElement(config, "PrinterRedirection").text = printer
 
         if self._config.startup_commands:
-            logon_command = ET.SubElement(config, "LogonCommand")
+            logon_command = SubElement(config, "LogonCommand")
             command_text = " && ".join(self._config.startup_commands)
-            ET.SubElement(logon_command, "Command").text = f"cmd.exe /c {command_text}"
+            SubElement(logon_command, "Command").text = f"cmd.exe /c {command_text}"
 
-        tree = ET.ElementTree(config)
-        ET.indent(tree, space="  ")
+        tree = ElementTree(config)
+        indent(tree, space="  ")
 
         with open(self._wsb_path, "wb") as f:
             tree.write(f, encoding="utf-8", xml_declaration=True)
@@ -506,6 +506,7 @@ start /min powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File "%~dp0pr
 
         Raises:
             SandboxError: If execution fails.
+            SandboxTimeoutError: If command times out.
         """
         if self._state.status != "running":
             raise SandboxError(_ERR_SANDBOX_NOT_RUNNING)

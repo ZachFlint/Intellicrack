@@ -1,36 +1,9 @@
 {
   "tool": "precommit-hooks",
-  "generated": "2026-03-08T16:29:11.126563",
-  "total_findings": 190,
-  "total_files": 128,
+  "generated": "2026-03-14T15:27:00.930994",
+  "total_findings": 170,
+  "total_files": 120,
   "files": [
-    {
-      "path": "IntellicrackStructure.hta",
-      "count": 3,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "trailing-whitespace",
-          "message": "[FIXED] Fixed",
-          "raw": "IntellicrackStructure.hta: [trailing-whitespace] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "IntellicrackStructure.hta: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "IntellicrackStructure.hta: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
     {
       "path": "reports/csv/precommit-hooks_findings.csv",
       "count": 2,
@@ -48,46 +21,6 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "reports/csv/precommit-hooks_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": ".complexipy_cache/c4ed0630d647fefad77d0754b11ca463.json",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": ".complexipy_cache/c4ed0630d647fefad77d0754b11ca463.json: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": ".complexipy_cache/c4ed0630d647fefad77d0754b11ca463.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": "IntellicrackKnowledgeGraph.html",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "IntellicrackKnowledgeGraph.html: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "IntellicrackKnowledgeGraph.html: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -692,46 +625,6 @@
       ]
     },
     {
-      "path": "reports/txt/bandit_findings.txt",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/txt/bandit_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "reports/txt/bandit_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": "reports/txt/basedpyright_findings.txt",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/txt/basedpyright_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "reports/txt/basedpyright_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
       "path": "reports/txt/blinter_findings.txt",
       "count": 2,
       "findings": [
@@ -812,26 +705,6 @@
       ]
     },
     {
-      "path": "reports/txt/deptry_findings.txt",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/txt/deptry_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "reports/txt/deptry_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
       "path": "reports/txt/flake8_findings.txt",
       "count": 2,
       "findings": [
@@ -848,26 +721,6 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "reports/txt/flake8_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": "reports/txt/jsonlint_findings.txt",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/txt/jsonlint_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "reports/txt/jsonlint_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -972,26 +825,6 @@
       ]
     },
     {
-      "path": "reports/txt/pydocstyle_findings.txt",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/txt/pydocstyle_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "reports/txt/pydocstyle_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
       "path": "reports/txt/radon_findings.txt",
       "count": 2,
       "findings": [
@@ -1028,26 +861,6 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "reports/txt/ruff_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": "reports/txt/semgrep_findings.txt",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/txt/semgrep_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "reports/txt/semgrep_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -1192,73 +1005,7 @@
       ]
     },
     {
-      "path": "reports/xml/basedpyright_findings.xml",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/xml/basedpyright_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "reports/xml/basedpyright_findings.xml: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": "reports/xml/semgrep_findings.xml",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/xml/semgrep_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "reports/xml/semgrep_findings.xml: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": "scripts/generate_tree.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "trailing-whitespace",
-          "message": "[FIXED] Fixed",
-          "raw": "scripts/generate_tree.py: [trailing-whitespace] [FIXED] Fixed"
-        }
-      ]
-    },
-    {
-      "path": "scripts/knowledge-graph/visualize_architecture.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "trailing-whitespace",
-          "message": "[FIXED] Fixed",
-          "raw": "scripts/knowledge-graph/visualize_architecture.py: [trailing-whitespace] [FIXED] Fixed"
-        }
-      ]
-    },
-    {
-      "path": "coverage.json",
+      "path": "reports/txt/bandit_findings.txt",
       "count": 1,
       "findings": [
         {
@@ -1266,7 +1013,20 @@
           "column": null,
           "code": "end-of-file-fixer",
           "message": "[FIXED] Fixed",
-          "raw": "coverage.json: [end-of-file-fixer] [FIXED] Fixed"
+          "raw": "reports/txt/bandit_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/basedpyright_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/basedpyright_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
         }
       ]
     },
@@ -1297,6 +1057,19 @@
       ]
     },
     {
+      "path": "reports/txt/deptry_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/deptry_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
       "path": "reports/txt/interrogate_findings.txt",
       "count": 1,
       "findings": [
@@ -1306,6 +1079,45 @@
           "code": "end-of-file-fixer",
           "message": "[FIXED] Fixed",
           "raw": "reports/txt/interrogate_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/jsonlint_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/jsonlint_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/pydocstyle_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/pydocstyle_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/semgrep_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/semgrep_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
         }
       ]
     },
@@ -1332,6 +1144,19 @@
           "code": "end-of-file-fixer",
           "message": "[FIXED] Fixed",
           "raw": "reports/xml/bandit_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/basedpyright_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/basedpyright_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
         }
       ]
     },
@@ -1566,6 +1391,19 @@
           "code": "end-of-file-fixer",
           "message": "[FIXED] Fixed",
           "raw": "reports/xml/ruff_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/semgrep_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/semgrep_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
         }
       ]
     },
@@ -1856,19 +1694,6 @@
       ]
     },
     {
-      "path": "IntellicrackStructure.txt",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "IntellicrackStructure.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
       "path": "package.json",
       "count": 1,
       "findings": [
@@ -1904,19 +1729,6 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "qodana.yaml: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": "scripts/knowledge-graph/IntellicrackKnowledgeGraph.dot",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "scripts/knowledge-graph/IntellicrackKnowledgeGraph.dot: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },

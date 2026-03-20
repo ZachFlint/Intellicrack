@@ -1,19 +1,8 @@
-4 findings in D:\Intellicrack\tests\test_core\test_logging.py
+1 findings in D:\Intellicrack\src\intellicrack\core\_xml_gen.pyi
 
-D:\Intellicrack\tests\test_core\test_logging.py:3:1: I001 Import block is un-sorted or un-formatted
-
-D:\Intellicrack\tests\test_core\test_logging.py:32:35: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
-
-D:\Intellicrack\tests\test_core\test_logging.py:591:5: SIM117 Use a single `with` statement with multiple contexts instead of nested `with` statements
-
-D:\Intellicrack\tests\test_core\test_logging.py:601:25: B009 Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+D:\Intellicrack\src\intellicrack\core\_xml_gen.pyi:1:1: I001 Import block is un-sorted or un-formatted
 
 
-1 findings in D:\Intellicrack\tests\test_credentials\__init__.py
+1 findings in D:\Intellicrack\src\intellicrack\ui\panels\async_bridge.py
 
-D:\Intellicrack\tests\test_credentials\__init__.py:1:1: D104 Missing docstring in public package
-
-
-1 findings in D:\Intellicrack\tests\test_sandbox\__init__.py
-
-D:\Intellicrack\tests\test_sandbox\__init__.py:1:1: D104 Missing docstring in public package
+D:\Intellicrack\src\intellicrack\ui\panels\async_bridge.py:130:5: UP047 Generic function `run_bridge_coroutine` should use type parameters

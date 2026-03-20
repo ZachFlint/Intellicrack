@@ -268,6 +268,7 @@ class MainWindow(QMainWindow):
         self._script_manager = manager
         self._script_validator = validator
         self._tool_panel.wire_script_backend(manager, validator)
+        _logger.debug("script_manager_wired")
 
     def set_model_discovery(self, discovery: ModelDiscovery) -> None:
         """Set the model discovery instance.
@@ -276,6 +277,7 @@ class MainWindow(QMainWindow):
             discovery: ModelDiscovery for provider model enumeration.
         """
         self._model_discovery = discovery
+        _logger.debug("model_discovery_set")
 
     def _initialize_model_cache(self) -> None:
         """Initialize model cache settings from configuration."""
@@ -454,7 +456,7 @@ class MainWindow(QMainWindow):
 
         self._add_menu_action(embedded_menu, "Open x64dbg Debugger", self._on_open_x64dbg)
         self._add_menu_action(embedded_menu, "Open Cutter Analysis", self._on_open_cutter)
-        self._add_menu_action(embedded_menu, "Open HxD Hex Editor", self._on_open_hxd)
+        self._add_menu_action(embedded_menu, "Open Hex Editor", self._on_open_hex_editor)
         embedded_menu.addSeparator()
         self._add_menu_action(embedded_menu, "Debug Current Binary...", self._on_debug_current_binary)
         self._add_menu_action(embedded_menu, "Analyze Current Binary...", self._on_analyze_current_binary)
@@ -606,11 +608,11 @@ class MainWindow(QMainWindow):
         self._cutter_btn.clicked.connect(self._on_open_cutter)
         toolbar.addWidget(self._cutter_btn)
 
-        self._hxd_btn = QPushButton("HxD")
-        self._hxd_btn.setObjectName("tool_button")
-        self._hxd_btn.setToolTip("Open HxD Hex Editor")
-        self._hxd_btn.clicked.connect(self._on_open_hxd)
-        toolbar.addWidget(self._hxd_btn)
+        self._hex_editor_btn = QPushButton("Hex Editor")
+        self._hex_editor_btn.setObjectName("tool_button")
+        self._hex_editor_btn.setToolTip("Open Hex Editor")
+        self._hex_editor_btn.clicked.connect(self._on_open_hex_editor)
+        toolbar.addWidget(self._hex_editor_btn)
 
         self._ghidra_btn = QPushButton("Ghidra")
         self._ghidra_btn.setObjectName("tool_button")
@@ -1685,16 +1687,16 @@ class MainWindow(QMainWindow):
             _logger.exception("tool_open_failed", tool_name="Cutter", error=str(e))
             self._show_tool_error("Cutter", f"Failed to open Cutter panel: {e}")
 
-    def _on_open_hxd(self) -> None:
+    def _on_open_hex_editor(self) -> None:
         """Open hex editor panel."""
         try:
-            widget = self._tool_panel.add_hxd_tab()
+            widget = self._tool_panel.add_hex_editor_tab()
             if widget is None:
                 self._show_tool_error("Hex Editor", "Failed to initialize hex editor panel")
                 return
             widget.start_tool()
         except Exception as e:
-            _logger.exception("tool_open_failed", tool_name="HxD", error=str(e))
+            _logger.exception("tool_open_failed", tool_name="HexEditor", error=str(e))
             self._show_tool_error("Hex Editor", f"Failed to open hex editor panel: {e}")
 
     def _on_open_ghidra(self) -> None:
@@ -1800,12 +1802,12 @@ class MainWindow(QMainWindow):
             self._show_tool_error("Cutter", "Failed to open binary in Cutter")
 
     def _on_hex_edit_current_binary(self) -> None:
-        """Open the currently loaded binary in HxD hex editor."""
+        """Open the currently loaded binary in the hex editor."""
         if self._current_binary is None:
             self._show_no_binary_warning("hex edit")
             return
-        if not self._tool_panel.open_in_hxd(self._current_binary):
-            self._show_tool_error("HxD", "Failed to open binary in HxD")
+        if not self._tool_panel.open_in_hex_editor(self._current_binary):
+            self._show_tool_error("Hex Editor", "Failed to open binary in hex editor")
 
     def _on_open_binary_in_ghidra(self) -> None:
         """Open the currently loaded binary in the Ghidra panel."""

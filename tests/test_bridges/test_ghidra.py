@@ -162,9 +162,7 @@ def test_tool_functions_have_descriptions(bridge: GhidraBridge) -> None:
     tool_def = bridge.tool_definition
     for func in tool_def.functions:
         assert func.description, f"Function {func.name} has no description"
-        assert len(func.description) > _MIN_DESCRIPTION_LEN, (
-            f"Function {func.name} description too short"
-        )
+        assert len(func.description) > _MIN_DESCRIPTION_LEN, f"Function {func.name} description too short"
 
 
 def test_tool_functions_have_matching_methods(bridge: GhidraBridge) -> None:

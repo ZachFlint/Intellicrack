@@ -29,6 +29,7 @@ from .binary import BinaryBridge
 from .cutter import CutterBridge
 from .frida_bridge import FridaBridge
 from .ghidra import GhidraBridge
+from .hex_editor import HexEditorBridge
 from .installer import ToolInstaller
 from .process import ProcessBridge
 from .sandbox_bridge import SandboxBridge
@@ -46,6 +47,7 @@ __all__: list[str] = [
     "DynamicAnalysisBridge",
     "FridaBridge",
     "GhidraBridge",
+    "HexEditorBridge",
     "InstrumentationBridge",
     "MemorySearchResult",
     "ProcessBridge",

@@ -113,6 +113,8 @@ jobs:
         timeout-minutes: 15
       - name: Install package in editable mode
         run: pixi run pip install -e .
+      - name: Fix PyQt6 stubs
+        run: pixi run python scripts/fix_pyqt6_stubs.py
       - name: Type check with basedpyright
         run: |
           pixi run basedpyright src/
@@ -169,7 +171,7 @@ jobs:
         if: always()
         uses: codecov/codecov-action@v5
         with:
-          file: ./coverage.xml
+          files: ./coverage.xml
           flags: unittests
           name: codecov-windows-py3.12
           fail_ci_if_error: false

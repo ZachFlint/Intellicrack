@@ -912,6 +912,8 @@ class SessionManager:
         Returns:
             True if deleted.
         """
+        is_current = self._current is not None and self._current.id == session_id
+        _logger.info("session_deleting", session_id=session_id, is_current=is_current)
         if self._current is not None and self._current.id == session_id:
             await self._stop_auto_save()
             self._current = None
@@ -949,6 +951,7 @@ class SessionManager:
         Returns:
             Number of sessions deleted.
         """
+        _logger.info("session_cleanup_requested", days=days)
         return self._store.cleanup_old(days)
 
     async def export_json(self, session_id: str, path: Path) -> None:
@@ -961,6 +964,7 @@ class SessionManager:
         Raises:
             ValueError: If the session is not found.
         """
+        _logger.info("session_exporting", session_id=session_id, path=str(path))
         session = self._store.load(session_id)
         if session is None:
             raise ValueError(_ERR_SESSION_NOT_FOUND)
@@ -998,6 +1002,7 @@ class SessionManager:
         Raises:
             ValueError: If no current session exists.
         """
+        _logger.info("current_session_exporting", path=str(path))
         if self._current is None:
             raise ValueError(_ERR_NO_CURRENT_SESSION)
 

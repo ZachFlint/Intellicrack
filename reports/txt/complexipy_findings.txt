@@ -1,3 +1,31 @@
+6 findings in src\intellicrack\bridges\x64dbg.py
+
+src\intellicrack\bridges\x64dbg.py: X64DbgBridge::_get_parent_pid - cognitive complexity 16 (exceeds threshold)
+
+src\intellicrack\bridges\x64dbg.py: X64DbgBridge::get_stack_trace - cognitive complexity 16 (exceeds threshold)
+
+src\intellicrack\bridges\x64dbg.py: X64DbgBridge::_get_threads - cognitive complexity 17 (exceeds threshold)
+
+src\intellicrack\bridges\x64dbg.py: X64DbgBridge::find_pattern - cognitive complexity 24 (exceeds threshold)
+
+src\intellicrack\bridges\x64dbg.py: X64DbgBridge::get_watchpoints - cognitive complexity 27 (exceeds threshold)
+
+src\intellicrack\bridges\x64dbg.py: X64DbgBridge::get_breakpoints - cognitive complexity 43 (exceeds threshold)
+
+
+5 findings in src\intellicrack\bridges\frida_bridge.py
+
+src\intellicrack\bridges\frida_bridge.py: FridaBridge::shutdown - cognitive complexity 16 (exceeds threshold)
+
+src\intellicrack\bridges\frida_bridge.py: FridaBridge::stalker_follow - cognitive complexity 19 (exceeds threshold)
+
+src\intellicrack\bridges\frida_bridge.py: FridaBridge::allocate_memory - cognitive complexity 20 (exceeds threshold)
+
+src\intellicrack\bridges\frida_bridge.py: FridaBridge::replace_function - cognitive complexity 25 (exceeds threshold)
+
+src\intellicrack\bridges\frida_bridge.py: FridaBridge::hook_function - cognitive complexity 26 (exceeds threshold)
+
+
 4 findings in src\intellicrack\bridges\installer.py
 
 src\intellicrack\bridges\installer.py: ToolInstaller::_download_file - cognitive complexity 16 (exceeds threshold)
@@ -27,15 +55,6 @@ src\intellicrack\bridges\process.py: ProcessBridge::list_processes - cognitive c
 src\intellicrack\bridges\process.py: ProcessBridge::get_threads - cognitive complexity 17 (exceeds threshold)
 
 src\intellicrack\bridges\process.py: ProcessBridge::search_pattern - cognitive complexity 21 (exceeds threshold)
-
-
-3 findings in src\intellicrack\bridges\x64dbg.py
-
-src\intellicrack\bridges\x64dbg.py: X64DbgBridge::_get_parent_pid - cognitive complexity 16 (exceeds threshold)
-
-src\intellicrack\bridges\x64dbg.py: X64DbgBridge::get_stack_trace - cognitive complexity 16 (exceeds threshold)
-
-src\intellicrack\bridges\x64dbg.py: X64DbgBridge::_get_threads - cognitive complexity 17 (exceeds threshold)
 
 
 3 findings in src\intellicrack\providers\discovery.py
@@ -119,11 +138,6 @@ src\intellicrack\ui\session_manager.py: SessionManagerDialog::_load_sessions - c
 src\intellicrack\ui\tool_config.py: ToolStatusCheckWorker::_check_ghidra - cognitive complexity 20 (exceeds threshold)
 
 src\intellicrack\ui\tool_config.py: ToolInstallWorker::_install_tool - cognitive complexity 22 (exceeds threshold)
-
-
-1 findings in src\intellicrack\bridges\frida_bridge.py
-
-src\intellicrack\bridges\frida_bridge.py: FridaBridge::hook_function - cognitive complexity 29 (exceeds threshold)
 
 
 1 findings in src\intellicrack\core\logging.py
