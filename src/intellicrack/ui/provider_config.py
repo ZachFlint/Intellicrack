@@ -90,10 +90,11 @@ _logger = get_logger("ui.provider_config")
 if TYPE_CHECKING:
     from intellicrack.core.types import ModelInfo
     from intellicrack.providers.base import LLMProviderBase
-    from intellicrack.providers.discovery import ModelDiscovery
+    from intellicrack.providers.discovery import DiscoveryEvent, ModelDiscovery
     from intellicrack.providers.registry import ProviderRegistry
 
 HTTP_OK = 200
+_MAX_DISCOVERY_PREVIEW_ITEMS = 3
 
 _PROVIDER_DISPLAY_NAMES: dict[str, str] = {
     "anthropic": "Anthropic",
@@ -2038,6 +2039,8 @@ class ModelSelectionDialog(QDialog):
         self,
         models: list[ModelInfo],
         current_model: str | None = None,
+        provider_name: ProviderName | None = None,
+        discovery: ModelDiscovery | None = None,
         parent: QWidget | None = None,
     ) -> None:
         """Initialize the model selection dialog.
@@ -2045,14 +2048,19 @@ class ModelSelectionDialog(QDialog):
         Args:
             models: List of available models.
             current_model: Currently selected model ID.
+            provider_name: Provider identifier for discovery status lookup.
+            discovery: Discovery service for last-event status display.
             parent: Parent widget.
         """
         super().__init__(parent)
         self._models = models
         self._current_model = current_model
+        self._provider_name = provider_name
+        self._discovery = discovery
 
         self._setup_ui()
         self._populate_models()
+        self._update_discovery_status()
 
         self.setWindowTitle("Select Model")
         self.resize(500, 400)
@@ -2070,6 +2078,12 @@ class ModelSelectionDialog(QDialog):
         self._info_label.setObjectName("info_label")
         layout.addWidget(self._info_label)
 
+        self._discovery_status_label = QLabel()
+        self._discovery_status_label.setWordWrap(True)
+        self._discovery_status_label.setObjectName("discovery_status_label")
+        self._discovery_status_label.setStyleSheet("QLabel { color: #6a9fb5; font-style: italic; font-size: 11px; padding: 4px; }")
+        layout.addWidget(self._discovery_status_label)
+
         self._model_list.currentRowChanged.connect(self._on_model_selected)
 
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
@@ -2086,6 +2100,35 @@ class ModelSelectionDialog(QDialog):
 
             if self._current_model and model.id == self._current_model:
                 self._model_list.setCurrentItem(item)
+
+    def _update_discovery_status(self) -> None:
+        """Update the discovery status label with the last event for the provider."""
+        if self._discovery is None or self._provider_name is None:
+            self._discovery_status_label.setText("")
+            return
+
+        event: DiscoveryEvent | None = self._discovery.get_last_event(self._provider_name)
+        if event is None:
+            self._discovery_status_label.setText("No discovery data available.")
+            return
+
+        ts = event.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        if event.success:
+            parts = [f"Last discovery: {ts} — {event.model_count} models found"]
+            if event.new_models:
+                parts.append(
+                    f"New: {', '.join(event.new_models[:_MAX_DISCOVERY_PREVIEW_ITEMS])}"
+                    + (" ..." if len(event.new_models) > _MAX_DISCOVERY_PREVIEW_ITEMS else "")
+                )
+            if event.removed_models:
+                parts.append(
+                    f"Removed: {', '.join(event.removed_models[:_MAX_DISCOVERY_PREVIEW_ITEMS])}"
+                    + (" ..." if len(event.removed_models) > _MAX_DISCOVERY_PREVIEW_ITEMS else "")
+                )
+            self._discovery_status_label.setText(" | ".join(parts))
+        else:
+            error = event.error_message or "Unknown error"
+            self._discovery_status_label.setText(f"Last discovery: {ts} — Failed: {error}")
 
     def _on_model_selected(self, index: int) -> None:
         """Handle model selection change.

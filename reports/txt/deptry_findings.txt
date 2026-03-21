@@ -1,4 +1,4 @@
-95 findings in pyproject.toml
+96 findings in pyproject.toml
 
 pyproject.toml: DEP002 'black' defined as a dependency but not used in the codebase
 
@@ -31,6 +31,8 @@ pyproject.toml: DEP002 'sourcery' defined as a dependency but not used in the co
 pyproject.toml: DEP002 'wemake-python-styleguide' defined as a dependency but not used in the codebase
 
 pyproject.toml: DEP002 'darglint' defined as a dependency but not used in the codebase
+
+pyproject.toml: DEP002 'pydoclint' defined as a dependency but not used in the codebase
 
 pyproject.toml: DEP002 'pyroma' defined as a dependency but not used in the codebase
 
@@ -210,6 +212,19 @@ src\intellicrack\bridges\binary.py:28:8: DEP003 'lief' imported but it is a tran
 src\intellicrack\bridges\binary.py:29:8: DEP003 'pefile' imported but it is a transitive dependency
 
 
+5 findings in src\intellicrack\ui\panels\hex_editor_panel.py
+
+src\intellicrack\ui\panels\hex_editor_panel.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\hex_editor_panel.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\hex_editor_panel.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\hex_editor_panel.py:48:12: DEP003 'pefile' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\hex_editor_panel.py:62:12: DEP003 'intellicrack_hexcore' imported but it is a transitive dependency
+
+
 4 findings in src\intellicrack\ui\panels\binary_panel.py
 
 src\intellicrack\ui\panels\binary_panel.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency
@@ -219,17 +234,6 @@ src\intellicrack\ui\panels\binary_panel.py:21:1: DEP003 'PyQt6' imported but it 
 src\intellicrack\ui\panels\binary_panel.py:22:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
 src\intellicrack\ui\panels\binary_panel.py:44:12: DEP003 'lief' imported but it is a transitive dependency
-
-
-4 findings in src\intellicrack\ui\panels\hex_editor_panel.py
-
-src\intellicrack\ui\panels\hex_editor_panel.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency
-
-src\intellicrack\ui\panels\hex_editor_panel.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency
-
-src\intellicrack\ui\panels\hex_editor_panel.py:43:12: DEP003 'pefile' imported but it is a transitive dependency
-
-src\intellicrack\ui\panels\hex_editor_panel.py:57:12: DEP001 'intellicrack_hexcore' imported but missing from the dependency definitions
 
 
 4 findings in src\intellicrack\ui\provider_config.py
@@ -452,9 +456,9 @@ src\intellicrack\bridges\x64dbg.py:77:12: DEP003 'keystone' imported but it is a
 
 2 findings in src\intellicrack\main.py
 
-src\intellicrack\main.py:319:9: DEP003 'PyQt6' imported but it is a transitive dependency
-
 src\intellicrack\main.py:320:9: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\main.py:321:9: DEP003 'PyQt6' imported but it is a transitive dependency
 
 
 2 findings in src\intellicrack\providers\anthropic.py
@@ -523,7 +527,7 @@ src\intellicrack\bridges\frida_bridge.py:21:8: DEP003 'frida' imported but it is
 
 1 findings in src\intellicrack\bridges\hex_editor.py
 
-src\intellicrack\bridges\hex_editor.py:28:12: DEP001 'intellicrack_hexcore' imported but missing from the dependency definitions
+src\intellicrack\bridges\hex_editor.py:36:12: DEP003 'intellicrack_hexcore' imported but it is a transitive dependency
 
 
 1 findings in src\intellicrack\bridges\installer.py

@@ -23,7 +23,7 @@ tests/test_providers\test_agentic_capabilities.py:217:9: F841 local variable '_c
 
 1 findings in src/intellicrack/bridges\ghidra.py
 
-src/intellicrack/bridges\ghidra.py:2379:141: E501 line too long (146 > 140 characters)
+src/intellicrack/bridges\ghidra.py:2390:141: E501 line too long (146 > 140 characters)
 
 
 1 findings in src/intellicrack/sandbox\windows.py

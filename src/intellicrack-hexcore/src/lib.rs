@@ -268,8 +268,9 @@ impl HexDocument {
     }
 
     fn inspect_at(&self, py: Python<'_>, offset: usize) -> PyResult<PyObject> {
-        let data = self.inner.read_all();
-        let inspection = data_inspector::inspect_at(&data, offset);
+        let needed = 16.min(self.inner.document_size().saturating_sub(offset));
+        let slice = self.inner.read(offset, needed);
+        let inspection = data_inspector::inspect_at(&slice, 0);
         let dict = PyDict::new(py);
         for (key, value) in inspection.to_map() {
             dict.set_item(key, value)?;
@@ -278,9 +279,17 @@ impl HexDocument {
     }
 
     fn compute_hash(&self, py: Python<'_>, algorithm: &str) -> PyResult<String> {
-        let data = self.inner.read_all();
+        let doc_size = self.inner.document_size();
+        let chunk_size: usize = 65536;
+        let mut all_data = Vec::with_capacity(doc_size);
+        let mut offset: usize = 0;
+        while offset < doc_size {
+            let len = chunk_size.min(doc_size - offset);
+            all_data.extend_from_slice(&self.inner.read(offset, len));
+            offset += len;
+        }
         let algo = algorithm.to_string();
-        let result = py.allow_threads(|| hash::compute_hash(&data, &algo));
+        let result = py.allow_threads(|| hash::compute_hash(&all_data, &algo));
         match result {
             Ok(r) => Ok(r.hex_digest),
             Err(e) => Err(pyo3::exceptions::PyValueError::new_err(e.to_string())),
@@ -294,9 +303,15 @@ impl HexDocument {
         end: usize,
         algorithm: &str,
     ) -> PyResult<String> {
-        let data = self.inner.read_all();
+        let actual_end = end.min(self.inner.document_size());
+        if start > actual_end {
+            return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                "invalid range: start={}, end={}", start, actual_end
+            )));
+        }
+        let range_data = self.inner.read(start, actual_end - start);
         let algo = algorithm.to_string();
-        let result = py.allow_threads(|| hash::compute_hash_range(&data, start, end, &algo));
+        let result = py.allow_threads(|| hash::compute_hash(&range_data, &algo));
         match result {
             Ok(r) => Ok(r.hex_digest),
             Err(e) => Err(pyo3::exceptions::PyValueError::new_err(e.to_string())),
@@ -304,10 +319,17 @@ impl HexDocument {
     }
 
     fn byte_statistics(&self) -> Vec<(u8, usize)> {
-        let data = self.inner.read_all();
         let mut counts = [0usize; 256];
-        for &b in &data {
-            counts[b as usize] += 1;
+        let doc_size = self.inner.document_size();
+        let chunk_size: usize = 65536;
+        let mut offset: usize = 0;
+        while offset < doc_size {
+            let len = chunk_size.min(doc_size - offset);
+            let chunk = self.inner.read(offset, len);
+            for &b in &chunk {
+                counts[b as usize] += 1;
+            }
+            offset += len;
         }
         counts
             .iter()

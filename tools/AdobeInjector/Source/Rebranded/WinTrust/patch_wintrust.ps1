@@ -15,15 +15,15 @@ function Test-ExecutionPolicy {
         $policy = Get-ExecutionPolicy -Scope CurrentUser -ErrorAction SilentlyContinue
         if ($policy -eq 'Restricted' -or $policy -eq 'AllSigned') {
             Write-Warning "Current execution policy ($policy) may prevent running this script."
-            Write-Host "To allow running scripts, you can set the execution policy to RemoteSigned or Bypass."
-            Write-Host "Run this command in an elevated PowerShell prompt:"
-            Write-Host "    Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force"
-            Write-Host "Alternatively, run this script with: powershell.exe -ExecutionPolicy Bypass -File .\patch.ps1"
+            Write-Information -MessageData "To allow running scripts, you can set the execution policy to RemoteSigned or Bypass." -InformationAction Continue
+            Write-Information -MessageData "Run this command in an elevated PowerShell prompt:" -InformationAction Continue
+            Write-Information -MessageData "    Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force" -InformationAction Continue
+            Write-Information -MessageData "Alternatively, run this script with: powershell.exe -ExecutionPolicy Bypass -File .\patch.ps1" -InformationAction Continue
             exit 1
         }
     }
     catch {
-        Write-Host "Skipping execution policy check (module not available)" -ForegroundColor Yellow
+        Write-Warning "Skipping execution policy check (module not available)"
     }
 }
 

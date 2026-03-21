@@ -746,8 +746,7 @@ class GhidraPanel(AnalysisPanelBase):
             )
             if not path_str:
                 return
-            ghidra_path = Path(path_str)
-            self._bridge.ghidra_path = ghidra_path
+            self.set_ghidra_path(Path(path_str))
 
         project_dir = Path(tempfile.gettempdir()) / "intellicrack_ghidra"
         self._headless_btn.setEnabled(False)
@@ -760,7 +759,11 @@ class GhidraPanel(AnalysisPanelBase):
 
     def _on_headless_started(self) -> None:
         """Handle successful headless start."""
-        self._set_status("Headless Ghidra started")
+        project_path = self._bridge.project_path if self._bridge is not None else None
+        if project_path is not None:
+            self._set_status(f"Headless Ghidra started | Project: {project_path}")
+        else:
+            self._set_status("Headless Ghidra started")
         _logger.info("ghidra_headless_started", bridge_type="ghidra")
         self._headless_btn.setEnabled(True)
         self._sync_toolbar_state()

@@ -310,6 +310,27 @@ class AnthropicProvider(LLMProviderBase):
 
         return content, tool_calls, thinking_text
 
+    async def _make_anthropic_api_call(self, api_kwargs: dict[str, Any]) -> AnthropicMessage:
+        """Execute the Anthropic messages API call with exception translation.
+
+        Args:
+            api_kwargs: Keyword arguments to pass to messages.create.
+
+        Returns:
+            The Anthropic API response message.
+
+        Raises:
+            ProviderError: If the client is not initialized.
+            RateLimitError: If the API returns a rate limit response.
+        """
+        if self._client is None:
+            raise ProviderError(_MSG_NOT_CONNECTED)
+        try:
+            return cast("AnthropicMessage", await self._client.messages.create(**api_kwargs))
+        except anthropic.RateLimitError as e:
+            self._logger.warning("anthropic_rate_limited", error=str(e))
+            raise RateLimitError(_MSG_RATE_LIMITED) from e
+
     async def chat(
         self,
         messages: list[Message],
@@ -373,7 +394,7 @@ class AnthropicProvider(LLMProviderBase):
         )
 
         try:
-            response = cast("AnthropicMessage", await self._client.messages.create(**api_kwargs))
+            response = await self._retry_with_backoff(lambda: self._make_anthropic_api_call(api_kwargs))
             duration_ms = (time.perf_counter() - start_time) * 1000
             content, tool_calls, thinking_text = self._parse_response_blocks(response)
             if thinking_text:
@@ -397,9 +418,8 @@ class AnthropicProvider(LLMProviderBase):
                 tool_calls=tool_calls,
                 duration_ms=duration_ms,
             )
-        except anthropic.RateLimitError as e:
-            self._logger.warning("anthropic_rate_limited", error=str(e))
-            raise RateLimitError(_MSG_RATE_LIMITED) from e
+        except RateLimitError:
+            raise
         except Exception as e:
             self._logger.warning("anthropic_request_failed", error=str(e))
             raise ProviderError(_MSG_REQUEST_FAILED) from e

@@ -1203,6 +1203,12 @@
     {
       "complexity": 0,
       "file_name": "ghidra.py",
+      "function_name": "GhidraBridge::project_path",
+      "path": "src\\intellicrack\\bridges\\ghidra.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "ghidra.py",
       "function_name": "GhidraBridge::tool_definition",
       "path": "src\\intellicrack\\bridges\\ghidra.py"
     },
@@ -1453,15 +1459,15 @@
       "path": "src\\intellicrack\\bridges\\ghidra.py"
     },
     {
-      "complexity": 11,
+      "complexity": 12,
       "file_name": "ghidra.py",
-      "function_name": "GhidraBridge::shutdown",
+      "function_name": "GhidraBridge::get_functions",
       "path": "src\\intellicrack\\bridges\\ghidra.py"
     },
     {
       "complexity": 12,
       "file_name": "ghidra.py",
-      "function_name": "GhidraBridge::get_functions",
+      "function_name": "GhidraBridge::shutdown",
       "path": "src\\intellicrack\\bridges\\ghidra.py"
     },
     {
@@ -1491,12 +1497,6 @@
     {
       "complexity": 0,
       "file_name": "hex_editor.py",
-      "function_name": "HexEditorBridge::goto_offset",
-      "path": "src\\intellicrack\\bridges\\hex_editor.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::is_available",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
@@ -1515,7 +1515,13 @@
     {
       "complexity": 0,
       "file_name": "hex_editor.py",
-      "function_name": "HexEditorBridge::select_range",
+      "function_name": "HexEditorBridge::set_state_holder",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::set_tool_registry",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -1539,13 +1545,7 @@
     {
       "complexity": 1,
       "file_name": "hex_editor.py",
-      "function_name": "HexEditorBridge::close_file",
-      "path": "src\\intellicrack\\bridges\\hex_editor.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "hex_editor.py",
-      "function_name": "HexEditorBridge::delete_bytes",
+      "function_name": "HexEditorBridge::calculate_hash_range",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -1557,7 +1557,7 @@
     {
       "complexity": 1,
       "file_name": "hex_editor.py",
-      "function_name": "HexEditorBridge::insert_bytes",
+      "function_name": "HexEditorBridge::goto_offset",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -1575,19 +1575,7 @@
     {
       "complexity": 1,
       "file_name": "hex_editor.py",
-      "function_name": "HexEditorBridge::redo",
-      "path": "src\\intellicrack\\bridges\\hex_editor.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::remove_bookmark",
-      "path": "src\\intellicrack\\bridges\\hex_editor.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "hex_editor.py",
-      "function_name": "HexEditorBridge::replace_bytes",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -1611,19 +1599,13 @@
     {
       "complexity": 1,
       "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::select_range",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::shutdown",
-      "path": "src\\intellicrack\\bridges\\hex_editor.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "hex_editor.py",
-      "function_name": "HexEditorBridge::undo",
-      "path": "src\\intellicrack\\bridges\\hex_editor.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "hex_editor.py",
-      "function_name": "HexEditorBridge::write_bytes",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -1635,13 +1617,43 @@
     {
       "complexity": 2,
       "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::close_file",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::delete_bytes",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::get_document_info",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::initialize",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
       "complexity": 2,
       "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::insert_bytes",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::inspect_data_at",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::write_bytes",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -1653,6 +1665,24 @@
     {
       "complexity": 3,
       "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::redo",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::replace_bytes",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::undo",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::open_file",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
@@ -1663,9 +1693,27 @@
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
-      "complexity": 6,
+      "complexity": 8,
       "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::save",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::save_to_sandbox",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::test_in_sandbox",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::get_context_for_ai",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -1673,6 +1721,96 @@
       "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::copy_as",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_state.py",
+      "function_name": "HexDocumentState::__init__",
+      "path": "src\\intellicrack\\bridges\\hex_state.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_state.py",
+      "function_name": "HexDocumentState::clear_selection",
+      "path": "src\\intellicrack\\bridges\\hex_state.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_state.py",
+      "function_name": "HexDocumentState::cursor_offset",
+      "path": "src\\intellicrack\\bridges\\hex_state.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_state.py",
+      "function_name": "HexDocumentState::document",
+      "path": "src\\intellicrack\\bridges\\hex_state.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_state.py",
+      "function_name": "HexDocumentState::file_path",
+      "path": "src\\intellicrack\\bridges\\hex_state.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_state.py",
+      "function_name": "HexDocumentState::notify_data_modified",
+      "path": "src\\intellicrack\\bridges\\hex_state.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_state.py",
+      "function_name": "HexDocumentState::notify_document_saved",
+      "path": "src\\intellicrack\\bridges\\hex_state.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_state.py",
+      "function_name": "HexDocumentState::register_callback",
+      "path": "src\\intellicrack\\bridges\\hex_state.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_state.py",
+      "function_name": "HexDocumentState::selection",
+      "path": "src\\intellicrack\\bridges\\hex_state.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_state.py",
+      "function_name": "HexDocumentState::set_cursor",
+      "path": "src\\intellicrack\\bridges\\hex_state.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_state.py",
+      "function_name": "HexDocumentState::set_selection",
+      "path": "src\\intellicrack\\bridges\\hex_state.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_state.py",
+      "function_name": "HexDocumentState::unregister_callback",
+      "path": "src\\intellicrack\\bridges\\hex_state.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_state.py",
+      "function_name": "_CallbackEntry::__init__",
+      "path": "src\\intellicrack\\bridges\\hex_state.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "hex_state.py",
+      "function_name": "HexDocumentState::set_document",
+      "path": "src\\intellicrack\\bridges\\hex_state.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "hex_state.py",
+      "function_name": "HexDocumentState::_notify",
+      "path": "src\\intellicrack\\bridges\\hex_state.py"
     },
     {
       "complexity": 0,
@@ -3445,12 +3583,6 @@
       "path": "src\\intellicrack\\core\\orchestrator.py"
     },
     {
-      "complexity": 5,
-      "file_name": "orchestrator.py",
-      "function_name": "Orchestrator::shutdown",
-      "path": "src\\intellicrack\\core\\orchestrator.py"
-    },
-    {
       "complexity": 7,
       "file_name": "orchestrator.py",
       "function_name": "Orchestrator::_get_model_context_window",
@@ -3490,6 +3622,12 @@
       "complexity": 13,
       "file_name": "orchestrator.py",
       "function_name": "Orchestrator::reanalyze_bridge_analysis",
+      "path": "src\\intellicrack\\core\\orchestrator.py"
+    },
+    {
+      "complexity": 13,
+      "file_name": "orchestrator.py",
+      "function_name": "Orchestrator::shutdown",
       "path": "src\\intellicrack\\core\\orchestrator.py"
     },
     {
@@ -4279,7 +4417,7 @@
       "path": "src\\intellicrack\\core\\tools.py"
     },
     {
-      "complexity": 12,
+      "complexity": 16,
       "file_name": "tools.py",
       "function_name": "ToolRegistry::execute_tool_call",
       "path": "src\\intellicrack\\core\\tools.py"
@@ -4839,6 +4977,12 @@
     {
       "complexity": 0,
       "file_name": "main.py",
+      "function_name": "_get_provider_registry",
+      "path": "src\\intellicrack\\main.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "main.py",
       "function_name": "_import_config_class",
       "path": "src\\intellicrack\\main.py"
     },
@@ -4870,12 +5014,6 @@
       "complexity": 0,
       "file_name": "main.py",
       "function_name": "_import_process_manager",
-      "path": "src\\intellicrack\\main.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "main.py",
-      "function_name": "_import_provider_registry",
       "path": "src\\intellicrack\\main.py"
     },
     {
@@ -5014,6 +5152,12 @@
       "complexity": 1,
       "file_name": "anthropic.py",
       "function_name": "AnthropicProvider::get_system_prompt",
+      "path": "src\\intellicrack\\providers\\anthropic.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "anthropic.py",
+      "function_name": "AnthropicProvider::_make_anthropic_api_call",
       "path": "src\\intellicrack\\providers\\anthropic.py"
     },
     {
@@ -6103,7 +6247,7 @@
       "path": "src\\intellicrack\\providers\\openai.py"
     },
     {
-      "complexity": 9,
+      "complexity": 10,
       "file_name": "openai.py",
       "function_name": "OpenAIProvider::chat",
       "path": "src\\intellicrack\\providers\\openai.py"
@@ -6589,7 +6733,7 @@
       "path": "src\\intellicrack\\sandbox\\manager.py"
     },
     {
-      "complexity": 16,
+      "complexity": 21,
       "file_name": "manager.py",
       "function_name": "SandboxManager::create",
       "path": "src\\intellicrack\\sandbox\\manager.py"
@@ -6747,12 +6891,6 @@
     {
       "complexity": 3,
       "file_name": "qemu.py",
-      "function_name": "QEMUSandbox::_create_guest_agent_script",
-      "path": "src\\intellicrack\\sandbox\\qemu.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "qemu.py",
       "function_name": "QEMUSandbox::copy_from_sandbox",
       "path": "src\\intellicrack\\sandbox\\qemu.py"
     },
@@ -6771,6 +6909,12 @@
     {
       "complexity": 4,
       "file_name": "qemu.py",
+      "function_name": "QEMUSandbox::_create_guest_agent_script",
+      "path": "src\\intellicrack\\sandbox\\qemu.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "qemu.py",
       "function_name": "QEMUSandbox::_get_free_port",
       "path": "src\\intellicrack\\sandbox\\qemu.py"
     },
@@ -6781,7 +6925,7 @@
       "path": "src\\intellicrack\\sandbox\\qemu.py"
     },
     {
-      "complexity": 6,
+      "complexity": 7,
       "file_name": "qemu.py",
       "function_name": "QEMUSandbox::_generate_execution_script",
       "path": "src\\intellicrack\\sandbox\\qemu.py"
@@ -6853,7 +6997,7 @@
       "path": "src\\intellicrack\\sandbox\\qemu.py"
     },
     {
-      "complexity": 12,
+      "complexity": 13,
       "file_name": "qemu.py",
       "function_name": "QEMUSandbox::run_binary",
       "path": "src\\intellicrack\\sandbox\\qemu.py"
@@ -6867,13 +7011,13 @@
     {
       "complexity": 16,
       "file_name": "qemu.py",
-      "function_name": "QEMUSandbox::_build_qemu_command",
+      "function_name": "QEMUSandbox::_detect_accelerator",
       "path": "src\\intellicrack\\sandbox\\qemu.py"
     },
     {
-      "complexity": 16,
+      "complexity": 17,
       "file_name": "qemu.py",
-      "function_name": "QEMUSandbox::_detect_accelerator",
+      "function_name": "QEMUSandbox::_build_qemu_command",
       "path": "src\\intellicrack\\sandbox\\qemu.py"
     },
     {
@@ -7405,12 +7549,6 @@
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
-      "complexity": 4,
-      "file_name": "app.py",
-      "function_name": "MainWindow::closeEvent",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
       "complexity": 5,
       "file_name": "app.py",
       "function_name": "MainWindow::_apply_smart_window_size",
@@ -7474,6 +7612,12 @@
       "complexity": 8,
       "file_name": "app.py",
       "function_name": "MainWindow::_refresh_model_discovery_status",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "app.py",
+      "function_name": "MainWindow::closeEvent",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -9093,12 +9237,6 @@
     {
       "complexity": 0,
       "file_name": "ghidra_panel.py",
-      "function_name": "GhidraPanel::_on_headless_started",
-      "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "ghidra_panel.py",
       "function_name": "GhidraPanel::_on_refresh_funcs_error",
       "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py"
     },
@@ -9265,6 +9403,12 @@
       "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py"
     },
     {
+      "complexity": 3,
+      "file_name": "ghidra_panel.py",
+      "function_name": "GhidraPanel::_on_headless_started",
+      "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py"
+    },
+    {
       "complexity": 4,
       "file_name": "ghidra_panel.py",
       "function_name": "GhidraPanel::_apply_xrefs_from",
@@ -9397,6 +9541,12 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
     },
     {
+      "complexity": 0,
+      "file_name": "hex_editor_panel.py",
+      "function_name": "HexEditorPanel::_setup_shortcuts",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+    },
+    {
       "complexity": 1,
       "file_name": "hex_editor_panel.py",
       "function_name": "HexEditorPanel::_build_side_panels",
@@ -9405,7 +9555,25 @@
     {
       "complexity": 1,
       "file_name": "hex_editor_panel.py",
+      "function_name": "HexEditorPanel::_focus_goto",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_editor_panel.py",
+      "function_name": "HexEditorPanel::_focus_search",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_editor_panel.py",
       "function_name": "HexEditorPanel::_on_edit_mode_changed",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_editor_panel.py",
+      "function_name": "HexEditorPanel::_on_string_double_clicked",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
     },
     {
@@ -9421,9 +9589,27 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
     },
     {
+      "complexity": 2,
+      "file_name": "hex_editor_panel.py",
+      "function_name": "HexEditorPanel::_select_template",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+    },
+    {
       "complexity": 3,
       "file_name": "hex_editor_panel.py",
       "function_name": "HexEditorPanel::_cleanup",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "hex_editor_panel.py",
+      "function_name": "HexEditorPanel::_on_find_next",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "hex_editor_panel.py",
+      "function_name": "HexEditorPanel::_on_find_prev",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
     },
     {
@@ -9507,19 +9693,25 @@
     {
       "complexity": 8,
       "file_name": "hex_editor_panel.py",
+      "function_name": "HexEditorPanel::_cache_original_byte",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "hex_editor_panel.py",
       "function_name": "HexEditorPanel::_on_goto_offset",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "hex_editor_panel.py",
+      "function_name": "HexEditorPanel::_on_send_to_ai",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
     },
     {
       "complexity": 10,
       "file_name": "hex_editor_panel.py",
       "function_name": "HexEditorPanel::_populate_sections",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 13,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::load_file",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
     },
     {
@@ -9535,9 +9727,27 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
     },
     {
+      "complexity": 15,
+      "file_name": "hex_editor_panel.py",
+      "function_name": "HexEditorPanel::load_file",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+    },
+    {
+      "complexity": 17,
+      "file_name": "hex_editor_panel.py",
+      "function_name": "HexEditorPanel::_auto_detect_file_type",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+    },
+    {
       "complexity": 20,
       "file_name": "hex_editor_panel.py",
       "function_name": "HexEditorPanel::_on_search",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+    },
+    {
+      "complexity": 27,
+      "file_name": "hex_editor_panel.py",
+      "function_name": "HexEditorPanel::_populate_strings",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
     },
     {
@@ -9547,9 +9757,21 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
     },
     {
+      "complexity": 28,
+      "file_name": "hex_editor_panel.py",
+      "function_name": "HexEditorPanel::_update_patches",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+    },
+    {
       "complexity": 29,
       "file_name": "hex_editor_panel.py",
       "function_name": "HexEditorPanel::_populate_exports",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+    },
+    {
+      "complexity": 31,
+      "file_name": "hex_editor_panel.py",
+      "function_name": "HexEditorPanel::set_state_holder",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
     },
     {
@@ -9763,7 +9985,13 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
     },
     {
-      "complexity": 41,
+      "complexity": 24,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "HexEditorWidget::_do_paste",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
+      "complexity": 43,
       "file_name": "hex_editor_widget.py",
       "function_name": "HexEditorWidget::keyPressEvent",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
@@ -9861,6 +10089,12 @@
     {
       "complexity": 1,
       "file_name": "process_panel.py",
+      "function_name": "ProcessPanel::_build_tracked_tab",
+      "path": "src\\intellicrack\\ui\\panels\\process_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "process_panel.py",
       "function_name": "ProcessPanel::_on_attach",
       "path": "src\\intellicrack\\ui\\panels\\process_panel.py"
     },
@@ -9868,6 +10102,12 @@
       "complexity": 1,
       "file_name": "process_panel.py",
       "function_name": "ProcessPanel::_on_refresh_finished",
+      "path": "src\\intellicrack\\ui\\panels\\process_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "process_panel.py",
+      "function_name": "ProcessPanel::_on_top_tab_changed",
       "path": "src\\intellicrack\\ui\\panels\\process_panel.py"
     },
     {
@@ -9880,6 +10120,12 @@
       "complexity": 2,
       "file_name": "process_panel.py",
       "function_name": "ProcessPanel::_on_process_selection_changed",
+      "path": "src\\intellicrack\\ui\\panels\\process_panel.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "process_panel.py",
+      "function_name": "ProcessPanel::_on_tracked_auto_refresh_toggled",
       "path": "src\\intellicrack\\ui\\panels\\process_panel.py"
     },
     {
@@ -9898,6 +10144,12 @@
       "complexity": 4,
       "file_name": "process_panel.py",
       "function_name": "ProcessPanel::_load_process_details",
+      "path": "src\\intellicrack\\ui\\panels\\process_panel.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "process_panel.py",
+      "function_name": "ProcessPanel::_refresh_tracked_tab",
       "path": "src\\intellicrack\\ui\\panels\\process_panel.py"
     },
     {
@@ -10065,6 +10317,12 @@
     {
       "complexity": 0,
       "file_name": "sandbox_panel.py",
+      "function_name": "SandboxPanel::_on_cleanup_stale_error",
+      "path": "src\\intellicrack\\ui\\panels\\sandbox_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "sandbox_panel.py",
       "function_name": "SandboxPanel::_on_create_error",
       "path": "src\\intellicrack\\ui\\panels\\sandbox_panel.py"
     },
@@ -10215,7 +10473,7 @@
     {
       "complexity": 2,
       "file_name": "sandbox_panel.py",
-      "function_name": "SandboxPanel::_on_create",
+      "function_name": "SandboxPanel::_on_cleanup_stale_success",
       "path": "src\\intellicrack\\ui\\panels\\sandbox_panel.py"
     },
     {
@@ -10240,6 +10498,12 @@
       "complexity": 3,
       "file_name": "sandbox_panel.py",
       "function_name": "SandboxPanel::_connect_vnc_display",
+      "path": "src\\intellicrack\\ui\\panels\\sandbox_panel.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "sandbox_panel.py",
+      "function_name": "SandboxPanel::_on_create",
       "path": "src\\intellicrack\\ui\\panels\\sandbox_panel.py"
     },
     {
@@ -10639,7 +10903,7 @@
       "path": "src\\intellicrack\\ui\\panels\\stack_viewer.py"
     },
     {
-      "complexity": 8,
+      "complexity": 12,
       "file_name": "stack_viewer.py",
       "function_name": "StackFrameTable::set_frames",
       "path": "src\\intellicrack\\ui\\panels\\stack_viewer.py"
@@ -11835,6 +12099,12 @@
     {
       "complexity": 10,
       "file_name": "provider_config.py",
+      "function_name": "ModelSelectionDialog::_update_discovery_status",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "provider_config.py",
       "function_name": "ProviderSettingsWidget::_persist_api_key_to_env",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
@@ -12933,6 +13203,12 @@
     {
       "complexity": 0,
       "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::_on_hex_context_push",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "tools.py",
       "function_name": "ToolOutputPanel::_on_xref_selected",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
@@ -13372,6 +13648,12 @@
       "complexity": 15,
       "file_name": "tools.py",
       "function_name": "ToolOutputPanel::add_sandbox_tab",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 17,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::_wire_hex_editor_state",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
     {

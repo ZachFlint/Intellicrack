@@ -1,6 +1,6 @@
 {
   "tool": "mypy",
-  "generated": "2026-03-20T11:30:35.785954",
+  "generated": "2026-03-20T17:24:15.975920",
   "total_findings": 93,
   "total_files": 27,
   "files": [
@@ -397,36 +397,36 @@
           "raw": "src\\intellicrack\\ui\\provider_config.py:85: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], str]\")  [assignment]"
         },
         {
-          "line": 1952,
+          "line": 1953,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:1952: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1953: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1969,
+          "line": 1970,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:1969: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1970: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 1989,
+          "line": 1990,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:1989: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1990: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 2014,
+          "line": 2015,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:2014: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\ui\\provider_config.py:2015: error: Statement is unreachable  [unreachable]"
         }
       ]
     },
@@ -569,28 +569,6 @@
       ]
     },
     {
-      "path": "tests\\test_ui\\test_font_manager.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 141,
-          "column": null,
-          "severity": "error",
-          "code": "comparison-overlap",
-          "message": "Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")",
-          "raw": "tests\\test_ui\\test_font_manager.py:141: error: Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")  [comparison-overlap]"
-        },
-        {
-          "line": 182,
-          "column": null,
-          "severity": "error",
-          "code": "comparison-overlap",
-          "message": "Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")",
-          "raw": "tests\\test_ui\\test_font_manager.py:182: error: Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")  [comparison-overlap]"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\credentials\\store.py",
       "count": 2,
       "findings": [
@@ -657,6 +635,28 @@
       ]
     },
     {
+      "path": "tests\\test_ui\\test_font_manager.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 141,
+          "column": null,
+          "severity": "error",
+          "code": "comparison-overlap",
+          "message": "Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")",
+          "raw": "tests\\test_ui\\test_font_manager.py:141: error: Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")  [comparison-overlap]"
+        },
+        {
+          "line": 182,
+          "column": null,
+          "severity": "error",
+          "code": "comparison-overlap",
+          "message": "Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")",
+          "raw": "tests\\test_ui\\test_font_manager.py:182: error: Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")  [comparison-overlap]"
+        }
+      ]
+    },
+    {
       "path": "tests\\test_providers\\test_local_transformers_provider.py",
       "count": 2,
       "findings": [
@@ -701,20 +701,6 @@
       ]
     },
     {
-      "path": "tests\\test_ui\\test_graph_view.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 335,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QGraphicsScene | None\" has no attribute \"items\"",
-          "raw": "tests\\test_ui\\test_graph_view.py:335: error: Item \"None\" of \"QGraphicsScene | None\" has no attribute \"items\"  [union-attr]"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\credentials\\env_loader.py",
       "count": 1,
       "findings": [
@@ -733,26 +719,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 205,
+          "line": 206,
           "column": null,
           "severity": "error",
           "code": "union-attr",
           "message": "Item \"None\" of \"StreamReader | None\" has no attribute \"readline\"",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:205: error: Item \"None\" of \"StreamReader | None\" has no attribute \"readline\"  [union-attr]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\bridges\\hex_editor.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 755,
-          "column": null,
-          "severity": "error",
-          "code": "no-redef",
-          "message": "Name \"data\" already defined on line 749",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:755: error: Name \"data\" already defined on line 749  [no-redef]"
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:206: error: Item \"None\" of \"StreamReader | None\" has no attribute \"readline\"  [union-attr]"
         }
       ]
     },
@@ -781,20 +753,6 @@
           "code": "no-untyped-def",
           "message": "Function is missing a type annotation for one or more arguments",
           "raw": "tests\\test_providers\\test_huggingface_provider.py:202: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\model_loader.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 28,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:28: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
         }
       ]
     },
@@ -841,34 +799,6 @@
       ]
     },
     {
-      "path": "tests\\test_ui\\test_sandbox_panel_fixes.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 75,
-          "column": null,
-          "severity": "error",
-          "code": "arg-type",
-          "message": "Argument 1 to \"set_sandbox_manager\" of \"SandboxPanel\" has incompatible type \"object\"; expected \"SandboxManager\"",
-          "raw": "tests\\test_ui\\test_sandbox_panel_fixes.py:75: error: Argument 1 to \"set_sandbox_manager\" of \"SandboxPanel\" has incompatible type \"object\"; expected \"SandboxManager\"  [arg-type]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\local_transformers.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 65,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:65: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
-        }
-      ]
-    },
-    {
       "path": "tests\\test_providers\\test_model_discovery.py",
       "count": 1,
       "findings": [
@@ -893,6 +823,76 @@
           "code": "no-untyped-def",
           "message": "Function is missing a type annotation for one or more arguments",
           "raw": "tests\\test_providers\\test_google_provider.py:194: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_ui\\test_graph_view.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 335,
+          "column": null,
+          "severity": "error",
+          "code": "union-attr",
+          "message": "Item \"None\" of \"QGraphicsScene | None\" has no attribute \"items\"",
+          "raw": "tests\\test_ui\\test_graph_view.py:335: error: Item \"None\" of \"QGraphicsScene | None\" has no attribute \"items\"  [union-attr]"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_ui\\test_sandbox_panel_fixes.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 75,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 1 to \"set_sandbox_manager\" of \"SandboxPanel\" has incompatible type \"object\"; expected \"SandboxManager\"",
+          "raw": "tests\\test_ui\\test_sandbox_panel_fixes.py:75: error: Argument 1 to \"set_sandbox_manager\" of \"SandboxPanel\" has incompatible type \"object\"; expected \"SandboxManager\"  [arg-type]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\model_loader.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 28,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
+          "raw": "src\\intellicrack\\providers\\model_loader.py:28: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\bridges\\hex_editor.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 923,
+          "column": null,
+          "severity": "error",
+          "code": "no-redef",
+          "message": "Name \"data\" already defined on line 917",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:923: error: Name \"data\" already defined on line 917  [no-redef]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\local_transformers.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 65,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:65: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
         }
       ]
     },

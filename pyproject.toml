@@ -59,6 +59,7 @@ dependencies = [
   "sourcery",
   "wemake-python-styleguide",
   "darglint",
+  "pydoclint",
   "pyroma",
   "yapf",
   "mccabe",
@@ -163,6 +164,7 @@ dev = [
   "sourcery",
   "wemake-python-styleguide",
   "darglint",
+  "pydoclint",
   "pyroma",
   "yapf",
   "mccabe",
@@ -284,11 +286,13 @@ taplo = ">=0.10.0,<0.11"
 yamlfmt = ">=0.21.0,<0.22"
 pixi-pycharm = ">=0.0.10,<0.0.11"
 capstone = ">=5.0.7,<6"
+rust = "*"
 
 [tool.pixi.pypi-dependencies]
 intellicrack = { path = ".", editable = true }
 # Build/packaging
 pip = ">=26.0.1, <27"
+maturin = "*"
 wheel = ">=0.46.3, <0.47"
 setuptools = "*"
 build = ">=1.4.0, <2"
@@ -348,6 +352,7 @@ pydocstyle = ">=6.3.0, <7"
 sourcery = ">=1.43.0, <2"
 wemake-python-styleguide = ">=1.6.1, <2"
 darglint = ">=1.8.1, <2"
+pydoclint = ">=0.5.0, <1"
 pyroma = ">=5.0.1, <6"
 mypy-extensions = ">=1.1.0, <2"
 dead = ">=2.1.0, <3"
@@ -900,12 +905,11 @@ ignore-names-if-inherits-from = [
 ]
 
 [tool.interrogate]
-ignore-init-method = true
-ignore-init-module = true
-ignore-magic = true
+ignore-init-module = false
+ignore-magic = false
 ignore-semiprivate = false
 ignore-private = false
-ignore-property-decorators = true
+ignore-property-decorators = false
 ignore-module = false
 ignore-nested-functions = true
 ignore-nested-classes = true
@@ -927,6 +931,12 @@ exclude = [
   "typings",
   "stubs",
 ]
+
+[tool.pydoclint]
+style = "google"
+arg-type-hints-in-docstring = false
+check-return-types = true
+check-yield-types = true
 
 [tool.deptry]
 known_first_party = [ "intellicrack" ]

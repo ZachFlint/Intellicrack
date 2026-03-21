@@ -103,6 +103,8 @@ class FridaPanel(AnalysisPanelBase):
         self._device_combo.currentTextChanged.connect(self._on_device_changed)
         toolbar.addWidget(self._device_combo)
 
+        self._refresh_devices_btn = self._add_secondary_button(toolbar, "Refresh Devices", self.refresh_devices)
+
         toolbar.addSeparator()
 
         self._add_toolbar_label(toolbar, "Target:")

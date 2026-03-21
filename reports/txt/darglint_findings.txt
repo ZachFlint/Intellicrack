@@ -1,3 +1,15 @@
-1 findings in src\intellicrack\bridges\hex_editor.py
+2 findings in src\intellicrack\bridges\hex_editor.py
 
-src\intellicrack\bridges\hex_editor.py:save_as:871: DAR402: +r RuntimeError
+src\intellicrack\bridges\hex_editor.py:save_as:1042: DAR402: +r RuntimeError
+
+src\intellicrack\bridges\hex_editor.py:test_in_sandbox:1203: DAR401: -r TypeError
+
+
+1 findings in src\intellicrack\providers\openai.py
+
+src\intellicrack\providers\openai.py:chat:298: DAR402: +r RateLimitError
+
+
+1 findings in src\intellicrack\sandbox\qemu.py
+
+src\intellicrack\sandbox\qemu.py:run_command:1528: DAR402: +r ValueError

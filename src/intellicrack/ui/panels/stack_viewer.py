@@ -267,8 +267,8 @@ class StackFrameTable(QTableWidget):
 
     def _setup_ui(self) -> None:
         """Set up the table UI."""
-        self.setColumnCount(5)
-        self.setHorizontalHeaderLabels(["#", "Return Address", "Function", "Module", "Offset"])
+        self.setColumnCount(7)
+        self.setHorizontalHeaderLabels(["#", "Return Address", "Function", "Module", "Offset", "FP", "SP"])
 
         if header := self.horizontalHeader():
             header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
@@ -276,6 +276,8 @@ class StackFrameTable(QTableWidget):
             header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
             header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
             header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+            header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+            header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)
 
         self.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
@@ -355,6 +357,18 @@ class StackFrameTable(QTableWidget):
             offset_item.setFont(mono_font)
             offset_item.setForeground(QColor("#b5cea8"))
             self.setItem(row, 4, offset_item)
+
+            fp_text = f"0x{frame.frame_pointer:016X}" if frame.frame_pointer else ""
+            fp_item = QTableWidgetItem(fp_text)
+            fp_item.setFont(mono_font)
+            fp_item.setForeground(QColor("#ce9178"))
+            self.setItem(row, 5, fp_item)
+
+            sp_text = f"0x{frame.stack_pointer:016X}" if frame.stack_pointer else ""
+            sp_item = QTableWidgetItem(sp_text)
+            sp_item.setFont(mono_font)
+            sp_item.setForeground(QColor("#ce9178"))
+            self.setItem(row, 6, sp_item)
 
 
 class StackViewerPanel(QWidget):

@@ -1,6 +1,6 @@
 {
   "tool": "flake8",
-  "generated": "2026-03-20T11:25:57.401023",
+  "generated": "2026-03-20T17:20:21.650905",
   "total_findings": 13,
   "total_files": 9,
   "files": [
@@ -76,11 +76,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 2379,
+          "line": 2390,
           "column": 141,
           "code": "E501",
           "message": "line too long (146 > 140 characters)",
-          "raw": "src/intellicrack/bridges\\ghidra.py:2379:141: E501 line too long (146 > 140 characters)"
+          "raw": "src/intellicrack/bridges\\ghidra.py:2390:141: E501 line too long (146 > 140 characters)"
         }
       ]
     },

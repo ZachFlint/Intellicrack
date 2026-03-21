@@ -87,6 +87,7 @@ _PROCESS_LOG_NAME_INDEX = 3
 _PROCESS_LOG_PATH_INDEX = 4
 _PIDFILE_MAX_RETRIES = 3
 _PIDFILE_RETRY_DELAY = 2.0
+_ERR_UNSUPPORTED_GUEST_OS = "unsupported guest OS"
 
 
 class GuestOS(Enum):
@@ -817,6 +818,7 @@ class QEMUSandbox(SandboxBase):
 
         Raises:
             SandboxError: If configuration is invalid.
+            ValueError: If an unsupported guest OS is configured.
         """
         if self._qemu_path is None:
             raise SandboxError(_ERR_QEMU_PATH)
@@ -860,13 +862,15 @@ class QEMUSandbox(SandboxBase):
         if self._shared_folder is not None:
             if self._qemu_config.guest_os == GuestOS.WINDOWS:
                 netdev += f",smb={self._shared_folder}"
-            else:
+            elif self._qemu_config.guest_os == GuestOS.LINUX:
                 cmd.extend([
                     "-fsdev",
                     f"local,id=fsdev0,path={self._shared_folder},security_model=mapped-xattr",
                     "-device",
                     "virtio-9p-pci,fsdev=fsdev0,mount_tag=shared",
                 ])
+            else:
+                raise ValueError(_ERR_UNSUPPORTED_GUEST_OS)
 
         cmd.extend([
             "-netdev",
@@ -1077,7 +1081,11 @@ class QEMUSandbox(SandboxBase):
         self._shared_folder = None
 
     async def _create_guest_agent_script(self) -> None:
-        """Create guest agent monitoring scripts."""
+        """Create guest agent monitoring scripts.
+
+        Raises:
+            ValueError: If an unsupported guest OS is configured.
+        """
         if self._shared_folder is None:
             return
 
@@ -1195,7 +1203,7 @@ while ($true) {
             startup_content = """@echo off
 powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File "Z:\\monitor\\agent.ps1"
 """
-        else:
+        elif self._qemu_config.guest_os == GuestOS.LINUX:
             agent_script = monitor_dir / "agent.py"
             agent_content = '''#!/usr/bin/env python3
 """QEMU Guest Agent for Intellicrack sandbox monitoring.
@@ -1494,6 +1502,8 @@ if __name__ == "__main__":
             startup_content = """#!/bin/bash
 python3 /mnt/shared/monitor/agent.py &
 """
+        else:
+            raise ValueError(_ERR_UNSUPPORTED_GUEST_OS)
         startup_script.write_text(startup_content, encoding="utf-8")
 
         _logger.debug("guest_agent_scripts_created", extra={"path": str(monitor_dir)})
@@ -1516,6 +1526,7 @@ python3 /mnt/shared/monitor/agent.py &
 
         Raises:
             SandboxError: If execution fails.
+            ValueError: If an unsupported guest OS is configured.
         """
         if self._state.status != "running":
             raise SandboxError(_ERR_NOT_RUNNING)
@@ -1563,21 +1574,26 @@ python3 /mnt/shared/monitor/agent.py &
 
         Returns:
             Tuple of (script_filename, script_content).
+
+        Raises:
+            ValueError: If an unsupported guest OS is configured.
         """
         if self._qemu_config.guest_os == GuestOS.WINDOWS:
             script_name = f"exec_{script_id}.cmd"
             script_content = f"""@echo off
 {f'cd /d "{working_directory}"' if working_directory else ""}
 {command}
-echo %ERRORLEVEL% > "Z:\\output\\{result_name}"
+echo %ERRORLEVEL% > "{self.GUEST_SHARED_PATH_WINDOWS}output\\{result_name}"
 """
-        else:
+        elif self._qemu_config.guest_os == GuestOS.LINUX:
             script_name = f"exec_{script_id}.sh"
             script_content = f"""#!/bin/bash
 {f'cd "{working_directory}"' if working_directory else ""}
 {command}
-echo $? > "/mnt/shared/output/{result_name}"
+echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
 """
+        else:
+            raise ValueError(_ERR_UNSUPPORTED_GUEST_OS)
         return script_name, script_content
 
     @staticmethod
@@ -1633,6 +1649,7 @@ echo $? > "/mnt/shared/output/{result_name}"
 
         Raises:
             SandboxError: If execution fails.
+            ValueError: If an unsupported guest OS is configured.
         """
         if self._state.status != "running":
             raise SandboxError(_ERR_NOT_RUNNING)
@@ -1655,9 +1672,11 @@ echo $? > "/mnt/shared/output/{result_name}"
                 log_file.unlink()
 
         if self._qemu_config.guest_os == GuestOS.WINDOWS:
-            binary_sandbox_path = f"Z:\\input\\{binary_path.name}"
+            binary_sandbox_path = f"{self.GUEST_SHARED_PATH_WINDOWS}input\\{binary_path.name}"
+        elif self._qemu_config.guest_os == GuestOS.LINUX:
+            binary_sandbox_path = f"{self.GUEST_SHARED_PATH_LINUX}/input/{binary_path.name}"
         else:
-            binary_sandbox_path = f"/mnt/shared/input/{binary_path.name}"
+            raise ValueError(_ERR_UNSUPPORTED_GUEST_OS)
 
         args_str = " ".join(f'"{a}"' for a in (args or []))
         command = f'"{binary_sandbox_path}" {args_str}'

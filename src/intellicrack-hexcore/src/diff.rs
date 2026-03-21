@@ -200,7 +200,7 @@ mod tests {
 
     #[test]
     fn test_block_aligned_diff() {
-        let mut a = vec![0x00u8; 64];
+        let a = vec![0x00u8; 64];
         let mut b = vec![0x00u8; 64];
         b[32] = 0xFF;
         let result = diff_data(&a, &b);

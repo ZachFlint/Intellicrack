@@ -206,6 +206,8 @@ class SandboxManager:
 
             if auto_start:
                 try:
+                    if sandbox_type == "qemu" and isinstance(sandbox, QEMUSandbox):
+                        sandbox.enable_vnc_display()
                     await sandbox.start()
                     _logger.info("sandbox_instance_started", instance_id=instance.id)
                 except Exception as e:

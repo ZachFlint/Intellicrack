@@ -11,17 +11,6 @@ src\intellicrack\core\types.py: Unused function is_readable
 src\intellicrack\core\types.py: Unused function is_writable
 
 
-4 findings in src\intellicrack\core\process_manager.py
-
-src\intellicrack\core\process_manager.py: Unused function get_all_tracked
-
-src\intellicrack\core\process_manager.py: Unused function get_running_processes
-
-src\intellicrack\core\process_manager.py: Unused function request_shutdown
-
-src\intellicrack\core\process_manager.py: Unused function reset_instance
-
-
 4 findings in src\intellicrack\ui\panels\hex_editor_widget.py
 
 src\intellicrack\ui\panels\hex_editor_widget.py: Unused function mouseMoveEvent
@@ -42,15 +31,6 @@ src\intellicrack\ui\panels\vnc_widget.py: Unused function mouseMoveEvent
 src\intellicrack\ui\panels\vnc_widget.py: Unused function mouseReleaseEvent
 
 src\intellicrack\ui\panels\vnc_widget.py: Unused function paintEvent
-
-
-3 findings in src\intellicrack\bridges\base.py
-
-src\intellicrack\bridges\base.py: Unused function has_capability
-
-src\intellicrack\bridges\base.py: Unused function supports_arch
-
-src\intellicrack\bridges\base.py: Unused function supports_format
 
 
 3 findings in src\intellicrack\credentials\oauth.py
@@ -89,6 +69,20 @@ src\intellicrack\ui\resources\theme_manager.py: Unused function get_available_th
 src\intellicrack\ui\resources\theme_manager.py: Unused function reset_instance
 
 
+2 findings in src\intellicrack\bridges\base.py
+
+src\intellicrack\bridges\base.py: Unused function supports_arch
+
+src\intellicrack\bridges\base.py: Unused function supports_format
+
+
+2 findings in src\intellicrack\bridges\hex_state.py
+
+src\intellicrack\bridges\hex_state.py: Unused function clear_selection
+
+src\intellicrack\bridges\hex_state.py: Unused function unregister_callback
+
+
 2 findings in src\intellicrack\providers\local_transformers.py
 
 src\intellicrack\providers\local_transformers.py: Unused function current_model_id
@@ -108,29 +102,14 @@ src\intellicrack\providers\ollama.py: Unused function local_available
 src\intellicrack\core\logging.py: Unused function get_structlog_logger
 
 
+1 findings in src\intellicrack\core\process_manager.py
+
+src\intellicrack\core\process_manager.py: Unused function reset_instance
+
+
 1 findings in src\intellicrack\core\script_gen.py
 
 src\intellicrack\core\script_gen.py: Unused function prepare_ai_prompt
-
-
-1 findings in src\intellicrack\core\tools.py
-
-src\intellicrack\core\tools.py: Unused function get_hex_editor_bridge
-
-
-1 findings in src\intellicrack\providers\discovery.py
-
-src\intellicrack\providers\discovery.py: Unused function get_last_event
-
-
-1 findings in src\intellicrack\providers\registry.py
-
-src\intellicrack\providers\registry.py: Unused function get_provider_registry
-
-
-1 findings in src\intellicrack\sandbox\qemu.py
-
-src\intellicrack\sandbox\qemu.py: Unused function enable_vnc_display
 
 
 1 findings in src\intellicrack\ui\app.py
@@ -151,11 +130,6 @@ src\intellicrack\ui\highlighter.py: Unused function highlightBlock
 1 findings in src\intellicrack\ui\panels\binary_panel.py
 
 src\intellicrack\ui\panels\binary_panel.py: Unused function wheelEvent
-
-
-1 findings in src\intellicrack\ui\panels\frida_panel.py
-
-src\intellicrack\ui\panels\frida_panel.py: Unused function refresh_devices
 
 
 1 findings in src\intellicrack\ui\panels\graph_view.py

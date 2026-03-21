@@ -1,20 +1,56 @@
 {
   "tool": "darglint",
-  "generated": "2026-03-20T11:29:58.115128",
-  "total_findings": 1,
-  "total_files": 1,
+  "generated": "2026-03-20T17:23:51.364171",
+  "total_findings": 4,
+  "total_files": 3,
   "files": [
     {
       "path": "src\\intellicrack\\bridges\\hex_editor.py",
-      "count": 1,
+      "count": 2,
       "findings": [
         {
-          "line": 871,
+          "line": 1042,
           "column": null,
           "function": "save_as",
           "code": "DAR402",
           "message": "[save_as] +r RuntimeError",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:save_as:871: DAR402: +r RuntimeError"
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:save_as:1042: DAR402: +r RuntimeError"
+        },
+        {
+          "line": 1203,
+          "column": null,
+          "function": "test_in_sandbox",
+          "code": "DAR401",
+          "message": "[test_in_sandbox] -r TypeError",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:test_in_sandbox:1203: DAR401: -r TypeError"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\openai.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 298,
+          "column": null,
+          "function": "chat",
+          "code": "DAR402",
+          "message": "[chat] +r RateLimitError",
+          "raw": "src\\intellicrack\\providers\\openai.py:chat:298: DAR402: +r RateLimitError"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\sandbox\\qemu.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 1528,
+          "column": null,
+          "function": "run_command",
+          "code": "DAR402",
+          "message": "[run_command] +r ValueError",
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:run_command:1528: DAR402: +r ValueError"
         }
       ]
     }
