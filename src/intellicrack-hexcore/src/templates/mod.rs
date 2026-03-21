@@ -1,5 +1,6 @@
 pub mod common;
 pub mod elf;
+pub mod macho;
 pub mod pe;
 pub mod zip;
 
@@ -307,6 +308,7 @@ fn field_type_name(ft: &FieldType) -> &'static str {
 fn register_builtins(registry: &mut TemplateRegistry) {
     pe::register_templates(registry);
     elf::register_templates(registry);
+    macho::register_templates(registry);
     zip::register_templates(registry);
     common::register_templates(registry);
 }

@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Fri, Mar 20, 2026 11:45:37 AM
+Generated: Fri, Mar 20, 2026 06:24:36 PM
 Directory: D:\Intellicrack
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -2221,6 +2221,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   │   ├── frida_bridge.py
 │   │   │   ├── ghidra.py
 │   │   │   ├── hex_editor.py
+│   │   │   ├── hex_state.py
 │   │   │   ├── installer.py
 │   │   │   ├── named_pipe_client.py
 │   │   │   ├── process.py
@@ -2247,20 +2248,6 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   │   ├── env_loader.py
 │   │   │   ├── oauth.py
 │   │   │   └── store.py
-│   │   ├── plugins/
-│   │   │   └── x64dbg_plugin/
-│   │   │       ├── third_party/
-│   │   │       │   └── nlohmann/
-│   │   │       │       └── json.hpp
-│   │   │       ├── CMakeLists.txt
-│   │   │       ├── command_handler.cpp
-│   │   │       ├── command_handler.h
-│   │   │       ├── event_handler.cpp
-│   │   │       ├── event_handler.h
-│   │   │       ├── intellicrack_x64dbg.cpp
-│   │   │       ├── pipe_server.cpp
-│   │   │       ├── pipe_server.h
-│   │   │       └── protocol.h
 │   │   ├── providers/
 │   │   │   ├── __init__.py
 │   │   │   ├── anthropic.py
@@ -2338,6 +2325,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   ├── templates/
 │       │   │   ├── common.rs
 │       │   │   ├── elf.rs
+│       │   │   ├── macho.rs
 │       │   │   ├── mod.rs
 │       │   │   ├── pe.rs
 │       │   │   └── zip.rs
@@ -2514,7 +2502,6 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   ├── intellicrack-hexcore-4d919a4a65f236a5/
 │       │   │   │   │   ├── dep-test-lib-intellicrack_hexcore
 │       │   │   │   │   ├── invoked.timestamp
-│       │   │   │   │   ├── output-test-lib-intellicrack_hexcore
 │       │   │   │   │   ├── test-lib-intellicrack_hexcore
 │       │   │   │   │   └── test-lib-intellicrack_hexcore.json
 │       │   │   │   ├── intellicrack-hexcore-7393ad59ab21719a/
@@ -3268,24 +3255,23 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   ├── examples/
 │       │   │   ├── incremental/
 │       │   │   │   ├── intellicrack_hexcore-0xsw2n1sqgods/
-│       │   │   │   │   ├── s-hgobt9ske2-0s3uqes-b98zui3ssm8ycb6shdgowk7z1/
-│       │   │   │   │   │   ├── dep-graph.bin
-│       │   │   │   │   │   ├── query-cache.bin
-│       │   │   │   │   │   └── work-products.bin
 │       │   │   │   │   ├── s-hgobtf8b89-19u1yp3-b98zui3ssm8ycb6shdgowk7z1/
 │       │   │   │   │   │   ├── dep-graph.bin
 │       │   │   │   │   │   ├── query-cache.bin
 │       │   │   │   │   │   └── work-products.bin
-│       │   │   │   │   ├── s-hgobt9ske2-0s3uqes.lock
-│       │   │   │   │   └── s-hgobtf8b89-19u1yp3.lock
+│       │   │   │   │   ├── s-hgucbg9blo-0rb1c17-0d7rpk438w4c7j9ovljs3aehu/
+│       │   │   │   │   │   ├── dep-graph.bin
+│       │   │   │   │   │   ├── query-cache.bin
+│       │   │   │   │   │   └── work-products.bin
+│       │   │   │   │   ├── s-hgobtf8b89-19u1yp3.lock
+│       │   │   │   │   └── s-hgucbg9blo-0rb1c17.lock
 │       │   │   │   └── intellicrack_hexcore-2vcfoc3rh53jn/
-│       │   │   │       ├── s-hgobtz4vb7-05yqda6-3iy0mcjmuu000wmchfuq2s9jg/
+│       │   │   │       ├── s-hgudiglqaz-0hyrfx3-cufdrfixr90pz3cjbamzoxu1d/
 │       │   │   │       │   ├── 0051e6wpdugvg9l8m2yp26kcv.o
 │       │   │   │       │   ├── 02kpuc6ymuv6n6dcec84mslkc.o
 │       │   │   │       │   ├── 030d06of3f3k8yj0ud3d38upp.o
 │       │   │   │       │   ├── 03yiegyzy5dci42ygiy7a1dhk.o
 │       │   │   │       │   ├── 0440d0b1gjf9ywdljdyjqq867.o
-│       │   │   │       │   ├── 06508why75gvddrfe5mq7n8ek.o
 │       │   │   │       │   ├── 0a5h28jj3yh58ayrs11t5pqb8.o
 │       │   │   │       │   ├── 0asjt3xq2mu5oheho5ak9573x.o
 │       │   │   │       │   ├── 0dqkj72wvth059c0upzqlkful.o
@@ -3301,7 +3287,6 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── 0vyhhg5hd1oxw7gctfnuzcco7.o
 │       │   │   │       │   ├── 11qkejd2ozp6swvbq93gzca1t.o
 │       │   │   │       │   ├── 15qx7hnm88yyycc96jpwd64vy.o
-│       │   │   │       │   ├── 18iiwmo1b3guztjttieskhdkw.o
 │       │   │   │       │   ├── 19pxgnbkdr2l9rn91m4br3t1m.o
 │       │   │   │       │   ├── 19xn1bf95l2uzgilpnnb0xia2.o
 │       │   │   │       │   ├── 1aicr61k8l93ulnbwodoox9yg.o
@@ -3310,10 +3295,10 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── 1hk69havvpum4aaqbpi9k8gpe.o
 │       │   │   │       │   ├── 1i1rtwknmkgvqnz0d182u44kx.o
 │       │   │   │       │   ├── 1ipo83wn6ennwfw9k17uyj7m2.o
+│       │   │   │       │   ├── 1mmhbmzz6450zggxswap27t0q.o
 │       │   │   │       │   ├── 1nssvjcewcpsvith38jy9nia8.o
 │       │   │   │       │   ├── 1p791n70xicrgqzb3bk09nsr5.o
 │       │   │   │       │   ├── 1s9owls0rbbc27a9f4tftnn3e.o
-│       │   │   │       │   ├── 1tmzy9ee8j8qupsy5j4bpiz5f.o
 │       │   │   │       │   ├── 1umdku3552ddk8zx6dngdpy9j.o
 │       │   │   │       │   ├── 21k9rx9qqmvu2kla4rschmqef.o
 │       │   │   │       │   ├── 22o1duce9kcke43wxj6hudsps.o
@@ -3335,7 +3320,6 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── 2v77k3wbf3d7d76fwzzo6260i.o
 │       │   │   │       │   ├── 2vwqyq6z3p7ilfj0zd6rfkh26.o
 │       │   │   │       │   ├── 2wk5dydmk8dloaugq4l1sgm3j.o
-│       │   │   │       │   ├── 32h3wsrkoi0s547100ppjt0hp.o
 │       │   │   │       │   ├── 32i611ish495j96kqgznsrzm0.o
 │       │   │   │       │   ├── 34fmp5bzrrw6gi2r2jax3zeoo.o
 │       │   │   │       │   ├── 39jksqky2t599k8iv45zjnryy.o
@@ -3363,11 +3347,11 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── 4gzl52de8s0vr3oku7vwo62mh.o
 │       │   │   │       │   ├── 4inomlpntxt5nxh3ex0q1w2lg.o
 │       │   │   │       │   ├── 4j34lhbucorwgp6vtcfjdrd9w.o
-│       │   │   │       │   ├── 4jcqhwiezm1kyhvv2ghqaue4o.o
 │       │   │   │       │   ├── 4k5y1m9q6wwioy4kmdyazwq8g.o
 │       │   │   │       │   ├── 4khmociy721d7deqz1kmuic7c.o
 │       │   │   │       │   ├── 4kkfqfm2fkiyvrlo73u9s7i0d.o
 │       │   │   │       │   ├── 4qdxwlwqt87rbixd3v0bxopss.o
+│       │   │   │       │   ├── 4qm0uknrv64gmu37y16lj5aoc.o
 │       │   │   │       │   ├── 4ttic9t8kwyyy56qm7jck3iyv.o
 │       │   │   │       │   ├── 4tvkh6l3gc27ab6qlchmqhdb2.o
 │       │   │   │       │   ├── 4u1iomxh4w8kidyy4prpq6b5s.o
@@ -3378,31 +3362,31 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── 5alx99be190ij672atd06w4um.o
 │       │   │   │       │   ├── 5dbg79mg0vm9v5y650uvwbpwq.o
 │       │   │   │       │   ├── 5g4v2llix9d1459pj0jd7uwtr.o
-│       │   │   │       │   ├── 5giv4kk2ypmlzcjhlr4jc1z43.o
 │       │   │   │       │   ├── 5i1ccnzrthot57ycl1li4yod6.o
 │       │   │   │       │   ├── 5jy5osr5v6h8on6ebivyiiji9.o
 │       │   │   │       │   ├── 5nyp7sihcexucqyfk10vzsl9h.o
 │       │   │   │       │   ├── 5od0dj4xv5x0nznjuu2cboxzk.o
-│       │   │   │       │   ├── 5pb7hqgmvwcorjveax2oghcpk.o
 │       │   │   │       │   ├── 5up8v14om3a3ebisw2aiydjea.o
 │       │   │   │       │   ├── 5yzxd6kjib7wfp794m855vkwi.o
+│       │   │   │       │   ├── 5ztoobg1oua9tm77mcj55zbpv.o
 │       │   │   │       │   ├── 60rwlnisr0sa2mv18a672f6py.o
 │       │   │   │       │   ├── 63gkou9fu2ti7c7q76r1rvptj.o
 │       │   │   │       │   ├── 641dty4b1rxaxl8k79ka0zadu.o
 │       │   │   │       │   ├── 66spzb2m8z79fwg4x5m2uahae.o
+│       │   │   │       │   ├── 6ew5s4r51l0ztttga8ya9uiry.o
 │       │   │   │       │   ├── 6eyz9hcbmkozp276v5oy3biit.o
 │       │   │   │       │   ├── 6f9pm2tvyatdfk74u7d9zqnb3.o
 │       │   │   │       │   ├── 6h2uhyg44354btok4thum04jj.o
 │       │   │   │       │   ├── 6i4tw1rtd31jwookknwdarwdh.o
 │       │   │   │       │   ├── 6j9qvrhn2j7brr9dpwuen545x.o
 │       │   │   │       │   ├── 6nzp5yzcz96lg88k11q8g4i5i.o
-│       │   │   │       │   ├── 6o7he0oiulfnnmdurkszh2qrd.o
 │       │   │   │       │   ├── 6olc35q20b3nuppapsvgfoz1e.o
 │       │   │   │       │   ├── 6olt9odehipuhkl35uuuxeqdn.o
 │       │   │   │       │   ├── 6qju25mblkh8g9o83rfak615z.o
 │       │   │   │       │   ├── 6srcfzq7cmndisr9p5orm0y39.o
 │       │   │   │       │   ├── 6v94h5cmnbo34hy2setw8wbbt.o
 │       │   │   │       │   ├── 6x61se3af8prky1tgpep51eac.o
+│       │   │   │       │   ├── 6ykqsx6u2omar32swzbt4780a.o
 │       │   │   │       │   ├── 6ymyp4n92d2aiiynq46x1awn9.o
 │       │   │   │       │   ├── 702twtfkmpuvogcc6wua8mulz.o
 │       │   │   │       │   ├── 725disyr2v39rakh3snq65x39.o
@@ -3411,8 +3395,8 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── 7a8ezca9rcdlcg1ggoqdm9adc.o
 │       │   │   │       │   ├── 7an68r48lz6l04dyzbuov0tb7.o
 │       │   │   │       │   ├── 7hd1dtkwjwmhqw95avgantd43.o
-│       │   │   │       │   ├── 7hei61stgchpbu7nt7g5fie6a.o
 │       │   │   │       │   ├── 7hm120ufu96lg7zc1kbtrvxcg.o
+│       │   │   │       │   ├── 7olx1ksvz6csyzbj0ncn8uuz9.o
 │       │   │   │       │   ├── 7osq0egb32un6t0ppod6g64z3.o
 │       │   │   │       │   ├── 7ty3dv73jm1bdlxrgzdb8r276.o
 │       │   │   │       │   ├── 7vb8zgab72gcpsepjwl8xlrwu.o
@@ -3426,7 +3410,6 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── 8el8ybvj95aog9wejavjgt9y6.o
 │       │   │   │       │   ├── 8jegjdqdyixke91qzxhdv5iy5.o
 │       │   │   │       │   ├── 8rak2u44zu463lbrko5hw1i67.o
-│       │   │   │       │   ├── 8xsyk1s2ove7a1zd1f2jkr5kj.o
 │       │   │   │       │   ├── 8zzgfg3urmpzbeezfz9f14a2j.o
 │       │   │   │       │   ├── 91aypgkv6zy1bpkvi8lca3akf.o
 │       │   │   │       │   ├── 950tzywyjzy1108o5i2i857o8.o
@@ -3449,12 +3432,12 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── 9x52dnhwp8n8i1q4bolcacvq9.o
 │       │   │   │       │   ├── 9y220nkcvhpn240jq6huv65i7.o
 │       │   │   │       │   ├── 9yeckkogj7dsa0k3pjy9wqp3u.o
-│       │   │   │       │   ├── a03nbyfecsm09lptjp2cyims5.o
 │       │   │   │       │   ├── a2ll8m4l2wnacbirxejnawttt.o
 │       │   │   │       │   ├── a3rwckf0iw6qz3v5ledea4fk9.o
 │       │   │   │       │   ├── a55tiv7dm8o6oxiuteza764fw.o
 │       │   │   │       │   ├── a5h4yousx2bwiiioyhp7pg4jt.o
 │       │   │   │       │   ├── a5mobazz0i472pjlshs4rdam0.o
+│       │   │   │       │   ├── a7c2c8ms3uz9jb4ilh0jy5pyv.o
 │       │   │   │       │   ├── acwpqzoioxr09s0jzfotifpix.o
 │       │   │   │       │   ├── ad65w37xlb5x35a5sv8reaxf6.o
 │       │   │   │       │   ├── adl8f3ujtthialyyjxvl9s6rd.o
@@ -3480,6 +3463,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── br7pe8ckg58vqu67rrn8z8spx.o
 │       │   │   │       │   ├── bs3vjwejnvj6j9oe3yl73r01o.o
 │       │   │   │       │   ├── bt5jgd91zumys79pwmfcm8542.o
+│       │   │   │       │   ├── btpby8sjt4lcvr59km60acivf.o
 │       │   │   │       │   ├── btwxb33jp31qvauhgid325k58.o
 │       │   │   │       │   ├── bv7t6kj1lywuitz0z6zxvlzwp.o
 │       │   │   │       │   ├── bvw1ohc1797uls86syhecx2ly.o
@@ -3491,6 +3475,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── ce9pwyj7sig5q9i6468i028q5.o
 │       │   │   │       │   ├── cex59iiwrl191hru7m8fzqmis.o
 │       │   │   │       │   ├── cirmyztzrlcud422z9hi9qli4.o
+│       │   │   │       │   ├── ckedxfi7495m74o0t78810gq6.o
 │       │   │   │       │   ├── cp6a71jrcszv36g9ojfnw9f51.o
 │       │   │   │       │   ├── cq9fbohvsoqfvhqpq30dzd4pf.o
 │       │   │   │       │   ├── cr7e8xhdewznt9i8e3t4p85xv.o
@@ -3503,6 +3488,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── d2pgbvolzl48kgjmsr4dilifn.o
 │       │   │   │       │   ├── d2ulek2vitxme1gdxvllrshat.o
 │       │   │   │       │   ├── d4k7s2e2fim967i1kz5jydm2z.o
+│       │   │   │       │   ├── d5uf5oac69937lyqbykrfago4.o
 │       │   │   │       │   ├── da286rpkoqoxekbhqa7hw9o37.o
 │       │   │   │       │   ├── dcf0jo0c4ms2cp09ycgsvvmj0.o
 │       │   │   │       │   ├── dep-graph.bin
@@ -3512,10 +3498,10 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── dqy5xhn8bpzs2zw2pyjifm07y.o
 │       │   │   │       │   ├── dr76bvbrj2l23ifj8p9u19kw1.o
 │       │   │   │       │   ├── ds84updxtvp031maxf94hiov6.o
-│       │   │   │       │   ├── dv5awcti60hv7tve1epqrdssb.o
 │       │   │   │       │   ├── dzloqhm9r1fg6yf3eulau1p0c.o
 │       │   │   │       │   ├── e30h7o4zj2fcel1dj95jtfdz2.o
 │       │   │   │       │   ├── e3syp8gxakyry603vbh7xmdi2.o
+│       │   │   │       │   ├── e7w34sls99pcr74cyxo7q2u5y.o
 │       │   │   │       │   ├── edejxi59xraifak0oqmv376hu.o
 │       │   │   │       │   ├── ef2hp7ue453n3jr3uldth0olc.o
 │       │   │   │       │   ├── ef36gk0o29947d184z23kfrz9.o
@@ -3528,6 +3514,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── en232k0jgo1wmfn4h9yjjshd0.o
 │       │   │   │       │   ├── eozjyjuyhwdpi1l6gozas24uv.o
 │       │   │   │       │   ├── ep1crdf8eajki7hcl8tkkhuua.o
+│       │   │   │       │   ├── er9gokn1q464sm1edfjhnevpj.o
 │       │   │   │       │   ├── es2c557w2n2118fg12gw9nf11.o
 │       │   │   │       │   ├── etaxz8iz68w718pt2yyhvn2np.o
 │       │   │   │       │   ├── ew254yj1zaqea8fy8k4skcczh.o
@@ -3539,13 +3526,12 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── f5im7h76r199wsl5p8y8nnsm8.o
 │       │   │   │       │   ├── query-cache.bin
 │       │   │   │       │   └── work-products.bin
-│       │   │   │       ├── s-hgobv6pm1e-0ay31qn-3tzaohz3mdqt8ovh61igmlf2j/
+│       │   │   │       ├── s-hguharvhmv-0vurqq8-270y0o7g7k60xy5yw3hhr8bdi/
 │       │   │   │       │   ├── 0051e6wpdugvg9l8m2yp26kcv.o
 │       │   │   │       │   ├── 02kpuc6ymuv6n6dcec84mslkc.o
 │       │   │   │       │   ├── 030d06of3f3k8yj0ud3d38upp.o
 │       │   │   │       │   ├── 03yiegyzy5dci42ygiy7a1dhk.o
 │       │   │   │       │   ├── 0440d0b1gjf9ywdljdyjqq867.o
-│       │   │   │       │   ├── 06508why75gvddrfe5mq7n8ek.o
 │       │   │   │       │   ├── 0a5h28jj3yh58ayrs11t5pqb8.o
 │       │   │   │       │   ├── 0asjt3xq2mu5oheho5ak9573x.o
 │       │   │   │       │   ├── 0dqkj72wvth059c0upzqlkful.o
@@ -3561,7 +3547,6 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── 0vyhhg5hd1oxw7gctfnuzcco7.o
 │       │   │   │       │   ├── 11qkejd2ozp6swvbq93gzca1t.o
 │       │   │   │       │   ├── 15qx7hnm88yyycc96jpwd64vy.o
-│       │   │   │       │   ├── 18iiwmo1b3guztjttieskhdkw.o
 │       │   │   │       │   ├── 19pxgnbkdr2l9rn91m4br3t1m.o
 │       │   │   │       │   ├── 19xn1bf95l2uzgilpnnb0xia2.o
 │       │   │   │       │   ├── 1aicr61k8l93ulnbwodoox9yg.o
@@ -3570,10 +3555,10 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── 1hk69havvpum4aaqbpi9k8gpe.o
 │       │   │   │       │   ├── 1i1rtwknmkgvqnz0d182u44kx.o
 │       │   │   │       │   ├── 1ipo83wn6ennwfw9k17uyj7m2.o
+│       │   │   │       │   ├── 1mmhbmzz6450zggxswap27t0q.o
 │       │   │   │       │   ├── 1nssvjcewcpsvith38jy9nia8.o
 │       │   │   │       │   ├── 1p791n70xicrgqzb3bk09nsr5.o
 │       │   │   │       │   ├── 1s9owls0rbbc27a9f4tftnn3e.o
-│       │   │   │       │   ├── 1tmzy9ee8j8qupsy5j4bpiz5f.o
 │       │   │   │       │   ├── 1umdku3552ddk8zx6dngdpy9j.o
 │       │   │   │       │   ├── 21k9rx9qqmvu2kla4rschmqef.o
 │       │   │   │       │   ├── 22o1duce9kcke43wxj6hudsps.o
@@ -3595,7 +3580,6 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── 2v77k3wbf3d7d76fwzzo6260i.o
 │       │   │   │       │   ├── 2vwqyq6z3p7ilfj0zd6rfkh26.o
 │       │   │   │       │   ├── 2wk5dydmk8dloaugq4l1sgm3j.o
-│       │   │   │       │   ├── 32h3wsrkoi0s547100ppjt0hp.o
 │       │   │   │       │   ├── 32i611ish495j96kqgznsrzm0.o
 │       │   │   │       │   ├── 34fmp5bzrrw6gi2r2jax3zeoo.o
 │       │   │   │       │   ├── 39jksqky2t599k8iv45zjnryy.o
@@ -3623,11 +3607,11 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── 4gzl52de8s0vr3oku7vwo62mh.o
 │       │   │   │       │   ├── 4inomlpntxt5nxh3ex0q1w2lg.o
 │       │   │   │       │   ├── 4j34lhbucorwgp6vtcfjdrd9w.o
-│       │   │   │       │   ├── 4jcqhwiezm1kyhvv2ghqaue4o.o
 │       │   │   │       │   ├── 4k5y1m9q6wwioy4kmdyazwq8g.o
 │       │   │   │       │   ├── 4khmociy721d7deqz1kmuic7c.o
 │       │   │   │       │   ├── 4kkfqfm2fkiyvrlo73u9s7i0d.o
 │       │   │   │       │   ├── 4qdxwlwqt87rbixd3v0bxopss.o
+│       │   │   │       │   ├── 4qm0uknrv64gmu37y16lj5aoc.o
 │       │   │   │       │   ├── 4ttic9t8kwyyy56qm7jck3iyv.o
 │       │   │   │       │   ├── 4tvkh6l3gc27ab6qlchmqhdb2.o
 │       │   │   │       │   ├── 4u1iomxh4w8kidyy4prpq6b5s.o
@@ -3638,31 +3622,31 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── 5alx99be190ij672atd06w4um.o
 │       │   │   │       │   ├── 5dbg79mg0vm9v5y650uvwbpwq.o
 │       │   │   │       │   ├── 5g4v2llix9d1459pj0jd7uwtr.o
-│       │   │   │       │   ├── 5giv4kk2ypmlzcjhlr4jc1z43.o
 │       │   │   │       │   ├── 5i1ccnzrthot57ycl1li4yod6.o
 │       │   │   │       │   ├── 5jy5osr5v6h8on6ebivyiiji9.o
 │       │   │   │       │   ├── 5nyp7sihcexucqyfk10vzsl9h.o
 │       │   │   │       │   ├── 5od0dj4xv5x0nznjuu2cboxzk.o
-│       │   │   │       │   ├── 5pb7hqgmvwcorjveax2oghcpk.o
 │       │   │   │       │   ├── 5up8v14om3a3ebisw2aiydjea.o
 │       │   │   │       │   ├── 5yzxd6kjib7wfp794m855vkwi.o
+│       │   │   │       │   ├── 5ztoobg1oua9tm77mcj55zbpv.o
 │       │   │   │       │   ├── 60rwlnisr0sa2mv18a672f6py.o
 │       │   │   │       │   ├── 63gkou9fu2ti7c7q76r1rvptj.o
 │       │   │   │       │   ├── 641dty4b1rxaxl8k79ka0zadu.o
 │       │   │   │       │   ├── 66spzb2m8z79fwg4x5m2uahae.o
+│       │   │   │       │   ├── 6ew5s4r51l0ztttga8ya9uiry.o
 │       │   │   │       │   ├── 6eyz9hcbmkozp276v5oy3biit.o
 │       │   │   │       │   ├── 6f9pm2tvyatdfk74u7d9zqnb3.o
 │       │   │   │       │   ├── 6h2uhyg44354btok4thum04jj.o
 │       │   │   │       │   ├── 6i4tw1rtd31jwookknwdarwdh.o
 │       │   │   │       │   ├── 6j9qvrhn2j7brr9dpwuen545x.o
 │       │   │   │       │   ├── 6nzp5yzcz96lg88k11q8g4i5i.o
-│       │   │   │       │   ├── 6o7he0oiulfnnmdurkszh2qrd.o
 │       │   │   │       │   ├── 6olc35q20b3nuppapsvgfoz1e.o
 │       │   │   │       │   ├── 6olt9odehipuhkl35uuuxeqdn.o
 │       │   │   │       │   ├── 6qju25mblkh8g9o83rfak615z.o
 │       │   │   │       │   ├── 6srcfzq7cmndisr9p5orm0y39.o
 │       │   │   │       │   ├── 6v94h5cmnbo34hy2setw8wbbt.o
 │       │   │   │       │   ├── 6x61se3af8prky1tgpep51eac.o
+│       │   │   │       │   ├── 6ykqsx6u2omar32swzbt4780a.o
 │       │   │   │       │   ├── 6ymyp4n92d2aiiynq46x1awn9.o
 │       │   │   │       │   ├── 702twtfkmpuvogcc6wua8mulz.o
 │       │   │   │       │   ├── 725disyr2v39rakh3snq65x39.o
@@ -3671,8 +3655,8 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── 7a8ezca9rcdlcg1ggoqdm9adc.o
 │       │   │   │       │   ├── 7an68r48lz6l04dyzbuov0tb7.o
 │       │   │   │       │   ├── 7hd1dtkwjwmhqw95avgantd43.o
-│       │   │   │       │   ├── 7hei61stgchpbu7nt7g5fie6a.o
 │       │   │   │       │   ├── 7hm120ufu96lg7zc1kbtrvxcg.o
+│       │   │   │       │   ├── 7olx1ksvz6csyzbj0ncn8uuz9.o
 │       │   │   │       │   ├── 7osq0egb32un6t0ppod6g64z3.o
 │       │   │   │       │   ├── 7ty3dv73jm1bdlxrgzdb8r276.o
 │       │   │   │       │   ├── 7vb8zgab72gcpsepjwl8xlrwu.o
@@ -3686,7 +3670,6 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── 8el8ybvj95aog9wejavjgt9y6.o
 │       │   │   │       │   ├── 8jegjdqdyixke91qzxhdv5iy5.o
 │       │   │   │       │   ├── 8rak2u44zu463lbrko5hw1i67.o
-│       │   │   │       │   ├── 8xsyk1s2ove7a1zd1f2jkr5kj.o
 │       │   │   │       │   ├── 8zzgfg3urmpzbeezfz9f14a2j.o
 │       │   │   │       │   ├── 91aypgkv6zy1bpkvi8lca3akf.o
 │       │   │   │       │   ├── 950tzywyjzy1108o5i2i857o8.o
@@ -3709,12 +3692,12 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── 9x52dnhwp8n8i1q4bolcacvq9.o
 │       │   │   │       │   ├── 9y220nkcvhpn240jq6huv65i7.o
 │       │   │   │       │   ├── 9yeckkogj7dsa0k3pjy9wqp3u.o
-│       │   │   │       │   ├── a03nbyfecsm09lptjp2cyims5.o
 │       │   │   │       │   ├── a2ll8m4l2wnacbirxejnawttt.o
 │       │   │   │       │   ├── a3rwckf0iw6qz3v5ledea4fk9.o
 │       │   │   │       │   ├── a55tiv7dm8o6oxiuteza764fw.o
 │       │   │   │       │   ├── a5h4yousx2bwiiioyhp7pg4jt.o
 │       │   │   │       │   ├── a5mobazz0i472pjlshs4rdam0.o
+│       │   │   │       │   ├── a7c2c8ms3uz9jb4ilh0jy5pyv.o
 │       │   │   │       │   ├── acwpqzoioxr09s0jzfotifpix.o
 │       │   │   │       │   ├── ad65w37xlb5x35a5sv8reaxf6.o
 │       │   │   │       │   ├── adl8f3ujtthialyyjxvl9s6rd.o
@@ -3740,6 +3723,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── br7pe8ckg58vqu67rrn8z8spx.o
 │       │   │   │       │   ├── bs3vjwejnvj6j9oe3yl73r01o.o
 │       │   │   │       │   ├── bt5jgd91zumys79pwmfcm8542.o
+│       │   │   │       │   ├── btpby8sjt4lcvr59km60acivf.o
 │       │   │   │       │   ├── btwxb33jp31qvauhgid325k58.o
 │       │   │   │       │   ├── bv7t6kj1lywuitz0z6zxvlzwp.o
 │       │   │   │       │   ├── bvw1ohc1797uls86syhecx2ly.o
@@ -3751,6 +3735,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── ce9pwyj7sig5q9i6468i028q5.o
 │       │   │   │       │   ├── cex59iiwrl191hru7m8fzqmis.o
 │       │   │   │       │   ├── cirmyztzrlcud422z9hi9qli4.o
+│       │   │   │       │   ├── ckedxfi7495m74o0t78810gq6.o
 │       │   │   │       │   ├── cp6a71jrcszv36g9ojfnw9f51.o
 │       │   │   │       │   ├── cq9fbohvsoqfvhqpq30dzd4pf.o
 │       │   │   │       │   ├── cr7e8xhdewznt9i8e3t4p85xv.o
@@ -3763,6 +3748,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── d2pgbvolzl48kgjmsr4dilifn.o
 │       │   │   │       │   ├── d2ulek2vitxme1gdxvllrshat.o
 │       │   │   │       │   ├── d4k7s2e2fim967i1kz5jydm2z.o
+│       │   │   │       │   ├── d5uf5oac69937lyqbykrfago4.o
 │       │   │   │       │   ├── da286rpkoqoxekbhqa7hw9o37.o
 │       │   │   │       │   ├── dcf0jo0c4ms2cp09ycgsvvmj0.o
 │       │   │   │       │   ├── dep-graph.bin
@@ -3772,10 +3758,10 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── dqy5xhn8bpzs2zw2pyjifm07y.o
 │       │   │   │       │   ├── dr76bvbrj2l23ifj8p9u19kw1.o
 │       │   │   │       │   ├── ds84updxtvp031maxf94hiov6.o
-│       │   │   │       │   ├── dv5awcti60hv7tve1epqrdssb.o
 │       │   │   │       │   ├── dzloqhm9r1fg6yf3eulau1p0c.o
 │       │   │   │       │   ├── e30h7o4zj2fcel1dj95jtfdz2.o
 │       │   │   │       │   ├── e3syp8gxakyry603vbh7xmdi2.o
+│       │   │   │       │   ├── e7w34sls99pcr74cyxo7q2u5y.o
 │       │   │   │       │   ├── edejxi59xraifak0oqmv376hu.o
 │       │   │   │       │   ├── ef2hp7ue453n3jr3uldth0olc.o
 │       │   │   │       │   ├── ef36gk0o29947d184z23kfrz9.o
@@ -3788,6 +3774,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── en232k0jgo1wmfn4h9yjjshd0.o
 │       │   │   │       │   ├── eozjyjuyhwdpi1l6gozas24uv.o
 │       │   │   │       │   ├── ep1crdf8eajki7hcl8tkkhuua.o
+│       │   │   │       │   ├── er9gokn1q464sm1edfjhnevpj.o
 │       │   │   │       │   ├── es2c557w2n2118fg12gw9nf11.o
 │       │   │   │       │   ├── etaxz8iz68w718pt2yyhvn2np.o
 │       │   │   │       │   ├── ew254yj1zaqea8fy8k4skcczh.o
@@ -3799,9 +3786,592 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │       │   ├── f5im7h76r199wsl5p8y8nnsm8.o
 │       │   │   │       │   ├── query-cache.bin
 │       │   │   │       │   └── work-products.bin
-│       │   │   │       ├── s-hgobtz4vb7-05yqda6.lock
-│       │   │   │       └── s-hgobv6pm1e-0ay31qn.lock
+│       │   │   │       ├── s-hgudiglqaz-0hyrfx3.lock
+│       │   │   │       └── s-hguharvhmv-0vurqq8.lock
 │       │   │   └── .cargo-lock
+│       │   ├── maturin/
+│       │   │   └── intellicrack_hexcore.dll
+│       │   ├── release/
+│       │   │   ├── .fingerprint/
+│       │   │   │   ├── aho-corasick-dfba2a0ba8cc06ae/
+│       │   │   │   │   ├── dep-lib-aho_corasick
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-aho_corasick
+│       │   │   │   │   └── lib-aho_corasick.json
+│       │   │   │   ├── autocfg-a2c6748e1abc0e67/
+│       │   │   │   │   ├── dep-lib-autocfg
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-autocfg
+│       │   │   │   │   └── lib-autocfg.json
+│       │   │   │   ├── block-buffer-aea17d7d387d499b/
+│       │   │   │   │   ├── dep-lib-block_buffer
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-block_buffer
+│       │   │   │   │   └── lib-block_buffer.json
+│       │   │   │   ├── cfg-if-385f4e40850ba0dd/
+│       │   │   │   │   ├── dep-lib-cfg_if
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-cfg_if
+│       │   │   │   │   └── lib-cfg_if.json
+│       │   │   │   ├── cpufeatures-1bb46b639acd1e76/
+│       │   │   │   │   ├── dep-lib-cpufeatures
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-cpufeatures
+│       │   │   │   │   └── lib-cpufeatures.json
+│       │   │   │   ├── crc32fast-1f20f562d33ec612/
+│       │   │   │   │   ├── run-build-script-build-script-build
+│       │   │   │   │   └── run-build-script-build-script-build.json
+│       │   │   │   ├── crc32fast-595d09c8ed5fe0d4/
+│       │   │   │   │   ├── dep-lib-crc32fast
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-crc32fast
+│       │   │   │   │   └── lib-crc32fast.json
+│       │   │   │   ├── crc32fast-c5603edc4697b366/
+│       │   │   │   │   ├── build-script-build-script-build
+│       │   │   │   │   ├── build-script-build-script-build.json
+│       │   │   │   │   ├── dep-build-script-build-script-build
+│       │   │   │   │   └── invoked.timestamp
+│       │   │   │   ├── crossbeam-deque-67d59dc6c8a11225/
+│       │   │   │   │   ├── dep-lib-crossbeam_deque
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-crossbeam_deque
+│       │   │   │   │   └── lib-crossbeam_deque.json
+│       │   │   │   ├── crossbeam-epoch-bbfef6cbec1b4431/
+│       │   │   │   │   ├── dep-lib-crossbeam_epoch
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-crossbeam_epoch
+│       │   │   │   │   └── lib-crossbeam_epoch.json
+│       │   │   │   ├── crossbeam-utils-6d90888b49979750/
+│       │   │   │   │   ├── dep-lib-crossbeam_utils
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-crossbeam_utils
+│       │   │   │   │   └── lib-crossbeam_utils.json
+│       │   │   │   ├── crossbeam-utils-8eeb8bfbf4872dd0/
+│       │   │   │   │   ├── run-build-script-build-script-build
+│       │   │   │   │   └── run-build-script-build-script-build.json
+│       │   │   │   ├── crossbeam-utils-ff19ed6e1a9cf4a3/
+│       │   │   │   │   ├── build-script-build-script-build
+│       │   │   │   │   ├── build-script-build-script-build.json
+│       │   │   │   │   ├── dep-build-script-build-script-build
+│       │   │   │   │   └── invoked.timestamp
+│       │   │   │   ├── crypto-common-e15593f6d600c65c/
+│       │   │   │   │   ├── dep-lib-crypto_common
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-crypto_common
+│       │   │   │   │   └── lib-crypto_common.json
+│       │   │   │   ├── digest-0b96b890ff491a11/
+│       │   │   │   │   ├── dep-lib-digest
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-digest
+│       │   │   │   │   └── lib-digest.json
+│       │   │   │   ├── either-c0572c8e65673265/
+│       │   │   │   │   ├── dep-lib-either
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-either
+│       │   │   │   │   └── lib-either.json
+│       │   │   │   ├── generic-array-1591f3b109d6259b/
+│       │   │   │   │   ├── dep-lib-generic_array
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-generic_array
+│       │   │   │   │   └── lib-generic_array.json
+│       │   │   │   ├── generic-array-18ee3c3f8152de87/
+│       │   │   │   │   ├── build-script-build-script-build
+│       │   │   │   │   ├── build-script-build-script-build.json
+│       │   │   │   │   ├── dep-build-script-build-script-build
+│       │   │   │   │   └── invoked.timestamp
+│       │   │   │   ├── generic-array-acec915e46bae1a7/
+│       │   │   │   │   ├── run-build-script-build-script-build
+│       │   │   │   │   └── run-build-script-build-script-build.json
+│       │   │   │   ├── heck-715f626dcb4698d3/
+│       │   │   │   │   ├── dep-lib-heck
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-heck
+│       │   │   │   │   └── lib-heck.json
+│       │   │   │   ├── indoc-2ad5e8863b6418c1/
+│       │   │   │   │   ├── dep-lib-indoc
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-indoc
+│       │   │   │   │   └── lib-indoc.json
+│       │   │   │   ├── intellicrack-hexcore-31e3762df01bb049/
+│       │   │   │   │   ├── dep-lib-intellicrack_hexcore
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-intellicrack_hexcore
+│       │   │   │   │   └── lib-intellicrack_hexcore.json
+│       │   │   │   ├── itoa-01439ce7fb02dc1d/
+│       │   │   │   │   ├── dep-lib-itoa
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-itoa
+│       │   │   │   │   └── lib-itoa.json
+│       │   │   │   ├── libc-08c667ba3660682a/
+│       │   │   │   │   ├── run-build-script-build-script-build
+│       │   │   │   │   └── run-build-script-build-script-build.json
+│       │   │   │   ├── libc-b36eca88aef504a3/
+│       │   │   │   │   ├── build-script-build-script-build
+│       │   │   │   │   ├── build-script-build-script-build.json
+│       │   │   │   │   ├── dep-build-script-build-script-build
+│       │   │   │   │   └── invoked.timestamp
+│       │   │   │   ├── libc-c25ed74f22ccb1fc/
+│       │   │   │   │   ├── dep-lib-libc
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-libc
+│       │   │   │   │   └── lib-libc.json
+│       │   │   │   ├── md-5-179a25fea783c093/
+│       │   │   │   │   ├── dep-lib-md5
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-md5
+│       │   │   │   │   └── lib-md5.json
+│       │   │   │   ├── memchr-d29f5a4c159c3c86/
+│       │   │   │   │   ├── dep-lib-memchr
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-memchr
+│       │   │   │   │   └── lib-memchr.json
+│       │   │   │   ├── memmap2-fd61326e2259ca6b/
+│       │   │   │   │   ├── dep-lib-memmap2
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-memmap2
+│       │   │   │   │   └── lib-memmap2.json
+│       │   │   │   ├── memoffset-07942d4db7ff4a20/
+│       │   │   │   │   ├── run-build-script-build-script-build
+│       │   │   │   │   └── run-build-script-build-script-build.json
+│       │   │   │   ├── memoffset-691a518c91bff5ec/
+│       │   │   │   │   ├── build-script-build-script-build
+│       │   │   │   │   ├── build-script-build-script-build.json
+│       │   │   │   │   ├── dep-build-script-build-script-build
+│       │   │   │   │   └── invoked.timestamp
+│       │   │   │   ├── memoffset-913e1c7aaac62924/
+│       │   │   │   │   ├── dep-lib-memoffset
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-memoffset
+│       │   │   │   │   └── lib-memoffset.json
+│       │   │   │   ├── once_cell-3a535680e70514f6/
+│       │   │   │   │   ├── dep-lib-once_cell
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-once_cell
+│       │   │   │   │   └── lib-once_cell.json
+│       │   │   │   ├── once_cell-4a9322c3b06b7429/
+│       │   │   │   │   ├── dep-lib-once_cell
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-once_cell
+│       │   │   │   │   └── lib-once_cell.json
+│       │   │   │   ├── proc-macro2-2c35a4f75c887235/
+│       │   │   │   │   ├── build-script-build-script-build
+│       │   │   │   │   ├── build-script-build-script-build.json
+│       │   │   │   │   ├── dep-build-script-build-script-build
+│       │   │   │   │   └── invoked.timestamp
+│       │   │   │   ├── proc-macro2-3b049445276f1468/
+│       │   │   │   │   ├── run-build-script-build-script-build
+│       │   │   │   │   └── run-build-script-build-script-build.json
+│       │   │   │   ├── proc-macro2-40fabc91ab2dbbd0/
+│       │   │   │   │   ├── dep-lib-proc_macro2
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-proc_macro2
+│       │   │   │   │   └── lib-proc_macro2.json
+│       │   │   │   ├── pyo3-76f67603daa9797d/
+│       │   │   │   │   ├── run-build-script-build-script-build
+│       │   │   │   │   └── run-build-script-build-script-build.json
+│       │   │   │   ├── pyo3-8ab50e9d4df9d92c/
+│       │   │   │   │   ├── dep-lib-pyo3
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-pyo3
+│       │   │   │   │   └── lib-pyo3.json
+│       │   │   │   ├── pyo3-build-config-4e50bf82a4c14409/
+│       │   │   │   │   ├── build-script-build-script-build
+│       │   │   │   │   ├── build-script-build-script-build.json
+│       │   │   │   │   ├── dep-build-script-build-script-build
+│       │   │   │   │   └── invoked.timestamp
+│       │   │   │   ├── pyo3-build-config-57036d74ab3caeaa/
+│       │   │   │   │   ├── run-build-script-build-script-build
+│       │   │   │   │   └── run-build-script-build-script-build.json
+│       │   │   │   ├── pyo3-build-config-a7c409a6c7b42f42/
+│       │   │   │   │   ├── dep-lib-pyo3_build_config
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-pyo3_build_config
+│       │   │   │   │   └── lib-pyo3_build_config.json
+│       │   │   │   ├── pyo3-e76f4dc294a334fd/
+│       │   │   │   │   ├── build-script-build-script-build
+│       │   │   │   │   ├── build-script-build-script-build.json
+│       │   │   │   │   ├── dep-build-script-build-script-build
+│       │   │   │   │   └── invoked.timestamp
+│       │   │   │   ├── pyo3-ffi-0f13a64d60aa7e8a/
+│       │   │   │   │   ├── dep-lib-pyo3_ffi
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-pyo3_ffi
+│       │   │   │   │   └── lib-pyo3_ffi.json
+│       │   │   │   ├── pyo3-ffi-38ddcd07c42b53cf/
+│       │   │   │   │   ├── run-build-script-build-script-build
+│       │   │   │   │   └── run-build-script-build-script-build.json
+│       │   │   │   ├── pyo3-ffi-f057f0b4048a3430/
+│       │   │   │   │   ├── build-script-build-script-build
+│       │   │   │   │   ├── build-script-build-script-build.json
+│       │   │   │   │   ├── dep-build-script-build-script-build
+│       │   │   │   │   └── invoked.timestamp
+│       │   │   │   ├── pyo3-macros-041221c0cbc9a844/
+│       │   │   │   │   ├── dep-lib-pyo3_macros
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-pyo3_macros
+│       │   │   │   │   └── lib-pyo3_macros.json
+│       │   │   │   ├── pyo3-macros-backend-6babaf4dd6786db9/
+│       │   │   │   │   ├── dep-lib-pyo3_macros_backend
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-pyo3_macros_backend
+│       │   │   │   │   └── lib-pyo3_macros_backend.json
+│       │   │   │   ├── pyo3-macros-backend-d6894a20b93208e0/
+│       │   │   │   │   ├── build-script-build-script-build
+│       │   │   │   │   ├── build-script-build-script-build.json
+│       │   │   │   │   ├── dep-build-script-build-script-build
+│       │   │   │   │   └── invoked.timestamp
+│       │   │   │   ├── pyo3-macros-backend-f0220d75404f3a32/
+│       │   │   │   │   ├── run-build-script-build-script-build
+│       │   │   │   │   └── run-build-script-build-script-build.json
+│       │   │   │   ├── quote-1d47c7ef8922d775/
+│       │   │   │   │   ├── dep-lib-quote
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-quote
+│       │   │   │   │   └── lib-quote.json
+│       │   │   │   ├── quote-ac0b713bfbec1334/
+│       │   │   │   │   ├── build-script-build-script-build
+│       │   │   │   │   ├── build-script-build-script-build.json
+│       │   │   │   │   ├── dep-build-script-build-script-build
+│       │   │   │   │   └── invoked.timestamp
+│       │   │   │   ├── quote-d0fb7d3e318089d2/
+│       │   │   │   │   ├── run-build-script-build-script-build
+│       │   │   │   │   └── run-build-script-build-script-build.json
+│       │   │   │   ├── rayon-core-0e4bf12e97e25f40/
+│       │   │   │   │   ├── run-build-script-build-script-build
+│       │   │   │   │   └── run-build-script-build-script-build.json
+│       │   │   │   ├── rayon-core-18c8cc7537545d39/
+│       │   │   │   │   ├── build-script-build-script-build
+│       │   │   │   │   ├── build-script-build-script-build.json
+│       │   │   │   │   ├── dep-build-script-build-script-build
+│       │   │   │   │   └── invoked.timestamp
+│       │   │   │   ├── rayon-core-2445cf0790c89dff/
+│       │   │   │   │   ├── dep-lib-rayon_core
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-rayon_core
+│       │   │   │   │   └── lib-rayon_core.json
+│       │   │   │   ├── rayon-f193588a405505a8/
+│       │   │   │   │   ├── dep-lib-rayon
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-rayon
+│       │   │   │   │   └── lib-rayon.json
+│       │   │   │   ├── regex-automata-24982cf52ad0c672/
+│       │   │   │   │   ├── dep-lib-regex_automata
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-regex_automata
+│       │   │   │   │   └── lib-regex_automata.json
+│       │   │   │   ├── regex-c45eb3d16c95279b/
+│       │   │   │   │   ├── dep-lib-regex
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-regex
+│       │   │   │   │   └── lib-regex.json
+│       │   │   │   ├── regex-syntax-e9bfac29085d0dd1/
+│       │   │   │   │   ├── dep-lib-regex_syntax
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-regex_syntax
+│       │   │   │   │   └── lib-regex_syntax.json
+│       │   │   │   ├── serde-4efc25986ab33564/
+│       │   │   │   │   ├── run-build-script-build-script-build
+│       │   │   │   │   └── run-build-script-build-script-build.json
+│       │   │   │   ├── serde-66530ebb4138313d/
+│       │   │   │   │   ├── build-script-build-script-build
+│       │   │   │   │   ├── build-script-build-script-build.json
+│       │   │   │   │   ├── dep-build-script-build-script-build
+│       │   │   │   │   └── invoked.timestamp
+│       │   │   │   ├── serde-e93b3533851d4d9f/
+│       │   │   │   │   ├── dep-lib-serde
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-serde
+│       │   │   │   │   └── lib-serde.json
+│       │   │   │   ├── serde_core-1c74137c19db489e/
+│       │   │   │   │   ├── build-script-build-script-build
+│       │   │   │   │   ├── build-script-build-script-build.json
+│       │   │   │   │   ├── dep-build-script-build-script-build
+│       │   │   │   │   └── invoked.timestamp
+│       │   │   │   ├── serde_core-41cb47f1f51c0c14/
+│       │   │   │   │   ├── run-build-script-build-script-build
+│       │   │   │   │   └── run-build-script-build-script-build.json
+│       │   │   │   ├── serde_core-7bd8eecab8417789/
+│       │   │   │   │   ├── dep-lib-serde_core
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-serde_core
+│       │   │   │   │   └── lib-serde_core.json
+│       │   │   │   ├── serde_derive-4b52e8912be6d020/
+│       │   │   │   │   ├── dep-lib-serde_derive
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-serde_derive
+│       │   │   │   │   └── lib-serde_derive.json
+│       │   │   │   ├── serde_json-37a418b1388e962e/
+│       │   │   │   │   ├── build-script-build-script-build
+│       │   │   │   │   ├── build-script-build-script-build.json
+│       │   │   │   │   ├── dep-build-script-build-script-build
+│       │   │   │   │   └── invoked.timestamp
+│       │   │   │   ├── serde_json-618a504fdd57c763/
+│       │   │   │   │   ├── dep-lib-serde_json
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-serde_json
+│       │   │   │   │   └── lib-serde_json.json
+│       │   │   │   ├── serde_json-abd93a39e5c600b4/
+│       │   │   │   │   ├── run-build-script-build-script-build
+│       │   │   │   │   └── run-build-script-build-script-build.json
+│       │   │   │   ├── sha1-5f3566f7c833f637/
+│       │   │   │   │   ├── dep-lib-sha1
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-sha1
+│       │   │   │   │   └── lib-sha1.json
+│       │   │   │   ├── sha2-00da1c785ef22f25/
+│       │   │   │   │   ├── dep-lib-sha2
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-sha2
+│       │   │   │   │   └── lib-sha2.json
+│       │   │   │   ├── syn-061fcbe5e8cd8a5e/
+│       │   │   │   │   ├── dep-lib-syn
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-syn
+│       │   │   │   │   └── lib-syn.json
+│       │   │   │   ├── target-lexicon-572e1ac820ea8318/
+│       │   │   │   │   ├── build-script-build-script-build
+│       │   │   │   │   ├── build-script-build-script-build.json
+│       │   │   │   │   ├── dep-build-script-build-script-build
+│       │   │   │   │   └── invoked.timestamp
+│       │   │   │   ├── target-lexicon-6eff8465129382a9/
+│       │   │   │   │   ├── run-build-script-build-script-build
+│       │   │   │   │   └── run-build-script-build-script-build.json
+│       │   │   │   ├── target-lexicon-ac4d71b804495f8e/
+│       │   │   │   │   ├── dep-lib-target_lexicon
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-target_lexicon
+│       │   │   │   │   └── lib-target_lexicon.json
+│       │   │   │   ├── thiserror-85b4bb481db04019/
+│       │   │   │   │   ├── dep-lib-thiserror
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-thiserror
+│       │   │   │   │   └── lib-thiserror.json
+│       │   │   │   ├── thiserror-cb9ea4825e08b7d5/
+│       │   │   │   │   ├── build-script-build-script-build
+│       │   │   │   │   ├── build-script-build-script-build.json
+│       │   │   │   │   ├── dep-build-script-build-script-build
+│       │   │   │   │   └── invoked.timestamp
+│       │   │   │   ├── thiserror-e434bd0d15380ba0/
+│       │   │   │   │   ├── run-build-script-build-script-build
+│       │   │   │   │   └── run-build-script-build-script-build.json
+│       │   │   │   ├── thiserror-impl-9314e3cf195e59d5/
+│       │   │   │   │   ├── dep-lib-thiserror_impl
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-thiserror_impl
+│       │   │   │   │   └── lib-thiserror_impl.json
+│       │   │   │   ├── typenum-53564d6091686f3a/
+│       │   │   │   │   ├── build-script-build-script-build
+│       │   │   │   │   ├── build-script-build-script-build.json
+│       │   │   │   │   ├── dep-build-script-build-script-build
+│       │   │   │   │   └── invoked.timestamp
+│       │   │   │   ├── typenum-d62d0c2b00d059c6/
+│       │   │   │   │   ├── dep-lib-typenum
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-typenum
+│       │   │   │   │   └── lib-typenum.json
+│       │   │   │   ├── typenum-d9008b6cbe697a1b/
+│       │   │   │   │   ├── run-build-script-build-script-build
+│       │   │   │   │   └── run-build-script-build-script-build.json
+│       │   │   │   ├── unicode-ident-7cb6077d788cfe85/
+│       │   │   │   │   ├── dep-lib-unicode_ident
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-unicode_ident
+│       │   │   │   │   └── lib-unicode_ident.json
+│       │   │   │   ├── unindent-a6147c03ba7110e0/
+│       │   │   │   │   ├── dep-lib-unindent
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-unindent
+│       │   │   │   │   └── lib-unindent.json
+│       │   │   │   ├── version_check-1b35945728b5eb17/
+│       │   │   │   │   ├── dep-lib-version_check
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-version_check
+│       │   │   │   │   └── lib-version_check.json
+│       │   │   │   ├── zmij-5e9e18752fc263ac/
+│       │   │   │   │   ├── run-build-script-build-script-build
+│       │   │   │   │   └── run-build-script-build-script-build.json
+│       │   │   │   ├── zmij-817bc6a685c63987/
+│       │   │   │   │   ├── dep-lib-zmij
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-zmij
+│       │   │   │   │   └── lib-zmij.json
+│       │   │   │   └── zmij-c072861476d091d6/
+│       │   │   │       ├── build-script-build-script-build
+│       │   │   │       ├── build-script-build-script-build.json
+│       │   │   │       ├── dep-build-script-build-script-build
+│       │   │   │       └── invoked.timestamp
+│       │   │   ├── deps/
+│       │   │   │   ├── aho_corasick-dfba2a0ba8cc06ae.d
+│       │   │   │   ├── autocfg-a2c6748e1abc0e67.d
+│       │   │   │   ├── block_buffer-aea17d7d387d499b.d
+│       │   │   │   ├── cfg_if-385f4e40850ba0dd.d
+│       │   │   │   ├── cpufeatures-1bb46b639acd1e76.d
+│       │   │   │   ├── crc32fast-595d09c8ed5fe0d4.d
+│       │   │   │   ├── crossbeam_deque-67d59dc6c8a11225.d
+│       │   │   │   ├── crossbeam_epoch-bbfef6cbec1b4431.d
+│       │   │   │   ├── crossbeam_utils-6d90888b49979750.d
+│       │   │   │   ├── crypto_common-e15593f6d600c65c.d
+│       │   │   │   ├── digest-0b96b890ff491a11.d
+│       │   │   │   ├── either-c0572c8e65673265.d
+│       │   │   │   ├── generic_array-1591f3b109d6259b.d
+│       │   │   │   ├── heck-715f626dcb4698d3.d
+│       │   │   │   ├── indoc-2ad5e8863b6418c1.d
+│       │   │   │   ├── indoc-2ad5e8863b6418c1.dll
+│       │   │   │   ├── indoc-2ad5e8863b6418c1.dll.exp
+│       │   │   │   ├── indoc-2ad5e8863b6418c1.dll.lib
+│       │   │   │   ├── indoc-2ad5e8863b6418c1.pdb
+│       │   │   │   ├── intellicrack_hexcore.d
+│       │   │   │   ├── intellicrack_hexcore.dll
+│       │   │   │   ├── intellicrack_hexcore.dll.exp
+│       │   │   │   ├── intellicrack_hexcore.dll.lib
+│       │   │   │   ├── intellicrack_hexcore.pdb
+│       │   │   │   ├── itoa-01439ce7fb02dc1d.d
+│       │   │   │   ├── libaho_corasick-dfba2a0ba8cc06ae.rlib
+│       │   │   │   ├── libaho_corasick-dfba2a0ba8cc06ae.rmeta
+│       │   │   │   ├── libautocfg-a2c6748e1abc0e67.rlib
+│       │   │   │   ├── libautocfg-a2c6748e1abc0e67.rmeta
+│       │   │   │   ├── libblock_buffer-aea17d7d387d499b.rlib
+│       │   │   │   ├── libblock_buffer-aea17d7d387d499b.rmeta
+│       │   │   │   ├── libc-c25ed74f22ccb1fc.d
+│       │   │   │   ├── libcfg_if-385f4e40850ba0dd.rlib
+│       │   │   │   ├── libcfg_if-385f4e40850ba0dd.rmeta
+│       │   │   │   ├── libcpufeatures-1bb46b639acd1e76.rlib
+│       │   │   │   ├── libcpufeatures-1bb46b639acd1e76.rmeta
+│       │   │   │   ├── libcrc32fast-595d09c8ed5fe0d4.rlib
+│       │   │   │   ├── libcrc32fast-595d09c8ed5fe0d4.rmeta
+│       │   │   │   ├── libcrossbeam_deque-67d59dc6c8a11225.rlib
+│       │   │   │   ├── libcrossbeam_deque-67d59dc6c8a11225.rmeta
+│       │   │   │   ├── libcrossbeam_epoch-bbfef6cbec1b4431.rlib
+│       │   │   │   ├── libcrossbeam_epoch-bbfef6cbec1b4431.rmeta
+│       │   │   │   ├── libcrossbeam_utils-6d90888b49979750.rlib
+│       │   │   │   ├── libcrossbeam_utils-6d90888b49979750.rmeta
+│       │   │   │   ├── libcrypto_common-e15593f6d600c65c.rlib
+│       │   │   │   ├── libcrypto_common-e15593f6d600c65c.rmeta
+│       │   │   │   ├── libdigest-0b96b890ff491a11.rlib
+│       │   │   │   ├── libdigest-0b96b890ff491a11.rmeta
+│       │   │   │   ├── libeither-c0572c8e65673265.rlib
+│       │   │   │   ├── libeither-c0572c8e65673265.rmeta
+│       │   │   │   ├── libgeneric_array-1591f3b109d6259b.rlib
+│       │   │   │   ├── libgeneric_array-1591f3b109d6259b.rmeta
+│       │   │   │   ├── libheck-715f626dcb4698d3.rlib
+│       │   │   │   ├── libheck-715f626dcb4698d3.rmeta
+│       │   │   │   ├── libitoa-01439ce7fb02dc1d.rlib
+│       │   │   │   ├── libitoa-01439ce7fb02dc1d.rmeta
+│       │   │   │   ├── liblibc-c25ed74f22ccb1fc.rlib
+│       │   │   │   ├── liblibc-c25ed74f22ccb1fc.rmeta
+│       │   │   │   ├── libmd5-179a25fea783c093.rlib
+│       │   │   │   ├── libmd5-179a25fea783c093.rmeta
+│       │   │   │   ├── libmemchr-d29f5a4c159c3c86.rlib
+│       │   │   │   ├── libmemchr-d29f5a4c159c3c86.rmeta
+│       │   │   │   ├── libmemmap2-fd61326e2259ca6b.rlib
+│       │   │   │   ├── libmemmap2-fd61326e2259ca6b.rmeta
+│       │   │   │   ├── libmemoffset-913e1c7aaac62924.rlib
+│       │   │   │   ├── libmemoffset-913e1c7aaac62924.rmeta
+│       │   │   │   ├── libonce_cell-3a535680e70514f6.rlib
+│       │   │   │   ├── libonce_cell-3a535680e70514f6.rmeta
+│       │   │   │   ├── libonce_cell-4a9322c3b06b7429.rlib
+│       │   │   │   ├── libonce_cell-4a9322c3b06b7429.rmeta
+│       │   │   │   ├── libproc_macro2-40fabc91ab2dbbd0.rlib
+│       │   │   │   ├── libproc_macro2-40fabc91ab2dbbd0.rmeta
+│       │   │   │   ├── libpyo3-8ab50e9d4df9d92c.rlib
+│       │   │   │   ├── libpyo3-8ab50e9d4df9d92c.rmeta
+│       │   │   │   ├── libpyo3_build_config-a7c409a6c7b42f42.rlib
+│       │   │   │   ├── libpyo3_build_config-a7c409a6c7b42f42.rmeta
+│       │   │   │   ├── libpyo3_ffi-0f13a64d60aa7e8a.rlib
+│       │   │   │   ├── libpyo3_ffi-0f13a64d60aa7e8a.rmeta
+│       │   │   │   ├── libpyo3_macros_backend-6babaf4dd6786db9.rlib
+│       │   │   │   ├── libpyo3_macros_backend-6babaf4dd6786db9.rmeta
+│       │   │   │   ├── libquote-1d47c7ef8922d775.rlib
+│       │   │   │   ├── libquote-1d47c7ef8922d775.rmeta
+│       │   │   │   ├── librayon-f193588a405505a8.rlib
+│       │   │   │   ├── librayon-f193588a405505a8.rmeta
+│       │   │   │   ├── librayon_core-2445cf0790c89dff.rlib
+│       │   │   │   ├── librayon_core-2445cf0790c89dff.rmeta
+│       │   │   │   ├── libregex-c45eb3d16c95279b.rlib
+│       │   │   │   ├── libregex-c45eb3d16c95279b.rmeta
+│       │   │   │   ├── libregex_automata-24982cf52ad0c672.rlib
+│       │   │   │   ├── libregex_automata-24982cf52ad0c672.rmeta
+│       │   │   │   ├── libregex_syntax-e9bfac29085d0dd1.rlib
+│       │   │   │   ├── libregex_syntax-e9bfac29085d0dd1.rmeta
+│       │   │   │   ├── libserde-e93b3533851d4d9f.rlib
+│       │   │   │   ├── libserde-e93b3533851d4d9f.rmeta
+│       │   │   │   ├── libserde_core-7bd8eecab8417789.rlib
+│       │   │   │   ├── libserde_core-7bd8eecab8417789.rmeta
+│       │   │   │   ├── libserde_json-618a504fdd57c763.rlib
+│       │   │   │   ├── libserde_json-618a504fdd57c763.rmeta
+│       │   │   │   ├── libsha1-5f3566f7c833f637.rlib
+│       │   │   │   ├── libsha1-5f3566f7c833f637.rmeta
+│       │   │   │   ├── libsha2-00da1c785ef22f25.rlib
+│       │   │   │   ├── libsha2-00da1c785ef22f25.rmeta
+│       │   │   │   ├── libsyn-061fcbe5e8cd8a5e.rlib
+│       │   │   │   ├── libsyn-061fcbe5e8cd8a5e.rmeta
+│       │   │   │   ├── libtarget_lexicon-ac4d71b804495f8e.rlib
+│       │   │   │   ├── libtarget_lexicon-ac4d71b804495f8e.rmeta
+│       │   │   │   ├── libthiserror-85b4bb481db04019.rlib
+│       │   │   │   ├── libthiserror-85b4bb481db04019.rmeta
+│       │   │   │   ├── libtypenum-d62d0c2b00d059c6.rlib
+│       │   │   │   ├── libtypenum-d62d0c2b00d059c6.rmeta
+│       │   │   │   ├── libunicode_ident-7cb6077d788cfe85.rlib
+│       │   │   │   ├── libunicode_ident-7cb6077d788cfe85.rmeta
+│       │   │   │   ├── libunindent-a6147c03ba7110e0.rlib
+│       │   │   │   ├── libunindent-a6147c03ba7110e0.rmeta
+│       │   │   │   ├── libversion_check-1b35945728b5eb17.rlib
+│       │   │   │   ├── libversion_check-1b35945728b5eb17.rmeta
+│       │   │   │   ├── libzmij-817bc6a685c63987.rlib
+│       │   │   │   ├── libzmij-817bc6a685c63987.rmeta
+│       │   │   │   ├── md5-179a25fea783c093.d
+│       │   │   │   ├── memchr-d29f5a4c159c3c86.d
+│       │   │   │   ├── memmap2-fd61326e2259ca6b.d
+│       │   │   │   ├── memoffset-913e1c7aaac62924.d
+│       │   │   │   ├── once_cell-3a535680e70514f6.d
+│       │   │   │   ├── once_cell-4a9322c3b06b7429.d
+│       │   │   │   ├── proc_macro2-40fabc91ab2dbbd0.d
+│       │   │   │   ├── pyo3-8ab50e9d4df9d92c.d
+│       │   │   │   ├── pyo3_build_config-a7c409a6c7b42f42.d
+│       │   │   │   ├── pyo3_ffi-0f13a64d60aa7e8a.d
+│       │   │   │   ├── pyo3_macros-041221c0cbc9a844.d
+│       │   │   │   ├── pyo3_macros-041221c0cbc9a844.dll
+│       │   │   │   ├── pyo3_macros-041221c0cbc9a844.dll.exp
+│       │   │   │   ├── pyo3_macros-041221c0cbc9a844.dll.lib
+│       │   │   │   ├── pyo3_macros-041221c0cbc9a844.pdb
+│       │   │   │   ├── pyo3_macros_backend-6babaf4dd6786db9.d
+│       │   │   │   ├── quote-1d47c7ef8922d775.d
+│       │   │   │   ├── rayon-f193588a405505a8.d
+│       │   │   │   ├── rayon_core-2445cf0790c89dff.d
+│       │   │   │   ├── regex-c45eb3d16c95279b.d
+│       │   │   │   ├── regex_automata-24982cf52ad0c672.d
+│       │   │   │   ├── regex_syntax-e9bfac29085d0dd1.d
+│       │   │   │   ├── serde-e93b3533851d4d9f.d
+│       │   │   │   ├── serde_core-7bd8eecab8417789.d
+│       │   │   │   ├── serde_derive-4b52e8912be6d020.d
+│       │   │   │   ├── serde_derive-4b52e8912be6d020.dll
+│       │   │   │   ├── serde_derive-4b52e8912be6d020.dll.exp
+│       │   │   │   ├── serde_derive-4b52e8912be6d020.dll.lib
+│       │   │   │   ├── serde_derive-4b52e8912be6d020.pdb
+│       │   │   │   ├── serde_json-618a504fdd57c763.d
+│       │   │   │   ├── sha1-5f3566f7c833f637.d
+│       │   │   │   ├── sha2-00da1c785ef22f25.d
+│       │   │   │   ├── syn-061fcbe5e8cd8a5e.d
+│       │   │   │   ├── target_lexicon-ac4d71b804495f8e.d
+│       │   │   │   ├── thiserror-85b4bb481db04019.d
+│       │   │   │   ├── thiserror_impl-9314e3cf195e59d5.d
+│       │   │   │   ├── thiserror_impl-9314e3cf195e59d5.dll
+│       │   │   │   ├── thiserror_impl-9314e3cf195e59d5.dll.exp
+│       │   │   │   ├── thiserror_impl-9314e3cf195e59d5.dll.lib
+│       │   │   │   ├── thiserror_impl-9314e3cf195e59d5.pdb
+│       │   │   │   ├── typenum-d62d0c2b00d059c6.d
+│       │   │   │   ├── unicode_ident-7cb6077d788cfe85.d
+│       │   │   │   ├── unindent-a6147c03ba7110e0.d
+│       │   │   │   ├── version_check-1b35945728b5eb17.d
+│       │   │   │   └── zmij-817bc6a685c63987.d
+│       │   │   ├── examples/
+│       │   │   ├── incremental/
+│       │   │   ├── .cargo-lock
+│       │   │   ├── intellicrack_hexcore.d
+│       │   │   ├── intellicrack_hexcore.dll
+│       │   │   ├── intellicrack_hexcore.dll.exp
+│       │   │   ├── intellicrack_hexcore.dll.lib
+│       │   │   └── intellicrack_hexcore.pdb
 │       │   ├── .rustc_info.json
 │       │   └── CACHEDIR.TAG
 │       ├── Cargo.lock
@@ -18277,7 +18847,6 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   │   ├── sample1.rc
 │   │   │   └── Sample2.dll
 │   │   ├── changes.txt
-│   │   ├── download_rh.ps1
 │   │   ├── ReadMe.txt
 │   │   └── ResourceHacker.exe
 │   ├── WindowsPatch/
@@ -18594,6 +19163,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 ├── justfile
 ├── LICENSE
 ├── MANIFEST.in
+├── package-lock.json
 ├── package.json
 ├── pixi.lock
 ├── pyproject.toml

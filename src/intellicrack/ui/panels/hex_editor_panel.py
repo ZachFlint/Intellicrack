@@ -14,9 +14,10 @@ from __future__ import annotations
 
 import math
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -37,6 +38,10 @@ from PyQt6.QtWidgets import (
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.hex_editor_widget import HexEditorWidget
+
+
+if TYPE_CHECKING:
+    from intellicrack.bridges.hex_state import HexDocumentState
 
 
 try:
@@ -65,6 +70,8 @@ except ImportError:
 _KB = 1024
 _MB = _KB * _KB
 _GB = _MB * _KB
+_PRINTABLE_MIN = 0x20
+_PRINTABLE_MAX = 0x7E
 
 
 def _format_size(size: int) -> str:
@@ -99,6 +106,8 @@ class HexEditorPanel(AnalysisPanelBase):
         _side_tabs: Tab widget for side panels.
     """
 
+    context_push_requested: pyqtSignal = pyqtSignal(dict)
+
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the hex editor panel.
 
@@ -128,6 +137,13 @@ class HexEditorPanel(AnalysisPanelBase):
         self._undo_btn: QPushButton | None = None
         self._redo_btn: QPushButton | None = None
         self._side_tabs: QTabWidget | None = None
+
+        self._search_results: list[tuple[int, int]] = []
+        self._search_index: int = 0
+        self._original_data_cache: dict[int, int] = {}
+        self._state_holder: HexDocumentState | None = None
+        self._find_next_btn: QPushButton | None = None
+        self._find_prev_btn: QPushButton | None = None
 
         super().__init__(parent)
 
@@ -159,6 +175,8 @@ class HexEditorPanel(AnalysisPanelBase):
         toolbar.addWidget(self._search_mode_combo)
 
         self._add_secondary_button(toolbar, "Find", self._on_search)
+        self._find_next_btn = self._add_secondary_button(toolbar, "Next", self._on_find_next)
+        self._find_prev_btn = self._add_secondary_button(toolbar, "Prev", self._on_find_prev)
         toolbar.addSeparator()
 
         self._undo_btn = self._add_secondary_button(toolbar, "Undo", self._on_undo)
@@ -169,6 +187,8 @@ class HexEditorPanel(AnalysisPanelBase):
         self._encoding_combo.addItems(["ASCII", "UTF-8", "UTF-16LE", "UTF-16BE"])
         self._encoding_combo.setFixedWidth(90)
         toolbar.addWidget(self._encoding_combo)
+
+        self._add_secondary_button(toolbar, "Send to AI", self._on_send_to_ai)
 
         self._file_info_label = QLabel("")
         toolbar.addWidget(self._file_info_label)
@@ -194,7 +214,34 @@ class HexEditorPanel(AnalysisPanelBase):
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 1)
 
+        self._setup_shortcuts()
+
         return splitter
+
+    def _setup_shortcuts(self) -> None:
+        """Configure keyboard shortcuts for the hex editor panel."""
+        sc_find = QShortcut(QKeySequence("Ctrl+F"), self)
+        sc_find.activated.connect(self._focus_search)
+        sc_goto = QShortcut(QKeySequence("Ctrl+G"), self)
+        sc_goto.activated.connect(self._focus_goto)
+        sc_save = QShortcut(QKeySequence("Ctrl+S"), self)
+        sc_save.activated.connect(self._on_save)
+        sc_find_next = QShortcut(QKeySequence("F3"), self)
+        sc_find_next.activated.connect(self._on_find_next)
+        sc_find_prev = QShortcut(QKeySequence("Shift+F3"), self)
+        sc_find_prev.activated.connect(self._on_find_prev)
+
+    def _focus_search(self) -> None:
+        """Focus the search input field."""
+        if self._search_input is not None:
+            self._search_input.setFocus()
+            self._search_input.selectAll()
+
+    def _focus_goto(self) -> None:
+        """Focus the goto-offset input field."""
+        if self._offset_input is not None:
+            self._offset_input.setFocus()
+            self._offset_input.selectAll()
 
     def _build_side_panels(self) -> None:
         """Create all side panel tabs."""
@@ -303,10 +350,18 @@ class HexEditorPanel(AnalysisPanelBase):
                 self._file_info_label.setText(f"  {path.name} ({_format_size(doc_len)})")
 
             self._populate_template_combo()
+            self._auto_detect_file_type()
             self._populate_sections()
             self._populate_imports()
             self._populate_exports()
+            self._populate_strings()
             self._update_statistics()
+            self._original_data_cache.clear()
+            self._search_results.clear()
+            self._search_index = 0
+
+            if self._state_holder is not None:
+                self._state_holder.set_document(self._document, path, source="panel")
 
             _logger.info("file_loaded", path=str(path), size=doc_len)
 
@@ -332,6 +387,7 @@ class HexEditorPanel(AnalysisPanelBase):
             name = self._file_path.name if self._file_path is not None else "untitled"
             size = self._document.length()
             self._file_info_label.setText(f"  {name}{modified_mark} ({_format_size(size)})")
+        self._update_patches()
 
     def _on_edit_mode_changed(self, mode: str) -> None:
         """Handle edit mode toggle.
@@ -482,6 +538,9 @@ class HexEditorPanel(AnalysisPanelBase):
                 raw_results = self._document.search_regex(query, 100)
                 results = [(r[0], r[1]) for r in raw_results]
 
+            self._search_results = results
+            self._search_index = 0
+
             if results and self._hex_widget is not None:
                 goto_fn = getattr(self._hex_widget, "goto_offset", None)
                 if callable(goto_fn):
@@ -496,6 +555,60 @@ class HexEditorPanel(AnalysisPanelBase):
 
         except Exception as exc:
             _logger.debug("search_failed", error=str(exc))
+
+    def _on_find_next(self) -> None:
+        """Navigate to the next search result with wrap-around."""
+        if not self._search_results or self._hex_widget is None:
+            return
+        self._search_index = (self._search_index + 1) % len(self._search_results)
+        offset, _length = self._search_results[self._search_index]
+        goto_fn = getattr(self._hex_widget, "goto_offset", None)
+        if callable(goto_fn):
+            goto_fn(offset)
+
+    def _on_find_prev(self) -> None:
+        """Navigate to the previous search result with wrap-around."""
+        if not self._search_results or self._hex_widget is None:
+            return
+        self._search_index = (self._search_index - 1) % len(self._search_results)
+        offset, _length = self._search_results[self._search_index]
+        goto_fn = getattr(self._hex_widget, "goto_offset", None)
+        if callable(goto_fn):
+            goto_fn(offset)
+
+    def _on_send_to_ai(self) -> None:
+        """Emit context for AI analysis from the current hex editor state."""
+        if self._document is None:
+            return
+
+        context: dict[str, Any] = {}
+        context["file_path"] = str(self._file_path) if self._file_path else None
+        context["size"] = self._document.length()
+        context["modified"] = self._document.is_modified()
+
+        cursor_offset = 0
+        if self._hex_widget is not None:
+            cursor_offset = getattr(self._hex_widget, "_cursor_offset", 0)
+        context["cursor"] = cursor_offset
+
+        try:
+            read_start = max(0, cursor_offset - 128)
+            read_len = min(256, self._document.length() - read_start)
+            if read_len > 0:
+                raw = self._document.read(read_start, read_len)
+                context["bytes_at_cursor"] = " ".join(f"{b:02X}" for b in raw)
+                context["bytes_offset"] = read_start
+        except Exception:
+            _logger.debug("ai_context_bytes_read_failed")
+
+        try:
+            inspection = self._document.inspect_at(cursor_offset)
+            if isinstance(inspection, dict):
+                context["inspection"] = {k: str(v) for k, v in cast("dict[str, object]", inspection).items()}
+        except Exception:
+            _logger.debug("ai_context_inspection_failed")
+
+        self.context_push_requested.emit(context)
 
     def _on_undo(self) -> None:
         """Undo the last edit operation."""
@@ -770,10 +883,233 @@ class HexEditorPanel(AnalysisPanelBase):
             if callable(goto_fn):
                 goto_fn(offset)
 
+    def set_state_holder(self, state_holder: HexDocumentState) -> None:
+        """Attach a shared state holder for bridge-GUI synchronization.
+
+        Args:
+            state_holder: The shared HexDocumentState instance.
+        """
+        self._state_holder = state_holder
+        from intellicrack.bridges.hex_state import HexDocumentEvent as _Evt  # noqa: PLC0415
+
+        def _on_state_event(event_type: _Evt, data: dict[str, Any]) -> None:
+            if event_type == _Evt.DOCUMENT_OPENED:
+                file_path_str = data.get("file_path")
+                if file_path_str and self._document is None:
+                    self.load_file(file_path_str)
+            elif event_type == _Evt.CURSOR_MOVED:
+                offset = data.get("offset", 0)
+                if self._hex_widget is not None:
+                    goto_fn = getattr(self._hex_widget, "goto_offset", None)
+                    if callable(goto_fn):
+                        goto_fn(offset)
+                self._update_data_inspector(offset)
+            elif event_type == _Evt.DATA_MODIFIED:
+                if self._hex_widget is not None:
+                    update_fn = getattr(self._hex_widget, "_update_viewport", None)
+                    if callable(update_fn):
+                        update_fn()
+                self._on_data_changed()
+            elif event_type == _Evt.SELECTION_CHANGED:
+                start = data.get("start", -1)
+                end = data.get("end", -1)
+                if self._hex_widget is not None and start >= 0 and end >= 0:
+                    widget = self._hex_widget
+                    widget._selection_start = start
+                    widget._selection_end = end
+                    update_fn = getattr(widget, "_update_viewport", None)
+                    if callable(update_fn):
+                        update_fn()
+
+        state_holder.register_callback(_on_state_event, source_id="panel")
+
+    def _auto_detect_file_type(self) -> None:
+        """Detect the file type from magic bytes and auto-select the template."""
+        if self._document is None or self._template_combo is None:
+            return
+
+        try:
+            magic = self._document.read(0, 4)
+            if isinstance(magic, (list, bytearray)):
+                magic = bytes(magic)
+
+            detected = ""
+            pe_magic = b"\x4d\x5a"
+            elf_magic = b"\x7fELF"
+            zip_magic = b"\x50\x4b\x03\x04"
+            macho_magics = {
+                b"\xfe\xed\xfa\xce",
+                b"\xfe\xed\xfa\xcf",
+                b"\xce\xfa\xed\xfe",
+                b"\xcf\xfa\xed\xfe",
+            }
+            if len(magic) >= len(pe_magic) and magic[:2] == pe_magic:
+                detected = "PE"
+                self._select_template("IMAGE_DOS_HEADER")
+            elif len(magic) >= len(elf_magic) and magic[:4] == elf_magic:
+                detected = "ELF"
+                self._select_template("ELF_HEADER_64")
+            elif len(magic) >= len(elf_magic) and magic[:4] in macho_magics:
+                detected = "Mach-O"
+                self._select_template("MACH_HEADER_64")
+            elif len(magic) >= len(zip_magic) and magic[:4] == zip_magic:
+                detected = "ZIP"
+                self._select_template("ZIP_LOCAL_FILE_HEADER")
+
+            if detected and self._file_info_label is not None:
+                current = self._file_info_label.text()
+                self._file_info_label.setText(f"{current} [{detected}]")
+
+        except Exception as exc:
+            _logger.debug("auto_detect_failed", error=str(exc))
+
+    def _select_template(self, template_name: str) -> None:
+        """Select a template by name in the combo box.
+
+        Args:
+            template_name: Template name to select.
+        """
+        if self._template_combo is None:
+            return
+        idx = self._template_combo.findText(template_name)
+        if idx >= 0:
+            self._template_combo.setCurrentIndex(idx)
+
+    def _populate_strings(self) -> None:
+        """Scan the document for printable ASCII strings and populate the strings tab."""
+        if self._strings_tree is None or self._document is None:
+            return
+
+        self._strings_tree.clear()
+        chunk_size = 65536
+        min_string_len = 4
+        max_strings = 5000
+        max_display_len = 256
+
+        doc_len: int = self._document.length()
+        string_count = 0
+        current_string_start = -1
+        current_chars: list[str] = []
+        offset = 0
+
+        while offset < doc_len and string_count < max_strings:
+            chunk_len = min(chunk_size, doc_len - offset)
+            raw = self._document.read(offset, chunk_len)
+            if isinstance(raw, (list, bytearray)):
+                raw = bytes(raw)
+
+            for i, byte_val in enumerate(raw):
+                abs_offset = offset + i
+                if _PRINTABLE_MIN <= byte_val <= _PRINTABLE_MAX:
+                    if current_string_start < 0:
+                        current_string_start = abs_offset
+                    current_chars.append(chr(byte_val))
+                else:
+                    if len(current_chars) >= min_string_len:
+                        string_val = "".join(current_chars)
+                        display = string_val[:max_display_len]
+                        item = QTreeWidgetItem([
+                            f"0x{current_string_start:08X}",
+                            str(len(string_val)),
+                            display,
+                        ])
+                        self._strings_tree.addTopLevelItem(item)
+                        string_count += 1
+                        if string_count >= max_strings:
+                            break
+                    current_string_start = -1
+                    current_chars.clear()
+
+            offset += chunk_len
+
+        if len(current_chars) >= min_string_len and string_count < max_strings:
+            string_val = "".join(current_chars)
+            display = string_val[:max_display_len]
+            item = QTreeWidgetItem([
+                f"0x{current_string_start:08X}",
+                str(len(string_val)),
+                display,
+            ])
+            self._strings_tree.addTopLevelItem(item)
+
+        self._strings_tree.itemDoubleClicked.connect(self._on_string_double_clicked)
+
+    def _on_string_double_clicked(self, item: QTreeWidgetItem, column: int) -> None:
+        """Navigate to the string offset when double-clicked.
+
+        Args:
+            item: The clicked tree item.
+            column: The clicked column index.
+        """
+        _ = column
+        offset_text = item.text(0)
+        try:
+            offset = int(offset_text, 16)
+            self.goto_offset(offset)
+        except ValueError:
+            pass
+
+    def _update_patches(self) -> None:
+        """Update the patches tree by comparing modified offsets to originals."""
+        if self._patches_tree is None or self._document is None or self._hex_widget is None:
+            return
+
+        modified_offsets: set[int] = getattr(self._hex_widget, "_modified_offsets", set())
+        if not modified_offsets:
+            return
+
+        for off in sorted(modified_offsets):
+            if off not in self._original_data_cache:
+                continue
+
+            original_byte = self._original_data_cache[off]
+            try:
+                raw = self._document.read(off, 1)
+                if isinstance(raw, (list, bytes, bytearray)):
+                    current_byte = raw[0] if raw else 0
+                else:
+                    continue
+            except Exception:
+                _logger.debug("patch_read_failed", offset=off)
+                continue
+
+            if current_byte != original_byte:
+                existing = False
+                for i in range(self._patches_tree.topLevelItemCount()):
+                    tree_item = self._patches_tree.topLevelItem(i)
+                    if tree_item is not None and tree_item.text(0) == f"0x{off:08X}":
+                        tree_item.setText(2, f"0x{current_byte:02X}")
+                        existing = True
+                        break
+                if not existing:
+                    patch_item = QTreeWidgetItem([
+                        f"0x{off:08X}",
+                        f"0x{original_byte:02X}",
+                        f"0x{current_byte:02X}",
+                    ])
+                    self._patches_tree.addTopLevelItem(patch_item)
+
+    def _cache_original_byte(self, offset: int) -> None:
+        """Cache the original byte value before first modification.
+
+        Args:
+            offset: Byte offset to cache.
+        """
+        if offset in self._original_data_cache or self._document is None:
+            return
+        try:
+            raw = self._document.read(offset, 1)
+            if isinstance(raw, (list, bytes, bytearray)):
+                self._original_data_cache[offset] = raw[0] if raw else 0
+        except Exception:
+            _logger.debug("cache_original_byte_failed", offset=offset)
+
     def _cleanup(self) -> None:
         """Release resources when the panel is closed."""
         self._document = None
         self._file_path = None
+        self._original_data_cache.clear()
+        self._search_results.clear()
         if self._hex_widget is not None:
             set_doc = getattr(self._hex_widget, "set_document", None)
             if callable(set_doc):

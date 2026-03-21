@@ -12,13 +12,21 @@ memory-mapped I/O for large file support.
 
 from __future__ import annotations
 
+import asyncio
 import base64
+import inspect as _inspect_mod
+import tempfile
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ..core.logging import get_logger
 from ..core.types import ToolDefinition, ToolFunction, ToolName, ToolParameter
 from .base import BridgeCapabilities, ToolBridgeBase
+
+
+if TYPE_CHECKING:
+    from ..core.tools import ToolRegistry
+    from .hex_state import HexDocumentState
 
 
 _hexcore_mod: Any = None
@@ -58,12 +66,30 @@ class HexEditorBridge(ToolBridgeBase):
         self._cursor_offset: int = 0
         self._selection: tuple[int, int] | None = None
         self._hexcore_available: bool = _hexcore_available
+        self._state_holder: HexDocumentState | None = None
+        self._tool_registry: ToolRegistry | None = None
         self._capabilities = BridgeCapabilities(
             supports_static_analysis=True,
             supports_patching=True,
             supported_architectures=["x86", "x86_64", "arm", "arm64"],
             supported_formats=["pe", "elf", "macho", "raw"],
         )
+
+    def set_state_holder(self, state_holder: HexDocumentState) -> None:
+        """Attach a shared state holder for bridge-GUI synchronization.
+
+        Args:
+            state_holder: The shared HexDocumentState instance.
+        """
+        self._state_holder = state_holder
+
+    def set_tool_registry(self, registry: ToolRegistry) -> None:
+        """Set the tool registry for cross-bridge access.
+
+        Args:
+            registry: The ToolRegistry providing access to other bridges.
+        """
+        self._tool_registry = registry
 
     @property
     def name(self) -> ToolName:
@@ -253,9 +279,7 @@ class HexEditorBridge(ToolBridgeBase):
                     name="hex_editor.copy_as",
                     description="Format bytes at cursor/selection in a specific format.",
                     parameters=[
-                        ToolParameter(
-                            name="format", type="string", description="Output format.", enum=["hex", "c_array", "python", "base64"]
-                        ),
+                        ToolParameter(name="fmt", type="string", description="Output format.", enum=["hex", "c_array", "python", "base64"]),
                     ],
                     returns="Formatted string",
                 ),
@@ -267,6 +291,125 @@ class HexEditorBridge(ToolBridgeBase):
                     ],
                     returns="True if saved",
                 ),
+                ToolFunction(
+                    name="hex_editor.get_cursor_position",
+                    description="Get the current logical cursor position in the document.",
+                    parameters=[],
+                    returns="Current byte offset of the cursor as an integer",
+                ),
+                ToolFunction(
+                    name="hex_editor.select_range",
+                    description="Set the selection range to a span of bytes.",
+                    parameters=[
+                        ToolParameter(name="start", type="integer", description="Selection start offset."),
+                        ToolParameter(name="end", type="integer", description="Selection end offset (inclusive)."),
+                    ],
+                    returns="True always",
+                ),
+                ToolFunction(
+                    name="hex_editor.get_selection",
+                    description="Get the current selection range.",
+                    parameters=[],
+                    returns="Tuple of (start, end) offsets, or null if no selection is active",
+                ),
+                ToolFunction(
+                    name="hex_editor.save_as",
+                    description="Save the document to a new file path.",
+                    parameters=[
+                        ToolParameter(name="path", type="string", description="New file path to save to."),
+                    ],
+                    returns="True if saved successfully",
+                ),
+                ToolFunction(
+                    name="hex_editor.goto_offset",
+                    description="Navigate the cursor to a specific byte offset.",
+                    parameters=[
+                        ToolParameter(name="offset", type="integer", description="Target byte offset."),
+                    ],
+                    returns="True always",
+                ),
+                ToolFunction(
+                    name="hex_editor.replace_bytes",
+                    description="Find and replace all occurrences of a byte pattern.",
+                    parameters=[
+                        ToolParameter(name="pattern_hex", type="string", description="Hex string pattern to find."),
+                        ToolParameter(name="replacement_hex", type="string", description="Hex string replacement."),
+                    ],
+                    returns="Number of replacements made",
+                ),
+                ToolFunction(
+                    name="hex_editor.calculate_hash_range",
+                    description="Calculate hash of a byte range within the document.",
+                    parameters=[
+                        ToolParameter(name="start", type="integer", description="Start byte offset."),
+                        ToolParameter(name="end", type="integer", description="End byte offset (exclusive)."),
+                        ToolParameter(name="algorithm", type="string", description="Hash algorithm.", required=False, default="sha256"),
+                    ],
+                    returns="Hex digest string",
+                ),
+                ToolFunction(
+                    name="hex_editor.get_document_info",
+                    description="Get information about the currently open document.",
+                    parameters=[],
+                    returns="Dict with file_path, size, modified, cursor, selection",
+                ),
+                ToolFunction(
+                    name="hex_editor.get_context_for_ai",
+                    description="Get hex editor context for AI analysis.",
+                    parameters=[
+                        ToolParameter(
+                            name="include_bytes",
+                            type="integer",
+                            description="Number of bytes around cursor to include.",
+                            required=False,
+                            default=256,
+                        ),
+                    ],
+                    returns="Dict with document info, bytes at cursor, inspections, bookmarks",
+                ),
+                ToolFunction(
+                    name="hex_editor.save_to_sandbox",
+                    description="Save the current document to a sandbox environment.",
+                    parameters=[
+                        ToolParameter(name="dest_path", type="string", description="Destination path inside the sandbox."),
+                        ToolParameter(
+                            name="sandbox_type",
+                            type="string",
+                            description="Sandbox type (docker, qemu, windows_sandbox).",
+                            required=False,
+                            default="docker",
+                        ),
+                    ],
+                    returns="Dict with sandbox_path and status",
+                ),
+                ToolFunction(
+                    name="hex_editor.test_in_sandbox",
+                    description="Save the document to a sandbox, execute it, and return the execution report.",
+                    parameters=[
+                        ToolParameter(
+                            name="args",
+                            type="string",
+                            description="Command-line arguments for the binary.",
+                            required=False,
+                            default="",
+                        ),
+                        ToolParameter(
+                            name="sandbox_type",
+                            type="string",
+                            description="Sandbox type.",
+                            required=False,
+                            default="docker",
+                        ),
+                        ToolParameter(
+                            name="timeout",
+                            type="integer",
+                            description="Execution timeout in seconds.",
+                            required=False,
+                            default=30,
+                        ),
+                    ],
+                    returns="Dict with execution report including exit code, stdout, stderr",
+                ),
             ],
         )
 
@@ -277,12 +420,14 @@ class HexEditorBridge(ToolBridgeBase):
             tool_path: Unused for this bridge.
         """
         _ = tool_path
-        self._state.connected = True
-        self._state.tool_running = True
         if self._hexcore_available:
+            self._state.connected = True
+            self._state.tool_running = True
             _logger.info("hex_editor_initialized", backend="rust_hexcore")
         else:
-            _logger.warning("hex_editor_initialized_no_backend", backend="unavailable")
+            self._state.connected = False
+            self._state.tool_running = False
+            _logger.warning("hex_editor_backend_unavailable", backend="intellicrack_hexcore")
 
     async def is_available(self) -> bool:
         """Check if the Rust hex core is available.
@@ -329,6 +474,9 @@ class HexEditorBridge(ToolBridgeBase):
         doc_len: int = self._document.length()
         _logger.info("file_opened", path=path, size=doc_len)
 
+        if self._state_holder is not None:
+            self._state_holder.set_document(self._document, Path(path), source="bridge")
+
         return {
             "file_path": path,
             "size": doc_len,
@@ -349,6 +497,8 @@ class HexEditorBridge(ToolBridgeBase):
         self._selection = None
         self._state.binary_loaded = False
         self._state.target_path = None
+        if self._state_holder is not None:
+            self._state_holder.set_document(None, None, source="bridge")
         _logger.info("file_closed")
         return True
 
@@ -393,6 +543,8 @@ class HexEditorBridge(ToolBridgeBase):
         data = bytes.fromhex(data_hex.replace(" ", ""))
         self._document.write_bytes(offset, data)
         _logger.debug("bytes_written", offset=hex(offset), length=len(data))
+        if self._state_holder is not None:
+            self._state_holder.notify_data_modified(offset, len(data), source="bridge")
         return True
 
     async def insert_bytes(self, offset: int, data_hex: str) -> bool:
@@ -415,6 +567,8 @@ class HexEditorBridge(ToolBridgeBase):
         data = bytes.fromhex(data_hex.replace(" ", ""))
         self._document.insert_bytes(offset, data)
         _logger.debug("bytes_inserted", offset=hex(offset), length=len(data))
+        if self._state_holder is not None:
+            self._state_holder.notify_data_modified(offset, len(data), source="bridge")
         return True
 
     async def delete_bytes(self, offset: int, length: int) -> bool:
@@ -436,6 +590,8 @@ class HexEditorBridge(ToolBridgeBase):
 
         self._document.delete_bytes(offset, length)
         _logger.debug("bytes_deleted", offset=hex(offset), length=length)
+        if self._state_holder is not None:
+            self._state_holder.notify_data_modified(offset, length, source="bridge")
         return True
 
     async def goto_offset(self, offset: int) -> bool:
@@ -449,6 +605,8 @@ class HexEditorBridge(ToolBridgeBase):
         """
         self._cursor_offset = offset
         _logger.debug("cursor_moved", offset=hex(offset))
+        if self._state_holder is not None:
+            self._state_holder.set_cursor(offset, source="bridge")
         return True
 
     async def get_cursor_position(self) -> int:
@@ -471,6 +629,8 @@ class HexEditorBridge(ToolBridgeBase):
         """
         self._selection = (start, end)
         _logger.debug("range_selected", start=hex(start), end=hex(end))
+        if self._state_holder is not None:
+            self._state_holder.set_selection(start, end, source="bridge")
         return True
 
     async def get_selection(self) -> tuple[int, int] | None:
@@ -552,12 +712,12 @@ class HexEditorBridge(ToolBridgeBase):
         _logger.debug("search_regex_completed", pattern=pattern, matches=len(results))
         return [{"offset": r[0], "length": r[1]} for r in results]
 
-    async def replace_bytes(self, pattern: bytes, replacement: bytes) -> int:
+    async def replace_bytes(self, pattern_hex: str, replacement_hex: str) -> int:
         """Find and replace all occurrences of a byte pattern.
 
         Args:
-            pattern: Pattern bytes to find.
-            replacement: Replacement bytes.
+            pattern_hex: Hex string pattern to find (e.g. "4D 5A").
+            replacement_hex: Hex string replacement (e.g. "90 90").
 
         Returns:
             Number of replacements made.
@@ -569,8 +729,12 @@ class HexEditorBridge(ToolBridgeBase):
             msg = "no document open"
             raise RuntimeError(msg)
 
-        count: int = self._document.replace_bytes(list(pattern), list(replacement))
+        pattern = list(bytes.fromhex(pattern_hex.replace(" ", "")))
+        replacement = list(bytes.fromhex(replacement_hex.replace(" ", "")))
+        count: int = self._document.replace_bytes(pattern, replacement)
         _logger.debug("bytes_replaced", pattern_length=len(pattern), replacements=count)
+        if count > 0 and self._state_holder is not None:
+            self._state_holder.notify_data_modified(0, 0, source="bridge")
         return count
 
     async def undo(self) -> bool:
@@ -583,6 +747,8 @@ class HexEditorBridge(ToolBridgeBase):
             return False
         result: bool = self._document.undo()
         _logger.debug("undo_performed", success=result)
+        if result and self._state_holder is not None:
+            self._state_holder.notify_data_modified(0, 0, source="bridge")
         return result
 
     async def redo(self) -> bool:
@@ -595,6 +761,8 @@ class HexEditorBridge(ToolBridgeBase):
             return False
         result: bool = self._document.redo()
         _logger.debug("redo_performed", success=result)
+        if result and self._state_holder is not None:
+            self._state_holder.notify_data_modified(0, 0, source="bridge")
         return result
 
     async def inspect_data_at(self, offset: int) -> dict[str, str]:
@@ -855,7 +1023,10 @@ class HexEditorBridge(ToolBridgeBase):
                 msg = "no file path; use save_as"
                 raise RuntimeError(msg)
 
-        _logger.info("file_saved", path=path or self._document.file_path())
+        saved_path = path or self._document.file_path() or ""
+        _logger.info("file_saved", path=saved_path)
+        if self._state_holder is not None:
+            self._state_holder.notify_document_saved(str(saved_path), source="bridge")
         return True
 
     async def save_as(self, path: str) -> bool:
@@ -871,3 +1042,215 @@ class HexEditorBridge(ToolBridgeBase):
             RuntimeError: If no document is open.
         """
         return await self.save(path)
+
+    async def calculate_hash_range(
+        self,
+        start: int,
+        end: int,
+        algorithm: str = "sha256",
+    ) -> str:
+        """Calculate a hash of a byte range within the document.
+
+        Args:
+            start: Start byte offset.
+            end: End byte offset (exclusive).
+            algorithm: Hash algorithm (md5, sha1, sha256, sha512, crc32).
+
+        Returns:
+            Hex digest string.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        digest: str = self._document.compute_hash_range(start, end, algorithm)
+        _logger.debug("hash_range_calculated", algorithm=algorithm, start=start, end=end)
+        return digest
+
+    async def get_document_info(self) -> dict[str, Any]:
+        """Get information about the currently open document.
+
+        Returns:
+            Dict with file_path, size, modified, cursor, and selection.
+        """
+        if self._document is None:
+            return {
+                "file_path": None,
+                "size": 0,
+                "modified": False,
+                "cursor": 0,
+                "selection": None,
+            }
+
+        file_path_val = self._document.file_path()
+        return {
+            "file_path": file_path_val,
+            "size": self._document.length(),
+            "modified": self._document.is_modified(),
+            "cursor": self._cursor_offset,
+            "selection": list(self._selection) if self._selection else None,
+        }
+
+    async def get_context_for_ai(self, include_bytes: int = 256) -> dict[str, Any]:
+        """Get hex editor context suitable for AI analysis.
+
+        Collects document metadata, bytes around the cursor, data
+        inspection at the cursor, selected bytes, and bookmarks into
+        a single dict for injection into an AI conversation.
+
+        Args:
+            include_bytes: Number of bytes around the cursor to include.
+
+        Returns:
+            Dict with document info, bytes_at_cursor, inspection,
+            selected_bytes, and bookmarks.
+        """
+        context: dict[str, Any] = await self.get_document_info()
+
+        if self._document is not None:
+            cursor = self._cursor_offset
+            half = include_bytes // 2
+            doc_len: int = self._document.length()
+            read_start = max(0, cursor - half)
+            read_len = min(include_bytes, doc_len - read_start)
+            if read_len > 0:
+                raw = self._document.read(read_start, read_len)
+                context["bytes_at_cursor"] = " ".join(f"{b:02X}" for b in raw)
+                context["bytes_offset"] = read_start
+            else:
+                context["bytes_at_cursor"] = ""
+                context["bytes_offset"] = 0
+
+            try:
+                inspection = self._document.inspect_at(cursor)
+                if isinstance(inspection, dict):
+                    context["inspection"] = {k: str(v) for k, v in cast("dict[str, object]", inspection).items()}
+            except Exception:
+                context["inspection"] = {}
+
+            if self._selection is not None:
+                sel_start, sel_end = self._selection
+                sel_len = sel_end - sel_start + 1
+                capped = min(sel_len, include_bytes)
+                sel_raw = self._document.read(sel_start, capped)
+                context["selected_bytes"] = " ".join(f"{b:02X}" for b in sel_raw)
+                context["selection_range"] = [sel_start, sel_end]
+
+            bookmarks = self._document.list_bookmarks()
+            context["bookmarks"] = [{"offset": b[0], "length": b[1], "label": b[2]} for b in bookmarks]
+
+        return context
+
+    async def save_to_sandbox(
+        self,
+        dest_path: str,
+        sandbox_type: str = "docker",
+    ) -> dict[str, Any]:
+        """Save the current document into a sandbox environment.
+
+        Writes the document to a temporary file, then uses the sandbox
+        bridge to copy it into the sandbox at the given destination path.
+
+        Args:
+            dest_path: Destination path inside the sandbox.
+            sandbox_type: Sandbox type (docker, qemu, windows_sandbox).
+
+        Returns:
+            Dict with sandbox_path and status.
+
+        Raises:
+            RuntimeError: If no document is open or sandbox unavailable.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        if self._tool_registry is None:
+            msg = "tool registry not set; cannot access sandbox bridge"
+            raise RuntimeError(msg)
+
+        sandbox_bridge = self._tool_registry.get(ToolName.SANDBOX)
+        if sandbox_bridge is None:
+            msg = "sandbox bridge not available"
+            raise RuntimeError(msg)
+
+        file_path_str = self._document.file_path()
+        if file_path_str is None:
+            import os  # noqa: PLC0415
+
+            tmp_fd, tmp_path = tempfile.mkstemp(suffix=".bin")
+            os.close(tmp_fd)
+            self._document.save(tmp_path)
+            file_path_str = tmp_path
+
+        copy_fn = getattr(sandbox_bridge, "copy_to_sandbox", None)
+        if callable(copy_fn):
+            if _inspect_mod.iscoroutinefunction(copy_fn):
+                await copy_fn(file_path_str, dest_path, sandbox_type)
+            else:
+                await asyncio.to_thread(copy_fn, file_path_str, dest_path, sandbox_type)
+
+        _logger.info("saved_to_sandbox", dest=dest_path, sandbox_type=sandbox_type)
+        return {"sandbox_path": dest_path, "status": "copied"}
+
+    async def test_in_sandbox(
+        self,
+        args: str = "",
+        sandbox_type: str = "docker",
+        timeout: int = 30,
+    ) -> dict[str, Any]:
+        """Save to sandbox, execute the binary, and return the report.
+
+        Args:
+            args: Command-line arguments for the binary.
+            sandbox_type: Sandbox type.
+            timeout: Execution timeout in seconds.
+
+        Returns:
+            Dict with execution report including exit_code, stdout, stderr.
+
+        Raises:
+            RuntimeError: If no document is open or sandbox unavailable.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        file_name = "target.bin"
+        file_path_str = self._document.file_path()
+        if file_path_str is not None:
+            file_name = Path(file_path_str).name
+
+        dest_path = f"/sandbox_workdir/{file_name}"
+        await self.save_to_sandbox(dest_path, sandbox_type)
+
+        if self._tool_registry is None:
+            msg = "tool registry not set"
+            raise RuntimeError(msg)
+
+        sandbox_bridge = self._tool_registry.get(ToolName.SANDBOX)
+        if sandbox_bridge is None:
+            msg = "sandbox bridge not available"
+            raise RuntimeError(msg)
+
+        run_fn = getattr(sandbox_bridge, "run_binary", None)
+        if not callable(run_fn):
+            msg = "sandbox bridge does not support run_binary"
+            raise TypeError(msg)
+
+        if _inspect_mod.iscoroutinefunction(run_fn):
+            result = await run_fn(dest_path, args, timeout)
+        else:
+            result = await asyncio.to_thread(run_fn, dest_path, args, timeout)
+
+        _logger.info(
+            "sandbox_test_completed",
+            dest=dest_path,
+            sandbox_type=sandbox_type,
+        )
+        if isinstance(result, dict):
+            return cast("dict[str, Any]", result)
+        return {"exit_code": -1, "stdout": "", "stderr": str(result)}

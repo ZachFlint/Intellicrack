@@ -5,6 +5,7 @@
   "private": true,
   "description": "Intellicrack binary analysis platform",
   "dependencies": {
+    "jsonlint": "^1.6.3",
     "markdownlint-cli": "^0.48.0"
   }
 }

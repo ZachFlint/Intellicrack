@@ -1,34 +1,28 @@
 {
   "tool": "basedpyright",
-  "generated": "2026-03-20T11:28:56.377245",
+  "generated": "2026-03-20T17:22:53.524119",
   "total_findings": 2,
-  "total_files": 2,
+  "total_files": 1,
   "files": [
     {
-      "path": "d:\\Intellicrack\\src\\intellicrack\\bridges\\hex_editor.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 28,
-          "column": 12,
-          "severity": "warning",
-          "rule": "reportMissingImports",
-          "message": "Import \"intellicrack_hexcore\" could not be resolved",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\bridges\\hex_editor.py:28:12: [warning] Import \"intellicrack_hexcore\" could not be resolved"
-        }
-      ]
-    },
-    {
       "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_panel.py",
-      "count": 1,
+      "count": 2,
       "findings": [
         {
-          "line": 57,
-          "column": 12,
-          "severity": "warning",
-          "rule": "reportMissingImports",
-          "message": "Import \"intellicrack_hexcore\" could not be resolved",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_panel.py:57:12: [warning] Import \"intellicrack_hexcore\" could not be resolved"
+          "line": 934,
+          "column": 31,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"__new__\"\n\u00a0\u00a0Argument type is \"list[Unknown] | bytearray\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_panel.py:934:31: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"__new__\"\n\u00a0\u00a0Argument type is \"list[Unknown] | bytearray\""
+        },
+        {
+          "line": 1069,
+          "column": 21,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Type of \"current_byte\" is partially unknown\n\u00a0\u00a0Type of \"current_byte\" is \"Unknown | int\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_panel.py:1069:21: [error] Type of \"current_byte\" is partially unknown\n\u00a0\u00a0Type of \"current_byte\" is \"Unknown | int\""
         }
       ]
     }

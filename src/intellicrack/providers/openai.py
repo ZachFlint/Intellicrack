@@ -296,6 +296,7 @@ class OpenAIProvider(LLMProviderBase):
 
         Raises:
             ProviderError: If not connected or request fails.
+            RateLimitError: If rate limited after exhausting retries.
         """
         if not self._connected or self._client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
@@ -323,14 +324,18 @@ class OpenAIProvider(LLMProviderBase):
             tools_count=len(tools) if tools else 0,
         )
 
+        typed_messages = cast("list[ChatCompletionMessageParam]", openai_messages)
+        typed_tools = cast("list[ChatCompletionToolParam]", openai_tools) if openai_tools else None
         start_time = time.perf_counter()
-        response = await self._make_openai_api_call(
-            model=model,
-            messages=cast("list[ChatCompletionMessageParam]", openai_messages),
-            temperature=temperature,
-            max_tokens=max_tokens,
-            tools=cast("list[ChatCompletionToolParam]", openai_tools) if openai_tools else None,
-            tool_choice=tool_choice_param,
+        response = await self._retry_with_backoff(
+            lambda: self._make_openai_api_call(
+                model=model,
+                messages=typed_messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                tools=typed_tools,
+                tool_choice=tool_choice_param,
+            )
         )
         duration_ms = (time.perf_counter() - start_time) * 1000
 

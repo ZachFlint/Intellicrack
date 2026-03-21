@@ -1,3 +1,20 @@
+7 findings in src\intellicrack\ui\panels\hex_editor_panel.py
+
+src\intellicrack\ui\panels\hex_editor_panel.py:514: '_on_search' has rank C
+
+src\intellicrack\ui\panels\hex_editor_panel.py:926: '_auto_detect_file_type' has rank C
+
+src\intellicrack\ui\panels\hex_editor_panel.py:1052: '_update_patches' has rank C
+
+src\intellicrack\ui\panels\hex_editor_panel.py:978: '_populate_strings' has rank C
+
+src\intellicrack\ui\panels\hex_editor_panel.py:787: '_populate_imports' has rank C
+
+src\intellicrack\ui\panels\hex_editor_panel.py:815: '_populate_exports' has rank C
+
+src\intellicrack\ui\panels\hex_editor_panel.py:317: 'load_file' has rank C
+
+
 5 findings in src\intellicrack\bridges\x64dbg.py
 
 src\intellicrack\bridges\x64dbg.py:2580: 'find_pattern' has rank C
@@ -73,11 +90,11 @@ src\intellicrack\providers\openrouter.py:145: 'list_models' has rank C
 
 3 findings in src\intellicrack\sandbox\qemu.py
 
-src\intellicrack\sandbox\qemu.py:812: '_build_qemu_command' has rank C
+src\intellicrack\sandbox\qemu.py:813: '_build_qemu_command' has rank C
 
-src\intellicrack\sandbox\qemu.py:1616: 'run_binary' has rank C
+src\intellicrack\sandbox\qemu.py:1632: 'run_binary' has rank C
 
-src\intellicrack\sandbox\qemu.py:1775: '_parse_network_log' has rank C
+src\intellicrack\sandbox\qemu.py:1794: '_parse_network_log' has rank C
 
 
 3 findings in src\intellicrack\ui\panels\binary_panel.py
@@ -98,13 +115,13 @@ src\intellicrack\ui\panels\graph_view.py:287: 'load_graph' has rank C
 src\intellicrack\ui\panels\graph_view.py:275: 'CFGGraphScene' has rank C
 
 
-3 findings in src\intellicrack\ui\panels\hex_editor_panel.py
+3 findings in src\intellicrack\ui\panels\hex_editor_widget.py
 
-src\intellicrack\ui\panels\hex_editor_panel.py:458: '_on_search' has rank C
+src\intellicrack\ui\panels\hex_editor_widget.py:421: 'keyPressEvent' has rank E
 
-src\intellicrack\ui\panels\hex_editor_panel.py:674: '_populate_imports' has rank C
+src\intellicrack\ui\panels\hex_editor_widget.py:669: '_do_paste' has rank C
 
-src\intellicrack\ui\panels\hex_editor_panel.py:702: '_populate_exports' has rank C
+src\intellicrack\ui\panels\hex_editor_widget.py:922: 'copy_as' has rank C
 
 
 2 findings in src\intellicrack\bridges\binary.py
@@ -135,9 +152,16 @@ src\intellicrack\bridges\schemas.py:578: 'get_schema_for_provider' has rank C
 src\intellicrack\bridges\schemas.py:304: 'validate_tool_parameter' has rank C
 
 
+2 findings in src\intellicrack\core\orchestrator.py
+
+src\intellicrack\core\orchestrator.py:429: '_run_agent_loop' has rank C
+
+src\intellicrack\core\orchestrator.py:1665: 'shutdown' has rank C
+
+
 2 findings in src\intellicrack\providers\anthropic.py
 
-src\intellicrack\providers\anthropic.py:407: 'chat_stream' has rank C
+src\intellicrack\providers\anthropic.py:427: 'chat_stream' has rank C
 
 src\intellicrack\providers\anthropic.py:212: '_build_api_kwargs' has rank C
 
@@ -165,7 +189,7 @@ src\intellicrack\providers\ollama.py:329: '_get_client_and_model' has rank C
 
 2 findings in src\intellicrack\providers\openai.py
 
-src\intellicrack\providers\openai.py:458: 'chat_stream' has rank D
+src\intellicrack\providers\openai.py:463: 'chat_stream' has rank D
 
 src\intellicrack\providers\openai.py:271: 'chat' has rank C
 
@@ -193,16 +217,16 @@ src\intellicrack\ui\app.py:901: '_on_tool_result' has rank C
 
 2 findings in src\intellicrack\ui\provider_config.py
 
-src\intellicrack\ui\provider_config.py:521: '_fetch_anthropic_models' has rank C
+src\intellicrack\ui\provider_config.py:522: '_fetch_anthropic_models' has rank C
 
-src\intellicrack\ui\provider_config.py:487: '_fetch_models' has rank C
+src\intellicrack\ui\provider_config.py:488: '_fetch_models' has rank C
 
 
 2 findings in src\intellicrack\ui\tools.py
 
-src\intellicrack\ui\tools.py:1514: '_on_tab_close_requested' has rank C
+src\intellicrack\ui\tools.py:1517: '_on_tab_close_requested' has rank C
 
-src\intellicrack\ui\tools.py:1577: 'close_embedded_tools' has rank C
+src\intellicrack\ui\tools.py:1580: 'close_embedded_tools' has rank C
 
 
 2 findings in src\intellicrack\ui\tool_config.py
@@ -210,13 +234,6 @@ src\intellicrack\ui\tools.py:1577: 'close_embedded_tools' has rank C
 src\intellicrack\ui\tool_config.py:418: '_check_ghidra' has rank C
 
 src\intellicrack\ui\tool_config.py:485: '_check_cutter' has rank C
-
-
-2 findings in src\intellicrack\ui\panels\hex_editor_widget.py
-
-src\intellicrack\ui\panels\hex_editor_widget.py:421: 'keyPressEvent' has rank E
-
-src\intellicrack\ui\panels\hex_editor_widget.py:865: 'copy_as' has rank C
 
 
 2 findings in tests\test_providers\test_model_discovery.py
@@ -235,7 +252,7 @@ tests\test_ui\test_app_embedded_tools.py:54: 'TestEmbeddedToolsMenuIntegration' 
 
 1 findings in src\intellicrack\bridges\hex_editor.py
 
-src\intellicrack\bridges\hex_editor.py:724: 'copy_as' has rank C
+src\intellicrack\bridges\hex_editor.py:892: 'copy_as' has rank C
 
 
 1 findings in src\intellicrack\bridges\process.py
@@ -248,11 +265,6 @@ src\intellicrack\bridges\process.py:1116: 'search_pattern' has rank C
 src\intellicrack\core\logging.py:426: '_sanitize_arguments' has rank C
 
 
-1 findings in src\intellicrack\core\orchestrator.py
-
-src\intellicrack\core\orchestrator.py:429: '_run_agent_loop' has rank C
-
-
 1 findings in src\intellicrack\core\process_manager.py
 
 src\intellicrack\core\process_manager.py:270: '_sync_cleanup' has rank C
@@ -261,6 +273,11 @@ src\intellicrack\core\process_manager.py:270: '_sync_cleanup' has rank C
 1 findings in src\intellicrack\core\script_gen.py
 
 src\intellicrack\core\script_gen.py:173: 'to_prompt_context' has rank C
+
+
+1 findings in src\intellicrack\core\tools.py
+
+src\intellicrack\core\tools.py:459: 'execute_tool_call' has rank C
 
 
 1 findings in src\intellicrack\credentials\env_loader.py
@@ -276,6 +293,11 @@ src\intellicrack\credentials\store.py:548: 'validate' has rank C
 1 findings in src\intellicrack\providers\base.py
 
 src\intellicrack\providers\base.py:478: '_convert_messages_to_openai_format' has rank C
+
+
+1 findings in src\intellicrack\sandbox\manager.py
+
+src\intellicrack\sandbox\manager.py:152: 'create' has rank C
 
 
 1 findings in src\intellicrack\ui\highlighter.py

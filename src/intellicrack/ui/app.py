@@ -1897,7 +1897,24 @@ class MainWindow(QMainWindow):
         Args:
             a0: Close event.
         """
+        try:
+            from ..core.process_manager import ProcessManager
+
+            pm = ProcessManager.get_instance()
+            request_shutdown = getattr(pm, "request_shutdown", None)
+            if callable(request_shutdown):
+                request_shutdown()
+        except Exception as e:
+            _logger.warning("process_manager_shutdown_failed", error=str(e))
+
         self._tool_panel.close_embedded_tools()
+
+        try:
+            from .panels.async_bridge import run_bridge_coroutine
+
+            run_bridge_coroutine(self._sandbox_manager.destroy_all())
+        except Exception as e:
+            _logger.warning("sandbox_manager_destroy_all_failed", error=str(e))
 
         shutdown_fn = getattr(
             importlib.import_module(".panels.async_bridge", "intellicrack.ui"),

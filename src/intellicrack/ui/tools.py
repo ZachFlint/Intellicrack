@@ -1005,6 +1005,9 @@ class ToolOutputPanel(QFrame):
             self._hex_editor_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("hex_editor"))
             self._tab_widget.addTab(qwidget, "Hex Editor")
             self._embedded_tools["hex_editor"] = qwidget
+
+            self._wire_hex_editor_state(raw_widget)
+
             _logger.info("hex_editor_tab_added", tab="Hex Editor")
         except Exception as e:
             _logger.warning("hex_editor_tab_add_failed", error=str(e))
@@ -1783,6 +1786,50 @@ class ToolOutputPanel(QFrame):
         if doc is None:
             return None
         return doc.findChild(QSyntaxHighlighter)
+
+    def _wire_hex_editor_state(self, panel_widget: object) -> None:
+        """Create a shared HexDocumentState and wire it to the bridge and panel.
+
+        Args:
+            panel_widget: The HexEditorPanel instance.
+        """
+        try:
+            state_mod = importlib.import_module("intellicrack.bridges.hex_state")
+            state_holder = state_mod.HexDocumentState()
+
+            set_state = getattr(panel_widget, "set_state_holder", None)
+            if callable(set_state):
+                set_state(state_holder)
+
+            reg_getter = getattr(self._tool_registry, "get_hex_editor_bridge", None)
+            if callable(reg_getter):
+                try:
+                    bridge = reg_getter()
+                    bridge_set_state = getattr(bridge, "set_state_holder", None)
+                    if callable(bridge_set_state):
+                        bridge_set_state(state_holder)
+                    bridge_set_reg = getattr(bridge, "set_tool_registry", None)
+                    if callable(bridge_set_reg):
+                        bridge_set_reg(self._tool_registry)
+                    _logger.info("hex_editor_state_wired", source="registry")
+                except Exception:
+                    _logger.debug("hex_editor_bridge_state_wire_failed", exc_info=True)
+
+            context_signal = getattr(panel_widget, "context_push_requested", None)
+            if context_signal is not None and hasattr(context_signal, "connect"):
+                context_signal.connect(self._on_hex_context_push)
+
+        except Exception:
+            _logger.debug("hex_editor_state_wire_failed", exc_info=True)
+
+    def _on_hex_context_push(self, context: dict[str, object]) -> None:
+        """Handle hex editor context push for AI integration.
+
+        Args:
+            context: Hex editor context dictionary.
+        """
+        self.log(f"[Hex Editor Context] cursor=0x{context.get('cursor', 0):08X}")
+        _logger.info("hex_context_pushed", keys=list(context.keys()))
 
     def _wire_stack_viewer_bridges(self) -> None:
         """Wire bridge instances to the stack viewer panel.

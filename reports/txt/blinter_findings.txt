@@ -1,4 +1,6 @@
-2 findings in D:\Intellicrack\scripts\build-cli-launcher.cmd
+3 findings in D:\Intellicrack\scripts\build-cli-launcher.cmd
+
+Line 1: Unix line endings detected (E018)
 
 Line 7: Missing error handling (W025)
 

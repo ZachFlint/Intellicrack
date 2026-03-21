@@ -1,8 +1,8 @@
 {
   "tool": "uncalled",
-  "generated": "2026-03-20T11:27:13.716926",
-  "total_findings": 51,
-  "total_files": 26,
+  "generated": "2026-03-20T17:21:28.561790",
+  "total_findings": 44,
+  "total_files": 22,
   "files": [
     {
       "path": "src\\intellicrack\\core\\types.py",
@@ -37,36 +37,6 @@
           "column": null,
           "message": "Unused function: is_writable",
           "raw": "src\\intellicrack\\core\\types.py: Unused function is_writable"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\core\\process_manager.py",
-      "count": 4,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: get_all_tracked",
-          "raw": "src\\intellicrack\\core\\process_manager.py: Unused function get_all_tracked"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: get_running_processes",
-          "raw": "src\\intellicrack\\core\\process_manager.py: Unused function get_running_processes"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: request_shutdown",
-          "raw": "src\\intellicrack\\core\\process_manager.py: Unused function request_shutdown"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: reset_instance",
-          "raw": "src\\intellicrack\\core\\process_manager.py: Unused function reset_instance"
         }
       ]
     },
@@ -127,30 +97,6 @@
           "column": null,
           "message": "Unused function: paintEvent",
           "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py: Unused function paintEvent"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\bridges\\base.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: has_capability",
-          "raw": "src\\intellicrack\\bridges\\base.py: Unused function has_capability"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: supports_arch",
-          "raw": "src\\intellicrack\\bridges\\base.py: Unused function supports_arch"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: supports_format",
-          "raw": "src\\intellicrack\\bridges\\base.py: Unused function supports_format"
         }
       ]
     },
@@ -251,6 +197,42 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\bridges\\base.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: supports_arch",
+          "raw": "src\\intellicrack\\bridges\\base.py: Unused function supports_arch"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: supports_format",
+          "raw": "src\\intellicrack\\bridges\\base.py: Unused function supports_format"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\bridges\\hex_state.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: clear_selection",
+          "raw": "src\\intellicrack\\bridges\\hex_state.py: Unused function clear_selection"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: unregister_callback",
+          "raw": "src\\intellicrack\\bridges\\hex_state.py: Unused function unregister_callback"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\providers\\local_transformers.py",
       "count": 2,
       "findings": [
@@ -299,6 +281,18 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\core\\process_manager.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: reset_instance",
+          "raw": "src\\intellicrack\\core\\process_manager.py: Unused function reset_instance"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\core\\script_gen.py",
       "count": 1,
       "findings": [
@@ -307,54 +301,6 @@
           "column": null,
           "message": "Unused function: prepare_ai_prompt",
           "raw": "src\\intellicrack\\core\\script_gen.py: Unused function prepare_ai_prompt"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\core\\tools.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: get_hex_editor_bridge",
-          "raw": "src\\intellicrack\\core\\tools.py: Unused function get_hex_editor_bridge"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\discovery.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: get_last_event",
-          "raw": "src\\intellicrack\\providers\\discovery.py: Unused function get_last_event"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\registry.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: get_provider_registry",
-          "raw": "src\\intellicrack\\providers\\registry.py: Unused function get_provider_registry"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\sandbox\\qemu.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: enable_vnc_display",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py: Unused function enable_vnc_display"
         }
       ]
     },
@@ -403,18 +349,6 @@
           "column": null,
           "message": "Unused function: wheelEvent",
           "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: Unused function wheelEvent"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\frida_panel.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: refresh_devices",
-          "raw": "src\\intellicrack\\ui\\panels\\frida_panel.py: Unused function refresh_devices"
         }
       ]
     },

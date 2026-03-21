@@ -1,9 +1,78 @@
 {
   "tool": "xenon",
-  "generated": "2026-03-20T11:26:38.670999",
-  "total_findings": 87,
-  "total_files": 42,
+  "generated": "2026-03-20T17:20:58.246684",
+  "total_findings": 95,
+  "total_files": 44,
   "files": [
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py",
+      "count": 7,
+      "findings": [
+        {
+          "line": 514,
+          "column": null,
+          "name": "_on_search",
+          "rank": "C",
+          "complexity": 20,
+          "message": "'_on_search' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:514: '_on_search' has rank C"
+        },
+        {
+          "line": 926,
+          "column": null,
+          "name": "_auto_detect_file_type",
+          "rank": "C",
+          "complexity": 20,
+          "message": "'_auto_detect_file_type' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:926: '_auto_detect_file_type' has rank C"
+        },
+        {
+          "line": 1052,
+          "column": null,
+          "name": "_update_patches",
+          "rank": "C",
+          "complexity": 20,
+          "message": "'_update_patches' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:1052: '_update_patches' has rank C"
+        },
+        {
+          "line": 978,
+          "column": null,
+          "name": "_populate_strings",
+          "rank": "C",
+          "complexity": 20,
+          "message": "'_populate_strings' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:978: '_populate_strings' has rank C"
+        },
+        {
+          "line": 787,
+          "column": null,
+          "name": "_populate_imports",
+          "rank": "C",
+          "complexity": 20,
+          "message": "'_populate_imports' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:787: '_populate_imports' has rank C"
+        },
+        {
+          "line": 815,
+          "column": null,
+          "name": "_populate_exports",
+          "rank": "C",
+          "complexity": 20,
+          "message": "'_populate_exports' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:815: '_populate_exports' has rank C"
+        },
+        {
+          "line": 317,
+          "column": null,
+          "name": "load_file",
+          "rank": "C",
+          "complexity": 20,
+          "message": "'load_file' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:317: 'load_file' has rank C"
+        }
+      ]
+    },
     {
       "path": "src\\intellicrack\\bridges\\x64dbg.py",
       "count": 5,
@@ -285,31 +354,31 @@
       "count": 3,
       "findings": [
         {
-          "line": 812,
+          "line": 813,
           "column": null,
           "name": "_build_qemu_command",
           "rank": "C",
           "complexity": 20,
           "message": "'_build_qemu_command' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:812: '_build_qemu_command' has rank C"
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:813: '_build_qemu_command' has rank C"
         },
         {
-          "line": 1616,
+          "line": 1632,
           "column": null,
           "name": "run_binary",
           "rank": "C",
           "complexity": 20,
           "message": "'run_binary' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:1616: 'run_binary' has rank C"
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:1632: 'run_binary' has rank C"
         },
         {
-          "line": 1775,
+          "line": 1794,
           "column": null,
           "name": "_parse_network_log",
           "rank": "C",
           "complexity": 20,
           "message": "'_parse_network_log' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:1775: '_parse_network_log' has rank C"
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:1794: '_parse_network_log' has rank C"
         }
       ]
     },
@@ -380,35 +449,35 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py",
       "count": 3,
       "findings": [
         {
-          "line": 458,
+          "line": 421,
           "column": null,
-          "name": "_on_search",
-          "rank": "C",
-          "complexity": 20,
-          "message": "'_on_search' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:458: '_on_search' has rank C"
+          "name": "keyPressEvent",
+          "rank": "E",
+          "complexity": 40,
+          "message": "'keyPressEvent' has rank E (complexity > threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:421: 'keyPressEvent' has rank E"
         },
         {
-          "line": 674,
+          "line": 669,
           "column": null,
-          "name": "_populate_imports",
+          "name": "_do_paste",
           "rank": "C",
           "complexity": 20,
-          "message": "'_populate_imports' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:674: '_populate_imports' has rank C"
+          "message": "'_do_paste' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:669: '_do_paste' has rank C"
         },
         {
-          "line": 702,
+          "line": 922,
           "column": null,
-          "name": "_populate_exports",
+          "name": "copy_as",
           "rank": "C",
           "complexity": 20,
-          "message": "'_populate_exports' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:702: '_populate_exports' has rank C"
+          "message": "'copy_as' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:922: 'copy_as' has rank C"
         }
       ]
     },
@@ -509,17 +578,41 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\core\\orchestrator.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 429,
+          "column": null,
+          "name": "_run_agent_loop",
+          "rank": "C",
+          "complexity": 20,
+          "message": "'_run_agent_loop' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\core\\orchestrator.py:429: '_run_agent_loop' has rank C"
+        },
+        {
+          "line": 1665,
+          "column": null,
+          "name": "shutdown",
+          "rank": "C",
+          "complexity": 20,
+          "message": "'shutdown' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\core\\orchestrator.py:1665: 'shutdown' has rank C"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\providers\\anthropic.py",
       "count": 2,
       "findings": [
         {
-          "line": 407,
+          "line": 427,
           "column": null,
           "name": "chat_stream",
           "rank": "C",
           "complexity": 20,
           "message": "'chat_stream' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:407: 'chat_stream' has rank C"
+          "raw": "src\\intellicrack\\providers\\anthropic.py:427: 'chat_stream' has rank C"
         },
         {
           "line": 212,
@@ -609,13 +702,13 @@
       "count": 2,
       "findings": [
         {
-          "line": 458,
+          "line": 463,
           "column": null,
           "name": "chat_stream",
           "rank": "D",
           "complexity": 30,
           "message": "'chat_stream' has rank D (complexity > threshold)",
-          "raw": "src\\intellicrack\\providers\\openai.py:458: 'chat_stream' has rank D"
+          "raw": "src\\intellicrack\\providers\\openai.py:463: 'chat_stream' has rank D"
         },
         {
           "line": 271,
@@ -705,22 +798,22 @@
       "count": 2,
       "findings": [
         {
-          "line": 521,
+          "line": 522,
           "column": null,
           "name": "_fetch_anthropic_models",
           "rank": "C",
           "complexity": 20,
           "message": "'_fetch_anthropic_models' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:521: '_fetch_anthropic_models' has rank C"
+          "raw": "src\\intellicrack\\ui\\provider_config.py:522: '_fetch_anthropic_models' has rank C"
         },
         {
-          "line": 487,
+          "line": 488,
           "column": null,
           "name": "_fetch_models",
           "rank": "C",
           "complexity": 20,
           "message": "'_fetch_models' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:487: '_fetch_models' has rank C"
+          "raw": "src\\intellicrack\\ui\\provider_config.py:488: '_fetch_models' has rank C"
         }
       ]
     },
@@ -729,22 +822,22 @@
       "count": 2,
       "findings": [
         {
-          "line": 1514,
+          "line": 1517,
           "column": null,
           "name": "_on_tab_close_requested",
           "rank": "C",
           "complexity": 20,
           "message": "'_on_tab_close_requested' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\tools.py:1514: '_on_tab_close_requested' has rank C"
+          "raw": "src\\intellicrack\\ui\\tools.py:1517: '_on_tab_close_requested' has rank C"
         },
         {
-          "line": 1577,
+          "line": 1580,
           "column": null,
           "name": "close_embedded_tools",
           "rank": "C",
           "complexity": 20,
           "message": "'close_embedded_tools' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\tools.py:1577: 'close_embedded_tools' has rank C"
+          "raw": "src\\intellicrack\\ui\\tools.py:1580: 'close_embedded_tools' has rank C"
         }
       ]
     },
@@ -769,30 +862,6 @@
           "complexity": 20,
           "message": "'_check_cutter' has rank C (complexity > threshold)",
           "raw": "src\\intellicrack\\ui\\tool_config.py:485: '_check_cutter' has rank C"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 421,
-          "column": null,
-          "name": "keyPressEvent",
-          "rank": "E",
-          "complexity": 40,
-          "message": "'keyPressEvent' has rank E (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:421: 'keyPressEvent' has rank E"
-        },
-        {
-          "line": 865,
-          "column": null,
-          "name": "copy_as",
-          "rank": "C",
-          "complexity": 20,
-          "message": "'copy_as' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:865: 'copy_as' has rank C"
         }
       ]
     },
@@ -849,13 +918,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 724,
+          "line": 892,
           "column": null,
           "name": "copy_as",
           "rank": "C",
           "complexity": 20,
           "message": "'copy_as' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:724: 'copy_as' has rank C"
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:892: 'copy_as' has rank C"
         }
       ]
     },
@@ -890,21 +959,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\core\\orchestrator.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 429,
-          "column": null,
-          "name": "_run_agent_loop",
-          "rank": "C",
-          "complexity": 20,
-          "message": "'_run_agent_loop' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:429: '_run_agent_loop' has rank C"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\core\\process_manager.py",
       "count": 1,
       "findings": [
@@ -931,6 +985,21 @@
           "complexity": 20,
           "message": "'to_prompt_context' has rank C (complexity > threshold)",
           "raw": "src\\intellicrack\\core\\script_gen.py:173: 'to_prompt_context' has rank C"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\tools.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 459,
+          "column": null,
+          "name": "execute_tool_call",
+          "rank": "C",
+          "complexity": 20,
+          "message": "'execute_tool_call' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\core\\tools.py:459: 'execute_tool_call' has rank C"
         }
       ]
     },
@@ -976,6 +1045,21 @@
           "complexity": 20,
           "message": "'_convert_messages_to_openai_format' has rank C (complexity > threshold)",
           "raw": "src\\intellicrack\\providers\\base.py:478: '_convert_messages_to_openai_format' has rank C"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\sandbox\\manager.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 152,
+          "column": null,
+          "name": "create",
+          "rank": "C",
+          "complexity": 20,
+          "message": "'create' has rank C (complexity > threshold)",
+          "raw": "src\\intellicrack\\sandbox\\manager.py:152: 'create' has rank C"
         }
       ]
     },

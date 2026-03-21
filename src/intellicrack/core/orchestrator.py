@@ -17,7 +17,7 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, cast
 from uuid import uuid4
 
 import structlog.contextvars
@@ -43,7 +43,7 @@ from .types import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Coroutine
     from pathlib import Path
     from typing import Any
 
@@ -1689,6 +1689,34 @@ class Orchestrator:
                     session_id=self._current_session.id,
                     state=self._state,
                 )
+
+        for provider_name in self._providers.list_registered():
+            provider = self._providers.get(provider_name)
+            if provider is None:
+                continue
+            unload = getattr(provider, "unload_model", None)
+            if callable(unload):
+                try:
+                    unload_coro: Coroutine[object, object, None] = cast(
+                        "Coroutine[object, object, None]",
+                        unload(),
+                    )
+                    await unload_coro
+                    _logger.debug("shutdown_provider_model_unloaded", provider=provider_name.value)
+                except Exception:
+                    _logger.exception("shutdown_provider_unload_failed", provider=provider_name.value)
+
+        session_cleanup = getattr(self._sessions, "cleanup", None)
+        if callable(session_cleanup):
+            try:
+                cleanup_coro: Coroutine[object, object, int] = cast(
+                    "Coroutine[object, object, int]",
+                    session_cleanup(),
+                )
+                deleted: int = await cleanup_coro
+                _logger.info("shutdown_session_cleanup_completed", deleted=deleted)
+            except Exception:
+                _logger.exception("shutdown_session_cleanup_failed")
 
         self._current_session = None
         self._state = "idle"

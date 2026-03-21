@@ -33,6 +33,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.core.process_manager import ProcessManager, TrackedProcess
 from intellicrack.ui.panels.qt_compat import set_header_labels, set_sorting_enabled
 
 
@@ -49,6 +50,13 @@ _PROC_COL_NAME = 1
 _PROC_COL_ARCH = 2
 _PROC_COL_MEMORY = 3
 _PROC_COL_THREADS = 4
+
+_TRACKED_COLUMNS = ["PID", "Name", "Type", "Status", "Registered At"]
+_TRACKED_COL_PID = 0
+_TRACKED_COL_NAME = 1
+_TRACKED_COL_TYPE = 2
+_TRACKED_COL_STATUS = 3
+_TRACKED_COL_REGISTERED = 4
 
 _TH32CS_SNAPPROCESS = 0x00000002
 _TH32CS_SNAPMODULE = 0x00000008
@@ -362,6 +370,8 @@ class ProcessPanel(QWidget):
         self._refresh_worker: _ProcessRefreshWorker | None = None
         self._auto_refresh_timer = QTimer(self)
         self._auto_refresh_timer.timeout.connect(self._on_refresh)
+        self._tracked_refresh_timer = QTimer(self)
+        self._tracked_refresh_timer.timeout.connect(self._refresh_tracked_tab)
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -369,6 +379,13 @@ class ProcessPanel(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(4)
+
+        self._top_tabs = QTabWidget()
+
+        system_tab = QWidget()
+        system_layout = QVBoxLayout(system_tab)
+        system_layout.setContentsMargins(0, 4, 0, 0)
+        system_layout.setSpacing(4)
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
@@ -412,7 +429,7 @@ class ProcessPanel(QWidget):
         self._proc_count_label.setObjectName("toolbar_label")
         toolbar.addWidget(self._proc_count_label)
 
-        layout.addWidget(toolbar)
+        system_layout.addWidget(toolbar)
 
         main_splitter = QSplitter(Qt.Orientation.Horizontal)
 
@@ -459,9 +476,65 @@ class ProcessPanel(QWidget):
         main_splitter.addWidget(details_panel)
 
         main_splitter.setSizes([500, 300])
-        layout.addWidget(main_splitter)
+        system_layout.addWidget(main_splitter)
+
+        self._top_tabs.addTab(system_tab, "System Processes")
+
+        tracked_tab = self._build_tracked_tab()
+        self._top_tabs.addTab(tracked_tab, "Tracked")
+        self._top_tabs.currentChanged.connect(self._on_top_tab_changed)
+
+        layout.addWidget(self._top_tabs)
 
         self._on_refresh()
+
+    def _build_tracked_tab(self) -> QWidget:
+        """Build the Tracked Processes tab widget.
+
+        Returns:
+            The configured tracked processes tab widget.
+        """
+        tab = QWidget()
+        tab_layout = QVBoxLayout(tab)
+        tab_layout.setContentsMargins(0, 4, 0, 0)
+        tab_layout.setSpacing(4)
+
+        tracked_toolbar = QToolBar()
+        tracked_toolbar.setMovable(False)
+        tracked_toolbar.setFixedHeight(32)
+
+        self._tracked_refresh_btn = QPushButton("Refresh")
+        self._tracked_refresh_btn.setObjectName("tool_button")
+        self._tracked_refresh_btn.clicked.connect(self._refresh_tracked_tab)
+        tracked_toolbar.addWidget(self._tracked_refresh_btn)
+
+        self._tracked_auto_refresh_btn = QPushButton("Auto-Refresh: OFF")
+        self._tracked_auto_refresh_btn.setCheckable(True)
+        self._tracked_auto_refresh_btn.setObjectName("toggle_button")
+        self._tracked_auto_refresh_btn.toggled.connect(self._on_tracked_auto_refresh_toggled)
+        tracked_toolbar.addWidget(self._tracked_auto_refresh_btn)
+
+        tracked_toolbar.addSeparator()
+
+        self._tracked_count_label = QLabel("0 tracked")
+        self._tracked_count_label.setObjectName("toolbar_label")
+        tracked_toolbar.addWidget(self._tracked_count_label)
+
+        tab_layout.addWidget(tracked_toolbar)
+
+        self._tracked_table = QTableWidget(0, len(_TRACKED_COLUMNS))
+        self._tracked_table.setHorizontalHeaderLabels(_TRACKED_COLUMNS)
+        self._tracked_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._tracked_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        set_sorting_enabled(self._tracked_table, enable=True)
+        tracked_h = self._tracked_table.horizontalHeader()
+        if tracked_h is not None:
+            tracked_h.setSectionResizeMode(_TRACKED_COL_NAME, QHeaderView.ResizeMode.Stretch)
+            tracked_h.setSectionResizeMode(_TRACKED_COL_REGISTERED, QHeaderView.ResizeMode.ResizeToContents)
+
+        tab_layout.addWidget(self._tracked_table)
+
+        return tab
 
     def _on_refresh(self) -> None:
         """Refresh the process list from the system.
@@ -553,6 +626,63 @@ class ProcessPanel(QWidget):
         else:
             self._auto_refresh_btn.setText("Auto-Refresh: OFF")
             self._auto_refresh_timer.stop()
+
+    def _on_tracked_auto_refresh_toggled(self, checked: bool) -> None:
+        """Toggle automatic refresh for the tracked processes tab.
+
+        Args:
+            checked: Whether auto-refresh is enabled.
+        """
+        if checked:
+            self._tracked_auto_refresh_btn.setText("Auto-Refresh: ON")
+            self._tracked_refresh_timer.start(3000)
+        else:
+            self._tracked_auto_refresh_btn.setText("Auto-Refresh: OFF")
+            self._tracked_refresh_timer.stop()
+
+    def _on_top_tab_changed(self, index: int) -> None:
+        """Handle top-level tab change.
+
+        Args:
+            index: Index of the newly selected tab.
+        """
+        if index == 1:
+            self._refresh_tracked_tab()
+
+    def _refresh_tracked_tab(self) -> None:
+        """Refresh the tracked processes table from ProcessManager."""
+        try:
+            manager = ProcessManager.get_instance()
+            all_tracked: list[TrackedProcess] = manager.get_all_tracked()
+            running_pids: set[int | None] = {p.pid for p in manager.get_running_processes()}
+        except Exception as e:
+            _logger.warning("tracked_refresh_failed", error=str(e))
+            return
+
+        set_sorting_enabled(self._tracked_table, enable=False)
+        self._tracked_table.setRowCount(0)
+
+        for tracked in all_tracked:
+            pid = tracked.pid
+            status = "Running" if pid in running_pids else "Stopped"
+            registered_str = tracked.registered_at.strftime("%Y-%m-%d %H:%M:%S")
+
+            row = self._tracked_table.rowCount()
+            self._tracked_table.insertRow(row)
+
+            pid_item = QTableWidgetItem()
+            pid_item.setData(Qt.ItemDataRole.DisplayRole, pid if pid is not None else -1)
+            self._tracked_table.setItem(row, _TRACKED_COL_PID, pid_item)
+
+            self._tracked_table.setItem(row, _TRACKED_COL_NAME, QTableWidgetItem(tracked.name))
+            self._tracked_table.setItem(row, _TRACKED_COL_TYPE, QTableWidgetItem(tracked.process_type.value))
+            self._tracked_table.setItem(row, _TRACKED_COL_STATUS, QTableWidgetItem(status))
+            self._tracked_table.setItem(row, _TRACKED_COL_REGISTERED, QTableWidgetItem(registered_str))
+
+        count = len(all_tracked)
+        set_sorting_enabled(self._tracked_table, enable=True)
+        self._tracked_count_label.setText(f"{count} tracked")
+        _logger.debug("tracked_tab_refreshed", count=count)
 
     def _on_process_selection_changed(self, current: QModelIndex, _previous: QModelIndex) -> None:
         """Handle process table selection change.
@@ -668,6 +798,7 @@ class ProcessPanel(QWidget):
             True if cleanup succeeded.
         """
         self._auto_refresh_timer.stop()
+        self._tracked_refresh_timer.stop()
         if self._refresh_worker is not None:
             if self._refresh_worker.isRunning():
                 self._refresh_worker.wait(2000)

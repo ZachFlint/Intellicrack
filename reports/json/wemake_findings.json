@@ -1,8 +1,8 @@
 {
   "tool": "wemake",
-  "generated": "2026-03-20T11:28:36.764310",
-  "total_findings": 278,
-  "total_files": 56,
+  "generated": "2026-03-20T17:22:36.028999",
+  "total_findings": 288,
+  "total_files": 57,
   "files": [
     {
       "path": "src/intellicrack\\bridges\\x64dbg.py",
@@ -204,53 +204,150 @@
           "raw": "src/intellicrack\\ui\\tools.py:275:9: WPS324 Found inconsistent `return` statement"
         },
         {
-          "line": 1015,
+          "line": 1018,
           "column": 5,
           "code": "C901",
           "message": "'ToolOutputPanel.add_x64dbg_tab' is too complex (11)",
-          "raw": "src/intellicrack\\ui\\tools.py:1015:5: C901 'ToolOutputPanel.add_x64dbg_tab' is too complex (11)"
+          "raw": "src/intellicrack\\ui\\tools.py:1018:5: C901 'ToolOutputPanel.add_x64dbg_tab' is too complex (11)"
         },
         {
-          "line": 1067,
+          "line": 1070,
           "column": 5,
           "code": "C901",
           "message": "'ToolOutputPanel.add_cutter_tab' is too complex (11)",
-          "raw": "src/intellicrack\\ui\\tools.py:1067:5: C901 'ToolOutputPanel.add_cutter_tab' is too complex (11)"
+          "raw": "src/intellicrack\\ui\\tools.py:1070:5: C901 'ToolOutputPanel.add_cutter_tab' is too complex (11)"
         },
         {
-          "line": 1114,
+          "line": 1117,
           "column": 5,
           "code": "C901",
           "message": "'ToolOutputPanel.add_ghidra_tab' is too complex (11)",
-          "raw": "src/intellicrack\\ui\\tools.py:1114:5: C901 'ToolOutputPanel.add_ghidra_tab' is too complex (11)"
+          "raw": "src/intellicrack\\ui\\tools.py:1117:5: C901 'ToolOutputPanel.add_ghidra_tab' is too complex (11)"
         },
         {
-          "line": 1161,
+          "line": 1164,
           "column": 5,
           "code": "C901",
           "message": "'ToolOutputPanel.add_frida_tab' is too complex (11)",
-          "raw": "src/intellicrack\\ui\\tools.py:1161:5: C901 'ToolOutputPanel.add_frida_tab' is too complex (11)"
+          "raw": "src/intellicrack\\ui\\tools.py:1164:5: C901 'ToolOutputPanel.add_frida_tab' is too complex (11)"
         },
         {
-          "line": 1514,
+          "line": 1517,
           "column": 5,
           "code": "C901",
           "message": "'ToolOutputPanel._on_tab_close_requested' is too complex (12)",
-          "raw": "src/intellicrack\\ui\\tools.py:1514:5: C901 'ToolOutputPanel._on_tab_close_requested' is too complex (12)"
+          "raw": "src/intellicrack\\ui\\tools.py:1517:5: C901 'ToolOutputPanel._on_tab_close_requested' is too complex (12)"
         },
         {
-          "line": 1569,
+          "line": 1572,
           "column": 31,
           "code": "WPS441",
           "message": "Found control variable used after block: k",
-          "raw": "src/intellicrack\\ui\\tools.py:1569:31: WPS441 Found control variable used after block: k"
+          "raw": "src/intellicrack\\ui\\tools.py:1572:31: WPS441 Found control variable used after block: k"
         },
         {
-          "line": 1577,
+          "line": 1580,
           "column": 5,
           "code": "C901",
           "message": "'ToolOutputPanel.close_embedded_tools' is too complex (14)",
-          "raw": "src/intellicrack\\ui\\tools.py:1577:5: C901 'ToolOutputPanel.close_embedded_tools' is too complex (14)"
+          "raw": "src/intellicrack\\ui\\tools.py:1580:5: C901 'ToolOutputPanel.close_embedded_tools' is too complex (14)"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack\\ui\\provider_config.py",
+      "count": 13,
+      "findings": [
+        {
+          "line": 0,
+          "column": 1,
+          "code": "WPS203",
+          "message": "Found module with too many imported names: 55 > 50",
+          "raw": "src/intellicrack\\ui\\provider_config.py:0:1: WPS203 Found module with too many imported names: 55 > 50"
+        },
+        {
+          "line": 149,
+          "column": 9,
+          "code": "WPS327",
+          "message": "Found useless `continue` at the end of the loop",
+          "raw": "src/intellicrack\\ui\\provider_config.py:149:9: WPS327 Found useless `continue` at the end of the loop"
+        },
+        {
+          "line": 165,
+          "column": 5,
+          "code": "WPS212",
+          "message": "Found too many return statements: 6 > 5",
+          "raw": "src/intellicrack\\ui\\provider_config.py:165:5: WPS212 Found too many return statements: 6 > 5"
+        },
+        {
+          "line": 259,
+          "column": 5,
+          "code": "WPS212",
+          "message": "Found too many return statements: 7 > 5",
+          "raw": "src/intellicrack\\ui\\provider_config.py:259:5: WPS212 Found too many return statements: 7 > 5"
+        },
+        {
+          "line": 488,
+          "column": 5,
+          "code": "C901",
+          "message": "'ModelRefreshWorker._fetch_models' is too complex (11)",
+          "raw": "src/intellicrack\\ui\\provider_config.py:488:5: C901 'ModelRefreshWorker._fetch_models' is too complex (11)"
+        },
+        {
+          "line": 488,
+          "column": 5,
+          "code": "WPS212",
+          "message": "Found too many return statements: 8 > 5",
+          "raw": "src/intellicrack\\ui\\provider_config.py:488:5: WPS212 Found too many return statements: 8 > 5"
+        },
+        {
+          "line": 522,
+          "column": 5,
+          "code": "C901",
+          "message": "'ModelRefreshWorker._fetch_anthropic_models' is too complex (11)",
+          "raw": "src/intellicrack\\ui\\provider_config.py:522:5: C901 'ModelRefreshWorker._fetch_anthropic_models' is too complex (11)"
+        },
+        {
+          "line": 522,
+          "column": 5,
+          "code": "WPS212",
+          "message": "Found too many return statements: 6 > 5",
+          "raw": "src/intellicrack\\ui\\provider_config.py:522:5: WPS212 Found too many return statements: 6 > 5"
+        },
+        {
+          "line": 1299,
+          "column": 5,
+          "code": "WPS211",
+          "message": "Found too many arguments: 6 > 5",
+          "raw": "src/intellicrack\\ui\\provider_config.py:1299:5: WPS211 Found too many arguments: 6 > 5"
+        },
+        {
+          "line": 1586,
+          "column": 13,
+          "code": "WPS480",
+          "message": "Found comment inside formatted string",
+          "raw": "src/intellicrack\\ui\\provider_config.py:1586:13: WPS480 Found comment inside formatted string"
+        },
+        {
+          "line": 1586,
+          "column": 13,
+          "code": "WPS479",
+          "message": "Found multi-line formatted string",
+          "raw": "src/intellicrack\\ui\\provider_config.py:1586:13: WPS479 Found multi-line formatted string"
+        },
+        {
+          "line": 2121,
+          "column": 24,
+          "code": "WPS509",
+          "message": "Found incorrectly nested ternary",
+          "raw": "src/intellicrack\\ui\\provider_config.py:2121:24: WPS509 Found incorrectly nested ternary"
+        },
+        {
+          "line": 2126,
+          "column": 24,
+          "code": "WPS509",
+          "message": "Found incorrectly nested ternary",
+          "raw": "src/intellicrack\\ui\\provider_config.py:2126:24: WPS509 Found incorrectly nested ternary"
         }
       ]
     },
@@ -259,88 +356,178 @@
       "count": 12,
       "findings": [
         {
-          "line": 199,
+          "line": 200,
           "column": 13,
           "code": "WPS414",
           "message": "Found incorrect unpacking target",
-          "raw": "src/intellicrack\\sandbox\\qemu.py:199:13: WPS414 Found incorrect unpacking target"
+          "raw": "src/intellicrack\\sandbox\\qemu.py:200:13: WPS414 Found incorrect unpacking target"
         },
         {
-          "line": 199,
+          "line": 200,
           "column": 13,
           "code": "WPS414",
           "message": "Found incorrect unpacking target",
-          "raw": "src/intellicrack\\sandbox\\qemu.py:199:13: WPS414 Found incorrect unpacking target"
+          "raw": "src/intellicrack\\sandbox\\qemu.py:200:13: WPS414 Found incorrect unpacking target"
         },
         {
-          "line": 410,
+          "line": 411,
           "column": 17,
           "code": "WPS414",
           "message": "Found incorrect unpacking target",
-          "raw": "src/intellicrack\\sandbox\\qemu.py:410:17: WPS414 Found incorrect unpacking target"
+          "raw": "src/intellicrack\\sandbox\\qemu.py:411:17: WPS414 Found incorrect unpacking target"
         },
         {
-          "line": 410,
+          "line": 411,
           "column": 17,
           "code": "WPS414",
           "message": "Found incorrect unpacking target",
-          "raw": "src/intellicrack\\sandbox\\qemu.py:410:17: WPS414 Found incorrect unpacking target"
+          "raw": "src/intellicrack\\sandbox\\qemu.py:411:17: WPS414 Found incorrect unpacking target"
         },
         {
-          "line": 513,
+          "line": 514,
           "column": 17,
           "code": "WPS327",
           "message": "Found useless `continue` at the end of the loop",
-          "raw": "src/intellicrack\\sandbox\\qemu.py:513:17: WPS327 Found useless `continue` at the end of the loop"
+          "raw": "src/intellicrack\\sandbox\\qemu.py:514:17: WPS327 Found useless `continue` at the end of the loop"
         },
         {
-          "line": 812,
+          "line": 813,
           "column": 5,
           "code": "C901",
-          "message": "'QEMUSandbox._build_qemu_command' is too complex (11)",
-          "raw": "src/intellicrack\\sandbox\\qemu.py:812:5: C901 'QEMUSandbox._build_qemu_command' is too complex (11)"
+          "message": "'QEMUSandbox._build_qemu_command' is too complex (12)",
+          "raw": "src/intellicrack\\sandbox\\qemu.py:813:5: C901 'QEMUSandbox._build_qemu_command' is too complex (12)"
         },
         {
-          "line": 910,
+          "line": 914,
           "column": 5,
           "code": "C901",
           "message": "'QEMUSandbox.start' is too complex (11)",
-          "raw": "src/intellicrack\\sandbox\\qemu.py:910:5: C901 'QEMUSandbox.start' is too complex (11)"
+          "raw": "src/intellicrack\\sandbox\\qemu.py:914:5: C901 'QEMUSandbox.start' is too complex (11)"
         },
         {
-          "line": 910,
+          "line": 914,
           "column": 5,
           "code": "WPS217",
           "message": "Found too many await expressions: 10 > 5",
-          "raw": "src/intellicrack\\sandbox\\qemu.py:910:5: WPS217 Found too many await expressions: 10 > 5"
+          "raw": "src/intellicrack\\sandbox\\qemu.py:914:5: WPS217 Found too many await expressions: 10 > 5"
         },
         {
-          "line": 1195,
+          "line": 1203,
           "column": 31,
           "code": "WPS342",
           "message": "Found implicit raw string: \"\"\"@echo off",
-          "raw": "src/intellicrack\\sandbox\\qemu.py:1195:31: WPS342 Found implicit raw string: \"\"\"@echo off"
+          "raw": "src/intellicrack\\sandbox\\qemu.py:1203:31: WPS342 Found implicit raw string: \"\"\"@echo off"
         },
         {
-          "line": 1200,
+          "line": 1208,
           "column": 29,
           "code": "WPS342",
           "message": "Found implicit raw string: '''#!/usr/bin/env python3",
-          "raw": "src/intellicrack\\sandbox\\qemu.py:1200:29: WPS342 Found implicit raw string: '''#!/usr/bin/env python3"
+          "raw": "src/intellicrack\\sandbox\\qemu.py:1208:29: WPS342 Found implicit raw string: '''#!/usr/bin/env python3"
         },
         {
-          "line": 1616,
+          "line": 1632,
           "column": 5,
           "code": "C901",
-          "message": "'QEMUSandbox.run_binary' is too complex (11)",
-          "raw": "src/intellicrack\\sandbox\\qemu.py:1616:5: C901 'QEMUSandbox.run_binary' is too complex (11)"
+          "message": "'QEMUSandbox.run_binary' is too complex (12)",
+          "raw": "src/intellicrack\\sandbox\\qemu.py:1632:5: C901 'QEMUSandbox.run_binary' is too complex (12)"
         },
         {
-          "line": 1616,
+          "line": 1632,
           "column": 5,
           "code": "WPS217",
           "message": "Found too many await expressions: 7 > 5",
-          "raw": "src/intellicrack\\sandbox\\qemu.py:1616:5: WPS217 Found too many await expressions: 7 > 5"
+          "raw": "src/intellicrack\\sandbox\\qemu.py:1632:5: WPS217 Found too many await expressions: 7 > 5"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack\\ui\\panels\\hex_editor_widget.py",
+      "count": 12,
+      "findings": [
+        {
+          "line": 308,
+          "column": 5,
+          "code": "WPS211",
+          "message": "Found too many arguments: 8 > 5",
+          "raw": "src/intellicrack\\ui\\panels\\hex_editor_widget.py:308:5: WPS211 Found too many arguments: 8 > 5"
+        },
+        {
+          "line": 354,
+          "column": 5,
+          "code": "WPS211",
+          "message": "Found too many arguments: 8 > 5",
+          "raw": "src/intellicrack\\ui\\panels\\hex_editor_widget.py:354:5: WPS211 Found too many arguments: 8 > 5"
+        },
+        {
+          "line": 421,
+          "column": 5,
+          "code": "C901",
+          "message": "'HexEditorWidget.keyPressEvent' is too complex (24)",
+          "raw": "src/intellicrack\\ui\\panels\\hex_editor_widget.py:421:5: C901 'HexEditorWidget.keyPressEvent' is too complex (24)"
+        },
+        {
+          "line": 421,
+          "column": 5,
+          "code": "WPS212",
+          "message": "Found too many return statements: 7 > 5",
+          "raw": "src/intellicrack\\ui\\panels\\hex_editor_widget.py:421:5: WPS212 Found too many return statements: 7 > 5"
+        },
+        {
+          "line": 459,
+          "column": 9,
+          "code": "WPS223",
+          "message": "Found too many `elif` branches: 9 > 3",
+          "raw": "src/intellicrack\\ui\\panels\\hex_editor_widget.py:459:9: WPS223 Found too many `elif` branches: 9 > 3"
+        },
+        {
+          "line": 498,
+          "column": 28,
+          "code": "WPS447",
+          "message": "Found alphabet as strings: 0123456789abcdefABCDEF",
+          "raw": "src/intellicrack\\ui\\panels\\hex_editor_widget.py:498:28: WPS447 Found alphabet as strings: 0123456789abcdefABCDEF"
+        },
+        {
+          "line": 669,
+          "column": 5,
+          "code": "C901",
+          "message": "'HexEditorWidget._do_paste' is too complex (17)",
+          "raw": "src/intellicrack\\ui\\panels\\hex_editor_widget.py:669:5: C901 'HexEditorWidget._do_paste' is too complex (17)"
+        },
+        {
+          "line": 687,
+          "column": 21,
+          "code": "WPS447",
+          "message": "Found alphabet as strings: 0123456789abcdefABCDEF",
+          "raw": "src/intellicrack\\ui\\panels\\hex_editor_widget.py:687:21: WPS447 Found alphabet as strings: 0123456789abcdefABCDEF"
+        },
+        {
+          "line": 703,
+          "column": 30,
+          "code": "WPS518",
+          "message": "Found implicit `enumerate()` call",
+          "raw": "src/intellicrack\\ui\\panels\\hex_editor_widget.py:703:30: WPS518 Found implicit `enumerate()` call"
+        },
+        {
+          "line": 712,
+          "column": 30,
+          "code": "WPS518",
+          "message": "Found implicit `enumerate()` call",
+          "raw": "src/intellicrack\\ui\\panels\\hex_editor_widget.py:712:30: WPS518 Found implicit `enumerate()` call"
+        },
+        {
+          "line": 922,
+          "column": 5,
+          "code": "C901",
+          "message": "'HexEditorWidget.copy_as' is too complex (11)",
+          "raw": "src/intellicrack\\ui\\panels\\hex_editor_widget.py:922:5: C901 'HexEditorWidget.copy_as' is too complex (11)"
+        },
+        {
+          "line": 922,
+          "column": 5,
+          "code": "WPS212",
+          "message": "Found too many return statements: 6 > 5",
+          "raw": "src/intellicrack\\ui\\panels\\hex_editor_widget.py:922:5: WPS212 Found too many return statements: 6 > 5"
         }
       ]
     },
@@ -514,89 +701,6 @@
           "code": "WPS362",
           "message": "Found assignment to a subscript slice",
           "raw": "src/intellicrack\\bridges\\binary.py:786:9: WPS362 Found assignment to a subscript slice"
-        }
-      ]
-    },
-    {
-      "path": "src/intellicrack\\ui\\provider_config.py",
-      "count": 11,
-      "findings": [
-        {
-          "line": 0,
-          "column": 1,
-          "code": "WPS203",
-          "message": "Found module with too many imported names: 54 > 50",
-          "raw": "src/intellicrack\\ui\\provider_config.py:0:1: WPS203 Found module with too many imported names: 54 > 50"
-        },
-        {
-          "line": 148,
-          "column": 9,
-          "code": "WPS327",
-          "message": "Found useless `continue` at the end of the loop",
-          "raw": "src/intellicrack\\ui\\provider_config.py:148:9: WPS327 Found useless `continue` at the end of the loop"
-        },
-        {
-          "line": 164,
-          "column": 5,
-          "code": "WPS212",
-          "message": "Found too many return statements: 6 > 5",
-          "raw": "src/intellicrack\\ui\\provider_config.py:164:5: WPS212 Found too many return statements: 6 > 5"
-        },
-        {
-          "line": 258,
-          "column": 5,
-          "code": "WPS212",
-          "message": "Found too many return statements: 7 > 5",
-          "raw": "src/intellicrack\\ui\\provider_config.py:258:5: WPS212 Found too many return statements: 7 > 5"
-        },
-        {
-          "line": 487,
-          "column": 5,
-          "code": "C901",
-          "message": "'ModelRefreshWorker._fetch_models' is too complex (11)",
-          "raw": "src/intellicrack\\ui\\provider_config.py:487:5: C901 'ModelRefreshWorker._fetch_models' is too complex (11)"
-        },
-        {
-          "line": 487,
-          "column": 5,
-          "code": "WPS212",
-          "message": "Found too many return statements: 8 > 5",
-          "raw": "src/intellicrack\\ui\\provider_config.py:487:5: WPS212 Found too many return statements: 8 > 5"
-        },
-        {
-          "line": 521,
-          "column": 5,
-          "code": "C901",
-          "message": "'ModelRefreshWorker._fetch_anthropic_models' is too complex (11)",
-          "raw": "src/intellicrack\\ui\\provider_config.py:521:5: C901 'ModelRefreshWorker._fetch_anthropic_models' is too complex (11)"
-        },
-        {
-          "line": 521,
-          "column": 5,
-          "code": "WPS212",
-          "message": "Found too many return statements: 6 > 5",
-          "raw": "src/intellicrack\\ui\\provider_config.py:521:5: WPS212 Found too many return statements: 6 > 5"
-        },
-        {
-          "line": 1298,
-          "column": 5,
-          "code": "WPS211",
-          "message": "Found too many arguments: 6 > 5",
-          "raw": "src/intellicrack\\ui\\provider_config.py:1298:5: WPS211 Found too many arguments: 6 > 5"
-        },
-        {
-          "line": 1585,
-          "column": 13,
-          "code": "WPS480",
-          "message": "Found comment inside formatted string",
-          "raw": "src/intellicrack\\ui\\provider_config.py:1585:13: WPS480 Found comment inside formatted string"
-        },
-        {
-          "line": 1585,
-          "column": 13,
-          "code": "WPS479",
-          "message": "Found multi-line formatted string",
-          "raw": "src/intellicrack\\ui\\provider_config.py:1585:13: WPS479 Found multi-line formatted string"
         }
       ]
     },
@@ -939,68 +1043,6 @@
       ]
     },
     {
-      "path": "src/intellicrack\\ui\\panels\\hex_editor_widget.py",
-      "count": 8,
-      "findings": [
-        {
-          "line": 308,
-          "column": 5,
-          "code": "WPS211",
-          "message": "Found too many arguments: 8 > 5",
-          "raw": "src/intellicrack\\ui\\panels\\hex_editor_widget.py:308:5: WPS211 Found too many arguments: 8 > 5"
-        },
-        {
-          "line": 354,
-          "column": 5,
-          "code": "WPS211",
-          "message": "Found too many arguments: 8 > 5",
-          "raw": "src/intellicrack\\ui\\panels\\hex_editor_widget.py:354:5: WPS211 Found too many arguments: 8 > 5"
-        },
-        {
-          "line": 421,
-          "column": 5,
-          "code": "C901",
-          "message": "'HexEditorWidget.keyPressEvent' is too complex (23)",
-          "raw": "src/intellicrack\\ui\\panels\\hex_editor_widget.py:421:5: C901 'HexEditorWidget.keyPressEvent' is too complex (23)"
-        },
-        {
-          "line": 421,
-          "column": 5,
-          "code": "WPS212",
-          "message": "Found too many return statements: 6 > 5",
-          "raw": "src/intellicrack\\ui\\panels\\hex_editor_widget.py:421:5: WPS212 Found too many return statements: 6 > 5"
-        },
-        {
-          "line": 456,
-          "column": 9,
-          "code": "WPS223",
-          "message": "Found too many `elif` branches: 9 > 3",
-          "raw": "src/intellicrack\\ui\\panels\\hex_editor_widget.py:456:9: WPS223 Found too many `elif` branches: 9 > 3"
-        },
-        {
-          "line": 495,
-          "column": 28,
-          "code": "WPS447",
-          "message": "Found alphabet as strings: 0123456789abcdefABCDEF",
-          "raw": "src/intellicrack\\ui\\panels\\hex_editor_widget.py:495:28: WPS447 Found alphabet as strings: 0123456789abcdefABCDEF"
-        },
-        {
-          "line": 865,
-          "column": 5,
-          "code": "C901",
-          "message": "'HexEditorWidget.copy_as' is too complex (11)",
-          "raw": "src/intellicrack\\ui\\panels\\hex_editor_widget.py:865:5: C901 'HexEditorWidget.copy_as' is too complex (11)"
-        },
-        {
-          "line": 865,
-          "column": 5,
-          "code": "WPS212",
-          "message": "Found too many return statements: 6 > 5",
-          "raw": "src/intellicrack\\ui\\panels\\hex_editor_widget.py:865:5: WPS212 Found too many return statements: 6 > 5"
-        }
-      ]
-    },
-    {
       "path": "src/intellicrack\\bridges\\process.py",
       "count": 7,
       "findings": [
@@ -1063,8 +1105,8 @@
           "line": 0,
           "column": 1,
           "code": "WPS203",
-          "message": "Found module with too many imported names: 71 > 50",
-          "raw": "src/intellicrack\\ui\\app.py:0:1: WPS203 Found module with too many imported names: 71 > 50"
+          "message": "Found module with too many imported names: 73 > 50",
+          "raw": "src/intellicrack\\ui\\app.py:0:1: WPS203 Found module with too many imported names: 73 > 50"
         },
         {
           "line": 71,
@@ -1440,6 +1482,47 @@
       ]
     },
     {
+      "path": "src/intellicrack\\core\\orchestrator.py",
+      "count": 5,
+      "findings": [
+        {
+          "line": 414,
+          "column": 9,
+          "code": "WPS243",
+          "message": "Found too long `finally` block: 5 > 2",
+          "raw": "src/intellicrack\\core\\orchestrator.py:414:9: WPS243 Found too long `finally` block: 5 > 2"
+        },
+        {
+          "line": 429,
+          "column": 5,
+          "code": "C901",
+          "message": "'Orchestrator._run_agent_loop' is too complex (11)",
+          "raw": "src/intellicrack\\core\\orchestrator.py:429:5: C901 'Orchestrator._run_agent_loop' is too complex (11)"
+        },
+        {
+          "line": 905,
+          "column": 5,
+          "code": "WPS211",
+          "message": "Found too many arguments: 6 > 5",
+          "raw": "src/intellicrack\\core\\orchestrator.py:905:5: WPS211 Found too many arguments: 6 > 5"
+        },
+        {
+          "line": 976,
+          "column": 5,
+          "code": "WPS211",
+          "message": "Found too many arguments: 6 > 5",
+          "raw": "src/intellicrack\\core\\orchestrator.py:976:5: WPS211 Found too many arguments: 6 > 5"
+        },
+        {
+          "line": 1665,
+          "column": 5,
+          "code": "C901",
+          "message": "'Orchestrator.shutdown' is too complex (17)",
+          "raw": "src/intellicrack\\core\\orchestrator.py:1665:5: C901 'Orchestrator.shutdown' is too complex (17)"
+        }
+      ]
+    },
+    {
       "path": "src/intellicrack\\credentials\\oauth.py",
       "count": 5,
       "findings": [
@@ -1581,25 +1664,25 @@
           "raw": "src/intellicrack\\providers\\openai.py:271:5: WPS211 Found too many arguments: 8 > 5"
         },
         {
-          "line": 349,
+          "line": 354,
           "column": 5,
           "code": "WPS211",
           "message": "Found too many arguments: 6 > 5",
-          "raw": "src/intellicrack\\providers\\openai.py:349:5: WPS211 Found too many arguments: 6 > 5"
+          "raw": "src/intellicrack\\providers\\openai.py:354:5: WPS211 Found too many arguments: 6 > 5"
         },
         {
-          "line": 458,
+          "line": 463,
           "column": 5,
           "code": "C901",
           "message": "'OpenAIProvider.chat_stream' is too complex (18)",
-          "raw": "src/intellicrack\\providers\\openai.py:458:5: C901 'OpenAIProvider.chat_stream' is too complex (18)"
+          "raw": "src/intellicrack\\providers\\openai.py:463:5: C901 'OpenAIProvider.chat_stream' is too complex (18)"
         },
         {
-          "line": 458,
+          "line": 463,
           "column": 5,
           "code": "WPS211",
           "message": "Found too many arguments: 8 > 5",
-          "raw": "src/intellicrack\\providers\\openai.py:458:5: WPS211 Found too many arguments: 8 > 5"
+          "raw": "src/intellicrack\\providers\\openai.py:463:5: WPS211 Found too many arguments: 8 > 5"
         }
       ]
     },
@@ -1645,40 +1728,6 @@
       ]
     },
     {
-      "path": "src/intellicrack\\core\\orchestrator.py",
-      "count": 4,
-      "findings": [
-        {
-          "line": 414,
-          "column": 9,
-          "code": "WPS243",
-          "message": "Found too long `finally` block: 5 > 2",
-          "raw": "src/intellicrack\\core\\orchestrator.py:414:9: WPS243 Found too long `finally` block: 5 > 2"
-        },
-        {
-          "line": 429,
-          "column": 5,
-          "code": "C901",
-          "message": "'Orchestrator._run_agent_loop' is too complex (11)",
-          "raw": "src/intellicrack\\core\\orchestrator.py:429:5: C901 'Orchestrator._run_agent_loop' is too complex (11)"
-        },
-        {
-          "line": 905,
-          "column": 5,
-          "code": "WPS211",
-          "message": "Found too many arguments: 6 > 5",
-          "raw": "src/intellicrack\\core\\orchestrator.py:905:5: WPS211 Found too many arguments: 6 > 5"
-        },
-        {
-          "line": 976,
-          "column": 5,
-          "code": "WPS211",
-          "message": "Found too many arguments: 6 > 5",
-          "raw": "src/intellicrack\\core\\orchestrator.py:976:5: WPS211 Found too many arguments: 6 > 5"
-        }
-      ]
-    },
-    {
       "path": "src/intellicrack\\providers\\anthropic.py",
       "count": 4,
       "findings": [
@@ -1690,25 +1739,25 @@
           "raw": "src/intellicrack\\providers\\anthropic.py:212:5: WPS211 Found too many arguments: 9 > 5"
         },
         {
-          "line": 313,
+          "line": 334,
           "column": 5,
           "code": "WPS211",
           "message": "Found too many arguments: 8 > 5",
-          "raw": "src/intellicrack\\providers\\anthropic.py:313:5: WPS211 Found too many arguments: 8 > 5"
+          "raw": "src/intellicrack\\providers\\anthropic.py:334:5: WPS211 Found too many arguments: 8 > 5"
         },
         {
-          "line": 407,
+          "line": 427,
           "column": 5,
           "code": "C901",
           "message": "'AnthropicProvider.chat_stream' is too complex (13)",
-          "raw": "src/intellicrack\\providers\\anthropic.py:407:5: C901 'AnthropicProvider.chat_stream' is too complex (13)"
+          "raw": "src/intellicrack\\providers\\anthropic.py:427:5: C901 'AnthropicProvider.chat_stream' is too complex (13)"
         },
         {
-          "line": 407,
+          "line": 427,
           "column": 5,
           "code": "WPS211",
           "message": "Found too many arguments: 8 > 5",
-          "raw": "src/intellicrack\\providers\\anthropic.py:407:5: WPS211 Found too many arguments: 8 > 5"
+          "raw": "src/intellicrack\\providers\\anthropic.py:427:5: WPS211 Found too many arguments: 8 > 5"
         }
       ]
     },
@@ -1785,32 +1834,32 @@
       "count": 4,
       "findings": [
         {
-          "line": 67,
+          "line": 75,
           "column": 9,
           "code": "WPS120",
           "message": "Found regular name with trailing underscore: _fields_",
-          "raw": "src/intellicrack\\ui\\panels\\process_panel.py:67:9: WPS120 Found regular name with trailing underscore: _fields_"
+          "raw": "src/intellicrack\\ui\\panels\\process_panel.py:75:9: WPS120 Found regular name with trailing underscore: _fields_"
         },
         {
-          "line": 81,
+          "line": 89,
           "column": 9,
           "code": "WPS120",
           "message": "Found regular name with trailing underscore: _fields_",
-          "raw": "src/intellicrack\\ui\\panels\\process_panel.py:81:9: WPS120 Found regular name with trailing underscore: _fields_"
+          "raw": "src/intellicrack\\ui\\panels\\process_panel.py:89:9: WPS120 Found regular name with trailing underscore: _fields_"
         },
         {
-          "line": 95,
+          "line": 103,
           "column": 9,
           "code": "WPS120",
           "message": "Found regular name with trailing underscore: _fields_",
-          "raw": "src/intellicrack\\ui\\panels\\process_panel.py:95:9: WPS120 Found regular name with trailing underscore: _fields_"
+          "raw": "src/intellicrack\\ui\\panels\\process_panel.py:103:9: WPS120 Found regular name with trailing underscore: _fields_"
         },
         {
-          "line": 106,
+          "line": 114,
           "column": 9,
           "code": "WPS120",
           "message": "Found regular name with trailing underscore: _fields_",
-          "raw": "src/intellicrack\\ui\\panels\\process_panel.py:106:9: WPS120 Found regular name with trailing underscore: _fields_"
+          "raw": "src/intellicrack\\ui\\panels\\process_panel.py:114:9: WPS120 Found regular name with trailing underscore: _fields_"
         }
       ]
     },
@@ -1907,18 +1956,18 @@
           "raw": "src/intellicrack\\main.py:118:34: WPS421 Found wrong function call: vars"
         },
         {
-          "line": 475,
+          "line": 476,
           "column": 5,
           "code": "WPS243",
           "message": "Found too long `finally` block: 3 > 2",
-          "raw": "src/intellicrack\\main.py:475:5: WPS243 Found too long `finally` block: 3 > 2"
+          "raw": "src/intellicrack\\main.py:476:5: WPS243 Found too long `finally` block: 3 > 2"
         },
         {
-          "line": 561,
+          "line": 562,
           "column": 1,
           "code": "WPS217",
           "message": "Found too many await expressions: 8 > 5",
-          "raw": "src/intellicrack\\main.py:561:1: WPS217 Found too many await expressions: 8 > 5"
+          "raw": "src/intellicrack\\main.py:562:1: WPS217 Found too many await expressions: 8 > 5"
         }
       ]
     },
@@ -1946,6 +1995,33 @@
           "code": "WPS212",
           "message": "Found too many return statements: 6 > 5",
           "raw": "src/intellicrack\\providers\\model_loader.py:704:1: WPS212 Found too many return statements: 6 > 5"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack\\ui\\panels\\hex_editor_panel.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 514,
+          "column": 5,
+          "code": "C901",
+          "message": "'HexEditorPanel._on_search' is too complex (12)",
+          "raw": "src/intellicrack\\ui\\panels\\hex_editor_panel.py:514:5: C901 'HexEditorPanel._on_search' is too complex (12)"
+        },
+        {
+          "line": 886,
+          "column": 5,
+          "code": "C901",
+          "message": "'HexEditorPanel.set_state_holder' is too complex (13)",
+          "raw": "src/intellicrack\\ui\\panels\\hex_editor_panel.py:886:5: C901 'HexEditorPanel.set_state_holder' is too complex (13)"
+        },
+        {
+          "line": 1052,
+          "column": 5,
+          "code": "C901",
+          "message": "'HexEditorPanel._update_patches' is too complex (12)",
+          "raw": "src/intellicrack\\ui\\panels\\hex_editor_panel.py:1052:5: C901 'HexEditorPanel._update_patches' is too complex (12)"
         }
       ]
     },
@@ -2071,8 +2147,8 @@
           "line": 459,
           "column": 5,
           "code": "C901",
-          "message": "'ToolRegistry.execute_tool_call' is too complex (11)",
-          "raw": "src/intellicrack\\core\\tools.py:459:5: C901 'ToolRegistry.execute_tool_call' is too complex (11)"
+          "message": "'ToolRegistry.execute_tool_call' is too complex (12)",
+          "raw": "src/intellicrack\\core\\tools.py:459:5: C901 'ToolRegistry.execute_tool_call' is too complex (12)"
         }
       ]
     },
@@ -2226,11 +2302,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 262,
+          "line": 264,
           "column": 5,
           "code": "WPS211",
           "message": "Found too many arguments: 8 > 5",
-          "raw": "src/intellicrack\\sandbox\\manager.py:262:5: WPS211 Found too many arguments: 8 > 5"
+          "raw": "src/intellicrack\\sandbox\\manager.py:264:5: WPS211 Found too many arguments: 8 > 5"
         }
       ]
     },
@@ -2248,15 +2324,15 @@
       ]
     },
     {
-      "path": "src/intellicrack\\ui\\panels\\hex_editor_panel.py",
+      "path": "src/intellicrack\\ui\\panels\\frida_panel.py",
       "count": 1,
       "findings": [
         {
-          "line": 458,
-          "column": 5,
-          "code": "C901",
-          "message": "'HexEditorPanel._on_search' is too complex (12)",
-          "raw": "src/intellicrack\\ui\\panels\\hex_editor_panel.py:458:5: C901 'HexEditorPanel._on_search' is too complex (12)"
+          "line": 92,
+          "column": 9,
+          "code": "WPS473",
+          "message": "Found too many empty lines in `def`: 10 > 9",
+          "raw": "src/intellicrack\\ui\\panels\\frida_panel.py:92:9: WPS473 Found too many empty lines in `def`: 10 > 9"
         }
       ]
     },

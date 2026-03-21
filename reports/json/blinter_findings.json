@@ -1,13 +1,21 @@
 {
   "tool": "blinter",
-  "generated": "2026-03-20T11:23:26.376305",
-  "total_findings": 4,
+  "generated": "2026-03-20T17:18:06.432151",
+  "total_findings": 5,
   "total_files": 3,
   "files": [
     {
       "path": "D:\\Intellicrack\\scripts\\build-cli-launcher.cmd",
-      "count": 2,
+      "count": 3,
       "findings": [
+        {
+          "line": 1,
+          "column": 0,
+          "severity": "error",
+          "code": "E018",
+          "message": "Unix line endings detected",
+          "raw": "Line 1: Unix line endings detected (E018)"
+        },
         {
           "line": 7,
           "column": 0,

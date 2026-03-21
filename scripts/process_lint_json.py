@@ -313,6 +313,47 @@ def process_darglint_text(text_output: str) -> tuple[dict[str, list[dict[str, An
     return grouped, cnt
 
 
+def process_pydoclint_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
+    r"""Process pydoclint docstring linting text output.
+
+    Pydoclint outputs filenames on their own line, then indented findings below.
+    Example::
+
+        src\\intellicrack\\bridges\\base.py
+            168: DOC203: Method \`has_capability\` return type(s) ...
+            179: DOC203: Method \`supports_arch\` return type(s) ...
+
+    Args:
+        text_output: Raw text output from pydoclint.
+
+    Returns:
+        A tuple of (grouped findings by file, total count).
+    """
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    finding_pattern = re.compile(r"^\s+(\d+):\s*(DOC\d+):\s*(.+)$")
+    current_file: str | None = None
+    for line in text_output.strip().split("\n"):
+        if not line.strip():
+            continue
+        finding_match = finding_pattern.match(line)
+        if finding_match:
+            line_num = int(finding_match.group(1))
+            code = finding_match.group(2)
+            message = finding_match.group(3).strip()
+            fp = current_file if current_file else "unknown"
+            grouped[fp].append({
+                "line": line_num,
+                "column": None,
+                "code": code,
+                "message": message,
+                "raw": line.strip(),
+            })
+        elif line.rstrip().endswith(".py"):
+            current_file = line.strip()
+    cnt = sum(len(v) for v in grouped.values())
+    return grouped, cnt
+
+
 def process_dead_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
     """Process dead code linting text output.
 
@@ -1545,6 +1586,7 @@ TEXT_PROCESSORS: dict[str, Callable[[str], tuple[dict[str, list[dict[str, Any]]]
     "ty": process_ty_text,
     "vulture": process_vulture_text,
     "darglint": process_darglint_text,
+    "pydoclint": process_pydoclint_text,
     "dead": process_dead_text,
     "mypy": process_mypy_text,
     "bandit": process_bandit_text,

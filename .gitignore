@@ -423,6 +423,7 @@ docker-compose.override.yml
 *.lock
 !requirements.lock
 !pixi.lock
+!**/Cargo.lock
 
 # Linting and testing reports
 reports/ci-jobs/

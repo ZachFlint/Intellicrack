@@ -4,6 +4,9 @@ Full production build system - downloads dependencies, compiles, and packages
 Requires administrative privileges
 Run with: .\build.ps1 or via build.bat
 #>
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
+    Justification = 'Interactive build script uses Write-Host for colored console UI')]
+param()
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -63,7 +66,7 @@ function Get-UserConfirmation {
     return $response -eq 'y' -or $response -eq 'Y'
 }
 
-function Download-File {
+function Save-FileFromUrl {
     param (
         [string]$Url,
         [string]$Destination
@@ -297,7 +300,7 @@ if (!$hasAutoIt) {
     Write-Host "[4/5] Downloading and installing AutoIt3..." -ForegroundColor Cyan
     try {
         Write-Host "      Downloading from: $autoItUrl"
-        Download-File -Url $autoItUrl -Destination $autoItZipPath
+        Save-FileFromUrl -Url $autoItUrl -Destination $autoItZipPath
         Write-Host "      Extracting to: $autoItInstallDir"
 
         New-Item -Path $autoItInstallDir -ItemType Directory -Force | Out-Null
@@ -340,7 +343,7 @@ if (!$hasSciTE) {
     Write-Host "[4/5 continued] Downloading and installing SciTE..." -ForegroundColor Cyan
     try {
         Write-Host "      Downloading from: $sciTEUrl"
-        Download-File -Url $sciTEUrl -Destination $sciTEZipPath
+        Save-FileFromUrl -Url $sciTEUrl -Destination $sciTEZipPath
         $sciTEDestDir = Join-Path $autoItInstallDir "install\SciTE"
         Write-Host "      Extracting to: $sciTEDestDir"
 

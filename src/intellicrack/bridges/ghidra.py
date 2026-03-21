@@ -127,6 +127,15 @@ class GhidraBridge(StaticAnalysisBridge):
         self._ghidra_path = value
 
     @property
+    def project_path(self) -> Path | None:
+        """Get the active Ghidra project path.
+
+        Returns:
+            Path to the active Ghidra project, or None if no project is open.
+        """
+        return self._project_path
+
+    @property
     def name(self) -> ToolName:
         """Get the tool's name.
 
@@ -647,8 +656,10 @@ class GhidraBridge(StaticAnalysisBridge):
 
         self._bridge = None
         self._binary_path = None
+        project_path_str = str(self._project_path) if self._project_path is not None else None
+        self._project_path = None
         await super().shutdown()
-        _logger.info("ghidra_bridge_shutdown", bridge="ghidra")
+        _logger.info("ghidra_bridge_shutdown", bridge="ghidra", project_path=project_path_str)
 
     async def is_available(self) -> bool:
         """Check if Ghidra is available.

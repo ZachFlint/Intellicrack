@@ -492,12 +492,14 @@ class ToolRegistry:
             _logger.debug("execute_tool_call_not_registered", tool_name=tool_enum.value)
             raise ToolError(_ERR_NOT_REGISTERED)
 
-        method = getattr(bridge, function_name, None)
+        attr_name = function_name.split(".", maxsplit=1)[-1] if "." in function_name else function_name
+        method = getattr(bridge, attr_name, None)
         if method is None:
             _logger.debug(
                 "execute_tool_call_unknown_func",
                 tool_name=tool_enum.value,
                 function_name=function_name,
+                attr_name=attr_name,
             )
             raise ToolError(_ERR_UNKNOWN_FUNC)
 
@@ -508,6 +510,18 @@ class ToolRegistry:
                 function_name=function_name,
             )
             raise ToolError(_ERR_NOT_CALLABLE)
+
+        caps = getattr(bridge, "capabilities", None)
+        if caps is not None:
+            capability_name = function_name.split("_", 1)[0] if "_" in function_name else function_name
+            has_cap = caps.has_capability(capability_name)
+            _logger.debug(
+                "execute_tool_call_capability_check",
+                tool_name=tool_enum.value,
+                function_name=function_name,
+                capability=capability_name,
+                has_capability=has_cap,
+            )
 
         start = time.monotonic()
         result: object = None

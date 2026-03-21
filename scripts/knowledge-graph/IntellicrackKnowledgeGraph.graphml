@@ -156,15 +156,15 @@ Returns:
 Returns:
     The CredentialLoader class.</data>
     </node>
-    <node id="src.intellicrack.main._import_provider_registry">
+    <node id="src.intellicrack.main._get_provider_registry">
       <data key="d0">function</data>
       <data key="d1">python</data>
-      <data key="d3">_import_provider_registry</data>
+      <data key="d3">_get_provider_registry</data>
       <data key="d5">[]</data>
-      <data key="d4">Import the ProviderRegistry class dynamically.
+      <data key="d4">Get the global provider registry singleton instance.
 
 Returns:
-    The ProviderRegistry class.</data>
+    The singleton ProviderRegistry instance.</data>
     </node>
     <node id="src.intellicrack.main._import_main_window">
       <data key="d0">function</data>
@@ -3342,6 +3342,16 @@ Attributes:
 Args:
     value: Path to Ghidra installation directory, or None.</data>
     </node>
+    <node id="src.intellicrack.bridges.ghidra.project_path">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">project_path</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Get the active Ghidra project path.
+
+Returns:
+    Path to the active Ghidra project, or None if no project is open.</data>
+    </node>
     <node id="src.intellicrack.bridges.ghidra.name">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -4054,6 +4064,7 @@ via the native Rust HexDocument backed by a piece table with
 memory-mapped I/O for large file support.</data>
     </node>
     <node id="base64" />
+    <node id="inspect" />
     <node id="src.intellicrack.bridges.hex_editor.HexEditorBridge">
       <data key="d0">class</data>
       <data key="d1">python</data>
@@ -4070,6 +4081,33 @@ Attributes:
     _selection: Current selection range or None.
     _hexcore_available: Whether the Rust extension is importable.</data>
     </node>
+    <node id="src.intellicrack.core.tools">
+      <data key="d0">module</data>
+      <data key="d1">python</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack\core\tools.py</data>
+      <data key="d3">src.intellicrack.core.tools</data>
+      <data key="d4">Tool registry for managing tool bridges.
+
+This module provides a registry for tool bridges that handles
+initialization, availability checking, and tool schema generation
+for LLM function calling.
+
+Bridge imports are deferred to method bodies to break a circular
+dependency: bridges.base -&gt; core.logging -&gt; core.__init__ -&gt; core.tools
+-&gt; bridges.binary -&gt; bridges.base.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_state">
+      <data key="d0">module</data>
+      <data key="d1">python</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack\bridges\hex_state.py</data>
+      <data key="d3">src.intellicrack.bridges.hex_state</data>
+      <data key="d4">Shared hex document state manager for bridge-GUI synchronization.
+
+Provides an observer-based state holder that bridges the HexEditorBridge
+(AI/programmatic control) and the HexEditorPanel (GUI display) by
+maintaining the canonical document reference, cursor position, selection,
+and file path, and notifying registered listeners of state changes.</data>
+    </node>
     <node id="intellicrack_hexcore" />
     <node id="src.intellicrack.bridges.hex_editor.__init__">
       <data key="d0">function</data>
@@ -4077,6 +4115,26 @@ Attributes:
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
       <data key="d4">Initialize the hex editor bridge.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_editor.set_state_holder">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_state_holder</data>
+      <data key="d5">['self', 'state_holder']</data>
+      <data key="d4">Attach a shared state holder for bridge-GUI synchronization.
+
+Args:
+    state_holder: The shared HexDocumentState instance.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_editor.set_tool_registry">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_tool_registry</data>
+      <data key="d5">['self', 'registry']</data>
+      <data key="d4">Set the tool registry for cross-bridge access.
+
+Args:
+    registry: The ToolRegistry providing access to other bridges.</data>
     </node>
     <node id="src.intellicrack.bridges.hex_editor.name">
       <data key="d0">function</data>
@@ -4323,12 +4381,12 @@ Raises:
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">replace_bytes</data>
-      <data key="d5">['self', 'pattern', 'replacement']</data>
+      <data key="d5">['self', 'pattern_hex', 'replacement_hex']</data>
       <data key="d4">Find and replace all occurrences of a byte pattern.
 
 Args:
-    pattern: Pattern bytes to find.
-    replacement: Replacement bytes.
+    pattern_hex: Hex string pattern to find (e.g. "4D 5A").
+    replacement_hex: Hex string replacement (e.g. "90 90").
 
 Returns:
     Number of replacements made.
@@ -4538,6 +4596,287 @@ Returns:
 Raises:
     RuntimeError: If no document is open.</data>
     </node>
+    <node id="src.intellicrack.bridges.hex_editor.calculate_hash_range">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">calculate_hash_range</data>
+      <data key="d5">['self', 'start', 'end', 'algorithm']</data>
+      <data key="d4">Calculate a hash of a byte range within the document.
+
+Args:
+    start: Start byte offset.
+    end: End byte offset (exclusive).
+    algorithm: Hash algorithm (md5, sha1, sha256, sha512, crc32).
+
+Returns:
+    Hex digest string.
+
+Raises:
+    RuntimeError: If no document is open.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_editor.get_document_info">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_document_info</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Get information about the currently open document.
+
+Returns:
+    Dict with file_path, size, modified, cursor, and selection.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_editor.get_context_for_ai">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_context_for_ai</data>
+      <data key="d5">['self', 'include_bytes']</data>
+      <data key="d4">Get hex editor context suitable for AI analysis.
+
+Collects document metadata, bytes around the cursor, data
+inspection at the cursor, selected bytes, and bookmarks into
+a single dict for injection into an AI conversation.
+
+Args:
+    include_bytes: Number of bytes around the cursor to include.
+
+Returns:
+    Dict with document info, bytes_at_cursor, inspection,
+    selected_bytes, and bookmarks.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_editor.save_to_sandbox">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">save_to_sandbox</data>
+      <data key="d5">['self', 'dest_path', 'sandbox_type']</data>
+      <data key="d4">Save the current document into a sandbox environment.
+
+Writes the document to a temporary file, then uses the sandbox
+bridge to copy it into the sandbox at the given destination path.
+
+Args:
+    dest_path: Destination path inside the sandbox.
+    sandbox_type: Sandbox type (docker, qemu, windows_sandbox).
+
+Returns:
+    Dict with sandbox_path and status.
+
+Raises:
+    RuntimeError: If no document is open or sandbox unavailable.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_editor.test_in_sandbox">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">test_in_sandbox</data>
+      <data key="d5">['self', 'args', 'sandbox_type', 'timeout']</data>
+      <data key="d4">Save to sandbox, execute the binary, and return the report.
+
+Args:
+    args: Command-line arguments for the binary.
+    sandbox_type: Sandbox type.
+    timeout: Execution timeout in seconds.
+
+Returns:
+    Dict with execution report including exit_code, stdout, stderr.
+
+Raises:
+    RuntimeError: If no document is open or sandbox unavailable.</data>
+    </node>
+    <node id="os" />
+    <node id="enum" />
+    <node id="src.intellicrack.bridges.hex_state.HexDocumentEvent">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">HexDocumentEvent</data>
+      <data key="d4">Event types emitted by HexDocumentState.
+
+Attributes:
+    DOCUMENT_OPENED: A new document was loaded.
+    DOCUMENT_CLOSED: The current document was closed.
+    CURSOR_MOVED: The cursor position changed.
+    SELECTION_CHANGED: The selection range changed.
+    DATA_MODIFIED: Document bytes were modified.
+    DOCUMENT_SAVED: The document was saved to disk.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_state._CallbackEntry">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">_CallbackEntry</data>
+      <data key="d4">Internal storage for a registered callback with its source_id.
+
+Attributes:
+    fn: The callback callable.
+    source_id: Identifier for loop-guard filtering.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_state.HexDocumentState">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">HexDocumentState</data>
+      <data key="d4">Thread-safe shared state holder for a hex document.
+
+Maintains the canonical document instance, cursor offset, selection
+range, and file path.  Registered callbacks are notified on state
+changes, enabling the bridge and GUI to stay in sync without direct
+coupling.
+
+Attributes:
+    _document: Active HexDocument instance or None.
+    _file_path: Path to the currently loaded file.
+    _cursor_offset: Current logical cursor position.
+    _selection: Current selection range (start, end) or None.
+    ...</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_state.__init__">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">__init__</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Initialize the hex document state holder.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_state.document">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">document</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Get the active HexDocument instance.
+
+Returns:
+    Active HexDocument or None if no document is open.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_state.file_path">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">file_path</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Get the path to the currently loaded file.
+
+Returns:
+    File path or None if no file is loaded.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_state.cursor_offset">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">cursor_offset</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Get the current cursor offset.
+
+Returns:
+    Current byte offset of the cursor.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_state.selection">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">selection</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Get the current selection range.
+
+Returns:
+    Tuple of (start, end) offsets or None if no selection.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_state.register_callback">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">register_callback</data>
+      <data key="d5">['self', 'callback', 'source_id']</data>
+      <data key="d4">Register an observer callback for state change notifications.
+
+Args:
+    callback: Callable receiving (event_type, data) arguments.
+    source_id: Identifier for the source to enable loop-guard
+        filtering. Notifications triggered by a source are not
+        re-delivered to that same source.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_state.unregister_callback">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">unregister_callback</data>
+      <data key="d5">['self', 'callback']</data>
+      <data key="d4">Remove a previously registered callback.
+
+Args:
+    callback: The callback to remove.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_state.set_document">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_document</data>
+      <data key="d5">['self', 'document', 'file_path']</data>
+      <data key="d4">Set or clear the active document.
+
+Args:
+    document: HexDocument instance, or None to close.
+    file_path: Path to the opened file, or None.
+    source: Identifier of the caller for loop-guard filtering.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_state.set_cursor">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_cursor</data>
+      <data key="d5">['self', 'offset']</data>
+      <data key="d4">Update the cursor position.
+
+Args:
+    offset: New cursor byte offset.
+    source: Identifier of the caller for loop-guard filtering.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_state.set_selection">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_selection</data>
+      <data key="d5">['self', 'start', 'end']</data>
+      <data key="d4">Update the selection range.
+
+Args:
+    start: Selection start offset.
+    end: Selection end offset (inclusive).
+    source: Identifier of the caller for loop-guard filtering.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_state.clear_selection">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">clear_selection</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Clear the current selection.
+
+Args:
+    source: Identifier of the caller for loop-guard filtering.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_state.notify_data_modified">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">notify_data_modified</data>
+      <data key="d5">['self', 'offset', 'length']</data>
+      <data key="d4">Notify observers that document data was modified.
+
+Args:
+    offset: Start offset of the modification.
+    length: Number of bytes affected.
+    source: Identifier of the caller for loop-guard filtering.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_state.notify_document_saved">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">notify_document_saved</data>
+      <data key="d5">['self', 'path']</data>
+      <data key="d4">Notify observers that the document was saved.
+
+Args:
+    path: Path where the document was saved.
+    source: Identifier of the caller for loop-guard filtering.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_state._notify">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_notify</data>
+      <data key="d5">['self', 'event_type', 'data']</data>
+      <data key="d4">Dispatch a state change notification to all registered callbacks.
+
+Uses a reentrancy guard to prevent infinite notification loops.
+Callbacks whose source_id matches the source are skipped.
+
+Args:
+    event_type: The event type being emitted.
+    data: Event-specific payload dictionary.
+    source: Identifier of the originating caller.</data>
+    </node>
     <node id="src.intellicrack.bridges.installer">
       <data key="d0">module</data>
       <data key="d1">python</data>
@@ -4548,7 +4887,6 @@ Raises:
 This module handles automatic detection, downloading, and installation
 of reverse engineering tools required by the platform.</data>
     </node>
-    <node id="os" />
     <node id="shutil" />
     <node id="zipfile" />
     <node id="httpx" />
@@ -7392,21 +7730,6 @@ Args:
 Returns:
     Deduplicated list preserving first-seen order.</data>
     </node>
-    <node id="src.intellicrack.core.tools">
-      <data key="d0">module</data>
-      <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\tools.py</data>
-      <data key="d3">src.intellicrack.core.tools</data>
-      <data key="d4">Tool registry for managing tool bridges.
-
-This module provides a registry for tool bridges that handles
-initialization, availability checking, and tool schema generation
-for LLM function calling.
-
-Bridge imports are deferred to method bodies to break a circular
-dependency: bridges.base -&gt; core.logging -&gt; core.__init__ -&gt; core.tools
--&gt; bridges.binary -&gt; bridges.base.</data>
-    </node>
     <node id="src.intellicrack.core.analysis_aggregator.__init__">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -7791,7 +8114,6 @@ Args:
 Returns:
     True if the tool is enabled.</data>
     </node>
-    <node id="inspect" />
     <node id="logging" />
     <node id="datetime" />
     <node id="logging.handlers" />
@@ -8942,7 +9264,6 @@ Raises:
     </node>
     <node id="atexit" />
     <node id="signal" />
-    <node id="enum" />
     <node id="psutil" />
     <node id="src.intellicrack.core.process_manager.ProcessType">
       <data key="d0">class</data>
@@ -12688,6 +13009,23 @@ Args:
 
 Returns:
     Tuple of (text content, parsed tool calls, thinking text).</data>
+    </node>
+    <node id="src.intellicrack.providers.anthropic._make_anthropic_api_call">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_make_anthropic_api_call</data>
+      <data key="d5">['self', 'api_kwargs']</data>
+      <data key="d4">Execute the Anthropic messages API call with exception translation.
+
+Args:
+    api_kwargs: Keyword arguments to pass to messages.create.
+
+Returns:
+    The Anthropic API response message.
+
+Raises:
+    ProviderError: If the client is not initialized.
+    RateLimitError: If the API returns a rate limit response.</data>
     </node>
     <node id="src.intellicrack.providers.anthropic.chat">
       <data key="d0">function</data>
@@ -17058,7 +17396,8 @@ Returns:
     QEMU command as list of arguments.
 
 Raises:
-    SandboxError: If configuration is invalid.</data>
+    SandboxError: If configuration is invalid.
+    ValueError: If an unsupported guest OS is configured.</data>
     </node>
     <node id="src.intellicrack.sandbox.qemu.start">
       <data key="d0">function</data>
@@ -17082,7 +17421,10 @@ Raises:
       <data key="d1">python</data>
       <data key="d3">_create_guest_agent_script</data>
       <data key="d5">['self']</data>
-      <data key="d4">Create guest agent monitoring scripts.</data>
+      <data key="d4">Create guest agent monitoring scripts.
+
+Raises:
+    ValueError: If an unsupported guest OS is configured.</data>
     </node>
     <node id="src.intellicrack.sandbox.qemu.run_command">
       <data key="d0">function</data>
@@ -17100,7 +17442,8 @@ Returns:
     Tuple of (exit_code, stdout, stderr).
 
 Raises:
-    SandboxError: If execution fails.</data>
+    SandboxError: If execution fails.
+    ValueError: If an unsupported guest OS is configured.</data>
     </node>
     <node id="src.intellicrack.sandbox.qemu._generate_execution_script">
       <data key="d0">function</data>
@@ -17116,7 +17459,10 @@ Args:
     result_name: Name of the result file.
 
 Returns:
-    Tuple of (script_filename, script_content).</data>
+    Tuple of (script_filename, script_content).
+
+Raises:
+    ValueError: If an unsupported guest OS is configured.</data>
     </node>
     <node id="src.intellicrack.sandbox.qemu._poll_for_result">
       <data key="d0">function</data>
@@ -17152,7 +17498,8 @@ Returns:
     ExecutionReport with results and activity.
 
 Raises:
-    SandboxError: If execution fails.</data>
+    SandboxError: If execution fails.
+    ValueError: If an unsupported guest OS is configured.</data>
     </node>
     <node id="src.intellicrack.sandbox.qemu._parse_file_log">
       <data key="d0">function</data>
@@ -19207,12 +19554,14 @@ Attributes:
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">__init__</data>
-      <data key="d5">['self', 'models', 'current_model', 'parent']</data>
+      <data key="d5">['self', 'models', 'current_model', 'provider_name', 'discovery', 'parent']</data>
       <data key="d4">Initialize the model selection dialog.
 
 Args:
     models: List of available models.
     current_model: Currently selected model ID.
+    provider_name: Provider identifier for discovery status lookup.
+    discovery: Discovery service for last-event status display.
     parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.provider_config._load_env_file_vars">
@@ -19884,6 +20233,13 @@ Returns:
       <data key="d3">_populate_models</data>
       <data key="d5">['self']</data>
       <data key="d4">Populate the model list.</data>
+    </node>
+    <node id="src.intellicrack.ui.provider_config._update_discovery_status">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_update_discovery_status</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Update the discovery status label with the last event for the provider.</data>
     </node>
     <node id="src.intellicrack.ui.provider_config._on_model_selected">
       <data key="d0">function</data>
@@ -21399,6 +21755,26 @@ and retrieves its document's syntax highlighter.
 
 Returns:
     Syntax highlighter or None if not available.</data>
+    </node>
+    <node id="src.intellicrack.ui.tools._wire_hex_editor_state">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_wire_hex_editor_state</data>
+      <data key="d5">['self', 'panel_widget']</data>
+      <data key="d4">Create a shared HexDocumentState and wire it to the bridge and panel.
+
+Args:
+    panel_widget: The HexEditorPanel instance.</data>
+    </node>
+    <node id="src.intellicrack.ui.tools._on_hex_context_push">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_hex_context_push</data>
+      <data key="d5">['self', 'context']</data>
+      <data key="d4">Handle hex editor context push for AI integration.
+
+Args:
+    context: Hex editor context dictionary.</data>
     </node>
     <node id="src.intellicrack.ui.tools._wire_stack_viewer_bridges">
       <data key="d0">function</data>
@@ -24645,6 +25021,7 @@ Attributes:
     _file_path: Path to the currently loaded file.
     _side_tabs: Tab widget for side panels.</data>
     </node>
+    <node id="intellicrack.bridges.hex_state" />
     <node id="src.intellicrack.ui.panels.hex_editor_panel.__init__">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -24674,6 +25051,27 @@ Args:
 
 Returns:
     Splitter widget containing hex editor and side panels.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_panel._setup_shortcuts">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_setup_shortcuts</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Configure keyboard shortcuts for the hex editor panel.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_panel._focus_search">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_focus_search</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Focus the search input field.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_panel._focus_goto">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_focus_goto</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Focus the goto-offset input field.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor_panel._build_side_panels">
       <data key="d0">function</data>
@@ -24779,6 +25177,27 @@ Args:
       <data key="d3">_on_search</data>
       <data key="d5">['self']</data>
       <data key="d4">Execute a search based on current mode and input.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_panel._on_find_next">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_find_next</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Navigate to the next search result with wrap-around.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_panel._on_find_prev">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_find_prev</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Navigate to the previous search result with wrap-around.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_panel._on_send_to_ai">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_send_to_ai</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Emit context for AI analysis from the current hex editor state.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor_panel._on_undo">
       <data key="d0">function</data>
@@ -24887,12 +25306,81 @@ Args:
 Args:
     offset: Target byte offset.</data>
     </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_panel.set_state_holder">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_state_holder</data>
+      <data key="d5">['self', 'state_holder']</data>
+      <data key="d4">Attach a shared state holder for bridge-GUI synchronization.
+
+Args:
+    state_holder: The shared HexDocumentState instance.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_panel._auto_detect_file_type">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_auto_detect_file_type</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Detect the file type from magic bytes and auto-select the template.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_panel._select_template">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_select_template</data>
+      <data key="d5">['self', 'template_name']</data>
+      <data key="d4">Select a template by name in the combo box.
+
+Args:
+    template_name: Template name to select.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_panel._populate_strings">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_populate_strings</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Scan the document for printable ASCII strings and populate the strings tab.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_panel._on_string_double_clicked">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_string_double_clicked</data>
+      <data key="d5">['self', 'item', 'column']</data>
+      <data key="d4">Navigate to the string offset when double-clicked.
+
+Args:
+    item: The clicked tree item.
+    column: The clicked column index.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_panel._update_patches">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_update_patches</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Update the patches tree by comparing modified offsets to originals.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_panel._cache_original_byte">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_cache_original_byte</data>
+      <data key="d5">['self', 'offset']</data>
+      <data key="d4">Cache the original byte value before first modification.
+
+Args:
+    offset: Byte offset to cache.</data>
+    </node>
     <node id="src.intellicrack.ui.panels.hex_editor_panel._cleanup">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_cleanup</data>
       <data key="d5">['self']</data>
       <data key="d4">Release resources when the panel is closed.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_panel._on_state_event">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_state_event</data>
+      <data key="d5">['event_type', 'data']</data>
+      <data key="d4" />
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor_widget">
       <data key="d0">module</data>
@@ -25163,6 +25651,17 @@ Args:
       <data key="d3">_do_copy</data>
       <data key="d5">['self']</data>
       <data key="d4">Copy selection to clipboard as hex string.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_widget._do_paste">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_do_paste</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Paste clipboard content at cursor position.
+
+Attempts to parse clipboard text as a hex string first
+(e.g. "4D 5A 90"). Falls back to encoding the raw text
+as UTF-8 bytes.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor_widget.mousePressEvent">
       <data key="d0">function</data>
@@ -25563,6 +26062,16 @@ Args:
       <data key="d5">['self']</data>
       <data key="d4">Set up the process panel layout.</data>
     </node>
+    <node id="src.intellicrack.ui.panels.process_panel._build_tracked_tab">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_build_tracked_tab</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Build the Tracked Processes tab widget.
+
+Returns:
+    The configured tracked processes tab widget.</data>
+    </node>
     <node id="src.intellicrack.ui.panels.process_panel._on_refresh">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -25606,6 +26115,33 @@ Args:
 
 Args:
     checked: Whether auto-refresh is enabled.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel._on_tracked_auto_refresh_toggled">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_tracked_auto_refresh_toggled</data>
+      <data key="d5">['self', 'checked']</data>
+      <data key="d4">Toggle automatic refresh for the tracked processes tab.
+
+Args:
+    checked: Whether auto-refresh is enabled.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel._on_top_tab_changed">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_top_tab_changed</data>
+      <data key="d5">['self', 'index']</data>
+      <data key="d4">Handle top-level tab change.
+
+Args:
+    index: Index of the newly selected tab.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.process_panel._refresh_tracked_tab">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_refresh_tracked_tab</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Refresh the tracked processes table from ProcessManager.</data>
     </node>
     <node id="src.intellicrack.ui.panels.process_panel._on_process_selection_changed">
       <data key="d0">function</data>
@@ -26030,6 +26566,26 @@ Args:
       <data key="d3">_on_create_error</data>
       <data key="d5">['self', 'exc']</data>
       <data key="d4">Handle sandbox creation failure.
+
+Args:
+    exc: The exception from the failed operation.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.sandbox_panel._on_cleanup_stale_success">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_cleanup_stale_success</data>
+      <data key="d5">['self', 'result']</data>
+      <data key="d4">Handle successful stale sandbox cleanup.
+
+Args:
+    result: Number of instances cleaned up.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.sandbox_panel._on_cleanup_stale_error">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_cleanup_stale_error</data>
+      <data key="d5">['self', 'exc']</data>
+      <data key="d4">Handle stale cleanup failure.
 
 Args:
     exc: The exception from the failed operation.</data>
@@ -30769,6 +31325,11 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\gemini_cli_config.json</data>
       <data key="d3">gemini_cli_config.json</data>
+    </node>
+    <node id="package-lock.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\package-lock.json</data>
+      <data key="d3">package-lock.json</data>
     </node>
     <node id="package.json">
       <data key="d0">config</data>
@@ -39975,6 +40536,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\docstring_parser\rest.meta.json</data>
       <data key="d3">rest.meta.json</data>
     </node>
+    <node id=".mypy_cache/3.13/docstring_parser/rest_attr_parser.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\docstring_parser\rest_attr_parser.data.json</data>
+      <data key="d3">rest_attr_parser.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/docstring_parser/rest_attr_parser.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\docstring_parser\rest_attr_parser.meta.json</data>
+      <data key="d3">rest_attr_parser.meta.json</data>
+    </node>
     <node id=".mypy_cache/3.13/docstring_parser/util.data.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\docstring_parser\util.data.json</data>
@@ -43375,6 +43946,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\intellicrack\bridges\hex_editor.meta.json</data>
       <data key="d3">hex_editor.meta.json</data>
     </node>
+    <node id=".mypy_cache/3.13/intellicrack/bridges/hex_state.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\intellicrack\bridges\hex_state.data.json</data>
+      <data key="d3">hex_state.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/intellicrack/bridges/hex_state.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\intellicrack\bridges\hex_state.meta.json</data>
+      <data key="d3">hex_state.meta.json</data>
+    </node>
     <node id=".mypy_cache/3.13/intellicrack/bridges/installer.data.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\intellicrack\bridges\installer.data.json</data>
@@ -44243,6 +44824,16 @@ and theme management for the Intellicrack application.</data>
     <node id=".mypy_cache/3.13/intellicrack/ui/resources/__init__.meta.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\intellicrack\ui\resources\__init__.meta.json</data>
+      <data key="d3">__init__.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/intellicrack_hexcore/__init__.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\intellicrack_hexcore\__init__.data.json</data>
+      <data key="d3">__init__.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/intellicrack_hexcore/__init__.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\intellicrack_hexcore\__init__.meta.json</data>
       <data key="d3">__init__.meta.json</data>
     </node>
     <node id=".mypy_cache/3.13/IPython/display.data.json">
@@ -82200,6 +82791,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\conda-meta\python_abi-3.13-8_cp313.json</data>
       <data key="d3">python_abi-3.13-8_cp313.json</data>
     </node>
+    <node id=".pixi/envs/default/conda-meta/rust-1.94.0-hf8d6059_0.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\conda-meta\rust-1.94.0-hf8d6059_0.json</data>
+      <data key="d3">rust-1.94.0-hf8d6059_0.json</data>
+    </node>
+    <node id=".pixi/envs/default/conda-meta/rust-std-x86_64-pc-windows-msvc-1.94.0-h17fc481_0.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\conda-meta\rust-std-x86_64-pc-windows-msvc-1.94.0-h17fc481_0.json</data>
+      <data key="d3">rust-std-x86_64-pc-windows-msvc-1.94.0-h17fc481_0.json</data>
+    </node>
     <node id=".pixi/envs/default/conda-meta/setuptools-82.0.1-pyh332efcf_0.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\conda-meta\setuptools-82.0.1-pyh332efcf_0.json</data>
@@ -83350,9 +83951,69 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\deptry-0.25.1.dist-info\sboms\deptryrs.cyclonedx.json</data>
       <data key="d3">deptryrs.cyclonedx.json</data>
     </node>
+    <node id=".pixi/envs/default/Lib/site-packages/docs/checking_class_attributes.md">
+      <data key="d0">documentation</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\docs\checking_class_attributes.md</data>
+      <data key="d3">checking_class_attributes.md</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/docs/config_options.md">
+      <data key="d0">documentation</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\docs\config_options.md</data>
+      <data key="d3">config_options.md</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/docs/how_to_config.md">
+      <data key="d0">documentation</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\docs\how_to_config.md</data>
+      <data key="d3">how_to_config.md</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/docs/how_to_ignore.md">
+      <data key="d0">documentation</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\docs\how_to_ignore.md</data>
+      <data key="d3">how_to_ignore.md</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/docs/index.md">
+      <data key="d0">documentation</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\docs\index.md</data>
+      <data key="d3">index.md</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/docs/notes_for_developers.md">
+      <data key="d0">documentation</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\docs\notes_for_developers.md</data>
+      <data key="d3">notes_for_developers.md</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/docs/notes_for_users.md">
+      <data key="d0">documentation</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\docs\notes_for_users.md</data>
+      <data key="d3">notes_for_users.md</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/docs/notes_generator_vs_iterator.md">
+      <data key="d0">documentation</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\docs\notes_generator_vs_iterator.md</data>
+      <data key="d3">notes_generator_vs_iterator.md</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/docs/style_deviations.md">
+      <data key="d0">documentation</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\docs\style_deviations.md</data>
+      <data key="d3">style_deviations.md</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/docs/style_mismatch.md">
+      <data key="d0">documentation</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\docs\style_mismatch.md</data>
+      <data key="d3">style_mismatch.md</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/docs/violation_codes.md">
+      <data key="d0">documentation</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\docs\violation_codes.md</data>
+      <data key="d3">violation_codes.md</data>
+    </node>
     <node id=".pixi/envs/default/Lib/site-packages/docstring_parser-0.17.0.dist-info/licenses/LICENSE.md">
       <data key="d0">documentation</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\docstring_parser-0.17.0.dist-info\licenses\LICENSE.md</data>
+      <data key="d3">LICENSE.md</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/docstring_parser_fork-0.0.14.dist-info/licenses/LICENSE.md">
+      <data key="d0">documentation</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\docstring_parser_fork-0.0.14.dist-info\licenses\LICENSE.md</data>
       <data key="d3">LICENSE.md</data>
     </node>
     <node id=".pixi/envs/default/Lib/site-packages/frida_tools-14.6.1.dist-info/uv_build.json">
@@ -83429,6 +84090,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\intellicrack-0.1.0a1.dist-info\uv_cache.json</data>
       <data key="d3">uv_cache.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/intellicrack_hexcore-0.1.0.dist-info/direct_url.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\intellicrack_hexcore-0.1.0.dist-info\direct_url.json</data>
+      <data key="d3">direct_url.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/intellicrack_hexcore-0.1.0.dist-info/sboms/intellicrack-hexcore.cyclonedx.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\intellicrack_hexcore-0.1.0.dist-info\sboms\intellicrack-hexcore.cyclonedx.json</data>
+      <data key="d3">intellicrack-hexcore.cyclonedx.json</data>
     </node>
     <node id=".pixi/envs/default/Lib/site-packages/jsonlint-0.1.dist-info/metadata.json">
       <data key="d0">config</data>
@@ -83534,6 +84205,11 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">documentation</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\material\templates\.icons\simple\LICENSE.md</data>
       <data key="d3">LICENSE.md</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/maturin-1.12.6.dist-info/sboms/maturin.cyclonedx.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\maturin-1.12.6.dist-info\sboms\maturin.cyclonedx.json</data>
+      <data key="d3">maturin.cyclonedx.json</data>
     </node>
     <node id=".pixi/envs/default/Lib/site-packages/mdit_py_plugins/admon/port.yaml">
       <data key="d0">config</data>
@@ -84630,10 +85306,15 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\yamllint\conf\relaxed.yaml</data>
       <data key="d3">relaxed.yaml</data>
     </node>
-    <node id=".pixi/envs/default/Lib/site-packages/zipp-3.23.0.dist-info/direct_url.json">
+    <node id=".pixi/envs/default/Library/etc/target-spec-json-schema.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\zipp-3.23.0.dist-info\direct_url.json</data>
-      <data key="d3">direct_url.json</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Library\etc\target-spec-json-schema.json</data>
+      <data key="d3">target-spec-json-schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Library/lib/rustlib/x86_64-pc-windows-msvc/analysis/removed.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Library\lib\rustlib\x86_64-pc-windows-msvc\analysis\removed.json</data>
+      <data key="d3">removed.json</data>
     </node>
     <node id=".pixi/envs/default/Library/mingw64/doc/git-credential-manager/README.md">
       <data key="d0">documentation</data>
@@ -84654,6 +85335,31 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">documentation</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Library\mingw64\share\licenses\pcre2\LICENCE.md</data>
       <data key="d3">LICENCE.md</data>
+    </node>
+    <node id=".pixi/envs/default/Library/share/doc/cargo/README.md">
+      <data key="d0">documentation</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Library\share\doc\cargo\README.md</data>
+      <data key="d3">README.md</data>
+    </node>
+    <node id=".pixi/envs/default/Library/share/doc/clippy/README.md">
+      <data key="d0">documentation</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Library\share\doc\clippy\README.md</data>
+      <data key="d3">README.md</data>
+    </node>
+    <node id=".pixi/envs/default/Library/share/doc/rust/README.md">
+      <data key="d0">documentation</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Library\share\doc\rust\README.md</data>
+      <data key="d3">README.md</data>
+    </node>
+    <node id=".pixi/envs/default/Library/share/doc/rust-analyzer/README.md">
+      <data key="d0">documentation</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Library\share\doc\rust-analyzer\README.md</data>
+      <data key="d3">README.md</data>
+    </node>
+    <node id=".pixi/envs/default/Library/share/doc/rustfmt/README.md">
+      <data key="d0">documentation</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Library\share\doc\rustfmt\README.md</data>
+      <data key="d3">README.md</data>
     </node>
     <node id=".pixi/envs/default/Library/share/markdownlint-cli/package-lock.json">
       <data key="d0">config</data>
@@ -86955,6 +87661,451 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\debug\.fingerprint\zmij-ad706ccbdeeacfe2\lib-zmij.json</data>
       <data key="d3">lib-zmij.json</data>
     </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/aho-corasick-dfba2a0ba8cc06ae/lib-aho_corasick.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\aho-corasick-dfba2a0ba8cc06ae\lib-aho_corasick.json</data>
+      <data key="d3">lib-aho_corasick.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/autocfg-a2c6748e1abc0e67/lib-autocfg.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\autocfg-a2c6748e1abc0e67\lib-autocfg.json</data>
+      <data key="d3">lib-autocfg.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/block-buffer-aea17d7d387d499b/lib-block_buffer.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\block-buffer-aea17d7d387d499b\lib-block_buffer.json</data>
+      <data key="d3">lib-block_buffer.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/cfg-if-385f4e40850ba0dd/lib-cfg_if.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\cfg-if-385f4e40850ba0dd\lib-cfg_if.json</data>
+      <data key="d3">lib-cfg_if.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/cpufeatures-1bb46b639acd1e76/lib-cpufeatures.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\cpufeatures-1bb46b639acd1e76\lib-cpufeatures.json</data>
+      <data key="d3">lib-cpufeatures.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/crc32fast-1f20f562d33ec612/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\crc32fast-1f20f562d33ec612\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/crc32fast-595d09c8ed5fe0d4/lib-crc32fast.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\crc32fast-595d09c8ed5fe0d4\lib-crc32fast.json</data>
+      <data key="d3">lib-crc32fast.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/crc32fast-c5603edc4697b366/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\crc32fast-c5603edc4697b366\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/crossbeam-deque-67d59dc6c8a11225/lib-crossbeam_deque.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\crossbeam-deque-67d59dc6c8a11225\lib-crossbeam_deque.json</data>
+      <data key="d3">lib-crossbeam_deque.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/crossbeam-epoch-bbfef6cbec1b4431/lib-crossbeam_epoch.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\crossbeam-epoch-bbfef6cbec1b4431\lib-crossbeam_epoch.json</data>
+      <data key="d3">lib-crossbeam_epoch.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/crossbeam-utils-6d90888b49979750/lib-crossbeam_utils.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\crossbeam-utils-6d90888b49979750\lib-crossbeam_utils.json</data>
+      <data key="d3">lib-crossbeam_utils.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/crossbeam-utils-8eeb8bfbf4872dd0/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\crossbeam-utils-8eeb8bfbf4872dd0\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/crossbeam-utils-ff19ed6e1a9cf4a3/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\crossbeam-utils-ff19ed6e1a9cf4a3\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/crypto-common-e15593f6d600c65c/lib-crypto_common.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\crypto-common-e15593f6d600c65c\lib-crypto_common.json</data>
+      <data key="d3">lib-crypto_common.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/digest-0b96b890ff491a11/lib-digest.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\digest-0b96b890ff491a11\lib-digest.json</data>
+      <data key="d3">lib-digest.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/either-c0572c8e65673265/lib-either.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\either-c0572c8e65673265\lib-either.json</data>
+      <data key="d3">lib-either.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/generic-array-1591f3b109d6259b/lib-generic_array.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\generic-array-1591f3b109d6259b\lib-generic_array.json</data>
+      <data key="d3">lib-generic_array.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/generic-array-18ee3c3f8152de87/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\generic-array-18ee3c3f8152de87\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/generic-array-acec915e46bae1a7/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\generic-array-acec915e46bae1a7\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/heck-715f626dcb4698d3/lib-heck.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\heck-715f626dcb4698d3\lib-heck.json</data>
+      <data key="d3">lib-heck.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/indoc-2ad5e8863b6418c1/lib-indoc.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\indoc-2ad5e8863b6418c1\lib-indoc.json</data>
+      <data key="d3">lib-indoc.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/intellicrack-hexcore-31e3762df01bb049/lib-intellicrack_hexcore.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\intellicrack-hexcore-31e3762df01bb049\lib-intellicrack_hexcore.json</data>
+      <data key="d3">lib-intellicrack_hexcore.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/itoa-01439ce7fb02dc1d/lib-itoa.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\itoa-01439ce7fb02dc1d\lib-itoa.json</data>
+      <data key="d3">lib-itoa.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/libc-08c667ba3660682a/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\libc-08c667ba3660682a\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/libc-b36eca88aef504a3/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\libc-b36eca88aef504a3\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/libc-c25ed74f22ccb1fc/lib-libc.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\libc-c25ed74f22ccb1fc\lib-libc.json</data>
+      <data key="d3">lib-libc.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/md-5-179a25fea783c093/lib-md5.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\md-5-179a25fea783c093\lib-md5.json</data>
+      <data key="d3">lib-md5.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/memchr-d29f5a4c159c3c86/lib-memchr.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\memchr-d29f5a4c159c3c86\lib-memchr.json</data>
+      <data key="d3">lib-memchr.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/memmap2-fd61326e2259ca6b/lib-memmap2.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\memmap2-fd61326e2259ca6b\lib-memmap2.json</data>
+      <data key="d3">lib-memmap2.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/memoffset-07942d4db7ff4a20/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\memoffset-07942d4db7ff4a20\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/memoffset-691a518c91bff5ec/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\memoffset-691a518c91bff5ec\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/memoffset-913e1c7aaac62924/lib-memoffset.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\memoffset-913e1c7aaac62924\lib-memoffset.json</data>
+      <data key="d3">lib-memoffset.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/once_cell-3a535680e70514f6/lib-once_cell.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\once_cell-3a535680e70514f6\lib-once_cell.json</data>
+      <data key="d3">lib-once_cell.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/once_cell-4a9322c3b06b7429/lib-once_cell.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\once_cell-4a9322c3b06b7429\lib-once_cell.json</data>
+      <data key="d3">lib-once_cell.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/proc-macro2-2c35a4f75c887235/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\proc-macro2-2c35a4f75c887235\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/proc-macro2-3b049445276f1468/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\proc-macro2-3b049445276f1468\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/proc-macro2-40fabc91ab2dbbd0/lib-proc_macro2.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\proc-macro2-40fabc91ab2dbbd0\lib-proc_macro2.json</data>
+      <data key="d3">lib-proc_macro2.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/pyo3-76f67603daa9797d/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\pyo3-76f67603daa9797d\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/pyo3-8ab50e9d4df9d92c/lib-pyo3.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\pyo3-8ab50e9d4df9d92c\lib-pyo3.json</data>
+      <data key="d3">lib-pyo3.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/pyo3-build-config-4e50bf82a4c14409/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\pyo3-build-config-4e50bf82a4c14409\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/pyo3-build-config-57036d74ab3caeaa/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\pyo3-build-config-57036d74ab3caeaa\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/pyo3-build-config-a7c409a6c7b42f42/lib-pyo3_build_config.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\pyo3-build-config-a7c409a6c7b42f42\lib-pyo3_build_config.json</data>
+      <data key="d3">lib-pyo3_build_config.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/pyo3-e76f4dc294a334fd/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\pyo3-e76f4dc294a334fd\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/pyo3-ffi-0f13a64d60aa7e8a/lib-pyo3_ffi.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\pyo3-ffi-0f13a64d60aa7e8a\lib-pyo3_ffi.json</data>
+      <data key="d3">lib-pyo3_ffi.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/pyo3-ffi-38ddcd07c42b53cf/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\pyo3-ffi-38ddcd07c42b53cf\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/pyo3-ffi-f057f0b4048a3430/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\pyo3-ffi-f057f0b4048a3430\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/pyo3-macros-041221c0cbc9a844/lib-pyo3_macros.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\pyo3-macros-041221c0cbc9a844\lib-pyo3_macros.json</data>
+      <data key="d3">lib-pyo3_macros.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/pyo3-macros-backend-6babaf4dd6786db9/lib-pyo3_macros_backend.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\pyo3-macros-backend-6babaf4dd6786db9\lib-pyo3_macros_backend.json</data>
+      <data key="d3">lib-pyo3_macros_backend.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/pyo3-macros-backend-d6894a20b93208e0/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\pyo3-macros-backend-d6894a20b93208e0\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/pyo3-macros-backend-f0220d75404f3a32/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\pyo3-macros-backend-f0220d75404f3a32\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/quote-1d47c7ef8922d775/lib-quote.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\quote-1d47c7ef8922d775\lib-quote.json</data>
+      <data key="d3">lib-quote.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/quote-ac0b713bfbec1334/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\quote-ac0b713bfbec1334\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/quote-d0fb7d3e318089d2/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\quote-d0fb7d3e318089d2\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/rayon-core-0e4bf12e97e25f40/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\rayon-core-0e4bf12e97e25f40\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/rayon-core-18c8cc7537545d39/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\rayon-core-18c8cc7537545d39\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/rayon-core-2445cf0790c89dff/lib-rayon_core.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\rayon-core-2445cf0790c89dff\lib-rayon_core.json</data>
+      <data key="d3">lib-rayon_core.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/rayon-f193588a405505a8/lib-rayon.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\rayon-f193588a405505a8\lib-rayon.json</data>
+      <data key="d3">lib-rayon.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/regex-automata-24982cf52ad0c672/lib-regex_automata.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\regex-automata-24982cf52ad0c672\lib-regex_automata.json</data>
+      <data key="d3">lib-regex_automata.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/regex-c45eb3d16c95279b/lib-regex.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\regex-c45eb3d16c95279b\lib-regex.json</data>
+      <data key="d3">lib-regex.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/regex-syntax-e9bfac29085d0dd1/lib-regex_syntax.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\regex-syntax-e9bfac29085d0dd1\lib-regex_syntax.json</data>
+      <data key="d3">lib-regex_syntax.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/serde-4efc25986ab33564/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\serde-4efc25986ab33564\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/serde-66530ebb4138313d/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\serde-66530ebb4138313d\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/serde-e93b3533851d4d9f/lib-serde.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\serde-e93b3533851d4d9f\lib-serde.json</data>
+      <data key="d3">lib-serde.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/serde_core-1c74137c19db489e/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\serde_core-1c74137c19db489e\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/serde_core-41cb47f1f51c0c14/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\serde_core-41cb47f1f51c0c14\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/serde_core-7bd8eecab8417789/lib-serde_core.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\serde_core-7bd8eecab8417789\lib-serde_core.json</data>
+      <data key="d3">lib-serde_core.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/serde_derive-4b52e8912be6d020/lib-serde_derive.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\serde_derive-4b52e8912be6d020\lib-serde_derive.json</data>
+      <data key="d3">lib-serde_derive.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/serde_json-37a418b1388e962e/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\serde_json-37a418b1388e962e\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/serde_json-618a504fdd57c763/lib-serde_json.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\serde_json-618a504fdd57c763\lib-serde_json.json</data>
+      <data key="d3">lib-serde_json.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/serde_json-abd93a39e5c600b4/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\serde_json-abd93a39e5c600b4\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/sha1-5f3566f7c833f637/lib-sha1.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\sha1-5f3566f7c833f637\lib-sha1.json</data>
+      <data key="d3">lib-sha1.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/sha2-00da1c785ef22f25/lib-sha2.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\sha2-00da1c785ef22f25\lib-sha2.json</data>
+      <data key="d3">lib-sha2.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/syn-061fcbe5e8cd8a5e/lib-syn.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\syn-061fcbe5e8cd8a5e\lib-syn.json</data>
+      <data key="d3">lib-syn.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/target-lexicon-572e1ac820ea8318/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\target-lexicon-572e1ac820ea8318\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/target-lexicon-6eff8465129382a9/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\target-lexicon-6eff8465129382a9\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/target-lexicon-ac4d71b804495f8e/lib-target_lexicon.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\target-lexicon-ac4d71b804495f8e\lib-target_lexicon.json</data>
+      <data key="d3">lib-target_lexicon.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/thiserror-85b4bb481db04019/lib-thiserror.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\thiserror-85b4bb481db04019\lib-thiserror.json</data>
+      <data key="d3">lib-thiserror.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/thiserror-cb9ea4825e08b7d5/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\thiserror-cb9ea4825e08b7d5\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/thiserror-e434bd0d15380ba0/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\thiserror-e434bd0d15380ba0\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/thiserror-impl-9314e3cf195e59d5/lib-thiserror_impl.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\thiserror-impl-9314e3cf195e59d5\lib-thiserror_impl.json</data>
+      <data key="d3">lib-thiserror_impl.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/typenum-53564d6091686f3a/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\typenum-53564d6091686f3a\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/typenum-d62d0c2b00d059c6/lib-typenum.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\typenum-d62d0c2b00d059c6\lib-typenum.json</data>
+      <data key="d3">lib-typenum.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/typenum-d9008b6cbe697a1b/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\typenum-d9008b6cbe697a1b\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/unicode-ident-7cb6077d788cfe85/lib-unicode_ident.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\unicode-ident-7cb6077d788cfe85\lib-unicode_ident.json</data>
+      <data key="d3">lib-unicode_ident.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/unindent-a6147c03ba7110e0/lib-unindent.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\unindent-a6147c03ba7110e0\lib-unindent.json</data>
+      <data key="d3">lib-unindent.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/version_check-1b35945728b5eb17/lib-version_check.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\version_check-1b35945728b5eb17\lib-version_check.json</data>
+      <data key="d3">lib-version_check.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/zmij-5e9e18752fc263ac/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\zmij-5e9e18752fc263ac\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/zmij-817bc6a685c63987/lib-zmij.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\zmij-817bc6a685c63987\lib-zmij.json</data>
+      <data key="d3">lib-zmij.json</data>
+    </node>
+    <node id="src/intellicrack-hexcore/target/release/.fingerprint/zmij-c072861476d091d6/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\target\release\.fingerprint\zmij-c072861476d091d6\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
     <node id="tools/AdobeInjector/README.md">
       <data key="d0">documentation</data>
       <data key="d2">D:\Intellicrack\tools\AdobeInjector\README.md</data>
@@ -87874,7 +89025,7 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.main" target="src.intellicrack.main._import_credential_loader">
       <data key="d6">defines</data>
     </edge>
-    <edge source="src.intellicrack.main" target="src.intellicrack.main._import_provider_registry">
+    <edge source="src.intellicrack.main" target="src.intellicrack.main._get_provider_registry">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.main" target="src.intellicrack.main._import_main_window">
@@ -89404,6 +90555,9 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.bridges.ghidra" target="src.intellicrack.bridges.ghidra.ghidra_path">
       <data key="d6">defines</data>
     </edge>
+    <edge source="src.intellicrack.bridges.ghidra" target="src.intellicrack.bridges.ghidra.project_path">
+      <data key="d6">defines</data>
+    </edge>
     <edge source="src.intellicrack.bridges.ghidra" target="src.intellicrack.bridges.ghidra.name">
       <data key="d6">defines</data>
     </edge>
@@ -89554,7 +90708,16 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.bridges.hex_editor" target="__future__">
       <data key="d6">imports</data>
     </edge>
+    <edge source="src.intellicrack.bridges.hex_editor" target="asyncio">
+      <data key="d6">imports</data>
+    </edge>
     <edge source="src.intellicrack.bridges.hex_editor" target="base64">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_editor" target="inspect">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_editor" target="tempfile">
       <data key="d6">imports</data>
     </edge>
     <edge source="src.intellicrack.bridges.hex_editor" target="pathlib">
@@ -89575,10 +90738,22 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.bridges.hex_editor" target="src.intellicrack.bridges.hex_editor.HexEditorBridge">
       <data key="d6">defines</data>
     </edge>
+    <edge source="src.intellicrack.bridges.hex_editor" target="src.intellicrack.core.tools">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_editor" target="src.intellicrack.bridges.hex_state">
+      <data key="d6">imports</data>
+    </edge>
     <edge source="src.intellicrack.bridges.hex_editor" target="intellicrack_hexcore">
       <data key="d6">imports</data>
     </edge>
     <edge source="src.intellicrack.bridges.hex_editor" target="src.intellicrack.bridges.hex_editor.__init__">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_editor" target="src.intellicrack.bridges.hex_editor.set_state_holder">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_editor" target="src.intellicrack.bridges.hex_editor.set_tool_registry">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.bridges.hex_editor" target="src.intellicrack.bridges.hex_editor.name">
@@ -89680,8 +90855,221 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.bridges.hex_editor" target="src.intellicrack.bridges.hex_editor.save_as">
       <data key="d6">defines</data>
     </edge>
+    <edge source="src.intellicrack.bridges.hex_editor" target="src.intellicrack.bridges.hex_editor.calculate_hash_range">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_editor" target="src.intellicrack.bridges.hex_editor.get_document_info">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_editor" target="src.intellicrack.bridges.hex_editor.get_context_for_ai">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_editor" target="src.intellicrack.bridges.hex_editor.save_to_sandbox">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_editor" target="src.intellicrack.bridges.hex_editor.test_in_sandbox">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_editor" target="os">
+      <data key="d6">imports</data>
+    </edge>
     <edge source="src.intellicrack.bridges.hex_editor.HexEditorBridge" target="src.intellicrack.bridges.base.ToolBridgeBase">
       <data key="d6">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="__future__">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="asyncio">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="inspect">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="time">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="dataclasses">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="typing">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.logging">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.types">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.ToolStatus">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.ToolRegistry">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="pathlib">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.bridges.base">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.bridges.binary">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.bridges.cutter">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.bridges.frida_bridge">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.bridges.ghidra">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.bridges.hex_editor">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.bridges.process">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.bridges.sandbox_bridge">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.bridges.x64dbg">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.__init__">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.tools_directory">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.initialize">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.initialize_tool">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.shutdown">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_binary_bridge">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_process_bridge">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_frida_bridge">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_ghidra_bridge">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_cutter_bridge">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_x64dbg_bridge">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_sandbox_bridge">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_hex_editor_bridge">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_status">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_all_status">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_tool_definitions">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_available_tools">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.execute_tool_call">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.ensure_tool_ready">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.tools" target="src.intellicrack.bridges.installer">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="__future__">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="enum">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="threading">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="collections.abc">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="typing">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.core.logging">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.HexDocumentEvent">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state._CallbackEntry">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.HexDocumentState">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="pathlib">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.__init__">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.document">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.file_path">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.cursor_offset">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.selection">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.register_callback">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.unregister_callback">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.set_document">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.set_cursor">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.set_selection">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.clear_selection">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.notify_data_modified">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.notify_document_saved">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state._notify">
+      <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.bridges.installer" target="__future__">
       <data key="d6">imports</data>
@@ -90642,129 +92030,6 @@ and theme management for the Intellicrack application.</data>
     </edge>
     <edge source="src.intellicrack.core.analysis_aggregator" target="src.intellicrack.core.analysis_aggregator._collect_from_static_bridge">
       <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="__future__">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="asyncio">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="inspect">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="time">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="dataclasses">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="typing">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.logging">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.types">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.ToolStatus">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.ToolRegistry">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="pathlib">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.bridges.base">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.bridges.binary">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.bridges.cutter">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.bridges.frida_bridge">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.bridges.ghidra">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.bridges.hex_editor">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.bridges.process">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.bridges.sandbox_bridge">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.bridges.x64dbg">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.__init__">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.tools_directory">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.initialize">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.initialize_tool">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.shutdown">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_binary_bridge">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_process_bridge">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_frida_bridge">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_ghidra_bridge">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_cutter_bridge">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_x64dbg_bridge">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_sandbox_bridge">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_hex_editor_bridge">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_status">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_all_status">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_tool_definitions">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.get_available_tools">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.execute_tool_call">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.core.tools.ensure_tool_ready">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.core.tools" target="src.intellicrack.bridges.installer">
-      <data key="d6">imports</data>
     </edge>
     <edge source="src.intellicrack.core.config" target="__future__">
       <data key="d6">imports</data>
@@ -92213,6 +93478,9 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.providers.anthropic" target="src.intellicrack.providers.anthropic._parse_response_blocks">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.providers.anthropic" target="src.intellicrack.providers.anthropic._make_anthropic_api_call">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.providers.anthropic" target="src.intellicrack.providers.anthropic.chat">
@@ -94243,6 +95511,9 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app._reconnect_providers">
       <data key="d6">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.app" target="src.intellicrack.core.process_manager">
+      <data key="d6">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.app" target="src.intellicrack.ui.app.load_session">
       <data key="d6">defines</data>
     </edge>
@@ -94679,6 +95950,9 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._populate_models">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._update_discovery_status">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._on_model_selected">
@@ -95420,6 +96694,12 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.get_code_highlighter">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools._wire_hex_editor_state">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools._on_hex_context_push">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools._wire_stack_viewer_bridges">
@@ -97267,6 +98547,9 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="PyQt6.QtCore">
       <data key="d6">imports</data>
     </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="PyQt6.QtGui">
+      <data key="d6">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="PyQt6.QtWidgets">
       <data key="d6">imports</data>
     </edge>
@@ -97285,6 +98568,9 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="src.intellicrack.ui.panels.hex_editor_panel.HexEditorPanel">
       <data key="d6">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="intellicrack.bridges.hex_state">
+      <data key="d6">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="pefile">
       <data key="d6">imports</data>
     </edge>
@@ -97298,6 +98584,15 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="src.intellicrack.ui.panels.hex_editor_panel._create_content">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="src.intellicrack.ui.panels.hex_editor_panel._setup_shortcuts">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="src.intellicrack.ui.panels.hex_editor_panel._focus_search">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="src.intellicrack.ui.panels.hex_editor_panel._focus_goto">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="src.intellicrack.ui.panels.hex_editor_panel._build_side_panels">
@@ -97334,6 +98629,15 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="src.intellicrack.ui.panels.hex_editor_panel._on_search">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="src.intellicrack.ui.panels.hex_editor_panel._on_find_next">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="src.intellicrack.ui.panels.hex_editor_panel._on_find_prev">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="src.intellicrack.ui.panels.hex_editor_panel._on_send_to_ai">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="src.intellicrack.ui.panels.hex_editor_panel._on_undo">
@@ -97378,7 +98682,31 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="src.intellicrack.ui.panels.hex_editor_panel.goto_offset">
       <data key="d6">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="src.intellicrack.ui.panels.hex_editor_panel.set_state_holder">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="src.intellicrack.ui.panels.hex_editor_panel._auto_detect_file_type">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="src.intellicrack.ui.panels.hex_editor_panel._select_template">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="src.intellicrack.ui.panels.hex_editor_panel._populate_strings">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="src.intellicrack.ui.panels.hex_editor_panel._on_string_double_clicked">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="src.intellicrack.ui.panels.hex_editor_panel._update_patches">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="src.intellicrack.ui.panels.hex_editor_panel._cache_original_byte">
+      <data key="d6">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="src.intellicrack.ui.panels.hex_editor_panel._cleanup">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_panel" target="src.intellicrack.ui.panels.hex_editor_panel._on_state_event">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.hex_editor_panel.HexEditorPanel" target="intellicrack.ui.panels.base_panel.AnalysisPanelBase">
@@ -97475,6 +98803,9 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.hex_editor_widget" target="src.intellicrack.ui.panels.hex_editor_widget._do_copy">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_widget" target="src.intellicrack.ui.panels.hex_editor_widget._do_paste">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.hex_editor_widget" target="src.intellicrack.ui.panels.hex_editor_widget.mousePressEvent">
@@ -97618,6 +98949,9 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.ui.panels.process_panel" target="intellicrack.core.logging">
       <data key="d6">imports</data>
     </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="intellicrack.core.process_manager">
+      <data key="d6">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.panels.process_panel" target="intellicrack.ui.panels.qt_compat">
       <data key="d6">imports</data>
     </edge>
@@ -97666,6 +99000,9 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._setup_ui">
       <data key="d6">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._build_tracked_tab">
+      <data key="d6">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._on_refresh">
       <data key="d6">defines</data>
     </edge>
@@ -97676,6 +99013,15 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._on_auto_refresh_toggled">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._on_tracked_auto_refresh_toggled">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._on_top_tab_changed">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._refresh_tracked_tab">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.process_panel" target="src.intellicrack.ui.panels.process_panel._on_process_selection_changed">
@@ -97853,6 +99199,12 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel._on_create_error">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel._on_cleanup_stale_success">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel._on_cleanup_stale_error">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.sandbox_panel" target="src.intellicrack.ui.panels.sandbox_panel._on_destroy">

@@ -259,14 +259,15 @@ def _import_credential_loader() -> type[CredentialLoader]:
     return cast("type[CredentialLoader]", mod.CredentialLoader)
 
 
-def _import_provider_registry() -> type[ProviderRegistry]:
-    """Import the ProviderRegistry class dynamically.
+def _get_provider_registry() -> ProviderRegistry:
+    """Get the global provider registry singleton instance.
 
     Returns:
-        The ProviderRegistry class.
+        The singleton ProviderRegistry instance.
     """
     mod = importlib.import_module("intellicrack.providers.registry")
-    return cast("type[ProviderRegistry]", mod.ProviderRegistry)
+    get_registry = cast("Callable[[], ProviderRegistry]", mod.get_provider_registry)
+    return get_registry()
 
 
 def _import_main_window() -> type[MainWindow]:
@@ -585,7 +586,7 @@ async def _run_application(
     splash.set_progress(20, "Initializing providers...")
     app.processEvents()
 
-    provider_registry = _import_provider_registry()()
+    provider_registry = _get_provider_registry()
     logger.info("provider_initialization_started")
     await _initialize_providers(provider_registry, credential_loader, logger)
     logger.info("provider_initialization_complete")

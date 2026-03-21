@@ -446,6 +446,9 @@ class HexEditorWidget(QAbstractScrollArea):
         if ctrl and key == Qt.Key.Key_C:
             self._do_copy()
             return
+        if ctrl and key == Qt.Key.Key_V:
+            self._do_paste()
+            return
         if ctrl and key == Qt.Key.Key_A:
             self._selection_start = 0
             self._selection_end = doc_len - 1
@@ -641,6 +644,7 @@ class HexEditorWidget(QAbstractScrollArea):
             return
         undo_fn = getattr(self._document, "undo", None)
         if callable(undo_fn) and undo_fn():
+            self._modified_offsets.clear()
             self.data_changed.emit()
             self._update_viewport()
 
@@ -650,6 +654,7 @@ class HexEditorWidget(QAbstractScrollArea):
             return
         redo_fn = getattr(self._document, "redo", None)
         if callable(redo_fn) and redo_fn():
+            self._modified_offsets.clear()
             self.data_changed.emit()
             self._update_viewport()
 
@@ -660,6 +665,58 @@ class HexEditorWidget(QAbstractScrollArea):
             clipboard = QApplication.clipboard()
             if clipboard is not None:
                 clipboard.setText(text)
+
+    def _do_paste(self) -> None:
+        """Paste clipboard content at cursor position.
+
+        Attempts to parse clipboard text as a hex string first
+        (e.g. "4D 5A 90"). Falls back to encoding the raw text
+        as UTF-8 bytes.
+        """
+        if self._document is None:
+            return
+        clipboard = QApplication.clipboard()
+        if clipboard is None:
+            return
+        text = clipboard.text()
+        if not text:
+            return
+
+        data: bytes = b""
+        stripped = text.replace(" ", "").replace("\n", "").replace("\r", "")
+        if all(c in "0123456789abcdefABCDEF" for c in stripped) and len(stripped) % 2 == 0:
+            try:
+                data = bytes.fromhex(stripped)
+            except ValueError:
+                data = text.encode("utf-8")
+        else:
+            data = text.encode("utf-8")
+
+        if not data:
+            return
+
+        if self._edit_mode == "overwrite":
+            write_fn = getattr(self._document, "write_bytes", None)
+            if callable(write_fn):
+                try:
+                    write_fn(self._cursor_offset, data)
+                    for i in range(len(data)):
+                        self._modified_offsets.add(self._cursor_offset + i)
+                except Exception:
+                    _logger.debug("paste_write_failed", offset=self._cursor_offset)
+        else:
+            insert_fn = getattr(self._document, "insert_bytes", None)
+            if callable(insert_fn):
+                try:
+                    insert_fn(self._cursor_offset, data)
+                    for i in range(len(data)):
+                        self._modified_offsets.add(self._cursor_offset + i)
+                except Exception:
+                    _logger.debug("paste_insert_failed", offset=self._cursor_offset)
+
+        self.data_changed.emit()
+        self._update_scrollbar()
+        self._move_cursor(self._cursor_offset + len(data))
 
     @override
     def mousePressEvent(self, a0: QMouseEvent | None) -> None:

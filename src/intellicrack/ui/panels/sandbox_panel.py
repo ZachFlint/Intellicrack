@@ -225,6 +225,11 @@ class SandboxPanel(AnalysisPanelBase):
         """
         self._sandbox_manager = manager
         _logger.info("sandbox_manager_set", manager_type=type(manager).__name__)
+        self._run_async(
+            manager.cleanup_stale(),
+            on_success=self._on_cleanup_stale_success,
+            on_error=self._on_cleanup_stale_error,
+        )
 
     def get_sandbox(self) -> SandboxBase | None:
         """Get the current sandbox backend.
@@ -283,6 +288,9 @@ class SandboxPanel(AnalysisPanelBase):
             return
 
         _logger.debug("sandbox_create_started", backend_type=type(self._sandbox).__name__)
+        enable_vnc_fn = getattr(self._sandbox, "enable_vnc_display", None)
+        if callable(enable_vnc_fn):
+            enable_vnc_fn()
         self._create_btn.setEnabled(False)
         self._run_async(
             self._sandbox.start(),
@@ -334,6 +342,26 @@ class SandboxPanel(AnalysisPanelBase):
         self._log(f"[-] Failed to create sandbox: {exc}")
         self._create_btn.setEnabled(True)
         _logger.warning("sandbox_create_failed", error=str(exc))
+
+    def _on_cleanup_stale_success(self, result: object) -> None:
+        """Handle successful stale sandbox cleanup.
+
+        Args:
+            result: Number of instances cleaned up.
+        """
+        _ = self
+        count = result if isinstance(result, int) else 0
+        if count > 0:
+            _logger.info("stale_sandboxes_cleaned_up", count=count)
+
+    def _on_cleanup_stale_error(self, exc: object) -> None:
+        """Handle stale cleanup failure.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        _ = self
+        _logger.warning("stale_sandbox_cleanup_failed", error=str(exc))
 
     def _on_destroy(self) -> None:
         """Destroy the current sandbox environment."""

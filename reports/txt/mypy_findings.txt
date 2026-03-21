@@ -100,13 +100,13 @@ src\intellicrack\ui\provider_config.py:79: error: Incompatible types in assignme
 
 src\intellicrack\ui\provider_config.py:85: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], str]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:1952: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\provider_config.py:1953: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\provider_config.py:1969: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\provider_config.py:1970: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\provider_config.py:1989: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\provider_config.py:1990: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\provider_config.py:2014: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\provider_config.py:2015: error: Statement is unreachable  [unreachable]
 
 
 7 findings in tests\test_ui\test_tools_logic.py
@@ -148,13 +148,6 @@ src\intellicrack\ui\app.py:285: error: Statement is unreachable  [unreachable]
 src\intellicrack\ui\app.py:715: error: Statement is unreachable  [unreachable]
 
 
-2 findings in tests\test_ui\test_font_manager.py
-
-tests\test_ui\test_font_manager.py:141: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
-
-tests\test_ui\test_font_manager.py:182: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
-
-
 2 findings in src\intellicrack\credentials\store.py
 
 src\intellicrack\credentials\store.py:37: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
@@ -176,6 +169,13 @@ tests\test_bridges\test_x64dbg.py:165: error: Incompatible types in assignment (
 tests\test_bridges\test_x64dbg.py:175: error: Value of type "WatchpointInfo" is not indexable  [index]
 
 
+2 findings in tests\test_ui\test_font_manager.py
+
+tests\test_ui\test_font_manager.py:141: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
+
+tests\test_ui\test_font_manager.py:182: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
+
+
 2 findings in tests\test_providers\test_local_transformers_provider.py
 
 tests\test_providers\test_local_transformers_provider.py:496: error: Argument 1 to "_format_prompt" of "LocalTransformersProvider" has incompatible type "list[dict[str, str]]"; expected "list[dict[str, object]]"  [arg-type]
@@ -190,11 +190,6 @@ tests\test_ui\test_app_embedded_tools.py:148: error: "MainWindow" has no attribu
 tests\test_ui\test_app_embedded_tools.py:220: error: "MainWindow" has no attribute "_on_open_hxd"  [attr-defined]
 
 
-1 findings in tests\test_ui\test_graph_view.py
-
-tests\test_ui\test_graph_view.py:335: error: Item "None" of "QGraphicsScene | None" has no attribute "items"  [union-attr]
-
-
 1 findings in src\intellicrack\credentials\env_loader.py
 
 src\intellicrack\credentials\env_loader.py:400: error: Argument 2 to "get" of "Mapping" has incompatible type "str | None"; expected "str"  [arg-type]
@@ -202,12 +197,7 @@ src\intellicrack\credentials\env_loader.py:400: error: Argument 2 to "get" of "M
 
 1 findings in src\intellicrack\sandbox\qemu.py
 
-src\intellicrack\sandbox\qemu.py:205: error: Item "None" of "StreamReader | None" has no attribute "readline"  [union-attr]
-
-
-1 findings in src\intellicrack\bridges\hex_editor.py
-
-src\intellicrack\bridges\hex_editor.py:755: error: Name "data" already defined on line 749  [no-redef]
+src\intellicrack\sandbox\qemu.py:206: error: Item "None" of "StreamReader | None" has no attribute "readline"  [union-attr]
 
 
 1 findings in tests\test_providers\test_openrouter_provider.py
@@ -218,11 +208,6 @@ tests\test_providers\test_openrouter_provider.py:217: error: Function is missing
 1 findings in tests\test_providers\test_huggingface_provider.py
 
 tests\test_providers\test_huggingface_provider.py:202: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
-
-
-1 findings in src\intellicrack\providers\model_loader.py
-
-src\intellicrack\providers\model_loader.py:28: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
 
 
 1 findings in tests\test_providers\test_openai_provider.py
@@ -240,16 +225,6 @@ tests\test_providers\test_grok_provider.py:193: error: Function is missing a typ
 tests\test_providers\test_anthropic_provider.py:193: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
 
 
-1 findings in tests\test_ui\test_sandbox_panel_fixes.py
-
-tests\test_ui\test_sandbox_panel_fixes.py:75: error: Argument 1 to "set_sandbox_manager" of "SandboxPanel" has incompatible type "object"; expected "SandboxManager"  [arg-type]
-
-
-1 findings in src\intellicrack\providers\local_transformers.py
-
-src\intellicrack\providers\local_transformers.py:65: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
-
-
 1 findings in tests\test_providers\test_model_discovery.py
 
 tests\test_providers\test_model_discovery.py:112: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
@@ -258,6 +233,31 @@ tests\test_providers\test_model_discovery.py:112: error: Function is missing a t
 1 findings in tests\test_providers\test_google_provider.py
 
 tests\test_providers\test_google_provider.py:194: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
+
+
+1 findings in tests\test_ui\test_graph_view.py
+
+tests\test_ui\test_graph_view.py:335: error: Item "None" of "QGraphicsScene | None" has no attribute "items"  [union-attr]
+
+
+1 findings in tests\test_ui\test_sandbox_panel_fixes.py
+
+tests\test_ui\test_sandbox_panel_fixes.py:75: error: Argument 1 to "set_sandbox_manager" of "SandboxPanel" has incompatible type "object"; expected "SandboxManager"  [arg-type]
+
+
+1 findings in src\intellicrack\providers\model_loader.py
+
+src\intellicrack\providers\model_loader.py:28: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
+
+
+1 findings in src\intellicrack\bridges\hex_editor.py
+
+src\intellicrack\bridges\hex_editor.py:923: error: Name "data" already defined on line 917  [no-redef]
+
+
+1 findings in src\intellicrack\providers\local_transformers.py
+
+src\intellicrack\providers\local_transformers.py:65: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
 
 
 1 findings in tests\test_ui\test_vnc_widget.py

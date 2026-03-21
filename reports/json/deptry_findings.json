@@ -1,12 +1,12 @@
 {
   "tool": "deptry",
-  "generated": "2026-03-20T11:30:51.715463",
-  "total_findings": 217,
+  "generated": "2026-03-20T17:24:31.199179",
+  "total_findings": 219,
   "total_files": 53,
   "files": [
     {
       "path": "pyproject.toml",
-      "count": 95,
+      "count": 96,
       "findings": [
         {
           "line": null,
@@ -119,6 +119,13 @@
           "code": "DEP002",
           "message": "'darglint' defined as a dependency but not used in the codebase",
           "raw": "pyproject.toml: DEP002 'darglint' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'pydoclint' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pydoclint' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
@@ -738,6 +745,47 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py",
+      "count": 5,
+      "findings": [
+        {
+          "line": 19,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 20,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 21,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 48,
+          "column": 12,
+          "code": "DEP003",
+          "message": "'pefile' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:48:12: DEP003 'pefile' imported but it is a transitive dependency"
+        },
+        {
+          "line": 62,
+          "column": 12,
+          "code": "DEP003",
+          "message": "'intellicrack_hexcore' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:62:12: DEP003 'intellicrack_hexcore' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\panels\\binary_panel.py",
       "count": 4,
       "findings": [
@@ -768,40 +816,6 @@
           "code": "DEP003",
           "message": "'lief' imported but it is a transitive dependency",
           "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:44:12: DEP003 'lief' imported but it is a transitive dependency"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py",
-      "count": 4,
-      "findings": [
-        {
-          "line": 19,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 20,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 43,
-          "column": 12,
-          "code": "DEP003",
-          "message": "'pefile' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:43:12: DEP003 'pefile' imported but it is a transitive dependency"
-        },
-        {
-          "line": 57,
-          "column": 12,
-          "code": "DEP001",
-          "message": "'intellicrack_hexcore' imported but missing from the dependency definitions",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:57:12: DEP001 'intellicrack_hexcore' imported but missing from the dependency definitions"
         }
       ]
     },
@@ -1465,18 +1479,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 319,
-          "column": 9,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\main.py:319:9: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
           "line": 320,
           "column": 9,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
           "raw": "src\\intellicrack\\main.py:320:9: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 321,
+          "column": 9,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\main.py:321:9: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1664,11 +1678,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 28,
+          "line": 36,
           "column": 12,
-          "code": "DEP001",
-          "message": "'intellicrack_hexcore' imported but missing from the dependency definitions",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:28:12: DEP001 'intellicrack_hexcore' imported but missing from the dependency definitions"
+          "code": "DEP003",
+          "message": "'intellicrack_hexcore' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:36:12: DEP003 'intellicrack_hexcore' imported but it is a transitive dependency"
         }
       ]
     },

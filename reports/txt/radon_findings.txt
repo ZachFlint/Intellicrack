@@ -1,3 +1,20 @@
+7 findings in src\intellicrack\ui\panels\hex_editor_panel.py
+
+src\intellicrack\ui\panels\hex_editor_panel.py:514:4: method 'HexEditorPanel._on_search' - complexity 18 (rank C)
+
+src\intellicrack\ui\panels\hex_editor_panel.py:926:4: method 'HexEditorPanel._auto_detect_file_type' - complexity 15 (rank C)
+
+src\intellicrack\ui\panels\hex_editor_panel.py:1052:4: method 'HexEditorPanel._update_patches' - complexity 15 (rank C)
+
+src\intellicrack\ui\panels\hex_editor_panel.py:978:4: method 'HexEditorPanel._populate_strings' - complexity 13 (rank C)
+
+src\intellicrack\ui\panels\hex_editor_panel.py:787:4: method 'HexEditorPanel._populate_imports' - complexity 12 (rank C)
+
+src\intellicrack\ui\panels\hex_editor_panel.py:815:4: method 'HexEditorPanel._populate_exports' - complexity 12 (rank C)
+
+src\intellicrack\ui\panels\hex_editor_panel.py:317:4: method 'HexEditorPanel.load_file' - complexity 11 (rank C)
+
+
 5 findings in src\intellicrack\bridges\x64dbg.py
 
 src\intellicrack\bridges\x64dbg.py:2580:4: method 'X64DbgBridge.find_pattern' - complexity 17 (rank C)
@@ -73,11 +90,11 @@ src\intellicrack\providers\openrouter.py:145:4: method 'OpenRouterProvider.list_
 
 3 findings in src\intellicrack\sandbox\qemu.py
 
-src\intellicrack\sandbox\qemu.py:812:4: method 'QEMUSandbox._build_qemu_command' - complexity 15 (rank C)
+src\intellicrack\sandbox\qemu.py:813:4: method 'QEMUSandbox._build_qemu_command' - complexity 16 (rank C)
 
-src\intellicrack\sandbox\qemu.py:1616:4: method 'QEMUSandbox.run_binary' - complexity 13 (rank C)
+src\intellicrack\sandbox\qemu.py:1632:4: method 'QEMUSandbox.run_binary' - complexity 14 (rank C)
 
-src\intellicrack\sandbox\qemu.py:1775:4: method 'QEMUSandbox._parse_network_log' - complexity 12 (rank C)
+src\intellicrack\sandbox\qemu.py:1794:4: method 'QEMUSandbox._parse_network_log' - complexity 12 (rank C)
 
 
 3 findings in src\intellicrack\ui\panels\binary_panel.py
@@ -98,13 +115,13 @@ src\intellicrack\ui\panels\graph_view.py:287:4: method 'CFGGraphScene.load_graph
 src\intellicrack\ui\panels\graph_view.py:275:0: class 'CFGGraphScene' - complexity 11 (rank C)
 
 
-3 findings in src\intellicrack\ui\panels\hex_editor_panel.py
+3 findings in src\intellicrack\ui\panels\hex_editor_widget.py
 
-src\intellicrack\ui\panels\hex_editor_panel.py:458:4: method 'HexEditorPanel._on_search' - complexity 18 (rank C)
+src\intellicrack\ui\panels\hex_editor_widget.py:421:4: method 'HexEditorWidget.keyPressEvent' - complexity 35 (rank E)
 
-src\intellicrack\ui\panels\hex_editor_panel.py:674:4: method 'HexEditorPanel._populate_imports' - complexity 12 (rank C)
+src\intellicrack\ui\panels\hex_editor_widget.py:669:4: method 'HexEditorWidget._do_paste' - complexity 16 (rank C)
 
-src\intellicrack\ui\panels\hex_editor_panel.py:702:4: method 'HexEditorPanel._populate_exports' - complexity 12 (rank C)
+src\intellicrack\ui\panels\hex_editor_widget.py:922:4: method 'HexEditorWidget.copy_as' - complexity 15 (rank C)
 
 
 2 findings in src\intellicrack\bridges\binary.py
@@ -135,9 +152,16 @@ src\intellicrack\bridges\schemas.py:578:0: function 'get_schema_for_provider' - 
 src\intellicrack\bridges\schemas.py:304:0: function 'validate_tool_parameter' - complexity 11 (rank C)
 
 
+2 findings in src\intellicrack\core\orchestrator.py
+
+src\intellicrack\core\orchestrator.py:429:4: method 'Orchestrator._run_agent_loop' - complexity 13 (rank C)
+
+src\intellicrack\core\orchestrator.py:1665:4: method 'Orchestrator.shutdown' - complexity 12 (rank C)
+
+
 2 findings in src\intellicrack\providers\anthropic.py
 
-src\intellicrack\providers\anthropic.py:407:4: method 'AnthropicProvider.chat_stream' - complexity 16 (rank C)
+src\intellicrack\providers\anthropic.py:427:4: method 'AnthropicProvider.chat_stream' - complexity 16 (rank C)
 
 src\intellicrack\providers\anthropic.py:212:4: method 'AnthropicProvider._build_api_kwargs' - complexity 14 (rank C)
 
@@ -165,7 +189,7 @@ src\intellicrack\providers\ollama.py:329:4: method 'OllamaProvider._get_client_a
 
 2 findings in src\intellicrack\providers\openai.py
 
-src\intellicrack\providers\openai.py:458:4: method 'OpenAIProvider.chat_stream' - complexity 24 (rank D)
+src\intellicrack\providers\openai.py:463:4: method 'OpenAIProvider.chat_stream' - complexity 24 (rank D)
 
 src\intellicrack\providers\openai.py:271:4: method 'OpenAIProvider.chat' - complexity 12 (rank C)
 
@@ -193,16 +217,16 @@ src\intellicrack\ui\app.py:901:4: method 'MainWindow._on_tool_result' - complexi
 
 2 findings in src\intellicrack\ui\provider_config.py
 
-src\intellicrack\ui\provider_config.py:521:4: method 'ModelRefreshWorker._fetch_anthropic_models' - complexity 14 (rank C)
+src\intellicrack\ui\provider_config.py:522:4: method 'ModelRefreshWorker._fetch_anthropic_models' - complexity 14 (rank C)
 
-src\intellicrack\ui\provider_config.py:487:4: method 'ModelRefreshWorker._fetch_models' - complexity 12 (rank C)
+src\intellicrack\ui\provider_config.py:488:4: method 'ModelRefreshWorker._fetch_models' - complexity 12 (rank C)
 
 
 2 findings in src\intellicrack\ui\tools.py
 
-src\intellicrack\ui\tools.py:1514:4: method 'ToolOutputPanel._on_tab_close_requested' - complexity 18 (rank C)
+src\intellicrack\ui\tools.py:1517:4: method 'ToolOutputPanel._on_tab_close_requested' - complexity 18 (rank C)
 
-src\intellicrack\ui\tools.py:1577:4: method 'ToolOutputPanel.close_embedded_tools' - complexity 14 (rank C)
+src\intellicrack\ui\tools.py:1580:4: method 'ToolOutputPanel.close_embedded_tools' - complexity 14 (rank C)
 
 
 2 findings in src\intellicrack\ui\tool_config.py
@@ -212,16 +236,9 @@ src\intellicrack\ui\tool_config.py:418:4: method 'ToolStatusCheckWorker._check_g
 src\intellicrack\ui\tool_config.py:485:4: method 'ToolStatusCheckWorker._check_cutter' - complexity 11 (rank C)
 
 
-2 findings in src\intellicrack\ui\panels\hex_editor_widget.py
-
-src\intellicrack\ui\panels\hex_editor_widget.py:421:4: method 'HexEditorWidget.keyPressEvent' - complexity 33 (rank E)
-
-src\intellicrack\ui\panels\hex_editor_widget.py:865:4: method 'HexEditorWidget.copy_as' - complexity 15 (rank C)
-
-
 1 findings in src\intellicrack\bridges\hex_editor.py
 
-src\intellicrack\bridges\hex_editor.py:724:4: method 'HexEditorBridge.copy_as' - complexity 13 (rank C)
+src\intellicrack\bridges\hex_editor.py:892:4: method 'HexEditorBridge.copy_as' - complexity 13 (rank C)
 
 
 1 findings in src\intellicrack\bridges\process.py
@@ -234,11 +251,6 @@ src\intellicrack\bridges\process.py:1116:4: method 'ProcessBridge.search_pattern
 src\intellicrack\core\logging.py:426:0: function '_sanitize_arguments' - complexity 11 (rank C)
 
 
-1 findings in src\intellicrack\core\orchestrator.py
-
-src\intellicrack\core\orchestrator.py:429:4: method 'Orchestrator._run_agent_loop' - complexity 13 (rank C)
-
-
 1 findings in src\intellicrack\core\process_manager.py
 
 src\intellicrack\core\process_manager.py:270:4: method 'ProcessManager._sync_cleanup' - complexity 13 (rank C)
@@ -247,6 +259,11 @@ src\intellicrack\core\process_manager.py:270:4: method 'ProcessManager._sync_cle
 1 findings in src\intellicrack\core\script_gen.py
 
 src\intellicrack\core\script_gen.py:173:4: method 'ScriptContext.to_prompt_context' - complexity 13 (rank C)
+
+
+1 findings in src\intellicrack\core\tools.py
+
+src\intellicrack\core\tools.py:459:4: method 'ToolRegistry.execute_tool_call' - complexity 13 (rank C)
 
 
 1 findings in src\intellicrack\credentials\env_loader.py
@@ -262,6 +279,11 @@ src\intellicrack\credentials\store.py:548:4: method 'CredentialStore.validate' -
 1 findings in src\intellicrack\providers\base.py
 
 src\intellicrack\providers\base.py:478:4: method 'LLMProviderBase._convert_messages_to_openai_format' - complexity 11 (rank C)
+
+
+1 findings in src\intellicrack\sandbox\manager.py
+
+src\intellicrack\sandbox\manager.py:152:4: method 'SandboxManager.create' - complexity 11 (rank C)
 
 
 1 findings in src\intellicrack\ui\highlighter.py
