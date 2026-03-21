@@ -123,6 +123,16 @@ impl UndoManager {
         self.redo_stack.clear();
         self.saved_index = Some(0);
     }
+
+    pub fn get_overwrite_patches(&self) -> Vec<(usize, Vec<u8>)> {
+        self.undo_stack
+            .iter()
+            .filter_map(|op| match op {
+                Operation::Overwrite { offset, new_data, .. } => Some((*offset, new_data.clone())),
+                _ => None,
+            })
+            .collect()
+    }
 }
 
 impl Default for UndoManager {

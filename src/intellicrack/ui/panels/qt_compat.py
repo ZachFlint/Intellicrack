@@ -59,7 +59,7 @@ def _resolve(obj: object, method_name: str) -> Callable[..., Any]:
         method_name: The camelCase method name to look up.
 
     Returns:
-        The bound method callable.
+        Callable[..., Any]: The bound method callable.
 
     Raises:
         AttributeError: If the method does not exist on the object.
@@ -145,7 +145,7 @@ def get_current_tree_item(tree: QTreeWidget) -> QTreeWidgetItem | None:
         tree: The tree widget.
 
     Returns:
-        The selected item or None.
+        QTreeWidgetItem | None: The selected item or None.
     """
     return _resolve(tree, _CURRENT_ITEM)()
 
@@ -180,7 +180,7 @@ def tree_item_data(
         role: Qt item data role.
 
     Returns:
-        The stored data value.
+        object: The stored data value.
     """
     return _resolve(item, _GET_DATA)(column, role)
 
@@ -192,7 +192,7 @@ def wheel_angle_delta_y(event: QWheelEvent) -> int:
         event: The wheel event.
 
     Returns:
-        Vertical scroll angle delta in eighths of a degree.
+        int: Vertical scroll angle delta in eighths of a degree.
     """
     point: object = _resolve(event, "angleDelta")()
     return _resolve(point, "y")()
@@ -205,7 +205,7 @@ def key_event_key(event: QKeyEvent) -> int:
         event: The key event.
 
     Returns:
-        Integer key code matching Qt.Key enum values.
+        int: Integer key code matching Qt.Key enum values.
     """
     return _resolve(event, "key")()
 
@@ -219,7 +219,7 @@ def qt_key_page_up() -> int:
     """Return Qt.Key.Key_PageUp constant value.
 
     Returns:
-        Integer value of Qt.Key.Key_PageUp.
+        int: Integer value of Qt.Key.Key_PageUp.
     """
     from PyQt6.QtCore import Qt as _Qt  # noqa: PLC0415
 
@@ -230,7 +230,7 @@ def qt_key_page_down() -> int:
     """Return Qt.Key.Key_PageDown constant value.
 
     Returns:
-        Integer value of Qt.Key.Key_PageDown.
+        int: Integer value of Qt.Key.Key_PageDown.
     """
     from PyQt6.QtCore import Qt as _Qt  # noqa: PLC0415
 

@@ -15,7 +15,11 @@ from __future__ import annotations
 import asyncio
 import base64
 import inspect as _inspect_mod
+import json
+import os
+import struct
 import tempfile
+import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
@@ -25,9 +29,15 @@ from .base import BridgeCapabilities, ToolBridgeBase
 
 
 if TYPE_CHECKING:
+    from ..core.disassembler import HexDisassembler
+    from ..core.hexpat_compiler import HexPatCompiler, HexPatError
     from ..core.tools import ToolRegistry
+    from ..core.transform_pipeline import TransformPipeline
+    from ..core.yara_scanner import YaraScanner
     from .hex_state import HexDocumentState
 
+
+_logger = get_logger("bridges.hex_editor")
 
 _hexcore_mod: Any = None
 _hexcore_available: bool = False
@@ -38,11 +48,57 @@ try:
     _hexcore_mod = intellicrack_hexcore
     _hexcore_available = True
 except ImportError:
-    pass
-
-_logger = get_logger("bridges.hex_editor")
-if not _hexcore_available:
     _logger.debug("hexcore_import_unavailable")
+
+_HexPatCompiler: type[HexPatCompiler] | None = None
+_HexPatError: type[HexPatError] | None = None
+_hexpat_available: bool = False
+try:
+    from intellicrack.core.hexpat_compiler import (
+        HexPatCompiler as _HexPatCompiler,
+        HexPatError as _HexPatError,
+    )
+
+    _hexpat_available = True
+except Exception as _exc:
+    _logger.debug("hexpat_compiler_unavailable", error=str(_exc))
+
+_HexDisassembler: type[HexDisassembler] | None = None
+_disasm_available: bool = False
+try:
+    from intellicrack.core.disassembler import HexDisassembler as _HexDisassembler
+
+    _disasm_available = True
+except Exception as _exc:
+    _logger.debug("hex_disassembler_unavailable", error=str(_exc))
+
+_YaraScanner: type[YaraScanner] | None = None
+_yara_bridge_available: bool = False
+try:
+    from intellicrack.core.yara_scanner import YaraScanner as _YaraScanner
+
+    _yara_bridge_available = True
+except Exception as _exc:
+    _logger.debug("yara_scanner_unavailable", error=str(_exc))
+
+_get_all_transform_nodes: Any = None
+_TransformPipeline: type[TransformPipeline] | None = None
+_pipeline_available: bool = False
+try:
+    from intellicrack.core.transform_pipeline import (
+        TransformPipeline as _TransformPipeline,
+        get_all_transform_nodes as _get_all_transform_nodes,
+    )
+
+    _pipeline_available = True
+except Exception as _exc:
+    _logger.debug("transform_pipeline_unavailable", error=str(_exc))
+
+
+_JAVA_SIGNED_BYTE_THRESHOLD = 0x7F
+_PRINTABLE_MIN = 0x20
+_PRINTABLE_MAX = 0x7E
+_DEFAULT_POINTER_SIZE = 4
 
 
 class HexEditorBridge(ToolBridgeBase):
@@ -51,23 +107,20 @@ class HexEditorBridge(ToolBridgeBase):
     Wraps the ``intellicrack_hexcore.HexDocument`` class to provide
     hex editing, searching, hashing, data inspection, template
     parsing, and binary diffing through the standard bridge interface.
-
-    Attributes:
-        _document: Active HexDocument instance or None.
-        _cursor_offset: Current logical cursor position.
-        _selection: Current selection range or None.
-        _hexcore_available: Whether the Rust extension is importable.
     """
 
     def __init__(self) -> None:
-        """Initialize the hex editor bridge."""
         super().__init__()
         self._document: Any | None = None
         self._cursor_offset: int = 0
         self._selection: tuple[int, int] | None = None
         self._hexcore_available: bool = _hexcore_available
+        self._hexpat_available: bool = _hexpat_available
+        self._pipeline_available: bool = _pipeline_available
         self._state_holder: HexDocumentState | None = None
         self._tool_registry: ToolRegistry | None = None
+        self._highlight_rules: dict[str, dict[str, Any]] = {}
+        self._display_mode: str = "hex8"
         self._capabilities = BridgeCapabilities(
             supports_static_analysis=True,
             supports_patching=True,
@@ -96,7 +149,7 @@ class HexEditorBridge(ToolBridgeBase):
         """Get the tool name.
 
         Returns:
-            ToolName.HEX_EDITOR enum value.
+            ToolName: ToolName.HEX_EDITOR enum value.
         """
         return ToolName.HEX_EDITOR
 
@@ -105,7 +158,7 @@ class HexEditorBridge(ToolBridgeBase):
         """Get tool definition for LLM function calling.
 
         Returns:
-            ToolDefinition with all hex editor functions.
+            ToolDefinition: ToolDefinition with all hex editor functions.
         """
         return ToolDefinition(
             tool_name=ToolName.HEX_EDITOR,
@@ -238,6 +291,60 @@ class HexEditorBridge(ToolBridgeBase):
                     returns="List of {name, description} dicts",
                 ),
                 ToolFunction(
+                    name="hex_editor.register_template",
+                    description="Register a JSON template definition at runtime.",
+                    parameters=[
+                        ToolParameter(
+                            name="json_str",
+                            type="string",
+                            description="JSON template definition string.",
+                        ),
+                    ],
+                    returns="Registered template name",
+                ),
+                ToolFunction(
+                    name="hex_editor.remove_template",
+                    description="Remove a registered template by name.",
+                    parameters=[
+                        ToolParameter(
+                            name="template_name",
+                            type="string",
+                            description="Name of the template to remove.",
+                        ),
+                    ],
+                    returns="True if removed",
+                ),
+                ToolFunction(
+                    name="hex_editor.compile_pattern",
+                    description="Compile HexPat DSL source code into a JSON template definition.",
+                    parameters=[
+                        ToolParameter(
+                            name="source",
+                            type="string",
+                            description="HexPat DSL source code.",
+                        ),
+                    ],
+                    returns="Compiled JSON template string",
+                ),
+                ToolFunction(
+                    name="hex_editor.export_template",
+                    description="Export a registered template as JSON.",
+                    parameters=[
+                        ToolParameter(
+                            name="template_name",
+                            type="string",
+                            description="Name of the template to export.",
+                        ),
+                    ],
+                    returns="JSON template string",
+                ),
+                ToolFunction(
+                    name="hex_editor.list_templates_detailed",
+                    description="List all templates with detailed metadata.",
+                    parameters=[],
+                    returns="List of {name, description, category, field_count} dicts",
+                ),
+                ToolFunction(
                     name="hex_editor.compare_files",
                     description="Compare two files byte-by-byte.",
                     parameters=[
@@ -279,7 +386,25 @@ class HexEditorBridge(ToolBridgeBase):
                     name="hex_editor.copy_as",
                     description="Format bytes at cursor/selection in a specific format.",
                     parameters=[
-                        ToolParameter(name="fmt", type="string", description="Output format.", enum=["hex", "c_array", "python", "base64"]),
+                        ToolParameter(
+                            name="fmt",
+                            type="string",
+                            description="Output format.",
+                            enum=[
+                                "hex",
+                                "c_array",
+                                "python",
+                                "base64",
+                                "rust_array",
+                                "csharp_array",
+                                "java_array",
+                                "javascript_array",
+                                "go_slice",
+                                "hex_string_no_spaces",
+                                "nasm_db",
+                                "markdown_table",
+                            ],
+                        ),
                     ],
                     returns="Formatted string",
                 ),
@@ -410,6 +535,222 @@ class HexEditorBridge(ToolBridgeBase):
                     ],
                     returns="Dict with execution report including exit code, stdout, stderr",
                 ),
+                ToolFunction(
+                    name="hex_editor.get_entropy",
+                    description="Get Shannon entropy of the entire document (0.0-8.0).",
+                    parameters=[],
+                    returns="Float entropy value",
+                ),
+                ToolFunction(
+                    name="hex_editor.get_entropy_map",
+                    description="Get per-block entropy values across the document.",
+                    parameters=[
+                        ToolParameter(name="block_size", type="integer", description="Block size in bytes.", required=False, default=4096),
+                    ],
+                    returns="List of float entropy values per block",
+                ),
+                ToolFunction(
+                    name="hex_editor.get_byte_distribution",
+                    description="Get 256-element byte frequency distribution.",
+                    parameters=[],
+                    returns="List of 256 integer counts",
+                ),
+                ToolFunction(
+                    name="hex_editor.get_byte_type_distribution",
+                    description="Get byte type counts: null, printable, control, high.",
+                    parameters=[],
+                    returns="Dict with null_count, printable_count, control_count, high_count",
+                ),
+                ToolFunction(
+                    name="hex_editor.get_digram_matrix",
+                    description="Get 256x256 byte-pair frequency matrix.",
+                    parameters=[],
+                    returns="List of 65536 integer frequencies (row-major)",
+                ),
+                ToolFunction(
+                    name="hex_editor.get_content_classification",
+                    description="Classify document blocks by content type.",
+                    parameters=[
+                        ToolParameter(name="block_size", type="integer", description="Block size in bytes.", required=False, default=4096),
+                    ],
+                    returns="List of ints: 0=null, 1=plaintext, 2=structured, 3=encrypted, 4=code",
+                ),
+                ToolFunction(
+                    name="hex_editor.disassemble",
+                    description="Disassemble instructions at offset.",
+                    parameters=[
+                        ToolParameter(name="offset", type="integer", description="Byte offset to disassemble from."),
+                        ToolParameter(name="count", type="integer", description="Number of instructions.", required=False, default=50),
+                        ToolParameter(name="arch", type="string", description="Architecture (x86, arm, arm64, mips, etc.).", required=False, default="auto"),
+                        ToolParameter(name="mode", type="string", description="Mode (16, 32, 64, arm, thumb).", required=False, default="64"),
+                    ],
+                    returns="List of {address, bytes, mnemonic, operands, size} dicts",
+                ),
+                ToolFunction(
+                    name="hex_editor.yara_scan",
+                    description="Scan document with YARA rule source.",
+                    parameters=[
+                        ToolParameter(name="rule_source", type="string", description="YARA rule source code."),
+                    ],
+                    returns="List of {rule, tags, meta, strings} match dicts",
+                ),
+                ToolFunction(
+                    name="hex_editor.yara_scan_files",
+                    description="Scan document with YARA rule files.",
+                    parameters=[
+                        ToolParameter(name="rule_paths", type="string", description="Comma-separated paths to .yar files."),
+                    ],
+                    returns="List of match dicts",
+                ),
+                ToolFunction(
+                    name="hex_editor.apply_transform",
+                    description="Apply a data transform to a byte range.",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Transform name (e.g. xor_single, base64_encode)."),
+                        ToolParameter(name="offset", type="integer", description="Start offset."),
+                        ToolParameter(name="length", type="integer", description="Number of bytes."),
+                        ToolParameter(name="params_json", type="string", description="JSON dict of params. Byte values as hex strings.", required=False, default="{}"),
+                    ],
+                    returns="Hex string of transformed bytes",
+                ),
+                ToolFunction(
+                    name="hex_editor.apply_pipeline",
+                    description="Apply a transform pipeline to a byte range.",
+                    parameters=[
+                        ToolParameter(name="pipeline_json", type="string", description="JSON array of {name, params} steps."),
+                        ToolParameter(name="offset", type="integer", description="Start offset."),
+                        ToolParameter(name="length", type="integer", description="Number of bytes."),
+                    ],
+                    returns="Hex string of transformed bytes",
+                ),
+                ToolFunction(
+                    name="hex_editor.list_transforms",
+                    description="List all available data transforms.",
+                    parameters=[],
+                    returns="List of {name, category, description} dicts",
+                ),
+                ToolFunction(
+                    name="hex_editor.decode_text",
+                    description="Decode bytes at offset as text in specified encoding.",
+                    parameters=[
+                        ToolParameter(name="offset", type="integer", description="Start offset."),
+                        ToolParameter(name="length", type="integer", description="Byte length to decode."),
+                        ToolParameter(name="encoding", type="string", description="Encoding name.", required=False, default="utf-8"),
+                    ],
+                    returns="Decoded text string",
+                ),
+                ToolFunction(
+                    name="hex_editor.list_encodings",
+                    description="List all supported text encodings.",
+                    parameters=[],
+                    returns="List of {name, label} dicts",
+                ),
+                ToolFunction(
+                    name="hex_editor.calculate_hash_custom_crc",
+                    description="Calculate CRC with custom parameters.",
+                    parameters=[
+                        ToolParameter(name="start", type="integer", description="Start offset."),
+                        ToolParameter(name="end", type="integer", description="End offset."),
+                        ToolParameter(name="poly", type="integer", description="CRC polynomial."),
+                        ToolParameter(name="init", type="integer", description="Initial value."),
+                        ToolParameter(name="width", type="integer", description="CRC width: 8, 16, 32, or 64."),
+                        ToolParameter(name="refin", type="boolean", description="Reflect input.", required=False, default=False),
+                        ToolParameter(name="refout", type="boolean", description="Reflect output.", required=False, default=False),
+                        ToolParameter(name="xorout", type="integer", description="Final XOR value.", required=False, default=0),
+                    ],
+                    returns="CRC hex digest string",
+                ),
+                ToolFunction(
+                    name="hex_editor.export_patches",
+                    description="Export document patches as IPS or IPS32.",
+                    parameters=[
+                        ToolParameter(name="patch_format", type="string", description="Patch format.", enum=["ips", "ips32"]),
+                    ],
+                    returns="Base64-encoded patch data",
+                ),
+                ToolFunction(
+                    name="hex_editor.import_patches",
+                    description="Import and apply IPS/IPS32 patches.",
+                    parameters=[
+                        ToolParameter(name="data_b64", type="string", description="Base64-encoded IPS/IPS32 data."),
+                    ],
+                    returns="Number of patches applied",
+                ),
+                ToolFunction(
+                    name="hex_editor.search_numeric",
+                    description="Search for a numeric value in the document.",
+                    parameters=[
+                        ToolParameter(name="value", type="integer", description="Value to search for."),
+                        ToolParameter(name="size", type="integer", description="Byte size: 1, 2, 4, or 8."),
+                        ToolParameter(name="value_type", type="string", description="Value type.", enum=["uint", "int", "float"], required=False, default="uint"),
+                        ToolParameter(name="endianness", type="string", description="Byte order.", enum=["little", "big"], required=False, default="little"),
+                        ToolParameter(name="alignment", type="integer", description="Search alignment.", required=False, default=1),
+                        ToolParameter(name="max_results", type="integer", description="Max results.", required=False, default=100),
+                    ],
+                    returns="List of {offset, length} dicts",
+                ),
+                ToolFunction(
+                    name="hex_editor.add_highlight_rule",
+                    description="Add a byte highlighting rule.",
+                    parameters=[
+                        ToolParameter(name="condition_type", type="string", description="Condition type.", enum=["byte_value", "byte_range", "pattern"]),
+                        ToolParameter(name="condition_params", type="string", description="JSON condition parameters."),
+                        ToolParameter(name="color", type="string", description="Highlight color hex.", required=False, default="#FFFF00"),
+                    ],
+                    returns="Rule ID string",
+                ),
+                ToolFunction(
+                    name="hex_editor.remove_highlight_rule",
+                    description="Remove a highlighting rule.",
+                    parameters=[
+                        ToolParameter(name="rule_id", type="string", description="Rule ID to remove."),
+                    ],
+                    returns="True if removed",
+                ),
+                ToolFunction(
+                    name="hex_editor.list_highlight_rules",
+                    description="List all active highlighting rules.",
+                    parameters=[],
+                    returns="List of rule dicts",
+                ),
+                ToolFunction(
+                    name="hex_editor.set_display_mode",
+                    description="Set the hex display mode.",
+                    parameters=[
+                        ToolParameter(
+                            name="mode",
+                            type="string",
+                            description="Display mode.",
+                            enum=[
+                                "hex8",
+                                "hex16_le",
+                                "hex16_be",
+                                "hex32_le",
+                                "hex32_be",
+                                "hex64_le",
+                                "hex64_be",
+                                "dec_u8",
+                                "dec_u16",
+                                "dec_u32",
+                                "dec_s8",
+                                "dec_s16",
+                                "dec_s32",
+                                "float32",
+                                "float64",
+                                "rgba8",
+                                "hexii",
+                                "binary",
+                            ],
+                        ),
+                    ],
+                    returns="True",
+                ),
+                ToolFunction(
+                    name="hex_editor.get_display_mode",
+                    description="Get the current display mode.",
+                    parameters=[],
+                    returns="Display mode string",
+                ),
             ],
         )
 
@@ -433,7 +774,7 @@ class HexEditorBridge(ToolBridgeBase):
         """Check if the Rust hex core is available.
 
         Returns:
-            True if intellicrack_hexcore is importable.
+            bool: True if intellicrack_hexcore is importable.
         """
         return self._hexcore_available
 
@@ -453,7 +794,7 @@ class HexEditorBridge(ToolBridgeBase):
             path: Filesystem path to the file.
 
         Returns:
-            Dict with file_path, size, and modified status.
+            dict[str, Any]: Dict with file_path, size, and modified status.
 
         Raises:
             RuntimeError: If the Rust core is not available.
@@ -487,7 +828,7 @@ class HexEditorBridge(ToolBridgeBase):
         """Close the currently open file.
 
         Returns:
-            True if a file was closed.
+            bool: True if a file was closed.
         """
         if self._document is None:
             return False
@@ -510,7 +851,7 @@ class HexEditorBridge(ToolBridgeBase):
             length: Number of bytes to read.
 
         Returns:
-            Hex string of the read bytes.
+            str: Hex string of the read bytes.
 
         Raises:
             RuntimeError: If no document is open.
@@ -531,7 +872,7 @@ class HexEditorBridge(ToolBridgeBase):
             data_hex: Hex string of bytes (e.g. "4D 5A 90").
 
         Returns:
-            True if the write succeeded.
+            bool: True if the write succeeded.
 
         Raises:
             RuntimeError: If no document is open.
@@ -555,7 +896,7 @@ class HexEditorBridge(ToolBridgeBase):
             data_hex: Hex string of bytes to insert.
 
         Returns:
-            True if the insert succeeded.
+            bool: True if the insert succeeded.
 
         Raises:
             RuntimeError: If no document is open.
@@ -579,7 +920,7 @@ class HexEditorBridge(ToolBridgeBase):
             length: Number of bytes to delete.
 
         Returns:
-            True if the delete succeeded.
+            bool: True if the delete succeeded.
 
         Raises:
             RuntimeError: If no document is open.
@@ -601,7 +942,7 @@ class HexEditorBridge(ToolBridgeBase):
             offset: Target byte offset.
 
         Returns:
-            True always.
+            bool: True always.
         """
         self._cursor_offset = offset
         _logger.debug("cursor_moved", offset=hex(offset))
@@ -613,7 +954,7 @@ class HexEditorBridge(ToolBridgeBase):
         """Get the current cursor position.
 
         Returns:
-            Current byte offset of the cursor.
+            int: Current byte offset of the cursor.
         """
         return self._cursor_offset
 
@@ -625,7 +966,7 @@ class HexEditorBridge(ToolBridgeBase):
             end: Selection end offset.
 
         Returns:
-            True always.
+            bool: True always.
         """
         self._selection = (start, end)
         _logger.debug("range_selected", start=hex(start), end=hex(end))
@@ -637,7 +978,7 @@ class HexEditorBridge(ToolBridgeBase):
         """Get the current selection range.
 
         Returns:
-            Tuple of (start, end) offsets, or None if no selection.
+            tuple[int, int] | None: Tuple of (start, end) offsets, or None if no selection.
         """
         return self._selection
 
@@ -649,7 +990,7 @@ class HexEditorBridge(ToolBridgeBase):
             max_results: Maximum number of results to return.
 
         Returns:
-            List of dicts with offset and length keys.
+            list[dict[str, int]]: List of dicts with offset and length keys.
 
         Raises:
             RuntimeError: If no document is open.
@@ -678,7 +1019,7 @@ class HexEditorBridge(ToolBridgeBase):
             max_results: Maximum number of results.
 
         Returns:
-            List of dicts with offset and length keys.
+            list[dict[str, int]]: List of dicts with offset and length keys.
 
         Raises:
             RuntimeError: If no document is open.
@@ -699,7 +1040,7 @@ class HexEditorBridge(ToolBridgeBase):
             max_results: Maximum number of results.
 
         Returns:
-            List of dicts with offset and length keys.
+            list[dict[str, int]]: List of dicts with offset and length keys.
 
         Raises:
             RuntimeError: If no document is open.
@@ -720,7 +1061,7 @@ class HexEditorBridge(ToolBridgeBase):
             replacement_hex: Hex string replacement (e.g. "90 90").
 
         Returns:
-            Number of replacements made.
+            int: Number of replacements made.
 
         Raises:
             RuntimeError: If no document is open.
@@ -741,7 +1082,7 @@ class HexEditorBridge(ToolBridgeBase):
         """Undo the last edit operation.
 
         Returns:
-            True if an operation was undone.
+            bool: True if an operation was undone.
         """
         if self._document is None:
             return False
@@ -755,7 +1096,7 @@ class HexEditorBridge(ToolBridgeBase):
         """Redo the last undone operation.
 
         Returns:
-            True if an operation was redone.
+            bool: True if an operation was redone.
         """
         if self._document is None:
             return False
@@ -772,7 +1113,7 @@ class HexEditorBridge(ToolBridgeBase):
             offset: Byte offset to inspect.
 
         Returns:
-            Dict mapping type names to formatted value strings.
+            dict[str, str]: Dict mapping type names to formatted value strings.
 
         Raises:
             RuntimeError: If no document is open.
@@ -795,7 +1136,7 @@ class HexEditorBridge(ToolBridgeBase):
             algorithm: Hash algorithm (md5, sha1, sha256, sha512, crc32).
 
         Returns:
-            Hex digest string.
+            str: Hex digest string.
 
         Raises:
             RuntimeError: If no document is open.
@@ -812,7 +1153,7 @@ class HexEditorBridge(ToolBridgeBase):
         """Get byte frequency statistics for the document.
 
         Returns:
-            List of dicts with byte value and count.
+            list[dict[str, int]]: List of dicts with byte value and count.
 
         Raises:
             RuntimeError: If no document is open.
@@ -833,7 +1174,7 @@ class HexEditorBridge(ToolBridgeBase):
             offset: Byte offset to apply at.
 
         Returns:
-            List of parsed field dicts with name, offset, size, value.
+            list[dict[str, Any]]: List of parsed field dicts with name, offset, size, value.
 
         Raises:
             RuntimeError: If no document is open.
@@ -853,7 +1194,7 @@ class HexEditorBridge(ToolBridgeBase):
         """List all available struct templates.
 
         Returns:
-            List of dicts with name and description.
+            list[dict[str, str]]: List of dicts with name and description.
         """
         if self._document is None:
             if not self._hexcore_available or _hexcore_mod is None:
@@ -866,6 +1207,115 @@ class HexEditorBridge(ToolBridgeBase):
         _logger.debug("templates_listed", count=len(templates))
         return [{"name": t[0], "description": t[1]} for t in templates]
 
+    async def register_template(self, json_str: str) -> str:
+        """Register a JSON template definition at runtime.
+
+        Args:
+            json_str: JSON template definition string.
+
+        Returns:
+            str: Name of the registered template.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        name: str = self._document.register_json_template(json_str)
+        _logger.info("template_registered", template_name=name)
+        if self._state_holder is not None:
+            self._state_holder.notify_template_registered(name, source="bridge")
+        return name
+
+    async def remove_template(self, template_name: str) -> bool:
+        """Remove a registered template by name.
+
+        Args:
+            template_name: Name of the template to remove.
+
+        Returns:
+            bool: True if the template was removed.
+        """
+        if self._document is None:
+            return False
+
+        removed: bool = self._document.remove_template(template_name)
+        if removed:
+            _logger.info("template_removed", template_name=template_name)
+            if self._state_holder is not None:
+                self._state_holder.notify_template_removed(template_name, source="bridge")
+        return removed
+
+    async def compile_pattern(self, source: str) -> str:
+        """Compile HexPat DSL source code into a JSON template.
+
+        Args:
+            source: HexPat DSL source code.
+
+        Returns:
+            str: Compiled JSON template string.
+
+        Raises:
+            ValueError: If the DSL source has syntax errors.
+            RuntimeError: If the HexPat compiler is not available.
+        """
+        if not self._hexpat_available or _HexPatCompiler is None or _HexPatError is None:
+            msg = "hexpat_compiler not available"
+            raise RuntimeError(msg)
+        compiler = _HexPatCompiler()
+        try:
+            return compiler.compile(source)
+        except _HexPatError as exc:
+            msg = f"compilation error at line {exc.line}, column {exc.column}: {exc.message}"
+            raise ValueError(msg) from exc
+
+    async def export_template(self, template_name: str) -> str:
+        """Export a registered template as JSON.
+
+        Args:
+            template_name: Name of the template to export.
+
+        Returns:
+            str: JSON template string.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        result: str = self._document.export_template_json(template_name)
+        _logger.debug("template_exported", template_name=template_name)
+        return result
+
+    async def list_templates_detailed(self) -> list[dict[str, Any]]:
+        """List all templates with detailed metadata.
+
+        Returns:
+            list[dict[str, Any]]: List of dicts with name, description, category, field_count.
+        """
+        if self._document is None:
+            if not self._hexcore_available or _hexcore_mod is None:
+                return []
+            doc = _hexcore_mod.HexDocument()
+            templates = doc.list_templates_detailed()
+        else:
+            templates = self._document.list_templates_detailed()
+
+        _logger.debug("templates_listed_detailed", count=len(templates))
+        return [
+            {
+                "name": t[0],
+                "description": t[1],
+                "category": t[2],
+                "field_count": t[3],
+            }
+            for t in templates
+        ]
+
     async def compare_files(self, path_a: str, path_b: str) -> dict[str, Any]:
         """Compare two files byte-by-byte.
 
@@ -874,7 +1324,7 @@ class HexEditorBridge(ToolBridgeBase):
             path_b: Path to the second file.
 
         Returns:
-            Dict with regions, total_differences, and files_identical.
+            dict[str, Any]: Dict with regions, total_differences, and files_identical.
 
         Raises:
             RuntimeError: If the Rust core is not available.
@@ -893,10 +1343,13 @@ class HexEditorBridge(ToolBridgeBase):
         """Format bytes at the cursor position or selection.
 
         Args:
-            fmt: Output format - "hex", "c_array", "python", "base64".
+            fmt: Output format - "hex", "c_array", "python", "base64",
+                "rust_array", "csharp_array", "java_array",
+                "javascript_array", "go_slice", "hex_string_no_spaces",
+                "nasm_db", "markdown_table".
 
         Returns:
-            Formatted string representation.
+            str: Formatted string representation.
 
         Raises:
             RuntimeError: If no document is open.
@@ -933,6 +1386,38 @@ class HexEditorBridge(ToolBridgeBase):
             return f'b"{inner}"'
         if fmt == "base64":
             return base64.b64encode(data).decode("ascii")
+        if fmt == "rust_array":
+            inner = ", ".join(f"0x{b:02X}" for b in data)
+            return f"[{inner}]"
+        if fmt == "csharp_array":
+            inner = ", ".join(f"0x{b:02X}" for b in data)
+            return f"new byte[] {{{inner}}}"
+        if fmt == "java_array":
+            parts: list[str] = []
+            for b in data:
+                if b > _JAVA_SIGNED_BYTE_THRESHOLD:
+                    parts.append(f"(byte)0x{b:02X}")
+                else:
+                    parts.append(f"0x{b:02X}")
+            return "new byte[] {" + ", ".join(parts) + "}"
+        if fmt == "javascript_array":
+            inner = ", ".join(f"0x{b:02X}" for b in data)
+            return f"new Uint8Array([{inner}])"
+        if fmt == "go_slice":
+            inner = ", ".join(f"0x{b:02X}" for b in data)
+            return f"[]byte{{{inner}}}"
+        if fmt == "hex_string_no_spaces":
+            return "".join(f"{b:02X}" for b in data)
+        if fmt == "nasm_db":
+            inner = ", ".join(f"0x{b:02X}" for b in data)
+            return f"db {inner}"
+        if fmt == "markdown_table":
+            rows: list[str] = ["| Offset | Hex | ASCII |", "| --- | --- | --- |"]
+            for i, b in enumerate(data):
+                hex_val = f"{b:02X}"
+                ascii_val = chr(b) if _PRINTABLE_MIN <= b <= _PRINTABLE_MAX else "."
+                rows.append(f"| {start + i:#010x} | {hex_val} | {ascii_val} |")
+            return "\n".join(rows)
         return ""
 
     async def add_bookmark(
@@ -951,7 +1436,7 @@ class HexEditorBridge(ToolBridgeBase):
             color: Color as hex string.
 
         Returns:
-            Index of the new bookmark.
+            int: Index of the new bookmark.
 
         Raises:
             RuntimeError: If no document is open.
@@ -971,7 +1456,7 @@ class HexEditorBridge(ToolBridgeBase):
             index: Bookmark index.
 
         Returns:
-            True if the bookmark was removed.
+            bool: True if the bookmark was removed.
 
         Raises:
             RuntimeError: If no document is open.
@@ -988,7 +1473,7 @@ class HexEditorBridge(ToolBridgeBase):
         """List all bookmarks.
 
         Returns:
-            List of dicts with offset, length, label, color.
+            list[dict[str, Any]]: List of dicts with offset, length, label, color.
         """
         if self._document is None:
             return []
@@ -1004,7 +1489,7 @@ class HexEditorBridge(ToolBridgeBase):
             path: Save path. Uses original path if None.
 
         Returns:
-            True if saved successfully.
+            bool: True if saved successfully.
 
         Raises:
             RuntimeError: If no document is open.
@@ -1036,10 +1521,7 @@ class HexEditorBridge(ToolBridgeBase):
             path: New file path.
 
         Returns:
-            True if saved successfully.
-
-        Raises:
-            RuntimeError: If no document is open.
+            bool: True if saved successfully.
         """
         return await self.save(path)
 
@@ -1057,7 +1539,7 @@ class HexEditorBridge(ToolBridgeBase):
             algorithm: Hash algorithm (md5, sha1, sha256, sha512, crc32).
 
         Returns:
-            Hex digest string.
+            str: Hex digest string.
 
         Raises:
             RuntimeError: If no document is open.
@@ -1074,7 +1556,7 @@ class HexEditorBridge(ToolBridgeBase):
         """Get information about the currently open document.
 
         Returns:
-            Dict with file_path, size, modified, cursor, and selection.
+            dict[str, Any]: Dict with file_path, size, modified, cursor, and selection.
         """
         if self._document is None:
             return {
@@ -1105,7 +1587,7 @@ class HexEditorBridge(ToolBridgeBase):
             include_bytes: Number of bytes around the cursor to include.
 
         Returns:
-            Dict with document info, bytes_at_cursor, inspection,
+            dict[str, Any]: Dict with document info, bytes_at_cursor, inspection,
             selected_bytes, and bookmarks.
         """
         context: dict[str, Any] = await self.get_document_info()
@@ -1159,7 +1641,7 @@ class HexEditorBridge(ToolBridgeBase):
             sandbox_type: Sandbox type (docker, qemu, windows_sandbox).
 
         Returns:
-            Dict with sandbox_path and status.
+            dict[str, Any]: Dict with sandbox_path and status.
 
         Raises:
             RuntimeError: If no document is open or sandbox unavailable.
@@ -1179,8 +1661,6 @@ class HexEditorBridge(ToolBridgeBase):
 
         file_path_str = self._document.file_path()
         if file_path_str is None:
-            import os  # noqa: PLC0415
-
             tmp_fd, tmp_path = tempfile.mkstemp(suffix=".bin")
             os.close(tmp_fd)
             self._document.save(tmp_path)
@@ -1210,10 +1690,11 @@ class HexEditorBridge(ToolBridgeBase):
             timeout: Execution timeout in seconds.
 
         Returns:
-            Dict with execution report including exit_code, stdout, stderr.
+            dict[str, Any]: Dict with execution report including exit_code, stdout, stderr.
 
         Raises:
             RuntimeError: If no document is open or sandbox unavailable.
+            TypeError: If sandbox bridge does not support run_binary.
         """
         if self._document is None:
             msg = "no document open"
@@ -1254,3 +1735,769 @@ class HexEditorBridge(ToolBridgeBase):
         if isinstance(result, dict):
             return cast("dict[str, Any]", result)
         return {"exit_code": -1, "stdout": "", "stderr": str(result)}
+
+    async def get_entropy(self) -> float:
+        """Get Shannon entropy of the entire document.
+
+        Returns:
+            float: Entropy value between 0.0 and 8.0.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        result: float = self._document.entropy()
+        _logger.debug("entropy_computed", value=result)
+        return result
+
+    async def get_entropy_map(self, block_size: int = 4096) -> list[float]:
+        """Get per-block entropy values across the document.
+
+        Args:
+            block_size: Block size in bytes for entropy calculation.
+
+        Returns:
+            list[float]: List of entropy values per block.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        result = self._document.entropy_map(block_size)
+        _logger.debug("entropy_map_computed", blocks=len(result), block_size=block_size)
+        return [float(v) for v in result]
+
+    async def get_byte_distribution(self) -> list[int]:
+        """Get the 256-element byte frequency distribution.
+
+        Returns:
+            list[int]: List of 256 integer counts, one per byte value.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        result = self._document.byte_distribution_full()
+        _logger.debug("byte_distribution_computed")
+        return [int(v) for v in result]
+
+    async def get_byte_type_distribution(self) -> dict[str, int]:
+        """Get byte type counts across the document.
+
+        Returns:
+            dict[str, int]: Dict with null_count, printable_count, control_count, high_count.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        result: Any = self._document.byte_type_distribution()
+        _logger.debug("byte_type_distribution_computed")
+        if isinstance(result, dict):
+            return cast("dict[str, int]", result)
+        items: list[Any] = list(result)
+        return {
+            "null_count": int(items[0]),
+            "printable_count": int(items[1]),
+            "control_count": int(items[2]),
+            "high_count": int(items[3]),
+        }
+
+    async def get_digram_matrix(self) -> list[int]:
+        """Get the 256x256 byte-pair frequency matrix.
+
+        Returns:
+            list[int]: List of 65536 integer frequencies in row-major order.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        result = self._document.digram_matrix()
+        _logger.debug("digram_matrix_computed")
+        return [int(v) for v in result]
+
+    async def get_content_classification(self, block_size: int = 4096) -> list[int]:
+        """Classify document blocks by content type.
+
+        Args:
+            block_size: Block size in bytes for classification.
+
+        Returns:
+            list[int]: List of classification ints per block:
+                0=null, 1=plaintext, 2=structured, 3=encrypted, 4=code.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        result = self._document.content_classification(block_size)
+        _logger.debug("content_classification_computed", blocks=len(result), block_size=block_size)
+        return [int(v) for v in result]
+
+    async def disassemble(
+        self,
+        offset: int,
+        count: int = 50,
+        arch: str = "auto",
+        mode: str = "64",
+    ) -> list[dict[str, Any]]:
+        """Disassemble instructions at a byte offset.
+
+        Args:
+            offset: Byte offset in the document to disassemble from.
+            count: Number of instructions to disassemble.
+            arch: Target architecture (x86, arm, arm64, mips, etc.) or "auto".
+            mode: Architecture mode (16, 32, 64, arm, thumb).
+
+        Returns:
+            list[dict[str, Any]]: List of dicts with address, bytes, mnemonic, operands, size.
+
+        Raises:
+            RuntimeError: If no document is open.
+            ImportError: If the disassembler module is unavailable.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        if _HexDisassembler is None:
+            msg = "disassembler module not available"
+            raise RuntimeError(msg)
+
+        max_bytes = count * 15
+        doc_len: int = self._document.length()
+        read_len = min(max_bytes, doc_len - offset)
+        if read_len <= 0:
+            return []
+
+        raw = self._document.read(offset, read_len)
+        if isinstance(raw, bytes):
+            data = raw
+        elif isinstance(raw, bytearray) or not isinstance(raw, list):
+            data = bytes(raw)
+        else:
+            data = bytes(cast("list[int]", raw))
+        disassembler = _HexDisassembler()
+        if arch == "auto":
+            arch, mode = disassembler.auto_detect_arch(data)
+
+        raw_instructions = disassembler.disassemble(data, offset, arch, mode, count)
+        _logger.debug("disassembly_completed", offset=hex(offset), count=len(raw_instructions), arch=arch)
+        return [
+            {
+                "address": insn.address,
+                "bytes": insn.raw_bytes.hex(),
+                "mnemonic": insn.mnemonic,
+                "operands": insn.op_str,
+                "size": insn.size,
+            }
+            for insn in raw_instructions
+        ]
+
+    async def yara_scan(self, rule_source: str) -> list[dict[str, Any]]:
+        """Scan the document with a YARA rule given as source code.
+
+        Args:
+            rule_source: YARA rule source code string.
+
+        Returns:
+            list[dict[str, Any]]: List of match dicts with rule, tags, meta, strings.
+
+        Raises:
+            RuntimeError: If no document is open.
+            ImportError: If the YARA scanner module is unavailable.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        if _YaraScanner is None:
+            msg = "yara_scanner module not available"
+            raise RuntimeError(msg)
+
+        doc_len: int = self._document.length()
+        raw = self._document.read(0, doc_len)
+        if isinstance(raw, bytes):
+            data = raw
+        elif isinstance(raw, bytearray) or not isinstance(raw, list):
+            data = bytes(raw)
+        else:
+            data = bytes(cast("list[int]", raw))
+        scanner = _YaraScanner()
+        compiled = scanner.compile_source(rule_source)
+        raw_matches = scanner.scan_data(data, compiled)
+        _logger.debug("yara_scan_completed", matches=len(raw_matches))
+        return [
+            {
+                "rule": m.rule_name,
+                "tags": m.tags,
+                "meta": m.meta,
+                "namespace": m.namespace,
+                "strings": [
+                    {"identifier": s.identifier, "offset": s.offset, "data": s.data.hex()}
+                    for s in m.strings
+                ],
+            }
+            for m in raw_matches
+        ]
+
+    async def yara_scan_files(self, rule_paths: str) -> list[dict[str, Any]]:
+        """Scan the document with YARA rules loaded from files.
+
+        Args:
+            rule_paths: Comma-separated paths to .yar rule files.
+
+        Returns:
+            list[dict[str, Any]]: List of match dicts with rule, tags, meta, strings.
+
+        Raises:
+            RuntimeError: If no document is open.
+            ImportError: If the YARA scanner module is unavailable.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        if _YaraScanner is None:
+            msg = "yara_scanner module not available"
+            raise RuntimeError(msg)
+
+        doc_len: int = self._document.length()
+        raw = self._document.read(0, doc_len)
+        if isinstance(raw, bytes):
+            data = raw
+        elif isinstance(raw, bytearray) or not isinstance(raw, list):
+            data = bytes(raw)
+        else:
+            data = bytes(cast("list[int]", raw))
+        paths: list[str | Path] = [Path(p.strip()) for p in rule_paths.split(",") if p.strip()]
+        scanner = _YaraScanner()
+        compiled = scanner.compile_rules(paths)
+        raw_matches = scanner.scan_data(data, compiled)
+        _logger.debug("yara_scan_files_completed", rule_paths=paths, matches=len(raw_matches))
+        return [
+            {
+                "rule": m.rule_name,
+                "tags": m.tags,
+                "meta": m.meta,
+                "namespace": m.namespace,
+                "strings": [
+                    {"identifier": s.identifier, "offset": s.offset, "data": s.data.hex()}
+                    for s in m.strings
+                ],
+            }
+            for m in raw_matches
+        ]
+
+    async def apply_transform(
+        self,
+        name: str,
+        offset: int,
+        length: int,
+        params_json: str = "{}",
+    ) -> str:
+        """Apply a data transform to a byte range.
+
+        Args:
+            name: Transform name (e.g. xor_single, base64_encode).
+            offset: Start offset in the document.
+            length: Number of bytes to transform.
+            params_json: JSON dict of transform parameters. Byte values as hex strings.
+
+        Returns:
+            str: Hex string of the transformed bytes.
+
+        Raises:
+            RuntimeError: If no document is open.
+            ValueError: If params_json is not valid JSON.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        raw_params = cast("dict[str, Any]", json.loads(params_json))
+        params: dict[str, Any] = {}
+        for k, v in raw_params.items():
+            if isinstance(v, str):
+                try:
+                    params[k] = bytes.fromhex(v)
+                except ValueError:
+                    params[k] = v
+            else:
+                params[k] = v
+
+        result = self._document.transform_data(name, offset, length, params)
+        if isinstance(result, bytes):
+            data = result
+        elif isinstance(result, bytearray) or not isinstance(result, list):
+            data = bytes(result)
+        else:
+            data = bytes(cast("list[int]", result))
+        _logger.debug("transform_applied", name=name, offset=hex(offset), length=length)
+        return data.hex()
+
+    async def apply_pipeline(
+        self,
+        pipeline_json: str,
+        offset: int,
+        length: int,
+    ) -> str:
+        """Apply a transform pipeline to a byte range.
+
+        Args:
+            pipeline_json: JSON array of {name, params} step dicts.
+            offset: Start offset in the document.
+            length: Number of bytes to transform.
+
+        Returns:
+            str: Hex string of the transformed bytes.
+
+        Raises:
+            RuntimeError: If no document is open.
+            ValueError: If pipeline_json is not valid JSON.
+            ImportError: If the transform pipeline module is unavailable.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        if _TransformPipeline is None:
+            msg = "transform_pipeline module not available"
+            raise RuntimeError(msg)
+
+        steps = cast("list[dict[str, Any]]", json.loads(pipeline_json))
+        raw = self._document.read(offset, length)
+        if isinstance(raw, bytes):
+            data = raw
+        elif isinstance(raw, bytearray) or not isinstance(raw, list):
+            data = bytes(raw)
+        else:
+            data = bytes(cast("list[int]", raw))
+
+        node_map = {n.name: n for n in _get_all_transform_nodes()}
+        pipeline = _TransformPipeline()
+        for step in steps:
+            step_name = str(step.get("name", ""))
+            step_params = cast("dict[str, Any]", step.get("params", {}))
+            if step_name in node_map:
+                pipeline.add_step(node_map[step_name], step_params)
+        result = pipeline.execute(data)
+        _logger.debug("pipeline_applied", steps=len(steps), offset=hex(offset), length=length)
+        return result.hex()
+
+    async def list_transforms(self) -> list[dict[str, str]]:
+        """List all available data transforms.
+
+        Returns:
+            list[dict[str, str]]: List of dicts with name, category, description.
+        """
+        if not self._pipeline_available or _get_all_transform_nodes is None:
+            return []
+
+        nodes = _get_all_transform_nodes()
+        _logger.debug("transforms_listed", count=len(nodes))
+        return [{"name": n.name, "category": n.category, "description": n.description} for n in nodes]
+
+    async def decode_text(self, offset: int, length: int, encoding: str = "utf-8") -> str:
+        """Decode bytes at an offset as text in the specified encoding.
+
+        Args:
+            offset: Start offset in the document.
+            length: Number of bytes to decode.
+            encoding: Python codec name (e.g. utf-8, utf-16le, latin-1).
+
+        Returns:
+            str: Decoded text string.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        if hasattr(self._document, "decode_text"):
+            result: str = self._document.decode_text(offset, length, encoding)
+            _logger.debug("text_decoded", offset=hex(offset), length=length, encoding=encoding)
+            return result
+
+        raw = self._document.read(offset, length)
+        if isinstance(raw, bytes):
+            data = raw
+        elif isinstance(raw, bytearray) or not isinstance(raw, list):
+            data = bytes(raw)
+        else:
+            data = bytes(cast("list[int]", raw))
+        decoded = data.decode(encoding, errors="replace")
+        _logger.debug("text_decoded", offset=hex(offset), length=length, encoding=encoding)
+        return decoded
+
+    async def list_encodings(self) -> list[dict[str, str]]:
+        """List all supported text encodings.
+
+        Returns:
+            list[dict[str, str]]: List of dicts with name and label.
+        """
+        if self._document is not None and hasattr(self._document, "list_encodings"):
+            raw = self._document.list_encodings()
+            _logger.debug("encodings_listed", count=len(raw))
+            return [{"name": str(e[0]), "label": str(e[1])} for e in raw]
+
+        encodings: list[dict[str, str]] = [
+            {"name": "utf-8", "label": "UTF-8"},
+            {"name": "utf-16le", "label": "UTF-16 LE"},
+            {"name": "utf-16be", "label": "UTF-16 BE"},
+            {"name": "utf-32le", "label": "UTF-32 LE"},
+            {"name": "utf-32be", "label": "UTF-32 BE"},
+            {"name": "ascii", "label": "ASCII"},
+            {"name": "latin-1", "label": "Latin-1 (ISO 8859-1)"},
+            {"name": "cp1252", "label": "Windows-1252"},
+            {"name": "cp1251", "label": "Windows-1251 (Cyrillic)"},
+            {"name": "shift-jis", "label": "Shift-JIS"},
+            {"name": "euc-jp", "label": "EUC-JP"},
+            {"name": "gb2312", "label": "GB2312 (Simplified Chinese)"},
+            {"name": "big5", "label": "Big5 (Traditional Chinese)"},
+            {"name": "euc-kr", "label": "EUC-KR"},
+        ]
+        _logger.debug("encodings_listed", count=len(encodings))
+        return encodings
+
+    async def calculate_hash_custom_crc(
+        self,
+        start: int,
+        end: int,
+        poly: int,
+        init: int,
+        width: int,
+        refin: bool = False,
+        refout: bool = False,
+        xorout: int = 0,
+    ) -> str:
+        """Calculate a CRC with fully custom parameters over a byte range.
+
+        Args:
+            start: Start byte offset (inclusive).
+            end: End byte offset (exclusive).
+            poly: CRC generator polynomial.
+            init: Initial CRC register value.
+            width: CRC width in bits: 8, 16, 32, or 64.
+            refin: Reflect each input byte before processing.
+            refout: Reflect the final CRC register before XOR.
+            xorout: Value to XOR with the final CRC register.
+
+        Returns:
+            str: CRC value as a zero-padded hex string.
+
+        Raises:
+            RuntimeError: If no document is open.
+            ValueError: If width is not 8, 16, 32, or 64.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        if hasattr(self._document, "compute_hash_custom_crc"):
+            result: str = self._document.compute_hash_custom_crc(
+                start, end, poly, init, width, refin, refout, xorout
+            )
+            _logger.debug("custom_crc_computed", width=width)
+            return result
+
+        valid_widths = {8, 16, 32, 64}
+        if width not in valid_widths:
+            msg = f"unsupported CRC width {width}; must be one of {valid_widths}"
+            raise ValueError(msg)
+
+        length = end - start
+        raw = self._document.read(start, length)
+        if isinstance(raw, bytes):
+            data = raw
+        elif isinstance(raw, bytearray):
+            data = bytes(raw)
+        elif isinstance(raw, list):
+            data = bytes(cast("list[int]", raw))
+        else:
+            data = bytes(raw)
+
+        mask = (1 << width) - 1
+
+        def reflect(val: int, bits: int) -> int:
+            reflected = 0
+            for _ in range(bits):
+                reflected = (reflected << 1) | (val & 1)
+                val >>= 1
+            return reflected
+
+        crc = init & mask
+        for byte in data:
+            b = reflect(byte, 8) if refin else byte
+            crc ^= b << (width - 8)
+            for _ in range(8):
+                crc = (
+                    ((crc << 1) ^ poly) & mask
+                    if crc & (1 << (width - 1))
+                    else (crc << 1) & mask
+                )
+        if refout:
+            crc = reflect(crc, width)
+        crc ^= xorout
+        crc &= mask
+
+        hex_width = width // 4
+        _logger.debug("custom_crc_computed", width=width, result=f"{crc:#0{hex_width + 2}x}")
+        return f"{crc:0{hex_width}X}"
+
+    async def export_patches(self, patch_format: str = "ips") -> str:
+        """Export document patches as IPS or IPS32 format.
+
+        Args:
+            patch_format: Patch format, either "ips" or "ips32".
+
+        Returns:
+            str: Base64-encoded patch data.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        raw: bytes
+        if patch_format == "ips32" and hasattr(self._document, "export_patches_ips32"):
+            raw = self._document.export_patches_ips32()
+        elif hasattr(self._document, "export_patches_ips"):
+            raw = self._document.export_patches_ips()
+        else:
+            msg = f"patch export format '{patch_format}' not supported by backend"
+            raise RuntimeError(msg)
+
+        _logger.debug("patches_exported", patch_format=patch_format, size=len(raw))
+        return base64.b64encode(raw).decode("ascii")
+
+    async def import_patches(self, data_b64: str) -> int:
+        """Import and apply IPS/IPS32 patches from base64-encoded data.
+
+        Args:
+            data_b64: Base64-encoded IPS or IPS32 patch data.
+
+        Returns:
+            int: Number of patches applied.
+
+        Raises:
+            RuntimeError: If no document is open or import is unsupported.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        raw = base64.b64decode(data_b64)
+        if not hasattr(self._document, "import_patches_ips"):
+            msg = "patch import not supported by backend"
+            raise RuntimeError(msg)
+
+        count: int = self._document.import_patches_ips(raw)
+        _logger.debug("patches_imported", count=count)
+        if count > 0 and self._state_holder is not None:
+            self._state_holder.notify_data_modified(0, 0, source="bridge")
+        return count
+
+    async def search_numeric(
+        self,
+        value: int,
+        size: int = 4,
+        value_type: str = "uint",
+        endianness: str = "little",
+        alignment: int = 1,
+        max_results: int = 100,
+    ) -> list[dict[str, int]]:
+        """Search for a numeric value in the document.
+
+        Args:
+            value: Integer value to search for.
+            size: Byte size of the value: 1, 2, 4, or 8.
+            value_type: Value type interpretation: "uint", "int", or "float".
+            endianness: Byte order: "little" or "big".
+            alignment: Search step alignment in bytes.
+            max_results: Maximum number of results to return.
+
+        Returns:
+            list[dict[str, int]]: List of dicts with offset and length.
+
+        Raises:
+            RuntimeError: If no document is open.
+            ValueError: If size is not 1, 2, 4, or 8.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        big_endian = endianness == "big"
+        if value_type == "float":
+            if hasattr(self._document, "search_numeric_float"):
+                results = self._document.search_numeric_float(value, size, big_endian, alignment, max_results)
+                _logger.debug("search_numeric_float_completed", matches=len(results))
+                return [{"offset": r[0], "length": r[1]} for r in results]
+        elif hasattr(self._document, "search_numeric"):
+            results = self._document.search_numeric(value, size, value_type == "int", big_endian, alignment, max_results)
+            _logger.debug("search_numeric_completed", matches=len(results))
+            return [{"offset": r[0], "length": r[1]} for r in results]
+
+        needle = self._pack_numeric_needle(value, size, value_type, big_endian)
+        doc_len: int = self._document.length()
+        matches: list[dict[str, int]] = []
+        pos = 0
+        while pos <= doc_len - size and len(matches) < max_results:
+            chunk_len = min(65536, doc_len - pos)
+            raw = self._document.read(pos, chunk_len)
+            if isinstance(raw, bytes):
+                chunk = raw
+            elif isinstance(raw, bytearray) or not isinstance(raw, list):
+                chunk = bytes(raw)
+            else:
+                chunk = bytes(cast("list[int]", raw))
+            idx = 0
+            while idx <= len(chunk) - size and len(matches) < max_results:
+                if chunk[idx : idx + size] == needle:
+                    abs_offset = pos + idx
+                    if (abs_offset % alignment) == 0:
+                        matches.append({"offset": abs_offset, "length": size})
+                idx += alignment
+            pos += chunk_len - size + 1
+
+        _logger.debug("search_numeric_completed", matches=len(matches))
+        return matches
+
+    @staticmethod
+    def _pack_numeric_needle(value: int, size: int, value_type: str, big_endian: bool) -> bytes:
+        """Pack a numeric value into bytes for use as a search needle.
+
+        Args:
+            value: Numeric value to pack.
+            size: Byte width: 1, 2, 4, or 8 for integers; 4 or 8 for floats.
+            value_type: ``"float"``, ``"int"``, or ``"uint"``.
+            big_endian: True for big-endian byte order.
+
+        Returns:
+            bytes: Packed bytes representation of the value.
+
+        Raises:
+            ValueError: If size is invalid for the given value_type.
+        """
+        endian_char = ">" if big_endian else "<"
+        if value_type == "float":
+            if size not in {4, 8}:
+                msg = f"float size must be 4 or 8, got {size}"
+                raise ValueError(msg)
+            fmt_char = "f" if size == _DEFAULT_POINTER_SIZE else "d"
+            return struct.pack(endian_char + fmt_char, float(value))
+        if size not in {1, 2, 4, 8}:
+            msg = f"numeric size must be 1, 2, 4, or 8, got {size}"
+            raise ValueError(msg)
+        signed = value_type == "int"
+        size_chars = {1: "b", 2: "h", 4: "i", 8: "q"}
+        fmt_char = size_chars[size] if signed else size_chars[size].upper()
+        return struct.pack(endian_char + fmt_char, value)
+
+    async def add_highlight_rule(
+        self,
+        condition_type: str,
+        condition_params: str,
+        color: str = "#FFFF00",
+    ) -> str:
+        """Add a byte highlighting rule.
+
+        Args:
+            condition_type: Condition type: "byte_value", "byte_range", or "pattern".
+            condition_params: JSON string of condition parameters.
+            color: Highlight color as a hex color string (e.g. "#FFFF00").
+
+        Returns:
+            str: Rule ID string (UUID).
+
+        Raises:
+            ValueError: If condition_params is not valid JSON.
+        """
+        parsed_params = cast("dict[str, Any]", json.loads(condition_params))
+        rule_id = str(uuid.uuid4())
+        rule: dict[str, Any] = {
+            "id": rule_id,
+            "condition_type": condition_type,
+            "condition_params": parsed_params,
+            "color": color,
+        }
+        self._highlight_rules[rule_id] = rule
+        _logger.debug("highlight_rule_added", rule_id=rule_id, condition_type=condition_type)
+        if self._state_holder is not None and hasattr(self._state_holder, "notify_highlight_rule_added"):
+            self._state_holder.notify_highlight_rule_added(rule, source="bridge")
+        return rule_id
+
+    async def remove_highlight_rule(self, rule_id: str) -> bool:
+        """Remove a highlighting rule by ID.
+
+        Args:
+            rule_id: The rule ID returned from add_highlight_rule.
+
+        Returns:
+            bool: True if the rule was found and removed.
+        """
+        if rule_id not in self._highlight_rules:
+            return False
+        del self._highlight_rules[rule_id]
+        _logger.debug("highlight_rule_removed", rule_id=rule_id)
+        if self._state_holder is not None and hasattr(self._state_holder, "notify_highlight_rule_removed"):
+            self._state_holder.notify_highlight_rule_removed(rule_id, source="bridge")
+        return True
+
+    async def list_highlight_rules(self) -> list[dict[str, Any]]:
+        """List all active highlighting rules.
+
+        Returns:
+            list[dict[str, Any]]: List of rule dicts with id, condition_type,
+                condition_params, and color.
+        """
+        rules = list(self._highlight_rules.values())
+        _logger.debug("highlight_rules_listed", count=len(rules))
+        return rules
+
+    async def set_display_mode(self, mode: str) -> bool:
+        """Set the hex display mode.
+
+        Args:
+            mode: Display mode string (e.g. "hex8", "hex16_le", "float32").
+
+        Returns:
+            bool: True always.
+        """
+        self._display_mode = mode
+        _logger.debug("display_mode_set", mode=mode)
+        if self._state_holder is not None and hasattr(self._state_holder, "notify_display_mode_changed"):
+            self._state_holder.notify_display_mode_changed(mode, source="bridge")
+        return True
+
+    async def get_display_mode(self) -> str:
+        """Get the current hex display mode.
+
+        Returns:
+            str: Current display mode string.
+        """
+        return self._display_mode

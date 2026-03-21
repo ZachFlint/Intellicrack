@@ -462,17 +462,9 @@ class FridaBridge(InstrumentationBridge):
 
     Provides function hooking, memory manipulation, and script execution
     capabilities using the Frida framework.
-
-    Attributes:
-        _device: Frida device connection.
-        _session: Active Frida session.
-        _scripts: Active scripts by ID.
-        _hooks: Active hooks by ID.
-        _message_handler: Handler for script messages.
     """
 
     def __init__(self) -> None:
-        """Initialize the Frida bridge."""
         super().__init__()
         self._device: frida.core.Device | None = None
         self._session: frida.core.Session | None = None
@@ -503,7 +495,7 @@ class FridaBridge(InstrumentationBridge):
         """Get the tool's name.
 
         Returns:
-            ToolName.FRIDA
+            ToolName: ToolName.FRIDA
         """
         return ToolName.FRIDA
 
@@ -512,7 +504,7 @@ class FridaBridge(InstrumentationBridge):
         """Get tool definition for LLM function calling.
 
         Returns:
-            ToolDefinition with all available functions.
+            ToolDefinition: ToolDefinition with all available functions.
         """
         return ToolDefinition(
             tool_name=ToolName.FRIDA,
@@ -614,7 +606,7 @@ class FridaBridge(InstrumentationBridge):
         """Check if Frida is available.
 
         Returns:
-            True if Frida is installed and working.
+            bool: True if Frida is installed and working.
         """
         try:
             await asyncio.to_thread(frida.get_local_device)
@@ -717,7 +709,7 @@ class FridaBridge(InstrumentationBridge):
             args: Command line arguments.
 
         Returns:
-            PID of spawned process.
+            int: PID of spawned process.
 
         Raises:
             ToolError: If spawn fails.
@@ -846,7 +838,7 @@ class FridaBridge(InstrumentationBridge):
             size: Number of bytes to read.
 
         Returns:
-            Memory contents.
+            bytes: Memory contents.
 
         Raises:
             ToolError: If read fails.
@@ -882,7 +874,7 @@ class FridaBridge(InstrumentationBridge):
             data: Bytes to write.
 
         Returns:
-            Number of bytes written.
+            int: Number of bytes written.
 
         Raises:
             ToolError: If write fails.
@@ -912,7 +904,7 @@ class FridaBridge(InstrumentationBridge):
             protection: Memory protection filter (e.g., 'r-x', '---' for all).
 
         Returns:
-            List of memory regions.
+            list[MemoryRegion]: List of memory regions.
 
         Raises:
             ToolError: If operation fails.
@@ -922,7 +914,7 @@ class FridaBridge(InstrumentationBridge):
 
         _logger.debug("memory_regions_enumerating", protection=protection)
         script_code = (
-            "var ranges = Process.enumerateRanges('" + protection + "');\n"
+            f"var ranges = Process.enumerateRanges('{protection}" + "');\n"
             "var result = ranges.map(function(r) {\n"
             "    return {\n"
             "        base: r.base.toString(),\n"
@@ -972,7 +964,7 @@ class FridaBridge(InstrumentationBridge):
             pattern: Byte pattern to search for.
 
         Returns:
-            List of matches with context.
+            list[MemorySearchResult]: List of matches with context.
 
         Raises:
             ToolError: If scan fails.
@@ -1030,7 +1022,7 @@ class FridaBridge(InstrumentationBridge):
         """List all loaded modules in the process.
 
         Returns:
-            List of module information.
+            list[ModuleInfo]: List of module information.
 
         Raises:
             ToolError: If operation fails.
@@ -1088,7 +1080,7 @@ class FridaBridge(InstrumentationBridge):
             module_name: Name of the module.
 
         Returns:
-            List of export information.
+            list[ExportInfo]: List of export information.
 
         Raises:
             ToolError: If operation fails.
@@ -1153,7 +1145,7 @@ class FridaBridge(InstrumentationBridge):
             on_leave: JavaScript code for function exit.
 
         Returns:
-            Hook information.
+            HookInfo: Hook information.
 
         Raises:
             ToolError: If hooking fails.
@@ -1228,7 +1220,7 @@ class FridaBridge(InstrumentationBridge):
             hook_id: ID of the hook to remove.
 
         Returns:
-            True if removed successfully, False if hook not found.
+            bool: True if removed successfully, False if hook not found.
         """
         if hook_id not in self._scripts:
             _logger.warning("hook_not_found", hook_id=hook_id)
@@ -1244,7 +1236,7 @@ class FridaBridge(InstrumentationBridge):
         """Get all active hooks.
 
         Returns:
-            List of hook information.
+            list[HookInfo]: List of hook information.
         """
         _logger.debug("hooks_listed", count=len(self._hooks))
         return list(self._hooks.values())
@@ -1256,7 +1248,7 @@ class FridaBridge(InstrumentationBridge):
             script: JavaScript code to execute.
 
         Returns:
-            Script execution result.
+            str: Script execution result.
 
         Raises:
             ToolError: If execution fails.
@@ -1283,7 +1275,7 @@ class FridaBridge(InstrumentationBridge):
             script_code: JavaScript code to execute.
 
         Returns:
-            Script ID for later unloading via unload_script.
+            str: Script ID for later unloading via unload_script.
 
         Raises:
             ToolError: If not attached or script fails to load.
@@ -1315,7 +1307,7 @@ class FridaBridge(InstrumentationBridge):
             script_id: Script ID returned by execute_persistent_script.
 
         Returns:
-            True if unloaded, False if script not found.
+            bool: True if unloaded, False if script not found.
         """
         if script_id not in self._scripts:
             _logger.warning("script_not_found_for_unload", script_id=script_id)
@@ -1333,7 +1325,7 @@ class FridaBridge(InstrumentationBridge):
             return_value: Value to return instead.
 
         Returns:
-            Hook information.
+            HookInfo: Hook information.
         """
         _logger.debug("intercept_return_setting", target=target, return_value=return_value)
         on_leave = f"retval.replace({return_value});"
@@ -1354,7 +1346,7 @@ class FridaBridge(InstrumentationBridge):
             args: Function arguments.
 
         Returns:
-            Function return value.
+            int: Function return value.
 
         Raises:
             ToolError: If call fails.
@@ -1394,7 +1386,7 @@ class FridaBridge(InstrumentationBridge):
             timeout: Timeout in seconds.
 
         Returns:
-            Script result as dictionary.
+            dict[str, Any]: Script result as dictionary.
 
         Raises:
             ToolError: If not attached to a process.
@@ -1470,7 +1462,7 @@ class FridaBridge(InstrumentationBridge):
             module_name: Name of the module.
 
         Returns:
-            List of import information.
+            list[ImportInfo]: List of import information.
 
         Raises:
             ToolError: If operation fails.
@@ -1529,7 +1521,7 @@ class FridaBridge(InstrumentationBridge):
         """List all threads in the attached process.
 
         Returns:
-            List of thread information.
+            list[ThreadInfo]: List of thread information.
 
         Raises:
             ToolError: If operation fails.
@@ -1587,7 +1579,7 @@ class FridaBridge(InstrumentationBridge):
             size: Number of bytes to allocate.
 
         Returns:
-            Address of the allocated memory.
+            int: Address of the allocated memory.
 
         Raises:
             ToolError: If allocation fails.
@@ -1648,7 +1640,7 @@ class FridaBridge(InstrumentationBridge):
             protection: New protection flags (e.g., 'rwx', 'r-x', 'rw-').
 
         Returns:
-            True if the protection was changed successfully.
+            bool: True if the protection was changed successfully.
 
         Raises:
             ToolError: If the operation fails.
@@ -1695,7 +1687,7 @@ class FridaBridge(InstrumentationBridge):
             module_name: Name of the module.
 
         Returns:
-            Base address of the module.
+            int: Base address of the module.
 
         Raises:
             ToolError: If the module is not found.
@@ -1733,7 +1725,7 @@ class FridaBridge(InstrumentationBridge):
             address: Address to resolve.
 
         Returns:
-            Symbol information for the address.
+            SymbolInfo: Symbol information for the address.
 
         Raises:
             ToolError: If resolution fails.
@@ -1781,7 +1773,7 @@ class FridaBridge(InstrumentationBridge):
             name: Function name to search for.
 
         Returns:
-            List of symbol information for matching functions.
+            list[SymbolInfo]: List of symbol information for matching functions.
 
         Raises:
             ToolError: If the search fails.
@@ -1842,7 +1834,7 @@ class FridaBridge(InstrumentationBridge):
             query: Query pattern (e.g., 'exports:*!CreateFile*').
 
         Returns:
-            List of matching API names and addresses.
+            list[ApiResolverMatch]: List of matching API names and addresses.
 
         Raises:
             ToolError: If resolution fails.
@@ -1895,7 +1887,7 @@ class FridaBridge(InstrumentationBridge):
             replacement_code: JavaScript body defining the NativeCallback.
 
         Returns:
-            Hook information for the replacement.
+            HookInfo: Hook information for the replacement.
 
         Raises:
             ToolError: If replacement fails.
@@ -1962,7 +1954,7 @@ class FridaBridge(InstrumentationBridge):
         Does not require an active session attachment.
 
         Returns:
-            List of dictionaries with 'pid' and 'name' for each process.
+            list[dict[str, object]]: List of dictionaries with 'pid' and 'name' for each process.
 
         Raises:
             ToolError: If device is not available.
@@ -1989,7 +1981,7 @@ class FridaBridge(InstrumentationBridge):
             target: Function target string.
 
         Returns:
-            JavaScript expression evaluating to a NativePointer.
+            str: JavaScript expression evaluating to a NativePointer.
         """
         if target.startswith("0x"):
             return f"ptr({target})"
@@ -2050,7 +2042,7 @@ class FridaBridge(InstrumentationBridge):
             limit: Maximum events to collect before auto-stop.
 
         Returns:
-            Trace ID for later retrieval via stalker_unfollow.
+            str: Trace ID for later retrieval via stalker_unfollow.
 
         Raises:
             ToolError: If Stalker fails to start.
@@ -2145,7 +2137,7 @@ class FridaBridge(InstrumentationBridge):
             thread_id: Thread ID to stop tracing. None for current thread.
 
         Returns:
-            StalkerTrace with collected events and duration.
+            StalkerTrace: StalkerTrace with collected events and duration.
 
         Raises:
             ToolError: If unfollow fails.
@@ -2259,7 +2251,7 @@ class FridaBridge(InstrumentationBridge):
         """Get list of child processes intercepted by child gating.
 
         Returns:
-            List of pending child process information.
+            list[ChildProcessInfo]: List of pending child process information.
         """
         with self._gated_children_lock:
             result = list(self._gated_children)
@@ -2330,7 +2322,7 @@ class FridaBridge(InstrumentationBridge):
         """Get all collected crash reports.
 
         Returns:
-            List of crash information.
+            list[CrashInfo]: List of crash information.
         """
         with self._crashes_lock:
             result = list(self._crashes)
@@ -2341,7 +2333,7 @@ class FridaBridge(InstrumentationBridge):
         """List all available Frida devices.
 
         Returns:
-            List of device information.
+            list[FridaDeviceInfo]: List of device information.
         """
         _ = self._state
         devices = await asyncio.to_thread(frida.enumerate_devices)
@@ -2367,7 +2359,7 @@ class FridaBridge(InstrumentationBridge):
             host: Remote host address (required for 'remote' type).
 
         Returns:
-            Information about the connected device.
+            FridaDeviceInfo: Information about the connected device.
 
         Raises:
             ToolError: If connection fails.

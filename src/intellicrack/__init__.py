@@ -63,7 +63,7 @@ def __getattr__(name: str) -> object:
         name: The name of the attribute to retrieve.
 
     Returns:
-        The requested module attribute.
+        object: The requested module attribute.
 
     Raises:
         AttributeError: If the attribute is not found.

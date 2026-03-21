@@ -83,12 +83,12 @@ class Session:
     Attributes:
         id: Unique session identifier.
         name: Human-readable session name.
-        created_at: When the session was created.
-        updated_at: When the session was last modified.
+        created_at: Timestamp when the session was created.
+        updated_at: Timestamp of the last session update.
+        provider: LLM provider used for this session.
+        model: Model identifier used for this session.
         binaries: List of loaded binaries.
         active_binary_index: Index of active binary.
-        provider: LLM provider being used.
-        model: Model identifier.
         messages: Conversation history.
         tool_states: State of each tool bridge.
         patches: Applied patches.
@@ -127,7 +127,7 @@ class Session:
             name: Optional session name.
 
         Returns:
-            New Session instance.
+            Session: New Session instance.
         """
         session_id = str(uuid4())
         now = datetime.now()
@@ -146,7 +146,7 @@ class Session:
         """Get the currently active binary.
 
         Returns:
-            Active BinaryInfo or None.
+            BinaryInfo | None: Active BinaryInfo or None.
         """
         if 0 <= self.active_binary_index < len(self.binaries):
             return self.binaries[self.active_binary_index]
@@ -197,7 +197,7 @@ class Session:
             binary_name: Name of the binary.
 
         Returns:
-            BridgeAnalysisSummary if available, None otherwise.
+            BridgeAnalysisSummary | None: BridgeAnalysisSummary if available, None otherwise.
         """
         return self.bridge_analyses.get(binary_name)
 
@@ -207,16 +207,11 @@ class SessionStore:
 
     Handles storing and retrieving sessions from a SQLite database.
 
-    Attributes:
-        _db_path: Path to the SQLite database file.
+    Args:
+        db_path: Path to the SQLite database file.
     """
 
     def __init__(self, db_path: Path) -> None:
-        """Initialize the session store.
-
-        Args:
-            db_path: Path to the SQLite database file.
-        """
         self._db_path = db_path
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         _logger.debug("session_store_init", db_path=str(db_path))
@@ -227,7 +222,7 @@ class SessionStore:
         """Get a database connection.
 
         Yields:
-            SQLite connection.
+            sqlite3.Connection: Active database connection with auto-commit/rollback.
 
         Raises:
             Exception: Re-raised from any database operation after rollback.
@@ -335,7 +330,7 @@ class SessionStore:
             session_id: Session identifier.
 
         Returns:
-            Session instance or None if not found.
+            Session | None: Session instance or None if not found.
         """
         _logger.debug("session_load_query", session_id=session_id)
         with self._connection() as conn:
@@ -383,7 +378,7 @@ class SessionStore:
             session_id: Session identifier.
 
         Returns:
-            True if deleted, False if not found.
+            bool: True if deleted, False if not found.
         """
         _logger.debug("session_delete_query", session_id=session_id)
         with self._connection() as conn:
@@ -405,7 +400,7 @@ class SessionStore:
             limit: Maximum number of sessions to return.
 
         Returns:
-            List of session metadata.
+            list[SessionMetadata]: List of session metadata.
         """
         _logger.debug("session_list_all_query", limit=limit)
         with self._connection() as conn:
@@ -445,7 +440,7 @@ class SessionStore:
             tag: Tag to search for.
 
         Returns:
-            List of matching session metadata.
+            list[SessionMetadata]: List of matching session metadata.
         """
         _logger.debug("session_search_by_tag_query", tag=tag)
         with self._connection() as conn:
@@ -486,7 +481,7 @@ class SessionStore:
             days: Number of days to keep.
 
         Returns:
-            Number of sessions deleted.
+            int: Number of sessions deleted.
         """
         _logger.debug("session_cleanup_old_start", days=days)
         cutoff = datetime.now().isoformat()
@@ -515,7 +510,7 @@ class SessionStore:
             binary: BinaryInfo instance to serialize.
 
         Returns:
-            Dictionary representation of the binary information.
+            dict[str, Any]: Dictionary representation of the binary information.
         """
         return {
             "path": str(binary.path),
@@ -540,7 +535,7 @@ class SessionStore:
             data: Dictionary containing serialized binary information.
 
         Returns:
-            Reconstructed BinaryInfo instance.
+            BinaryInfo: Reconstructed BinaryInfo instance.
         """
         return BinaryInfo(
             path=Path(data["path"]),
@@ -565,7 +560,7 @@ class SessionStore:
             message: Message instance to serialize.
 
         Returns:
-            Dictionary representation of the message.
+            dict[str, Any]: Dictionary representation of the message.
         """
         result: dict[str, Any] = {
             "role": message.role,
@@ -598,7 +593,7 @@ class SessionStore:
             data: Dictionary containing serialized message data.
 
         Returns:
-            Reconstructed Message instance.
+            Message: Reconstructed Message instance.
         """
         tool_calls = None
         if "tool_calls" in data:
@@ -624,7 +619,7 @@ class SessionStore:
             state: ToolState instance to serialize.
 
         Returns:
-            Dictionary representation of the tool state.
+            dict[str, Any]: Dictionary representation of the tool state.
         """
         return {
             "tool": state.tool.value,
@@ -642,7 +637,7 @@ class SessionStore:
             data: Dictionary containing serialized tool state data.
 
         Returns:
-            Reconstructed ToolState instance.
+            ToolState: Reconstructed ToolState instance.
         """
         return ToolState(
             tool=ToolName(data["tool"]),
@@ -660,7 +655,7 @@ class SessionStore:
             patch: PatchInfo instance to serialize.
 
         Returns:
-            Dictionary representation of the patch information.
+            dict[str, Any]: Dictionary representation of the patch information.
         """
         return {
             "address": patch.address,
@@ -678,7 +673,7 @@ class SessionStore:
             data: Dictionary containing serialized patch data.
 
         Returns:
-            Reconstructed PatchInfo instance.
+            PatchInfo: Reconstructed PatchInfo instance.
         """
         return PatchInfo(
             address=data["address"],
@@ -729,7 +724,7 @@ class SessionStore:
             path: Path to the JSON file.
 
         Returns:
-            Imported Session instance.
+            Session: Imported Session instance.
 
         Raises:
             FileNotFoundError: If the file does not exist.
@@ -781,11 +776,10 @@ class SessionManager:
 
     Coordinates between the active session and the session store.
 
-    Attributes:
-        _store: Session persistence store.
-        _current: Currently active session.
-        _auto_save: Whether to auto-save changes.
-        _save_interval: Interval between auto-saves in seconds.
+    Args:
+        store: Session persistence store.
+        auto_save: Whether to auto-save changes.
+        save_interval: Interval between auto-saves in seconds.
     """
 
     def __init__(
@@ -794,13 +788,6 @@ class SessionManager:
         auto_save: bool = True,
         save_interval: int = 300,
     ) -> None:
-        """Initialize the session manager.
-
-        Args:
-            store: Session persistence store.
-            auto_save: Whether to auto-save changes.
-            save_interval: Interval between auto-saves in seconds.
-        """
         self._store = store
         self._current: Session | None = None
         self._auto_save = auto_save
@@ -813,7 +800,7 @@ class SessionManager:
         """Get the current session.
 
         Returns:
-            Current session or None.
+            Session | None: Current session or None.
         """
         return self._current
 
@@ -831,7 +818,7 @@ class SessionManager:
             name: Optional session name.
 
         Returns:
-            New Session instance.
+            Session: New Session instance.
         """
         if self._current is not None:
             await self.save()
@@ -853,7 +840,7 @@ class SessionManager:
             session_id: Session identifier.
 
         Returns:
-            Session instance or None if not found.
+            Session | None: Session instance or None if not found.
         """
         if self._current is not None:
             await self.save()
@@ -874,7 +861,7 @@ class SessionManager:
             session_id: Session identifier.
 
         Returns:
-            Session instance or None if not found.
+            Session | None: Session instance or None if not found.
         """
         return self._store.load(session_id)
 
@@ -910,7 +897,7 @@ class SessionManager:
             session_id: Session identifier.
 
         Returns:
-            True if deleted.
+            bool: True if deleted.
         """
         is_current = self._current is not None and self._current.id == session_id
         _logger.info("session_deleting", session_id=session_id, is_current=is_current)
@@ -927,7 +914,7 @@ class SessionManager:
             limit: Maximum number to return.
 
         Returns:
-            List of session metadata.
+            list[SessionMetadata]: List of session metadata.
         """
         return self._store.list_all(limit)
 
@@ -938,7 +925,7 @@ class SessionManager:
             tag: Tag to search for.
 
         Returns:
-            List of matching session metadata.
+            list[SessionMetadata]: List of matching session metadata.
         """
         return self._store.search_by_tag(tag)
 
@@ -949,7 +936,7 @@ class SessionManager:
             days: Number of days to keep.
 
         Returns:
-            Number of sessions deleted.
+            int: Number of sessions deleted.
         """
         _logger.info("session_cleanup_requested", days=days)
         return self._store.cleanup_old(days)
@@ -979,7 +966,7 @@ class SessionManager:
             replace: Whether to replace existing session with same ID.
 
         Returns:
-            Imported Session instance.
+            Session: Imported Session instance.
 
         Raises:
             ValueError: If session with same ID already exists and replace=False.

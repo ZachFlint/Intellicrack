@@ -60,7 +60,6 @@ class FontManager:
     _instance: ClassVar[FontManager | None] = None
 
     def __init__(self) -> None:
-        """Initialize the font manager."""
         self._fonts_loaded: bool = False
         self._loaded_families: list[str] = []
         self._code_font_family: str = ""
@@ -72,7 +71,7 @@ class FontManager:
         """Get the singleton instance of FontManager.
 
         Returns:
-            The FontManager singleton instance.
+            FontManager: The FontManager singleton instance.
         """
         if cls._instance is None:
             cls._instance = cls()
@@ -87,7 +86,7 @@ class FontManager:
         """Load all custom fonts from the fonts directory.
 
         Returns:
-            True if at least one font was loaded successfully.
+            bool: True if at least one font was loaded successfully.
         """
         if self._fonts_loaded:
             _logger.debug("fonts_already_loaded", families_count=len(self._loaded_families))
@@ -143,7 +142,7 @@ class FontManager:
             font_path: Path to the font file.
 
         Returns:
-            True if the font was loaded successfully.
+            bool: True if the font was loaded successfully.
         """
         font_id = QFontDatabase.addApplicationFont(str(font_path))
 
@@ -194,7 +193,7 @@ class FontManager:
             candidates: List of font family names to try.
 
         Returns:
-            The first available font family name, or the last candidate if none found.
+            str: The first available font family name, or the last candidate if none found.
         """
         families = QFontDatabase.families()
 
@@ -215,7 +214,7 @@ class FontManager:
             size: Font size in points.
 
         Returns:
-            QFont configured for code display.
+            QFont: QFont configured for code display.
         """
         if not self._fonts_loaded:
             self.load_fonts()
@@ -233,7 +232,7 @@ class FontManager:
             size: Font size in points.
 
         Returns:
-            QFont configured for bold code display.
+            QFont: QFont configured for bold code display.
         """
         font = self.get_code_font(size)
         font.setBold(True)
@@ -246,7 +245,7 @@ class FontManager:
             size: Font size in points.
 
         Returns:
-            QFont configured for UI display.
+            QFont: QFont configured for UI display.
         """
         if not self._fonts_loaded:
             self.load_fonts()
@@ -263,7 +262,7 @@ class FontManager:
             size: Font size in points.
 
         Returns:
-            QFont configured for bold UI display.
+            QFont: QFont configured for bold UI display.
         """
         font = self.get_ui_font(size)
         font.setBold(True)
@@ -276,7 +275,7 @@ class FontManager:
             size: Font size in points.
 
         Returns:
-            QFont configured for heading display.
+            QFont: QFont configured for heading display.
         """
         font = self.get_ui_font(size)
         font.setBold(True)
@@ -287,7 +286,7 @@ class FontManager:
         """Get the current code font family name.
 
         Returns:
-            Code font family name.
+            str: Code font family name.
         """
         if not self._fonts_loaded:
             self.load_fonts()
@@ -298,7 +297,7 @@ class FontManager:
         """Get the current UI font family name.
 
         Returns:
-            UI font family name.
+            str: UI font family name.
         """
         if not self._fonts_loaded:
             self.load_fonts()
@@ -309,7 +308,7 @@ class FontManager:
         """Get list of all loaded font families.
 
         Returns:
-            List of loaded font family names.
+            list[str]: List of loaded font family names.
         """
         return self._loaded_families.copy()
 
@@ -317,7 +316,7 @@ class FontManager:
         """Check if any custom fonts were loaded.
 
         Returns:
-            True if custom fonts were loaded successfully.
+            bool: True if custom fonts were loaded successfully.
         """
         return bool(self._loaded_families)
 
@@ -325,7 +324,7 @@ class FontManager:
         """Get information about loaded fonts.
 
         Returns:
-            Dictionary with font loading status and details.
+            dict[str, object]: Dictionary with font loading status and details.
         """
         return {
             "fonts_loaded": self._fonts_loaded,

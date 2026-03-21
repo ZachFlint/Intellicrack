@@ -41,9 +41,9 @@ class StackFrame:
     """Represents a single stack frame entry.
 
     Attributes:
-        index: Frame index in the call stack.
+        index: Position in the call stack.
         return_address: Return address for this frame.
-        function_name: Name of the function if known.
+        function_name: Name of the function at this frame.
         module_name: Name of the module containing the function.
         offset: Offset within the function.
         frame_pointer: Frame pointer value if available.
@@ -72,7 +72,7 @@ class StackDataSource(Protocol):
         """Get current stack frames from the data source.
 
         Returns:
-            List of StackFrame objects representing the call stack.
+            list[StackFrame]: List of StackFrame objects representing the call stack.
         """
         return []
 
@@ -81,7 +81,7 @@ class StackDataSource(Protocol):
         """Check if the data source is connected.
 
         Returns:
-            True if connected and can provide stack data.
+            bool: True if connected and can provide stack data.
         """
         return False
 
@@ -90,7 +90,7 @@ class StackDataSource(Protocol):
         """Get the name of this data source.
 
         Returns:
-            Human-readable source name.
+            str: Human-readable source name.
         """
         return "Unknown"
 
@@ -103,7 +103,6 @@ class X64DbgStackSource:
     """
 
     def __init__(self) -> None:
-        """Initialize the x64dbg stack source."""
         self._bridge: object | None = None
 
     def set_bridge(self, bridge: object) -> None:
@@ -118,7 +117,7 @@ class X64DbgStackSource:
         """Get stack frames from x64dbg.
 
         Returns:
-            List of StackFrame objects.
+            list[StackFrame]: List of StackFrame objects.
         """
         if not self._bridge:
             return []
@@ -148,7 +147,7 @@ class X64DbgStackSource:
         """Check if x64dbg bridge is connected.
 
         Returns:
-            True if bridge is attached and connected.
+            bool: True if bridge is attached and connected.
         """
         if not self._bridge:
             return False
@@ -163,7 +162,7 @@ class X64DbgStackSource:
         """Get the source name.
 
         Returns:
-            'x64dbg' string.
+            str: 'x64dbg' string.
         """
         return "x64dbg"
 
@@ -176,7 +175,6 @@ class FridaStackSource:
     """
 
     def __init__(self) -> None:
-        """Initialize the Frida stack source."""
         self._bridge: object | None = None
         self._cached_frames: list[StackFrame] = []
 
@@ -192,7 +190,7 @@ class FridaStackSource:
         """Get stack frames from Frida.
 
         Returns:
-            List of StackFrame objects.
+            list[StackFrame]: List of StackFrame objects.
         """
         if not self._bridge:
             return self._cached_frames
@@ -230,7 +228,7 @@ class FridaStackSource:
         """Check if Frida bridge is connected.
 
         Returns:
-            True if bridge is attached and session is active.
+            bool: True if bridge is attached and session is active.
         """
         if not self._bridge:
             return False
@@ -245,23 +243,26 @@ class FridaStackSource:
         """Get the source name.
 
         Returns:
-            'Frida' string.
+            str: 'Frida' string.
         """
         return "Frida"
 
 
 class StackFrameTable(QTableWidget):
-    """Table widget for displaying stack frames."""
+    """Table widget for displaying stack frames.
+
+    Args:
+        parent: Parent widget.
+
+    Attributes:
+        frame_clicked: Qt signal for frame clicked.
+        frame_double_clicked: Qt signal for frame double clicked.
+    """
 
     frame_clicked = pyqtSignal(int)
     frame_double_clicked = pyqtSignal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the stack frame table.
-
-        Args:
-            parent: Parent widget.
-        """
         super().__init__(parent=parent)
         self._setup_ui()
 
@@ -376,16 +377,17 @@ class StackViewerPanel(QWidget):
 
     Displays call stack frames from x64dbg or Frida sources
     with auto-refresh during debugging.
+
+    Args:
+        parent: Parent widget.
+
+    Attributes:
+        address_navigate: Qt signal for address navigate.
     """
 
     address_navigate = pyqtSignal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the stack viewer panel.
-
-        Args:
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._sources: dict[str, X64DbgStackSource | FridaStackSource] = {}
         self._active_source: str | None = None

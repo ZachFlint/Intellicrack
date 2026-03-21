@@ -48,7 +48,7 @@ def _empty_str_list() -> list[str]:
     """Typed factory for empty string lists (dataclass default).
 
     Returns:
-        An empty string list.
+        list[str]: An empty string list.
     """
     return []
 
@@ -57,7 +57,7 @@ def _empty_int_list() -> list[int]:
     """Typed factory for empty int lists (dataclass default).
 
     Returns:
-        An empty integer list.
+        list[int]: An empty integer list.
     """
     return []
 
@@ -66,7 +66,7 @@ def _empty_dict_list() -> list[dict[str, Any]]:
     """Typed factory for empty dict lists (dataclass default).
 
     Returns:
-        An empty list of string-Any dictionaries.
+        list[dict[str, Any]]: An empty list of string-Any dictionaries.
     """
     return []
 
@@ -75,7 +75,7 @@ def _empty_str_any_dict() -> dict[str, Any]:
     """Typed factory for empty string-Any dicts (dataclass default).
 
     Returns:
-        An empty string-keyed dictionary.
+        dict[str, Any]: An empty string-keyed dictionary.
     """
     return {}
 
@@ -94,6 +94,19 @@ class BypassStrategy(Enum):
     """Bypass strategy types for license protections.
 
     These are hints for the AI when writing scripts, not template selectors.
+
+    Attributes:
+        RETURN_TRUE: Force target function to return true (1).
+        RETURN_FALSE: Force target function to return false (0).
+        RETURN_ZERO: Force target function to return integer zero.
+        RETURN_ONE: Force target function to return integer one.
+        NOP_FUNCTION: Replace target function body with a no-op.
+        SKIP_CHECK: Skip over a conditional check entirely.
+        PATCH_JUMP: Patch a conditional jump to always or never branch.
+        HOOK_REPLACE: Replace entire function with a custom implementation.
+        MEMORY_PATCH: Patch bytes in process memory at runtime.
+        INLINE_PATCH: Patch instruction bytes directly in the binary on disk.
+        VIRTUALIZATION_DEFEAT: Bypass code-virtualization protections (VMProtect, Themida, etc.).
     """
 
     RETURN_TRUE = "return_true"
@@ -113,7 +126,7 @@ class BypassStrategy(Enum):
         """Get human-readable description of the strategy.
 
         Returns:
-            Description text for this bypass strategy.
+            str: Description text for this bypass strategy.
         """
         descriptions = {
             BypassStrategy.RETURN_TRUE: "Force function to return true (1)",
@@ -138,7 +151,7 @@ class ScriptContext:
     Provides the AI with all necessary information to write an effective script.
 
     Attributes:
-        binary_name: Name of the target binary.
+        binary_name: Name of the binary being analyzed.
         binary_path: Full path to the binary.
         architecture: Target architecture (x86, x64, arm, arm64).
         platform: Target platform (windows, linux, macos).
@@ -177,7 +190,7 @@ class ScriptContext:
             language: Target script language (optional) to include API reference.
 
         Returns:
-            Formatted context string.
+            str: Formatted context string.
         """
         lines = [
             f"Binary: {self.binary_name}",
@@ -272,11 +285,11 @@ class Script:
     """A script ready for execution.
 
     Attributes:
-        name: Script name.
-        script_type: Type of script (frida, ghidra, cutter, python, x64dbg).
-        language: Script language.
-        content: Script content (written by AI).
-        description: Description of what the script does.
+        name: Script name identifier.
+        script_type: Type of the script.
+        language: Programming language of the script.
+        content: Script source code content.
+        description: Human-readable description of the script.
         created_at: Generation timestamp.
         context: Context used to generate the script.
         target_functions: Target functions the script operates on.
@@ -320,7 +333,7 @@ class Script:
         """Get the appropriate file extension for this script type.
 
         Returns:
-            File extension including the dot.
+            str: File extension including the dot.
         """
         extensions = {
             ScriptLanguage.JAVASCRIPT: ".js",
@@ -343,7 +356,7 @@ class ScriptValidator:
             content: Python script content.
 
         Returns:
-            Tuple of (is_valid, error_message).
+            tuple[bool, str | None]: Tuple of (is_valid, error_message).
         """
         try:
             ast.parse(content)
@@ -361,7 +374,7 @@ class ScriptValidator:
             content: JavaScript script content.
 
         Returns:
-            Tuple of (is_valid, error_message).
+            tuple[bool, str | None]: Tuple of (is_valid, error_message).
         """
         _logger.debug("validate_javascript_start", content_length=len(content))
         try:
@@ -410,7 +423,7 @@ class ScriptValidator:
             content: Java script content.
 
         Returns:
-            Tuple of (is_valid, error_message).
+            tuple[bool, str | None]: Tuple of (is_valid, error_message).
         """
         _logger.debug("validate_java_start", content_length=len(content))
         required_elements = ["import", "public", "void run("]
@@ -433,7 +446,7 @@ class ScriptValidator:
             script: Script to validate.
 
         Returns:
-            Tuple of (is_valid, error_message).
+            tuple[bool, str | None]: Tuple of (is_valid, error_message).
         """
         validators = {
             ScriptLanguage.PYTHON: self.validate_python,
@@ -456,19 +469,20 @@ class ScriptValidator:
 class ScriptManager:
     """Manages script storage and retrieval.
 
+    Args:
+        scripts_dir: Directory for storing scripts.
+
     Attributes:
         scripts_dir: Directory for storing scripts.
-        scripts: In-memory script cache.
+        scripts: Mapping of script names to Script objects.
     """
 
-    def __init__(self, scripts_dir: Path) -> None:
-        """Initialize the script manager.
+    scripts_dir: Path
+    scripts: dict[str, Script]
 
-        Args:
-            scripts_dir: Directory for storing scripts.
-        """
+    def __init__(self, scripts_dir: Path) -> None:
         self.scripts_dir = scripts_dir
-        self.scripts: dict[str, Script] = {}
+        self.scripts = {}
         self._validator = ScriptValidator()
 
     def add_script(self, script: Script, validate: bool = True) -> bool:
@@ -479,7 +493,7 @@ class ScriptManager:
             validate: Whether to validate syntax before adding.
 
         Returns:
-            True if script was added successfully.
+            bool: True if script was added successfully.
         """
         if validate:
             is_valid, error = self._validator.validate(script)
@@ -498,7 +512,7 @@ class ScriptManager:
             name: Script name.
 
         Returns:
-            Script or None if not found.
+            Script | None: Script or None if not found.
         """
         return self.scripts.get(name)
 
@@ -509,7 +523,7 @@ class ScriptManager:
             name: Script name to delete.
 
         Returns:
-            True if script was deleted, False if not found.
+            bool: True if script was deleted, False if not found.
         """
         if name not in self.scripts:
             return False
@@ -524,7 +538,7 @@ class ScriptManager:
             script_type: Optional filter by script type.
 
         Returns:
-            List of script names.
+            list[str]: List of script names.
         """
         if script_type is None:
             return list(self.scripts.keys())
@@ -538,7 +552,7 @@ class ScriptManager:
             subdir: Optional subdirectory within scripts_dir.
 
         Returns:
-            Path where script was saved, or None if not found.
+            Path | None: Path where script was saved, or None if not found.
         """
         script = self.scripts.get(name)
         if script is None:
@@ -563,7 +577,7 @@ class ScriptManager:
             path: Path to script file.
 
         Returns:
-            Loaded script or None if failed.
+            Script | None: Loaded script or None if failed.
         """
         if not path.exists():
             _logger.debug("script_load_not_found", path=str(path))
@@ -613,7 +627,7 @@ class ScriptManager:
             name: Script name.
 
         Returns:
-            True if saved successfully.
+            bool: True if saved successfully.
         """
         return self.save_script(name) is not None if name in self.scripts else False
 
@@ -624,7 +638,7 @@ class ScriptManager:
             name: Script name.
 
         Returns:
-            True if reloaded successfully.
+            bool: True if reloaded successfully.
         """
         # First try to find where it might be saved
         # This is a bit tricky since save_script logic handles paths
@@ -661,7 +675,7 @@ class ScriptManager:
             result: The result object or data from execution.
 
         Returns:
-            True if the result was recorded, False if script not found.
+            bool: True if the result was recorded, False if script not found.
         """
         script = self.scripts.get(script_name)
         if script is None:
@@ -683,7 +697,7 @@ def get_frida_api_reference() -> dict[str, str]:
     """Get Frida API reference for AI context.
 
     Returns:
-        Dictionary mapping API categories to usage examples.
+        dict[str, str]: Dictionary mapping API categories to usage examples.
     """
     return {
         "process": ("Process.findModuleByName(name), Process.enumerateModules(), Process.enumerateRanges(protection)"),
@@ -704,7 +718,7 @@ def get_ghidra_api_reference() -> dict[str, str]:
     """Get Ghidra API reference for AI context.
 
     Returns:
-        Dictionary mapping API categories to usage examples.
+        dict[str, str]: Dictionary mapping API categories to usage examples.
     """
     return {
         "program": ("currentProgram.getListing(), currentProgram.getSymbolTable(), currentProgram.getMemory()"),
@@ -719,7 +733,7 @@ def get_cutter_reference() -> dict[str, str]:
     """Get Cutter/Rizin command reference for AI context.
 
     Returns:
-        Dictionary mapping command categories to examples.
+        dict[str, str]: Dictionary mapping command categories to examples.
     """
     return {
         "analysis": "aaa (analyze all), af (analyze function), afl (list functions)",
@@ -735,7 +749,7 @@ def get_x64dbg_reference() -> dict[str, str]:
     """Get x64dbg command reference for AI context.
 
     Returns:
-        Dictionary mapping command categories to examples.
+        dict[str, str]: Dictionary mapping command categories to examples.
     """
     return {
         "breakpoints": ("bp addr (set bp), bc addr (clear bp), bph addr (hardware bp)"),
@@ -750,7 +764,7 @@ class ScriptGenerator:
     """Generates AI prompts for dynamic script generation in Intellicrack."""
 
     def __init__(self) -> None:
-        """Initialize the script generator."""
+        pass
 
     @staticmethod
     def prepare_ai_prompt(context: ScriptContext, language: ScriptLanguage) -> str:
@@ -761,7 +775,7 @@ class ScriptGenerator:
             language: Target script language.
 
         Returns:
-            Full prompt string including context and API references.
+            str: Full prompt string including context and API references.
         """
         context_str = context.to_prompt_context(language)
 

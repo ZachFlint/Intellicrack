@@ -89,7 +89,7 @@ class ToolVersion:
         """Get string representation.
 
         Returns:
-            Version string in major.minor.patch format.
+            str: Version string in major.minor.patch format.
         """
         return f"{self.major}.{self.minor}.{self.patch}"
 
@@ -100,7 +100,7 @@ class ToolVersion:
             other: Version to compare against.
 
         Returns:
-            True if this version is greater or equal.
+            bool: True if this version is greater or equal.
         """
         if self.major != other.major:
             return self.major >= other.major
@@ -202,17 +202,11 @@ TOOL_REGISTRY: dict[ToolName, ToolInfo] = {
 class ToolInstaller:
     """Handles automatic tool detection and installation.
 
-    Attributes:
-        tools_directory: Base directory for tool installations.
-        _http_client: HTTP client for downloads.
+    Args:
+        tools_directory: Directory where tools should be installed.
     """
 
     def __init__(self, tools_directory: Path) -> None:
-        """Initialize the tool installer.
-
-        Args:
-            tools_directory: Directory where tools should be installed.
-        """
         self.tools_directory = tools_directory
         self._http_client: httpx.AsyncClient | None = None
 
@@ -222,7 +216,7 @@ class ToolInstaller:
         """Get or create HTTP client.
 
         Returns:
-            Async HTTP client instance.
+            httpx.AsyncClient: Async HTTP client instance.
         """
         if self._http_client is None:
             self._http_client = httpx.AsyncClient(
@@ -247,7 +241,7 @@ class ToolInstaller:
             tool: The tool to find.
 
         Returns:
-            Path to tool installation or None if not found.
+            Path | None: Path to tool installation or None if not found.
         """
         tool_info = TOOL_REGISTRY.get(tool)
         if tool_info is None:
@@ -299,7 +293,7 @@ class ToolInstaller:
         """Check if Frida Python package is installed.
 
         Returns:
-            Path indicating Frida is installed, or None.
+            Path | None: Path indicating Frida is installed, or None.
         """
         try:
             process_manager = ProcessManager.get_instance()
@@ -323,7 +317,7 @@ class ToolInstaller:
             path: Path to the tool installation.
 
         Returns:
-            Parsed version or None if couldn't determine.
+            ToolVersion | None: Parsed version or None if couldn't determine.
         """
         if tool == ToolName.GHIDRA:
             return self._get_ghidra_version(path)
@@ -376,7 +370,7 @@ class ToolInstaller:
             path: Path to the Ghidra installation root.
 
         Returns:
-            Parsed ToolVersion or None if the file cannot be read.
+            ToolVersion | None: Parsed ToolVersion or None if the file cannot be read.
         """
         props_path = path / "Ghidra" / "application.properties"
         if not props_path.is_file():
@@ -427,7 +421,7 @@ class ToolInstaller:
             version_str: Raw version string.
 
         Returns:
-            Parsed ToolVersion.
+            ToolVersion: Parsed ToolVersion.
         """
         version = ToolVersion(raw=version_str)
 
@@ -447,7 +441,7 @@ class ToolInstaller:
             path: Path to installation.
 
         Returns:
-            True if installation is valid and meets minimum version.
+            bool: True if installation is valid and meets minimum version.
         """
         if tool in {ToolName.PROCESS, ToolName.BINARY}:
             return True
@@ -485,7 +479,7 @@ class ToolInstaller:
             tool: The tool to install.
 
         Returns:
-            InstallResult with installation status.
+            InstallResult: InstallResult with installation status.
         """
         tool_info = TOOL_REGISTRY.get(tool)
         if tool_info is None:
@@ -541,7 +535,7 @@ class ToolInstaller:
         """Install Frida Python package.
 
         Returns:
-            InstallResult with installation status.
+            InstallResult: InstallResult with installation status.
         """
         try:
             _logger.info("frida_pip_installing", tool="frida")
@@ -583,7 +577,7 @@ class ToolInstaller:
             tool: Tool to get release for.
 
         Returns:
-            Download URL or None if not found.
+            str | None: Download URL or None if not found.
         """
         tool_info = TOOL_REGISTRY.get(tool)
         if tool_info is None or not tool_info.download_url:
@@ -631,7 +625,7 @@ class ToolInstaller:
             url: URL to download.
 
         Returns:
-            Path to downloaded file or None on failure.
+            Path | None: Path to downloaded file or None on failure.
         """
         try:
             client = await self._get_client()
@@ -671,7 +665,7 @@ class ToolInstaller:
             tool: Tool being extracted.
 
         Returns:
-            Path to extracted tool.
+            Path: Path to extracted tool.
 
         Raises:
             ToolError: If extraction fails.
@@ -715,7 +709,7 @@ class ToolInstaller:
             tool: The tool to ensure.
 
         Returns:
-            Path to tool installation.
+            Path: Path to tool installation.
 
         Raises:
             ToolError: If tool cannot be found or installed.
@@ -737,7 +731,7 @@ class ToolInstaller:
         """Get status of all tools.
 
         Returns:
-            Dict mapping tool name to (available, path) tuple.
+            dict[ToolName, tuple[bool, Path | None]]: Dict mapping tool name to (available, path) tuple.
         """
         status: dict[ToolName, tuple[bool, Path | None]] = {}
 
@@ -765,7 +759,7 @@ def _find_cmake() -> Path | None:
     via ``vswhere.exe``.
 
     Returns:
-        Path to cmake if found, otherwise None.
+        Path | None: Path to cmake if found, otherwise None.
     """
     found = shutil.which("cmake")
     if found is not None:
@@ -784,8 +778,7 @@ def _find_cmake() -> Path | None:
             text=True,
             timeout=15,
         )
-        vs_path = result.stdout.strip()
-        if vs_path:
+        if vs_path := result.stdout.strip():
             cmake_path = Path(vs_path) / "Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe"
             if cmake_path.is_file():
                 return cmake_path
@@ -804,7 +797,7 @@ def _detect_vs_generator(cmake_path: Path) -> str | None:
         cmake_path: Path to the cmake executable.
 
     Returns:
-        Generator string (e.g. ``"Visual Studio 18 2026"``) or None.
+        str | None: Generator string (e.g. ``"Visual Studio 18 2026"``) or None.
     """
     try:
         result = _subprocess_run(
@@ -821,12 +814,11 @@ def _detect_vs_generator(cmake_path: Path) -> str | None:
     best: str | None = None
     best_ver = 0
     for line in result.stdout.splitlines():
-        match = re.search(r"(Visual Studio (\d+) \d{4})", line)
-        if match:
-            ver = int(match.group(2))
+        if match := re.search(r"(Visual Studio (\d+) \d{4})", line):
+            ver = int(match[2])
             if ver > best_ver:
                 best_ver = ver
-                best = match.group(1)
+                best = match[1]
     return best
 
 
@@ -843,7 +835,7 @@ def build_x64dbg_plugin(plugin_dir: Path, x64dbg_path: Path) -> bool:
             as a hint for SDK headers).
 
     Returns:
-        True if at least one architecture built successfully.
+        bool: True if at least one architecture built successfully.
     """
     cmake_path = _find_cmake()
     if cmake_path is None:
@@ -928,7 +920,7 @@ def _find_plugin_source(plugin_dir: Path, filename: str) -> Path | None:
         filename: Plugin filename to search for (e.g. ``intellicrack_bridge_x64.dp64``).
 
     Returns:
-        Path to the binary if found, otherwise None.
+        Path | None: Path to the binary if found, otherwise None.
     """
     arch = "x64" if filename.endswith(".dp64") else "x32"
     candidates: list[Path] = [
@@ -938,10 +930,9 @@ def _find_plugin_source(plugin_dir: Path, filename: str) -> Path | None:
         plugin_dir / f"build_{arch}" / "plugins" / filename,
         plugin_dir / f"build_{arch}" / "Release" / filename,
     ]
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-    return None
+    return next(
+        (candidate for candidate in candidates if candidate.is_file()), None
+    )
 
 
 def deploy_x64dbg_plugin(x64dbg_path: Path, tools_directory: Path) -> bool:
@@ -957,7 +948,7 @@ def deploy_x64dbg_plugin(x64dbg_path: Path, tools_directory: Path) -> bool:
         tools_directory: Path to the tools directory containing ``x64dbg_plugin/``.
 
     Returns:
-        True if at least one plugin was deployed or is already up-to-date.
+        bool: True if at least one plugin was deployed or is already up-to-date.
     """
     plugin_dir = tools_directory / "x64dbg_plugin"
     if not plugin_dir.is_dir():

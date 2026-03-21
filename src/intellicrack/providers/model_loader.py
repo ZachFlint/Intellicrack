@@ -71,17 +71,7 @@ _ACTIVATION_OVERHEAD_MULTIPLIER: float = 1.3
 
 @dataclass
 class LoadedModel:
-    """A loaded model with its tokenizer and metadata.
-
-    Attributes:
-        model: The loaded HuggingFace model.
-        tokenizer: The associated tokenizer.
-        device: The device the model is loaded on.
-        dtype: The data type used for the model.
-        memory_usage_bytes: Estimated memory usage in bytes.
-        model_id: The HuggingFace model identifier.
-        load_time_seconds: Time taken to load the model.
-    """
+    """A loaded model with its tokenizer and metadata."""
 
     model: PreTrainedModel
     tokenizer: PreTrainedTokenizerBase
@@ -97,7 +87,7 @@ class ModelConfig:
     """Configuration for model loading.
 
     Attributes:
-        model_id: HuggingFace model identifier or path.
+        model_id: HuggingFace model identifier or local path.
         dtype: Data type for the model.
         device: Target device.
         max_memory_bytes: Maximum memory to use.
@@ -125,16 +115,11 @@ class ModelCache:
     Maintains an LRU cache of loaded models, automatically evicting
     least recently used models when the memory limit is exceeded.
 
-    Attributes:
-        max_memory_bytes: Maximum total memory for cached models.
+    Args:
+        max_memory_bytes: Maximum memory for cached models.
     """
 
     def __init__(self, max_memory_bytes: int = _DEFAULT_CACHE_SIZE_BYTES) -> None:
-        """Initialize the model cache.
-
-        Args:
-            max_memory_bytes: Maximum memory for cached models.
-        """
         self._cache: OrderedDict[str, LoadedModel] = OrderedDict()
         self._lock = threading.RLock()
         self._max_memory_bytes = max_memory_bytes
@@ -145,7 +130,7 @@ class ModelCache:
         """Get the maximum memory limit.
 
         Returns:
-            Maximum memory in bytes allowed for cached models.
+            int: Maximum memory in bytes allowed for cached models.
         """
         return self._max_memory_bytes
 
@@ -169,7 +154,7 @@ class ModelCache:
             device_type: The device type.
 
         Returns:
-            The cached LoadedModel or None if not cached.
+            LoadedModel | None: The cached LoadedModel or None if not cached.
         """
         cache_key = self._make_key(model_id, dtype, device_type)
         with self._lock:
@@ -215,7 +200,7 @@ class ModelCache:
             device_type: The device type.
 
         Returns:
-            True if model was removed, False if not found.
+            bool: True if model was removed, False if not found.
         """
         cache_key = self._make_key(model_id, dtype, device_type)
         with self._lock:
@@ -240,7 +225,7 @@ class ModelCache:
         """Get current memory usage.
 
         Returns:
-            Current memory usage in bytes.
+            int: Current memory usage in bytes.
         """
         with self._lock:
             return self._current_memory_bytes
@@ -255,7 +240,7 @@ class ModelCache:
             device_type: The device type.
 
         Returns:
-            Cache key string.
+            str: Cache key string.
         """
         return f"{model_id}::{dtype}::{device_type}"
 
@@ -309,7 +294,7 @@ def estimate_model_memory(
         include_activations: Include activation memory overhead.
 
     Returns:
-        Estimated memory in bytes.
+        int: Estimated memory in bytes.
     """
     param_count = _estimate_parameter_count(model_id)
 
@@ -348,7 +333,7 @@ def _estimate_parameter_count(model_id: str) -> int:
         model_id: HuggingFace model identifier.
 
     Returns:
-        Estimated parameter count.
+        int: Estimated parameter count.
     """
     model_lower = model_id.lower()
 
@@ -427,7 +412,7 @@ def select_dtype_for_memory(
         preferred_dtype: Preferred dtype if it fits.
 
     Returns:
-        Selected dtype that should fit in memory.
+        DtypeOption: Selected dtype that should fit in memory.
     """
     if preferred_dtype != "auto":
         estimated = estimate_model_memory(model_id, preferred_dtype)
@@ -473,7 +458,7 @@ def load_model_for_xpu(
         cache: Optional model cache.
 
     Returns:
-        LoadedModel with model, tokenizer, and metadata.
+        LoadedModel: LoadedModel with model, tokenizer, and metadata.
 
     Raises:
         RuntimeError: If model loading fails.
@@ -587,7 +572,7 @@ def load_model_for_cpu(
         cache: Optional model cache.
 
     Returns:
-        LoadedModel with model, tokenizer, and metadata.
+        LoadedModel: LoadedModel with model, tokenizer, and metadata.
 
     Raises:
         RuntimeError: If model loading fails.
@@ -684,7 +669,7 @@ def _get_torch_dtype(dtype_str: str) -> torch.dtype:
         dtype_str: String dtype name.
 
     Returns:
-        Corresponding torch.dtype.
+        torch.dtype: Corresponding torch.dtype.
 
     Raises:
         ImportError: If torch is not installed.
@@ -714,7 +699,7 @@ def _get_quantization_config(dtype_str: str) -> object:
         dtype_str: Quantization precision, either ``"int8"`` or ``"int4"``.
 
     Returns:
-        A ``BitsAndBytesConfig`` instance (preferred) or a plain
+        object: A ``BitsAndBytesConfig`` instance (preferred) or a plain
         ``dict`` when the config class is unavailable.
 
     Raises:
@@ -760,7 +745,7 @@ def get_global_model_cache() -> ModelCache:
     """Get the global model cache singleton.
 
     Returns:
-        The global ModelCache instance.
+        ModelCache: The global ModelCache instance.
     """
     with _cache_lock:
         if "cache" not in _cache_state:

@@ -105,7 +105,7 @@ async def _fetch_model_config(model_id: str) -> dict[str, Any]:
         model_id: HuggingFace model identifier (e.g. "microsoft/Phi-3-mini-4k-instruct").
 
     Returns:
-        Parsed config dict, or empty dict on failure.
+        dict[str, Any]: Parsed config dict, or empty dict on failure.
     """
     url = _HF_CONFIG_URL.format(model_id=model_id)
     try:
@@ -128,7 +128,7 @@ def _classify_model_capabilities(
         config: Parsed config.json dict from HuggingFace Hub.
 
     Returns:
-        Tuple of (context_window, supports_vision).
+        tuple[int, bool]: Tuple of (context_window, supports_vision).
     """
     context_window = 4096
     for key in ("max_position_embeddings", "max_sequence_length", "n_positions"):
@@ -158,11 +158,9 @@ class LocalTransformersProvider(LLMProviderBase):
     with automatic Intel XPU acceleration when available, falling back
     to CPU when XPU is unavailable.
 
-    Attributes:
-        device_type: Current device type ("xpu" or "cpu").
-        xpu_available: Whether XPU is available.
-        is_arc_b580: Whether an Arc B580 is detected.
-        current_model_id: Currently loaded model ID.
+    Args:
+        model_cache: Optional model cache. Uses global cache if None.
+        prefer_xpu: Whether to prefer XPU over CPU when available.
     """
 
     def __init__(
@@ -170,12 +168,6 @@ class LocalTransformersProvider(LLMProviderBase):
         model_cache: ModelCache | None = None,
         prefer_xpu: bool = True,
     ) -> None:
-        """Initialize the Local Transformers provider.
-
-        Args:
-            model_cache: Optional model cache. Uses global cache if None.
-            prefer_xpu: Whether to prefer XPU over CPU when available.
-        """
         super().__init__()
         self._model_cache = model_cache or get_global_model_cache()
         self._prefer_xpu = prefer_xpu
@@ -191,7 +183,7 @@ class LocalTransformersProvider(LLMProviderBase):
         """Get the provider's name.
 
         Returns:
-            ProviderName.LOCAL_TRANSFORMERS
+            ProviderName: ProviderName.LOCAL_TRANSFORMERS
         """
         return ProviderName.LOCAL_TRANSFORMERS
 
@@ -200,7 +192,7 @@ class LocalTransformersProvider(LLMProviderBase):
         """Get the current device type.
 
         Returns:
-            "xpu" or "cpu" depending on what's being used.
+            str: "xpu" or "cpu" depending on what's being used.
         """
         return self._device_type
 
@@ -209,7 +201,7 @@ class LocalTransformersProvider(LLMProviderBase):
         """Check if XPU is available.
 
         Returns:
-            True if XPU is available and usable.
+            bool: True if XPU is available and usable.
         """
         return self._xpu_available
 
@@ -218,7 +210,7 @@ class LocalTransformersProvider(LLMProviderBase):
         """Check if an Arc B580 is detected.
 
         Returns:
-            True if an Arc B580 GPU is detected.
+            bool: True if an Arc B580 GPU is detected.
         """
         return self._is_arc_b580
 
@@ -227,7 +219,7 @@ class LocalTransformersProvider(LLMProviderBase):
         """Get the currently loaded model ID.
 
         Returns:
-            Model ID or None if no model is loaded.
+            str | None: Model ID or None if no model is loaded.
         """
         return self._loaded_model.model_id if self._loaded_model else None
 
@@ -305,7 +297,7 @@ class LocalTransformersProvider(LLMProviderBase):
         fail gracefully if it is not).
 
         Returns:
-            List of ``ModelInfo`` objects for models that can be loaded
+            list[ModelInfo]: List of ``ModelInfo`` objects for models that can be loaded
             on the current device.
 
         Raises:
@@ -391,7 +383,7 @@ class LocalTransformersProvider(LLMProviderBase):
             enable_cache: Whether to enable prompt caching (ignored locally).
 
         Returns:
-            Tuple of (assistant message, tool calls if any).
+            tuple[Message, list[ToolCall] | None]: Tuple of (assistant message, tool calls if any).
 
         Raises:
             ProviderError: If not connected or request fails.
@@ -482,7 +474,7 @@ class LocalTransformersProvider(LLMProviderBase):
             enable_cache: Whether to enable prompt caching (ignored locally).
 
         Yields:
-            Text chunks as they are generated.
+            str: Text chunks as they are generated.
 
         Raises:
             ProviderError: If not connected or request fails.
@@ -518,8 +510,7 @@ class LocalTransformersProvider(LLMProviderBase):
 
             if tools and not self._cancel_requested:
                 full_text = "".join(accumulated_chunks)
-                parsed_calls = self._parse_tool_calls(full_text)
-                if parsed_calls:
+                if parsed_calls := self._parse_tool_calls(full_text):
                     self._pending_tool_calls = parsed_calls
 
         except Exception as exc:
@@ -599,7 +590,7 @@ class LocalTransformersProvider(LLMProviderBase):
             max_tokens: Maximum new tokens.
 
         Returns:
-            Generated text.
+            str: Generated text.
 
         Raises:
             RuntimeError: If no model is currently loaded.
@@ -651,7 +642,7 @@ class LocalTransformersProvider(LLMProviderBase):
             max_tokens: Maximum new tokens.
 
         Yields:
-            Text chunks.
+            str: Text chunks.
 
         Raises:
             RuntimeError: If no model is currently loaded.
@@ -738,7 +729,7 @@ class LocalTransformersProvider(LLMProviderBase):
             messages: List of Message objects.
 
         Returns:
-            List of message dictionaries.
+            list[dict[str, object]]: List of message dictionaries.
         """
         result: list[dict[str, object]] = []
 
@@ -785,7 +776,7 @@ class LocalTransformersProvider(LLMProviderBase):
             tools: List of ToolDefinition objects.
 
         Returns:
-            List of tool dictionaries.
+            list[dict[str, object]]: List of tool dictionaries.
         """
         result: list[dict[str, object]] = []
         for tool in tools:
@@ -814,7 +805,7 @@ class LocalTransformersProvider(LLMProviderBase):
                 prompt so the model is aware of callable functions.
 
         Returns:
-            Fully formatted prompt string ready for tokenization.
+            str: Fully formatted prompt string ready for tokenization.
         """
         chat_messages = self._build_chat_messages(messages, tools)
 
@@ -854,7 +845,7 @@ class LocalTransformersProvider(LLMProviderBase):
             tools: Optional tool definitions to expose to the model.
 
         Returns:
-            List of ``{"role": str, "content": str}`` dictionaries.
+            list[dict[str, str]]: List of ``{"role": str, "content": str}`` dictionaries.
         """
         chat_messages: list[dict[str, str]] = []
 
@@ -904,7 +895,7 @@ class LocalTransformersProvider(LLMProviderBase):
                 ``_build_chat_messages``.
 
         Returns:
-            ChatML-formatted prompt string with a trailing generation
+            str: ChatML-formatted prompt string with a trailing generation
             prompt.
         """
         parts: list[str] = []
@@ -923,7 +914,7 @@ class LocalTransformersProvider(LLMProviderBase):
             response: Model response text.
 
         Returns:
-            List of ToolCall objects or None.
+            list[ToolCall] | None: List of ToolCall objects or None.
         """
         start_idx = response.find('{"tool_call":')
         if start_idx == -1:
@@ -988,7 +979,7 @@ class LocalTransformersProvider(LLMProviderBase):
             response: Full response text.
 
         Returns:
-            Text before the tool call JSON.
+            str: Text before the tool call JSON.
         """
         if match := re.search(r'\{"tool_call":', response):
             return response[: match.start()].strip()
@@ -998,7 +989,7 @@ class LocalTransformersProvider(LLMProviderBase):
         """Get information about the current device.
 
         Returns:
-            Dictionary with device information.
+            dict[str, object]: Dictionary with device information.
         """
         info: dict[str, object] = {
             "device_type": self._device_type,

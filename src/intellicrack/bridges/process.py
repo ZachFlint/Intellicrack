@@ -135,8 +135,26 @@ class ProcessBridge(ToolBridgeBase):
     thread control, and module enumeration.
 
     Attributes:
-        _attached_pid: Currently attached process ID.
-        _process_handle: Windows process handle.
+        PROCESS_ALL_ACCESS: Win32 access mask granting all process permissions.
+        PROCESS_QUERY_INFORMATION: Win32 right to query process metadata.
+        PROCESS_VM_READ: Win32 right to read process virtual memory.
+        PROCESS_VM_WRITE: Win32 right to write process virtual memory.
+        PROCESS_VM_OPERATION: Win32 right for VM operations (VirtualAllocEx, etc.).
+        PROCESS_TERMINATE: Win32 right to terminate a process.
+        PROCESS_SUSPEND_RESUME: Win32 right to suspend or resume process threads.
+        TH32CS_SNAPPROCESS: Toolhelp32 flag to include processes in snapshot.
+        TH32CS_SNAPTHREAD: Toolhelp32 flag to include threads in snapshot.
+        TH32CS_SNAPMODULE: Toolhelp32 flag to include modules in snapshot.
+        TH32CS_SNAPMODULE32: Toolhelp32 flag to include 32-bit modules from 64-bit process.
+        MEM_COMMIT: VirtualAlloc flag to commit physical storage for a region.
+        MEM_RESERVE: VirtualAlloc flag to reserve virtual address space.
+        MEM_RELEASE: VirtualFree flag to release a memory region.
+        PAGE_NOACCESS: Memory protection: no access permitted.
+        PAGE_READONLY: Memory protection: read-only access.
+        PAGE_READWRITE: Memory protection: read and write access.
+        PAGE_EXECUTE: Memory protection: execute-only access.
+        PAGE_EXECUTE_READ: Memory protection: execute and read access.
+        PAGE_EXECUTE_READWRITE: Memory protection: execute, read, and write access.
     """
 
     PROCESS_ALL_ACCESS = 0x1F0FFF
@@ -164,7 +182,6 @@ class ProcessBridge(ToolBridgeBase):
     PAGE_EXECUTE_READWRITE = 0x40
 
     def __init__(self) -> None:
-        """Initialize the process bridge."""
         super().__init__()
         self._attached_pid: int | None = None
         self._process_handle: int | None = None
@@ -182,7 +199,7 @@ class ProcessBridge(ToolBridgeBase):
         """Get the tool's name.
 
         Returns:
-            ToolName.PROCESS
+            ToolName: ToolName.PROCESS
         """
         return ToolName.PROCESS
 
@@ -191,7 +208,7 @@ class ProcessBridge(ToolBridgeBase):
         """Get tool definition for LLM function calling.
 
         Returns:
-            ToolDefinition with all available functions.
+            ToolDefinition: ToolDefinition with all available functions.
         """
         return ToolDefinition(
             tool_name=ToolName.PROCESS,
@@ -491,7 +508,7 @@ class ProcessBridge(ToolBridgeBase):
         """Check if process bridge is available.
 
         Returns:
-            True on Windows systems.
+            bool: True on Windows systems.
         """
         try:
             _ = ctypes.windll.kernel32
@@ -511,7 +528,7 @@ class ProcessBridge(ToolBridgeBase):
             filter_name: Optional name filter.
 
         Returns:
-            List of processes.
+            list[ProcessInfo]: List of processes.
 
         Raises:
             ToolError: If enumeration fails.
@@ -570,7 +587,7 @@ class ProcessBridge(ToolBridgeBase):
             access: Access rights required.
 
         Returns:
-            True if successful.
+            bool: True if successful.
 
         Raises:
             ToolError: If open fails.
@@ -611,7 +628,7 @@ class ProcessBridge(ToolBridgeBase):
         """Close the current process handle.
 
         Returns:
-            True if closed.
+            bool: True if closed.
         """
         if self._process_handle is not None and self._kernel32 is not None:
             self._kernel32.CloseHandle(self._process_handle)
@@ -633,7 +650,7 @@ class ProcessBridge(ToolBridgeBase):
             pid: Process ID (uses current if not specified).
 
         Returns:
-            True if terminated.
+            bool: True if terminated.
 
         Raises:
             ToolError: If termination fails.
@@ -673,7 +690,7 @@ class ProcessBridge(ToolBridgeBase):
             pid: Process ID (uses current if not specified).
 
         Returns:
-            True if suspended.
+            bool: True if suspended.
 
         Raises:
             ToolError: If suspension fails.
@@ -702,7 +719,7 @@ class ProcessBridge(ToolBridgeBase):
             pid: Process ID (uses current if not specified).
 
         Returns:
-            True if resumed.
+            bool: True if resumed.
 
         Raises:
             ToolError: If resume fails.
@@ -732,7 +749,7 @@ class ProcessBridge(ToolBridgeBase):
             size: Bytes to read.
 
         Returns:
-            Memory contents.
+            bytes: Memory contents.
 
         Raises:
             ToolError: If read fails.
@@ -765,7 +782,7 @@ class ProcessBridge(ToolBridgeBase):
             data: Bytes to write.
 
         Returns:
-            Bytes written.
+            int: Bytes written.
 
         Raises:
             ToolError: If write fails.
@@ -804,7 +821,7 @@ class ProcessBridge(ToolBridgeBase):
             protection: Memory protection string.
 
         Returns:
-            Allocated address.
+            int: Allocated address.
 
         Raises:
             ToolError: If allocation fails.
@@ -849,7 +866,7 @@ class ProcessBridge(ToolBridgeBase):
             address: Address to free.
 
         Returns:
-            True if freed.
+            bool: True if freed.
 
         Raises:
             ToolError: If free fails.
@@ -887,7 +904,7 @@ class ProcessBridge(ToolBridgeBase):
             protection: New protection.
 
         Returns:
-            Previous protection.
+            str: Previous protection.
 
         Raises:
             ToolError: If operation fails.
@@ -933,7 +950,7 @@ class ProcessBridge(ToolBridgeBase):
             pid: Process ID (uses current if not specified).
 
         Returns:
-            List of modules.
+            list[ModuleInfo]: List of modules.
 
         Raises:
             ToolError: If operation fails.
@@ -995,7 +1012,7 @@ class ProcessBridge(ToolBridgeBase):
             pid: Process ID (uses current if not specified).
 
         Returns:
-            List of threads.
+            list[ThreadInfo]: List of threads.
 
         Raises:
             ToolError: If operation fails.
@@ -1046,7 +1063,7 @@ class ProcessBridge(ToolBridgeBase):
         """Get process memory map.
 
         Returns:
-            List of memory regions.
+            list[MemoryRegion]: List of memory regions.
 
         Raises:
             ToolError: If operation fails.
@@ -1127,7 +1144,7 @@ class ProcessBridge(ToolBridgeBase):
             end_address: Optional end address.
 
         Returns:
-            List of matching addresses.
+            list[int]: List of matching addresses.
         """
         _logger.debug("pattern_search_starting", pattern=pattern)
         pattern_bytes: list[int | None] = []
@@ -1172,7 +1189,7 @@ class ProcessBridge(ToolBridgeBase):
             dll_path: Path to DLL file.
 
         Returns:
-            True if injected.
+            bool: True if injected.
 
         Raises:
             ToolError: If injection fails.
@@ -1235,7 +1252,7 @@ class ProcessBridge(ToolBridgeBase):
             pid: Process ID (uses current if not specified).
 
         Returns:
-            Process info or None if not found.
+            ProcessInfo | None: Process info or None if not found.
         """
         _logger.debug("process_info_reading", pid=pid)
         target_pid = pid or self._attached_pid

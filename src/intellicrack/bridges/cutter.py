@@ -77,7 +77,7 @@ def _get_str(data: dict[str, Any], key: str, default: str = "") -> str:
         default: Default value if key not found or not a string.
 
     Returns:
-        String value or default.
+        str: String value or default.
     """
     val = data.get(key, default)
     return val if isinstance(val, str) else default
@@ -92,7 +92,7 @@ def _get_int(data: dict[str, Any], key: str, default: int = 0) -> int:
         default: Default value if key not found or not an int.
 
     Returns:
-        Integer value or default.
+        int: Integer value or default.
     """
     val = data.get(key, default)
     return val if isinstance(val, int) else default
@@ -107,7 +107,7 @@ def _get_float(data: dict[str, Any], key: str, default: float = 0.0) -> float:
         default: Default value if key not found or not a float.
 
     Returns:
-        Float value or default.
+        float: Float value or default.
     """
     val = data.get(key, default)
     return float(val) if isinstance(val, (int, float)) else default
@@ -121,7 +121,7 @@ def _get_dict(data: dict[str, Any], key: str) -> dict[str, Any]:
         key: Key to look up.
 
     Returns:
-        Dictionary value or empty dict.
+        dict[str, Any]: Dictionary value or empty dict.
     """
     val = data.get(key)
     return cast("dict[str, Any]", val) if isinstance(val, dict) else {}
@@ -135,7 +135,7 @@ def _get_optional_str(data: dict[str, Any], key: str) -> str | None:
         key: Key to look up.
 
     Returns:
-        String value or None.
+        str | None: String value or None.
     """
     val = data.get(key)
     return val if isinstance(val, str) else None
@@ -149,7 +149,7 @@ def _get_optional_int(data: dict[str, Any], key: str) -> int | None:
         key: Key to look up.
 
     Returns:
-        Integer value or None.
+        int | None: Integer value or None.
     """
     val = data.get(key)
     return val if isinstance(val, int) else None
@@ -163,7 +163,7 @@ def _get_list(data: dict[str, Any], key: str) -> list[Any]:
         key: Key to look up.
 
     Returns:
-        List value or empty list.
+        list[Any]: List value or empty list.
     """
     val = data.get(key)
     return cast("list[Any]", val) if isinstance(val, list) else []
@@ -174,15 +174,9 @@ class CutterBridge(StaticAnalysisBridge):
 
     Provides static analysis, disassembly, and debugging capabilities
     using the r2pipe interface.
-
-    Attributes:
-        _r2: The r2pipe instance.
-        _binary_path: Path to the loaded binary.
-        _analyzed: Whether analysis has been run.
     """
 
     def __init__(self) -> None:
-        """Initialize the Cutter bridge."""
         super().__init__()
         self._r2: r2pipe.open | None = None
         self._binary_path: Path | None = None
@@ -206,7 +200,7 @@ class CutterBridge(StaticAnalysisBridge):
             command: The r2 command to execute.
 
         Returns:
-            Command output as string, empty string if None.
+            str: Command output as string, empty string if None.
 
         Raises:
             ToolError: If r2 is not connected or command times out.
@@ -233,7 +227,7 @@ class CutterBridge(StaticAnalysisBridge):
         """Get the tool's name.
 
         Returns:
-            ToolName.CUTTER
+            ToolName: ToolName.CUTTER
         """
         return ToolName.CUTTER
 
@@ -242,7 +236,7 @@ class CutterBridge(StaticAnalysisBridge):
         """Get tool definition for LLM function calling.
 
         Returns:
-            ToolDefinition with all available functions.
+            ToolDefinition: ToolDefinition with all available functions.
         """
         return ToolDefinition(
             tool_name=ToolName.CUTTER,
@@ -597,7 +591,7 @@ class CutterBridge(StaticAnalysisBridge):
         """Check if Cutter/Rizin is available.
 
         Returns:
-            True if Cutter/Rizin can be used.
+            bool: True if Cutter/Rizin can be used.
         """
         r2: r2pipe.open | None = None
         try:
@@ -656,7 +650,7 @@ class CutterBridge(StaticAnalysisBridge):
         """Extract MD5 and SHA256 hashes from loaded binary.
 
         Returns:
-            Tuple of (md5, sha256) hash strings.
+            tuple[str, str]: Tuple of (md5, sha256) hash strings.
         """
         hashes = await self._cmd_json("itj")
         md5 = ""
@@ -674,7 +668,7 @@ class CutterBridge(StaticAnalysisBridge):
         """Extract binary metadata from Rizin.
 
         Returns:
-            Tuple of (file_type, arch, bits, entry_point).
+            tuple[str, str, int, int]: Tuple of (file_type, arch, bits, entry_point).
         """
         info_list = await self._cmd_json("ij")
         info = info_list[0] if info_list else {}
@@ -697,7 +691,7 @@ class CutterBridge(StaticAnalysisBridge):
             path: Path to the binary file.
 
         Returns:
-            BinaryInfo with file details.
+            BinaryInfo: BinaryInfo with file details.
 
         Raises:
             ToolError: If load fails.
@@ -782,7 +776,7 @@ class CutterBridge(StaticAnalysisBridge):
             filter_pattern: Optional regex to filter names.
 
         Returns:
-            List of function information.
+            list[FunctionInfo]: List of function information.
 
         Raises:
             ToolError: If operation fails.
@@ -826,7 +820,7 @@ class CutterBridge(StaticAnalysisBridge):
             address: Function address.
 
         Returns:
-            Function info or None if not found.
+            FunctionInfo | None: Function info or None if not found.
 
         Raises:
             ToolError: If operation fails.
@@ -900,7 +894,7 @@ class CutterBridge(StaticAnalysisBridge):
             address: Function address.
 
         Returns:
-            Decompiled C-like pseudocode.
+            str: Decompiled C-like pseudocode.
 
         Raises:
             ToolError: If decompilation fails.
@@ -934,7 +928,7 @@ class CutterBridge(StaticAnalysisBridge):
             count: Number of instructions.
 
         Returns:
-            List of disassembly lines.
+            list[DisassemblyLine]: List of disassembly lines.
 
         Raises:
             ToolError: If disassembly fails.
@@ -974,7 +968,7 @@ class CutterBridge(StaticAnalysisBridge):
             address: Target address.
 
         Returns:
-            List of cross-references.
+            list[CrossReference]: List of cross-references.
 
         Raises:
             ToolError: If operation fails.
@@ -1017,7 +1011,7 @@ class CutterBridge(StaticAnalysisBridge):
             address: Source address.
 
         Returns:
-            List of cross-references.
+            list[CrossReference]: List of cross-references.
 
         Raises:
             ToolError: If operation fails.
@@ -1060,7 +1054,7 @@ class CutterBridge(StaticAnalysisBridge):
             pattern: Regex pattern to match.
 
         Returns:
-            List of matching strings.
+            list[StringInfo]: List of matching strings.
 
         Raises:
             ToolError: If search fails.
@@ -1108,7 +1102,7 @@ class CutterBridge(StaticAnalysisBridge):
             pattern: Byte sequence to find.
 
         Returns:
-            List of addresses.
+            list[int]: List of addresses.
 
         Raises:
             ToolError: If search fails.
@@ -1132,7 +1126,7 @@ class CutterBridge(StaticAnalysisBridge):
             hex_pattern: Hex pattern like '48 8B ?? ??'.
 
         Returns:
-            List of addresses.
+            list[int]: List of addresses.
 
         Raises:
             ToolError: If search fails.
@@ -1153,7 +1147,7 @@ class CutterBridge(StaticAnalysisBridge):
         """Get section information.
 
         Returns:
-            List of section info.
+            list[SectionInfo]: List of section info.
         """
         if self._r2 is None:
             _logger.error("cutter_unavailable", operation="_get_sections_internal")
@@ -1177,7 +1171,7 @@ class CutterBridge(StaticAnalysisBridge):
         """Get import information.
 
         Returns:
-            List of import info.
+            list[ImportInfo]: List of import info.
         """
         if self._r2 is None:
             _logger.error("cutter_unavailable", operation="_get_imports_internal")
@@ -1199,7 +1193,7 @@ class CutterBridge(StaticAnalysisBridge):
         """Get export information.
 
         Returns:
-            List of export info.
+            list[ExportInfo]: List of export info.
         """
         if self._r2 is None:
             _logger.error("cutter_unavailable", operation="_get_exports_internal")
@@ -1221,7 +1215,7 @@ class CutterBridge(StaticAnalysisBridge):
         """Get imported functions.
 
         Returns:
-            List of import information.
+            list[ImportInfo]: List of import information.
         """
         result = await self._get_imports_internal() if self._analyzed else []
         _logger.debug("imports_queried", result_count=len(result))
@@ -1231,7 +1225,7 @@ class CutterBridge(StaticAnalysisBridge):
         """Get exported functions.
 
         Returns:
-            List of export information.
+            list[ExportInfo]: List of export information.
         """
         result = await self._get_exports_internal() if self._analyzed else []
         _logger.debug("exports_queried", result_count=len(result))
@@ -1241,7 +1235,7 @@ class CutterBridge(StaticAnalysisBridge):
         """Get binary section information.
 
         Returns:
-            List of section info.
+            list[SectionInfo]: List of section info.
         """
         result = await self._get_sections_internal() if self._analyzed else []
         _logger.debug("sections_queried", result_count=len(result))
@@ -1255,7 +1249,7 @@ class CutterBridge(StaticAnalysisBridge):
             new_name: New function name.
 
         Returns:
-            True if rename succeeded.
+            bool: True if rename succeeded.
 
         Raises:
             ToolError: If operation fails.
@@ -1283,7 +1277,7 @@ class CutterBridge(StaticAnalysisBridge):
             comment_type: Type of comment.
 
         Returns:
-            True if comment was added.
+            bool: True if comment was added.
 
         Raises:
             ToolError: If operation fails.
@@ -1324,7 +1318,7 @@ class CutterBridge(StaticAnalysisBridge):
             instruction: Assembly instruction.
 
         Returns:
-            Assembled bytes.
+            bytes: Assembled bytes.
 
         Raises:
             ToolError: If assembly fails.
@@ -1352,7 +1346,7 @@ class CutterBridge(StaticAnalysisBridge):
             command: Rizin command to execute.
 
         Returns:
-            Command output.
+            str: Command output.
         """
         _logger.debug("raw_command_executed", command=command)
         return await self._r2_cmd(command)
@@ -1364,7 +1358,7 @@ class CutterBridge(StaticAnalysisBridge):
             command: Command to execute.
 
         Returns:
-            Parsed JSON as list of dicts.
+            list[dict[str, Any]]: Parsed JSON as list of dicts.
         """
         if self._r2 is None:
             _logger.error("cutter_unavailable", operation="_cmd_json")
@@ -1392,7 +1386,7 @@ class CutterBridge(StaticAnalysisBridge):
             address: Target address.
 
         Returns:
-            Output of seek command.
+            str: Output of seek command.
         """
         _logger.debug("seek_to_address", address=hex(address))
         return await self.execute_command(f"s {address}")
@@ -1404,7 +1398,7 @@ class CutterBridge(StaticAnalysisBridge):
             address: Address of the function to graph.
 
         Returns:
-            List of basic block dictionaries from r2 agj output.
+            list[dict[str, Any]]: List of basic block dictionaries from r2 agj output.
 
         Raises:
             ToolError: If no binary is loaded or command fails.
@@ -1430,7 +1424,7 @@ class CutterBridge(StaticAnalysisBridge):
             name: Function name.
 
         Returns:
-            Address of function or None if not found.
+            int | None: Address of function or None if not found.
         """
         funcs = await self.get_functions(filter_pattern=name)
         return next((f.address for f in funcs if f.name == name), None)

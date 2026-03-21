@@ -46,17 +46,19 @@ class AnalysisPanelBase(QWidget):
     Subclasses override ``_populate_toolbar`` to add controls and
     ``_create_content`` to build the main display area.  Override
     ``_cleanup`` for panel-specific teardown in ``stop_tool``.
+
+    Args:
+        parent: Parent widget.
+
+    Attributes:
+        tool_started: Signal emitted when the tool starts.
+        tool_closed: Signal emitted when the tool closes.
     """
 
     tool_started: pyqtSignal = pyqtSignal()
     tool_closed: pyqtSignal = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the analysis panel base.
-
-        Args:
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._status_label: QLabel | None = None
         self._setup_ui()
@@ -73,7 +75,7 @@ class AnalysisPanelBase(QWidget):
         """Create and configure the panel toolbar.
 
         Returns:
-            Toolbar populated by ``_populate_toolbar``.
+            QToolBar: Toolbar populated by ``_populate_toolbar``.
         """
         toolbar = QToolBar()
         toolbar.setMovable(False)
@@ -98,7 +100,7 @@ class AnalysisPanelBase(QWidget):
         Override in subclasses to build splitters, tabs, and views.
 
         Returns:
-            The content widget.
+            QWidget: The content widget.
         """
         return QWidget(self)
 
@@ -126,7 +128,7 @@ class AnalysisPanelBase(QWidget):
             enabled: Initial enabled state.
 
         Returns:
-            The created button.
+            QPushButton: The created button.
         """
         btn = QPushButton(text)
         btn.setObjectName("tool_button")
@@ -149,7 +151,7 @@ class AnalysisPanelBase(QWidget):
             handler: Click handler.
 
         Returns:
-            The created button.
+            QPushButton: The created button.
         """
         btn = QPushButton(text)
         btn.setObjectName("secondary_button")
@@ -174,7 +176,7 @@ class AnalysisPanelBase(QWidget):
             enabled: Initial enabled state.
 
         Returns:
-            The created button.
+            QPushButton: The created button.
         """
         btn = QPushButton(text)
         btn.setObjectName("danger_button")
@@ -195,7 +197,7 @@ class AnalysisPanelBase(QWidget):
             text: Label text.
 
         Returns:
-            The created label.
+            QLabel: The created label.
         """
         label = QLabel(text)
         label.setObjectName("toolbar_label")
@@ -217,7 +219,7 @@ class AnalysisPanelBase(QWidget):
             max_width: Maximum widget width in pixels.
 
         Returns:
-            The created line edit.
+            QLineEdit: The created line edit.
         """
         line_edit = QLineEdit()
         set_hint = getattr(line_edit, "set" + "Place" + "holderText")
@@ -255,7 +257,7 @@ class AnalysisPanelBase(QWidget):
         """Start the panel and emit the ``tool_started`` signal.
 
         Returns:
-            True always since native panels are always ready.
+            bool: True always since native panels are always ready.
         """
         _logger.debug("tool_started", panel=type(self).__name__)
         self.tool_started.emit()
@@ -265,7 +267,7 @@ class AnalysisPanelBase(QWidget):
         """Stop the panel, run cleanup, and emit ``tool_closed``.
 
         Returns:
-            True if cleanup completed.
+            bool: True if cleanup completed.
         """
         _logger.debug("tool_stopping", panel=type(self).__name__)
         self._cleanup()

@@ -40,10 +40,9 @@ class ToolConfirmationDialog(QDialog):
     Displays the tool name, function, and arguments for user review
     before executing potentially destructive operations.
 
-    Attributes:
-        _call: The tool call to confirm.
-        _approved: Whether the user approved the call.
-        _remember_similar: Whether to remember choice for similar operations.
+    Args:
+        call: The tool call to confirm.
+        parent: Parent widget.
     """
 
     def __init__(
@@ -51,12 +50,6 @@ class ToolConfirmationDialog(QDialog):
         call: ToolCall,
         parent: QWidget | None = None,
     ) -> None:
-        """Initialize the confirmation dialog.
-
-        Args:
-            call: The tool call to confirm.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._call = call
         self._approved = False
@@ -73,7 +66,7 @@ class ToolConfirmationDialog(QDialog):
         """Get whether the call was approved.
 
         Returns:
-            True if user approved, False otherwise.
+            bool: True if user approved, False otherwise.
         """
         return self._approved
 
@@ -82,7 +75,7 @@ class ToolConfirmationDialog(QDialog):
         """Get whether to remember choice for similar operations.
 
         Returns:
-            True if user wants to remember choice.
+            bool: True if user wants to remember choice.
         """
         return self._remember_similar
 

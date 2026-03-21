@@ -71,8 +71,7 @@ def _make_event_dict(**overrides: object) -> dict[str, Any]:
         "module": "test_module",
         "function": "test_func",
         "line_number": "42",
-    }
-    base.update(overrides)
+    } | overrides
     return base
 
 

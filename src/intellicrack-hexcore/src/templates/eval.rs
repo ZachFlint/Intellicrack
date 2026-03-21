@@ -1,0 +1,1149 @@
+use std::collections::HashMap;
+
+use super::{
+    field_size, format_field_value, read_numeric_value, ConditionOp, Endianness, FieldDefinition,
+    FieldType, FieldValidation, ParsedField, TemplateError, TemplateRegistry,
+};
+
+const MAX_DEPTH: usize = 16;
+
+pub struct TemplateEvaluator<'a> {
+    data: &'a [u8],
+    current_offset: usize,
+    default_endian: Endianness,
+    parsed_values: HashMap<String, i64>,
+    registry: &'a TemplateRegistry,
+    depth: usize,
+}
+
+impl<'a> TemplateEvaluator<'a> {
+    pub fn new(
+        data: &'a [u8],
+        base_offset: usize,
+        default_endian: Endianness,
+        registry: &'a TemplateRegistry,
+    ) -> Self {
+        Self {
+            data,
+            current_offset: base_offset,
+            default_endian,
+            parsed_values: HashMap::new(),
+            registry,
+            depth: 0,
+        }
+    }
+
+    pub fn evaluate_fields(
+        &mut self,
+        fields: &[FieldDefinition],
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        let mut results = Vec::new();
+        for field in fields {
+            let parsed = self.evaluate_field(field)?;
+            results.extend(parsed);
+        }
+        Ok(results)
+    }
+
+    fn evaluate_field(
+        &mut self,
+        field: &FieldDefinition,
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        let endian = field.endianness.unwrap_or(self.default_endian);
+
+        match &field.field_type {
+            FieldType::DynamicArray {
+                element_type,
+                count_field,
+            } => self.eval_dynamic_array(&field.name, element_type, count_field, endian, field),
+
+            FieldType::Conditional {
+                condition_field,
+                condition_value,
+                condition_op,
+                fields,
+            } => self.eval_conditional(
+                condition_field,
+                *condition_value,
+                condition_op,
+                fields,
+            ),
+
+            FieldType::StructRef(template_name) => {
+                self.eval_struct_ref(&field.name, template_name, field)
+            }
+
+            FieldType::Pointer {
+                pointer_type,
+                target_template,
+            } => self.eval_pointer(&field.name, pointer_type, target_template, endian, field),
+
+            FieldType::Union { variants } => self.eval_union(&field.name, variants, field),
+
+            FieldType::Enum {
+                backing_type,
+                values,
+            } => self.eval_enum(&field.name, backing_type, values, endian, field),
+
+            FieldType::Bitfield {
+                bit_width,
+                backing_type,
+                flags,
+            } => self.eval_bitfield(
+                &field.name,
+                *bit_width,
+                backing_type,
+                flags.as_deref(),
+                endian,
+                field,
+            ),
+
+            FieldType::Computed {
+                expression,
+                display_type,
+            } => self.eval_computed(&field.name, expression, display_type, field),
+
+            _ => {
+                let size = field_size(&field.field_type);
+                if self.current_offset + size > self.data.len() {
+                    return Err(TemplateError::InsufficientData {
+                        offset: self.current_offset,
+                        needed: size,
+                        available: self.data.len().saturating_sub(self.current_offset),
+                    });
+                }
+
+                let raw = self.data[self.current_offset..self.current_offset + size].to_vec();
+                let display = format_field_value(&field.field_type, &raw, endian);
+
+                let numeric = read_numeric_value(&field.field_type, &raw, endian);
+                self.parsed_values.insert(field.name.clone(), numeric);
+
+                let validation_passed = field
+                    .validation
+                    .as_ref()
+                    .map(|v| check_validation(v, numeric, &raw));
+
+                let children = self.eval_array_children(&field.field_type, endian)?;
+
+                let parsed = ParsedField {
+                    name: field.name.clone(),
+                    offset: self.current_offset,
+                    size,
+                    raw_bytes: raw,
+                    display_value: display,
+                    children,
+                    color: field.color.clone(),
+                    validation_passed,
+                    description: field.description.clone(),
+                };
+
+                self.current_offset += size;
+                Ok(vec![parsed])
+            }
+        }
+    }
+
+    fn eval_array_children(
+        &self,
+        ft: &FieldType,
+        endian: Endianness,
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        if let FieldType::Array {
+            element_type,
+            count,
+        } = ft
+        {
+            let inner_size = field_size(element_type);
+            let mut children = Vec::new();
+            for i in 0..*count {
+                let arr_offset = self.current_offset + i * inner_size;
+                if arr_offset + inner_size > self.data.len() {
+                    break;
+                }
+                let arr_raw = self.data[arr_offset..arr_offset + inner_size].to_vec();
+                let arr_display = format_field_value(element_type, &arr_raw, endian);
+                children.push(ParsedField {
+                    name: format!("[{}]", i),
+                    offset: arr_offset,
+                    size: inner_size,
+                    raw_bytes: arr_raw,
+                    display_value: arr_display,
+                    children: Vec::new(),
+                    color: None,
+                    validation_passed: None,
+                    description: String::new(),
+                });
+            }
+            Ok(children)
+        } else {
+            Ok(Vec::new())
+        }
+    }
+
+    fn eval_dynamic_array(
+        &mut self,
+        name: &str,
+        element_type: &FieldType,
+        count_field: &str,
+        endian: Endianness,
+        field: &FieldDefinition,
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        let count = self.parsed_values.get(count_field).copied().ok_or_else(|| {
+            TemplateError::InvalidFieldReference(format!(
+                "count_field '{}' not found in parsed values",
+                count_field
+            ))
+        })?;
+
+        let count = count.max(0) as usize;
+        let inner_size = field_size(element_type);
+        let total_size = inner_size * count;
+
+        if self.current_offset + total_size > self.data.len() {
+            return Err(TemplateError::InsufficientData {
+                offset: self.current_offset,
+                needed: total_size,
+                available: self.data.len().saturating_sub(self.current_offset),
+            });
+        }
+
+        let raw = self.data[self.current_offset..self.current_offset + total_size].to_vec();
+        let mut children = Vec::new();
+
+        for i in 0..count {
+            let arr_offset = self.current_offset + i * inner_size;
+            let arr_raw = self.data[arr_offset..arr_offset + inner_size].to_vec();
+            let arr_display = format_field_value(element_type, &arr_raw, endian);
+            children.push(ParsedField {
+                name: format!("[{}]", i),
+                offset: arr_offset,
+                size: inner_size,
+                raw_bytes: arr_raw,
+                display_value: arr_display,
+                children: Vec::new(),
+                color: None,
+                validation_passed: None,
+                description: String::new(),
+            });
+        }
+
+        let parsed = ParsedField {
+            name: name.to_string(),
+            offset: self.current_offset,
+            size: total_size,
+            raw_bytes: raw,
+            display_value: format!("[{} x {}]", count, super::field_type_name(element_type)),
+            children,
+            color: field.color.clone(),
+            validation_passed: None,
+            description: field.description.clone(),
+        };
+
+        self.current_offset += total_size;
+        Ok(vec![parsed])
+    }
+
+    fn eval_conditional(
+        &mut self,
+        condition_field: &str,
+        condition_value: i64,
+        condition_op: &ConditionOp,
+        fields: &[FieldDefinition],
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        let actual = self
+            .parsed_values
+            .get(condition_field)
+            .copied()
+            .ok_or_else(|| {
+                TemplateError::InvalidFieldReference(format!(
+                    "condition_field '{}' not found",
+                    condition_field
+                ))
+            })?;
+
+        let matches = match condition_op {
+            ConditionOp::Eq => actual == condition_value,
+            ConditionOp::Ne => actual != condition_value,
+            ConditionOp::Gt => actual > condition_value,
+            ConditionOp::Lt => actual < condition_value,
+            ConditionOp::Ge => actual >= condition_value,
+            ConditionOp::Le => actual <= condition_value,
+            ConditionOp::BitAnd => (actual & condition_value) != 0,
+        };
+
+        if matches {
+            self.evaluate_fields(fields)
+        } else {
+            Ok(Vec::new())
+        }
+    }
+
+    fn eval_struct_ref(
+        &mut self,
+        name: &str,
+        template_name: &str,
+        field: &FieldDefinition,
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        if self.depth >= MAX_DEPTH {
+            return Err(TemplateError::CircularReference(format!(
+                "max nesting depth {} exceeded for '{}'",
+                MAX_DEPTH, template_name
+            )));
+        }
+
+        let template = self
+            .registry
+            .get(template_name)
+            .ok_or_else(|| TemplateError::NotFound(template_name.to_string()))?;
+
+        let saved_endian = self.default_endian;
+        self.default_endian = template.default_endianness;
+        self.depth += 1;
+
+        let start_offset = self.current_offset;
+        let children = self.evaluate_fields(&template.fields)?;
+        let end_offset = self.current_offset;
+
+        self.depth -= 1;
+        self.default_endian = saved_endian;
+
+        let size = end_offset - start_offset;
+        let raw = if start_offset + size <= self.data.len() {
+            self.data[start_offset..start_offset + size].to_vec()
+        } else {
+            Vec::new()
+        };
+
+        Ok(vec![ParsedField {
+            name: name.to_string(),
+            offset: start_offset,
+            size,
+            raw_bytes: raw,
+            display_value: format!("struct {}", template_name),
+            children,
+            color: field.color.clone(),
+            validation_passed: None,
+            description: field.description.clone(),
+        }])
+    }
+
+    fn eval_pointer(
+        &mut self,
+        name: &str,
+        pointer_type: &FieldType,
+        target_template: &str,
+        endian: Endianness,
+        field: &FieldDefinition,
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        let ptr_size = field_size(pointer_type);
+        if self.current_offset + ptr_size > self.data.len() {
+            return Err(TemplateError::InsufficientData {
+                offset: self.current_offset,
+                needed: ptr_size,
+                available: self.data.len().saturating_sub(self.current_offset),
+            });
+        }
+
+        let raw = self.data[self.current_offset..self.current_offset + ptr_size].to_vec();
+        let ptr_value = read_numeric_value(pointer_type, &raw, endian) as usize;
+        self.parsed_values
+            .insert(name.to_string(), ptr_value as i64);
+
+        let display = format!("-> 0x{:X} ({})", ptr_value, target_template);
+
+        let children = if ptr_value < self.data.len() && self.depth < MAX_DEPTH {
+            if let Some(template) = self.registry.get(target_template) {
+                let saved_offset = self.current_offset;
+                let saved_endian = self.default_endian;
+                self.current_offset = ptr_value;
+                self.default_endian = template.default_endianness;
+                self.depth += 1;
+                let result = self.evaluate_fields(&template.fields);
+                self.depth -= 1;
+                self.current_offset = saved_offset;
+                self.default_endian = saved_endian;
+                result.unwrap_or_default()
+            } else {
+                Vec::new()
+            }
+        } else {
+            Vec::new()
+        };
+
+        let parsed = ParsedField {
+            name: name.to_string(),
+            offset: self.current_offset,
+            size: ptr_size,
+            raw_bytes: raw,
+            display_value: display,
+            children,
+            color: field.color.clone(),
+            validation_passed: None,
+            description: field.description.clone(),
+        };
+
+        self.current_offset += ptr_size;
+        Ok(vec![parsed])
+    }
+
+    fn eval_union(
+        &mut self,
+        name: &str,
+        variants: &[FieldDefinition],
+        field: &FieldDefinition,
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        let start = self.current_offset;
+        let mut max_size: usize = 0;
+        let mut all_children = Vec::new();
+
+        for variant in variants {
+            self.current_offset = start;
+            let children = self.evaluate_field(variant)?;
+            let variant_end = self.current_offset;
+            let variant_size = variant_end - start;
+            if variant_size > max_size {
+                max_size = variant_size;
+            }
+            all_children.extend(children);
+        }
+
+        self.current_offset = start + max_size;
+
+        let raw = if start + max_size <= self.data.len() {
+            self.data[start..start + max_size].to_vec()
+        } else {
+            Vec::new()
+        };
+
+        Ok(vec![ParsedField {
+            name: name.to_string(),
+            offset: start,
+            size: max_size,
+            raw_bytes: raw,
+            display_value: format!("union<{} variants>", variants.len()),
+            children: all_children,
+            color: field.color.clone(),
+            validation_passed: None,
+            description: field.description.clone(),
+        }])
+    }
+
+    fn eval_enum(
+        &mut self,
+        name: &str,
+        backing_type: &FieldType,
+        values: &[(String, i64)],
+        endian: Endianness,
+        field: &FieldDefinition,
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        let size = field_size(backing_type);
+        if self.current_offset + size > self.data.len() {
+            return Err(TemplateError::InsufficientData {
+                offset: self.current_offset,
+                needed: size,
+                available: self.data.len().saturating_sub(self.current_offset),
+            });
+        }
+
+        let raw = self.data[self.current_offset..self.current_offset + size].to_vec();
+        let numeric = read_numeric_value(backing_type, &raw, endian);
+        self.parsed_values.insert(name.to_string(), numeric);
+
+        let variant_name = values
+            .iter()
+            .find(|(_, v)| *v == numeric)
+            .map(|(n, _)| n.as_str())
+            .unwrap_or("unknown");
+
+        let display = format!("{} ({}, 0x{:X})", variant_name, numeric, numeric);
+
+        let parsed = ParsedField {
+            name: name.to_string(),
+            offset: self.current_offset,
+            size,
+            raw_bytes: raw.clone(),
+            display_value: display,
+            children: Vec::new(),
+            color: field.color.clone(),
+            validation_passed: field
+                .validation
+                .as_ref()
+                .map(|v| check_validation(v, numeric, &raw)),
+            description: field.description.clone(),
+        };
+
+        self.current_offset += size;
+        Ok(vec![parsed])
+    }
+
+    fn eval_bitfield(
+        &mut self,
+        name: &str,
+        bit_width: u8,
+        backing_type: &FieldType,
+        flags: Option<&[(String, u64)]>,
+        endian: Endianness,
+        field: &FieldDefinition,
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        let size = field_size(backing_type);
+        if self.current_offset + size > self.data.len() {
+            return Err(TemplateError::InsufficientData {
+                offset: self.current_offset,
+                needed: size,
+                available: self.data.len().saturating_sub(self.current_offset),
+            });
+        }
+
+        let raw = self.data[self.current_offset..self.current_offset + size].to_vec();
+        let numeric = read_numeric_value(backing_type, &raw, endian);
+        let mask = if bit_width >= 64 {
+            u64::MAX
+        } else {
+            (1u64 << bit_width) - 1
+        };
+        let masked = (numeric as u64) & mask;
+        self.parsed_values.insert(name.to_string(), masked as i64);
+
+        let mut children = Vec::new();
+        if let Some(flag_list) = flags {
+            for (flag_name, flag_value) in flag_list {
+                let is_set = (masked & flag_value) != 0;
+                children.push(ParsedField {
+                    name: flag_name.clone(),
+                    offset: self.current_offset,
+                    size: 0,
+                    raw_bytes: Vec::new(),
+                    display_value: if is_set {
+                        format!("SET (0x{:X})", flag_value)
+                    } else {
+                        format!("CLEAR (0x{:X})", flag_value)
+                    },
+                    children: Vec::new(),
+                    color: None,
+                    validation_passed: None,
+                    description: String::new(),
+                });
+            }
+        }
+
+        let display = format!("0x{:X} ({}:{} bits)", masked, bit_width, size * 8);
+
+        let parsed = ParsedField {
+            name: name.to_string(),
+            offset: self.current_offset,
+            size,
+            raw_bytes: raw,
+            display_value: display,
+            children,
+            color: field.color.clone(),
+            validation_passed: None,
+            description: field.description.clone(),
+        };
+
+        self.current_offset += size;
+        Ok(vec![parsed])
+    }
+
+    fn eval_computed(
+        &mut self,
+        name: &str,
+        expression: &str,
+        display_type: &FieldType,
+        field: &FieldDefinition,
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        let value = evaluate_expression(expression, &self.parsed_values, self.current_offset)?;
+        self.parsed_values.insert(name.to_string(), value);
+
+        let display = format!(
+            "{} (0x{:X}) = {}",
+            value,
+            value as u64,
+            expression
+        );
+
+        Ok(vec![ParsedField {
+            name: name.to_string(),
+            offset: self.current_offset,
+            size: 0,
+            raw_bytes: Vec::new(),
+            display_value: display,
+            children: Vec::new(),
+            color: field.color.clone(),
+            validation_passed: None,
+            description: format!(
+                "{} [computed as {}]",
+                field.description,
+                super::field_type_name(display_type)
+            ),
+        }])
+    }
+}
+
+fn check_validation(validation: &FieldValidation, numeric: i64, raw: &[u8]) -> bool {
+    if let Some(expected) = validation.expected_value {
+        if numeric != expected {
+            return false;
+        }
+    }
+    if let Some(min) = validation.min_value {
+        if numeric < min {
+            return false;
+        }
+    }
+    if let Some(max) = validation.max_value {
+        if numeric > max {
+            return false;
+        }
+    }
+    if let Some(magic) = &validation.magic_bytes {
+        if raw.len() < magic.len() || &raw[..magic.len()] != magic.as_slice() {
+            return false;
+        }
+    }
+    true
+}
+
+fn evaluate_expression(
+    expr: &str,
+    values: &HashMap<String, i64>,
+    current_offset: usize,
+) -> Result<i64, TemplateError> {
+    let tokens = tokenize_expr(expr)?;
+    let mut pos = 0;
+    let result = parse_additive(&tokens, &mut pos, values, current_offset)?;
+    Ok(result)
+}
+
+#[derive(Debug, Clone)]
+enum ExprToken {
+    Number(i64),
+    Ident(String),
+    Dollar,
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Percent,
+    LParen,
+    RParen,
+    Sizeof,
+}
+
+fn tokenize_expr(expr: &str) -> Result<Vec<ExprToken>, TemplateError> {
+    let mut tokens = Vec::new();
+    let chars: Vec<char> = expr.chars().collect();
+    let mut i = 0;
+
+    while i < chars.len() {
+        match chars[i] {
+            ' ' | '\t' | '\n' | '\r' => {
+                i += 1;
+            }
+            '$' => {
+                tokens.push(ExprToken::Dollar);
+                i += 1;
+            }
+            '+' => {
+                tokens.push(ExprToken::Plus);
+                i += 1;
+            }
+            '-' => {
+                tokens.push(ExprToken::Minus);
+                i += 1;
+            }
+            '*' => {
+                tokens.push(ExprToken::Star);
+                i += 1;
+            }
+            '/' => {
+                tokens.push(ExprToken::Slash);
+                i += 1;
+            }
+            '%' => {
+                tokens.push(ExprToken::Percent);
+                i += 1;
+            }
+            '(' => {
+                tokens.push(ExprToken::LParen);
+                i += 1;
+            }
+            ')' => {
+                tokens.push(ExprToken::RParen);
+                i += 1;
+            }
+            '0'..='9' => {
+                let start = i;
+                if i + 1 < chars.len() && chars[i] == '0' && (chars[i + 1] == 'x' || chars[i + 1] == 'X') {
+                    i += 2;
+                    while i < chars.len() && chars[i].is_ascii_hexdigit() {
+                        i += 1;
+                    }
+                    let hex_str: String = chars[start + 2..i].iter().collect();
+                    let val = i64::from_str_radix(&hex_str, 16).map_err(|e| {
+                        TemplateError::ExpressionError(format!("bad hex: {}", e))
+                    })?;
+                    tokens.push(ExprToken::Number(val));
+                } else {
+                    while i < chars.len() && chars[i].is_ascii_digit() {
+                        i += 1;
+                    }
+                    let num_str: String = chars[start..i].iter().collect();
+                    let val: i64 = num_str.parse().map_err(|e| {
+                        TemplateError::ExpressionError(format!("bad number: {}", e))
+                    })?;
+                    tokens.push(ExprToken::Number(val));
+                }
+            }
+            c if c.is_ascii_alphabetic() || c == '_' => {
+                let start = i;
+                while i < chars.len() && (chars[i].is_ascii_alphanumeric() || chars[i] == '_') {
+                    i += 1;
+                }
+                let ident: String = chars[start..i].iter().collect();
+                if ident == "sizeof" {
+                    tokens.push(ExprToken::Sizeof);
+                } else {
+                    tokens.push(ExprToken::Ident(ident));
+                }
+            }
+            c => {
+                return Err(TemplateError::ExpressionError(format!(
+                    "unexpected character '{}'",
+                    c
+                )));
+            }
+        }
+    }
+
+    Ok(tokens)
+}
+
+fn parse_additive(
+    tokens: &[ExprToken],
+    pos: &mut usize,
+    values: &HashMap<String, i64>,
+    current_offset: usize,
+) -> Result<i64, TemplateError> {
+    let mut left = parse_multiplicative(tokens, pos, values, current_offset)?;
+    while *pos < tokens.len() {
+        match &tokens[*pos] {
+            ExprToken::Plus => {
+                *pos += 1;
+                let right = parse_multiplicative(tokens, pos, values, current_offset)?;
+                left = left.wrapping_add(right);
+            }
+            ExprToken::Minus => {
+                *pos += 1;
+                let right = parse_multiplicative(tokens, pos, values, current_offset)?;
+                left = left.wrapping_sub(right);
+            }
+            _ => break,
+        }
+    }
+    Ok(left)
+}
+
+fn parse_multiplicative(
+    tokens: &[ExprToken],
+    pos: &mut usize,
+    values: &HashMap<String, i64>,
+    current_offset: usize,
+) -> Result<i64, TemplateError> {
+    let mut left = parse_unary(tokens, pos, values, current_offset)?;
+    while *pos < tokens.len() {
+        match &tokens[*pos] {
+            ExprToken::Star => {
+                *pos += 1;
+                let right = parse_unary(tokens, pos, values, current_offset)?;
+                left = left.wrapping_mul(right);
+            }
+            ExprToken::Slash => {
+                *pos += 1;
+                let right = parse_unary(tokens, pos, values, current_offset)?;
+                if right == 0 {
+                    return Err(TemplateError::ExpressionError(
+                        "division by zero".to_string(),
+                    ));
+                }
+                left = left.wrapping_div(right);
+            }
+            ExprToken::Percent => {
+                *pos += 1;
+                let right = parse_unary(tokens, pos, values, current_offset)?;
+                if right == 0 {
+                    return Err(TemplateError::ExpressionError(
+                        "modulo by zero".to_string(),
+                    ));
+                }
+                left = left.wrapping_rem(right);
+            }
+            _ => break,
+        }
+    }
+    Ok(left)
+}
+
+fn parse_unary(
+    tokens: &[ExprToken],
+    pos: &mut usize,
+    values: &HashMap<String, i64>,
+    current_offset: usize,
+) -> Result<i64, TemplateError> {
+    if *pos < tokens.len() {
+        if let ExprToken::Minus = &tokens[*pos] {
+            *pos += 1;
+            let val = parse_primary(tokens, pos, values, current_offset)?;
+            return Ok(-val);
+        }
+    }
+    parse_primary(tokens, pos, values, current_offset)
+}
+
+fn parse_primary(
+    tokens: &[ExprToken],
+    pos: &mut usize,
+    values: &HashMap<String, i64>,
+    current_offset: usize,
+) -> Result<i64, TemplateError> {
+    if *pos >= tokens.len() {
+        return Err(TemplateError::ExpressionError(
+            "unexpected end of expression".to_string(),
+        ));
+    }
+
+    match &tokens[*pos] {
+        ExprToken::Number(n) => {
+            let val = *n;
+            *pos += 1;
+            Ok(val)
+        }
+        ExprToken::Dollar => {
+            *pos += 1;
+            Ok(current_offset as i64)
+        }
+        ExprToken::Ident(name) => {
+            let val = values.get(name).copied().ok_or_else(|| {
+                TemplateError::InvalidFieldReference(format!(
+                    "field '{}' not found in expression",
+                    name
+                ))
+            })?;
+            *pos += 1;
+            Ok(val)
+        }
+        ExprToken::Sizeof => {
+            *pos += 1;
+            if *pos < tokens.len() {
+                if let ExprToken::LParen = &tokens[*pos] {
+                    *pos += 1;
+                    if *pos < tokens.len() {
+                        if let ExprToken::Ident(name) = &tokens[*pos] {
+                            let type_name = name.clone();
+                            *pos += 1;
+                            if *pos < tokens.len() {
+                                if let ExprToken::RParen = &tokens[*pos] {
+                                    *pos += 1;
+                                }
+                            }
+                            let size = match type_name.as_str() {
+                                "u8" | "uint8" | "int8" | "s8" | "bool" | "char" => 1,
+                                "u16" | "uint16" | "int16" | "s16" => 2,
+                                "u32" | "uint32" | "int32" | "s32" | "float" | "float32" => 4,
+                                "u64" | "uint64" | "int64" | "s64" | "double" | "float64" => 8,
+                                _ => 0,
+                            };
+                            return Ok(size);
+                        }
+                    }
+                }
+            }
+            Err(TemplateError::ExpressionError(
+                "invalid sizeof syntax".to_string(),
+            ))
+        }
+        ExprToken::LParen => {
+            *pos += 1;
+            let val = parse_additive(tokens, pos, values, current_offset)?;
+            if *pos < tokens.len() {
+                if let ExprToken::RParen = &tokens[*pos] {
+                    *pos += 1;
+                }
+            }
+            Ok(val)
+        }
+        other => Err(TemplateError::ExpressionError(format!(
+            "unexpected token: {:?}",
+            other
+        ))),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::templates::{FieldDefinition, FieldType, StructTemplate};
+
+    fn make_registry() -> TemplateRegistry {
+        TemplateRegistry::new()
+    }
+
+    #[test]
+    fn test_basic_eval() {
+        let reg = make_registry();
+        let fields = vec![
+            FieldDefinition {
+                name: "a".to_string(),
+                field_type: FieldType::UInt8,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+            FieldDefinition {
+                name: "b".to_string(),
+                field_type: FieldType::UInt16,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+        ];
+        let data = [0x42, 0x34, 0x12];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].name, "a");
+        assert_eq!(result[1].name, "b");
+    }
+
+    #[test]
+    fn test_dynamic_array() {
+        let reg = make_registry();
+        let fields = vec![
+            FieldDefinition {
+                name: "count".to_string(),
+                field_type: FieldType::UInt8,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+            FieldDefinition {
+                name: "items".to_string(),
+                field_type: FieldType::DynamicArray {
+                    element_type: Box::new(FieldType::UInt8),
+                    count_field: "count".to_string(),
+                },
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+        ];
+        let data = [0x03, 0xAA, 0xBB, 0xCC];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[1].children.len(), 3);
+    }
+
+    #[test]
+    fn test_conditional_true() {
+        let reg = make_registry();
+        let fields = vec![
+            FieldDefinition {
+                name: "magic".to_string(),
+                field_type: FieldType::UInt16,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+            FieldDefinition {
+                name: "cond".to_string(),
+                field_type: FieldType::Conditional {
+                    condition_field: "magic".to_string(),
+                    condition_value: 0x5A4D,
+                    condition_op: ConditionOp::Eq,
+                    fields: vec![FieldDefinition {
+                        name: "pe_field".to_string(),
+                        field_type: FieldType::UInt32,
+                        endianness: None,
+                        description: String::new(),
+                        color: None,
+                        validation: None,
+                    }],
+                },
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+        ];
+        let data = [0x4D, 0x5A, 0x01, 0x02, 0x03, 0x04];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[1].name, "pe_field");
+    }
+
+    #[test]
+    fn test_conditional_false() {
+        let reg = make_registry();
+        let fields = vec![
+            FieldDefinition {
+                name: "magic".to_string(),
+                field_type: FieldType::UInt16,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+            FieldDefinition {
+                name: "cond".to_string(),
+                field_type: FieldType::Conditional {
+                    condition_field: "magic".to_string(),
+                    condition_value: 0xFFFF,
+                    condition_op: ConditionOp::Eq,
+                    fields: vec![FieldDefinition {
+                        name: "pe_field".to_string(),
+                        field_type: FieldType::UInt32,
+                        endianness: None,
+                        description: String::new(),
+                        color: None,
+                        validation: None,
+                    }],
+                },
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+        ];
+        let data = [0x4D, 0x5A, 0x01, 0x02, 0x03, 0x04];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result.len(), 1);
+    }
+
+    #[test]
+    fn test_enum_field() {
+        let reg = make_registry();
+        let fields = vec![FieldDefinition {
+            name: "file_type".to_string(),
+            field_type: FieldType::Enum {
+                backing_type: Box::new(FieldType::UInt16),
+                values: vec![
+                    ("EXEC".to_string(), 2),
+                    ("DYN".to_string(), 3),
+                    ("CORE".to_string(), 4),
+                ],
+            },
+            endianness: None,
+            description: String::new(),
+            color: None,
+            validation: None,
+        }];
+        let data = [0x02, 0x00];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert!(result[0].display_value.contains("EXEC"));
+    }
+
+    #[test]
+    fn test_validation_pass() {
+        let reg = make_registry();
+        let fields = vec![FieldDefinition {
+            name: "magic".to_string(),
+            field_type: FieldType::UInt16,
+            endianness: None,
+            description: String::new(),
+            color: None,
+            validation: Some(FieldValidation {
+                expected_value: Some(0x5A4D),
+                min_value: None,
+                max_value: None,
+                magic_bytes: None,
+            }),
+        }];
+        let data = [0x4D, 0x5A];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result[0].validation_passed, Some(true));
+    }
+
+    #[test]
+    fn test_validation_fail() {
+        let reg = make_registry();
+        let fields = vec![FieldDefinition {
+            name: "magic".to_string(),
+            field_type: FieldType::UInt16,
+            endianness: None,
+            description: String::new(),
+            color: None,
+            validation: Some(FieldValidation {
+                expected_value: Some(0x5A4D),
+                min_value: None,
+                max_value: None,
+                magic_bytes: None,
+            }),
+        }];
+        let data = [0x00, 0x00];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result[0].validation_passed, Some(false));
+    }
+
+    #[test]
+    fn test_expression_eval() {
+        let mut values = HashMap::new();
+        values.insert("a".to_string(), 10);
+        values.insert("b".to_string(), 3);
+        assert_eq!(evaluate_expression("a + b", &values, 0).unwrap(), 13);
+        assert_eq!(evaluate_expression("a * b", &values, 0).unwrap(), 30);
+        assert_eq!(evaluate_expression("a - b", &values, 0).unwrap(), 7);
+        assert_eq!(
+            evaluate_expression("(a + b) * 2", &values, 0).unwrap(),
+            26
+        );
+        assert_eq!(evaluate_expression("$", &values, 0x100).unwrap(), 0x100);
+    }
+
+    #[test]
+    fn test_bool_char_padding() {
+        let reg = make_registry();
+        let fields = vec![
+            FieldDefinition {
+                name: "flag".to_string(),
+                field_type: FieldType::Bool,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+            FieldDefinition {
+                name: "letter".to_string(),
+                field_type: FieldType::Char,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+            FieldDefinition {
+                name: "pad".to_string(),
+                field_type: FieldType::Padding(2),
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+        ];
+        let data = [0x01, 0x41, 0x00, 0x00];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result[0].display_value, "true");
+        assert!(result[1].display_value.contains("'A'"));
+        assert!(result[2].display_value.contains("padding"));
+    }
+}

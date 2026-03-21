@@ -65,9 +65,9 @@ class DisassemblyLine:
 
     Attributes:
         address: Virtual address of the instruction.
-        bytes_str: Hex representation of instruction bytes.
-        mnemonic: Instruction mnemonic (e.g., 'mov', 'jmp').
-        operands: Instruction operands (e.g., 'rax, rbx').
+        bytes_str: Raw bytes of the instruction as a hex string.
+        mnemonic: Assembly mnemonic (e.g. MOV, JMP).
+        operands: Instruction operands as a string.
         comment: Optional comment at this line.
     """
 
@@ -84,9 +84,9 @@ class MemorySearchResult:
 
     Attributes:
         address: Virtual address of the match.
-        matched_bytes: The actual bytes that matched (hex string).
-        context_before: Bytes preceding the match (hex string).
-        context_after: Bytes following the match (hex string).
+        matched_bytes: Matched bytes as a hex string.
+        context_before: Bytes preceding the match as a hex string.
+        context_after: Bytes following the match as a hex string.
     """
 
     address: int
@@ -101,12 +101,12 @@ class StackFrame:
 
     Attributes:
         index: Frame index (0 = top/current).
-        address: Instruction pointer in this frame.
+        address: Instruction pointer for this frame.
         return_address: Return address for this frame.
-        frame_pointer: Base/Frame pointer (RBP/EBP).
+        frame_pointer: Base/frame pointer (RBP/EBP).
         stack_pointer: Stack pointer (RSP/ESP).
-        function_name: Name of the function if known.
-        module_name: Name of the module if known.
+        function_name: Function name if resolved, None otherwise.
+        module_name: Module name if resolved, None otherwise.
     """
 
     index: int
@@ -125,10 +125,10 @@ class WatchpointInfo:
     Attributes:
         id: Watchpoint identifier.
         address: Memory address being watched.
-        size: Size of the watched region.
-        watch_type: Type of access to watch (read/write/exec).
+        size: Size of the watched region in bytes.
+        watch_type: Access type to watch (read, write, or exec).
         enabled: Whether the watchpoint is active.
-        hit_count: Number of times hit.
+        hit_count: Number of times the watchpoint has triggered.
     """
 
     id: int
@@ -172,7 +172,7 @@ class BridgeCapabilities:
             capability: Name of the capability to check.
 
         Returns:
-            True if the capability is supported.
+            bool: True if the capability is supported.
         """
         return getattr(self, f"supports_{capability}", False)
 
@@ -183,7 +183,7 @@ class BridgeCapabilities:
             arch: Architecture identifier to check.
 
         Returns:
-            True if the architecture is in the supported set.
+            bool: True if the architecture is in the supported set.
         """
         return arch in self.supported_architectures
 
@@ -194,7 +194,7 @@ class BridgeCapabilities:
             fmt: Binary format identifier to check.
 
         Returns:
-            True if the format is in the supported set.
+            bool: True if the format is in the supported set.
         """
         return fmt in self.supported_formats
 
@@ -225,7 +225,7 @@ class BridgeState:
         """Check if bridge is connected and tool is running.
 
         Returns:
-            True if both connected and tool_running are True.
+            bool: True if both connected and tool_running are True.
         """
         return self.connected and self.tool_running
 
@@ -240,15 +240,9 @@ class ToolBridgeBase(abc.ABC):
     All bridge implementations must inherit from this class and override
     the methods defined here. This ensures a consistent interface for
     the orchestrator to interact with any reverse engineering tool.
-
-    Attributes:
-        _state: Current state of the bridge.
-        _capabilities: Capabilities of the tool.
-        _logger: Logger instance for this bridge.
     """
 
     def __init__(self) -> None:
-        """Initialize the base bridge."""
         self._state: BridgeState = BridgeState()
         self._capabilities: BridgeCapabilities = BridgeCapabilities()
         self._logger = get_logger(f"bridges.{self.__class__.__name__.lower()}").bind(bridge=self.__class__.__name__.lower())
@@ -258,11 +252,11 @@ class ToolBridgeBase(abc.ABC):
     def name(self) -> ToolName:
         """Get the tool's name.
 
+        Returns:
+            ToolName: The tool's name enum value.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return the ToolName enum value.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -271,7 +265,7 @@ class ToolBridgeBase(abc.ABC):
         """Get current bridge state.
 
         Returns:
-            Current BridgeState instance.
+            BridgeState: Current BridgeState instance.
         """
         return self._state
 
@@ -280,7 +274,7 @@ class ToolBridgeBase(abc.ABC):
         """Get bridge capabilities.
 
         Returns:
-            BridgeCapabilities describing what this tool can do.
+            BridgeCapabilities: BridgeCapabilities describing what this tool can do.
         """
         return self._capabilities
 
@@ -289,12 +283,11 @@ class ToolBridgeBase(abc.ABC):
     def tool_definition(self) -> ToolDefinition:
         """Get tool definition for LLM function calling.
 
+        Returns:
+            ToolDefinition: Tool definition with available functions.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return a ToolDefinition
-            with all available functions for this bridge.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -320,11 +313,11 @@ class ToolBridgeBase(abc.ABC):
     async def is_available(self) -> bool:
         """Check if the tool is installed and available.
 
+        Returns:
+            bool: True if the tool is ready.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return True if tool is ready.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -337,7 +330,6 @@ class StaticAnalysisBridge(ToolBridgeBase):
     """
 
     def __init__(self) -> None:
-        """Initialize static analysis bridge."""
         super().__init__()
         self._capabilities = BridgeCapabilities(
             supports_static_analysis=True,
@@ -353,11 +345,11 @@ class StaticAnalysisBridge(ToolBridgeBase):
         Args:
             path: Path to the binary file.
 
+        Returns:
+            BinaryInfo: Information about the loaded binary.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return BinaryInfo with file details.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -380,11 +372,11 @@ class StaticAnalysisBridge(ToolBridgeBase):
         Args:
             filter_pattern: Optional regex pattern to filter function names.
 
+        Returns:
+            list[FunctionInfo]: List of analyzed function information.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return list of function information.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -395,11 +387,11 @@ class StaticAnalysisBridge(ToolBridgeBase):
         Args:
             address: Function address.
 
+        Returns:
+            FunctionInfo | None: Function info or None if not found.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return function info or None.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -410,11 +402,11 @@ class StaticAnalysisBridge(ToolBridgeBase):
         Args:
             address: Function address.
 
+        Returns:
+            str: Decompiled C pseudocode.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return decompiled C pseudocode.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -430,11 +422,11 @@ class StaticAnalysisBridge(ToolBridgeBase):
             address: Start address.
             count: Number of instructions.
 
+        Returns:
+            list[DisassemblyLine]: List of disassembly lines.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return list of disassembly lines.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -445,11 +437,11 @@ class StaticAnalysisBridge(ToolBridgeBase):
         Args:
             address: Target address.
 
+        Returns:
+            list[CrossReference]: List of cross-references to the address.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return list of cross-references.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -460,11 +452,11 @@ class StaticAnalysisBridge(ToolBridgeBase):
         Args:
             address: Source address.
 
+        Returns:
+            list[CrossReference]: List of cross-references from the address.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return list of cross-references.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -475,11 +467,11 @@ class StaticAnalysisBridge(ToolBridgeBase):
         Args:
             pattern: Regex pattern to match.
 
+        Returns:
+            list[StringInfo]: List of matching strings.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return matching strings.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -490,11 +482,11 @@ class StaticAnalysisBridge(ToolBridgeBase):
         Args:
             pattern: Byte sequence to find.
 
+        Returns:
+            list[int]: List of match addresses.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return list of match addresses.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -502,11 +494,11 @@ class StaticAnalysisBridge(ToolBridgeBase):
     async def get_imports(self) -> list[ImportInfo]:
         """Get all imported functions.
 
+        Returns:
+            list[ImportInfo]: List of import information.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return list of import information.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -514,11 +506,11 @@ class StaticAnalysisBridge(ToolBridgeBase):
     async def get_exports(self) -> list[ExportInfo]:
         """Get all exported functions.
 
+        Returns:
+            list[ExportInfo]: List of export information.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return list of export information.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -530,11 +522,11 @@ class StaticAnalysisBridge(ToolBridgeBase):
             address: Function address.
             new_name: New function name.
 
+        Returns:
+            bool: True if rename succeeded.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return True if rename succeeded.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -552,11 +544,11 @@ class StaticAnalysisBridge(ToolBridgeBase):
             comment: Comment text.
             comment_type: Type of comment (EOL, PRE, POST, PLATE).
 
+        Returns:
+            bool: True if comment was added.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return True if comment was added.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -569,7 +561,6 @@ class DynamicAnalysisBridge(ToolBridgeBase):
     """
 
     def __init__(self) -> None:
-        """Initialize dynamic analysis bridge."""
         super().__init__()
         self._capabilities = BridgeCapabilities(
             supports_dynamic_analysis=True,
@@ -603,11 +594,11 @@ class DynamicAnalysisBridge(ToolBridgeBase):
             path: Path to executable.
             args: Command line arguments.
 
+        Returns:
+            int: PID of spawned process.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return PID of spawned process.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -628,11 +619,11 @@ class DynamicAnalysisBridge(ToolBridgeBase):
             address: Memory address.
             size: Number of bytes to read.
 
+        Returns:
+            bytes: Memory contents.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return memory contents.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -644,11 +635,11 @@ class DynamicAnalysisBridge(ToolBridgeBase):
             address: Memory address.
             data: Bytes to write.
 
+        Returns:
+            int: Number of bytes written.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return the number of bytes written.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -656,11 +647,11 @@ class DynamicAnalysisBridge(ToolBridgeBase):
     async def get_memory_regions(self) -> list[MemoryRegion]:
         """Get process memory map.
 
+        Returns:
+            list[MemoryRegion]: List of memory regions.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return list of memory regions.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -671,11 +662,11 @@ class DynamicAnalysisBridge(ToolBridgeBase):
         Args:
             pattern: Byte pattern to search for.
 
+        Returns:
+            list[MemorySearchResult]: List of matches with context.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return list of matches with context.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -688,7 +679,6 @@ class DebuggerBridge(DynamicAnalysisBridge):
     """
 
     def __init__(self) -> None:
-        """Initialize debugger bridge."""
         super().__init__()
         self._capabilities.supports_debugging = True
 
@@ -723,11 +713,11 @@ class DebuggerBridge(DynamicAnalysisBridge):
     async def step_into(self) -> int:
         """Single step into.
 
+        Returns:
+            int: New instruction pointer.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return new instruction pointer.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -735,11 +725,11 @@ class DebuggerBridge(DynamicAnalysisBridge):
     async def step_over(self) -> int:
         """Single step over.
 
+        Returns:
+            int: New instruction pointer.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return new instruction pointer.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -747,11 +737,11 @@ class DebuggerBridge(DynamicAnalysisBridge):
     async def step_out(self) -> int:
         """Step out of current function.
 
+        Returns:
+            int: New instruction pointer.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return new instruction pointer.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -769,11 +759,11 @@ class DebuggerBridge(DynamicAnalysisBridge):
             bp_type: Type (software, hardware, memory).
             condition: Optional condition expression.
 
+        Returns:
+            int: Breakpoint ID.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return the breakpoint ID.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -784,11 +774,11 @@ class DebuggerBridge(DynamicAnalysisBridge):
         Args:
             address: Breakpoint address.
 
+        Returns:
+            bool: True if removed successfully.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return True if removed successfully.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -796,11 +786,11 @@ class DebuggerBridge(DynamicAnalysisBridge):
     async def get_breakpoints(self) -> list[BreakpointInfo]:
         """Get all breakpoints.
 
+        Returns:
+            list[BreakpointInfo]: List of breakpoint information.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return list of breakpoint information.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -808,11 +798,11 @@ class DebuggerBridge(DynamicAnalysisBridge):
     async def get_registers(self) -> RegisterState:
         """Get all register values.
 
+        Returns:
+            RegisterState: Current register state.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return RegisterState with all registers.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -824,11 +814,11 @@ class DebuggerBridge(DynamicAnalysisBridge):
             register: Register name (rax, rbx, etc.).
             value: New value.
 
+        Returns:
+            bool: True if set successfully.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return True if set successfully.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -836,11 +826,11 @@ class DebuggerBridge(DynamicAnalysisBridge):
     async def get_stack_trace(self) -> list[StackFrame]:
         """Get current stack trace.
 
+        Returns:
+            list[StackFrame]: List of stack frames.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return list of stack frames.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -856,11 +846,11 @@ class DebuggerBridge(DynamicAnalysisBridge):
             address: Start address.
             count: Number of instructions.
 
+        Returns:
+            list[DisassemblyLine]: List of disassembly lines.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return list of disassembly lines.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -872,11 +862,11 @@ class DebuggerBridge(DynamicAnalysisBridge):
             address: Target address.
             instruction: Assembly instruction.
 
+        Returns:
+            bytes: Assembled bytes.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return assembled bytes.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -889,7 +879,6 @@ class InstrumentationBridge(DynamicAnalysisBridge):
     """
 
     def __init__(self) -> None:
-        """Initialize instrumentation bridge."""
         super().__init__()
         self._capabilities.supports_scripting = True
 
@@ -897,12 +886,11 @@ class InstrumentationBridge(DynamicAnalysisBridge):
     async def enumerate_modules(self) -> list[ModuleInfo]:
         """List all loaded modules in the process.
 
+        Returns:
+            list[ModuleInfo]: List of loaded module information.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return list of ModuleInfo for each
-            loaded module in the attached process.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -913,12 +901,11 @@ class InstrumentationBridge(DynamicAnalysisBridge):
         Args:
             module_name: Name of the module.
 
+        Returns:
+            list[ExportInfo]: List of export information.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return list of ExportInfo for all
-            exported symbols from the specified module.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -936,12 +923,11 @@ class InstrumentationBridge(DynamicAnalysisBridge):
             on_enter: Script code to run on function entry.
             on_leave: Script code to run on function exit.
 
+        Returns:
+            HookInfo: Information about the installed hook.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return HookInfo describing the
-            installed hook on the target function.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -952,12 +938,11 @@ class InstrumentationBridge(DynamicAnalysisBridge):
         Args:
             hook_id: ID of the hook to remove.
 
+        Returns:
+            bool: True if hook was removed successfully.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return True if hook was removed
-            successfully, False otherwise.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -965,12 +950,11 @@ class InstrumentationBridge(DynamicAnalysisBridge):
     async def get_hooks(self) -> list[HookInfo]:
         """Get all active hooks.
 
+        Returns:
+            list[HookInfo]: List of active hook information.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return list of HookInfo for all
-            currently installed hooks in the process.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -981,12 +965,11 @@ class InstrumentationBridge(DynamicAnalysisBridge):
         Args:
             script: Script code to execute.
 
+        Returns:
+            str: Script execution result.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return the script execution result
-            as a string.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -998,12 +981,11 @@ class InstrumentationBridge(DynamicAnalysisBridge):
             target: Function to hook.
             return_value: Value to return instead.
 
+        Returns:
+            HookInfo: Information about the installed interception hook.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return HookInfo describing the
-            installed return value interception hook.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -1019,12 +1001,11 @@ class InstrumentationBridge(DynamicAnalysisBridge):
             address: Function address.
             args: Function arguments.
 
+        Returns:
+            int: Function return value.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return the integer return value
-            from calling the function at the specified address.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -1035,12 +1016,11 @@ class InstrumentationBridge(DynamicAnalysisBridge):
         Args:
             module_name: Name of the module.
 
+        Returns:
+            list[ImportInfo]: List of import information.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return list of ImportInfo for all
-            imported symbols from the specified module.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -1048,12 +1028,11 @@ class InstrumentationBridge(DynamicAnalysisBridge):
     async def enumerate_threads(self) -> list[ThreadInfo]:
         """List all threads in the attached process.
 
+        Returns:
+            list[ThreadInfo]: List of thread information.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return list of ThreadInfo for each
-            thread in the attached process.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -1066,7 +1045,6 @@ class BinaryOperationsBridge(ToolBridgeBase):
     """
 
     def __init__(self) -> None:
-        """Initialize binary operations bridge."""
         super().__init__()
         self._capabilities = BridgeCapabilities(
             supports_static_analysis=True,
@@ -1082,12 +1060,11 @@ class BinaryOperationsBridge(ToolBridgeBase):
         Args:
             path: Path to the binary.
 
+        Returns:
+            BinaryInfo: Information about the loaded binary.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return BinaryInfo with file details
-            including format, architecture, sections, and entry point.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -1099,12 +1076,11 @@ class BinaryOperationsBridge(ToolBridgeBase):
             offset: File offset.
             size: Number of bytes.
 
+        Returns:
+            bytes: Bytes read from the file.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return bytes read from the file
-            at the specified offset.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -1128,12 +1104,11 @@ class BinaryOperationsBridge(ToolBridgeBase):
         Args:
             patch: Patch information.
 
+        Returns:
+            bool: True if the patch was applied successfully.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return True if the patch was
-            applied successfully, False otherwise.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -1144,12 +1119,11 @@ class BinaryOperationsBridge(ToolBridgeBase):
         Args:
             patch: Patch to revert.
 
+        Returns:
+            bool: True if the patch was reverted successfully.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return True if the patch was
-            reverted successfully, False otherwise.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -1160,12 +1134,11 @@ class BinaryOperationsBridge(ToolBridgeBase):
         Args:
             path: Optional new path. Uses original if None.
 
+        Returns:
+            Path: Path where the file was saved.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return the Path where the file
-            was saved.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -1183,12 +1156,11 @@ class BinaryOperationsBridge(ToolBridgeBase):
             start_offset: Starting offset for search.
             max_results: Maximum results to return.
 
+        Returns:
+            list[int]: List of file offsets where the pattern was found.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return list of file offsets where
-            the byte pattern was found.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)
 
@@ -1202,11 +1174,10 @@ class BinaryOperationsBridge(ToolBridgeBase):
         Args:
             algorithm: Hash algorithm (md5, sha256).
 
+        Returns:
+            str: Hex digest of the file hash.
+
         Raises:
             RuntimeError: If the subclass does not override this method.
-
-        Note:
-            Subclasses must override to return the hex digest of the
-            file hash using the specified algorithm.
         """
         raise RuntimeError(_ERR_MUST_OVERRIDE)

@@ -62,14 +62,9 @@ class GoogleProvider(LLMProviderBase):
 
     Provides integration with Google's Gemini models including
     support for tool/function calling and streaming responses.
-
-    Attributes:
-        _client: The Gemini API client.
-        _current_task: Reference to any in-flight async task.
     """
 
     def __init__(self) -> None:
-        """Initialize the Google provider."""
         super().__init__()
         self._client: genai.Client | None = None
         self._current_task: asyncio.Task[object] | None = None
@@ -80,7 +75,7 @@ class GoogleProvider(LLMProviderBase):
         """Get the provider's name.
 
         Returns:
-            The provider name enum value.
+            ProviderName: The provider name enum value.
         """
         return ProviderName.GOOGLE
 
@@ -151,7 +146,7 @@ class GoogleProvider(LLMProviderBase):
         available generative models.
 
         Returns:
-            List of ModelInfo objects describing available models.
+            list[ModelInfo]: List of ModelInfo objects describing available models.
 
         Raises:
             ProviderError: If not connected or the request fails.
@@ -191,7 +186,7 @@ class GoogleProvider(LLMProviderBase):
                         name=display_name or model_id,
                         provider=ProviderName.GOOGLE,
                         context_window=input_limit,
-                        supports_tools=supports_tools,
+                        supports_vision=supports_vision,
                         supports_vision=supports_vision,
                         supports_streaming=supports_streaming,
                         input_cost_per_1m_tokens=None,
@@ -236,7 +231,7 @@ class GoogleProvider(LLMProviderBase):
             enable_cache: Whether to enable prompt caching.
 
         Returns:
-            A tuple containing the assistant message and optional tool calls.
+            tuple[Message, list[ToolCall] | None]: A tuple containing the assistant message and optional tool calls.
 
         Raises:
             ProviderError: If not connected or the request fails.
@@ -364,7 +359,7 @@ class GoogleProvider(LLMProviderBase):
             enable_cache: Whether to enable prompt caching.
 
         Yields:
-            Text chunks as they arrive from the API.
+            str: Text chunks as they arrive from the API.
 
         Raises:
             ProviderError: If not connected or the stream fails.
@@ -483,7 +478,7 @@ class GoogleProvider(LLMProviderBase):
             messages: List of Message objects to scan.
 
         Returns:
-            Concatenated system instruction text, or None if no system messages.
+            str | None: Concatenated system instruction text, or None if no system messages.
         """
         system_parts: list[str] = [msg.content for msg in messages if msg.role == "system" and msg.content]
         return "\n\n".join(system_parts) if system_parts else None
@@ -506,7 +501,7 @@ class GoogleProvider(LLMProviderBase):
             tool_choice: How the model should select tools.
 
         Returns:
-            Configured GenerateContentConfig instance.
+            types.GenerateContentConfig: Configured GenerateContentConfig instance.
         """
         tools_for_config: types.ToolListUnion | None = None
         if gemini_tools is not None:
@@ -548,7 +543,7 @@ class GoogleProvider(LLMProviderBase):
             response: The raw Gemini API response.
 
         Returns:
-            Tuple of (content string, list of ToolCall objects).
+            tuple[str, list[ToolCall]]: Tuple of (content string, list of ToolCall objects).
         """
         tool_calls: list[ToolCall] = []
 
@@ -593,7 +588,7 @@ class GoogleProvider(LLMProviderBase):
             messages: List of Message objects to convert.
 
         Returns:
-            List of content dictionaries in Gemini's expected format.
+            list[dict[str, object]]: List of content dictionaries in Gemini's expected format.
         """
         call_id_to_name: dict[str, str] = {}
         for msg in messages:
@@ -659,7 +654,7 @@ class GoogleProvider(LLMProviderBase):
             tools: List of ToolDefinition objects to convert.
 
         Returns:
-            List of Gemini Tool objects for function calling.
+            list[types.Tool]: List of Gemini Tool objects for function calling.
         """
         function_declarations: list[types.FunctionDeclaration] = []
         for tool in tools:
@@ -689,7 +684,7 @@ class GoogleProvider(LLMProviderBase):
             tools: List of ToolDefinition objects to convert.
 
         Returns:
-            List of tool dictionaries in Gemini's expected format.
+            list[dict[str, object]]: List of tool dictionaries in Gemini's expected format.
         """
         result: list[dict[str, object]] = []
         for tool in tools:

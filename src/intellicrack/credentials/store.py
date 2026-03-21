@@ -69,8 +69,8 @@ class StoredCredential:
     """Metadata for a stored credential.
 
     Attributes:
-        provider: The provider this credential belongs to.
-        key_name: Human-readable name/label for the credential.
+        provider: Provider this credential belongs to.
+        key_name: Human-readable name or label for the credential.
         created_at: When the credential was first stored.
         updated_at: When the credential was last updated.
         source: Where the credential originated from.
@@ -92,6 +92,10 @@ class CredentialStore:
 
     If keyring is unavailable, falls back to CredentialLoader for .env files.
 
+    Args:
+        fallback_loader: CredentialLoader instance for fallback.
+                       If None, creates a new one.
+
     Attributes:
         SERVICE_NAME: The keyring service name for Intellicrack credentials.
         METADATA_KEY: Key suffix for storing credential metadata.
@@ -101,12 +105,6 @@ class CredentialStore:
     METADATA_KEY: Final[str] = "_metadata"
 
     def __init__(self, fallback_loader: CredentialLoader | None = None) -> None:
-        """Initialize the credential store.
-
-        Args:
-            fallback_loader: CredentialLoader instance for fallback.
-                           If None, creates a new one.
-        """
         self._fallback_loader = fallback_loader or get_credential_loader()
         self._lock = asyncio.Lock()
         self._keyring: ModuleType | None = None
@@ -117,7 +115,7 @@ class CredentialStore:
         """Check if keyring backend is available and functional.
 
         Returns:
-            True if keyring is available and working.
+            bool: True if keyring is available and working.
         """
         if self._keyring_checked:
             return self._keyring_available
@@ -152,7 +150,7 @@ class CredentialStore:
         """Check if keyring backend is available and functional.
 
         Returns:
-            True if keyring can be used for credential storage.
+            bool: True if keyring can be used for credential storage.
         """
         return self._check_keyring()
 
@@ -163,7 +161,7 @@ class CredentialStore:
             provider: The provider.
 
         Returns:
-            The key name for keyring storage.
+            str: The key name for keyring storage.
         """
         return f"{self.SERVICE_NAME}_{provider.value}"
 
@@ -175,7 +173,7 @@ class CredentialStore:
             creds: Credentials to serialize.
 
         Returns:
-            JSON string representation.
+            str: JSON string representation.
         """
         data = asdict(creds)
         return json.dumps(data, ensure_ascii=False)
@@ -188,7 +186,7 @@ class CredentialStore:
             data: JSON string to deserialize.
 
         Returns:
-            ProviderCredentials instance.
+            ProviderCredentials: ProviderCredentials instance.
 
         Raises:
             CredentialStoreError: If deserialization fails.
@@ -214,7 +212,7 @@ class CredentialStore:
             metadata: Metadata to serialize.
 
         Returns:
-            JSON string representation.
+            str: JSON string representation.
         """
         data = {
             "provider": metadata.provider.value,
@@ -234,7 +232,7 @@ class CredentialStore:
             provider: Provider for the metadata.
 
         Returns:
-            StoredCredential instance.
+            StoredCredential: StoredCredential instance.
         """
         try:
             parsed = json.loads(data)
@@ -263,7 +261,7 @@ class CredentialStore:
             provider: Provider to get credentials for.
 
         Returns:
-            ProviderCredentials or None if not found.
+            ProviderCredentials | None: ProviderCredentials or None if not found.
         """
         if self._keyring is None:
             return None
@@ -341,7 +339,7 @@ class CredentialStore:
             provider: Provider to get metadata for.
 
         Returns:
-            StoredCredential metadata or None.
+            StoredCredential | None: StoredCredential metadata or None.
         """
         if self._keyring is None:
             return None
@@ -369,7 +367,7 @@ class CredentialStore:
             provider: The provider to get credentials for.
 
         Returns:
-            ProviderCredentials if found, None otherwise.
+            ProviderCredentials | None: ProviderCredentials if found, None otherwise.
         """
         async with self._lock:
             if self.keyring_available:
@@ -387,7 +385,7 @@ class CredentialStore:
             provider: The provider to get credentials for.
 
         Returns:
-            ProviderCredentials for the provider.
+            ProviderCredentials: ProviderCredentials for the provider.
 
         Raises:
             CredentialNotFoundError: If no credentials are found.
@@ -433,7 +431,7 @@ class CredentialStore:
             provider: The provider to delete credentials for.
 
         Returns:
-            True if credentials were deleted, False if not found.
+            bool: True if credentials were deleted, False if not found.
 
         Raises:
             KeyringUnavailableError: If keyring is not available.
@@ -468,7 +466,7 @@ class CredentialStore:
         """List all stored credential metadata.
 
         Returns:
-            List of StoredCredential with metadata for each provider.
+            list[StoredCredential]: List of StoredCredential with metadata for each provider.
         """
         results: list[StoredCredential] = []
 
@@ -505,7 +503,7 @@ class CredentialStore:
             overwrite: Whether to overwrite existing keyring credentials.
 
         Returns:
-            Dict mapping provider to success status.
+            dict[ProviderName, bool]: Dict mapping provider to success status.
 
         Raises:
             KeyringUnavailableError: If keyring is not available.
@@ -552,7 +550,7 @@ class CredentialStore:
             provider: The provider to validate.
 
         Returns:
-            Tuple of (is_valid, error_message).
+            tuple[bool, str | None]: Tuple of (is_valid, error_message).
         """
         creds = await self.get(provider)
         if creds is None or not creds.api_key:
@@ -587,7 +585,7 @@ class CredentialStore:
             provider: The provider to check.
 
         Returns:
-            CredentialSource or None if no credentials found.
+            CredentialSource | None: CredentialSource or None if no credentials found.
         """
         if self.keyring_available:
             keyring_creds = await self._get_from_keyring(provider)
@@ -615,7 +613,7 @@ def get_credential_store() -> CredentialStore:
     """Get the global credential store instance.
 
     Returns:
-        The singleton CredentialStore instance.
+        CredentialStore: The singleton CredentialStore instance.
     """
     if _store_holder.instance is None:
         _store_holder.instance = CredentialStore()
@@ -629,7 +627,7 @@ async def get_credentials(provider: ProviderName) -> ProviderCredentials | None:
         provider: The provider to get credentials for.
 
     Returns:
-        ProviderCredentials or None if not configured.
+        ProviderCredentials | None: ProviderCredentials or None if not configured.
     """
     store = get_credential_store()
     return await store.get(provider)

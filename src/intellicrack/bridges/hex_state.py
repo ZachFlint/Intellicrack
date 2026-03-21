@@ -38,6 +38,11 @@ class HexDocumentEvent(enum.Enum):
         SELECTION_CHANGED: The selection range changed.
         DATA_MODIFIED: Document bytes were modified.
         DOCUMENT_SAVED: The document was saved to disk.
+        TEMPLATE_REGISTERED: A template was registered at runtime.
+        TEMPLATE_REMOVED: A template was removed.
+        HIGHLIGHT_RULE_ADDED: A byte highlight rule was added.
+        HIGHLIGHT_RULE_REMOVED: A byte highlight rule was removed.
+        DISPLAY_MODE_CHANGED: The hex display mode changed.
     """
 
     DOCUMENT_OPENED = "document_opened"
@@ -46,6 +51,11 @@ class HexDocumentEvent(enum.Enum):
     SELECTION_CHANGED = "selection_changed"
     DATA_MODIFIED = "data_modified"
     DOCUMENT_SAVED = "document_saved"
+    TEMPLATE_REGISTERED = "template_registered"
+    TEMPLATE_REMOVED = "template_removed"
+    HIGHLIGHT_RULE_ADDED = "highlight_rule_added"
+    HIGHLIGHT_RULE_REMOVED = "highlight_rule_removed"
+    DISPLAY_MODE_CHANGED = "display_mode_changed"
 
 
 StateCallbackFn = Callable[[HexDocumentEvent, dict[str, Any]], None]
@@ -54,7 +64,7 @@ StateCallbackFn = Callable[[HexDocumentEvent, dict[str, Any]], None]
 class _CallbackEntry:
     """Internal storage for a registered callback with its source_id.
 
-    Attributes:
+    Args:
         fn: The callback callable.
         source_id: Identifier for loop-guard filtering.
     """
@@ -66,12 +76,6 @@ class _CallbackEntry:
         fn: StateCallbackFn,
         source_id: str,
     ) -> None:
-        """Initialize a callback entry.
-
-        Args:
-            fn: The callback callable.
-            source_id: Identifier for loop-guard filtering.
-        """
         self.fn = fn
         self.source_id = source_id
 
@@ -83,19 +87,9 @@ class HexDocumentState:
     range, and file path.  Registered callbacks are notified on state
     changes, enabling the bridge and GUI to stay in sync without direct
     coupling.
-
-    Attributes:
-        _document: Active HexDocument instance or None.
-        _file_path: Path to the currently loaded file.
-        _cursor_offset: Current logical cursor position.
-        _selection: Current selection range (start, end) or None.
-        _callbacks: Registered observer callbacks.
-        _lock: Thread safety lock.
-        _notify_guard: Reentrancy guard for notifications.
     """
 
     def __init__(self) -> None:
-        """Initialize the hex document state holder."""
         self._document: Any | None = None
         self._file_path: Path | None = None
         self._cursor_offset: int = 0
@@ -109,7 +103,7 @@ class HexDocumentState:
         """Get the active HexDocument instance.
 
         Returns:
-            Active HexDocument or None if no document is open.
+            Any | None: Active HexDocument or None if no document is open.
         """
         return self._document
 
@@ -118,7 +112,7 @@ class HexDocumentState:
         """Get the path to the currently loaded file.
 
         Returns:
-            File path or None if no file is loaded.
+            Path | None: File path or None if no file is loaded.
         """
         return self._file_path
 
@@ -127,7 +121,7 @@ class HexDocumentState:
         """Get the current cursor offset.
 
         Returns:
-            Current byte offset of the cursor.
+            int: Current byte offset of the cursor.
         """
         return self._cursor_offset
 
@@ -136,7 +130,7 @@ class HexDocumentState:
         """Get the current selection range.
 
         Returns:
-            Tuple of (start, end) offsets or None if no selection.
+            tuple[int, int] | None: Tuple of (start, end) offsets or None if no selection.
         """
         return self._selection
 
@@ -275,6 +269,96 @@ class HexDocumentState:
         self._notify(
             HexDocumentEvent.DOCUMENT_SAVED,
             {"path": path},
+            source=source,
+        )
+
+    def notify_template_registered(
+        self,
+        template_name: str,
+        *,
+        source: str = "",
+    ) -> None:
+        """Notify observers that a template was registered.
+
+        Args:
+            template_name: Name of the registered template.
+            source: Identifier of the caller for loop-guard filtering.
+        """
+        self._notify(
+            HexDocumentEvent.TEMPLATE_REGISTERED,
+            {"template_name": template_name},
+            source=source,
+        )
+
+    def notify_template_removed(
+        self,
+        template_name: str,
+        *,
+        source: str = "",
+    ) -> None:
+        """Notify observers that a template was removed.
+
+        Args:
+            template_name: Name of the removed template.
+            source: Identifier of the caller for loop-guard filtering.
+        """
+        self._notify(
+            HexDocumentEvent.TEMPLATE_REMOVED,
+            {"template_name": template_name},
+            source=source,
+        )
+
+    def notify_highlight_rule_added(
+        self,
+        rule: dict[str, Any],
+        *,
+        source: str = "",
+    ) -> None:
+        """Notify observers that a highlight rule was added.
+
+        Args:
+            rule: Rule dict with id, condition_type, condition_params, color.
+            source: Identifier of the caller for loop-guard filtering.
+        """
+        self._notify(
+            HexDocumentEvent.HIGHLIGHT_RULE_ADDED,
+            {"rule": rule},
+            source=source,
+        )
+
+    def notify_highlight_rule_removed(
+        self,
+        rule_id: str,
+        *,
+        source: str = "",
+    ) -> None:
+        """Notify observers that a highlight rule was removed.
+
+        Args:
+            rule_id: ID of the removed rule.
+            source: Identifier of the caller for loop-guard filtering.
+        """
+        self._notify(
+            HexDocumentEvent.HIGHLIGHT_RULE_REMOVED,
+            {"rule_id": rule_id},
+            source=source,
+        )
+
+    def notify_display_mode_changed(
+        self,
+        mode: str,
+        *,
+        source: str = "",
+    ) -> None:
+        """Notify observers that the hex display mode changed.
+
+        Args:
+            mode: New display mode string (e.g. ``"hex8"``, ``"hex16_le"``).
+            source: Identifier of the caller for loop-guard filtering.
+        """
+        self._notify(
+            HexDocumentEvent.DISPLAY_MODE_CHANGED,
+            {"mode": mode},
             source=source,
         )
 

@@ -45,7 +45,11 @@ _logger = get_logger("ui.panels.script_manager")
 
 
 class ScriptTypeInfo:
-    """Information about a script type including templates and extensions."""
+    """Information about a script type including templates and extensions.
+
+    Attributes:
+        TYPES: Mapping of script type identifiers to their configuration dicts.
+    """
 
     TYPES: ClassVar[dict[str, dict[str, str]]] = {
         "frida": {
@@ -211,7 +215,7 @@ if __name__ == "__main__":
         """Get list of available script types.
 
         Returns:
-            List of script type identifiers.
+            list[str]: List of script type identifiers.
         """
         return list(cls.TYPES.keys())
 
@@ -223,7 +227,7 @@ if __name__ == "__main__":
             script_type: Script type identifier.
 
         Returns:
-            Human-readable display name.
+            str: Human-readable display name.
         """
         info = cls.TYPES.get(script_type, {})
         return info.get("display", script_type)
@@ -236,7 +240,7 @@ if __name__ == "__main__":
             script_type: Script type identifier.
 
         Returns:
-            File extension including dot.
+            str: File extension including dot.
         """
         info = cls.TYPES.get(script_type, {})
         return info.get("extension", ".txt")
@@ -249,7 +253,7 @@ if __name__ == "__main__":
             script_type: Script type identifier.
 
         Returns:
-            Language identifier for syntax highlighting.
+            str: Language identifier for syntax highlighting.
         """
         info = cls.TYPES.get(script_type, {})
         return info.get("language", "text")
@@ -264,7 +268,7 @@ if __name__ == "__main__":
             address: Target address for template.
 
         Returns:
-            Template script content.
+            str: Template script content.
         """
         info = cls.TYPES.get(script_type, {})
         template = info.get("template", "")
@@ -272,17 +276,19 @@ if __name__ == "__main__":
 
 
 class ScriptListWidget(QListWidget):
-    """List widget for displaying and filtering scripts."""
+    """List widget for displaying and filtering scripts.
+
+    Args:
+        parent: Parent widget.
+
+    Attributes:
+        script_selected: Qt signal for script selected.
+    """
 
     script_selected = pyqtSignal(str)
 
     @override
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the script list widget.
-
-        Args:
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._scripts: dict[str, dict[str, str]] = {}
         self._current_filter: str | None = None
@@ -366,7 +372,7 @@ class ScriptListWidget(QListWidget):
         """Get the currently selected script ID.
 
         Returns:
-            Selected script ID or None.
+            str | None: Selected script ID or None.
         """
         if current := self.currentItem():
             return current.data(Qt.ItemDataRole.UserRole)
@@ -374,17 +380,19 @@ class ScriptListWidget(QListWidget):
 
 
 class ScriptEditor(QPlainTextEdit):
-    """Code editor widget for script editing with basic styling."""
+    """Code editor widget for script editing with basic styling.
+
+    Args:
+        parent: Parent widget.
+
+    Attributes:
+        content_changed: Qt signal for content changed.
+    """
 
     content_changed = pyqtSignal()
 
     @override
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the script editor.
-
-        Args:
-            parent: Parent widget.
-        """
         super().__init__(parent=parent)
         self._setup_ui()
 
@@ -417,7 +425,7 @@ class ScriptEditor(QPlainTextEdit):
         """Get the current editor content.
 
         Returns:
-            Script content string.
+            str: Script content string.
         """
         return self.toPlainText()
 
@@ -435,17 +443,18 @@ class ScriptManagerPanel(QWidget):
 
     Provides a split view with script list and editor, plus controls
     for script management and execution.
+
+    Args:
+        parent: Parent widget.
+
+    Attributes:
+        script_execute: Qt signal for script execute.
     """
 
     script_execute = pyqtSignal(str, str, str)
 
     @override
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the script manager panel.
-
-        Args:
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._backend: ScriptManager | None = None
         self._validator: ScriptValidator | None = None
@@ -590,7 +599,7 @@ class ScriptManagerPanel(QWidget):
             content: Script content.
 
         Returns:
-            Script object ready for use with ScriptManager.
+            Script: Script object ready for use with ScriptManager.
         """
         language_map = {
             "frida": ScriptLanguage.JAVASCRIPT,
@@ -836,7 +845,7 @@ class ScriptManagerPanel(QWidget):
         """Get the current script data.
 
         Returns:
-            Tuple of (name, type, content) or None.
+            tuple[str, str, str] | None: Tuple of (name, type, content) or None.
         """
         name = self._name_edit.text().strip()
         script_type_raw = self._type_combo.currentData()

@@ -55,9 +55,9 @@ class ToolStatus:
     """Status of a registered tool.
 
     Attributes:
-        name: Tool name.
-        available: Whether the tool is available.
-        connected: Whether the tool is connected.
+        name: Identifier of the tool.
+        available: Whether the tool is available on the system.
+        connected: Whether the tool is currently connected.
         version: Tool version if known.
         path: Installation path if known.
         error: Last error if any.
@@ -77,18 +77,11 @@ class ToolRegistry:
     Manages initialization, availability, and provides unified access
     to all tool bridges.
 
-    Attributes:
-        _bridges: Registered tool bridges.
-        _installer: Tool installer/detector.
-        _tools_dir: Directory for tool installations.
+    Args:
+        tools_dir: Directory for tool installations.
     """
 
     def __init__(self, tools_dir: Path) -> None:
-        """Initialize the tool registry.
-
-        Args:
-            tools_dir: Directory for tool installations.
-        """
         self._bridges: dict[ToolName, ToolBridgeBase] = {}
         from ..bridges.installer import ToolInstaller
 
@@ -102,7 +95,7 @@ class ToolRegistry:
         """Get the tools directory.
 
         Returns:
-            Path to tools directory.
+            Path: Path to tools directory.
         """
         return self._tools_dir
 
@@ -163,7 +156,7 @@ class ToolRegistry:
             port: Network port for bridge communication if applicable.
 
         Returns:
-            True if initialization succeeded.
+            bool: True if initialization succeeded.
         """
         if name not in self._bridges:
             _logger.error("unknown_tool", tool_name=name)
@@ -210,7 +203,7 @@ class ToolRegistry:
             name: Tool name.
 
         Returns:
-            Tool bridge or None if not registered.
+            ToolBridgeBase | None: Tool bridge or None if not registered.
         """
         bridge = self._bridges.get(name)
         if bridge is not None:
@@ -223,7 +216,7 @@ class ToolRegistry:
         """Get the binary operations bridge.
 
         Returns:
-            BinaryBridge instance.
+            BinaryBridge: BinaryBridge instance.
 
         Raises:
             ToolError: If bridge not available.
@@ -240,7 +233,7 @@ class ToolRegistry:
         """Get the process control bridge.
 
         Returns:
-            ProcessBridge instance.
+            ProcessBridge: ProcessBridge instance.
 
         Raises:
             ToolError: If bridge not available.
@@ -257,7 +250,7 @@ class ToolRegistry:
         """Get the Frida instrumentation bridge.
 
         Returns:
-            FridaBridge instance.
+            FridaBridge: FridaBridge instance.
 
         Raises:
             ToolError: If bridge not available.
@@ -274,7 +267,7 @@ class ToolRegistry:
         """Get the Ghidra analysis bridge.
 
         Returns:
-            GhidraBridge instance.
+            GhidraBridge: GhidraBridge instance.
 
         Raises:
             ToolError: If bridge not available.
@@ -291,7 +284,7 @@ class ToolRegistry:
         """Get the Cutter/Rizin analysis bridge.
 
         Returns:
-            CutterBridge instance.
+            CutterBridge: CutterBridge instance.
 
         Raises:
             ToolError: If bridge not available.
@@ -308,7 +301,7 @@ class ToolRegistry:
         """Get the x64dbg debugger bridge.
 
         Returns:
-            X64DbgBridge instance.
+            X64DbgBridge: X64DbgBridge instance.
 
         Raises:
             ToolError: If bridge not available.
@@ -325,7 +318,7 @@ class ToolRegistry:
         """Get the sandbox bridge.
 
         Returns:
-            SandboxBridge instance.
+            SandboxBridge: SandboxBridge instance.
 
         Raises:
             ToolError: If bridge not available.
@@ -342,7 +335,7 @@ class ToolRegistry:
         """Get the hex editor bridge.
 
         Returns:
-            HexEditorBridge instance.
+            HexEditorBridge: HexEditorBridge instance.
 
         Raises:
             ToolError: If bridge not available.
@@ -362,7 +355,7 @@ class ToolRegistry:
             name: Tool name.
 
         Returns:
-            ToolStatus instance.
+            ToolStatus: ToolStatus instance.
         """
         _logger.debug("get_status_entry", tool_name=name.value)
         bridge = self._bridges.get(name)
@@ -416,7 +409,7 @@ class ToolRegistry:
         """Get status of all tools.
 
         Returns:
-            List of ToolStatus instances.
+            list[ToolStatus]: List of ToolStatus instances.
         """
         _logger.debug("get_all_status_entry", bridge_count=len(self._bridges))
         tasks = [self.get_status(name) for name in self._bridges]
@@ -428,7 +421,7 @@ class ToolRegistry:
         """Get tool definitions for LLM function calling.
 
         Returns:
-            List of ToolDefinition instances.
+            list[ToolDefinition]: List of ToolDefinition instances.
         """
         _logger.debug("get_tool_definitions_entry", bridge_count=len(self._bridges))
         definitions: list[ToolDefinition] = []
@@ -446,7 +439,7 @@ class ToolRegistry:
         """Get list of available tools.
 
         Returns:
-            List of available tool names.
+            list[ToolName]: List of available tool names.
         """
         tools = list(self._bridges.keys())
         _logger.debug(
@@ -470,7 +463,7 @@ class ToolRegistry:
             arguments: Function arguments.
 
         Returns:
-            Result of the function call.
+            Any: Result of the function call.
 
         Raises:
             ToolError: If execution fails.
@@ -561,7 +554,7 @@ class ToolRegistry:
             name: Tool name.
 
         Returns:
-            True if tool is ready.
+            bool: True if tool is ready.
         """
         _logger.debug("ensure_tool_ready_entry", tool_name=name.value)
         bridge = self._bridges.get(name)

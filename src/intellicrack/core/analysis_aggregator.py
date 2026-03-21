@@ -40,16 +40,11 @@ class AnalysisAggregator:
     imports, exports, functions, and sections, then packages everything
     into a single BridgeAnalysisSummary.
 
-    Attributes:
-        _tools: Reference to the shared ToolRegistry.
+    Args:
+        tools: ToolRegistry providing access to bridge instances.
     """
 
     def __init__(self, tools: ToolRegistry) -> None:
-        """Initialize the aggregator with a tool registry.
-
-        Args:
-            tools: ToolRegistry providing access to bridge instances.
-        """
         self._tools = tools
 
     async def aggregate(
@@ -68,7 +63,7 @@ class AnalysisAggregator:
             binary_info: Pre-loaded binary metadata from the binary bridge.
 
         Returns:
-            BridgeAnalysisSummary with data from all contributing bridges.
+            BridgeAnalysisSummary: Aggregated data from all contributing bridges.
         """
         _logger.info("aggregation_starting", binary_name=binary_name)
         strings: list[StringInfo] = []
@@ -149,15 +144,15 @@ class AnalysisAggregator:
 
         try:
             raw_strings = await binary_bridge.get_strings()
-            for addr, value in raw_strings:
-                strings.append(
-                    StringInfo(
-                        address=addr,
-                        value=value,
-                        encoding="utf-8",
-                        section="",
-                    )
+            strings.extend(
+                StringInfo(
+                    address=addr,
+                    value=value,
+                    encoding="utf-8",
+                    section="",
                 )
+                for addr, value in raw_strings
+            )
             source_bridges.append("binary")
         except Exception as exc:
             _logger.warning(
@@ -254,7 +249,7 @@ def _deduplicate_imports(imports: list[ImportInfo]) -> list[ImportInfo]:
         imports: List of import entries possibly containing duplicates.
 
     Returns:
-        Deduplicated list preserving first-seen order.
+        list[ImportInfo]: Deduplicated list preserving first-seen order.
     """
     seen: set[int] = set()
     result: list[ImportInfo] = []
@@ -272,7 +267,7 @@ def _deduplicate_exports(exports: list[ExportInfo]) -> list[ExportInfo]:
         exports: List of export entries possibly containing duplicates.
 
     Returns:
-        Deduplicated list preserving first-seen order.
+        list[ExportInfo]: Deduplicated list preserving first-seen order.
     """
     seen: set[int] = set()
     result: list[ExportInfo] = []

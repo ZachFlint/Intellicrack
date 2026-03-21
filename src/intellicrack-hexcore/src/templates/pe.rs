@@ -16,6 +16,13 @@ fn image_dos_header() -> StructTemplate {
         name: "IMAGE_DOS_HEADER".to_string(),
         description: "PE DOS Header (64 bytes at offset 0)".to_string(),
         default_endianness: Endianness::Little,
+        version: None,
+        author: None,
+        category: Some("PE".to_string()),
+        magic_detection: Some(super::MagicDetection {
+            offset: 0,
+            bytes: vec![0x4D, 0x5A],
+        }),
         fields: vec![
             fd("e_magic", FieldType::UInt16, "Magic number (0x5A4D = 'MZ')"),
             fd("e_cblp", FieldType::UInt16, "Bytes on last page of file"),
@@ -31,10 +38,10 @@ fn image_dos_header() -> StructTemplate {
             fd("e_cs", FieldType::UInt16, "Initial (relative) CS value"),
             fd("e_lfarlc", FieldType::UInt16, "File address of relocation table"),
             fd("e_ovno", FieldType::UInt16, "Overlay number"),
-            fd("e_res", FieldType::Array(Box::new(FieldType::UInt16), 4), "Reserved words"),
+            fd("e_res", FieldType::Array { element_type: Box::new(FieldType::UInt16), count: 4 }, "Reserved words"),
             fd("e_oemid", FieldType::UInt16, "OEM identifier"),
             fd("e_oeminfo", FieldType::UInt16, "OEM information"),
-            fd("e_res2", FieldType::Array(Box::new(FieldType::UInt16), 10), "Reserved words"),
+            fd("e_res2", FieldType::Array { element_type: Box::new(FieldType::UInt16), count: 10 }, "Reserved words"),
             fd("e_lfanew", FieldType::Int32, "File address of new exe header"),
         ],
     }
@@ -45,6 +52,10 @@ fn image_file_header() -> StructTemplate {
         name: "IMAGE_FILE_HEADER".to_string(),
         description: "PE COFF File Header (20 bytes)".to_string(),
         default_endianness: Endianness::Little,
+        version: None,
+        author: None,
+        category: Some("PE".to_string()),
+        magic_detection: None,
         fields: vec![
             fd("Machine", FieldType::UInt16, "Target machine type"),
             fd("NumberOfSections", FieldType::UInt16, "Number of sections"),
@@ -62,6 +73,10 @@ fn image_optional_header32() -> StructTemplate {
         name: "IMAGE_OPTIONAL_HEADER32".to_string(),
         description: "PE32 Optional Header (96 bytes standard + data directories)".to_string(),
         default_endianness: Endianness::Little,
+        version: None,
+        author: None,
+        category: Some("PE".to_string()),
+        magic_detection: None,
         fields: vec![
             fd("Magic", FieldType::UInt16, "Magic number (0x10B = PE32)"),
             fd("MajorLinkerVersion", FieldType::UInt8, "Linker major version"),
@@ -102,6 +117,10 @@ fn image_optional_header64() -> StructTemplate {
         name: "IMAGE_OPTIONAL_HEADER64".to_string(),
         description: "PE32+ Optional Header (112 bytes standard + data directories)".to_string(),
         default_endianness: Endianness::Little,
+        version: None,
+        author: None,
+        category: Some("PE".to_string()),
+        magic_detection: None,
         fields: vec![
             fd("Magic", FieldType::UInt16, "Magic number (0x20B = PE32+)"),
             fd("MajorLinkerVersion", FieldType::UInt8, "Linker major version"),
@@ -141,6 +160,10 @@ fn image_section_header() -> StructTemplate {
         name: "IMAGE_SECTION_HEADER".to_string(),
         description: "PE Section Header (40 bytes)".to_string(),
         default_endianness: Endianness::Little,
+        version: None,
+        author: None,
+        category: Some("PE".to_string()),
+        magic_detection: None,
         fields: vec![
             fd("Name", FieldType::FixedString(8), "Section name (8 bytes, null-padded)"),
             fd("VirtualSize", FieldType::UInt32, "Size in memory (or PhysicalAddress)"),
@@ -161,6 +184,10 @@ fn image_data_directory() -> StructTemplate {
         name: "IMAGE_DATA_DIRECTORY".to_string(),
         description: "PE Data Directory Entry (8 bytes)".to_string(),
         default_endianness: Endianness::Little,
+        version: None,
+        author: None,
+        category: Some("PE".to_string()),
+        magic_detection: None,
         fields: vec![
             fd("VirtualAddress", FieldType::UInt32, "RVA of the data"),
             fd("Size", FieldType::UInt32, "Size of the data"),
@@ -173,6 +200,10 @@ fn image_import_descriptor() -> StructTemplate {
         name: "IMAGE_IMPORT_DESCRIPTOR".to_string(),
         description: "PE Import Directory Entry (20 bytes)".to_string(),
         default_endianness: Endianness::Little,
+        version: None,
+        author: None,
+        category: Some("PE".to_string()),
+        magic_detection: None,
         fields: vec![
             fd("OriginalFirstThunk", FieldType::UInt32, "RVA of Import Lookup Table (ILT)"),
             fd("TimeDateStamp", FieldType::UInt32, "Timestamp (0 if not bound)"),
@@ -188,6 +219,10 @@ fn image_export_directory() -> StructTemplate {
         name: "IMAGE_EXPORT_DIRECTORY".to_string(),
         description: "PE Export Directory Table (40 bytes)".to_string(),
         default_endianness: Endianness::Little,
+        version: None,
+        author: None,
+        category: Some("PE".to_string()),
+        magic_detection: None,
         fields: vec![
             fd("Characteristics", FieldType::UInt32, "Reserved, must be 0"),
             fd("TimeDateStamp", FieldType::UInt32, "Export creation timestamp"),
@@ -210,5 +245,7 @@ fn fd(name: &str, field_type: FieldType, description: &str) -> FieldDefinition {
         field_type,
         endianness: None,
         description: description.to_string(),
+        color: None,
+        validation: None,
     }
 }

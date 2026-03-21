@@ -109,6 +109,14 @@ class AsyncWorker(QThread):
 
     Runs an asyncio event loop in a separate thread to execute
     async operations without blocking the UI.
+
+    Args:
+        coro: Coroutine to execute.
+        parent: Parent widget.
+
+    Attributes:
+        finished: Qt signal for finished.
+        error: Qt signal for error.
     """
 
     finished = pyqtSignal(object)
@@ -119,12 +127,6 @@ class AsyncWorker(QThread):
         coro: Coroutine[object, object, object],
         parent: QWidget | None = None,
     ) -> None:
-        """Initialize the async worker.
-
-        Args:
-            coro: Coroutine to execute.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._coro: Coroutine[object, object, object] = coro
 
@@ -149,6 +151,19 @@ class MainWindow(QMainWindow):
 
     Combines chat panel, tool output panel, menus, and toolbar
     into the main application interface.
+
+    Args:
+        config: Application configuration.
+        orchestrator: AI agent orchestrator.
+        parent: Parent widget.
+
+    Attributes:
+        message_received: Qt signal for message received.
+        tool_call_received: Qt signal for tool call received.
+        tool_result_received: Qt signal for tool result received.
+        stream_chunk_received: Qt signal for stream chunk received.
+        status_update: Qt signal for status update.
+        bridge_analysis_received: Qt signal for bridge analysis received.
     """
 
     message_received = pyqtSignal(Message)
@@ -164,13 +179,6 @@ class MainWindow(QMainWindow):
         orchestrator: Orchestrator,
         parent: QWidget | None = None,
     ) -> None:
-        """Initialize the main window.
-
-        Args:
-            config: Application configuration.
-            orchestrator: AI agent orchestrator.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         sys.excepthook = _unhandled_exception_hook
         self._config = config
@@ -799,7 +807,7 @@ class MainWindow(QMainWindow):
         """Refresh tool installation status asynchronously.
 
         Returns:
-            Dictionary mapping tool names to (available, path) tuples.
+            dict[str, object]: Dictionary mapping tool names to (available, path) tuples.
         """
         installer = getattr(self, "_tool_installer", None)
         if installer is None:
@@ -842,7 +850,7 @@ class MainWindow(QMainWindow):
             call: The tool call requiring confirmation.
 
         Returns:
-            Future that resolves to True if approved, False otherwise.
+            asyncio.Future[bool]: Future that resolves to True if approved, False otherwise.
         """
         confirmation_module = importlib.import_module(".confirmation_dialog", "intellicrack.ui")
 

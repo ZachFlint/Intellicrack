@@ -62,14 +62,12 @@ class OpenRouterProvider(LLMProviderBase):
     unified API interface.
 
     Attributes:
-        _client: The httpx async client for API calls.
-        _api_key: The OpenRouter API key.
+        BASE_URL: OpenRouter unified LLM API base URL.
     """
 
     BASE_URL = "https://openrouter.ai/api/v1"
 
     def __init__(self) -> None:
-        """Initialize the OpenRouter provider."""
         super().__init__()
         self._client: httpx.AsyncClient | None = None
         self._api_key: str | None = None
@@ -80,7 +78,7 @@ class OpenRouterProvider(LLMProviderBase):
         """Get the provider's name.
 
         Returns:
-            ProviderName.OPENROUTER
+            ProviderName: ProviderName.OPENROUTER
         """
         return ProviderName.OPENROUTER
 
@@ -146,7 +144,7 @@ class OpenRouterProvider(LLMProviderBase):
         """Dynamically fetch available models from OpenRouter.
 
         Returns:
-            List of available models.
+            list[ModelInfo]: List of available models.
 
         Raises:
             ProviderError: If not connected.
@@ -243,7 +241,7 @@ class OpenRouterProvider(LLMProviderBase):
             enable_cache: Whether to enable prompt caching (ignored by OpenRouter).
 
         Returns:
-            Tuple of (assistant message, tool calls if any).
+            tuple[Message, list[ToolCall] | None]: Tuple of (assistant message, tool calls if any).
 
         Raises:
             ProviderError: If not connected or request fails.
@@ -366,7 +364,7 @@ class OpenRouterProvider(LLMProviderBase):
             response_message: The message dict from the API response.
 
         Returns:
-            List of parsed ToolCall objects.
+            list[ToolCall]: List of parsed ToolCall objects.
         """
         tool_calls: list[ToolCall] = []
 
@@ -408,7 +406,7 @@ class OpenRouterProvider(LLMProviderBase):
             enable_cache: Whether to enable prompt caching (ignored by OpenRouter).
 
         Yields:
-            Text chunks as they arrive.
+            str: Text chunks as they arrive.
 
         Raises:
             ProviderError: If not connected or request fails.
@@ -524,7 +522,7 @@ class OpenRouterProvider(LLMProviderBase):
             messages: List of Message objects.
 
         Returns:
-            List of messages in OpenRouter's format.
+            list[dict[str, object]]: List of messages in OpenRouter's format.
         """
         return self._convert_messages_to_openai_format(messages)
 
@@ -541,7 +539,7 @@ class OpenRouterProvider(LLMProviderBase):
             tools: List of ToolDefinition objects.
 
         Returns:
-            List of tools in OpenRouter's format.
+            list[dict[str, object]]: List of tools in OpenRouter's format.
         """
         openrouter_tools: list[dict[str, object]] = []
         for tool in tools:
@@ -556,7 +554,7 @@ class OpenRouterProvider(LLMProviderBase):
             generation_id: The generation ID from a previous response.
 
         Returns:
-            Generation details including cost and tokens used.
+            dict[str, object]: Generation details including cost and tokens used.
 
         Raises:
             ProviderError: If not connected or request fails.

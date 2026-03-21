@@ -44,7 +44,7 @@ def _resolve(obj: object, method_name: str) -> Callable[..., Any]:
         method_name: The camelCase method name to look up.
 
     Returns:
-        The bound method callable.
+        Callable[..., Any]: The bound method callable.
 
     Raises:
         AttributeError: If the method does not exist on the object.
@@ -65,7 +65,7 @@ def get_screen_geometry(app: QApplication) -> tuple[int, int, int, int] | None:
         app: The QApplication instance.
 
     Returns:
-        Tuple of (x, y, width, height) or None if no screen detected.
+        tuple[int, int, int, int] | None: Tuple of (x, y, width, height) or None if no screen detected.
     """
     screen: object = _resolve(app, _PRIMARY_SCREEN)()
     if screen is None:

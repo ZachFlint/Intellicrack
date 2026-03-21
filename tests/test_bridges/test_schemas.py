@@ -274,14 +274,14 @@ def test_validate_parameter_valid_enum_with_default() -> None:
     """Verify valid default in enum produces no error."""
     errors = validate_tool_parameter(_param(required=False, enum=["a", "b"], default="a"), "func")
     error_level = [e for e in errors if e.severity == "error"]
-    assert len(error_level) == 0
+    assert not error_level
 
 
 def test_validate_function_valid() -> None:
     """Verify valid function produces no errors."""
     errors = validate_tool_function(_func())
     error_level = [e for e in errors if e.severity == "error"]
-    assert len(error_level) == 0
+    assert not error_level
 
 
 def test_validate_function_empty_name() -> None:
@@ -315,7 +315,7 @@ def test_validate_definition_valid() -> None:
     """Verify valid tool definition produces no errors."""
     errors = validate_tool_definition(_tool())
     error_level = [e for e in errors if e.severity == "error"]
-    assert len(error_level) == 0
+    assert not error_level
 
 
 def test_validate_definition_empty_description() -> None:
@@ -462,7 +462,7 @@ def test_validate_and_convert_valid() -> None:
     schemas, errors = validate_and_convert(_tool(), ProviderName.OPENAI)
     assert len(schemas) == 1
     error_level = [e for e in errors if e.severity == "error"]
-    assert len(error_level) == 0
+    assert not error_level
 
 
 def test_validate_and_convert_invalid() -> None:

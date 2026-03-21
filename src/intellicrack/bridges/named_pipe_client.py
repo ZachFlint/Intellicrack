@@ -50,10 +50,9 @@ class PipeConfig:
 class NamedPipeClient:
     """Async named pipe client for x64dbg plugin IPC.
 
-    Attributes:
-        _config: Pipe configuration.
-        _handle: Windows pipe handle when connected.
-        _event_handler: Optional handler for event messages.
+    Args:
+        config: Pipe configuration.
+        event_handler: Optional event handler.
     """
 
     def __init__(
@@ -61,12 +60,6 @@ class NamedPipeClient:
         config: PipeConfig | None = None,
         event_handler: EventHandler | None = None,
     ) -> None:
-        """Initialize the named pipe client.
-
-        Args:
-            config: Pipe configuration.
-            event_handler: Optional event handler.
-        """
         self._config = config or PipeConfig()
         self._handle: int | None = None
         self._lock = asyncio.Lock()
@@ -77,7 +70,7 @@ class NamedPipeClient:
         """Check connection status.
 
         Returns:
-            True if connected to the pipe.
+            bool: True if connected to the pipe.
         """
         return self._handle is not None
 
@@ -141,7 +134,7 @@ class NamedPipeClient:
             params: Command parameters.
 
         Returns:
-            Response payload.
+            dict[str, Any]: Response payload.
         """
         request_id = str(uuid.uuid4())
         request = {
@@ -187,7 +180,7 @@ class NamedPipeClient:
         """Read a JSON message from the pipe.
 
         Returns:
-            Parsed JSON payload.
+            dict[str, Any]: Parsed JSON payload.
 
         Raises:
             ToolError: If reading or parsing fails.
@@ -222,7 +215,7 @@ class NamedPipeClient:
             size: Number of bytes to read.
 
         Returns:
-            Bytes read.
+            bytes: Bytes read.
 
         Raises:
             ToolError: If read fails.

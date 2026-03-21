@@ -111,7 +111,7 @@ def parse_tool_call(
         raw_arguments: Arguments as a JSON string or pre-parsed dict.
 
     Returns:
-        Parsed ToolCall instance.
+        ToolCall: Parsed ToolCall instance.
     """
     parsed_args: dict[str, Any]
     if isinstance(raw_arguments, str):
@@ -138,15 +138,9 @@ class LLMProviderBase(ABC):
     All provider implementations must inherit from this class and implement
     the abstract methods defined here. This ensures a consistent interface
     for the orchestrator to interact with any LLM provider.
-
-    Attributes:
-        _credentials: The stored credentials for this provider.
-        _connected: Whether the provider is currently connected.
-        _cancel_requested: Whether a cancellation has been requested.
     """
 
     def __init__(self) -> None:
-        """Initialize the base provider."""
         self._credentials: ProviderCredentials | None = None
         self._connected: bool = False
         self._cancel_requested: bool = False
@@ -159,7 +153,7 @@ class LLMProviderBase(ABC):
         """Get the provider's name.
 
         Returns:
-            The ProviderName enum value for this provider.
+            ProviderName: The ProviderName enum value for this provider.
         """
 
     @property
@@ -167,7 +161,7 @@ class LLMProviderBase(ABC):
         """Check if the provider is connected and authenticated.
 
         Returns:
-            True if the provider is ready to accept requests.
+            bool: True if the provider is ready to accept requests.
         """
         return self._connected
 
@@ -199,7 +193,7 @@ class LLMProviderBase(ABC):
         """Dynamically fetch available models from the provider.
 
         Returns:
-            List of available models with their capabilities.
+            list[ModelInfo]: List of available models with their capabilities.
 
         Raises:
             ProviderError: If not connected or request fails.
@@ -230,7 +224,7 @@ class LLMProviderBase(ABC):
             enable_cache: Whether to enable prompt caching.
 
         Returns:
-            Tuple of (assistant message, tool calls if any).
+            tuple[Message, list[ToolCall] | None]: Tuple of (assistant message, tool calls if any).
 
         Raises:
             ModelNotFoundError: If model doesn't exist.
@@ -263,7 +257,7 @@ class LLMProviderBase(ABC):
             enable_cache: Whether to enable prompt caching.
 
         Yields:
-            Text chunks as they arrive.
+            str: Text chunks as they arrive.
 
         Note:
             Implementations should raise ModelNotFoundError if the model
@@ -282,7 +276,7 @@ class LLMProviderBase(ABC):
         on each call so results are never returned twice.
 
         Returns:
-            List of ToolCall objects accumulated during streaming.
+            list[ToolCall]: List of ToolCall objects accumulated during streaming.
         """
         calls = list(self._pending_tool_calls)
         self._pending_tool_calls.clear()
@@ -321,12 +315,14 @@ class LLMProviderBase(ABC):
                 trigger a retry.
 
         Returns:
-            The result of the awaitable produced by *coro_factory*.
+            _T: The result of the awaitable produced by *coro_factory*.
 
         Raises:
             AuthenticationError: Always re-raised immediately.
-            ProviderError: The last retryable exception if all retries are
-                exhausted, or if the retry loop exits without a result.
+            retryable_exceptions: Re-raised after all retry attempts are
+                exhausted.
+            ProviderError: If the retry loop exits without capturing an
+                exception.
         """
         for attempt in range(max_retries + 1):
             try:
@@ -360,7 +356,7 @@ class LLMProviderBase(ABC):
             tools: List of ToolDefinition objects.
 
         Returns:
-            List of tool definitions in provider's format.
+            list[dict[str, object]]: List of tool definitions in provider's format.
         """
 
     @abstractmethod
@@ -374,7 +370,7 @@ class LLMProviderBase(ABC):
             messages: List of Message objects.
 
         Returns:
-            List of messages in provider's format.
+            list[dict[str, object]]: List of messages in provider's format.
         """
 
     @staticmethod
@@ -396,7 +392,7 @@ class LLMProviderBase(ABC):
             duration_ms: Request duration in milliseconds.
 
         Returns:
-            Tuple of (assistant message, tool calls or None).
+            tuple[Message, list[ToolCall] | None]: Tuple of (assistant message, tool calls or None).
         """
         message = Message(
             role="assistant",
@@ -430,7 +426,7 @@ class LLMProviderBase(ABC):
             raw_arguments: Arguments as a JSON string or pre-parsed dict.
 
         Returns:
-            Parsed ToolCall instance.
+            ToolCall: Parsed ToolCall instance.
         """
         return parse_tool_call(
             call_id=call_id,
@@ -447,7 +443,7 @@ class LLMProviderBase(ABC):
                 JSON-serializable object.
 
         Returns:
-            The result as a string, JSON-encoded if not already a string.
+            str: The result as a string, JSON-encoded if not already a string.
         """
         return result if isinstance(result, str) else json.dumps(result)
 
@@ -461,7 +457,7 @@ class LLMProviderBase(ABC):
             tool_choice: The tool choice configuration.
 
         Returns:
-            A string or dict suitable for the ``tool_choice`` API parameter.
+            str | dict[str, object]: A string or dict suitable for the ``tool_choice`` API parameter.
         """
         if tool_choice.mode == ToolChoiceMode.AUTO:
             return "auto"
@@ -496,7 +492,7 @@ class LLMProviderBase(ABC):
                 is omitted (Ollama).
 
         Returns:
-            List of message dicts in OpenAI-compatible format.
+            list[dict[str, object]]: List of message dicts in OpenAI-compatible format.
         """
         converted: list[dict[str, object]] = []
 
@@ -546,13 +542,9 @@ class ToolCallBufferManager:
 
     Used by providers that consume OpenAI-compatible SSE streams where tool
     call fragments arrive incrementally across multiple chunks.
-
-    Attributes:
-        _buffers: Mapping from tool-call index to accumulated fields.
     """
 
     def __init__(self) -> None:
-        """Initialize with empty buffers."""
         self._buffers: dict[int, dict[str, str]] = {}
 
     def accumulate(
@@ -587,7 +579,7 @@ class ToolCallBufferManager:
         Entries missing an ``id`` or ``name`` are silently discarded.
 
         Returns:
-            List of parsed ToolCall instances.
+            list[ToolCall]: List of parsed ToolCall instances.
         """
         results = [
             parse_tool_call(
@@ -617,7 +609,7 @@ def _build_schema_property(
         default: Optional default value.
 
     Returns:
-        JSONSchemaProperty with the specified values.
+        JSONSchemaProperty: JSONSchemaProperty with the specified values.
     """
     _logger.debug("build_schema_property", param_type=param_type, has_enum=enum_values is not None)
     prop: JSONSchemaProperty = {
@@ -640,7 +632,7 @@ def create_anthropic_tool_schema(
         tool: The tool definition to convert.
 
     Returns:
-        List of tools in Anthropic's format.
+        list[AnthropicToolSchema]: List of tools in Anthropic's format.
     """
     _logger.debug("create_anthropic_tool_schema", function_count=len(tool.functions))
     tools: list[AnthropicToolSchema] = []
@@ -683,7 +675,7 @@ def create_openai_tool_schema(
         tool: The tool definition to convert.
 
     Returns:
-        List of tools in OpenAI's format.
+        list[OpenAIToolSchema]: List of tools in OpenAI's format.
     """
     _logger.debug("create_openai_tool_schema", function_count=len(tool.functions))
     tools: list[OpenAIToolSchema] = []
@@ -729,7 +721,7 @@ def create_google_tool_schema(
         tool: The tool definition to convert.
 
     Returns:
-        List of function declarations in Google's format with uppercase types.
+        list[GoogleFunctionDeclaration]: List of function declarations in Google's format with uppercase types.
     """
     _logger.debug("create_google_tool_schema", function_count=len(tool.functions))
     tools: list[GoogleFunctionDeclaration] = []

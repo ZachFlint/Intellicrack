@@ -69,9 +69,15 @@ class ToolInstallWorker(QThread):
 
     Downloads and installs tools in a separate thread to avoid blocking UI.
 
+    Args:
+        tool_id: The tool identifier.
+        install_path: Directory to install the tool.
+        parent: Parent widget.
+
     Attributes:
         progress: Signal emitted with progress percentage (0-100).
         install_finished: Signal emitted when installation completes with (success, message).
+        DOWNLOAD_URLS: Mapping of tool IDs to their download URLs and display names.
     """
 
     progress: pyqtSignal = pyqtSignal(int)
@@ -98,13 +104,6 @@ class ToolInstallWorker(QThread):
         install_path: Path,
         parent: QWidget | None = None,
     ) -> None:
-        """Initialize the tool install worker.
-
-        Args:
-            tool_id: The tool identifier.
-            install_path: Directory to install the tool.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._tool_id = tool_id
         self._install_path = install_path
@@ -321,7 +320,7 @@ class ToolInstallWorker(QThread):
         """Locate the Cutter executable after extraction.
 
         Returns:
-            Path to the Cutter executable, or ``None`` if not found.
+            Path | None: Path to the Cutter executable, or ``None`` if not found.
         """
         candidates: list[Path] = [
             self._install_path / "cutter.exe",
@@ -340,6 +339,11 @@ class ToolInstallWorker(QThread):
 class ToolStatusCheckWorker(QThread):
     """Worker thread for checking tool status.
 
+    Args:
+        tool_id: The tool identifier.
+        tool_path: Path to the tool installation.
+        parent: Parent widget.
+
     Attributes:
         status_checked: Signal emitted when check completes with (tool_id, is_available, message).
     """
@@ -352,13 +356,6 @@ class ToolStatusCheckWorker(QThread):
         tool_path: str,
         parent: QWidget | None = None,
     ) -> None:
-        """Initialize the status check worker.
-
-        Args:
-            tool_id: The tool identifier.
-            tool_path: Path to the tool installation.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._tool_id = tool_id
         self._tool_path = tool_path
@@ -378,7 +375,7 @@ class ToolStatusCheckWorker(QThread):
         """Check if the tool is available and working.
 
         Returns:
-            Tuple of (is_available, status_message).
+            tuple[bool, str]: Tuple of (is_available, status_message).
         """
         if self._tool_id in {"frida", "process", "binary"}:
             return self._check_builtin()
@@ -403,7 +400,7 @@ class ToolStatusCheckWorker(QThread):
         """Check built-in tools.
 
         Returns:
-            Tuple of (is_available, status_message).
+            tuple[bool, str]: Tuple of (is_available, status_message).
         """
         if self._tool_id == "frida":
             if importlib.util.find_spec("frida") is None:
@@ -426,7 +423,7 @@ class ToolStatusCheckWorker(QThread):
             tool_path: Path to Ghidra installation.
 
         Returns:
-            Tuple of (is_available, status_message).
+            tuple[bool, str]: Tuple of (is_available, status_message).
         """
         headless: Path | None = None
         for item in tool_path.iterdir():
@@ -462,7 +459,7 @@ class ToolStatusCheckWorker(QThread):
             tool_path: Path to x64dbg installation.
 
         Returns:
-            Tuple of (is_available, status_message).
+            tuple[bool, str]: Tuple of (is_available, status_message).
         """
         x64dbg_exe = tool_path / "release" / "x64" / "x64dbg.exe"
         x32dbg_exe = tool_path / "release" / "x32" / "x32dbg.exe"
@@ -489,7 +486,7 @@ class ToolStatusCheckWorker(QThread):
             tool_path: Path to Cutter installation.
 
         Returns:
-            Tuple of (is_available, status_message).
+            tuple[bool, str]: Tuple of (is_available, status_message).
         """
         for candidate in [
             tool_path / "cutter.exe",
@@ -532,6 +529,11 @@ class ToolConfigDialog(QDialog):
     - Install missing tools
     - Test tool connections
 
+    Args:
+        tool_registry: Registry containing tool bridge instances.
+        tools_directory: Directory for tool installations.
+        parent: Parent widget.
+
     Attributes:
         tool_updated: Signal emitted when a tool config changes.
     """
@@ -544,13 +546,6 @@ class ToolConfigDialog(QDialog):
         tools_directory: Path | None = None,
         parent: QWidget | None = None,
     ) -> None:
-        """Initialize the tool configuration dialog.
-
-        Args:
-            tool_registry: Registry containing tool bridge instances.
-            tools_directory: Directory for tool installations.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._registry = tool_registry
         self._tools_directory = tools_directory or Path("D:/Intellicrack/tools")
@@ -653,7 +648,7 @@ class ToolConfigDialog(QDialog):
         """Get all tool settings.
 
         Returns:
-            Dictionary mapping tool IDs to their settings.
+            dict[str, dict[str, Any]]: Dictionary mapping tool IDs to their settings.
         """
         settings: dict[str, dict[str, Any]] = {tool_id: widget.get_settings() for tool_id, widget in self._tool_widgets.items()}
         return settings
@@ -664,6 +659,15 @@ class ToolSettingsWidget(QFrame):
 
     Displays path configuration, enable/disable toggle, and
     installation options for a specific tool.
+
+    Args:
+        tool_id: The tool identifier.
+        display_name: Human-readable tool name.
+        description: Tool description.
+        tools_directory: Base directory for tool installations.
+        registry: Tool registry for status checking.
+        config_path: Path to configuration file.
+        parent: Parent widget.
 
     Attributes:
         status_changed: Signal emitted when tool status changes.
@@ -681,17 +685,6 @@ class ToolSettingsWidget(QFrame):
         config_path: Path | None = None,
         parent: QWidget | None = None,
     ) -> None:
-        """Initialize the tool settings widget.
-
-        Args:
-            tool_id: The tool identifier.
-            display_name: Human-readable tool name.
-            description: Tool description.
-            tools_directory: Base directory for tool installations.
-            registry: Tool registry for status checking.
-            config_path: Path to configuration file.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._tool_id = tool_id
         self._display_name = display_name
@@ -825,7 +818,7 @@ class ToolSettingsWidget(QFrame):
         """Load settings from the config file.
 
         Returns:
-            Dictionary of saved settings for this tool.
+            dict[str, Any]: Dictionary of saved settings for this tool.
         """
         if not self._config_path.exists():
             return {}
@@ -941,7 +934,7 @@ class ToolSettingsWidget(QFrame):
         """Get current settings as a dictionary.
 
         Returns:
-            Dictionary of current settings.
+            dict[str, Any]: Dictionary of current settings.
         """
         return {
             "enabled": self._enabled_checkbox.isChecked(),
@@ -978,14 +971,13 @@ class ToolSettingsWidget(QFrame):
 
 
 class ToolCapabilitiesWidget(QFrame):
-    """Widget displaying tool capabilities in a grid format."""
+    """Widget displaying tool capabilities in a grid format.
+
+    Args:
+        parent: Parent widget.
+    """
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the capabilities widget.
-
-        Args:
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._setup_ui()
 
@@ -1079,6 +1071,13 @@ class ToolStatusDialog(QDialog):
 
     Displays which tools are installed, their connection state,
     supported capabilities, architectures, and file formats.
+
+    Args:
+        tool_registry: Registry containing tool bridge instances.
+        parent: Parent widget.
+
+    Attributes:
+        TOOL_CAPABILITIES: Mapping of tool IDs to their supported features, architectures, and formats.
     """
 
     TOOL_CAPABILITIES: ClassVar[dict[str, dict[str, Any]]] = {
@@ -1155,12 +1154,6 @@ class ToolStatusDialog(QDialog):
         tool_registry: ToolRegistry | None = None,
         parent: QWidget | None = None,
     ) -> None:
-        """Initialize the tool status dialog.
-
-        Args:
-            tool_registry: Registry containing tool bridge instances.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._registry = tool_registry
         self._config_path = get_config_file("tools.json")
@@ -1251,7 +1244,7 @@ class ToolStatusDialog(QDialog):
         """Load all tool settings from config.
 
         Returns:
-            Dictionary mapping tool IDs to their settings.
+            dict[str, dict[str, Any]]: Dictionary mapping tool IDs to their settings.
         """
         if not self._config_path.exists():
             return {}

@@ -41,12 +41,17 @@ class SandboxInstance:
     """Represents a managed sandbox instance.
 
     Attributes:
-        id: Unique instance identifier.
-        sandbox_type: Type of sandbox.
+        id: Unique instance identifier (auto-generated UUID).
+        sandbox_type: Type of sandbox backing this instance.
         sandbox: The sandbox implementation.
-        created_at: When the instance was created.
-        last_used: When the instance was last used.
-        binary_path: Path to binary being analyzed.
+        created_at: When this instance was created.
+        last_used: When this instance was last accessed.
+        binary_path: Path to the binary being analyzed, if any.
+
+    Args:
+        sandbox: The sandbox implementation.
+        sandbox_type: Type of sandbox.
+        binary_path: Optional binary being analyzed.
     """
 
     def __init__(
@@ -55,13 +60,6 @@ class SandboxInstance:
         sandbox_type: SandboxType,
         binary_path: Path | None = None,
     ) -> None:
-        """Initialize a sandbox instance.
-
-        Args:
-            sandbox: The sandbox implementation.
-            sandbox_type: Type of sandbox.
-            binary_path: Optional binary being analyzed.
-        """
         self.id = str(uuid4())
         self.sandbox_type = sandbox_type
         self.sandbox = sandbox
@@ -74,7 +72,7 @@ class SandboxInstance:
         """Get sandbox state.
 
         Returns:
-            Current sandbox state.
+            SandboxState: Current sandbox state.
         """
         return self.sandbox.state
 
@@ -89,10 +87,12 @@ class SandboxManager:
     Provides creation, lifecycle management, and coordination of
     multiple sandbox instances for binary analysis.
 
+    Args:
+        default_config: Default configuration for new sandboxes.
+        max_instances: Maximum number of concurrent instances.
+
     Attributes:
-        _instances: Active sandbox instances.
-        _default_config: Default sandbox configuration.
-        _max_instances: Maximum concurrent instances.
+        DEFAULT_MAX_INSTANCES: Maximum concurrent sandbox instances allowed.
     """
 
     DEFAULT_MAX_INSTANCES = 3
@@ -102,12 +102,6 @@ class SandboxManager:
         default_config: SandboxConfig | None = None,
         max_instances: int = DEFAULT_MAX_INSTANCES,
     ) -> None:
-        """Initialize the sandbox manager.
-
-        Args:
-            default_config: Default configuration for new sandboxes.
-            max_instances: Maximum number of concurrent instances.
-        """
         self._instances: dict[str, SandboxInstance] = {}
         self._default_config = default_config or SandboxConfig()
         self._max_instances = max_instances
@@ -118,7 +112,7 @@ class SandboxManager:
         """Get all managed instances.
 
         Returns:
-            List of sandbox instances.
+            list[SandboxInstance]: List of sandbox instances.
         """
         return list(self._instances.values())
 
@@ -127,7 +121,7 @@ class SandboxManager:
         """Get count of running instances.
 
         Returns:
-            Number of running sandboxes.
+            int: Number of running sandboxes.
         """
         return sum(inst.state.status == "running" for inst in self._instances.values())
 
@@ -135,7 +129,7 @@ class SandboxManager:
         """Get list of available sandbox types.
 
         Returns:
-            List of sandbox types that can be used.
+            list[SandboxType]: List of sandbox types that can be used.
         """
         available: list[SandboxType] = []
 
@@ -167,7 +161,7 @@ class SandboxManager:
             qemu_config: Optional QEMU-specific configuration.
 
         Returns:
-            Created sandbox instance.
+            SandboxInstance: Created sandbox instance.
 
         Raises:
             SandboxError: If creation fails.
@@ -225,7 +219,7 @@ class SandboxManager:
             instance_id: Instance identifier.
 
         Returns:
-            Sandbox instance or None if not found.
+            SandboxInstance | None: Sandbox instance or None if not found.
         """
         return self._instances.get(instance_id)
 
@@ -288,7 +282,7 @@ class SandboxManager:
             qemu_config: Optional QEMU-specific configuration.
 
         Returns:
-            Tuple of (sandbox instance, execution report).
+            tuple[SandboxInstance, ExecutionReport]: Tuple of (sandbox instance, execution report).
 
         Raises:
             Exception: If binary execution fails in the sandbox.
@@ -335,7 +329,7 @@ class SandboxManager:
             sandbox_type: Type of sandbox to find.
 
         Returns:
-            Idle instance or None if not found.
+            SandboxInstance | None: Idle instance or None if not found.
         """
         found = next(
             (
@@ -352,7 +346,7 @@ class SandboxManager:
         """Find the oldest idle sandbox instance.
 
         Returns:
-            Oldest idle instance or None if none idle.
+            SandboxInstance | None: Oldest idle instance or None if none idle.
         """
         oldest: SandboxInstance | None = None
         oldest_time: datetime | None = None
@@ -372,7 +366,7 @@ class SandboxManager:
             max_idle_seconds: Maximum idle time before cleanup.
 
         Returns:
-            Number of instances cleaned up.
+            int: Number of instances cleaned up.
         """
         _logger.debug("stale_cleanup_starting", max_idle_seconds=max_idle_seconds, total_instances=len(self._instances))
         now = datetime.now()
@@ -395,12 +389,14 @@ class SandboxManager:
         """Get manager status summary.
 
         Returns:
-            Status dictionary with instance information.
+            dict[str, object]: Status dictionary with instance information.
         """
         _logger.debug(
             "sandbox_status_queried",
             total_count=len(self._instances),
-            active_count=sum(1 for i in self._instances.values() if i.state.status == "running"),
+            active_count=sum(
+                i.state.status == "running" for i in self._instances.values()
+            ),
         )
         available_types = await self.get_available_types()
 

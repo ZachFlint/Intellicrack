@@ -64,7 +64,7 @@ def _ensure_loop() -> asyncio.AbstractEventLoop:
     """Lazily start and return the persistent background event loop.
 
     Returns:
-        The running background event loop.
+        asyncio.AbstractEventLoop: The running background event loop.
     """
     if _state.loop is not None and _state.loop.is_running():
         return _state.loop
@@ -91,6 +91,14 @@ class BridgeCallWorker(QThread):
     emits signals with the result on completion, allowing the Qt
     UI to remain responsive during bridge operations.  Auto-cleans
     up via deleteLater when the underlying QThread finishes.
+
+    Args:
+        coro: Coroutine to execute on the bridge event loop.
+        parent: Parent QObject for lifecycle management.
+
+    Attributes:
+        call_finished: Signal emitted with the coroutine result on success.
+        call_error: Signal emitted with the exception on failure.
     """
 
     call_finished: pyqtSignal = pyqtSignal(object)
@@ -101,12 +109,6 @@ class BridgeCallWorker(QThread):
         coro: Coroutine[object, object, object],
         parent: QObject | None = None,
     ) -> None:
-        """Initialize the bridge call worker.
-
-        Args:
-            coro: Coroutine to execute on the bridge event loop.
-            parent: Parent QObject for lifecycle management.
-        """
         super().__init__(parent)
         self._coro: Coroutine[object, object, object] = coro
         _: object = self.finished.connect(self.deleteLater)
@@ -143,8 +145,8 @@ def run_bridge_coroutine(coro: Coroutine[object, object, _T]) -> _T | None:
         coro: Coroutine to execute.
 
     Returns:
-        Coroutine result when executed synchronously, or None
-        when the coroutine was scheduled on a running loop.
+        _T | None: Coroutine result when executed synchronously, or None
+            when the coroutine was scheduled on a running loop.
     """
     try:
         running = asyncio.get_running_loop()

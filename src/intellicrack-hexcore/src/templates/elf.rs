@@ -15,6 +15,8 @@ fn fd(name: &str, field_type: FieldType, description: &str) -> FieldDefinition {
         field_type,
         endianness: None,
         description: description.to_string(),
+        color: None,
+        validation: None,
     }
 }
 
@@ -23,6 +25,13 @@ fn elf32_ehdr() -> StructTemplate {
         name: "Elf32_Ehdr".to_string(),
         description: "ELF32 File Header (52 bytes)".to_string(),
         default_endianness: Endianness::Little,
+        version: None,
+        author: None,
+        category: Some("ELF".to_string()),
+        magic_detection: Some(super::MagicDetection {
+            offset: 0,
+            bytes: vec![0x7F, 0x45, 0x4C, 0x46],
+        }),
         fields: vec![
             fd("e_ident", FieldType::Bytes(16), "ELF identification (magic, class, data, version, OS/ABI, padding)"),
             fd("e_type", FieldType::UInt16, "Object file type"),
@@ -47,6 +56,13 @@ fn elf64_ehdr() -> StructTemplate {
         name: "Elf64_Ehdr".to_string(),
         description: "ELF64 File Header (64 bytes)".to_string(),
         default_endianness: Endianness::Little,
+        version: None,
+        author: None,
+        category: Some("ELF".to_string()),
+        magic_detection: Some(super::MagicDetection {
+            offset: 0,
+            bytes: vec![0x7F, 0x45, 0x4C, 0x46],
+        }),
         fields: vec![
             fd("e_ident", FieldType::Bytes(16), "ELF identification"),
             fd("e_type", FieldType::UInt16, "Object file type"),
@@ -71,6 +87,10 @@ fn elf32_phdr() -> StructTemplate {
         name: "Elf32_Phdr".to_string(),
         description: "ELF32 Program Header (32 bytes)".to_string(),
         default_endianness: Endianness::Little,
+        version: None,
+        author: None,
+        category: Some("ELF".to_string()),
+        magic_detection: None,
         fields: vec![
             fd("p_type", FieldType::UInt32, "Segment type"),
             fd("p_offset", FieldType::UInt32, "Segment file offset"),
@@ -89,6 +109,10 @@ fn elf64_phdr() -> StructTemplate {
         name: "Elf64_Phdr".to_string(),
         description: "ELF64 Program Header (56 bytes)".to_string(),
         default_endianness: Endianness::Little,
+        version: None,
+        author: None,
+        category: Some("ELF".to_string()),
+        magic_detection: None,
         fields: vec![
             fd("p_type", FieldType::UInt32, "Segment type"),
             fd("p_flags", FieldType::UInt32, "Segment flags"),
@@ -107,6 +131,10 @@ fn elf32_shdr() -> StructTemplate {
         name: "Elf32_Shdr".to_string(),
         description: "ELF32 Section Header (40 bytes)".to_string(),
         default_endianness: Endianness::Little,
+        version: None,
+        author: None,
+        category: Some("ELF".to_string()),
+        magic_detection: None,
         fields: vec![
             fd("sh_name", FieldType::UInt32, "Section name (index into section name string table)"),
             fd("sh_type", FieldType::UInt32, "Section type"),
@@ -127,6 +155,10 @@ fn elf64_shdr() -> StructTemplate {
         name: "Elf64_Shdr".to_string(),
         description: "ELF64 Section Header (64 bytes)".to_string(),
         default_endianness: Endianness::Little,
+        version: None,
+        author: None,
+        category: Some("ELF".to_string()),
+        magic_detection: None,
         fields: vec![
             fd("sh_name", FieldType::UInt32, "Section name (index into section name string table)"),
             fd("sh_type", FieldType::UInt32, "Section type"),

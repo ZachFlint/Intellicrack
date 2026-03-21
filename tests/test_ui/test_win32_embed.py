@@ -115,7 +115,7 @@ class TestPollAndEmbed:
             qapp.processEvents()
             time.sleep(POLL_SLEEP_SEC)
 
-        assert len(called) == 0
+        assert not called
 
     @staticmethod
     def test_max_retries_limits_attempts(qapp: QApplication) -> None:
@@ -136,7 +136,7 @@ class TestPollAndEmbed:
             qapp.processEvents()
             time.sleep(POLL_SLEEP_SEC)
 
-        assert len(results) == 0
+        assert not results
 
     @staticmethod
     def test_accepts_callable_callback() -> None:

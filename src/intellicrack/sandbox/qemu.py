@@ -156,8 +156,8 @@ class GuestAgentMessage:
     """Message from the guest agent.
 
     Attributes:
-        message_type: Type of message.
-        timestamp: When the event occurred.
+        message_type: Type of the guest agent message.
+        timestamp: When the message was received.
         data: Message payload.
     """
 
@@ -171,15 +171,13 @@ class QMPClient:
 
     Provides asynchronous communication with QEMU via QMP for
     VM control, snapshot management, and status queries.
+
+    Args:
+        host: QMP server host.
+        port: QMP server port.
     """
 
     def __init__(self, host: str = "127.0.0.1", port: int = 4444) -> None:
-        """Initialize QMP client.
-
-        Args:
-            host: QMP server host.
-            port: QMP server port.
-        """
         self._host = host
         self._port = port
         self._reader: asyncio.StreamReader | None = None
@@ -194,7 +192,7 @@ class QMPClient:
             timeout: Connection timeout in seconds.
 
         Returns:
-            True if connected successfully.
+            bool: True if connected successfully.
         """
         try:
             self._reader, self._writer = await asyncio.wait_for(
@@ -242,7 +240,7 @@ class QMPClient:
             timeout: Response timeout.
 
         Returns:
-            QMP response.
+            QMPResponse: QMP response.
         """
         if self._reader is None or self._writer is None:
             return QMPResponse(success=False, error="Not connected")
@@ -279,7 +277,7 @@ class QMPClient:
         """Query VM status.
 
         Returns:
-            VM status response.
+            QMPResponse: VM status response.
         """
         return await self._send_command({"execute": "query-status"})
 
@@ -287,7 +285,7 @@ class QMPClient:
         """Pause the VM.
 
         Returns:
-            Command response.
+            QMPResponse: Command response.
         """
         return await self._send_command({"execute": "stop"})
 
@@ -295,7 +293,7 @@ class QMPClient:
         """Resume the VM.
 
         Returns:
-            Command response.
+            QMPResponse: Command response.
         """
         return await self._send_command({"execute": "cont"})
 
@@ -303,7 +301,7 @@ class QMPClient:
         """Quit QEMU.
 
         Returns:
-            Command response.
+            QMPResponse: Command response.
         """
         return await self._send_command({"execute": "quit"})
 
@@ -314,7 +312,7 @@ class QMPClient:
             name: Snapshot name.
 
         Returns:
-            Command response.
+            QMPResponse: Command response.
         """
         return await self._send_command({
             "execute": "human-monitor-command",
@@ -328,7 +326,7 @@ class QMPClient:
             name: Snapshot name.
 
         Returns:
-            Command response.
+            QMPResponse: Command response.
         """
         return await self._send_command({
             "execute": "human-monitor-command",
@@ -342,7 +340,7 @@ class QMPClient:
             name: Snapshot name.
 
         Returns:
-            Command response.
+            QMPResponse: Command response.
         """
         return await self._send_command({
             "execute": "human-monitor-command",
@@ -353,7 +351,7 @@ class QMPClient:
         """Get list of snapshots.
 
         Returns:
-            Snapshot list response.
+            QMPResponse: Snapshot list response.
         """
         return await self._send_command({
             "execute": "human-monitor-command",
@@ -366,15 +364,13 @@ class GuestAgentClient:
 
     Provides bidirectional communication with the guest OS for
     command execution, file transfer, and behavioral monitoring.
+
+    Args:
+        host: Agent server host.
+        port: Agent server port.
     """
 
     def __init__(self, host: str = "127.0.0.1", port: int = 4445) -> None:
-        """Initialize guest agent client.
-
-        Args:
-            host: Agent server host.
-            port: Agent server port.
-        """
         self._host = host
         self._port = port
         self._reader: asyncio.StreamReader | None = None
@@ -389,7 +385,7 @@ class GuestAgentClient:
         """Whether the client is currently connected.
 
         Returns:
-            True if the guest agent connection is active.
+            bool: True if the guest agent connection is active.
         """
         return self._connected
 
@@ -401,7 +397,7 @@ class GuestAgentClient:
             retry_interval: Interval between retries.
 
         Returns:
-            True if connected successfully.
+            bool: True if connected successfully.
         """
         start_time = time.time()
 
@@ -492,7 +488,7 @@ class GuestAgentClient:
             timeout: Execution timeout.
 
         Returns:
-            Tuple of (exit_code, stdout, stderr).
+            tuple[int, str, str]: Tuple of (exit_code, stdout, stderr).
         """
         if self._writer is None or not self._connected:
             return (-1, "", "Not connected to guest agent")
@@ -542,7 +538,7 @@ class GuestAgentClient:
         """Get all pending messages from the agent.
 
         Returns:
-            List of pending messages.
+            list[GuestAgentMessage]: List of pending messages.
         """
         messages: list[GuestAgentMessage] = []
         while not self._message_queue.empty():
@@ -561,9 +557,15 @@ class QEMUSandbox(SandboxBase):
     Uses QEMU virtualization with hardware acceleration (WHPX on Windows,
     KVM on Linux) or software emulation (TCG) for isolated binary execution.
 
+    Args:
+        config: General sandbox configuration.
+        qemu_config: QEMU-specific configuration.
+
     Attributes:
         QEMU_EXE: QEMU executable name.
         TOOLS_PATH: Default path to QEMU installation.
+        GUEST_SHARED_PATH_WINDOWS: Shared path on Windows guest.
+        GUEST_SHARED_PATH_LINUX: Shared path on Linux guest.
     """
 
     QEMU_EXE: Final[str] = "qemu-system-x86_64"
@@ -576,12 +578,6 @@ class QEMUSandbox(SandboxBase):
         config: SandboxConfig | None = None,
         qemu_config: QEMUConfig | None = None,
     ) -> None:
-        """Initialize QEMU sandbox.
-
-        Args:
-            config: General sandbox configuration.
-            qemu_config: QEMU-specific configuration.
-        """
         super().__init__(config)
         self._qemu_config = qemu_config or QEMUConfig()
         self._process: asyncio.subprocess.Process | None = None
@@ -600,7 +596,7 @@ class QEMUSandbox(SandboxBase):
         """Get QEMU configuration.
 
         Returns:
-            Current QEMU configuration.
+            QEMUConfig: Current QEMU configuration.
         """
         return self._qemu_config
 
@@ -609,7 +605,7 @@ class QEMUSandbox(SandboxBase):
         """Get the VNC port if VNC display is active.
 
         Returns:
-            VNC port number, or None if VNC is not enabled.
+            int | None: VNC port number, or None if VNC is not enabled.
         """
         return self._vnc_port
 
@@ -640,7 +636,7 @@ class QEMUSandbox(SandboxBase):
         Checks for QEMU executable and determines available acceleration.
 
         Returns:
-            True if QEMU can be used.
+            bool: True if QEMU can be used.
         """
         qemu_path = await self._find_qemu()
         if qemu_path is None:
@@ -661,7 +657,7 @@ class QEMUSandbox(SandboxBase):
         """Find QEMU executable.
 
         Returns:
-            Path to QEMU executable or None if not found.
+            Path | None: Path to QEMU executable or None if not found.
         """
         search_paths: list[Path] = []
 
@@ -690,7 +686,7 @@ class QEMUSandbox(SandboxBase):
         """Detect available hardware acceleration.
 
         Returns:
-            Best available accelerator type.
+            AcceleratorType: Best available accelerator type.
         """
         if self._qemu_path is None:
             return AcceleratorType.TCG
@@ -767,7 +763,7 @@ class QEMUSandbox(SandboxBase):
             end: End of port range.
 
         Returns:
-            Available port number.
+            int: Available port number.
 
         Raises:
             SandboxError: If no free ports are available after 100 attempts.
@@ -814,11 +810,11 @@ class QEMUSandbox(SandboxBase):
         """Build QEMU command line.
 
         Returns:
-            QEMU command as list of arguments.
+            list[str]: QEMU command as list of arguments.
 
         Raises:
             SandboxError: If configuration is invalid.
-            ValueError: If an unsupported guest OS is configured.
+            ValueError: If the guest OS type is unsupported.
         """
         if self._qemu_path is None:
             raise SandboxError(_ERR_QEMU_PATH)
@@ -828,7 +824,7 @@ class QEMUSandbox(SandboxBase):
 
         cmd: list[str] = [
             str(self._qemu_path),
-            *["-machine", "q35,accel=" + self._accelerator.value],
+            *["-machine", f"q35,accel={self._accelerator.value}"],
             "-cpu",
             "max",
             *["-smp", f"cores={self._qemu_config.cpu_cores}"],
@@ -1522,11 +1518,10 @@ python3 /mnt/shared/monitor/agent.py &
             working_directory: Optional working directory.
 
         Returns:
-            Tuple of (exit_code, stdout, stderr).
+            tuple[int, str, str]: Tuple of (exit_code, stdout, stderr).
 
         Raises:
             SandboxError: If execution fails.
-            ValueError: If an unsupported guest OS is configured.
         """
         if self._state.status != "running":
             raise SandboxError(_ERR_NOT_RUNNING)
@@ -1573,7 +1568,7 @@ python3 /mnt/shared/monitor/agent.py &
             result_name: Name of the result file.
 
         Returns:
-            Tuple of (script_filename, script_content).
+            tuple[str, str]: Tuple of (script_filename, script_content).
 
         Raises:
             ValueError: If an unsupported guest OS is configured.
@@ -1609,7 +1604,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             timeout: Maximum time in seconds to wait.
 
         Returns:
-            Tuple of (exit_code, stdout, stderr).
+            tuple[int, str, str]: Tuple of (exit_code, stdout, stderr).
 
         Raises:
             SandboxTimeoutError: If the command times out.
@@ -1645,11 +1640,11 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             monitor: Whether to monitor behavior.
 
         Returns:
-            ExecutionReport with results and activity.
+            ExecutionReport: ExecutionReport with results and activity.
 
         Raises:
             SandboxError: If execution fails.
-            ValueError: If an unsupported guest OS is configured.
+            ValueError: If the guest OS type is unsupported.
         """
         if self._state.status != "running":
             raise SandboxError(_ERR_NOT_RUNNING)
@@ -1730,7 +1725,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         """Parse file monitoring log.
 
         Returns:
-            List of file changes detected during execution.
+            list[FileChange]: List of file changes detected during execution.
         """
         if self._shared_folder is None:
             return []
@@ -1762,7 +1757,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         """Parse registry monitoring log.
 
         Returns:
-            List of registry changes detected during execution.
+            list[RegistryChange]: List of registry changes detected during execution.
         """
         if self._shared_folder is None:
             return []
@@ -1795,7 +1790,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         """Parse network monitoring log.
 
         Returns:
-            List of network activity detected during execution.
+            list[NetworkActivity]: List of network activity detected during execution.
         """
         if self._shared_folder is None:
             return []
@@ -1834,7 +1829,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         """Parse process monitoring log.
 
         Returns:
-            List of process activity detected during execution.
+            list[ProcessActivity]: List of process activity detected during execution.
         """
         if self._shared_folder is None:
             return []
@@ -1927,7 +1922,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             name: Snapshot name.
 
         Returns:
-            Snapshot identifier.
+            str: Snapshot identifier.
 
         Raises:
             SandboxError: If snapshot fails.
@@ -1966,7 +1961,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         """List available snapshots.
 
         Returns:
-            List of snapshot names.
+            list[str]: List of snapshot names.
         """
         if self._qmp is None:
             return []

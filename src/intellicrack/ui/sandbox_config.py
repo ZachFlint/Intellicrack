@@ -49,6 +49,7 @@ from .resources import IconManager
 
 
 _logger = get_logger("ui.sandbox_config")
+_IS_WIN32: bool = os.name == "nt"
 
 if TYPE_CHECKING:
     from intellicrack.sandbox.manager import SandboxManager
@@ -59,6 +60,13 @@ class SandboxTestWorker(QThread):
 
     Launches Windows Sandbox with a test configuration and monitors
     its execution without blocking the UI.
+
+    Args:
+        network_enabled: Whether networking is enabled.
+        memory_limit_mb: Memory limit in MB.
+        shared_folder: Path to shared folder.
+        read_only: Whether shared folder is read-only.
+        parent: Parent QThread.
 
     Attributes:
         finished: Signal emitted when test completes with (success, message).
@@ -76,15 +84,6 @@ class SandboxTestWorker(QThread):
         read_only: bool = False,
         parent: QThread | None = None,
     ) -> None:
-        """Initialize the sandbox test worker.
-
-        Args:
-            network_enabled: Whether networking is enabled.
-            memory_limit_mb: Memory limit in MB.
-            shared_folder: Path to shared folder.
-            read_only: Whether shared folder is read-only.
-            parent: Parent QThread.
-        """
         super().__init__(parent)
         self._network_enabled = network_enabled
         self._memory_limit_mb = memory_limit_mb
@@ -95,7 +94,7 @@ class SandboxTestWorker(QThread):
 
     def run(self) -> None:
         """Execute the sandbox test."""
-        if sys.platform != "win32":
+        if not _IS_WIN32:
             self.finished.emit(False, "Windows Sandbox is only available on Windows")
             return
 
@@ -196,7 +195,7 @@ class SandboxTestWorker(QThread):
         """Generate Windows Sandbox .wsb configuration XML.
 
         Returns:
-            XML configuration string.
+            str: XML configuration string.
         """
         config_lines = ["<Configuration>", "  <VGpu>Enable</VGpu>"]
 
@@ -253,8 +252,14 @@ class SandboxConfigDialog(QDialog):
     Allows users to configure sandbox isolation settings, resource
     limits, network access, and shared folders.
 
+    Args:
+        sandbox_manager: Sandbox manager instance.
+        parent: Parent widget.
+
     Attributes:
         settings_updated: Signal emitted when settings change.
+        CONFIG_DIR: Path to the application configuration directory.
+        CONFIG_FILE: Path to the sandbox JSON configuration file.
     """
 
     settings_updated: ClassVar[pyqtSignal] = pyqtSignal()
@@ -267,12 +272,6 @@ class SandboxConfigDialog(QDialog):
         sandbox_manager: SandboxManager | None = None,
         parent: QWidget | None = None,
     ) -> None:
-        """Initialize the sandbox configuration dialog.
-
-        Args:
-            sandbox_manager: Sandbox manager instance.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._manager = sandbox_manager
         self._is_available = False
@@ -395,7 +394,7 @@ class SandboxConfigDialog(QDialog):
 
     def _check_availability(self) -> None:
         """Check if Windows Sandbox is available."""
-        if sys.platform != "win32":
+        if not _IS_WIN32:
             _logger.info(
                 "sandbox_config_validated",
                 valid=False,
@@ -695,7 +694,7 @@ class SandboxConfigDialog(QDialog):
         """Get current settings as a dictionary.
 
         Returns:
-            Dictionary of current settings.
+            dict[str, Any]: Dictionary of current settings.
         """
         return {
             "enabled": self._enabled_checkbox.isChecked(),
@@ -712,7 +711,7 @@ class SandboxConfigDialog(QDialog):
         """Check if sandbox is available.
 
         Returns:
-            True if sandbox is available.
+            bool: True if sandbox is available.
         """
         return self._is_available
 
@@ -722,6 +721,10 @@ class SandboxMonitorWidget(QFrame):
 
     Displays information about running sandbox instances and
     allows control over them.
+
+    Args:
+        sandbox_manager: Sandbox manager instance.
+        parent: Parent widget.
 
     Attributes:
         sandbox_stopped: Signal emitted when sandbox is stopped.
@@ -734,12 +737,6 @@ class SandboxMonitorWidget(QFrame):
         sandbox_manager: SandboxManager | None = None,
         parent: QWidget | None = None,
     ) -> None:
-        """Initialize the sandbox monitor widget.
-
-        Args:
-            sandbox_manager: Sandbox manager instance.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._manager = sandbox_manager
         self._sandbox_pid: int | None = None
@@ -833,7 +830,7 @@ class SandboxMonitorWidget(QFrame):
                 self.append_output(f"[Error stopping sandbox: {e}]")
         elif self._sandbox_pid is not None:
             try:
-                if sys.platform == "win32":
+                if _IS_WIN32:
                     process_manager = ProcessManager.get_instance()
                     creation_flags = CREATE_NO_WINDOW
                     process_manager.run_tracked(
@@ -863,7 +860,7 @@ class SandboxMonitorWidget(QFrame):
 
     def _terminate_sandbox_by_name(self) -> None:
         """Terminate Windows Sandbox by process name."""
-        if sys.platform != "win32":
+        if not _IS_WIN32:
             self.append_output("[Cannot terminate sandbox on non-Windows platform]")
             return
 

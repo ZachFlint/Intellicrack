@@ -73,7 +73,7 @@ class ColoredConsoleRenderer:
             event_dict: The event dictionary to render.
 
         Returns:
-            Formatted colored log message string.
+            str: Formatted colored log message string.
         """
         timestamp = event_dict.pop("timestamp", "")
         level = event_dict.pop("level", "info")
@@ -105,7 +105,7 @@ def cleanup_old_logs(log_dir: Path, retention_days: int) -> int:
         retention_days: Number of days to retain log files.
 
     Returns:
-        Number of files deleted.
+        int: Number of files deleted.
     """
     if not log_dir.exists():
         return 0
@@ -140,7 +140,7 @@ def _add_call_info(
         event_dict: The event dictionary.
 
     Returns:
-        Updated event dictionary with call info.
+        EventDict: Updated event dictionary with call info.
     """
     frame: FrameType | None = inspect.currentframe()
     target_depth = 0
@@ -266,16 +266,16 @@ class IntellicrackLogger:
     providing structured logging with both file-based JSON output and
     colorized console output.
 
+    Args:
+        name: The name for this logger instance.
+
     Attributes:
-        name: The logger name.
+        name: The name for this logger instance.
     """
 
-    def __init__(self, name: str = "intellicrack") -> None:
-        """Initialize the Intellicrack logger.
+    name: str
 
-        Args:
-            name: The name for this logger instance.
-        """
+    def __init__(self, name: str = "intellicrack") -> None:
         self.name = name
 
     @staticmethod
@@ -321,7 +321,7 @@ class IntellicrackLogger:
             name: Optional child logger name. If None, returns the root logger.
 
         Returns:
-            Structlog BoundLogger instance for structured logging.
+            structlog.stdlib.BoundLogger: Configured BoundLogger instance for structured logging.
         """
         logger_name = self.name if name is None else f"{self.name}.{name}"
         return cast("structlog.stdlib.BoundLogger", structlog.get_logger(logger_name))
@@ -343,7 +343,7 @@ def setup_logging(config: LogConfig) -> IntellicrackLogger:
         config: LogConfig instance with logging settings.
 
     Returns:
-        Configured IntellicrackLogger instance.
+        IntellicrackLogger: Configured IntellicrackLogger instance.
     """
     log_dir = _DEFAULT_LOG_DIR
 
@@ -370,7 +370,7 @@ def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
         name: Module name for the logger. If None, returns root app logger.
 
     Returns:
-        Structlog BoundLogger instance for structured logging.
+        structlog.stdlib.BoundLogger: Configured BoundLogger instance for structured logging.
     """
     if _logger_state.app_logger is not None:
         return _logger_state.app_logger.get_logger(name)
@@ -388,7 +388,7 @@ def get_structlog_logger(name: str | None = None) -> structlog.stdlib.BoundLogge
         name: Module name for the logger. If None, returns root app logger.
 
     Returns:
-        Structlog BoundLogger instance for structured logging.
+        structlog.stdlib.BoundLogger: Configured BoundLogger instance for structured logging.
     """
     return get_logger(name)
 
@@ -430,7 +430,7 @@ def _sanitize_arguments(arguments: dict[str, object]) -> dict[str, str]:
         arguments: Dictionary of function arguments.
 
     Returns:
-        Dictionary with string representations of arguments.
+        dict[str, str]: Dictionary with string representations of arguments.
     """
     sanitized: dict[str, str] = {}
     for key, value in arguments.items():
@@ -584,11 +584,20 @@ def log_analysis_operation(
 class OperationTimer:
     """Context manager for timing operations and logging duration.
 
+    Args:
+        operation: The operation name.
+        logger_name: The logger name to use.
+        **context: Additional context for the log.
+
     Attributes:
         operation: The operation name.
         logger_name: The logger name to use.
         context: Additional context for the log.
     """
+
+    operation: str
+    logger_name: str
+    context: dict[str, object]
 
     def __init__(
         self,
@@ -596,13 +605,6 @@ class OperationTimer:
         logger_name: str = "operations",
         **context: object,
     ) -> None:
-        """Initialize the operation timer.
-
-        Args:
-            operation: The operation name.
-            logger_name: The logger name to use.
-            **context: Additional context for the log.
-        """
         self.operation = operation
         self.logger_name = logger_name
         self.context = context
@@ -614,7 +616,7 @@ class OperationTimer:
         """Return elapsed time in milliseconds since the timer started.
 
         Returns:
-            Elapsed time in milliseconds, or 0.0 if the timer has not started.
+            float: Elapsed time in milliseconds, or 0.0 if the timer has not started.
         """
         if self._start_time <= 0.0:
             return 0.0
@@ -624,7 +626,7 @@ class OperationTimer:
         """Start the timer and log operation start.
 
         Returns:
-            Self for context manager use.
+            OperationTimer: Self for context manager use.
         """
         self._start_time = time.perf_counter()
         self._slog.debug(f"{self.operation}_started", **self.context)

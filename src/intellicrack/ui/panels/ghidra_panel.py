@@ -69,14 +69,12 @@ class GhidraPanel(AnalysisPanelBase):
     Displays decompiled code, disassembly, function lists, strings,
     imports, exports, and cross-references from Ghidra headless
     analysis via the GhidraBridge backend.
+
+    Args:
+        parent: Parent widget.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the Ghidra panel.
-
-        Args:
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._bridge: GhidraBridge | None = None
 
@@ -105,7 +103,7 @@ class GhidraPanel(AnalysisPanelBase):
         """Create the Ghidra analysis content area.
 
         Returns:
-            Splitter with code tabs, data tabs, and function sidebar.
+            QWidget: Splitter with code tabs, data tabs, and function sidebar.
         """
         main_splitter = QSplitter(Qt.Orientation.Horizontal)
 
@@ -133,7 +131,7 @@ class GhidraPanel(AnalysisPanelBase):
         """Create decompiled and disassembly code tabs.
 
         Returns:
-            Tab widget with code views.
+            QTabWidget: Tab widget with code views.
         """
         tabs = QTabWidget()
 
@@ -155,7 +153,7 @@ class GhidraPanel(AnalysisPanelBase):
         """Create strings, imports, exports, and xrefs tabs.
 
         Returns:
-            Tab widget with data tables.
+            QTabWidget: Tab widget with data tables.
         """
         tabs = QTabWidget()
 
@@ -216,7 +214,7 @@ class GhidraPanel(AnalysisPanelBase):
         """Create the functions list sidebar.
 
         Returns:
-            Functions sidebar widget.
+            QWidget: Functions sidebar widget.
         """
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -264,7 +262,7 @@ class GhidraPanel(AnalysisPanelBase):
         """Get the current GhidraBridge instance.
 
         Returns:
-            The attached bridge or None.
+            GhidraBridge | None: The attached bridge or None.
         """
         return self._bridge
 
@@ -282,7 +280,7 @@ class GhidraPanel(AnalysisPanelBase):
         """Check bridge connection is live and show status if not.
 
         Returns:
-            The connected bridge, or None if not ready.
+            GhidraBridge | None: The connected bridge, or None if not ready.
         """
         if self._bridge is None:
             self._set_status("No bridge configured")
@@ -309,7 +307,7 @@ class GhidraPanel(AnalysisPanelBase):
             binary_path: Path to the binary to analyze.
 
         Returns:
-            True if loading was initiated.
+            bool: True if loading was initiated.
         """
         bridge = self._require_connected()
         if bridge is None:
@@ -740,14 +738,14 @@ class GhidraPanel(AnalysisPanelBase):
 
         ghidra_path = self._bridge.ghidra_path
         if ghidra_path is None:
-            path_str = QFileDialog.getExistingDirectory(
+            if path_str := QFileDialog.getExistingDirectory(
                 self,
                 "Select Ghidra Installation Directory",
-            )
-            if not path_str:
-                return
-            self.set_ghidra_path(Path(path_str))
+            ):
+                self.set_ghidra_path(Path(path_str))
 
+            else:
+                return
         project_dir = Path(tempfile.gettempdir()) / "intellicrack_ghidra"
         self._headless_btn.setEnabled(False)
         self._set_status("Starting headless Ghidra...")

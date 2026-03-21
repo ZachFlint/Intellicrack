@@ -86,6 +86,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/66/40/7732d648ab9d069a46e686043241f01206348e2bbf128daea85be4d6414b/coverage-7.13.5-cp313-cp313-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/b0/5c/3ba7d12e7a79566f97b8f954400926d7b6eb33bcdccc1315a857f200f1f1/crashtest-0.4.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/e9/5a/ac0f49e48063ab4255d9e3b79f5def51697fce1a95ea1370f03dc9db76f6/cryptography-46.0.5-cp311-abi3-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/1c/29/23572dc59bf4a3984fe3c5fc242f73be916785ee93387dd95c972dbf584e/cxxfilt-0.3.0-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/30/09/fe0e3bc32bd33707c519b102fc064ad2a2ce5a1b53e2be38b86936b476b1/cyclonedx_python_lib-11.7.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/69/28/85d1e0396d64422c5218d68e5cdcc53153aa8a2c83c7dbc3ee1502adf3a1/darglint-1.8.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/71/a2/a7b4945efa8df89f0a580b7a9dd2f06dd2ac45e6b55abbaf696577f432f9/dead-2.1.0-py2.py3-none-any.whl
@@ -386,6 +387,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/6f/5d/29ff8665b129cafd147d90b86e92babee32e116e3c84447107da3e77f8fb/xenon-0.9.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/05/92/aed08e68de6e6a3d7c2328ce7388072cd6affc26e2917197430b646aed02/yamllint-1.38.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/81/6acd6601f61e31cfb8729d3da6d5df966f80f374b78eff83760714487338/yapf-0.43.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/cc/a0/40b0291c8b24d13daf0e26538c9f3a0d843c38c6446dd17f36335bdd5b5f/yara_python-4.5.4-cp313-cp313-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/d9/82/b9c06c870f3bd8767c201f1edbdf9e8dc34be5b0fbc5682c4f80fe948475/zstandard-0.25.0-cp313-cp313-win_amd64.whl
       - pypi: ./
 packages:
@@ -964,6 +966,12 @@ packages:
   - check-sdist ; extra == 'pep8test'
   - click>=8.0.1 ; extra == 'pep8test'
   requires_python: '>=3.8,!=3.9.0,!=3.9.1'
+- pypi: https://files.pythonhosted.org/packages/1c/29/23572dc59bf4a3984fe3c5fc242f73be916785ee93387dd95c972dbf584e/cxxfilt-0.3.0-py2.py3-none-any.whl
+  name: cxxfilt
+  version: 0.3.0
+  sha256: 774e85a8d0157775ed43276d89397d924b104135762d86b3a95f81f203094e07
+  requires_dist:
+  - pytest>=3.0.0 ; extra == 'test'
 - pypi: https://files.pythonhosted.org/packages/30/09/fe0e3bc32bd33707c519b102fc064ad2a2ce5a1b53e2be38b86936b476b1/cyclonedx_python_lib-11.7.0-py3-none-any.whl
   name: cyclonedx-python-lib
   version: 11.7.0
@@ -1786,7 +1794,7 @@ packages:
 - pypi: ./
   name: intellicrack
   version: 0.1.0a1
-  sha256: 095abc870cb9cf24bc46e779521facf2cacc28271987aaa98768dd0186bead10
+  sha256: 75193ca1cc4da30e2833f5762bef33c353e78319c72009374cc923d8077aaf76
   requires_dist:
   - psutil>=7.2.2,<8
   - keyring>=25.7.0,<26
@@ -1892,6 +1900,8 @@ packages:
   - bitsandbytes
   - sentencepiece
   - safetensors
+  - yara-python>=4.5
+  - cxxfilt>=0.3
   - black ; extra == 'dev'
   - pylint ; extra == 'dev'
   - autopep8 ; extra == 'dev'
@@ -5327,6 +5337,10 @@ packages:
   - platformdirs>=3.5.1
   - tomli>=2.0.1 ; python_full_version < '3.11'
   requires_python: '>=3.7'
+- pypi: https://files.pythonhosted.org/packages/cc/a0/40b0291c8b24d13daf0e26538c9f3a0d843c38c6446dd17f36335bdd5b5f/yara_python-4.5.4-cp313-cp313-win_amd64.whl
+  name: yara-python
+  version: 4.5.4
+  sha256: 5f1288448991d63c1f6351c9f6d112916b0177ceefaa27d1419427a6ff09f829
 - conda: https://conda.anaconda.org/conda-forge/noarch/yarn-4.13.0-h6579d2d_0.conda
   sha256: 3081812ef6ebbb17544aefacd53ca2e57579dcf1e265c46ef47ac68a42be61ff
   md5: 207aef7f9db940a0fef47f5b41e5956f

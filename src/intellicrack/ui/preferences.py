@@ -52,7 +52,7 @@ def _combo_find_data(combo: QComboBox, data: object) -> int:
         data: The data value to find.
 
     Returns:
-        The index of the item, or -1 if not found.
+        int: The index of the item, or -1 if not found.
     """
     find_data = getattr(combo, "findData", None)
     if find_data is not None:
@@ -68,7 +68,7 @@ def _combo_current_data(combo: QComboBox) -> object:
         combo: The combo box.
 
     Returns:
-        The data associated with the current item.
+        object: The data associated with the current item.
     """
     current_data = getattr(combo, "currentData", None)
     if current_data is not None:
@@ -90,15 +90,14 @@ def _item_set_font(item: QListWidgetItem, font: QFont) -> None:
 
 
 class GeneralSettingsWidget(QWidget):
-    """Widget for general application settings."""
+    """Widget for general application settings.
+
+    Args:
+        config: Application configuration.
+        parent: Parent widget.
+    """
 
     def __init__(self, config: Config, parent: QWidget | None = None) -> None:
-        """Initialize general settings widget.
-
-        Args:
-            config: Application configuration.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._config = config
         self._setup_ui()
@@ -186,7 +185,7 @@ class GeneralSettingsWidget(QWidget):
         """Get current settings.
 
         Returns:
-            Dictionary of settings.
+            dict[str, Any]: Dictionary of settings.
         """
         provider_value = _combo_current_data(self._provider_combo)
         confirm_value = _combo_current_data(self._confirm_combo)
@@ -200,15 +199,14 @@ class GeneralSettingsWidget(QWidget):
 
 
 class AppearanceSettingsWidget(QWidget):
-    """Widget for appearance settings."""
+    """Widget for appearance settings.
+
+    Args:
+        config: Application configuration.
+        parent: Parent widget.
+    """
 
     def __init__(self, config: Config, parent: QWidget | None = None) -> None:
-        """Initialize appearance settings widget.
-
-        Args:
-            config: Application configuration.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._config = config
         self._setup_ui()
@@ -281,7 +279,7 @@ class AppearanceSettingsWidget(QWidget):
         """Get current settings.
 
         Returns:
-            Dictionary of settings.
+            dict[str, Any]: Dictionary of settings.
         """
         theme_data = _combo_current_data(self._theme_combo)
         theme = str(theme_data) if isinstance(theme_data, str) else self._config.ui.theme
@@ -296,15 +294,14 @@ class AppearanceSettingsWidget(QWidget):
 
 
 class SessionSettingsWidget(QWidget):
-    """Widget for session settings."""
+    """Widget for session settings.
+
+    Args:
+        config: Application configuration.
+        parent: Parent widget.
+    """
 
     def __init__(self, config: Config, parent: QWidget | None = None) -> None:
-        """Initialize session settings widget.
-
-        Args:
-            config: Application configuration.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._config = config
         self._setup_ui()
@@ -351,7 +348,7 @@ class SessionSettingsWidget(QWidget):
         """Get current settings.
 
         Returns:
-            Dictionary of settings.
+            dict[str, Any]: Dictionary of settings.
         """
         return {
             "session": SessionConfig(
@@ -363,15 +360,14 @@ class SessionSettingsWidget(QWidget):
 
 
 class LoggingSettingsWidget(QWidget):
-    """Widget for logging settings."""
+    """Widget for logging settings.
+
+    Args:
+        config: Application configuration.
+        parent: Parent widget.
+    """
 
     def __init__(self, config: Config, parent: QWidget | None = None) -> None:
-        """Initialize logging settings widget.
-
-        Args:
-            config: Application configuration.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._config = config
         self._setup_ui()
@@ -438,7 +434,7 @@ class LoggingSettingsWidget(QWidget):
         """Get current settings.
 
         Returns:
-            Dictionary of settings.
+            dict[str, Any]: Dictionary of settings.
         """
         level_data = _combo_current_data(self._log_level)
         level = str(level_data) if isinstance(level_data, str) else self._config.log.level
@@ -459,19 +455,17 @@ class PreferencesDialog(QDialog):
     Provides a unified interface for configuring all application
     settings organized into logical categories.
 
-    Signals:
-        settings_changed: Emitted when settings are applied.
+    Args:
+        config: Application configuration.
+        parent: Parent widget.
+
+    Attributes:
+        settings_changed: Qt signal for settings changed.
     """
 
     settings_changed = pyqtSignal(Config)
 
     def __init__(self, config: Config, parent: QWidget | None = None) -> None:
-        """Initialize the preferences dialog.
-
-        Args:
-            config: Application configuration.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._config = config
         self._settings_widgets: list[GeneralSettingsWidget | AppearanceSettingsWidget | SessionSettingsWidget | LoggingSettingsWidget] = []
@@ -661,7 +655,7 @@ class PreferencesDialog(QDialog):
         """Build a new Config from all widget settings.
 
         Returns:
-            New Config instance with updated values.
+            Config: New Config instance with updated values.
         """
         all_settings: dict[str, Any] = {}
         for widget in self._settings_widgets:
@@ -682,6 +676,6 @@ class PreferencesDialog(QDialog):
         """Get the current configuration.
 
         Returns:
-            The current configuration object.
+            Config: The current configuration object.
         """
         return self._config

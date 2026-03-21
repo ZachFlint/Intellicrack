@@ -46,6 +46,10 @@ class MessageBubble(QFrame):
 
     Displays a message from the user, assistant, or tool with
     appropriate styling and formatting.
+
+    Args:
+        message: The message to display.
+        parent: Parent widget.
     """
 
     def __init__(
@@ -53,12 +57,6 @@ class MessageBubble(QFrame):
         message: Message,
         parent: QWidget | None = None,
     ) -> None:
-        """Initialize a message bubble.
-
-        Args:
-            message: The message to display.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._message = message
         self._setup_ui()
@@ -106,7 +104,7 @@ class MessageBubble(QFrame):
         """Get display text for message role.
 
         Returns:
-            Role display string with emoji.
+            str: Role display string with emoji.
         """
         role_map = {
             "user": "You",
@@ -150,7 +148,7 @@ class MessageBubble(QFrame):
             call: The tool call to display.
 
         Returns:
-            Widget showing the tool call.
+            QFrame: Widget showing the tool call.
         """
         frame = QFrame()
         frame.setObjectName("tool_call_frame")
@@ -184,7 +182,7 @@ class MessageBubble(QFrame):
             result: The tool result to display.
 
         Returns:
-            Widget showing the tool result.
+            QFrame: Widget showing the tool result.
         """
         frame = QFrame()
         frame.setObjectName("tool_result_success" if result.success else "tool_result_error")
@@ -223,16 +221,17 @@ class ChatInput(QFrame):
 
     Provides a text input area and send button for composing
     messages to send to the AI.
+
+    Args:
+        parent: Parent widget.
+
+    Attributes:
+        message_submitted: Qt signal for message submitted.
     """
 
     message_submitted = pyqtSignal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the chat input.
-
-        Args:
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._setup_ui()
 
@@ -367,16 +366,17 @@ class ChatPanel(QFrame):
 
     Contains the message history scroll area and input widget.
     Manages displaying conversation messages and collecting user input.
+
+    Args:
+        parent: Parent widget.
+
+    Attributes:
+        message_submitted: Qt signal for message submitted.
     """
 
     message_submitted = pyqtSignal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the chat panel.
-
-        Args:
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._messages: list[Message] = []
         self._setup_ui()
@@ -457,7 +457,7 @@ class ChatPanel(QFrame):
         """Create a streaming message and return the append function.
 
         Returns:
-            Function to call with each text chunk.
+            Callable[[str], None]: Function to call with each text chunk.
         """
         _logger.debug("streaming_message_started", message_count=len(self._messages))
         message = Message(
@@ -524,7 +524,7 @@ class ChatPanel(QFrame):
         """Get all messages in the chat.
 
         Returns:
-            List of messages.
+            list[Message]: List of messages.
         """
         return self._messages.copy()
 

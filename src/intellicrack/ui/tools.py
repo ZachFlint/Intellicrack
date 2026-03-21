@@ -67,7 +67,7 @@ class ToolWidget(Protocol):
         """Launch the external tool process.
 
         Returns:
-            True if the tool was started successfully.
+            bool: True if the tool was started successfully.
         """
         _ = self
         return False
@@ -76,7 +76,7 @@ class ToolWidget(Protocol):
         """Terminate the external tool process.
 
         Returns:
-            True if the tool was stopped successfully.
+            bool: True if the tool was stopped successfully.
         """
         _ = self
         return False
@@ -93,7 +93,7 @@ class HexEditorPanelProtocol(ToolWidget, Protocol):
             file_path: Path to the file to open.
 
         Returns:
-            True if the file was loaded successfully.
+            bool: True if the file was loaded successfully.
         """
         _ = (self, file_path)
         return False
@@ -126,7 +126,7 @@ class X64DbgWidgetProtocol(ToolWidget, Protocol):
             file_path: Path to the executable to debug.
 
         Returns:
-            True if debugging was started successfully.
+            bool: True if debugging was started successfully.
         """
         _ = (self, file_path)
         return False
@@ -151,7 +151,7 @@ class CutterWidgetProtocol(ToolWidget, Protocol):
             file_path: Path to the binary to analyze.
 
         Returns:
-            True if analysis was started successfully.
+            bool: True if analysis was started successfully.
         """
         _ = (self, file_path)
         return False
@@ -176,7 +176,7 @@ class GhidraWidgetProtocol(ToolWidget, Protocol):
             binary_path: Path to the binary to analyze.
 
         Returns:
-            True if the binary was loaded successfully.
+            bool: True if the binary was loaded successfully.
         """
         _ = (self, binary_path)
         return False
@@ -230,7 +230,7 @@ class ProcessPanelProtocol(ToolWidget, Protocol):
         """Get the currently selected process ID.
 
         Returns:
-            The selected PID or None.
+            int | None: The selected PID or None.
         """
         _ = self
         return None
@@ -247,7 +247,7 @@ class BinaryPanelProtocol(ToolWidget, Protocol):
             file_path: Path to the binary file.
 
         Returns:
-            True if the file was loaded successfully.
+            bool: True if the file was loaded successfully.
         """
         _ = (self, file_path)
         return False
@@ -269,7 +269,7 @@ class SandboxPanelProtocol(ToolWidget, Protocol):
         """Get the current sandbox backend.
 
         Returns:
-            The attached sandbox or None.
+            SandboxBase | None: The attached sandbox or None.
         """
         _ = self
         return None
@@ -315,6 +315,10 @@ class CodeDisplay(QPlainTextEdit):
 
     Provides a read-only text area for displaying code with
     appropriate syntax highlighting based on language.
+
+    Args:
+        language: Programming language for highlighting.
+        parent: Parent widget.
     """
 
     def __init__(
@@ -322,12 +326,6 @@ class CodeDisplay(QPlainTextEdit):
         language: str = "c",
         parent: QWidget | None = None,
     ) -> None:
-        """Initialize the code display.
-
-        Args:
-            language: Programming language for highlighting.
-            parent: Parent widget.
-        """
         super().__init__(parent=parent)
         self._language = language
         self._setup_ui()
@@ -356,7 +354,7 @@ class CodeDisplay(QPlainTextEdit):
         """Get the current syntax highlighter.
 
         Returns:
-            The syntax highlighter or None.
+            QSyntaxHighlighter | None: The syntax highlighter or None.
         """
         return self._highlighter
 
@@ -398,6 +396,11 @@ class ToolTab(QFrame):
 
     Contains a code display area and optional metadata panel
     for showing tool-specific output.
+
+    Args:
+        name: Tab name.
+        language: Default syntax highlighting language.
+        parent: Parent widget.
     """
 
     def __init__(
@@ -406,13 +409,6 @@ class ToolTab(QFrame):
         language: str = "c",
         parent: QWidget | None = None,
     ) -> None:
-        """Initialize the tool tab.
-
-        Args:
-            name: Tab name.
-            language: Default syntax highlighting language.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._name = name
         self._language = language
@@ -503,16 +499,17 @@ class FunctionListPanel(QFrame):
     """Panel showing list of functions in the binary.
 
     Allows navigation to specific functions by clicking.
+
+    Args:
+        parent: Parent widget.
+
+    Attributes:
+        function_selected: Qt signal for function selected.
     """
 
     function_selected = pyqtSignal(str, int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the function list panel.
-
-        Args:
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._functions: list[tuple[str, int]] = []
         self._setup_ui()
@@ -580,7 +577,7 @@ class FunctionListPanel(QFrame):
         """Get the current list of functions.
 
         Returns:
-            List of (name, address) tuples.
+            list[tuple[str, int]]: List of (name, address) tuples.
         """
         return self._functions
 
@@ -589,16 +586,17 @@ class XRefPanel(QFrame):
     """Panel showing cross-references to/from an address.
 
     Displays incoming and outgoing references for navigation.
+
+    Args:
+        parent: Parent widget.
+
+    Attributes:
+        xref_selected: Qt signal for xref selected.
     """
 
     xref_selected = pyqtSignal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the xref panel.
-
-        Args:
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._setup_ui()
 
@@ -680,6 +678,9 @@ class ToolOutputPanel(QFrame):
     decompiled code, disassembly, strings, cross-references, embedded
     external tools, and specialized analysis panels.
 
+    Args:
+        parent: Parent widget.
+
     Attributes:
         address_clicked: Signal emitted when an address is clicked.
         embedded_tool_started: Signal emitted when embedded tool starts.
@@ -691,11 +692,6 @@ class ToolOutputPanel(QFrame):
     embedded_tool_closed: pyqtSignal = pyqtSignal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the tool output panel.
-
-        Args:
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._tabs: dict[str, ToolTab] = {}
         self._embedded_tools: dict[str, QWidget] = {}
@@ -924,7 +920,7 @@ class ToolOutputPanel(QFrame):
         """Add the bridge analysis panel as a tab.
 
         Returns:
-            The created BridgeAnalysisPanel widget.
+            BridgeAnalysisPanel: The created BridgeAnalysisPanel widget.
         """
         if self._analysis_panel is not None:
             return self._analysis_panel
@@ -941,7 +937,7 @@ class ToolOutputPanel(QFrame):
         """Add the script manager panel as a tab.
 
         Returns:
-            The created ScriptManagerPanel widget.
+            QWidget: The created ScriptManagerPanel widget.
         """
         if self._script_panel is not None:
             return self._script_panel
@@ -968,7 +964,7 @@ class ToolOutputPanel(QFrame):
         """Add the stack viewer panel as a tab.
 
         Returns:
-            The created StackViewerPanel widget.
+            QWidget: The created StackViewerPanel widget.
         """
         if self._stack_panel is not None:
             return self._stack_panel
@@ -991,7 +987,7 @@ class ToolOutputPanel(QFrame):
         """Add the built-in hex editor as a panel tab.
 
         Returns:
-            The created HexEditorPanel or None on failure.
+            HexEditorPanelProtocol | None: The created HexEditorPanel or None on failure.
         """
         if self._hex_editor_panel is not None:
             return self._hex_editor_panel
@@ -1022,7 +1018,7 @@ class ToolOutputPanel(QFrame):
             is_64bit: Whether to use 64-bit mode (True) or 32-bit (False).
 
         Returns:
-            The created X64DbgPanel or None if creation failed.
+            X64DbgWidgetProtocol | None: The created X64DbgPanel or None if creation failed.
         """
         if self._x64dbg_widget is not None:
             return self._x64dbg_widget
@@ -1071,7 +1067,7 @@ class ToolOutputPanel(QFrame):
         """Add the Cutter reverse engineering panel as a native tab.
 
         Returns:
-            The created CutterPanel or None if creation failed.
+            CutterWidgetProtocol | None: The created CutterPanel or None if creation failed.
         """
         if self._cutter_widget is not None:
             return self._cutter_widget
@@ -1118,7 +1114,7 @@ class ToolOutputPanel(QFrame):
         """Add the Ghidra analysis panel as a native tab.
 
         Returns:
-            The created GhidraPanel or None if creation failed.
+            GhidraWidgetProtocol | None: The created GhidraPanel or None if creation failed.
         """
         if self._ghidra_widget is not None:
             return self._ghidra_widget
@@ -1165,7 +1161,7 @@ class ToolOutputPanel(QFrame):
         """Add the Frida instrumentation panel as a tab.
 
         Returns:
-            The created FridaPanel or None if creation failed.
+            FridaPanelProtocol | None: The created FridaPanel or None if creation failed.
         """
         if self._frida_panel is not None:
             return self._frida_panel
@@ -1213,7 +1209,7 @@ class ToolOutputPanel(QFrame):
         """Add the process management panel as a tab.
 
         Returns:
-            The created ProcessPanel or None if creation failed.
+            ProcessPanelProtocol | None: The created ProcessPanel or None if creation failed.
         """
         if self._process_panel is not None:
             return self._process_panel
@@ -1238,7 +1234,7 @@ class ToolOutputPanel(QFrame):
         """Add the binary hex viewer and patching panel as a tab.
 
         Returns:
-            The created BinaryPanel or None if creation failed.
+            BinaryPanelProtocol | None: The created BinaryPanel or None if creation failed.
         """
         if self._binary_panel is not None:
             return self._binary_panel
@@ -1263,7 +1259,7 @@ class ToolOutputPanel(QFrame):
         """Add the sandbox management panel as a tab.
 
         Returns:
-            The created SandboxPanel or None if creation failed.
+            SandboxPanelProtocol | None: The created SandboxPanel or None if creation failed.
         """
         if self._sandbox_panel is not None:
             return self._sandbox_panel
@@ -1310,7 +1306,7 @@ class ToolOutputPanel(QFrame):
             file_path: Path to the binary to analyze.
 
         Returns:
-            True if the file was opened successfully.
+            bool: True if the file was opened successfully.
         """
         if self._ghidra_widget is None:
             widget = self.add_ghidra_tab()
@@ -1333,7 +1329,7 @@ class ToolOutputPanel(QFrame):
             file_path: Path to the binary file.
 
         Returns:
-            True if the file was opened successfully.
+            bool: True if the file was opened successfully.
         """
         if self._binary_panel is None:
             widget = self.add_binary_tab()
@@ -1355,7 +1351,7 @@ class ToolOutputPanel(QFrame):
             file_path: Path to the file to open.
 
         Returns:
-            True if the file was opened successfully.
+            bool: True if the file was opened successfully.
         """
         if self._hex_editor_panel is None:
             widget = self.add_hex_editor_tab()
@@ -1382,7 +1378,7 @@ class ToolOutputPanel(QFrame):
             is_64bit: Whether to use x64dbg (True) or x32dbg (False).
 
         Returns:
-            True if the file was opened successfully.
+            bool: True if the file was opened successfully.
         """
         if self._x64dbg_widget is None:
             widget = self.add_x64dbg_tab(is_64bit)
@@ -1405,7 +1401,7 @@ class ToolOutputPanel(QFrame):
             file_path: Path to the binary to analyze.
 
         Returns:
-            True if the file was opened successfully.
+            bool: True if the file was opened successfully.
         """
         if self._cutter_widget is None:
             widget = self.add_cutter_tab()
@@ -1438,7 +1434,7 @@ class ToolOutputPanel(QFrame):
             tool_id: The tool identifier.
 
         Returns:
-            The embedded tool widget or None if not available.
+            QWidget | None: The embedded tool widget or None if not available.
         """
         return self._embedded_tools.get(tool_id.lower())
 
@@ -1449,7 +1445,7 @@ class ToolOutputPanel(QFrame):
             panel_id: The panel identifier.
 
         Returns:
-            The panel widget or None if not available.
+            QWidget | None: The panel widget or None if not available.
         """
         return self._panels.get(panel_id.lower())
 
@@ -1640,7 +1636,7 @@ class ToolOutputPanel(QFrame):
             tool_id: Tool identifier (e.g., "frida", "ghidra", "cutter", "x64dbg").
 
         Returns:
-            Bridge instance or None if not available.
+            object | None: Bridge instance or None if not available.
         """
         panel_map: dict[str, str] = {
             "frida": "_frida_panel",
@@ -1660,7 +1656,7 @@ class ToolOutputPanel(QFrame):
         """Get the currently selected PID from the process panel.
 
         Returns:
-            Selected process ID or None if no process selected.
+            int | None: Selected process ID or None if no process selected.
         """
         if self._process_panel is not None and hasattr(self._process_panel, "get_selected_pid"):
             return self._process_panel.get_selected_pid()
@@ -1702,7 +1698,7 @@ class ToolOutputPanel(QFrame):
             tool_id: Tool identifier string.
 
         Returns:
-            The embedded tool widget or None.
+            QWidget | None: The embedded tool widget or None.
         """
         return self.get_embedded_tool(tool_id)
 
@@ -1734,7 +1730,7 @@ class ToolOutputPanel(QFrame):
         """Get the sandbox backend from the sandbox panel.
 
         Returns:
-            Sandbox backend or None.
+            object | None: Sandbox backend or None.
         """
         if self._sandbox_panel is not None and hasattr(self._sandbox_panel, "get_sandbox"):
             return self._sandbox_panel.get_sandbox()
@@ -1755,8 +1751,9 @@ class ToolOutputPanel(QFrame):
         """Get the current script panel state.
 
         Returns:
-            Tuple of (selected_script_id, current_script_data).
-            current_script_data is (name, type, content) or None.
+            tuple[str | None, tuple[str, str, str] | None]: Tuple of
+                (selected_script_id, current_script_data).
+                current_script_data is (name, type, content) or None.
         """
         selected_id: str | None = None
         current_script: tuple[str, str, str] | None = None
@@ -1776,16 +1773,14 @@ class ToolOutputPanel(QFrame):
         and retrieves its document's syntax highlighter.
 
         Returns:
-            Syntax highlighter or None if not available.
+            QSyntaxHighlighter | None: Syntax highlighter or None if not available.
         """
         current_widget = self._tab_widget.currentWidget()
         if current_widget is None:
             return None
         code_display = current_widget.findChild(QPlainTextEdit)
         doc = code_display.document()
-        if doc is None:
-            return None
-        return doc.findChild(QSyntaxHighlighter)
+        return None if doc is None else doc.findChild(QSyntaxHighlighter)
 
     def _wire_hex_editor_state(self, panel_widget: object) -> None:
         """Create a shared HexDocumentState and wire it to the bridge and panel.
