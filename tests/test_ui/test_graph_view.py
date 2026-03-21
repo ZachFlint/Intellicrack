@@ -217,7 +217,8 @@ class TestCFGGraphScene:
         """Verify edges are added to the scene for block connections."""
         scene = CFGGraphScene()
         scene.load_graph(SAMPLE_BLOCKS)
-        edge_count = sum(1 for item in scene.items() if isinstance(item, EdgeItem))
+        edge_count = sum(bool(isinstance(item, EdgeItem))
+                     for item in scene.items())
         assert edge_count > 0
 
     @staticmethod

@@ -242,7 +242,7 @@ def test_all_function_names_have_methods() -> None:
         method_name = func.name.split(".", 1)[1] if "." in func.name else func.name
         if not hasattr(bridge, method_name):
             missing.append(func.name)
-    assert missing == [], f"Tool functions without methods: {missing}"
+    assert not missing, f"Tool functions without methods: {missing}"
 
 
 def test_function_count_minimum() -> None:
@@ -589,7 +589,7 @@ def test_protect_memory(frida_bridge: FridaBridge) -> None:
     """Verify protect_memory succeeds on allocated memory."""
     addr: int = _run_async(frida_bridge.allocate_memory(_ALLOC_SIZE))
     result: bool = _run_async(frida_bridge.protect_memory(addr, _ALLOC_SIZE, "rwx"))
-    assert result is True
+    assert result
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
@@ -613,7 +613,7 @@ def test_hook_and_remove(frida_bridge: FridaBridge) -> None:
     assert hook.active
 
     removed: bool = _run_async(frida_bridge.remove_hook(hook.id))
-    assert removed is True
+    assert removed
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
@@ -630,7 +630,7 @@ def test_stalker_follow_and_unfollow(
         )
     )
     assert isinstance(trace_id, str)
-    assert len(trace_id) > 0
+    assert trace_id != ""
 
     time.sleep(_STALKER_SLEEP)
 
@@ -657,7 +657,7 @@ def test_get_pending_children_empty(frida_bridge: FridaBridge) -> None:
     """Verify get_pending_children returns typed empty list when gating not active."""
     children: list[ChildProcessInfo] = _run_async(frida_bridge.get_pending_children())
     assert isinstance(children, list)
-    assert len(children) == 0, "no children should be gated without enable_child_gating"
+    assert not children, "no children should be gated without enable_child_gating"
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
@@ -669,7 +669,7 @@ def test_crash_reporting_lifecycle(frida_bridge: FridaBridge) -> None:
 
     crashes: list[CrashInfo] = _run_async(frida_bridge.get_crashes())
     assert isinstance(crashes, list)
-    assert len(crashes) == 0, "no crashes should have occurred on healthy notepad"
+    assert not crashes, "no crashes should have occurred on healthy notepad"
     for crash in crashes:
         assert isinstance(crash, CrashInfo)
 

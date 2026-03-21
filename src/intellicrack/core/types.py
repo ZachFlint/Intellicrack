@@ -250,7 +250,7 @@ class SectionInfo:
         """Check if section is executable.
 
         Returns:
-            True if the section has the executable characteristic flag set.
+            bool: True if the section has the executable characteristic flag set.
         """
         return bool(self.characteristics & 0x20000000)
 
@@ -259,7 +259,7 @@ class SectionInfo:
         """Check if section is readable.
 
         Returns:
-            True if the section has the readable characteristic flag set.
+            bool: True if the section has the readable characteristic flag set.
         """
         return bool(self.characteristics & 0x40000000)
 
@@ -268,7 +268,7 @@ class SectionInfo:
         """Check if section is writable.
 
         Returns:
-            True if the section has the writable characteristic flag set.
+            bool: True if the section has the writable characteristic flag set.
         """
         return bool(self.characteristics & 0x80000000)
 
@@ -401,7 +401,7 @@ class DataTypeInfo:
         """Get the display string for the data type.
 
         Returns:
-            Formatted type string including pointer or array notation.
+            str: Formatted type string including pointer or array notation.
         """
         if self.is_pointer and self.base_type:
             return f"{self.base_type} *"
@@ -441,7 +441,7 @@ class FunctionInfo:
         """Check if code is available.
 
         Returns:
-            True if decompiled code or disassembly is present.
+            bool: True if decompiled code or disassembly is present.
         """
         return bool(self.decompiled_code or self.disassembly)
 
@@ -450,7 +450,7 @@ class FunctionInfo:
         """Get function summary.
 
         Returns:
-            Summary string with name, address, convention, and variable count.
+            str: Summary string with name, address, convention, and variable count.
         """
         vars_count = len(self.local_variables)
         return f"{self.name}@{hex(self.address)} ({self.calling_convention}, {vars_count} vars)"
@@ -478,7 +478,7 @@ class CrossReference:
         """Get string representation of the cross reference.
 
         Returns:
-            Formatted cross-reference showing type, source, and destination.
+            str: Formatted cross-reference showing type, source, and destination.
         """
         src = self.from_function or hex(self.from_address)
         dst = self.to_function or hex(self.to_address)
@@ -555,7 +555,7 @@ class BreakpointInfo:
         """Get string representation of the breakpoint.
 
         Returns:
-            Formatted breakpoint info with ID, address, type, and hit count.
+            str: Formatted breakpoint info with ID, address, type, and hit count.
         """
         status = "enabled" if self.enabled else "disabled"
         return f"BP#{self.id} @ {hex(self.address)} ({self.bp_type}): {status}, hit {self.hit_count} times"
@@ -566,9 +566,30 @@ class RegisterState:
     """CPU register state (x64).
 
     Attributes:
-        rax-r15: General purpose registers.
+        rax: General purpose register RAX.
+        rbx: General purpose register RBX.
+        rcx: General purpose register RCX.
+        rdx: General purpose register RDX.
+        rsi: General purpose register RSI.
+        rdi: General purpose register RDI.
+        rbp: Base pointer register.
+        rsp: Stack pointer register.
+        rip: Instruction pointer register.
+        r8: General purpose register R8.
+        r9: General purpose register R9.
+        r10: General purpose register R10.
+        r11: General purpose register R11.
+        r12: General purpose register R12.
+        r13: General purpose register R13.
+        r14: General purpose register R14.
+        r15: General purpose register R15.
         rflags: Flags register.
-        cs-ss: Segment registers.
+        cs: Code segment register.
+        ds: Data segment register.
+        es: Extra segment register.
+        fs: FS segment register.
+        gs: GS segment register.
+        ss: Stack segment register.
     """
 
     rax: int
@@ -603,7 +624,7 @@ class RegisterState:
             key: Register name.
 
         Returns:
-            Register value.
+            int: Register value.
 
         Raises:
             KeyError: If register name is invalid.
@@ -618,7 +639,7 @@ class RegisterState:
         """Get general purpose registers.
 
         Returns:
-            Dictionary of GPR names and values.
+            dict[str, int]: Dictionary of GPR names and values.
         """
         return {
             "rax": self.rax,
@@ -643,7 +664,7 @@ class RegisterState:
         """Get segment registers.
 
         Returns:
-            Dictionary of segment register names and values.
+            dict[str, int]: Dictionary of segment register names and values.
         """
         return {
             "cs": self.cs,
@@ -696,7 +717,7 @@ class ThreadInfo:
         """Get string representation of the thread.
 
         Returns:
-            Formatted thread info with TID, state, priority, and address.
+            str: Formatted thread info with TID, state, priority, and address.
         """
         return f"Thread {self.tid} ({self.state}, prio={self.priority}) @ {hex(self.start_address)}"
 
@@ -1040,7 +1061,7 @@ class ToolFunction:
         """Get function signature string.
 
         Returns:
-            Formatted signature with name, parameters, and return type.
+            str: Formatted signature with name, parameters, and return type.
         """
         params = ", ".join(f"{p.name}: {p.type}" for p in self.parameters)
         return f"{self.name}({params}) -> {self.returns}"
@@ -1064,11 +1085,20 @@ class ToolDefinition:
 class IntellicrackError(Exception):
     """Base exception for all Intellicrack errors.
 
+    Args:
+        message: Human-readable error description.
+        error_code: Optional numeric error code.
+        details: Optional dictionary with additional context.
+
     Attributes:
         message: Human-readable error description.
         error_code: Optional numeric error code for programmatic handling.
         details: Optional dictionary with additional context.
     """
+
+    message: str
+    error_code: int | None
+    details: dict[str, Any]
 
     def __init__(
         self,
@@ -1076,13 +1106,6 @@ class IntellicrackError(Exception):
         error_code: int | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
-        """Initialize the error with structured context.
-
-        Args:
-            message: Human-readable error description.
-            error_code: Optional numeric error code.
-            details: Optional dictionary with additional context.
-        """
         super().__init__(message)
         self.message = message
         self.error_code = error_code
@@ -1092,11 +1115,23 @@ class IntellicrackError(Exception):
 class ProviderError(IntellicrackError):
     """Error related to LLM providers.
 
+    Args:
+        message: Human-readable error description.
+        provider_name: Name of the provider.
+        status_code: HTTP status code if applicable.
+        response_body: Raw response body for debugging.
+        error_code: Optional numeric error code.
+        details: Optional dictionary with additional context.
+
     Attributes:
-        provider_name: Name of the provider that errored.
+        provider_name: Name of the provider that raised the error.
         status_code: HTTP status code if applicable.
         response_body: Raw response body for debugging.
     """
+
+    provider_name: str | None
+    status_code: int | None
+    response_body: str | None
 
     def __init__(
         self,
@@ -1107,16 +1142,6 @@ class ProviderError(IntellicrackError):
         error_code: int | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
-        """Initialize provider error with context.
-
-        Args:
-            message: Human-readable error description.
-            provider_name: Name of the provider.
-            status_code: HTTP status code if applicable.
-            response_body: Raw response body for debugging.
-            error_code: Optional numeric error code.
-            details: Optional dictionary with additional context.
-        """
         super().__init__(message, error_code, details)
         self.provider_name = provider_name
         self.status_code = status_code
@@ -1130,10 +1155,23 @@ class AuthenticationError(ProviderError):
 class RateLimitError(ProviderError):
     """Rate limit exceeded.
 
+    Args:
+        message: Human-readable error description.
+        retry_after: Seconds until retry is allowed.
+        limit_type: Type of rate limit hit.
+        provider_name: Name of the provider.
+        status_code: HTTP status code if applicable.
+        response_body: Raw response body for debugging.
+        error_code: Optional numeric error code.
+        details: Optional dictionary with additional context.
+
     Attributes:
         retry_after: Seconds until retry is allowed.
-        limit_type: Type of rate limit hit (requests, tokens, etc.).
+        limit_type: Type of rate limit hit.
     """
+
+    retry_after: float | None
+    limit_type: str | None
 
     def __init__(
         self,
@@ -1146,18 +1184,6 @@ class RateLimitError(ProviderError):
         error_code: int | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
-        """Initialize rate limit error with timing context.
-
-        Args:
-            message: Human-readable error description.
-            retry_after: Seconds until retry is allowed.
-            limit_type: Type of rate limit hit.
-            provider_name: Name of the provider.
-            status_code: HTTP status code if applicable.
-            response_body: Raw response body for debugging.
-            error_code: Optional numeric error code.
-            details: Optional dictionary with additional context.
-        """
         super().__init__(message, provider_name, status_code, response_body, error_code, details)
         self.retry_after = retry_after
         self.limit_type = limit_type
@@ -1166,10 +1192,23 @@ class RateLimitError(ProviderError):
 class ModelNotFoundError(ProviderError):
     """Requested model not found.
 
+    Args:
+        message: Human-readable error description.
+        model_name: Name of the model that was not found.
+        available_models: List of available model names.
+        provider_name: Name of the provider.
+        status_code: HTTP status code if applicable.
+        response_body: Raw response body for debugging.
+        error_code: Optional numeric error code.
+        details: Optional dictionary with additional context.
+
     Attributes:
         model_name: Name of the model that was not found.
         available_models: List of available model names.
     """
+
+    model_name: str | None
+    available_models: list[str]
 
     def __init__(
         self,
@@ -1182,18 +1221,6 @@ class ModelNotFoundError(ProviderError):
         error_code: int | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
-        """Initialize model not found error with available alternatives.
-
-        Args:
-            message: Human-readable error description.
-            model_name: Name of the model that was not found.
-            available_models: List of available model names.
-            provider_name: Name of the provider.
-            status_code: HTTP status code if applicable.
-            response_body: Raw response body for debugging.
-            error_code: Optional numeric error code.
-            details: Optional dictionary with additional context.
-        """
         super().__init__(message, provider_name, status_code, response_body, error_code, details)
         self.model_name = model_name
         self.available_models = available_models or []
@@ -1202,11 +1229,23 @@ class ModelNotFoundError(ProviderError):
 class ToolError(IntellicrackError):
     """Error related to tool bridges.
 
+    Args:
+        message: Human-readable error description.
+        tool_name: Name of the tool.
+        exit_code: Process exit code if applicable.
+        stderr: Standard error output for debugging.
+        error_code: Optional numeric error code.
+        details: Optional dictionary with additional context.
+
     Attributes:
-        tool_name: Name of the tool that errored.
+        tool_name: Name of the tool that raised the error.
         exit_code: Process exit code if applicable.
         stderr: Standard error output for debugging.
     """
+
+    tool_name: str | None
+    exit_code: int | None
+    stderr: str | None
 
     def __init__(
         self,
@@ -1217,16 +1256,6 @@ class ToolError(IntellicrackError):
         error_code: int | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
-        """Initialize tool error with execution context.
-
-        Args:
-            message: Human-readable error description.
-            tool_name: Name of the tool.
-            exit_code: Process exit code if applicable.
-            stderr: Standard error output for debugging.
-            error_code: Optional numeric error code.
-            details: Optional dictionary with additional context.
-        """
         super().__init__(message, error_code, details)
         self.tool_name = tool_name
         self.exit_code = exit_code
@@ -1236,10 +1265,21 @@ class ToolError(IntellicrackError):
 class ToolNotFoundError(ToolError):
     """Tool could not be found or installed.
 
+    Args:
+        message: Human-readable error description.
+        tool_name: Name of the tool.
+        search_paths: Paths that were searched.
+        install_hint: Hint for how to install the tool.
+        error_code: Optional numeric error code.
+        details: Optional dictionary with additional context.
+
     Attributes:
-        search_paths: Paths that were searched for the tool.
-        install_hint: Hint for how to install the missing tool.
+        search_paths: Paths that were searched.
+        install_hint: Hint for how to install the tool.
     """
+
+    search_paths: list[str]
+    install_hint: str | None
 
     def __init__(
         self,
@@ -1250,16 +1290,6 @@ class ToolNotFoundError(ToolError):
         error_code: int | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
-        """Initialize tool not found error with search context.
-
-        Args:
-            message: Human-readable error description.
-            tool_name: Name of the tool.
-            search_paths: Paths that were searched.
-            install_hint: Hint for how to install the tool.
-            error_code: Optional numeric error code.
-            details: Optional dictionary with additional context.
-        """
         super().__init__(message, tool_name, None, None, error_code, details)
         self.search_paths = search_paths or []
         self.install_hint = install_hint
@@ -1268,10 +1298,23 @@ class ToolNotFoundError(ToolError):
 class InitializationError(ToolError):
     """Tool failed to initialize.
 
+    Args:
+        message: Human-readable error description.
+        tool_name: Name of the tool.
+        config_path: Path to configuration that failed.
+        missing_dependency: Name of missing dependency.
+        exit_code: Process exit code if applicable.
+        stderr: Standard error output for debugging.
+        error_code: Optional numeric error code.
+        details: Optional dictionary with additional context.
+
     Attributes:
         config_path: Path to configuration that failed.
-        missing_dependency: Name of missing dependency if applicable.
+        missing_dependency: Name of missing dependency.
     """
+
+    config_path: str | None
+    missing_dependency: str | None
 
     def __init__(
         self,
@@ -1284,18 +1327,6 @@ class InitializationError(ToolError):
         error_code: int | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
-        """Initialize initialization error with config context.
-
-        Args:
-            message: Human-readable error description.
-            tool_name: Name of the tool.
-            config_path: Path to configuration that failed.
-            missing_dependency: Name of missing dependency.
-            exit_code: Process exit code if applicable.
-            stderr: Standard error output for debugging.
-            error_code: Optional numeric error code.
-            details: Optional dictionary with additional context.
-        """
         super().__init__(message, tool_name, exit_code, stderr, error_code, details)
         self.config_path = config_path
         self.missing_dependency = missing_dependency
@@ -1304,11 +1335,26 @@ class InitializationError(ToolError):
 class AttachError(ToolError):
     """Failed to attach to process.
 
+    Args:
+        message: Human-readable error description.
+        tool_name: Name of the tool.
+        pid: Process ID that could not be attached.
+        process_name: Name of the process that could not be attached.
+        reason: Specific reason for attachment failure.
+        exit_code: Process exit code if applicable.
+        stderr: Standard error output for debugging.
+        error_code: Optional numeric error code.
+        details: Optional dictionary with additional context.
+
     Attributes:
         pid: Process ID that could not be attached.
         process_name: Name of the process that could not be attached.
         reason: Specific reason for attachment failure.
     """
+
+    pid: int | None
+    process_name: str | None
+    reason: str | None
 
     def __init__(
         self,
@@ -1322,19 +1368,6 @@ class AttachError(ToolError):
         error_code: int | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
-        """Initialize attach error with process context.
-
-        Args:
-            message: Human-readable error description.
-            tool_name: Name of the tool.
-            pid: Process ID that could not be attached.
-            process_name: Name of the process that could not be attached.
-            reason: Specific reason for attachment failure.
-            exit_code: Process exit code if applicable.
-            stderr: Standard error output for debugging.
-            error_code: Optional numeric error code.
-            details: Optional dictionary with additional context.
-        """
         super().__init__(message, tool_name, exit_code, stderr, error_code, details)
         self.pid = pid
         self.process_name = process_name
@@ -1344,10 +1377,20 @@ class AttachError(ToolError):
 class SandboxError(IntellicrackError):
     """Error related to sandbox operations.
 
+    Args:
+        message: Human-readable error description.
+        sandbox_type: Type of sandbox.
+        vm_state: Current VM state when error occurred.
+        error_code: Optional numeric error code.
+        details: Optional dictionary with additional context.
+
     Attributes:
-        sandbox_type: Type of sandbox (qemu, docker, etc.).
+        sandbox_type: Type of sandbox.
         vm_state: Current VM state when error occurred.
     """
+
+    sandbox_type: str | None
+    vm_state: str | None
 
     def __init__(
         self,
@@ -1357,15 +1400,6 @@ class SandboxError(IntellicrackError):
         error_code: int | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
-        """Initialize sandbox error with VM context.
-
-        Args:
-            message: Human-readable error description.
-            sandbox_type: Type of sandbox.
-            vm_state: Current VM state when error occurred.
-            error_code: Optional numeric error code.
-            details: Optional dictionary with additional context.
-        """
         super().__init__(message, error_code, details)
         self.sandbox_type = sandbox_type
         self.vm_state = vm_state
@@ -1374,9 +1408,19 @@ class SandboxError(IntellicrackError):
 class SandboxTimeoutError(SandboxError):
     """Timeout during sandbox command execution.
 
+    Args:
+        message: Human-readable error description.
+        timeout_seconds: Timeout duration that was exceeded.
+        sandbox_type: Type of sandbox.
+        vm_state: Current VM state when error occurred.
+        error_code: Optional numeric error code.
+        details: Optional dictionary with additional context.
+
     Attributes:
         timeout_seconds: Timeout duration that was exceeded.
     """
+
+    timeout_seconds: float | None
 
     def __init__(
         self,
@@ -1387,16 +1431,6 @@ class SandboxTimeoutError(SandboxError):
         error_code: int | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
-        """Initialize sandbox timeout error.
-
-        Args:
-            message: Human-readable error description.
-            timeout_seconds: Timeout duration that was exceeded.
-            sandbox_type: Type of sandbox.
-            vm_state: Current VM state when error occurred.
-            error_code: Optional numeric error code.
-            details: Optional dictionary with additional context.
-        """
         super().__init__(message, sandbox_type, vm_state, error_code, details)
         self.timeout_seconds = timeout_seconds
 
@@ -1404,11 +1438,23 @@ class SandboxTimeoutError(SandboxError):
 class ConfigurationError(IntellicrackError):
     """Configuration error.
 
+    Args:
+        message: Human-readable error description.
+        config_key: Configuration key that caused the error.
+        expected_type: Expected type or format.
+        actual_value: Actual value that was provided.
+        error_code: Optional numeric error code.
+        details: Optional dictionary with additional context.
+
     Attributes:
         config_key: Configuration key that caused the error.
         expected_type: Expected type or format.
         actual_value: Actual value that was provided.
     """
+
+    config_key: str | None
+    expected_type: str | None
+    actual_value: str | None
 
     def __init__(
         self,
@@ -1419,16 +1465,6 @@ class ConfigurationError(IntellicrackError):
         error_code: int | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
-        """Initialize configuration error with key context.
-
-        Args:
-            message: Human-readable error description.
-            config_key: Configuration key that caused the error.
-            expected_type: Expected type or format.
-            actual_value: Actual value that was provided.
-            error_code: Optional numeric error code.
-            details: Optional dictionary with additional context.
-        """
         super().__init__(message, error_code, details)
         self.config_key = config_key
         self.expected_type = expected_type

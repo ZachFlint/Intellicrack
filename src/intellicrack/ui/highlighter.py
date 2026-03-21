@@ -36,20 +36,14 @@ _DELIM_STATE_MAP = (_BLOCK_STATE_DOUBLE_QUOTE, _BLOCK_STATE_SINGLE_QUOTE)
 class HighlightRule:
     """A syntax highlighting rule.
 
-    Attributes:
-        pattern: Regular expression pattern to match.
-        format: Text format to apply.
+    Args:
+        pattern: Regular expression pattern.
+        text_format: Format to apply to matches.
     """
 
     __slots__ = ("format", "pattern")
 
     def __init__(self, pattern: str, text_format: QTextCharFormat) -> None:
-        """Initialize a highlight rule.
-
-        Args:
-            pattern: Regular expression pattern.
-            text_format: Format to apply to matches.
-        """
         self.pattern = QRegularExpression(pattern)
         self.format = text_format
 
@@ -59,6 +53,13 @@ class CSyntaxHighlighter(QSyntaxHighlighter):
 
     Highlights keywords, types, strings, numbers, comments,
     and function calls in decompiled C code.
+
+    Args:
+        parent: Parent QTextDocument or None.
+
+    Attributes:
+        KEYWORDS: C/C++ reserved keyword strings for syntax highlighting.
+        TYPES: C/C++ type names including Windows SDK types for highlighting.
     """
 
     KEYWORDS: ClassVar[tuple[str, ...]] = (
@@ -151,11 +152,6 @@ class CSyntaxHighlighter(QSyntaxHighlighter):
     )
 
     def __init__(self, parent: QTextDocument | None = None) -> None:
-        """Initialize the C syntax highlighter.
-
-        Args:
-            parent: Parent QTextDocument or None.
-        """
         super().__init__(parent)
         self._rules: list[HighlightRule] = []
         self._multi_line_comment_format = QTextCharFormat()
@@ -177,7 +173,7 @@ class CSyntaxHighlighter(QSyntaxHighlighter):
             italic: Whether to use italic font.
 
         Returns:
-            Configured text format.
+            QTextCharFormat: Configured text format.
         """
         text_format = QTextCharFormat()
         text_format.setForeground(QColor(color))
@@ -271,6 +267,14 @@ class AssemblySyntaxHighlighter(QSyntaxHighlighter):
 
     Highlights instructions, registers, addresses, and comments
     in disassembly output.
+
+    Args:
+        parent: Parent QTextDocument or None.
+
+    Attributes:
+        INSTRUCTIONS: Recognized x86/x64 instruction mnemonics.
+        REGISTERS: Recognized CPU register names.
+        MEMORY_KEYWORDS: Recognized memory operand keywords.
     """
 
     INSTRUCTIONS: ClassVar[tuple[str, ...]] = (
@@ -499,11 +503,6 @@ class AssemblySyntaxHighlighter(QSyntaxHighlighter):
     )
 
     def __init__(self, parent: QTextDocument | None = None) -> None:
-        """Initialize the assembly syntax highlighter.
-
-        Args:
-            parent: Parent QTextDocument or None.
-        """
         super().__init__(parent)
         self._rules: list[HighlightRule] = []
         self._setup_rules()
@@ -522,7 +521,7 @@ class AssemblySyntaxHighlighter(QSyntaxHighlighter):
             italic: Whether to use italic font.
 
         Returns:
-            Configured text format.
+            QTextCharFormat: Configured text format.
         """
         text_format = QTextCharFormat()
         text_format.setForeground(QColor(color))
@@ -591,6 +590,13 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
 
     Highlights Python keywords, built-ins, strings, numbers,
     and comments in Python scripts.
+
+    Args:
+        parent: Parent QTextDocument or None.
+
+    Attributes:
+        KEYWORDS: Python reserved keywords.
+        BUILTINS: Python built-in function and type names.
     """
 
     KEYWORDS: ClassVar[tuple[str, ...]] = (
@@ -700,11 +706,6 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
     )
 
     def __init__(self, parent: QTextDocument | None = None) -> None:
-        """Initialize the Python syntax highlighter.
-
-        Args:
-            parent: Parent QTextDocument or None.
-        """
         super().__init__(parent)
         self._rules: list[HighlightRule] = []
         self._triple_quote_format = QTextCharFormat()
@@ -724,7 +725,7 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
             italic: Whether to use italic font.
 
         Returns:
-            Configured text format.
+            QTextCharFormat: Configured text format.
         """
         text_format = QTextCharFormat()
         text_format.setForeground(QColor(color))
@@ -863,6 +864,13 @@ class JavaScriptSyntaxHighlighter(QSyntaxHighlighter):
 
     Highlights JavaScript/Frida script keywords, functions,
     strings, numbers, and comments.
+
+    Args:
+        parent: Parent QTextDocument or None.
+
+    Attributes:
+        KEYWORDS: JavaScript reserved keywords.
+        FRIDA_GLOBALS: Frida API global object names.
     """
 
     KEYWORDS: ClassVar[tuple[str, ...]] = (
@@ -936,11 +944,6 @@ class JavaScriptSyntaxHighlighter(QSyntaxHighlighter):
     )
 
     def __init__(self, parent: QTextDocument | None = None) -> None:
-        """Initialize the JavaScript syntax highlighter.
-
-        Args:
-            parent: Parent QTextDocument or None.
-        """
         super().__init__(parent)
         self._rules: list[HighlightRule] = []
         self._multi_line_comment_format = QTextCharFormat()
@@ -962,7 +965,7 @@ class JavaScriptSyntaxHighlighter(QSyntaxHighlighter):
             italic: Whether to use italic font.
 
         Returns:
-            Configured text format.
+            QTextCharFormat: Configured text format.
         """
         text_format = QTextCharFormat()
         text_format.setForeground(QColor(color))
@@ -1045,6 +1048,177 @@ class JavaScriptSyntaxHighlighter(QSyntaxHighlighter):
             start_index = next_match.capturedStart() if next_match.hasMatch() else -1
 
 
+class HexPatSyntaxHighlighter(QSyntaxHighlighter):
+    """Syntax highlighter for HexPat pattern definition language.
+
+    Highlights struct/union/enum/bitfield keywords, primitive types,
+    endianness prefixes, annotations, strings, numbers, and comments
+    in HexPat DSL source code.
+
+    Args:
+        parent: Parent QTextDocument or None.
+
+    Attributes:
+        KEYWORDS: HexPat structural keywords for syntax highlighting.
+        TYPES: HexPat primitive type names for syntax highlighting.
+        ENDIANNESS: Endianness prefix keywords.
+        BUILTINS: Built-in function names.
+    """
+
+    KEYWORDS: ClassVar[tuple[str, ...]] = (
+        "struct",
+        "union",
+        "enum",
+        "bitfield",
+        "if",
+        "else",
+        "match",
+        "while",
+        "for",
+    )
+
+    TYPES: ClassVar[tuple[str, ...]] = (
+        "u8",
+        "u16",
+        "u32",
+        "u64",
+        "s8",
+        "s16",
+        "s32",
+        "s64",
+        "float",
+        "double",
+        "char",
+        "bool",
+        "padding",
+    )
+
+    ENDIANNESS: ClassVar[tuple[str, ...]] = ("le", "be")
+
+    BUILTINS: ClassVar[tuple[str, ...]] = ("sizeof", "addressof")
+
+    def __init__(self, parent: QTextDocument | None = None) -> None:
+        super().__init__(parent)
+        self._rules: list[HighlightRule] = []
+        self._multi_line_comment_format = QTextCharFormat()
+        self._comment_start = QRegularExpression(r"/\*")
+        self._comment_end = QRegularExpression(r"\*/")
+        self._setup_rules()
+
+    @staticmethod
+    def _create_format(
+        color: str,
+        bold: bool = False,
+        italic: bool = False,
+    ) -> QTextCharFormat:
+        """Create a text format with specified style.
+
+        Args:
+            color: Hex color string.
+            bold: Whether to use bold font.
+            italic: Whether to use italic font.
+
+        Returns:
+            QTextCharFormat: Configured text format.
+        """
+        text_format = QTextCharFormat()
+        text_format.setForeground(QColor(color))
+        if bold:
+            text_format.setFontWeight(QFont.Weight.Bold)
+        if italic:
+            text_format.setFontItalic(True)
+        return text_format
+
+    def _setup_rules(self) -> None:
+        """Set up HexPat highlighting rules."""
+        keyword_format = HexPatSyntaxHighlighter._create_format("#569CD6", bold=True)
+        for keyword in self.KEYWORDS:
+            pattern = rf"\b{keyword}\b"
+            self._rules.append(HighlightRule(pattern, keyword_format))
+
+        type_format = HexPatSyntaxHighlighter._create_format("#4EC9B0")
+        for type_name in self.TYPES:
+            pattern = rf"\b{type_name}\b"
+            self._rules.append(HighlightRule(pattern, type_format))
+
+        endian_format = HexPatSyntaxHighlighter._create_format("#C586C0")
+        for endian_kw in self.ENDIANNESS:
+            pattern = rf"\b{endian_kw}\b"
+            self._rules.append(HighlightRule(pattern, endian_format))
+
+        builtin_format = HexPatSyntaxHighlighter._create_format("#DCDCAA")
+        for builtin_name in self.BUILTINS:
+            pattern = rf"\b{builtin_name}\b"
+            self._rules.append(HighlightRule(pattern, builtin_format))
+        self._rules.append(HighlightRule(r"\$", builtin_format))
+
+        annotation_format = HexPatSyntaxHighlighter._create_format("#D7BA7D")
+        self._rules.append(HighlightRule(r"\[\[.*?\]\]", annotation_format))
+
+        attr_keyword_format = HexPatSyntaxHighlighter._create_format("#9CDCFE")
+        for attr_kw in ("color", "validate", "description", "min", "max"):
+            pattern = rf"\b{attr_kw}\b"
+            self._rules.append(HighlightRule(pattern, attr_keyword_format))
+
+        string_format = HexPatSyntaxHighlighter._create_format("#CE9178")
+        self._rules.append(HighlightRule(r'"[^"\\]*(\\.[^"\\]*)*"', string_format))
+
+        number_format = HexPatSyntaxHighlighter._create_format("#B5CEA8")
+        self._rules.append(HighlightRule(r"\b0x[0-9A-Fa-f]+\b", number_format))
+        self._rules.append(HighlightRule(r"\b\d+\b", number_format))
+
+        comment_format = HexPatSyntaxHighlighter._create_format("#6A9955", italic=True)
+        self._rules.append(HighlightRule(r"//[^\n]*", comment_format))
+        self._multi_line_comment_format = comment_format
+
+        operator_format = HexPatSyntaxHighlighter._create_format("#D4D4D4")
+        self._rules.append(HighlightRule(r"[+\-*/%&|^~<>=!]+", operator_format))
+
+    @override
+    def highlightBlock(self, text: str | None) -> None:
+        """Apply highlighting to a block of text.
+
+        Args:
+            text: The text block to highlight.
+        """
+        if text is None:
+            return
+        for rule in self._rules:
+            iterator = rule.pattern.globalMatch(text)
+            while iterator.hasNext():
+                match = iterator.next()
+                self.setFormat(
+                    match.capturedStart(),
+                    match.capturedLength(),
+                    rule.format,
+                )
+
+        self.setCurrentBlockState(0)
+
+        start_index = 0
+        if self.previousBlockState() != 1:
+            match = self._comment_start.match(text)
+            start_index = match.capturedStart() if match.hasMatch() else -1
+
+        while start_index >= 0:
+            end_match = self._comment_end.match(text, start_index)
+            if end_match.hasMatch():
+                end_index = end_match.capturedEnd()
+                comment_length = end_index - start_index
+            else:
+                self.setCurrentBlockState(1)
+                comment_length = len(text) - start_index
+
+            self.setFormat(
+                start_index,
+                comment_length,
+                self._multi_line_comment_format,
+            )
+
+            next_match = self._comment_start.match(text, start_index + comment_length)
+            start_index = next_match.capturedStart() if next_match.hasMatch() else -1
+
+
 def get_highlighter_for_language(
     language: str,
     parent: QTextDocument | None = None,
@@ -1052,11 +1226,11 @@ def get_highlighter_for_language(
     """Get the appropriate syntax highlighter for a language.
 
     Args:
-        language: Language name (c, cpp, asm, python, javascript, frida).
+        language: Language name (c, cpp, asm, python, javascript, frida, hexpat, pattern).
         parent: Parent QTextDocument.
 
     Returns:
-        Appropriate highlighter or None if not supported.
+        QSyntaxHighlighter | None: Appropriate highlighter or None if not supported.
     """
     language_lower = language.lower()
     _logger.debug("highlighter_requested", language=language_lower)
@@ -1069,4 +1243,6 @@ def get_highlighter_for_language(
         return PythonSyntaxHighlighter(parent)
     if language_lower in {"javascript", "js", "frida"}:
         return JavaScriptSyntaxHighlighter(parent)
+    if language_lower in {"hexpat", "pattern", "hexpattern"}:
+        return HexPatSyntaxHighlighter(parent)
     return None

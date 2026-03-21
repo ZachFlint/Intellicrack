@@ -85,14 +85,12 @@ class X64DbgPanel(AnalysisPanelBase):
     Displays disassembly, registers, breakpoints, memory dumps,
     stack traces, and a command console for controlling x64dbg
     via the X64DbgBridge backend.
+
+    Args:
+        parent: Parent widget.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the x64dbg panel.
-
-        Args:
-            parent: Parent widget.
-        """
         self._bridge: X64DbgBridge | None = None
         self._is_64bit: bool = True
         self._embedded_container: QWidget | None = None
@@ -152,7 +150,7 @@ class X64DbgPanel(AnalysisPanelBase):
         """Create the x64dbg debugging content area.
 
         Returns:
-            Tab widget with native controls and embedded x64dbg window.
+            QWidget: Tab widget with native controls and embedded x64dbg window.
         """
         self._main_tabs = QTabWidget()
 
@@ -203,7 +201,7 @@ class X64DbgPanel(AnalysisPanelBase):
         """Create the disassembly display section.
 
         Returns:
-            Disassembly container widget.
+            QWidget: Disassembly container widget.
         """
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -226,7 +224,7 @@ class X64DbgPanel(AnalysisPanelBase):
         """Create registers, stack, modules, and threads tabs.
 
         Returns:
-            Tab widget with inspection views.
+            QTabWidget: Tab widget with inspection views.
         """
         tabs = QTabWidget()
 
@@ -273,7 +271,7 @@ class X64DbgPanel(AnalysisPanelBase):
         """Create breakpoints, memory, and console tabs.
 
         Returns:
-            Tab widget with bottom-panel views.
+            QTabWidget: Tab widget with bottom-panel views.
         """
         tabs = QTabWidget()
 
@@ -420,7 +418,7 @@ class X64DbgPanel(AnalysisPanelBase):
         """Get the current X64DbgBridge instance.
 
         Returns:
-            The attached bridge or None.
+            X64DbgBridge | None: The attached bridge or None.
         """
         return self._bridge
 
@@ -431,7 +429,7 @@ class X64DbgPanel(AnalysisPanelBase):
             file_path: Path to the executable to debug.
 
         Returns:
-            True if loading was initiated.
+            bool: True if loading was initiated.
         """
         if self._bridge is None:
             _logger.warning("x64dbg_debug_no_bridge", reason="bridge not set")
@@ -1192,7 +1190,7 @@ class X64DbgPanel(AnalysisPanelBase):
             data: Raw bytes to format.
 
         Returns:
-            Formatted hex dump string.
+            str: Formatted hex dump string.
         """
         lines: list[str] = []
         for offset in range(0, len(data), _MEM_DUMP_BYTES_PER_LINE):

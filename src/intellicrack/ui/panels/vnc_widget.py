@@ -54,30 +54,28 @@ class RFBClient:
 
     Implements a minimal subset of RFC 6143 sufficient for receiving
     raw framebuffer updates and sending pointer/key events.
-
-    Attributes:
-        width: Framebuffer width in pixels.
-        height: Framebuffer height in pixels.
-        server_name: Server desktop name.
-        framebuffer: Current QImage framebuffer.
     """
 
+    width: int
+    height: int
+    server_name: str
+    framebuffer: QImage | None
+
     def __init__(self) -> None:
-        """Initialize the RFB client."""
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
         self._connected: bool = False
-        self.width: int = 0
-        self.height: int = 0
-        self.server_name: str = ""
-        self.framebuffer: QImage | None = None
+        self.width = 0
+        self.height = 0
+        self.server_name = ""
+        self.framebuffer = None
 
     @property
     def connected(self) -> bool:
         """Check if the client is connected.
 
         Returns:
-            True if connected to a VNC server.
+            bool: True if connected to a VNC server.
         """
         return self._connected
 
@@ -90,7 +88,7 @@ class RFBClient:
             timeout: Connection timeout in seconds.
 
         Returns:
-            True if connection and handshake succeeded.
+            bool: True if connection and handshake succeeded.
         """
         try:
             self._reader, self._writer = await asyncio.wait_for(
@@ -141,7 +139,7 @@ class RFBClient:
         """Perform RFB security type negotiation.
 
         Returns:
-            True if security negotiation succeeded.
+            bool: True if security negotiation succeeded.
 
         Raises:
             ConnectionError: If reader/writer not available.
@@ -193,7 +191,7 @@ class RFBClient:
         """Send ClientInit and receive ServerInit.
 
         Returns:
-            Tuple of (width, height, server_name).
+            tuple[int, int, str]: Tuple of (width, height, server_name).
 
         Raises:
             ConnectionError: If reader/writer not available.
@@ -242,7 +240,7 @@ class RFBClient:
         """Read and process one server message.
 
         Returns:
-            True if a message was handled, False on connection loss.
+            bool: True if a message was handled, False on connection loss.
         """
         if self._reader is None or not self._connected:
             return False
@@ -314,7 +312,7 @@ class RFBClient:
             total_bytes: Number of bytes to read.
 
         Returns:
-            Pixel data bytes, or None if connection was lost.
+            bytes | None: Pixel data bytes, or None if connection was lost.
         """
         if self._reader is None:
             return None
@@ -447,16 +445,13 @@ def _qt_key_to_x11(key: int, text: str) -> int:
         text: Text character from the key event.
 
     Returns:
-        X11 keysym value.
+        int: X11 keysym value.
     """
     mapped = _QT_TO_X11_KEYSYM.get(key)
     if mapped is not None:
         return mapped
 
-    if text and len(text) == 1:
-        return ord(text)
-
-    return key
+    return ord(text) if text and len(text) == 1 else key
 
 
 class VNCWidget(QWidget):
@@ -464,16 +459,17 @@ class VNCWidget(QWidget):
 
     Connects to a VNC server, displays the framebuffer, and forwards
     mouse and keyboard events.
+
+    Args:
+        parent: Parent widget.
+
+    Attributes:
+        connection_status_changed: Signal emitted with boolean indicating VNC connection state.
     """
 
     connection_status_changed: pyqtSignal = pyqtSignal(bool)
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the VNC widget.
-
-        Args:
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._client = RFBClient()
         self._update_timer = QTimer(self)
@@ -557,7 +553,7 @@ class VNCWidget(QWidget):
             event: Mouse event with position data.
 
         Returns:
-            Tuple of (x, y) in framebuffer coordinates.
+            tuple[int, int]: Tuple of (x, y) in framebuffer coordinates.
         """
         if self._client.framebuffer is None or self._client.width == 0:
             return 0, 0
@@ -575,7 +571,7 @@ class VNCWidget(QWidget):
             event: Mouse event.
 
         Returns:
-            RFB button mask integer.
+            int: RFB button mask integer.
         """
         mask = 0
         buttons = event.buttons()

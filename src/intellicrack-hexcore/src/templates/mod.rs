@@ -1,19 +1,54 @@
 pub mod common;
 pub mod elf;
+pub mod eval;
+pub mod json_schema;
 pub mod macho;
 pub mod pe;
 pub mod zip;
 
 use std::collections::HashMap;
+
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Endianness {
     Little,
     Big,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ConditionOp {
+    Eq,
+    Ne,
+    Gt,
+    Lt,
+    Ge,
+    Le,
+    BitAnd,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FieldValidation {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_value: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_value: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_value: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub magic_bytes: Option<Vec<u8>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MagicDetection {
+    pub offset: usize,
+    pub bytes: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", content = "params")]
 pub enum FieldType {
     UInt8,
     Int8,
@@ -27,23 +62,75 @@ pub enum FieldType {
     Float64,
     Bytes(usize),
     FixedString(usize),
-    Array(Box<FieldType>, usize),
+    Array {
+        element_type: Box<FieldType>,
+        count: usize,
+    },
+    Bool,
+    Char,
+    Padding(usize),
+    DynamicArray {
+        element_type: Box<FieldType>,
+        count_field: String,
+    },
+    Bitfield {
+        bit_width: u8,
+        backing_type: Box<FieldType>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        flags: Option<Vec<(String, u64)>>,
+    },
+    Union {
+        variants: Vec<FieldDefinition>,
+    },
+    Enum {
+        backing_type: Box<FieldType>,
+        values: Vec<(String, i64)>,
+    },
+    Pointer {
+        pointer_type: Box<FieldType>,
+        target_template: String,
+    },
+    Conditional {
+        condition_field: String,
+        condition_value: i64,
+        condition_op: ConditionOp,
+        fields: Vec<FieldDefinition>,
+    },
+    StructRef(String),
+    Computed {
+        expression: String,
+        display_type: Box<FieldType>,
+    },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FieldDefinition {
     pub name: String,
     pub field_type: FieldType,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub endianness: Option<Endianness>,
+    #[serde(default)]
     pub description: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub validation: Option<FieldValidation>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StructTemplate {
     pub name: String,
     pub description: String,
     pub fields: Vec<FieldDefinition>,
     pub default_endianness: Endianness,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub author: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub category: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub magic_detection: Option<MagicDetection>,
 }
 
 #[derive(Debug, Clone)]
@@ -54,6 +141,9 @@ pub struct ParsedField {
     pub raw_bytes: Vec<u8>,
     pub display_value: String,
     pub children: Vec<ParsedField>,
+    pub color: Option<String>,
+    pub validation_passed: Option<bool>,
+    pub description: String,
 }
 
 #[derive(Error, Debug)]
@@ -66,6 +156,16 @@ pub enum TemplateError {
         needed: usize,
         available: usize,
     },
+    #[error("JSON parse error: {0}")]
+    JsonParse(String),
+    #[error("invalid field reference: {0}")]
+    InvalidFieldReference(String),
+    #[error("expression error: {0}")]
+    ExpressionError(String),
+    #[error("circular reference: {0}")]
+    CircularReference(String),
+    #[error("validation failed: {0}")]
+    ValidationFailed(String),
 }
 
 pub struct TemplateRegistry {
@@ -85,6 +185,25 @@ impl TemplateRegistry {
         self.templates.insert(template.name.clone(), template);
     }
 
+    pub fn register_json(&mut self, json_str: &str) -> Result<String, TemplateError> {
+        let template = json_schema::parse_json_template(json_str)?;
+        let name = template.name.clone();
+        self.templates.insert(name.clone(), template);
+        Ok(name)
+    }
+
+    pub fn remove(&mut self, name: &str) -> bool {
+        self.templates.remove(name).is_some()
+    }
+
+    pub fn export_json(&self, name: &str) -> Result<String, TemplateError> {
+        let template = self
+            .templates
+            .get(name)
+            .ok_or_else(|| TemplateError::NotFound(name.to_string()))?;
+        json_schema::template_to_json(template)
+    }
+
     pub fn get(&self, name: &str) -> Option<&StructTemplate> {
         self.templates.get(name)
     }
@@ -94,6 +213,19 @@ impl TemplateRegistry {
             .templates
             .iter()
             .map(|(k, v)| (k.clone(), v.description.clone()))
+            .collect();
+        entries.sort_by(|a, b| a.0.cmp(&b.0));
+        entries
+    }
+
+    pub fn list_detailed(&self) -> Vec<(String, String, String, usize)> {
+        let mut entries: Vec<(String, String, String, usize)> = self
+            .templates
+            .iter()
+            .map(|(k, v)| {
+                let category = v.category.clone().unwrap_or_default();
+                (k.clone(), v.description.clone(), category, v.fields.len())
+            })
             .collect();
         entries.sort_by(|a, b| a.0.cmp(&b.0));
         entries
@@ -110,7 +242,9 @@ impl TemplateRegistry {
             .get(name)
             .ok_or_else(|| TemplateError::NotFound(name.to_string()))?;
 
-        parse_fields(&template.fields, data, offset, template.default_endianness)
+        let mut evaluator =
+            eval::TemplateEvaluator::new(data, offset, template.default_endianness, self);
+        evaluator.evaluate_fields(&template.fields)
     }
 }
 
@@ -120,81 +254,47 @@ impl Default for TemplateRegistry {
     }
 }
 
-fn field_size(ft: &FieldType) -> usize {
+pub fn field_size(ft: &FieldType) -> usize {
     match ft {
-        FieldType::UInt8 | FieldType::Int8 => 1,
+        FieldType::UInt8 | FieldType::Int8 | FieldType::Bool | FieldType::Char => 1,
         FieldType::UInt16 | FieldType::Int16 => 2,
         FieldType::UInt32 | FieldType::Int32 | FieldType::Float32 => 4,
         FieldType::UInt64 | FieldType::Int64 | FieldType::Float64 => 8,
-        FieldType::Bytes(n) | FieldType::FixedString(n) => *n,
-        FieldType::Array(inner, count) => field_size(inner) * count,
+        FieldType::Bytes(n) | FieldType::FixedString(n) | FieldType::Padding(n) => *n,
+        FieldType::Array {
+            element_type,
+            count,
+        } => field_size(element_type) * count,
+        FieldType::Bitfield { backing_type, .. } => field_size(backing_type),
+        FieldType::Enum { backing_type, .. } => field_size(backing_type),
+        FieldType::Pointer { pointer_type, .. } => field_size(pointer_type),
+        FieldType::DynamicArray { .. }
+        | FieldType::Union { .. }
+        | FieldType::Conditional { .. }
+        | FieldType::StructRef(_)
+        | FieldType::Computed { .. } => 0,
     }
 }
 
-fn parse_fields(
-    fields: &[FieldDefinition],
-    data: &[u8],
-    base_offset: usize,
-    default_endian: Endianness,
-) -> Result<Vec<ParsedField>, TemplateError> {
-    let mut results = Vec::new();
-    let mut current_offset = base_offset;
-
-    for field in fields {
-        let endian = field.endianness.unwrap_or(default_endian);
-        let size = field_size(&field.field_type);
-
-        if current_offset + size > data.len() {
-            return Err(TemplateError::InsufficientData {
-                offset: current_offset,
-                needed: size,
-                available: data.len().saturating_sub(current_offset),
-            });
-        }
-
-        let raw = data[current_offset..current_offset + size].to_vec();
-        let display = format_field_value(&field.field_type, &raw, endian);
-
-        let children = if let FieldType::Array(inner, count) = &field.field_type {
-            let inner_size = field_size(inner);
-            let mut arr_children = Vec::new();
-            for i in 0..*count {
-                let arr_offset = current_offset + i * inner_size;
-                let arr_raw = data[arr_offset..arr_offset + inner_size].to_vec();
-                let arr_display = format_field_value(inner, &arr_raw, endian);
-                arr_children.push(ParsedField {
-                    name: format!("[{}]", i),
-                    offset: arr_offset,
-                    size: inner_size,
-                    raw_bytes: arr_raw,
-                    display_value: arr_display,
-                    children: Vec::new(),
-                });
-            }
-            arr_children
-        } else {
-            Vec::new()
-        };
-
-        results.push(ParsedField {
-            name: field.name.clone(),
-            offset: current_offset,
-            size,
-            raw_bytes: raw,
-            display_value: display,
-            children,
-        });
-
-        current_offset += size;
-    }
-
-    Ok(results)
-}
-
-fn format_field_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> String {
+pub fn format_field_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> String {
     match ft {
         FieldType::UInt8 => format!("{} (0x{:02X})", raw[0], raw[0]),
         FieldType::Int8 => format!("{} (0x{:02X})", raw[0] as i8, raw[0]),
+        FieldType::Bool => {
+            if raw[0] != 0 {
+                "true".to_string()
+            } else {
+                "false".to_string()
+            }
+        }
+        FieldType::Char => {
+            let ch = raw[0];
+            if ch.is_ascii_graphic() || ch == b' ' {
+                format!("'{}' (0x{:02X})", ch as char, ch)
+            } else {
+                format!("0x{:02X}", ch)
+            }
+        }
         FieldType::UInt16 => {
             let v = match endian {
                 Endianness::Little => u16::from_le_bytes([raw[0], raw[1]]),
@@ -281,13 +381,38 @@ fn format_field_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> String 
                 .collect();
             format!("\"{}\"", s)
         }
-        FieldType::Array(inner, count) => {
-            format!("[{} x {}]", count, field_type_name(inner))
+        FieldType::Array {
+            element_type,
+            count,
+        } => {
+            format!("[{} x {}]", count, field_type_name(element_type))
         }
+        FieldType::Padding(n) => format!("padding[{}]", n),
+        FieldType::DynamicArray {
+            element_type,
+            count_field,
+        } => format!("[dyn {} x {}]", count_field, field_type_name(element_type)),
+        FieldType::Bitfield {
+            bit_width,
+            backing_type,
+            ..
+        } => format!("bitfield<{}:{}>", field_type_name(backing_type), bit_width),
+        FieldType::Union { variants } => format!("union<{} variants>", variants.len()),
+        FieldType::Enum { backing_type, .. } => {
+            format!("enum<{}>", field_type_name(backing_type))
+        }
+        FieldType::Pointer {
+            target_template, ..
+        } => format!("*{}", target_template),
+        FieldType::Conditional { condition_field, .. } => {
+            format!("if({})", condition_field)
+        }
+        FieldType::StructRef(name) => format!("struct {}", name),
+        FieldType::Computed { expression, .. } => format!("= {}", expression),
     }
 }
 
-fn field_type_name(ft: &FieldType) -> &'static str {
+pub fn field_type_name(ft: &FieldType) -> &'static str {
     match ft {
         FieldType::UInt8 => "uint8",
         FieldType::Int8 => "int8",
@@ -301,7 +426,66 @@ fn field_type_name(ft: &FieldType) -> &'static str {
         FieldType::Float64 => "float64",
         FieldType::Bytes(_) => "bytes",
         FieldType::FixedString(_) => "string",
-        FieldType::Array(_, _) => "array",
+        FieldType::Array { .. } => "array",
+        FieldType::Bool => "bool",
+        FieldType::Char => "char",
+        FieldType::Padding(_) => "padding",
+        FieldType::DynamicArray { .. } => "dynamic_array",
+        FieldType::Bitfield { .. } => "bitfield",
+        FieldType::Union { .. } => "union",
+        FieldType::Enum { .. } => "enum",
+        FieldType::Pointer { .. } => "pointer",
+        FieldType::Conditional { .. } => "conditional",
+        FieldType::StructRef(_) => "struct_ref",
+        FieldType::Computed { .. } => "computed",
+    }
+}
+
+pub fn read_numeric_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> i64 {
+    match ft {
+        FieldType::UInt8 | FieldType::Bool | FieldType::Char => raw[0] as i64,
+        FieldType::Int8 => raw[0] as i8 as i64,
+        FieldType::UInt16 => match endian {
+            Endianness::Little => u16::from_le_bytes([raw[0], raw[1]]) as i64,
+            Endianness::Big => u16::from_be_bytes([raw[0], raw[1]]) as i64,
+        },
+        FieldType::Int16 => match endian {
+            Endianness::Little => i16::from_le_bytes([raw[0], raw[1]]) as i64,
+            Endianness::Big => i16::from_be_bytes([raw[0], raw[1]]) as i64,
+        },
+        FieldType::UInt32 => match endian {
+            Endianness::Little => {
+                u32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]]) as i64
+            }
+            Endianness::Big => {
+                u32::from_be_bytes([raw[0], raw[1], raw[2], raw[3]]) as i64
+            }
+        },
+        FieldType::Int32 => match endian {
+            Endianness::Little => {
+                i32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]]) as i64
+            }
+            Endianness::Big => {
+                i32::from_be_bytes([raw[0], raw[1], raw[2], raw[3]]) as i64
+            }
+        },
+        FieldType::UInt64 => match endian {
+            Endianness::Little => u64::from_le_bytes([
+                raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
+            ]) as i64,
+            Endianness::Big => u64::from_be_bytes([
+                raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
+            ]) as i64,
+        },
+        FieldType::Int64 => match endian {
+            Endianness::Little => i64::from_le_bytes([
+                raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
+            ]),
+            Endianness::Big => i64::from_be_bytes([
+                raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
+            ]),
+        },
+        _ => 0,
     }
 }
 
@@ -343,7 +527,10 @@ mod tests {
         let fields = reg.apply("IMAGE_DOS_HEADER", &data, 0).unwrap();
         assert!(!fields.is_empty());
         assert_eq!(fields[0].name, "e_magic");
-        assert!(fields[0].display_value.contains("23117") || fields[0].display_value.contains("5A4D"));
+        assert!(
+            fields[0].display_value.contains("23117")
+                || fields[0].display_value.contains("5A4D")
+        );
     }
 
     #[test]
@@ -360,18 +547,26 @@ mod tests {
             name: "TEST".to_string(),
             description: "Test template".to_string(),
             default_endianness: Endianness::Little,
+            version: None,
+            author: None,
+            category: None,
+            magic_detection: None,
             fields: vec![
                 FieldDefinition {
                     name: "magic".to_string(),
                     field_type: FieldType::UInt16,
                     endianness: None,
                     description: "Magic number".to_string(),
+                    color: None,
+                    validation: None,
                 },
                 FieldDefinition {
                     name: "version".to_string(),
                     field_type: FieldType::UInt8,
                     endianness: None,
                     description: "Version".to_string(),
+                    color: None,
+                    validation: None,
                 },
             ],
         });
@@ -381,5 +576,73 @@ mod tests {
         assert_eq!(fields.len(), 2);
         assert_eq!(fields[0].name, "magic");
         assert_eq!(fields[1].name, "version");
+    }
+
+    #[test]
+    fn test_register_json() {
+        let mut reg = TemplateRegistry::new();
+        let json = r#"{
+            "name": "JSON_TEST",
+            "description": "Test from JSON",
+            "default_endianness": "little",
+            "fields": [
+                {
+                    "name": "magic",
+                    "field_type": {"type": "UInt16"},
+                    "description": "Magic"
+                }
+            ]
+        }"#;
+        let name = reg.register_json(json).unwrap();
+        assert_eq!(name, "JSON_TEST");
+        assert!(reg.get("JSON_TEST").is_some());
+    }
+
+    #[test]
+    fn test_export_json() {
+        let reg = TemplateRegistry::new();
+        let json = reg.export_json("IMAGE_DOS_HEADER").unwrap();
+        assert!(json.contains("IMAGE_DOS_HEADER"));
+        assert!(json.contains("e_magic"));
+    }
+
+    #[test]
+    fn test_json_roundtrip() {
+        let reg = TemplateRegistry::new();
+        let json = reg.export_json("IMAGE_DOS_HEADER").unwrap();
+        let mut reg2 = TemplateRegistry::new();
+        let name = reg2.register_json(&json).unwrap();
+        assert_eq!(name, "IMAGE_DOS_HEADER");
+
+        let mut data = vec![0u8; 64];
+        data[0] = 0x4D;
+        data[1] = 0x5A;
+        let fields1 = reg.apply("IMAGE_DOS_HEADER", &data, 0).unwrap();
+        let fields2 = reg2.apply("IMAGE_DOS_HEADER", &data, 0).unwrap();
+        assert_eq!(fields1.len(), fields2.len());
+        for (f1, f2) in fields1.iter().zip(fields2.iter()) {
+            assert_eq!(f1.name, f2.name);
+            assert_eq!(f1.display_value, f2.display_value);
+        }
+    }
+
+    #[test]
+    fn test_remove() {
+        let mut reg = TemplateRegistry::new();
+        assert!(reg.get("IMAGE_DOS_HEADER").is_some());
+        assert!(reg.remove("IMAGE_DOS_HEADER"));
+        assert!(reg.get("IMAGE_DOS_HEADER").is_none());
+        assert!(!reg.remove("NONEXISTENT"));
+    }
+
+    #[test]
+    fn test_list_detailed() {
+        let reg = TemplateRegistry::new();
+        let detailed = reg.list_detailed();
+        assert!(!detailed.is_empty());
+        let dos = detailed
+            .iter()
+            .find(|(name, _, _, _)| name == "IMAGE_DOS_HEADER");
+        assert!(dos.is_some());
     }
 }

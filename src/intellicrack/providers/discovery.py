@@ -34,10 +34,10 @@ class DiscoveryEvent:
     """Metadata about a discovery operation.
 
     Attributes:
-        provider: The provider that was queried.
-        timestamp: When the discovery occurred.
-        model_count: Number of models discovered.
-        success: Whether the discovery succeeded.
+        provider: Provider that was discovered.
+        timestamp: When the discovery was performed.
+        model_count: Number of models found.
+        success: Whether the discovery completed successfully.
         error_message: Error message if discovery failed.
         new_models: Model IDs added since last discovery.
         removed_models: Model IDs no longer available.
@@ -79,13 +79,7 @@ class DiscoveryFilter:
 
 @dataclass
 class _CacheEntry:
-    """Internal cache entry with expiration tracking.
-
-    Attributes:
-        models: Cached list of models.
-        timestamp: When the cache entry was created.
-        expires_at: When the cache entry expires.
-    """
+    """Internal cache entry with expiration tracking."""
 
     models: list[ModelInfo]
     timestamp: float
@@ -98,18 +92,11 @@ class DiscoveryCache:
     Provides thread-safe caching of model lists per provider with
     configurable TTL and optional disk persistence.
 
-    Attributes:
-        _ttl_seconds: Cache entry time-to-live in seconds.
-        _cache: Dictionary mapping providers to cache entries.
-        _lock: Asyncio lock for thread-safe operations.
+    Args:
+        ttl_seconds: Cache entry time-to-live in seconds. Default 1 hour.
     """
 
     def __init__(self, ttl_seconds: int = 3600) -> None:
-        """Initialize the discovery cache.
-
-        Args:
-            ttl_seconds: Cache entry time-to-live in seconds. Default 1 hour.
-        """
         self._ttl_seconds = ttl_seconds
         self._cache: dict[ProviderName, _CacheEntry] = {}
         self._lock = asyncio.Lock()
@@ -122,7 +109,7 @@ class DiscoveryCache:
             provider: The provider to get cached models for.
 
         Returns:
-            List of cached models, or None if not cached or expired.
+            list[ModelInfo] | None: List of cached models, or None if not cached or expired.
         """
         entry = self._cache.get(provider)
         if entry is None:
@@ -175,7 +162,7 @@ class DiscoveryCache:
             provider: The provider to check.
 
         Returns:
-            True if cache entry doesn't exist or is expired.
+            bool: True if cache entry doesn't exist or is expired.
         """
         entry = self._cache.get(provider)
         return True if entry is None else time.time() > entry.expires_at
@@ -184,7 +171,7 @@ class DiscoveryCache:
         """Get all non-expired cached models.
 
         Returns:
-            Dictionary mapping providers to their cached models.
+            dict[ProviderName, list[ModelInfo]]: Dictionary mapping providers to their cached models.
         """
         now = time.time()
         result: dict[ProviderName, list[ModelInfo]] = {
@@ -306,11 +293,10 @@ class ModelDiscovery:
     Provides unified model discovery with caching, filtering, and
     intelligent recommendations.
 
-    Attributes:
-        _registry: Provider registry for accessing provider instances.
-        _cache: Discovery cache for caching results.
-        _timeout: Per-provider timeout for discovery operations.
-        _events: History of discovery events.
+    Args:
+        registry: Provider registry containing registered providers.
+        cache_ttl: Cache time-to-live in seconds.
+        timeout_per_provider: Timeout for each provider's discovery.
     """
 
     def __init__(
@@ -319,13 +305,6 @@ class ModelDiscovery:
         cache_ttl: int = 3600,
         timeout_per_provider: float = 30.0,
     ) -> None:
-        """Initialize the model discovery orchestrator.
-
-        Args:
-            registry: Provider registry containing registered providers.
-            cache_ttl: Cache time-to-live in seconds.
-            timeout_per_provider: Timeout for each provider's discovery.
-        """
         self._registry = registry
         self._cache = DiscoveryCache(ttl_seconds=cache_ttl)
         self._timeout = timeout_per_provider
@@ -338,7 +317,7 @@ class ModelDiscovery:
         """Get the discovery cache.
 
         Returns:
-            The DiscoveryCache instance.
+            DiscoveryCache: The DiscoveryCache instance.
         """
         return self._cache
 
@@ -354,7 +333,7 @@ class ModelDiscovery:
             force_refresh: Force refresh even if cache is valid.
 
         Returns:
-            Dictionary mapping provider names to their available models.
+            dict[ProviderName, list[ModelInfo]]: Dictionary mapping provider names to their available models.
         """
         self._logger.info("discovery_starting", force_refresh=force_refresh)
         results: dict[ProviderName, list[ModelInfo]] = {}
@@ -496,7 +475,7 @@ class ModelDiscovery:
             use_cache: Whether to use cached results when available.
 
         Returns:
-            List of available models from the provider.
+            list[ModelInfo]: List of available models from the provider.
         """
         if use_cache:
             cached = self._cache.get(provider)
@@ -563,7 +542,7 @@ class ModelDiscovery:
             query: Search query string.
 
         Returns:
-            List of matching models.
+            list[ModelInfo]: List of matching models.
         """
         query_lower = query.lower()
         results: list[ModelInfo] = []
@@ -586,7 +565,7 @@ class ModelDiscovery:
             criteria: Filter criteria to apply.
 
         Returns:
-            List of models matching all criteria.
+            list[ModelInfo]: List of models matching all criteria.
         """
         all_models = self._cache.get_all_cached()
         results: list[ModelInfo] = []
@@ -642,7 +621,7 @@ class ModelDiscovery:
             model_id: The model identifier.
 
         Returns:
-            ModelInfo if found, None otherwise.
+            ModelInfo | None: ModelInfo if found, None otherwise.
         """
         cached = self._cache.get(provider)
         if cached is None:
@@ -660,7 +639,7 @@ class ModelDiscovery:
             limit: Maximum number of events to return (newest first).
 
         Returns:
-            List of discovery events.
+            list[DiscoveryEvent]: List of discovery events.
         """
         events = sorted(self._events, key=lambda e: e.timestamp, reverse=True)
         if limit is not None:
@@ -677,7 +656,7 @@ class ModelDiscovery:
             provider: The provider to get the event for.
 
         Returns:
-            Most recent DiscoveryEvent or None if none exists.
+            DiscoveryEvent | None: Most recent DiscoveryEvent or None if none exists.
         """
         return next(
             (event for event in reversed(self._events) if event.provider == provider),
@@ -699,7 +678,7 @@ class ModelDiscovery:
             task_type: Type of task ("analysis", "generation", "chat").
 
         Returns:
-            Recommended ModelInfo or None if no suitable model found.
+            ModelInfo | None: Recommended ModelInfo or None if no suitable model found.
         """
         all_models = self._cache.get_all_cached()
         candidates: list[ModelInfo] = []
@@ -743,7 +722,7 @@ class ModelDiscovery:
         """Get model count per provider from cache.
 
         Returns:
-            Dictionary mapping providers to their cached model count.
+            dict[ProviderName, int]: Dictionary mapping providers to their cached model count.
         """
         result: dict[ProviderName, int] = {}
         cached = self._cache.get_all_cached()

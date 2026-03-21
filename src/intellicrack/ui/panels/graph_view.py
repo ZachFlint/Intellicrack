@@ -98,8 +98,10 @@ _RET_MNEMONICS = frozenset({"ret", "retn", "retf", "iret", "iretd", "iretq"})
 class BasicBlockItem(QGraphicsRectItem):
     """Renders a single basic block as a styled rectangle with assembly text.
 
-    Attributes:
-        block_address: Start address of the basic block.
+    Args:
+        block_address: Start address of the block.
+        ops: List of instruction dicts from r2 agj (offset, disasm, ...).
+        parent: Parent graphics item.
     """
 
     def __init__(
@@ -108,13 +110,6 @@ class BasicBlockItem(QGraphicsRectItem):
         ops: list[dict[str, Any]],
         parent: QGraphicsItem | None = None,
     ) -> None:
-        """Initialize a basic block item.
-
-        Args:
-            block_address: Start address of the block.
-            ops: List of instruction dicts from r2 agj (offset, disasm, ...).
-            parent: Parent graphics item.
-        """
         self.block_address = block_address
         self._ops = ops
         self._font = QFont("JetBrains Mono", 8)
@@ -197,8 +192,11 @@ class BasicBlockItem(QGraphicsRectItem):
 class EdgeItem(QGraphicsPathItem):
     """Bezier curve edge between basic blocks with directional arrow.
 
-    Attributes:
-        edge_type: One of "true", "false", or "unconditional".
+    Args:
+        start: Source point (bottom center of source block).
+        end: Destination point (top center of target block).
+        edge_type: Branch type for coloring.
+        parent: Parent graphics item.
     """
 
     def __init__(
@@ -208,14 +206,6 @@ class EdgeItem(QGraphicsPathItem):
         edge_type: str = "unconditional",
         parent: QGraphicsItem | None = None,
     ) -> None:
-        """Initialize an edge item.
-
-        Args:
-            start: Source point (bottom center of source block).
-            end: Destination point (top center of target block).
-            edge_type: Branch type for coloring.
-            parent: Parent graphics item.
-        """
         super().__init__(parent)
         self.edge_type = edge_type
 
@@ -273,14 +263,13 @@ class EdgeItem(QGraphicsPathItem):
 
 
 class CFGGraphScene(QGraphicsScene):
-    """Scene that parses r2 agj output and lays out basic blocks hierarchically."""
+    """Scene that parses r2 agj output and lays out basic blocks hierarchically.
+
+    Args:
+        parent: Parent widget.
+    """
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the CFG graph scene.
-
-        Args:
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._block_items: dict[int, BasicBlockItem] = {}
 
@@ -396,7 +385,7 @@ class CFGGraphScene(QGraphicsScene):
             block_map: Mapping of block address to block data.
 
         Returns:
-            Dict mapping layer index to list of block addresses.
+            dict[int, list[int]]: Dict mapping layer index to list of block addresses.
         """
         if not block_map:
             return {}
@@ -416,9 +405,7 @@ class CFGGraphScene(QGraphicsScene):
                 successors[offset].append(int(fail_t))
                 referenced.add(int(fail_t))
 
-        roots = [a for a in all_addrs if a not in referenced]
-        if not roots:
-            roots = [min(all_addrs)]
+        roots = [a for a in all_addrs if a not in referenced] or [min(all_addrs)]
 
         layers: dict[int, list[int]] = defaultdict(list)
         visited: set[int] = set()
@@ -448,16 +435,17 @@ class CFGGraphView(QGraphicsView):
 
     Emits ``block_clicked`` with the block address when a
     BasicBlockItem is clicked.
+
+    Args:
+        parent: Parent widget.
+
+    Attributes:
+        block_clicked: Signal emitted with block address when a basic block is clicked.
     """
 
     block_clicked: pyqtSignal = pyqtSignal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the CFG graph view.
-
-        Args:
-            parent: Parent widget.
-        """
         scene = CFGGraphScene()
         super().__init__(scene, parent)
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -469,7 +457,7 @@ class CFGGraphView(QGraphicsView):
         """Get the typed CFGGraphScene.
 
         Returns:
-            The CFGGraphScene instance.
+            CFGGraphScene: The CFGGraphScene instance.
 
         Raises:
             TypeError: If the scene is not a CFGGraphScene.

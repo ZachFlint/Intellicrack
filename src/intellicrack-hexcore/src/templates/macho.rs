@@ -13,6 +13,8 @@ fn fd(name: &str, field_type: FieldType, description: &str) -> FieldDefinition {
         field_type,
         endianness: None,
         description: description.to_string(),
+        color: None,
+        validation: None,
     }
 }
 
@@ -20,7 +22,14 @@ fn mach_header() -> StructTemplate {
     StructTemplate {
         name: "MACH_HEADER".to_string(),
         description: "Mach-O 32-bit header (28 bytes at offset 0)".to_string(),
-        default_endianness: Endianness::Big,
+        default_endianness: Endianness::Little,
+        version: None,
+        author: None,
+        category: Some("Mach-O".to_string()),
+        magic_detection: Some(super::MagicDetection {
+            offset: 0,
+            bytes: vec![0xCE, 0xFA, 0xED, 0xFE],
+        }),
         fields: vec![
             fd("magic", FieldType::UInt32, "Mach-O magic (0xFEEDFACE or 0xCEFAEDFE)"),
             fd("cputype", FieldType::Int32, "CPU type identifier"),
@@ -37,7 +46,14 @@ fn mach_header_64() -> StructTemplate {
     StructTemplate {
         name: "MACH_HEADER_64".to_string(),
         description: "Mach-O 64-bit header (32 bytes at offset 0)".to_string(),
-        default_endianness: Endianness::Big,
+        default_endianness: Endianness::Little,
+        version: None,
+        author: None,
+        category: Some("Mach-O".to_string()),
+        magic_detection: Some(super::MagicDetection {
+            offset: 0,
+            bytes: vec![0xCF, 0xFA, 0xED, 0xFE],
+        }),
         fields: vec![
             fd("magic", FieldType::UInt32, "Mach-O 64-bit magic (0xFEEDFACF or 0xCFFAEDFE)"),
             fd("cputype", FieldType::Int32, "CPU type identifier"),
@@ -55,7 +71,11 @@ fn load_command() -> StructTemplate {
     StructTemplate {
         name: "LOAD_COMMAND".to_string(),
         description: "Mach-O load command header (8 bytes)".to_string(),
-        default_endianness: Endianness::Big,
+        default_endianness: Endianness::Little,
+        version: None,
+        author: None,
+        category: Some("Mach-O".to_string()),
+        magic_detection: None,
         fields: vec![
             fd("cmd", FieldType::UInt32, "Load command type (LC_SEGMENT_64=0x19, etc.)"),
             fd("cmdsize", FieldType::UInt32, "Total size of command including data"),
@@ -67,7 +87,11 @@ fn segment_command_64() -> StructTemplate {
     StructTemplate {
         name: "SEGMENT_COMMAND_64".to_string(),
         description: "Mach-O 64-bit segment command (72 bytes)".to_string(),
-        default_endianness: Endianness::Big,
+        default_endianness: Endianness::Little,
+        version: None,
+        author: None,
+        category: Some("Mach-O".to_string()),
+        magic_detection: None,
         fields: vec![
             fd("cmd", FieldType::UInt32, "LC_SEGMENT_64 (0x19)"),
             fd("cmdsize", FieldType::UInt32, "Size of this command"),
@@ -102,14 +126,14 @@ mod tests {
     fn test_apply_mach_header_64() {
         let reg = TemplateRegistry::new();
         let mut data = vec![0u8; 64];
-        data[0] = 0xFE;
-        data[1] = 0xED;
-        data[2] = 0xFA;
-        data[3] = 0xCF;
-        data[16] = 0x00;
+        data[0] = 0xCF;
+        data[1] = 0xFA;
+        data[2] = 0xED;
+        data[3] = 0xFE;
+        data[16] = 0x05;
         data[17] = 0x00;
         data[18] = 0x00;
-        data[19] = 0x05;
+        data[19] = 0x00;
 
         let fields = reg.apply("MACH_HEADER_64", &data, 0).unwrap();
         assert_eq!(fields.len(), 8);

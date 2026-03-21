@@ -57,17 +57,19 @@ class SandboxPanel(AnalysisPanelBase):
     Provides controls for creating and managing sandboxed environments,
     executing binaries with monitoring, taking/restoring snapshots,
     and reviewing execution reports (file, registry, network activity).
+
+    Args:
+        parent: Parent widget.
+
+    Attributes:
+        execution_completed: Signal emitted with execution ID when a sandboxed binary run finishes.
+        sandbox_created: Signal emitted with sandbox instance ID when a new sandbox is created.
     """
 
     execution_completed: pyqtSignal = pyqtSignal(str)
     sandbox_created: pyqtSignal = pyqtSignal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the sandbox panel.
-
-        Args:
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._sandbox: SandboxBase | None = None
         self._sandbox_manager: SandboxManager | None = None
@@ -114,7 +116,7 @@ class SandboxPanel(AnalysisPanelBase):
         """Create the sandbox management content area.
 
         Returns:
-            Splitter with execution controls and output tabs.
+            QWidget: Splitter with execution controls and output tabs.
         """
         main_splitter = QSplitter(Qt.Orientation.Vertical)
 
@@ -235,7 +237,7 @@ class SandboxPanel(AnalysisPanelBase):
         """Get the current sandbox backend.
 
         Returns:
-            The attached sandbox or None.
+            SandboxBase | None: The attached sandbox or None.
         """
         return self._sandbox
 
@@ -264,7 +266,7 @@ class SandboxPanel(AnalysisPanelBase):
         """Get the sandbox type from the combo box selection.
 
         Returns:
-            Sandbox type literal: ``"windows"`` or ``"qemu"``.
+            SandboxType: Sandbox type literal: ``"windows"`` or ``"qemu"``.
         """
         combo_text = self._sandbox_type_combo.currentText()
         return "qemu" if combo_text == "QEMU" else "windows"

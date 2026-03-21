@@ -46,7 +46,7 @@ def find_window_by_pid(pid: int) -> int | None:
         pid: Process ID to search for.
 
     Returns:
-        Window handle (HWND) as int, or None if not found or not on Windows.
+        int | None: Window handle (HWND) as int, or None if not found or not on Windows.
     """
     if not hasattr(ctypes, "windll"):
         return None
@@ -107,7 +107,7 @@ def embed_window(hwnd: int, parent: QWidget) -> QWidget | None:
         parent: Qt parent widget that will contain the embedded window.
 
     Returns:
-        The container QWidget wrapping the embedded window, or None on failure.
+        QWidget | None: The container QWidget wrapping the embedded window, or None on failure.
     """
     try:
         foreign_window: Any = QWindow.fromWinId(voidptr(hwnd))

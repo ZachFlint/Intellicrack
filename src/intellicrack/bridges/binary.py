@@ -54,7 +54,7 @@ if TYPE_CHECKING:
             data: Raw binary data to parse.
 
         Returns:
-            Parsed binary object, or None on failure.
+            _LiefParsedType: Parsed binary object, or None on failure.
         """
         _ = data
         return None
@@ -88,17 +88,9 @@ class BinaryBridge(BinaryOperationsBridge):
 
     Provides analysis and patching of PE, ELF, and Mach-O binaries
     using pefile, lief, and capstone libraries.
-
-    Attributes:
-        _binary_path: Path to the currently loaded binary.
-        _pe: Parsed PE file (if PE format).
-        _lief_binary: Parsed binary via lief.
-        _data: Raw binary data.
-        _modified: Whether binary has been modified.
     """
 
     def __init__(self) -> None:
-        """Initialize the binary operations bridge."""
         super().__init__()
         self._binary_path: Path | None = None
         self._pe: pefile.PE | None = None
@@ -118,7 +110,7 @@ class BinaryBridge(BinaryOperationsBridge):
         """Get the tool's name.
 
         Returns:
-            ToolName.BINARY
+            ToolName: ToolName.BINARY
         """
         return ToolName.BINARY
 
@@ -127,7 +119,7 @@ class BinaryBridge(BinaryOperationsBridge):
         """Get tool definition for LLM function calling.
 
         Returns:
-            ToolDefinition with all available functions.
+            ToolDefinition: ToolDefinition with all available functions.
         """
         return ToolDefinition(
             tool_name=ToolName.BINARY,
@@ -433,7 +425,7 @@ class BinaryBridge(BinaryOperationsBridge):
         """Check if binary operations are available.
 
         Returns:
-            Always True since this uses built-in libraries.
+            bool: Always True since this uses built-in libraries.
         """
         return True
 
@@ -444,7 +436,7 @@ class BinaryBridge(BinaryOperationsBridge):
             path: Path to the binary file.
 
         Returns:
-            BinaryInfo with file details.
+            BinaryInfo: BinaryInfo with file details.
 
         Raises:
             ToolError: If file cannot be loaded.
@@ -518,7 +510,7 @@ class BinaryBridge(BinaryOperationsBridge):
         """Detect the binary format.
 
         Returns:
-            The binary format ('pe', 'elf', 'macho', or 'raw').
+            str: The binary format ('pe', 'elf', 'macho', or 'raw').
         """
         if self._data is None or len(self._data) < _MIN_HEADER_LEN:
             return "raw"
@@ -550,7 +542,7 @@ class BinaryBridge(BinaryOperationsBridge):
             data: Raw binary data.
 
         Returns:
-            Parsed lief Binary object or None if parsing fails.
+            lief.Binary | None: Parsed lief Binary object or None if parsing fails.
         """
         parsed: _LiefParsedType = _lief_parse_raw(data)
         if parsed is None:
@@ -561,7 +553,7 @@ class BinaryBridge(BinaryOperationsBridge):
         """Detect the CPU architecture.
 
         Returns:
-            Tuple of (architecture name, is_64bit).
+            tuple[str, bool]: Tuple of (architecture name, is_64bit).
         """
         if self._pe is not None:
             machine: int = self._pe.FILE_HEADER.Machine
@@ -592,7 +584,7 @@ class BinaryBridge(BinaryOperationsBridge):
         """Get the entry point address.
 
         Returns:
-            Entry point address or 0 if not found.
+            int: Entry point address or 0 if not found.
         """
         if self._pe is not None:
             return int(self._pe.OPTIONAL_HEADER.AddressOfEntryPoint)
@@ -603,7 +595,7 @@ class BinaryBridge(BinaryOperationsBridge):
         """Get section information.
 
         Returns:
-            List of section info.
+            list[SectionInfo]: List of section info.
         """
         sections: list[SectionInfo] = []
 
@@ -652,7 +644,7 @@ class BinaryBridge(BinaryOperationsBridge):
             data: Bytes to analyze.
 
         Returns:
-            Entropy value between 0 and 8.
+            float: Entropy value between 0 and 8.
         """
         if not data:
             return 0.0
@@ -672,7 +664,7 @@ class BinaryBridge(BinaryOperationsBridge):
         """Get import information.
 
         Returns:
-            List of import info.
+            list[ImportInfo]: List of import info.
         """
         imports: list[ImportInfo] = []
 
@@ -709,7 +701,7 @@ class BinaryBridge(BinaryOperationsBridge):
         """Get export information.
 
         Returns:
-            List of export info.
+            list[ExportInfo]: List of export info.
         """
         exports: list[ExportInfo] = []
 
@@ -748,7 +740,7 @@ class BinaryBridge(BinaryOperationsBridge):
             size: Number of bytes to read.
 
         Returns:
-            Read bytes.
+            bytes: Read bytes.
 
         Raises:
             ToolError: If read fails.
@@ -794,7 +786,7 @@ class BinaryBridge(BinaryOperationsBridge):
             patch: Patch information.
 
         Returns:
-            True if patch applied successfully.
+            bool: True if patch applied successfully.
 
         Raises:
             ToolError: If patching fails.
@@ -847,7 +839,7 @@ class BinaryBridge(BinaryOperationsBridge):
             patch: Patch to revert.
 
         Returns:
-            True if reverted successfully.
+            bool: True if reverted successfully.
 
         Raises:
             ToolError: If revert fails.
@@ -878,7 +870,7 @@ class BinaryBridge(BinaryOperationsBridge):
             path: Optional new path. Uses original if None.
 
         Returns:
-            Path where file was saved.
+            Path: Path where file was saved.
 
         Raises:
             ToolError: If save fails.
@@ -912,7 +904,7 @@ class BinaryBridge(BinaryOperationsBridge):
             max_results: Maximum results to return.
 
         Returns:
-            List of offsets where pattern found.
+            list[int]: List of offsets where pattern found.
 
         Raises:
             ToolError: If search fails.
@@ -954,7 +946,7 @@ class BinaryBridge(BinaryOperationsBridge):
             max_results: Maximum results to return.
 
         Returns:
-            List of offsets where pattern found.
+            list[int]: List of offsets where pattern found.
 
         Raises:
             ToolError: If search fails.
@@ -993,7 +985,7 @@ class BinaryBridge(BinaryOperationsBridge):
             count: Number of instructions.
 
         Returns:
-            Disassembly text.
+            str: Disassembly text.
 
         Raises:
             ToolError: If disassembly fails.
@@ -1036,7 +1028,7 @@ class BinaryBridge(BinaryOperationsBridge):
             algorithm: Hash algorithm (md5, sha256).
 
         Returns:
-            Hex digest of hash.
+            str: Hex digest of hash.
 
         Raises:
             ToolError: If calculation fails.
@@ -1058,7 +1050,7 @@ class BinaryBridge(BinaryOperationsBridge):
             rva: Relative virtual address.
 
         Returns:
-            File offset.
+            int: File offset.
 
         Raises:
             ToolError: If conversion fails.
@@ -1081,7 +1073,7 @@ class BinaryBridge(BinaryOperationsBridge):
             offset: File offset.
 
         Returns:
-            Relative virtual address.
+            int: Relative virtual address.
 
         Raises:
             ToolError: If conversion fails.
@@ -1105,7 +1097,7 @@ class BinaryBridge(BinaryOperationsBridge):
             min_length: Minimum string length.
 
         Returns:
-            List of (offset, string) tuples.
+            list[tuple[int, str]]: List of (offset, string) tuples.
 
         Raises:
             ToolError: If no binary is loaded.

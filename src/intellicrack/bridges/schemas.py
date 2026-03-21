@@ -35,6 +35,9 @@ def _assert_never(value: Never) -> Never:
     Args:
         value: A value of type Never (should be impossible to call).
 
+    Returns:
+        Never: This function never returns.
+
     Raises:
         AssertionError: Always raised if this function is somehow called.
     """
@@ -140,7 +143,13 @@ class GoogleFunctionDeclaration(TypedDict):
 
 
 class ValidationError:
-    """Represents a validation error in a tool definition."""
+    """Represents a validation error in a tool definition.
+
+    Args:
+        message: Error description.
+        location: Where the error occurred (e.g., "func.param").
+        severity: Error severity level.
+    """
 
     def __init__(
         self,
@@ -148,13 +157,6 @@ class ValidationError:
         location: str,
         severity: Literal["error", "warning"] = "error",
     ) -> None:
-        """Initialize validation error.
-
-        Args:
-            message: Error description.
-            location: Where the error occurred (e.g., "func.param").
-            severity: Error severity level.
-        """
         self.message = message
         self.location = location
         self.severity = severity
@@ -163,7 +165,7 @@ class ValidationError:
         """Return string representation.
 
         Returns:
-            Formatted string showing severity, location, and message.
+            str: Formatted string showing severity, location, and message.
         """
         return f"[{self.severity.upper()}] {self.location}: {self.message}"
 
@@ -177,7 +179,7 @@ def normalize_type(param_type: str) -> str:
         param_type: The type string to normalize.
 
     Returns:
-        Normalized JSON Schema type string.
+        str: Normalized JSON Schema type string.
     """
     param_type_lower = param_type.lower().strip()
     if param_type_lower in PYTHON_TO_JSON_TYPES:
@@ -198,7 +200,7 @@ def build_schema_property(
         uppercase_types: If True, use uppercase type names (for Google).
 
     Returns:
-        JSONSchemaProperty or GoogleSchemaProperty dict.
+        JSONSchemaProperty | GoogleSchemaProperty: JSONSchemaProperty or GoogleSchemaProperty dict.
     """
     param_type = normalize_type(param.type)
     if uppercase_types:
@@ -227,7 +229,7 @@ def _build_json_schema_parameters(
         params: List of tool parameters.
 
     Returns:
-        JSONSchemaParameters dict with lowercase types.
+        JSONSchemaParameters: JSONSchemaParameters dict with lowercase types.
     """
     properties: dict[str, JSONSchemaProperty] = {}
     required: list[str] = []
@@ -254,7 +256,7 @@ def _build_google_schema_parameters(
         params: List of tool parameters.
 
     Returns:
-        GoogleSchemaParameters dict with uppercase types.
+        GoogleSchemaParameters: GoogleSchemaParameters dict with uppercase types.
     """
     properties: dict[str, GoogleSchemaProperty] = {}
     required: list[str] = []
@@ -294,7 +296,7 @@ def build_schema_parameters(
         uppercase_types: If True, use uppercase type names (for Google).
 
     Returns:
-        JSONSchemaParameters or GoogleSchemaParameters dict.
+        JSONSchemaParameters | GoogleSchemaParameters: JSONSchemaParameters or GoogleSchemaParameters dict.
     """
     if uppercase_types:
         return _build_google_schema_parameters(params)
@@ -312,7 +314,7 @@ def validate_tool_parameter(
         func_name: Name of the containing function for error context.
 
     Returns:
-        List of validation errors (empty if valid).
+        list[ValidationError]: List of validation errors (empty if valid).
     """
     errors: list[ValidationError] = []
     location = f"{func_name}.{param.name}"
@@ -386,7 +388,7 @@ def validate_tool_function(func: ToolFunction) -> list[ValidationError]:
         func: The function to validate.
 
     Returns:
-        List of validation errors (empty if valid).
+        list[ValidationError]: List of validation errors (empty if valid).
     """
     errors: list[ValidationError] = []
 
@@ -437,7 +439,7 @@ def validate_tool_definition(tool: ToolDefinition) -> list[ValidationError]:
         tool: The tool definition to validate.
 
     Returns:
-        List of validation errors (empty if valid).
+        list[ValidationError]: List of validation errors (empty if valid).
     """
     errors: list[ValidationError] = []
 
@@ -480,7 +482,7 @@ def to_anthropic_schema(tool: ToolDefinition) -> list[AnthropicToolSchema]:
         tool: The tool definition to convert.
 
     Returns:
-        List of tools in Anthropic's format.
+        list[AnthropicToolSchema]: List of tools in Anthropic's format.
     """
     tools: list[AnthropicToolSchema] = []
 
@@ -503,7 +505,7 @@ def to_openai_schema(tool: ToolDefinition) -> list[OpenAIToolSchema]:
         tool: The tool definition to convert.
 
     Returns:
-        List of tools in OpenAI's format.
+        list[OpenAIToolSchema]: List of tools in OpenAI's format.
     """
     tools: list[OpenAIToolSchema] = []
 
@@ -531,7 +533,7 @@ def to_google_schema(tool: ToolDefinition) -> list[GoogleFunctionDeclaration]:
         tool: The tool definition to convert.
 
     Returns:
-        List of function declarations in Google's format.
+        list[GoogleFunctionDeclaration]: List of function declarations in Google's format.
     """
     function_declarations: list[GoogleFunctionDeclaration] = []
 
@@ -556,7 +558,7 @@ def to_ollama_schema(tool: ToolDefinition) -> list[OpenAIToolSchema]:
         tool: The tool definition to convert.
 
     Returns:
-        List of tools in Ollama/OpenAI format.
+        list[OpenAIToolSchema]: List of tools in Ollama/OpenAI format.
     """
     return to_openai_schema(tool)
 
@@ -570,7 +572,7 @@ def to_openrouter_schema(tool: ToolDefinition) -> list[OpenAIToolSchema]:
         tool: The tool definition to convert.
 
     Returns:
-        List of tools in OpenRouter/OpenAI format.
+        list[OpenAIToolSchema]: List of tools in OpenRouter/OpenAI format.
     """
     return to_openai_schema(tool)
 
@@ -589,7 +591,7 @@ def get_schema_for_provider(
         provider: The target LLM provider.
 
     Returns:
-        List of tool schemas in the provider's format.
+        list[dict[str, Any]]: List of tool schemas in the provider's format.
     """
     if provider == ProviderName.ANTHROPIC:
         return [dict(s) for s in to_anthropic_schema(tool)]
@@ -621,7 +623,7 @@ def get_all_schemas_for_provider(
         provider: The target LLM provider.
 
     Returns:
-        Flattened list of all tool schemas in the provider's format.
+        list[dict[str, Any]]: Flattened list of all tool schemas in the provider's format.
     """
     all_schemas: list[dict[str, Any]] = []
     for tool in tools:
@@ -643,7 +645,7 @@ def validate_and_convert(
         provider: The target LLM provider.
 
     Returns:
-        Tuple of (schemas, validation_errors).
+        tuple[list[dict[str, Any]], list[ValidationError]]: Tuple of (schemas, validation_errors).
         Schemas will be empty if there are error-level validation errors.
     """
     errors = validate_tool_definition(tool)

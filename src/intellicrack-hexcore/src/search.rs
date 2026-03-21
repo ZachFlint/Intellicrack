@@ -336,6 +336,433 @@ pub fn replace_all(
     (result, count)
 }
 
+fn decode_uint(bytes: &[u8], size: usize, big_endian: bool) -> u64 {
+    match size {
+        1 => bytes[0] as u64,
+        2 => {
+            let arr = [bytes[0], bytes[1]];
+            if big_endian {
+                u16::from_be_bytes(arr) as u64
+            } else {
+                u16::from_le_bytes(arr) as u64
+            }
+        }
+        3 => {
+            if big_endian {
+                ((bytes[0] as u64) << 16) | ((bytes[1] as u64) << 8) | (bytes[2] as u64)
+            } else {
+                (bytes[0] as u64) | ((bytes[1] as u64) << 8) | ((bytes[2] as u64) << 16)
+            }
+        }
+        4 => {
+            let arr = [bytes[0], bytes[1], bytes[2], bytes[3]];
+            if big_endian {
+                u32::from_be_bytes(arr) as u64
+            } else {
+                u32::from_le_bytes(arr) as u64
+            }
+        }
+        8 => {
+            let arr = [
+                bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+            ];
+            if big_endian {
+                u64::from_be_bytes(arr)
+            } else {
+                u64::from_le_bytes(arr)
+            }
+        }
+        _ => 0,
+    }
+}
+
+fn sign_extend(raw: u64, size: usize) -> i64 {
+    match size {
+        1 => (raw as i8) as i64,
+        2 => (raw as i16) as i64,
+        3 => {
+            let shifted = raw << 40;
+            ((shifted as i64) >> 40)
+        }
+        4 => (raw as i32) as i64,
+        8 => raw as i64,
+        _ => raw as i64,
+    }
+}
+
+fn encode_uint_target(value: i64, size: usize, signed: bool, big_endian: bool) -> Option<Vec<u8>> {
+    let raw: u64 = if signed {
+        match size {
+            1 => {
+                let v = i8::try_from(value).ok()?;
+                (v as u8) as u64
+            }
+            2 => {
+                let v = i16::try_from(value).ok()?;
+                (v as u16) as u64
+            }
+            3 => {
+                if value < -8_388_608 || value > 8_388_607 {
+                    return None;
+                }
+                (value as u64) & 0xFF_FFFF
+            }
+            4 => {
+                let v = i32::try_from(value).ok()?;
+                (v as u32) as u64
+            }
+            8 => value as u64,
+            _ => return None,
+        }
+    } else {
+        if value < 0 {
+            return None;
+        }
+        let uval = value as u64;
+        match size {
+            1 => {
+                if uval > 0xFF {
+                    return None;
+                }
+                uval
+            }
+            2 => {
+                if uval > 0xFFFF {
+                    return None;
+                }
+                uval
+            }
+            3 => {
+                if uval > 0xFF_FFFF {
+                    return None;
+                }
+                uval
+            }
+            4 => {
+                if uval > 0xFFFF_FFFF {
+                    return None;
+                }
+                uval
+            }
+            8 => uval,
+            _ => return None,
+        }
+    };
+
+    let bytes = match size {
+        1 => vec![raw as u8],
+        2 => {
+            let v = raw as u16;
+            if big_endian {
+                v.to_be_bytes().to_vec()
+            } else {
+                v.to_le_bytes().to_vec()
+            }
+        }
+        3 => {
+            if big_endian {
+                vec![((raw >> 16) & 0xFF) as u8, ((raw >> 8) & 0xFF) as u8, (raw & 0xFF) as u8]
+            } else {
+                vec![(raw & 0xFF) as u8, ((raw >> 8) & 0xFF) as u8, ((raw >> 16) & 0xFF) as u8]
+            }
+        }
+        4 => {
+            let v = raw as u32;
+            if big_endian {
+                v.to_be_bytes().to_vec()
+            } else {
+                v.to_le_bytes().to_vec()
+            }
+        }
+        8 => {
+            if big_endian {
+                raw.to_be_bytes().to_vec()
+            } else {
+                raw.to_le_bytes().to_vec()
+            }
+        }
+        _ => return None,
+    };
+
+    Some(bytes)
+}
+
+pub fn search_numeric_int(
+    data: &[u8],
+    value: i64,
+    size: usize,
+    signed: bool,
+    big_endian: bool,
+    alignment: usize,
+    max_results: usize,
+) -> Vec<SearchResult> {
+    if size == 0 || size > 8 || data.len() < size {
+        return Vec::new();
+    }
+
+    let target = match encode_uint_target(value, size, signed, big_endian) {
+        Some(b) => b,
+        None => return Vec::new(),
+    };
+
+    let step = if alignment == 0 { 1 } else { alignment };
+
+    if data.len() > CHUNK_SIZE {
+        let num_positions = (data.len() - size) / step + 1;
+        let chunk_positions = (CHUNK_SIZE / step).max(1);
+
+        let position_chunks: Vec<(usize, usize)> = {
+            let mut chunks = Vec::new();
+            let mut pos = 0usize;
+            while pos < num_positions {
+                let end = (pos + chunk_positions).min(num_positions);
+                chunks.push((pos, end));
+                pos = end;
+            }
+            chunks
+        };
+
+        let mut all_results: Vec<SearchResult> = position_chunks
+            .par_iter()
+            .flat_map(|(chunk_start, chunk_end)| {
+                let mut local = Vec::new();
+                for idx in *chunk_start..*chunk_end {
+                    if local.len() >= max_results {
+                        break;
+                    }
+                    let offset = idx * step;
+                    if offset + size > data.len() {
+                        break;
+                    }
+                    if &data[offset..offset + size] == target.as_slice() {
+                        local.push(SearchResult {
+                            offset,
+                            length: size,
+                            matched_bytes: data[offset..offset + size].to_vec(),
+                        });
+                    }
+                }
+                local
+            })
+            .collect();
+
+        all_results.sort_by_key(|r| r.offset);
+        all_results.truncate(max_results);
+        return all_results;
+    }
+
+    let mut results = Vec::new();
+    let mut offset = 0usize;
+    while offset + size <= data.len() {
+        if results.len() >= max_results {
+            break;
+        }
+        if &data[offset..offset + size] == target.as_slice() {
+            results.push(SearchResult {
+                offset,
+                length: size,
+                matched_bytes: data[offset..offset + size].to_vec(),
+            });
+        }
+        offset += step;
+    }
+    results
+}
+
+pub fn search_numeric_float(
+    data: &[u8],
+    value: f64,
+    size: usize,
+    big_endian: bool,
+    tolerance: f64,
+    alignment: usize,
+    max_results: usize,
+) -> Vec<SearchResult> {
+    if (size != 4 && size != 8) || data.len() < size {
+        return Vec::new();
+    }
+
+    let step = if alignment == 0 { 1 } else { alignment };
+
+    let matches_value = |bytes: &[u8]| -> bool {
+        let decoded: f64 = if size == 4 {
+            let arr = [bytes[0], bytes[1], bytes[2], bytes[3]];
+            let fv = if big_endian {
+                f32::from_be_bytes(arr)
+            } else {
+                f32::from_le_bytes(arr)
+            };
+            if !fv.is_finite() {
+                return false;
+            }
+            fv as f64
+        } else {
+            let arr = [
+                bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+            ];
+            let fv = if big_endian {
+                f64::from_be_bytes(arr)
+            } else {
+                f64::from_le_bytes(arr)
+            };
+            if !fv.is_finite() {
+                return false;
+            }
+            fv
+        };
+        (decoded - value).abs() <= tolerance
+    };
+
+    if data.len() > CHUNK_SIZE {
+        let num_positions = (data.len() - size) / step + 1;
+        let chunk_positions = (CHUNK_SIZE / step).max(1);
+
+        let position_chunks: Vec<(usize, usize)> = {
+            let mut chunks = Vec::new();
+            let mut pos = 0usize;
+            while pos < num_positions {
+                let end = (pos + chunk_positions).min(num_positions);
+                chunks.push((pos, end));
+                pos = end;
+            }
+            chunks
+        };
+
+        let mut all_results: Vec<SearchResult> = position_chunks
+            .par_iter()
+            .flat_map(|(chunk_start, chunk_end)| {
+                let mut local = Vec::new();
+                for idx in *chunk_start..*chunk_end {
+                    if local.len() >= max_results {
+                        break;
+                    }
+                    let offset = idx * step;
+                    if offset + size > data.len() {
+                        break;
+                    }
+                    if matches_value(&data[offset..offset + size]) {
+                        local.push(SearchResult {
+                            offset,
+                            length: size,
+                            matched_bytes: data[offset..offset + size].to_vec(),
+                        });
+                    }
+                }
+                local
+            })
+            .collect();
+
+        all_results.sort_by_key(|r| r.offset);
+        all_results.truncate(max_results);
+        return all_results;
+    }
+
+    let mut results = Vec::new();
+    let mut offset = 0usize;
+    while offset + size <= data.len() {
+        if results.len() >= max_results {
+            break;
+        }
+        if matches_value(&data[offset..offset + size]) {
+            results.push(SearchResult {
+                offset,
+                length: size,
+                matched_bytes: data[offset..offset + size].to_vec(),
+            });
+        }
+        offset += step;
+    }
+    results
+}
+
+pub fn search_numeric_range(
+    data: &[u8],
+    min_val: i64,
+    max_val: i64,
+    size: usize,
+    signed: bool,
+    big_endian: bool,
+    alignment: usize,
+    max_results: usize,
+) -> Vec<SearchResult> {
+    if size == 0 || size > 8 || data.len() < size {
+        return Vec::new();
+    }
+
+    let step = if alignment == 0 { 1 } else { alignment };
+
+    let in_range = |bytes: &[u8]| -> bool {
+        let raw = decode_uint(bytes, size, big_endian);
+        let decoded: i64 = if signed {
+            sign_extend(raw, size)
+        } else {
+            raw as i64
+        };
+        decoded >= min_val && decoded <= max_val
+    };
+
+    if data.len() > CHUNK_SIZE {
+        let num_positions = (data.len() - size) / step + 1;
+        let chunk_positions = (CHUNK_SIZE / step).max(1);
+
+        let position_chunks: Vec<(usize, usize)> = {
+            let mut chunks = Vec::new();
+            let mut pos = 0usize;
+            while pos < num_positions {
+                let end = (pos + chunk_positions).min(num_positions);
+                chunks.push((pos, end));
+                pos = end;
+            }
+            chunks
+        };
+
+        let mut all_results: Vec<SearchResult> = position_chunks
+            .par_iter()
+            .flat_map(|(chunk_start, chunk_end)| {
+                let mut local = Vec::new();
+                for idx in *chunk_start..*chunk_end {
+                    if local.len() >= max_results {
+                        break;
+                    }
+                    let offset = idx * step;
+                    if offset + size > data.len() {
+                        break;
+                    }
+                    if in_range(&data[offset..offset + size]) {
+                        local.push(SearchResult {
+                            offset,
+                            length: size,
+                            matched_bytes: data[offset..offset + size].to_vec(),
+                        });
+                    }
+                }
+                local
+            })
+            .collect();
+
+        all_results.sort_by_key(|r| r.offset);
+        all_results.truncate(max_results);
+        return all_results;
+    }
+
+    let mut results = Vec::new();
+    let mut offset = 0usize;
+    while offset + size <= data.len() {
+        if results.len() >= max_results {
+            break;
+        }
+        if in_range(&data[offset..offset + size]) {
+            results.push(SearchResult {
+                offset,
+                length: size,
+                matched_bytes: data[offset..offset + size].to_vec(),
+            });
+        }
+        offset += step;
+    }
+    results
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -470,5 +897,68 @@ mod tests {
         assert_eq!(result[1], (0x5A, 0xFF));
         assert_eq!(result[2], (0x00, 0x00));
         assert_eq!(result[3], (0x00, 0xFF));
+    }
+
+    #[test]
+    fn test_search_numeric_int_le() {
+        let val: u32 = 0x12345678;
+        let mut data = vec![0u8; 100];
+        data[20..24].copy_from_slice(&val.to_le_bytes());
+        data[50..54].copy_from_slice(&val.to_le_bytes());
+        let results = search_numeric_int(&data, 0x12345678, 4, false, false, 1, 100);
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].offset, 20);
+        assert_eq!(results[1].offset, 50);
+    }
+
+    #[test]
+    fn test_search_numeric_int_be() {
+        let val: u32 = 0x12345678;
+        let mut data = vec![0u8; 100];
+        data[20..24].copy_from_slice(&val.to_be_bytes());
+        let results = search_numeric_int(&data, 0x12345678, 4, false, true, 1, 100);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].offset, 20);
+    }
+
+    #[test]
+    fn test_search_numeric_float() {
+        let val: f32 = 3.14;
+        let mut data = vec![0u8; 100];
+        data[40..44].copy_from_slice(&val.to_le_bytes());
+        let results = search_numeric_float(&data, 3.14, 4, false, 0.001, 1, 100);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].offset, 40);
+    }
+
+    #[test]
+    fn test_search_numeric_range() {
+        let mut data = vec![0u8; 100];
+        data[0..4].copy_from_slice(&10u32.to_le_bytes());
+        data[4..8].copy_from_slice(&20u32.to_le_bytes());
+        data[8..12].copy_from_slice(&30u32.to_le_bytes());
+        let results = search_numeric_range(&data, 15, 25, 4, false, false, 4, 100);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].offset, 4);
+    }
+
+    #[test]
+    fn test_search_numeric_alignment() {
+        let val: u16 = 0x1234;
+        let mut data = vec![0u8; 100];
+        data[3..5].copy_from_slice(&val.to_le_bytes());
+        data[4..6].copy_from_slice(&val.to_le_bytes());
+        let results = search_numeric_int(&data, 0x1234, 2, false, false, 2, 100);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].offset, 4);
+    }
+
+    #[test]
+    fn test_search_numeric_signed() {
+        let val: i32 = -1;
+        let mut data = vec![0u8; 100];
+        data[10..14].copy_from_slice(&val.to_le_bytes());
+        let results = search_numeric_int(&data, -1, 4, true, false, 1, 100);
+        assert!(results.iter().any(|r| r.offset == 10));
     }
 }

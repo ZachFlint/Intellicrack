@@ -26,16 +26,18 @@ _PACKAGE_NAME: Final[str] = "intellicrack"
 
 
 class AssetNotFoundError(FileNotFoundError):
-    """Raised when an asset directory or file cannot be found."""
+    """Raised when an asset directory or file cannot be found.
+
+    Args:
+        searched_paths: List of paths that were searched.
+
+    Attributes:
+        searched_paths: List of paths that were searched.
+    """
 
     searched_paths: list[Path]
 
     def __init__(self, searched_paths: list[Path]) -> None:
-        """Initialize the error with searched paths.
-
-        Args:
-            searched_paths: List of paths that were searched.
-        """
         paths_str = ", ".join(str(p) for p in searched_paths)
         super().__init__(f"Assets directory not found. Searched: [{paths_str}]")
         self.searched_paths = searched_paths
@@ -45,7 +47,7 @@ def _get_package_root() -> Path:
     """Get the root directory of the intellicrack package.
 
     Returns:
-        Path to the package root directory.
+        Path: Path to the package root directory.
     """
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         meipass_attr = "_MEIPASS"
@@ -63,7 +65,7 @@ def get_assets_path() -> Path:
     """Get the path to the assets directory.
 
     Returns:
-        Path to the assets directory.
+        Path: Path to the assets directory.
 
     Raises:
         AssetNotFoundError: If the assets directory cannot be found.
@@ -101,7 +103,7 @@ def get_resource_path(resource_path: str) -> Path:
             Forward slashes are automatically converted to OS-specific separators.
 
     Returns:
-        Absolute path to the resource.
+        Path: Absolute path to the resource.
 
     Example:
         >>> path = get_resource_path("icons/status_success.svg")
@@ -122,7 +124,7 @@ def get_icon_path(icon_name: str) -> Path:
         icon_name: Name of the icon file (with or without extension).
 
     Returns:
-        Path to the icon file.
+        Path: Path to the icon file.
     """
     icons_dir = get_assets_path() / "icons"
 
@@ -149,7 +151,7 @@ def get_font_path(font_name: str) -> Path:
         font_name: Name of the font file.
 
     Returns:
-        Path to the font file.
+        Path: Path to the font file.
     """
     resolved = get_assets_path() / "fonts" / font_name
     _logger.debug("font_path_resolved", font_name=font_name, path=str(resolved))
@@ -163,7 +165,7 @@ def get_style_path(style_name: str) -> Path:
         style_name: Name of the stylesheet file.
 
     Returns:
-        Path to the stylesheet file.
+        Path: Path to the stylesheet file.
     """
     resolved = get_assets_path() / "styles" / style_name
     _logger.debug("style_path_resolved", style_name=style_name, path=str(resolved))
@@ -177,7 +179,7 @@ def resource_exists(resource_path: str) -> bool:
         resource_path: Relative path to the resource within assets directory.
 
     Returns:
-        True if the resource exists, False otherwise.
+        bool: True if the resource exists, False otherwise.
     """
     try:
         path = get_resource_path(resource_path)

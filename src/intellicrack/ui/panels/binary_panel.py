@@ -86,7 +86,7 @@ def _lief_parse(parser: object, data: list[int]) -> object:
         data: Raw binary data as a list of integers.
 
     Returns:
-        Parsed binary object, or None on failure.
+        object: Parsed binary object, or None on failure.
     """
     parse_fn = getattr(parser, "parse", None)
     if parse_fn is None:
@@ -104,7 +104,7 @@ def _lief_call(obj: object, method: str, *args: object) -> object:
         *args: Method arguments.
 
     Returns:
-        Method return value.
+        object: Method return value.
     """
     fn = getattr(obj, method, None)
     if fn is None:
@@ -121,7 +121,7 @@ def _lief_attr_list(obj: object, attr: str) -> list[object]:
         attr: Attribute name.
 
     Returns:
-        List of objects from the attribute, empty if missing.
+        list[object]: List of objects from the attribute, empty if missing.
     """
     val: object = getattr(obj, attr, None)
     if val is None:
@@ -145,6 +145,15 @@ class BinaryPanel(QWidget):
 
     Provides a hex viewer with offset navigation, section/import/export
     listings, and binary patching capabilities with undo support.
+
+    Args:
+        parent: Parent widget.
+
+    Attributes:
+        tool_started: Signal emitted when binary analysis starts.
+        tool_closed: Signal emitted when the panel is closed.
+        offset_changed: Signal emitted when the current offset changes.
+        patch_applied: Signal emitted when a patch is applied.
     """
 
     tool_started: pyqtSignal = pyqtSignal()
@@ -153,11 +162,6 @@ class BinaryPanel(QWidget):
     patch_applied: pyqtSignal = pyqtSignal(int, bytes)
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the binary panel.
-
-        Args:
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._file_path: Path | None = None
         self._file_data: bytearray = bytearray()
@@ -330,7 +334,7 @@ class BinaryPanel(QWidget):
             file_path: Path to the binary file to load.
 
         Returns:
-            True if the file was loaded successfully.
+            bool: True if the file was loaded successfully.
         """
         path = Path(file_path) if isinstance(file_path, str) else file_path
         if not path.exists():
@@ -423,7 +427,7 @@ class BinaryPanel(QWidget):
         """Collect all byte offsets that have been modified by patches.
 
         Returns:
-            Set of patched byte positions.
+            set[int]: Set of patched byte positions.
         """
         offsets: set[int] = set()
         for patch_offset, _, patched in self._patches:
@@ -682,7 +686,7 @@ class BinaryPanel(QWidget):
             pe_offset: Offset of the PE signature in the file.
 
         Returns:
-            List of (vaddr, vsize, raw_offset) tuples per section.
+            list[tuple[int, int, int]]: List of (vaddr, vsize, raw_offset) tuples per section.
         """
         num_sections = struct.unpack_from("<H", self._file_data, pe_offset + 6)[0]
         opt_size = struct.unpack_from("<H", self._file_data, pe_offset + 20)[0]
@@ -705,7 +709,7 @@ class BinaryPanel(QWidget):
             sections: Section map from _build_pe_section_map.
 
         Returns:
-            File offset, or None if RVA not in any section.
+            int | None: File offset, or None if RVA not in any section.
         """
         return next(
             (rva - s_vaddr + s_raw for s_vaddr, s_vsize, s_raw in sections if s_vaddr <= rva < s_vaddr + s_vsize),
@@ -897,7 +901,7 @@ class BinaryPanel(QWidget):
             segment: A lief MachO segment object.
 
         Returns:
-            Protection flags string like "RWX" or "---".
+            str: Protection flags string like "RWX" or "---".
         """
         init_prot: int = int(getattr(segment, "init_protection", 0))
         parts: list[str] = []
@@ -916,7 +920,7 @@ class BinaryPanel(QWidget):
             segment: A lief MachO segment object.
 
         Returns:
-            Tree widget item representing the segment.
+            QTreeWidgetItem: Tree widget item representing the segment.
         """
         name_raw: str = str(getattr(segment, "name", ""))
         name: str = name_raw or "(unnamed)"
@@ -937,7 +941,7 @@ class BinaryPanel(QWidget):
             section: A lief MachO section object.
 
         Returns:
-            Tree widget item representing the section.
+            QTreeWidgetItem: Tree widget item representing the section.
         """
         name_raw: str = str(getattr(section, "name", ""))
         name: str = name_raw or "(unnamed)"
@@ -1155,7 +1159,7 @@ class BinaryPanel(QWidget):
         """Get the current binary data (with any applied patches).
 
         Returns:
-            The binary data as a bytearray.
+            bytearray: The binary data as a bytearray.
         """
         return self._file_data
 
@@ -1163,7 +1167,7 @@ class BinaryPanel(QWidget):
         """Get the list of applied patches.
 
         Returns:
-            List of (offset, original_bytes, patched_bytes) tuples.
+            list[tuple[int, bytes, bytes]]: List of (offset, original_bytes, patched_bytes) tuples.
         """
         return list(self._patches)
 
@@ -1171,7 +1175,7 @@ class BinaryPanel(QWidget):
         """Start the binary panel.
 
         Returns:
-            True always since native panels are always ready.
+            bool: True always since native panels are always ready.
         """
         self.tool_started.emit()
         return True
@@ -1180,7 +1184,7 @@ class BinaryPanel(QWidget):
         """Stop the binary panel and cleanup.
 
         Returns:
-            True if cleanup succeeded.
+            bool: True if cleanup succeeded.
         """
         self.tool_closed.emit()
         return True

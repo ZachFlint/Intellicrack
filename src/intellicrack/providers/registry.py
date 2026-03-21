@@ -34,21 +34,14 @@ class ProviderRegistry:
     Manages provider instances, connections, and provides a unified interface
     for accessing any configured LLM provider.
 
-    Attributes:
-        _providers: Dictionary mapping provider names to provider instances.
-        _active_provider: The currently active provider name.
-        _credential_loader: Optional credential loader for auto-connection.
+    Args:
+        credential_loader: Optional credential loader for auto-connecting providers.
     """
 
     def __init__(
         self,
         credential_loader: CredentialLoader | None = None,
     ) -> None:
-        """Initialize the provider registry.
-
-        Args:
-            credential_loader: Optional credential loader for auto-connecting providers.
-        """
         self._providers: dict[ProviderName, LLMProviderBase] = {}
         self._active_provider: ProviderName | None = None
         self._credential_loader = credential_loader
@@ -77,7 +70,7 @@ class ProviderRegistry:
             name: The provider name to unregister.
 
         Returns:
-            True if provider was removed, False if not found.
+            bool: True if provider was removed, False if not found.
         """
         if name in self._providers:
             del self._providers[name]
@@ -94,7 +87,7 @@ class ProviderRegistry:
             name: The provider name.
 
         Returns:
-            The provider instance or None if not registered.
+            LLMProviderBase | None: The provider instance or None if not registered.
         """
         return self._providers.get(name)
 
@@ -105,7 +98,7 @@ class ProviderRegistry:
             name: The provider name.
 
         Returns:
-            The provider instance.
+            LLMProviderBase: The provider instance.
 
         Raises:
             ProviderError: If provider is not registered.
@@ -119,7 +112,7 @@ class ProviderRegistry:
         """List all registered providers.
 
         Returns:
-            List of registered provider names.
+            list[ProviderName]: List of registered provider names.
         """
         return list(self._providers.keys())
 
@@ -127,7 +120,7 @@ class ProviderRegistry:
         """List all connected providers.
 
         Returns:
-            List of connected provider names.
+            list[ProviderName]: List of connected provider names.
         """
         connected: list[ProviderName] = [name for name, provider in self._providers.items() if provider.is_connected]
         return connected
@@ -145,7 +138,7 @@ class ProviderRegistry:
                         credential loader.
 
         Returns:
-            True if connection succeeded.
+            bool: True if connection succeeded.
 
         Raises:
             ProviderError: If provider not registered or no credentials.
@@ -204,7 +197,7 @@ class ProviderRegistry:
         """Get the currently active provider.
 
         Returns:
-            The active provider instance or None if none set.
+            LLMProviderBase | None: The active provider instance or None if none set.
         """
         if self._active_provider is None:
             return None
@@ -215,7 +208,7 @@ class ProviderRegistry:
         """Get the name of the currently active provider.
 
         Returns:
-            The active provider name or None if none set.
+            ProviderName | None: The active provider name or None if none set.
         """
         return self._active_provider
 
@@ -223,7 +216,7 @@ class ProviderRegistry:
         """Check if any provider is connected.
 
         Returns:
-            True if at least one provider is connected.
+            bool: True if at least one provider is connected.
         """
         return len(self.list_connected()) > 0
 
@@ -238,7 +231,7 @@ def get_provider_registry() -> ProviderRegistry:
     """Get the global provider registry instance.
 
     Returns:
-        The singleton ProviderRegistry instance.
+        ProviderRegistry: The singleton ProviderRegistry instance.
     """
     if _RegistryHolder.instance is None:
         _RegistryHolder.instance = ProviderRegistry()

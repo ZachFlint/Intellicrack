@@ -71,17 +71,19 @@ class FridaPanel(AnalysisPanelBase):
     Provides a script editor for writing Frida JavaScript,
     a console for viewing output, and a hook manager table
     for managing active function hooks.
+
+    Args:
+        parent: Parent widget.
+
+    Attributes:
+        hook_added: Signal emitted with hook ID when a Frida hook is registered.
+        script_executed: Signal emitted when a Frida script finishes execution.
     """
 
     hook_added: pyqtSignal = pyqtSignal(str)
     script_executed: pyqtSignal = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the Frida panel.
-
-        Args:
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._bridge: FridaBridge | None = None
         self._attached_pid: int | None = None
@@ -129,7 +131,7 @@ class FridaPanel(AnalysisPanelBase):
         """Create the Frida instrumentation content area.
 
         Returns:
-            Splitter with process browser, editor, hooks/threads, and console.
+            QWidget: Splitter with process browser, editor, hooks/threads, and console.
         """
         main_splitter = QSplitter(Qt.Orientation.Vertical)
 
@@ -173,7 +175,7 @@ class FridaPanel(AnalysisPanelBase):
         """Create the script editor section.
 
         Returns:
-            Editor container widget.
+            QWidget: Editor container widget.
         """
         editor_container = QWidget()
         editor_layout = QVBoxLayout(editor_container)
@@ -202,7 +204,7 @@ class FridaPanel(AnalysisPanelBase):
         """Create the process browser panel.
 
         Returns:
-            Process browser container widget.
+            QWidget: Process browser container widget.
         """
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -237,7 +239,7 @@ class FridaPanel(AnalysisPanelBase):
         """Create the tabbed right panel with hooks, threads, and stalker.
 
         Returns:
-            Tab widget containing hooks, threads, and stalker tabs.
+            QWidget: Tab widget containing hooks, threads, and stalker tabs.
         """
         self._right_tabs = QTabWidget()
         self._right_tabs.addTab(self._create_hooks_section(), "Hooks")
@@ -249,7 +251,7 @@ class FridaPanel(AnalysisPanelBase):
         """Create the hooks manager section.
 
         Returns:
-            Hooks container widget.
+            QWidget: Hooks container widget.
         """
         hooks_container = QWidget()
         hooks_layout = QVBoxLayout(hooks_container)
@@ -288,7 +290,7 @@ class FridaPanel(AnalysisPanelBase):
         """Create the thread viewer section.
 
         Returns:
-            Threads container widget.
+            QWidget: Threads container widget.
         """
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -321,7 +323,7 @@ class FridaPanel(AnalysisPanelBase):
         """Create the Stalker code tracing controls.
 
         Returns:
-            Stalker controls container widget.
+            QWidget: Stalker controls container widget.
         """
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -396,7 +398,7 @@ class FridaPanel(AnalysisPanelBase):
         """Get the current FridaBridge instance.
 
         Returns:
-            The attached bridge or None.
+            FridaBridge | None: The attached bridge or None.
         """
         return self._bridge
 
@@ -900,7 +902,7 @@ class FridaPanel(AnalysisPanelBase):
         """Build comma-separated events string from stalker checkboxes.
 
         Returns:
-            Comma-separated event type string.
+            str: Comma-separated event type string.
         """
         events: list[str] = []
         if self._stalker_call_cb.isChecked():

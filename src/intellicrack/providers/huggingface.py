@@ -62,15 +62,14 @@ class HuggingFaceProvider(LLMProviderBase):
     Inference API using the OpenAI-compatible chat completions endpoint.
 
     Attributes:
-        _client: The httpx async client for API calls.
-        _api_token: The HuggingFace API token.
+        BASE_URL: HuggingFace Inference API endpoint base URL.
+        MODELS_API_URL: HuggingFace model catalog API endpoint URL.
     """
 
     BASE_URL: ClassVar[str] = "https://api-inference.huggingface.co"
     MODELS_API_URL: ClassVar[str] = "https://huggingface.co/api/models"
 
     def __init__(self) -> None:
-        """Initialize the HuggingFace provider."""
         super().__init__()
         self._client: httpx.AsyncClient | None = None
         self._api_token: str | None = None
@@ -82,7 +81,7 @@ class HuggingFaceProvider(LLMProviderBase):
         """Get the provider's name.
 
         Returns:
-            The provider name enum value.
+            ProviderName: The provider name enum value.
         """
         return ProviderName.HUGGINGFACE
 
@@ -169,7 +168,7 @@ class HuggingFaceProvider(LLMProviderBase):
         recommended models that may not appear in the default listing.
 
         Returns:
-            List of available models with their capabilities.
+            list[ModelInfo]: List of available models with their capabilities.
 
         Raises:
             ProviderError: If not connected or request fails.
@@ -273,7 +272,7 @@ class HuggingFaceProvider(LLMProviderBase):
             enable_cache: Whether to enable prompt caching (ignored by HuggingFace).
 
         Returns:
-            Tuple of (assistant message, tool calls if any).
+            tuple[Message, list[ToolCall] | None]: Tuple of (assistant message, tool calls if any).
 
         Raises:
             ProviderError: If not connected, model loading, or request fails.
@@ -350,7 +349,7 @@ class HuggingFaceProvider(LLMProviderBase):
             request_body: The request payload.
 
         Returns:
-            Parsed JSON response dictionary.
+            dict[str, Any]: Parsed JSON response dictionary.
 
         Raises:
             ProviderError: If the API call fails or model is loading.
@@ -414,7 +413,7 @@ class HuggingFaceProvider(LLMProviderBase):
             response_message: The message dict from the API response.
 
         Returns:
-            List of parsed ToolCall instances.
+            list[ToolCall]: List of parsed ToolCall instances.
         """
         tool_calls: list[ToolCall] = []
         if not response_message.get("tool_calls"):
@@ -462,7 +461,7 @@ class HuggingFaceProvider(LLMProviderBase):
             enable_cache: Whether to enable prompt caching (ignored by HuggingFace).
 
         Yields:
-            Text chunks as they arrive from the API.
+            str: Text chunks as they arrive from the API.
 
         Raises:
             ProviderError: If not connected, model loading, or request fails.
@@ -598,7 +597,7 @@ class HuggingFaceProvider(LLMProviderBase):
             messages: List of Message objects.
 
         Returns:
-            List of messages in HuggingFace's OpenAI-compatible format.
+            list[dict[str, object]]: List of messages in HuggingFace's OpenAI-compatible format.
         """
         return self._convert_messages_to_openai_format(messages)
 
@@ -615,7 +614,7 @@ class HuggingFaceProvider(LLMProviderBase):
             tools: List of ToolDefinition objects.
 
         Returns:
-            List of tools in HuggingFace's OpenAI-compatible format.
+            list[dict[str, object]]: List of tools in HuggingFace's OpenAI-compatible format.
         """
         hf_tools: list[dict[str, object]] = []
         for tool in tools:

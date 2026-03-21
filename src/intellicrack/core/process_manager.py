@@ -68,7 +68,7 @@ class TrackedProcess:
         """Get process ID if available.
 
         Returns:
-            The process ID, or None if not available.
+            int | None: The process ID, or None if not available.
         """
         return self.process.pid
 
@@ -77,7 +77,7 @@ class TrackedProcess:
         """Check if process is still running.
 
         Returns:
-            True if the process is still running, False otherwise.
+            bool: True if the process is still running, False otherwise.
         """
         if isinstance(self.process, Popen):
             return self.process.poll() is None
@@ -91,7 +91,7 @@ class TrackedProcess:
         changed the process state.
 
         Returns:
-            True if the process is still running, False otherwise.
+            bool: True if the process is still running, False otherwise.
         """
         if isinstance(self.process, Popen):
             return self.process.poll() is None
@@ -106,19 +106,14 @@ class ProcessManager:
     - Normal exit via atexit handlers
     - Signal-based termination (SIGINT, SIGTERM)
     - Graceful shutdown with timeout followed by forceful termination
+
+    Attributes:
+        DEFAULT_GRACEFUL_TIMEOUT: Default graceful shutdown timeout in seconds.
+        DEFAULT_FORCE_TIMEOUT: Default forced termination timeout in seconds.
     """
 
     _instance: ProcessManager | None = None
     _lock: threading.Lock = threading.Lock()
-    _initialized: bool
-    _processes: dict[int, TrackedProcess]
-    _external_pids: dict[int, dict[str, Any]]
-    _process_lock: threading.Lock
-    _cleanup_in_progress: bool
-    _original_sigint_handler: Callable[[int, FrameType | None], Any] | int | None
-    _original_sigterm_handler: Callable[[int, FrameType | None], Any] | int | None
-    _atexit_registered: bool
-    _shutdown_event: threading.Event
 
     DEFAULT_GRACEFUL_TIMEOUT: float = 5.0
     DEFAULT_FORCE_TIMEOUT: float = 3.0
@@ -129,7 +124,7 @@ class ProcessManager:
         """Create or return the singleton instance.
 
         Returns:
-            The singleton ProcessManager instance.
+            ProcessManager: The singleton ProcessManager instance.
         """
         if cls._instance is None:
             with cls._lock:
@@ -140,7 +135,6 @@ class ProcessManager:
         return cls._instance
 
     def __init__(self) -> None:
-        """Initialize the ProcessManager."""
         if self._initialized:
             return
 
@@ -160,7 +154,7 @@ class ProcessManager:
         """Get the singleton instance.
 
         Returns:
-            The singleton ProcessManager instance.
+            ProcessManager: The singleton ProcessManager instance.
         """
         return cls()
 
@@ -179,7 +173,7 @@ class ProcessManager:
         """Get the module logger.
 
         Returns:
-            The module logger instance.
+            structlog.stdlib.BoundLogger: The module logger instance.
         """
         return _module_logger
 
@@ -410,7 +404,7 @@ class ProcessManager:
             cleanup_callback: Optional async callback for custom cleanup.
 
         Returns:
-            The process ID used as the tracking key.
+            int: The process ID used as the tracking key.
         """
         pid = process.pid
 
@@ -441,7 +435,7 @@ class ProcessManager:
             pid: The process ID to unregister.
 
         Returns:
-            The tracked process info if found, None otherwise.
+            TrackedProcess | None: The tracked process info if found, None otherwise.
         """
         with self._process_lock:
             tracked = self._processes.pop(pid, None)
@@ -462,7 +456,7 @@ class ProcessManager:
             pid: The process ID to look up.
 
         Returns:
-            The tracked process info if found, None otherwise.
+            TrackedProcess | None: The tracked process info if found, None otherwise.
         """
         with self._process_lock:
             return self._processes.get(pid)
@@ -471,7 +465,7 @@ class ProcessManager:
         """Get all tracked processes.
 
         Returns:
-            List of all tracked processes.
+            list[TrackedProcess]: List of all tracked processes.
         """
         with self._process_lock:
             return list(self._processes.values())
@@ -480,7 +474,7 @@ class ProcessManager:
         """Get all currently running tracked processes.
 
         Returns:
-            List of tracked processes that are still running.
+            list[TrackedProcess]: List of tracked processes that are still running.
         """
         with self._process_lock:
             return [p for p in self._processes.values() if p.is_running]
@@ -499,7 +493,7 @@ class ProcessManager:
             force_timeout: Timeout for forceful termination.
 
         Returns:
-            True if process was terminated, False if not found or already stopped.
+            bool: True if process was terminated, False if not found or already stopped.
         """
         graceful_timeout = graceful_timeout or self.DEFAULT_GRACEFUL_TIMEOUT
         force_timeout = force_timeout or self.DEFAULT_FORCE_TIMEOUT
@@ -660,7 +654,7 @@ class ProcessManager:
         """Check if shutdown has been requested via signal.
 
         Returns:
-            True if a shutdown signal has been received, False otherwise.
+            bool: True if a shutdown signal has been received, False otherwise.
         """
         return self._shutdown_event.is_set()
 
@@ -679,7 +673,7 @@ class ProcessManager:
         """Get the number of tracked processes.
 
         Returns:
-            The total count of tracked processes.
+            int: The total count of tracked processes.
         """
         with self._process_lock:
             return len(self._processes)
@@ -689,7 +683,7 @@ class ProcessManager:
         """Get the number of running tracked processes.
 
         Returns:
-            The count of currently running tracked processes.
+            int: The count of currently running tracked processes.
         """
         with self._process_lock:
             return sum(bool(p.is_running) for p in self._processes.values())
@@ -698,7 +692,7 @@ class ProcessManager:
         """Return string representation.
 
         Returns:
-            A string representation of the ProcessManager state.
+            str: A string representation of the ProcessManager state.
         """
         return f"ProcessManager(tracked={self.process_count}, running={self.running_count})"
 
@@ -732,7 +726,7 @@ class ProcessManager:
             creationflags: Windows process creation flags.
 
         Returns:
-            CompletedProcess with execution results (stdout/stderr as str if text=True).
+            CompletedProcess[Any]: Execution results (stdout/stderr as str if text=True).
 
         Raises:
             TimeoutExpired: If timeout exceeded.
@@ -829,7 +823,7 @@ class ProcessManager:
             creationflags: Windows process creation flags.
 
         Returns:
-            CompletedProcess with execution results.
+            CompletedProcess[Any]: Execution results with captured stdout/stderr.
         """
         return await asyncio.to_thread(
             self.run_tracked,
@@ -890,7 +884,7 @@ class ProcessManager:
             pid: The process ID to unregister.
 
         Returns:
-            True if the PID was registered and removed, False otherwise.
+            bool: True if the PID was registered and removed, False otherwise.
         """
         with self._process_lock:
             if pid in self._external_pids:
@@ -907,7 +901,7 @@ class ProcessManager:
             force: If True, skip graceful termination and kill immediately.
 
         Returns:
-            True if process was terminated (or already gone), False on error.
+            bool: True if process was terminated (or already gone), False on error.
         """
         logger = ProcessManager._get_logger()
 

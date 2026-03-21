@@ -70,6 +70,9 @@ class BridgeAnalysisPanel(QWidget):
     Shows data from connected bridges in tabbed tables: strings, imports,
     exports, functions, sections, and notes.
 
+    Args:
+        parent: Optional parent widget.
+
     Attributes:
         address_navigate: Signal emitted with an address when a cell with
             an address value is double-clicked.
@@ -78,11 +81,6 @@ class BridgeAnalysisPanel(QWidget):
     address_navigate = pyqtSignal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the bridge analysis panel.
-
-        Args:
-            parent: Optional parent widget.
-        """
         super().__init__(parent)
         self._current_analysis: BridgeAnalysisSummary | None = None
         self._mono_font = QFont(DEFAULT_CODE_FONT, 9)
@@ -159,7 +157,7 @@ class BridgeAnalysisPanel(QWidget):
             headers: Column header labels.
 
         Returns:
-            Configured QTableWidget.
+            QTableWidget: Configured QTableWidget.
         """
         table = QTableWidget()
         table.setColumnCount(len(headers))
@@ -363,7 +361,7 @@ class BridgeAnalysisPanel(QWidget):
         """Get the currently displayed analysis summary.
 
         Returns:
-            The current BridgeAnalysisSummary or None if not set.
+            BridgeAnalysisSummary | None: The current BridgeAnalysisSummary or None if not set.
         """
         return self._current_analysis
 

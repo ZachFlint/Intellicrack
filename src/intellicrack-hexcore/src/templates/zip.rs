@@ -12,6 +12,8 @@ fn fd(name: &str, field_type: FieldType, description: &str) -> FieldDefinition {
         field_type,
         endianness: None,
         description: description.to_string(),
+        color: None,
+        validation: None,
     }
 }
 
@@ -20,6 +22,13 @@ fn zip_local_file_header() -> StructTemplate {
         name: "ZIP_LOCAL_FILE_HEADER".to_string(),
         description: "ZIP Local File Header (30 bytes fixed)".to_string(),
         default_endianness: Endianness::Little,
+        version: None,
+        author: None,
+        category: Some("ZIP".to_string()),
+        magic_detection: Some(super::MagicDetection {
+            offset: 0,
+            bytes: vec![0x50, 0x4B, 0x03, 0x04],
+        }),
         fields: vec![
             fd("signature", FieldType::UInt32, "Local file header signature (0x04034B50)"),
             fd("version_needed", FieldType::UInt16, "Version needed to extract"),
@@ -41,6 +50,10 @@ fn zip_central_directory() -> StructTemplate {
         name: "ZIP_CENTRAL_DIRECTORY".to_string(),
         description: "ZIP Central Directory File Header (46 bytes fixed)".to_string(),
         default_endianness: Endianness::Little,
+        version: None,
+        author: None,
+        category: Some("ZIP".to_string()),
+        magic_detection: None,
         fields: vec![
             fd("signature", FieldType::UInt32, "Central directory signature (0x02014B50)"),
             fd("version_made_by", FieldType::UInt16, "Version made by"),
@@ -68,6 +81,10 @@ fn zip_end_of_central_directory() -> StructTemplate {
         name: "ZIP_END_OF_CENTRAL_DIRECTORY".to_string(),
         description: "ZIP End of Central Directory Record (22 bytes fixed)".to_string(),
         default_endianness: Endianness::Little,
+        version: None,
+        author: None,
+        category: Some("ZIP".to_string()),
+        magic_detection: None,
         fields: vec![
             fd("signature", FieldType::UInt32, "End of central directory signature (0x06054B50)"),
             fd("disk_number", FieldType::UInt16, "Number of this disk"),

@@ -97,7 +97,7 @@ def _oauth_provider_to_name(provider: OAuthProvider) -> ProviderName:
         provider: The OAuth provider enum value.
 
     Returns:
-        The matching ProviderName.
+        ProviderName: The matching ProviderName.
 
     Raises:
         KeyError: If the provider has no mapping.
@@ -160,7 +160,7 @@ class OAuthToken:
         """Check if the access token is expired.
 
         Returns:
-            True if expired or will expire within 5 minutes.
+            bool: True if expired or will expire within 5 minutes.
         """
         if self.expires_at is None:
             return False
@@ -172,7 +172,7 @@ class OAuthToken:
         """Check if the token should be refreshed soon.
 
         Returns:
-            True if token will expire within 10 minutes.
+            bool: True if token will expire within 10 minutes.
         """
         if self.expires_at is None:
             return False
@@ -183,7 +183,7 @@ class OAuthToken:
         """Convert token to dictionary for storage.
 
         Returns:
-            Dictionary representation.
+            dict[str, Any]: Dictionary representation.
         """
         return {
             "access_token": self.access_token,
@@ -202,7 +202,7 @@ class OAuthToken:
             data: Dictionary with token data.
 
         Returns:
-            OAuthToken instance.
+            OAuthToken: OAuthToken instance.
         """
         expires_at = None
         if data.get("expires_at"):
@@ -229,11 +229,11 @@ class OAuthState:
 
     Attributes:
         state: Random state parameter for CSRF protection.
-        code_verifier: PKCE code verifier (if using PKCE).
-        redirect_uri: Redirect URI used for this flow.
-        created_at: When the flow was initiated.
-        provider: The OAuth provider.
-        config: OAuth configuration.
+        code_verifier: PKCE code verifier, or None if not using PKCE.
+        redirect_uri: Redirect URI used for this authorization flow.
+        created_at: When the authorization flow was initiated.
+        provider: The OAuth provider for this flow.
+        config: OAuth configuration for this flow.
     """
 
     state: str
@@ -248,7 +248,7 @@ class OAuthState:
         """Check if this state has expired (10 minute timeout).
 
         Returns:
-            True if the state is older than 10 minutes.
+            bool: True if the state is older than 10 minutes.
         """
         timeout = timedelta(minutes=10)
         return datetime.now(UTC) >= (self.created_at + timeout)
@@ -345,15 +345,13 @@ class OAuthCallbackServer:
     """Local HTTP server for receiving OAuth callbacks.
 
     Runs in a background thread and waits for the OAuth redirect.
+
+    Args:
+        port: Port to listen on.
+        timeout: Timeout in seconds to wait for callback.
     """
 
     def __init__(self, port: int = 8080, timeout: float = 300.0) -> None:
-        """Initialize callback server.
-
-        Args:
-            port: Port to listen on.
-            timeout: Timeout in seconds to wait for callback.
-        """
         self._port = port
         self._timeout = timeout
         self._server: socketserver.TCPServer | None = None
@@ -382,7 +380,7 @@ class OAuthCallbackServer:
         """Wait for OAuth callback and return code and state.
 
         Returns:
-            Tuple of (code, state) from callback.
+            tuple[str, str]: Tuple of (code, state) from callback.
 
         Raises:
             OAuthCallbackError: If timeout or a non-denial error occurs.
@@ -426,6 +424,10 @@ class OAuthManager:
     Handles authorization code flow with local callback server,
     token storage via CredentialStore, and automatic token refresh.
 
+    Args:
+        credential_store: Store for persisting tokens.
+        callback_port: Port for local callback server.
+
     Attributes:
         DEFAULT_CALLBACK_PORT: Default port for local callback server.
     """
@@ -437,12 +439,6 @@ class OAuthManager:
         credential_store: CredentialStore | None = None,
         callback_port: int = DEFAULT_CALLBACK_PORT,
     ) -> None:
-        """Initialize the OAuth manager.
-
-        Args:
-            credential_store: Store for persisting tokens.
-            callback_port: Port for local callback server.
-        """
         self._credential_store = credential_store
         self._callback_port = callback_port
         self._pending_states: dict[str, OAuthState] = {}
@@ -453,7 +449,7 @@ class OAuthManager:
         """Get or create HTTP client.
 
         Returns:
-            httpx.AsyncClient instance.
+            httpx.AsyncClient: Shared HTTP client for OAuth token requests.
         """
         if self._http_client is None:
             self._http_client = httpx.AsyncClient(timeout=30.0)
@@ -470,7 +466,7 @@ class OAuthManager:
         """Generate a cryptographically secure state parameter.
 
         Returns:
-            Random URL-safe state string.
+            str: Random URL-safe state string.
         """
         return secrets.token_urlsafe(32)
 
@@ -479,7 +475,7 @@ class OAuthManager:
         """Generate PKCE code verifier and challenge.
 
         Returns:
-            Tuple of (code_verifier, code_challenge).
+            tuple[str, str]: Tuple of (code_verifier, code_challenge).
         """
         code_verifier = secrets.token_urlsafe(64)
         digest = hashlib.sha256(code_verifier.encode()).digest()
@@ -493,7 +489,7 @@ class OAuthManager:
             config: OAuth configuration.
 
         Returns:
-            Tuple of (authorization_url, state object).
+            tuple[str, OAuthState]: Tuple of (authorization_url, state object).
 
         Raises:
             OAuthConfigurationError: If configuration is invalid.
@@ -550,7 +546,7 @@ class OAuthManager:
             open_browser: Whether to open the browser automatically.
 
         Returns:
-            The authorization URL for the user.
+            str: The authorization URL for the user.
         """
         auth_url, oauth_state = self.build_authorization_url(config)
 
@@ -578,7 +574,7 @@ class OAuthManager:
             state: State parameter for validation.
 
         Returns:
-            The obtained OAuth token.
+            OAuthToken: The obtained OAuth token.
 
         Raises:
             OAuthCallbackError: If state is invalid or expired.
@@ -619,7 +615,7 @@ class OAuthManager:
             code_verifier: PKCE code verifier if used.
 
         Returns:
-            OAuthToken with access and refresh tokens.
+            OAuthToken: OAuthToken with access and refresh tokens.
 
         Raises:
             OAuthTokenError: If token exchange fails.
@@ -716,7 +712,7 @@ class OAuthManager:
             provider: OAuth provider.
 
         Returns:
-            OAuthToken or None if not found.
+            OAuthToken | None: OAuthToken or None if not found.
         """
         if self._credential_store is None:
             return None
@@ -751,7 +747,7 @@ class OAuthManager:
             auto_refresh: Whether to refresh expired tokens.
 
         Returns:
-            Valid OAuthToken or None if not available.
+            OAuthToken | None: Valid OAuthToken or None if not available.
         """
         token = await self._load_token(provider)
         if token is None:
@@ -778,7 +774,7 @@ class OAuthManager:
             config: OAuth configuration.
 
         Returns:
-            The refreshed OAuthToken.
+            OAuthToken: The refreshed OAuthToken.
 
         Raises:
             OAuthTokenError: If refresh fails.
@@ -841,7 +837,7 @@ class OAuthManager:
             provider: The OAuth provider.
 
         Returns:
-            True if token was revoked/deleted.
+            bool: True if token was revoked/deleted.
         """
         token = await self._load_token(provider)
         if token is None:
@@ -882,7 +878,7 @@ class OAuthManager:
             config: OAuth config for refresh.
 
         Returns:
-            ProviderCredentials with OAuth token, or None.
+            ProviderCredentials | None: ProviderCredentials with OAuth token, or None.
         """
         token = await self.get_token(provider, config, auto_refresh=True)
         if token is None:
@@ -902,7 +898,7 @@ class OAuthManager:
             config: OAuth configuration.
 
         Returns:
-            The obtained OAuthToken.
+            OAuthToken: The obtained OAuthToken.
         """
         callback_config = config
         if config.redirect_uri == "http://localhost:8080/callback":
@@ -940,7 +936,7 @@ def get_oauth_manager() -> OAuthManager:
     """Get the global OAuth manager instance.
 
     Returns:
-        The singleton OAuthManager instance.
+        OAuthManager: The singleton OAuthManager instance.
     """
     if _oauth_holder.instance is None:
         _oauth_holder.instance = OAuthManager(credential_store=get_credential_store())
@@ -960,7 +956,7 @@ async def authorize_google(
         scopes: OAuth scopes (uses defaults if None).
 
     Returns:
-        ProviderCredentials with OAuth access token.
+        ProviderCredentials: ProviderCredentials with OAuth access token.
     """
     base_config = OAUTH_CONFIGS[OAuthProvider.GOOGLE]
 

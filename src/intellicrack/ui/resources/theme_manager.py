@@ -1001,7 +1001,6 @@ class ThemeManager:
     _instance: ClassVar[ThemeManager | None] = None
 
     def __init__(self) -> None:
-        """Initialize the theme manager."""
         self._current_theme: str = DEFAULT_THEME
         self._theme_cache: dict[str, str] = {}
         self._styles_available: bool = self._check_styles_available()
@@ -1011,7 +1010,7 @@ class ThemeManager:
         """Get the singleton instance of ThemeManager.
 
         Returns:
-            The ThemeManager singleton instance.
+            ThemeManager: The ThemeManager singleton instance.
         """
         if cls._instance is None:
             cls._instance = cls()
@@ -1027,7 +1026,7 @@ class ThemeManager:
         """Check if the styles directory is available.
 
         Returns:
-            True if styles directory exists.
+            bool: True if styles directory exists.
         """
         try:
             styles_dir = get_assets_path() / "styles"
@@ -1046,7 +1045,7 @@ class ThemeManager:
             theme: Theme name ("dark" or "light").
 
         Returns:
-            True if theme was applied successfully.
+            bool: True if theme was applied successfully.
         """
         if theme not in {THEME_DARK, THEME_LIGHT}:
             _logger.warning("unknown_theme", theme=theme, default=DEFAULT_THEME)
@@ -1071,7 +1070,7 @@ class ThemeManager:
             theme: Theme name.
 
         Returns:
-            CSS stylesheet string.
+            str: CSS stylesheet string.
         """
         if theme in self._theme_cache:
             _logger.debug("theme_cache_hit", theme=theme)
@@ -1089,7 +1088,7 @@ class ThemeManager:
             theme: Theme name.
 
         Returns:
-            CSS stylesheet string.
+            str: CSS stylesheet string.
         """
         if self._styles_available:
             filename = f"{theme}_theme.qss"
@@ -1115,7 +1114,7 @@ class ThemeManager:
         """Toggle between dark and light themes.
 
         Returns:
-            The new theme name.
+            str: The new theme name.
         """
         old_theme = self._current_theme
         new_theme = THEME_LIGHT if self._current_theme == THEME_DARK else THEME_DARK
@@ -1128,7 +1127,7 @@ class ThemeManager:
         """Get the current theme name.
 
         Returns:
-            Current theme name.
+            str: Current theme name.
         """
         return self._current_theme
 
@@ -1136,7 +1135,7 @@ class ThemeManager:
         """Check if current theme is dark.
 
         Returns:
-            True if dark theme is active.
+            bool: True if dark theme is active.
         """
         return self._current_theme == THEME_DARK
 
@@ -1151,6 +1150,6 @@ class ThemeManager:
         """Get list of available theme names.
 
         Returns:
-            List of theme names.
+            list[str]: List of theme names.
         """
         return [THEME_DARK, THEME_LIGHT]

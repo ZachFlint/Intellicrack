@@ -144,6 +144,8 @@ dependencies = [
   "bitsandbytes",
   "sentencepiece",
   "safetensors",
+  "yara-python>=4.5",
+  "cxxfilt>=0.3",
 ]
 
 [project.optional-dependencies]
@@ -426,6 +428,7 @@ codespell = ">=2.4.2, <3"
 detect-secrets = ">=1.5.0, <2"
 pyannotate = ">=1.2.0, <2"
 flake8-pyproject = ">=1.2.4, <2"
+cxxfilt = ">=0.3"
 
 [tool.pixi.pypi-options]
 extra-index-urls = [ "https://download.pytorch.org/whl/xpu" ]
@@ -656,6 +659,7 @@ unfixable = [ "TRY400", "RUF013", "RUF022", "RET503" ]
 
 ignore = [
   "E501",    # line-too-long
+  "D107",    # missing-docstring-in-__init__ (conflicts with pydoclint DOC301)
   "D203",    # incorrect-blank-line-before-class
   "D213",    # multi-line-summary-second-line
   "S603",    # subprocess-without-shell-equals-true
@@ -679,7 +683,9 @@ dummy-variable-rgx = "^(_+|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 "src/intellicrack/ui/app.py" = [ "PLC0415" ]
 "src/intellicrack/bridges/x64dbg.py" = [ "PLR0904" ]
 "src/intellicrack/bridges/ghidra.py" = [ "PLR0904" ]
+"src/intellicrack/bridges/hex_editor.py" = [ "PLR0904" ]
 "src/intellicrack/ui/panels/async_bridge.py" = [ "UP047" ]
+"src/intellicrack/ui/panels/hex_editor_panel.py" = [ "N802", "S324", "PLR0914" ]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 30

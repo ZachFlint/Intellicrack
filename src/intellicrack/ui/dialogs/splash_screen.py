@@ -62,16 +62,14 @@ class SplashScreen(QSplashScreen):
 
     Args:
         version: Application version string to display.
+
+    Attributes:
+        progress_updated: Qt signal for progress updated.
     """
 
     progress_updated = pyqtSignal(int, str)
 
     def __init__(self, version: str = "") -> None:
-        """Initialize the splash screen.
-
-        Args:
-            version: Application version string to display.
-        """
         dpi_scale = SplashScreen._compute_dpi_scale()
         scaled_w = int(SPLASH_WIDTH * dpi_scale)
         scaled_h = int(SPLASH_HEIGHT * dpi_scale)
@@ -99,7 +97,7 @@ class SplashScreen(QSplashScreen):
         """Compute DPI scale factor from the primary screen.
 
         Returns:
-            DPI scale factor (defaults to 1.0 if unavailable).
+            float: DPI scale factor (defaults to 1.0 if unavailable).
         """
         app = QApplication.instance()
         if not isinstance(app, QApplication):
@@ -119,7 +117,7 @@ class SplashScreen(QSplashScreen):
             dpi_scale: DPI scale factor.
 
         Returns:
-            QPixmap for the splash screen.
+            QPixmap: QPixmap for the splash screen.
         """
         try:
             splash_path = get_assets_path() / "splash.png"
@@ -152,7 +150,7 @@ class SplashScreen(QSplashScreen):
             dpi_scale: DPI scale factor for font sizing.
 
         Returns:
-            QPixmap with generated splash screen.
+            QPixmap: QPixmap with generated splash screen.
         """
         pixmap = QPixmap(width, height)
         pixmap.fill(QColor(FALLBACK_BG_COLOR))
@@ -342,7 +340,7 @@ class SplashScreen(QSplashScreen):
         """Get current progress value.
 
         Returns:
-            Current progress (0-100).
+            int: Current progress (0-100).
         """
         return self._progress_value
 
@@ -351,7 +349,7 @@ class SplashScreen(QSplashScreen):
         """Get current status message.
 
         Returns:
-            Current status message.
+            str: Current status message.
         """
         return self._status_message
 
@@ -360,7 +358,7 @@ class SplashScreen(QSplashScreen):
         """Get the DPI scale factor.
 
         Returns:
-            DPI scale factor used for this splash screen.
+            float: DPI scale factor used for this splash screen.
         """
         return self._dpi_scale
 
@@ -369,6 +367,6 @@ class SplashScreen(QSplashScreen):
         """Get the version string.
 
         Returns:
-            Version string displayed on the splash screen.
+            str: Version string displayed on the splash screen.
         """
         return self._version

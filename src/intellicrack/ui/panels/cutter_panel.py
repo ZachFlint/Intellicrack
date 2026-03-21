@@ -73,14 +73,12 @@ class CutterPanel(AnalysisPanelBase):
     strings, imports, exports, sections, cross-references, and a raw
     r2 command console -- all driven by the CutterBridge headless
     backend via r2pipe.
+
+    Args:
+        parent: Parent widget.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the Cutter panel.
-
-        Args:
-            parent: Parent widget.
-        """
         self._bridge: CutterBridge | None = None
         self._current_binary: Path | None = None
         super().__init__(parent)
@@ -106,7 +104,7 @@ class CutterPanel(AnalysisPanelBase):
         """Create the Cutter analysis content area with three vertical zones.
 
         Returns:
-            Vertical splitter with code zone, data tabs, and console.
+            QWidget: Vertical splitter with code zone, data tabs, and console.
         """
         outer = QSplitter(Qt.Orientation.Vertical)
 
@@ -130,7 +128,7 @@ class CutterPanel(AnalysisPanelBase):
         """Create the top zone: functions sidebar + code tabs.
 
         Returns:
-            Horizontal splitter with sidebar on the left and code tabs on the right.
+            QSplitter: Horizontal splitter with sidebar on the left and code tabs on the right.
         """
         splitter = QSplitter(Qt.Orientation.Horizontal)
 
@@ -144,7 +142,7 @@ class CutterPanel(AnalysisPanelBase):
         """Create the functions list sidebar with filter and refresh.
 
         Returns:
-            Functions sidebar widget.
+            QWidget: Functions sidebar widget.
         """
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -182,7 +180,7 @@ class CutterPanel(AnalysisPanelBase):
         """Create disassembly, decompiler, and CFG code tabs.
 
         Returns:
-            Tab widget with code views.
+            QTabWidget: Tab widget with code views.
         """
         tabs = QTabWidget()
 
@@ -210,7 +208,7 @@ class CutterPanel(AnalysisPanelBase):
         """Create strings, imports, exports, sections, and xrefs tabs.
 
         Returns:
-            Tab widget with data tables.
+            QTabWidget: Tab widget with data tables.
         """
         tabs = QTabWidget()
 
@@ -280,7 +278,7 @@ class CutterPanel(AnalysisPanelBase):
         """Create the raw r2 command console.
 
         Returns:
-            Console widget with output log and command input.
+            QWidget: Console widget with output log and command input.
         """
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -325,7 +323,7 @@ class CutterPanel(AnalysisPanelBase):
         """Get the current CutterBridge instance.
 
         Returns:
-            The attached bridge or None.
+            CutterBridge | None: The attached bridge or None.
         """
         return self._bridge
 
@@ -339,7 +337,7 @@ class CutterPanel(AnalysisPanelBase):
             binary_path: Path to the binary to analyze.
 
         Returns:
-            True if loading was initiated.
+            bool: True if loading was initiated.
         """
         if self._bridge is None:
             self._set_status("No bridge configured")
@@ -365,7 +363,7 @@ class CutterPanel(AnalysisPanelBase):
         """Initialize the CutterBridge and emit tool_started.
 
         Returns:
-            True if initialization was initiated or bridge is absent.
+            bool: True if initialization was initiated or bridge is absent.
         """
         if self._bridge is None:
             self._set_status("No bridge configured")
@@ -594,15 +592,13 @@ class CutterPanel(AnalysisPanelBase):
         """Get the address of the currently selected function.
 
         Returns:
-            The function address or None if nothing is selected.
+            int | None: The function address or None if nothing is selected.
         """
         items = self._func_tree.selectedItems()
         if not items:
             return None
         address = tree_item_data(items[0], 0, Qt.ItemDataRole.UserRole)
-        if isinstance(address, int):
-            return address
-        return None
+        return address if isinstance(address, int) else None
 
     def _apply_decompiled(self, result: object) -> None:
         """Apply decompiled code to the view.
@@ -880,8 +876,7 @@ class CutterPanel(AnalysisPanelBase):
             result: Command output string from the bridge.
         """
         if result is not None:
-            text = str(result).rstrip()
-            if text:
+            if text := str(result).rstrip():
                 self._console_output.appendPlainText(text)
         self._console_run_btn.setEnabled(True)
 

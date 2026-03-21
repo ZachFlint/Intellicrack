@@ -200,7 +200,6 @@ class IconManager:
     _instance: ClassVar[IconManager | None] = None
 
     def __init__(self) -> None:
-        """Initialize the icon manager."""
         self._icon_cache: dict[str, QIcon] = {}
         self._pixmap_cache: dict[tuple[str, int], QPixmap] = {}
         self._icons_available: bool = self._check_icons_available()
@@ -210,7 +209,7 @@ class IconManager:
         """Get the singleton instance of IconManager.
 
         Returns:
-            The IconManager singleton instance.
+            IconManager: The IconManager singleton instance.
         """
         if cls._instance is None:
             cls._instance = cls()
@@ -226,7 +225,7 @@ class IconManager:
         """Check if the icons directory is available.
 
         Returns:
-            True if icons directory exists and contains files.
+            bool: True if icons directory exists and contains files.
         """
         try:
             icons_dir = get_assets_path() / "icons"
@@ -246,7 +245,7 @@ class IconManager:
             size: Preferred icon size in pixels.
 
         Returns:
-            QIcon instance (may be empty if icon not found and no fallback).
+            QIcon: QIcon instance (may be empty if icon not found and no fallback).
         """
         cache_key = f"{name}_{size}"
         if cache_key in self._icon_cache:
@@ -266,7 +265,7 @@ class IconManager:
             size: Preferred icon size.
 
         Returns:
-            QIcon instance.
+            QIcon: QIcon instance.
         """
         if self._icons_available:
             filename = ICON_MAP.get(name, f"{name}.svg")
@@ -293,7 +292,7 @@ class IconManager:
             size: Icon size in pixels.
 
         Returns:
-            QIcon with rendered Unicode character or empty icon.
+            QIcon: QIcon with rendered Unicode character or empty icon.
         """
         if fallback_char := UNICODE_FALLBACK.get(name, ""):
             _logger.debug("fallback_icon_generated", icon_name=name, char=fallback_char, size=size)
@@ -315,7 +314,7 @@ class IconManager:
             color: Text color (defaults to light gray).
 
         Returns:
-            QIcon containing the rendered text.
+            QIcon: QIcon containing the rendered text.
         """
         if color is None:
             color = QColor("#d4d4d4")
@@ -349,7 +348,7 @@ class IconManager:
             size: Desired pixmap size.
 
         Returns:
-            QPixmap of the requested size.
+            QPixmap: QPixmap of the requested size.
         """
         cache_key = (name, size)
         if cache_key in self._pixmap_cache:
@@ -366,7 +365,7 @@ class IconManager:
         """Get the main application icon.
 
         Returns:
-            QIcon for the application window and taskbar.
+            QIcon: QIcon for the application window and taskbar.
         """
         if "app_icon" in self._icon_cache:
             return self._icon_cache["app_icon"]
@@ -395,7 +394,7 @@ class IconManager:
             success: True for success icon, False for error icon.
 
         Returns:
-            Appropriate status icon.
+            QIcon: Appropriate status icon.
         """
         name = "status_success" if success else "status_error"
         return self.get_icon(name)
@@ -408,7 +407,7 @@ class IconManager:
             size: Pixmap size in pixels.
 
         Returns:
-            Appropriate status pixmap.
+            QPixmap: Appropriate status pixmap.
         """
         name = "status_success" if success else "status_error"
         return self.get_pixmap(name, size)
@@ -452,7 +451,7 @@ class IconManager:
         """List all available icon names.
 
         Returns:
-            List of icon names from ICON_MAP.
+            list[str]: List of icon names from ICON_MAP.
         """
         return list(ICON_MAP.keys())
 
@@ -463,7 +462,7 @@ class IconManager:
             name: Icon name to check.
 
         Returns:
-            True if the icon file exists.
+            bool: True if the icon file exists.
         """
         if not self._icons_available:
             return False

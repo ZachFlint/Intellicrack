@@ -52,7 +52,7 @@ def _find_hxd_executable() -> Path | None:
     Checks common installation paths and the system PATH.
 
     Returns:
-        Path to HxD.exe if found, None otherwise.
+        Path | None: Path to HxD.exe if found, None otherwise.
     """
     for candidate in _COMMON_HXD_PATHS:
         if candidate.exists():
@@ -63,10 +63,7 @@ def _find_hxd_executable() -> Path | None:
         return Path(path_result)
 
     path_result_lower = shutil.which("hxd")
-    if path_result_lower is not None:
-        return Path(path_result_lower)
-
-    return None
+    return Path(path_result_lower) if path_result_lower is not None else None
 
 
 class HxDPanel(AnalysisPanelBase):
@@ -74,17 +71,19 @@ class HxDPanel(AnalysisPanelBase):
 
     Launches HxD.exe as a subprocess, captures its Win32 window,
     and embeds it inside the panel using QWindow.fromWinId.
+
+    Args:
+        parent: Parent widget.
+
+    Attributes:
+        tool_started: Signal emitted when HxD starts.
+        tool_closed: Signal emitted when HxD closes.
     """
 
     tool_started: pyqtSignal = pyqtSignal()
     tool_closed: pyqtSignal = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the HxD panel.
-
-        Args:
-            parent: Parent widget.
-        """
         self._hxd_exe: Path | None = _find_hxd_executable()
         self._process: Popen[bytes] | None = None
         self._embedded_container: QWidget | None = None
@@ -108,7 +107,7 @@ class HxDPanel(AnalysisPanelBase):
         """Create the HxD embedding area.
 
         Returns:
-            Host widget for the embedded HxD window.
+            QWidget: Host widget for the embedded HxD window.
         """
         self._embed_host = QWidget()
         layout = QVBoxLayout(self._embed_host)
@@ -136,7 +135,7 @@ class HxDPanel(AnalysisPanelBase):
             file_path: Path to the file to open in the hex editor.
 
         Returns:
-            True if HxD was launched successfully.
+            bool: True if HxD was launched successfully.
         """
         path = Path(file_path) if isinstance(file_path, str) else file_path
 
@@ -197,7 +196,7 @@ class HxDPanel(AnalysisPanelBase):
         """Launch HxD without a specific file.
 
         Returns:
-            True if HxD was launched successfully.
+            bool: True if HxD was launched successfully.
         """
         if self._hxd_exe is None:
             self._show_not_installed_dialog()
@@ -248,7 +247,7 @@ class HxDPanel(AnalysisPanelBase):
         """Terminate HxD process.
 
         Returns:
-            True if the process was stopped.
+            bool: True if the process was stopped.
         """
         self._terminate_existing()
         self.tool_closed.emit()

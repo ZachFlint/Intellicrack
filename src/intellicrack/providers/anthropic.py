@@ -62,14 +62,9 @@ class AnthropicProvider(LLMProviderBase):
 
     Provides integration with Anthropic's Claude models including
     support for tool/function calling and streaming responses.
-
-    Attributes:
-        _client: The async Anthropic client instance.
-        _current_task: Reference to any in-flight async task.
     """
 
     def __init__(self) -> None:
-        """Initialize the Anthropic provider."""
         super().__init__()
         self._client: anthropic.AsyncAnthropic | None = None
         self._current_task: Task[Any] | None = None
@@ -80,7 +75,7 @@ class AnthropicProvider(LLMProviderBase):
         """Get the provider's name.
 
         Returns:
-            ProviderName.ANTHROPIC
+            ProviderName: ProviderName.ANTHROPIC
         """
         return ProviderName.ANTHROPIC
 
@@ -135,7 +130,7 @@ class AnthropicProvider(LLMProviderBase):
         available models, handling pagination as needed.
 
         Returns:
-            List of available Claude models with their capabilities.
+            list[ModelInfo]: List of available Claude models with their capabilities.
 
         Raises:
             ProviderError: If not connected or the request fails.
@@ -159,7 +154,7 @@ class AnthropicProvider(LLMProviderBase):
         """Paginate through the models endpoint and collect all results.
 
         Returns:
-            Complete list of ModelInfo objects from all pages.
+            list[ModelInfo]: Complete list of ModelInfo objects from all pages.
         """
         client = self._client
         if client is None:
@@ -193,7 +188,7 @@ class AnthropicProvider(LLMProviderBase):
             display_name_raw: Raw display name attribute from the API.
 
         Returns:
-            Populated ModelInfo instance.
+            ModelInfo: Populated ModelInfo instance.
         """
         display_name: str = str(display_name_raw) if display_name_raw else model_id
         return ModelInfo(
@@ -235,7 +230,7 @@ class AnthropicProvider(LLMProviderBase):
             enable_cache: Whether to enable prompt caching.
 
         Returns:
-            Keyword arguments dict for messages.create or messages.stream.
+            dict[str, Any]: Keyword arguments dict for messages.create or messages.stream.
         """
         kwargs: dict[str, Any] = {
             "model": model,
@@ -284,7 +279,7 @@ class AnthropicProvider(LLMProviderBase):
             response: The Anthropic API response message.
 
         Returns:
-            Tuple of (text content, parsed tool calls, thinking text).
+            tuple[str, list[ToolCall], str]: Tuple of (text content, parsed tool calls, thinking text).
         """
         content = ""
         tool_calls: list[ToolCall] = []
@@ -317,7 +312,7 @@ class AnthropicProvider(LLMProviderBase):
             api_kwargs: Keyword arguments to pass to messages.create.
 
         Returns:
-            The Anthropic API response message.
+            AnthropicMessage: The Anthropic API response message.
 
         Raises:
             ProviderError: If the client is not initialized.
@@ -355,7 +350,7 @@ class AnthropicProvider(LLMProviderBase):
             enable_cache: Whether to enable prompt caching.
 
         Returns:
-            Tuple of (assistant message, tool calls if any).
+            tuple[Message, list[ToolCall] | None]: Tuple of (assistant message, tool calls if any).
 
         Raises:
             ProviderError: If not connected or request fails.
@@ -448,7 +443,7 @@ class AnthropicProvider(LLMProviderBase):
             enable_cache: Whether to enable prompt caching.
 
         Yields:
-            Text chunks as they arrive.
+            str: Text chunks as they arrive.
 
         Raises:
             ProviderError: If not connected or request fails.
@@ -536,7 +531,7 @@ class AnthropicProvider(LLMProviderBase):
             messages: List of Message objects.
 
         Returns:
-            List of messages in Anthropic's format.
+            list[dict[str, object]]: List of messages in Anthropic's format.
         """
         result: list[dict[str, object]] = []
         for msg in messages:
@@ -553,7 +548,7 @@ class AnthropicProvider(LLMProviderBase):
             msg: The message to convert.
 
         Returns:
-            Formatted message dict, or None if the role should be skipped.
+            dict[str, object] | None: Formatted message dict, or None if the role should be skipped.
         """
         if msg.role == "system":
             return None
@@ -571,7 +566,7 @@ class AnthropicProvider(LLMProviderBase):
             msg: The user message.
 
         Returns:
-            Anthropic-formatted user message dict.
+            dict[str, object]: Anthropic-formatted user message dict.
         """
         return {"role": "user", "content": msg.content}
 
@@ -583,7 +578,7 @@ class AnthropicProvider(LLMProviderBase):
             msg: The assistant message.
 
         Returns:
-            Anthropic-formatted assistant message dict.
+            dict[str, object]: Anthropic-formatted assistant message dict.
         """
         content: list[dict[str, object]] = []
         if msg.content:
@@ -608,7 +603,7 @@ class AnthropicProvider(LLMProviderBase):
             msg: The tool result message.
 
         Returns:
-            Anthropic-formatted tool result dict, or None if no results.
+            dict[str, object] | None: Anthropic-formatted tool result dict, or None if no results.
         """
         if not msg.tool_results:
             return None
@@ -634,7 +629,7 @@ class AnthropicProvider(LLMProviderBase):
             tools: List of ToolDefinition objects.
 
         Returns:
-            List of tools in Anthropic's format.
+            list[dict[str, object]]: List of tools in Anthropic's format.
         """
         anthropic_tools: list[dict[str, object]] = []
         for tool in tools:
@@ -650,7 +645,7 @@ class AnthropicProvider(LLMProviderBase):
             messages: List of messages to scan.
 
         Returns:
-            Concatenated system prompt content, or None if no system messages.
+            str | None: Concatenated system prompt content, or None if no system messages.
         """
         system_parts: list[str] = [msg.content for msg in messages if msg.role == "system" and msg.content]
         return "\n\n".join(system_parts) if system_parts else None

@@ -132,7 +132,7 @@ def _enumerate_processes() -> list[dict[str, int | str]]:
     """Enumerate all running processes via Win32 ToolHelp API.
 
     Returns:
-        List of process info dicts with pid, name, thread_count fields.
+        list[dict[str, int | str]]: List of process info dicts with pid, name, thread_count fields.
     """
     if not _WINDOWS:
         return []
@@ -169,7 +169,7 @@ def _get_process_memory_mb(pid: int) -> float:
         pid: Process ID.
 
     Returns:
-        Working set size in MB, or 0.0 on failure.
+        float: Working set size in MB, or 0.0 on failure.
     """
     if not _WINDOWS:
         return 0.0
@@ -196,7 +196,7 @@ def _detect_process_architecture(pid: int) -> str:
         pid: Process ID.
 
     Returns:
-        One of 'x64', 'x86', or 'Unknown'.
+        str: One of 'x64', 'x86', or 'Unknown'.
     """
     if not _WINDOWS:
         return "Unknown"
@@ -225,7 +225,7 @@ def _enumerate_modules(pid: int) -> list[dict[str, str | int]]:
         pid: Process ID.
 
     Returns:
-        List of module info dicts with name, path, base_addr, size fields.
+        list[dict[str, str | int]]: List of module info dicts with name, path, base_addr, size fields.
     """
     if not _WINDOWS:
         return []
@@ -266,7 +266,7 @@ def _enumerate_threads(pid: int) -> list[dict[str, int]]:
         pid: Process ID.
 
     Returns:
-        List of thread info dicts with thread_id and priority fields.
+        list[dict[str, int]]: List of thread info dicts with thread_id and priority fields.
     """
     if not _WINDOWS:
         return []
@@ -302,6 +302,10 @@ class _ProcessRefreshWorker(QThread):
     IsWow64Process, GetProcessMemoryInfo) in a separate thread and emits
     the collected results back to the main thread via signal.
 
+    Args:
+        filter_text: Current search filter text (lowercased).
+        parent: Parent QObject.
+
     Attributes:
         refresh_finished: Signal emitted with process data when enumeration completes.
     """
@@ -309,12 +313,6 @@ class _ProcessRefreshWorker(QThread):
     refresh_finished: pyqtSignal = pyqtSignal(list)
 
     def __init__(self, filter_text: str, parent: QWidget | None = None) -> None:
-        """Initialize the worker.
-
-        Args:
-            filter_text: Current search filter text (lowercased).
-            parent: Parent QObject.
-        """
         super().__init__(parent)
         self._filter_text = filter_text
 
@@ -352,6 +350,15 @@ class ProcessPanel(QWidget):
 
     Provides a searchable process list with detailed views
     for modules, threads, and memory layout of selected processes.
+
+    Args:
+        parent: Parent widget.
+
+    Attributes:
+        tool_started: Signal emitted when the process panel starts.
+        tool_closed: Signal emitted when the process panel closes.
+        process_selected: Signal emitted with PID when a process is selected.
+        process_attached: Signal emitted with PID when a process is attached.
     """
 
     tool_started: pyqtSignal = pyqtSignal()
@@ -360,11 +367,6 @@ class ProcessPanel(QWidget):
     process_attached: pyqtSignal = pyqtSignal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the process panel.
-
-        Args:
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._selected_pid: int | None = None
         self._refresh_worker: _ProcessRefreshWorker | None = None
@@ -492,7 +494,7 @@ class ProcessPanel(QWidget):
         """Build the Tracked Processes tab widget.
 
         Returns:
-            The configured tracked processes tab widget.
+            QWidget: The configured tracked processes tab widget.
         """
         tab = QWidget()
         tab_layout = QVBoxLayout(tab)
@@ -774,7 +776,7 @@ class ProcessPanel(QWidget):
         """Get the currently selected process ID.
 
         Returns:
-            The selected PID or None.
+            int | None: The selected PID or None.
         """
         return self._selected_pid
 
@@ -782,7 +784,7 @@ class ProcessPanel(QWidget):
         """Start the process panel (refreshes process list).
 
         Returns:
-            True always since native panels are always ready.
+            bool: True always since native panels are always ready.
         """
         self._on_refresh()
         self.tool_started.emit()
@@ -795,7 +797,7 @@ class ProcessPanel(QWidget):
         worker to finish before emitting the tool_closed signal.
 
         Returns:
-            True if cleanup succeeded.
+            bool: True if cleanup succeeded.
         """
         self._auto_refresh_timer.stop()
         self._tracked_refresh_timer.stop()

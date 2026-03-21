@@ -80,14 +80,11 @@ class GrokProvider(LLMProviderBase):
 
     Attributes:
         BASE_URL: The X.AI API base URL.
-        _client: The async OpenAI client instance configured for Grok.
-        _current_task: Reference to any in-flight async task.
     """
 
     BASE_URL: str = "https://api.x.ai/v1"
 
     def __init__(self) -> None:
-        """Initialize the Grok provider."""
         super().__init__()
         self._client: openai.AsyncOpenAI | None = None
         self._current_task: asyncio.Task[object] | None = None
@@ -98,7 +95,7 @@ class GrokProvider(LLMProviderBase):
         """Get the provider's name.
 
         Returns:
-            ProviderName.GROK
+            ProviderName: ProviderName.GROK
         """
         return ProviderName.GROK
 
@@ -158,7 +155,7 @@ class GrokProvider(LLMProviderBase):
             model_id: Grok model identifier.
 
         Returns:
-            True if the model supports chat completions.
+            bool: True if the model supports chat completions.
         """
         non_chat_prefixes = (
             "embed-",
@@ -175,7 +172,7 @@ class GrokProvider(LLMProviderBase):
             model_id: Grok model identifier.
 
         Returns:
-            Estimated context window in tokens.
+            int: Estimated context window in tokens.
         """
         if "grok-3" in model_id:
             return 131072
@@ -191,7 +188,7 @@ class GrokProvider(LLMProviderBase):
             model_id: Grok model identifier.
 
         Returns:
-            True if the model likely supports image inputs.
+            bool: True if the model likely supports image inputs.
         """
         return "vision" in model_id or "image" in model_id
 
@@ -199,7 +196,7 @@ class GrokProvider(LLMProviderBase):
         """Dynamically fetch available models from Grok.
 
         Returns:
-            List of available Grok models.
+            list[ModelInfo]: List of available Grok models.
 
         Raises:
             ProviderError: If not connected.
@@ -258,7 +255,7 @@ class GrokProvider(LLMProviderBase):
             enable_cache: Whether to enable prompt caching (ignored by Grok).
 
         Returns:
-            Tuple of (assistant message, tool calls if any).
+            tuple[Message, list[ToolCall] | None]: Tuple of (assistant message, tool calls if any).
 
         Raises:
             ProviderError: If not connected or request fails.
@@ -338,7 +335,7 @@ class GrokProvider(LLMProviderBase):
             tool_choice: How the model should select tools.
 
         Returns:
-            The chat completion response object.
+            ChatCompletion: The chat completion response object.
 
         Raises:
             ProviderError: If the API call fails.
@@ -391,7 +388,7 @@ class GrokProvider(LLMProviderBase):
             response_message: The message from the Grok API response.
 
         Returns:
-            List of parsed ToolCall instances.
+            list[ToolCall]: List of parsed ToolCall instances.
         """
         tool_calls: list[ToolCall] = []
         if not response_message.tool_calls:
@@ -438,7 +435,7 @@ class GrokProvider(LLMProviderBase):
             enable_cache: Whether to enable prompt caching (ignored by Grok).
 
         Yields:
-            Text chunks as they arrive.
+            str: Text chunks as they arrive.
 
         Raises:
             ProviderError: If not connected or request fails.
@@ -546,7 +543,7 @@ class GrokProvider(LLMProviderBase):
             messages: List of Message objects.
 
         Returns:
-            List of messages in Grok's format.
+            list[dict[str, object]]: List of messages in Grok's format.
         """
         return self._convert_messages_to_openai_format(messages)
 
@@ -561,7 +558,7 @@ class GrokProvider(LLMProviderBase):
             tools: List of ToolDefinition objects.
 
         Returns:
-            List of tools in Grok's format.
+            list[dict[str, object]]: List of tools in Grok's format.
         """
         grok_tools: list[dict[str, object]] = []
         for tool in tools:

@@ -83,16 +83,18 @@ _ERR_CMD_TIMEOUT = "Command timed out"
 
 
 class WindowsSandbox(SandboxBase):
-    """Windows Sandbox implementation for isolated binary testing.
+    r"""Windows Sandbox implementation for isolated binary testing.
 
     Uses the Windows Sandbox feature (available in Windows 10 Pro/Enterprise)
     to provide an isolated execution environment for binary analysis.
 
+    Args:
+        config: Optional sandbox configuration.
+
     Attributes:
-        _process: Windows Sandbox process.
-        _wsb_path: Path to the .wsb configuration file.
-        _shared_folder: Path to the shared folder.
-        _monitor_folder: Path to monitoring scripts folder.
+        SANDBOX_EXE: Windows Sandbox executable filename.
+        SHARED_FOLDER_NAME: Host-side shared folder name for sandbox mapping.
+        SANDBOX_SHARED_PATH: Guest-side path where the shared folder is mounted.
     """
 
     SANDBOX_EXE = "WindowsSandbox.exe"
@@ -100,11 +102,6 @@ class WindowsSandbox(SandboxBase):
     SANDBOX_SHARED_PATH = "C:\\Users\\WDAGUtilityAccount\\Desktop\\Shared"
 
     def __init__(self, config: SandboxConfig | None = None) -> None:
-        """Initialize Windows Sandbox.
-
-        Args:
-            config: Optional sandbox configuration.
-        """
         super().__init__(config)
         self._process: Popen[bytes] | None = None
         self._wsb_path: Path | None = None
@@ -116,7 +113,7 @@ class WindowsSandbox(SandboxBase):
         """Check if Windows Sandbox is available.
 
         Returns:
-            True if Windows Sandbox can be used.
+            bool: True if Windows Sandbox can be used.
         """
         process_manager = ProcessManager.get_instance()
 
@@ -502,7 +499,7 @@ start /min powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File "%~dp0pr
             working_directory: Optional working directory.
 
         Returns:
-            Tuple of (exit_code, stdout, stderr).
+            tuple[int, str, str]: Tuple of (exit_code, stdout, stderr).
 
         Raises:
             SandboxError: If execution fails.
@@ -571,7 +568,7 @@ call "{sandbox_script_path}"
             monitor: Whether to monitor behavior.
 
         Returns:
-            ExecutionReport with results and activity.
+            ExecutionReport: ExecutionReport with results and activity.
 
         Raises:
             SandboxError: If execution fails.
@@ -654,7 +651,7 @@ call "{sandbox_script_path}"
         """Parse file monitoring log.
 
         Returns:
-            List of file changes detected during execution.
+            list[FileChange]: List of file changes detected during execution.
         """
         if self._shared_folder is None:
             return []
@@ -686,7 +683,7 @@ call "{sandbox_script_path}"
         """Parse registry monitoring log.
 
         Returns:
-            List of registry changes detected during execution.
+            list[RegistryChange]: List of registry changes detected during execution.
         """
         if self._shared_folder is None:
             return []
@@ -719,7 +716,7 @@ call "{sandbox_script_path}"
         """Parse network monitoring log.
 
         Returns:
-            List of network activity detected during execution.
+            list[NetworkActivity]: List of network activity detected during execution.
         """
         if self._shared_folder is None:
             return []
@@ -758,7 +755,7 @@ call "{sandbox_script_path}"
         """Parse process monitoring log.
 
         Returns:
-            List of process activity detected during execution.
+            list[ProcessActivity]: List of process activity detected during execution.
         """
         if self._shared_folder is None:
             return []

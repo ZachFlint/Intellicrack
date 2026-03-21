@@ -30,7 +30,7 @@ class ProviderCredentialMapping:
     """Mapping of environment variable names for a provider.
 
     Attributes:
-        api_key_var: Environment variable name for API key.
+        api_key_var: Environment variable name for the primary API key.
         api_base_var: Environment variable name for custom API base URL.
         organization_var: Environment variable name for organization ID.
         project_var: Environment variable name for project ID.
@@ -48,7 +48,7 @@ def _find_env_file() -> Path:
     """Find the .env file by searching up the directory tree.
 
     Returns:
-        Path to the found .env file or default location.
+        Path: Path to the found .env file or default location.
     """
     project_root = Path(__file__).resolve().parents[3]
     search_paths = [
@@ -80,7 +80,7 @@ def _validate_key_format(provider: ProviderName, api_key: str) -> str | None:
         api_key: The API key to validate.
 
     Returns:
-        Error message if invalid, None if valid.
+        str | None: Error message if invalid, None if valid.
     """
     if provider == ProviderName.ANTHROPIC and not api_key.startswith("sk-ant-"):
         return "Anthropic API key should start with 'sk-ant-'"
@@ -106,8 +106,12 @@ class CredentialLoader:
     This class parses .env files and provides credentials for each
     supported LLM provider.
 
+    Args:
+        env_path: Path to the .env file. If None, searches for .env
+                 in current directory and parent directories.
+
     Attributes:
-        env_path: Path to the .env file.
+        PROVIDER_MAPPINGS: Mapping of provider names to their credential environment variable configuration.
     """
 
     PROVIDER_MAPPINGS: ClassVar[dict[ProviderName, ProviderCredentialMapping]] = {
@@ -147,12 +151,6 @@ class CredentialLoader:
     }
 
     def __init__(self, env_path: Path | None = None) -> None:
-        """Initialize the credential loader.
-
-        Args:
-            env_path: Path to the .env file. If None, searches for .env
-                     in current directory and parent directories.
-        """
         if env_path is None:
             env_path = _find_env_file()
         self.env_path = env_path
@@ -220,7 +218,7 @@ class CredentialLoader:
             provider: The LLM provider to get credentials for.
 
         Returns:
-            ProviderCredentials if found and valid, None otherwise.
+            ProviderCredentials | None: ProviderCredentials if found and valid, None otherwise.
         """
         mapping = self.PROVIDER_MAPPINGS.get(provider)
         if mapping is None:
@@ -284,7 +282,7 @@ class CredentialLoader:
             name: Environment variable name.
 
         Returns:
-            Variable value or None if not found.
+            str | None: Variable value or None if not found.
         """
         if value := self._env_vars.get(name):
             return value
@@ -297,7 +295,7 @@ class CredentialLoader:
             provider: The provider to validate credentials for.
 
         Returns:
-            Tuple of (is_valid, error_message). error_message is None if valid.
+            tuple[bool, str | None]: Tuple of (is_valid, error_message). error_message is None if valid.
         """
         mapping = self.PROVIDER_MAPPINGS.get(provider)
         if mapping is None:
@@ -342,7 +340,7 @@ class CredentialLoader:
         """List all providers that have credentials configured.
 
         Returns:
-            List of provider names with valid credentials.
+            list[ProviderName]: List of provider names with valid credentials.
         """
         configured: list[ProviderName] = []
         for provider in ProviderName:
@@ -360,7 +358,7 @@ class CredentialLoader:
         """List all providers that are missing credentials.
 
         Returns:
-            List of provider names without valid credentials.
+            list[ProviderName]: List of provider names without valid credentials.
         """
         missing: list[ProviderName] = []
         for provider in ProviderName:
@@ -394,7 +392,7 @@ class CredentialLoader:
             default: Default value if the variable is not found.
 
         Returns:
-            The variable value, or default if not found.
+            str | None: The variable value, or default if not found.
         """
         value = self._env_vars.get(name)
         return value if value is not None else os.environ.get(name, default)
@@ -450,7 +448,7 @@ def get_api_key_env_var_mapping() -> dict[str, str]:
     of truth for env var names.
 
     Returns:
-        Dict mapping provider ID string to API key env var name.
+        dict[str, str]: Dict mapping provider ID string to API key env var name.
     """
     return {provider.value: mapping.api_key_var for provider, mapping in CredentialLoader.PROVIDER_MAPPINGS.items()}
 
@@ -496,6 +494,6 @@ def get_credential_loader() -> CredentialLoader:
     """Get the global credential loader instance.
 
     Returns:
-        The singleton CredentialLoader instance.
+        CredentialLoader: The singleton CredentialLoader instance.
     """
     return CredentialLoader()

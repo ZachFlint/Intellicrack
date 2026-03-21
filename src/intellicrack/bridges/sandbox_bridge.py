@@ -60,13 +60,9 @@ class SandboxBridge(ToolBridgeBase):
 
     Provides AI-accessible interface to the SandboxManager for
     creating isolated execution environments and running binaries.
-
-    Attributes:
-        _manager: The underlying SandboxManager instance.
     """
 
     def __init__(self) -> None:
-        """Initialize the sandbox bridge."""
         super().__init__()
         self._manager: SandboxManager | None = None
         self._capabilities = BridgeCapabilities(
@@ -81,7 +77,7 @@ class SandboxBridge(ToolBridgeBase):
         """Get the tool's name.
 
         Returns:
-            ToolName.SANDBOX.
+            ToolName: ToolName.SANDBOX.
         """
         return ToolName.SANDBOX
 
@@ -90,7 +86,7 @@ class SandboxBridge(ToolBridgeBase):
         """Get tool definition for LLM function calling.
 
         Returns:
-            ToolDefinition with all sandbox functions.
+            ToolDefinition: ToolDefinition with all sandbox functions.
         """
         return ToolDefinition(
             tool_name=ToolName.SANDBOX,
@@ -425,7 +421,7 @@ class SandboxBridge(ToolBridgeBase):
         """Check if sandbox functionality is available.
 
         Returns:
-            True if at least one sandbox type is available.
+            bool: True if at least one sandbox type is available.
         """
         if self._manager is None:
             self._manager = SandboxManager()
@@ -437,7 +433,7 @@ class SandboxBridge(ToolBridgeBase):
         """Ensure manager is initialized.
 
         Returns:
-            The SandboxManager instance.
+            SandboxManager: The SandboxManager instance.
         """
         if self._manager is None:
             self._manager = SandboxManager()
@@ -459,7 +455,7 @@ class SandboxBridge(ToolBridgeBase):
             memory_limit_mb: Memory limit in megabytes.
 
         Returns:
-            Dictionary with instance_id and status.
+            dict[str, Any]: Dictionary with instance_id and status.
 
         Raises:
             ToolError: If creation fails.
@@ -501,7 +497,7 @@ class SandboxBridge(ToolBridgeBase):
             instance_id: ID of the instance to destroy.
 
         Returns:
-            Success confirmation.
+            dict[str, Any]: Success confirmation.
 
         Raises:
             ToolError: If destruction fails.
@@ -536,7 +532,7 @@ class SandboxBridge(ToolBridgeBase):
             monitor: Whether to monitor behavior.
 
         Returns:
-            ExecutionReport as dictionary.
+            dict[str, Any]: ExecutionReport as dictionary.
 
         Raises:
             ToolError: If execution fails.
@@ -582,7 +578,7 @@ class SandboxBridge(ToolBridgeBase):
             working_directory: Optional working directory.
 
         Returns:
-            Dictionary with exit_code, stdout, stderr.
+            dict[str, Any]: Dictionary with exit_code, stdout, stderr.
 
         Raises:
             ToolError: If execution fails.
@@ -628,7 +624,7 @@ class SandboxBridge(ToolBridgeBase):
             dest: Destination path inside sandbox.
 
         Returns:
-            Success confirmation.
+            dict[str, Any]: Success confirmation.
 
         Raises:
             ToolError: If copy fails.
@@ -675,7 +671,7 @@ class SandboxBridge(ToolBridgeBase):
             dest: Local destination file path.
 
         Returns:
-            Success confirmation.
+            dict[str, Any]: Success confirmation.
 
         Raises:
             ToolError: If copy fails.
@@ -709,7 +705,7 @@ class SandboxBridge(ToolBridgeBase):
         """Get sandbox manager status.
 
         Returns:
-            Status dictionary with available types and instance info.
+            dict[str, Any]: Status dictionary with available types and instance info.
         """
         manager = self._ensure_manager()
         return dict(await manager.get_status())
@@ -718,7 +714,7 @@ class SandboxBridge(ToolBridgeBase):
         """List all active sandbox instances.
 
         Returns:
-            List of instance information dictionaries.
+            list[dict[str, Any]]: List of instance information dictionaries.
         """
         manager = self._ensure_manager()
 
@@ -746,7 +742,7 @@ class SandboxBridge(ToolBridgeBase):
             name: Name for the snapshot.
 
         Returns:
-            Dictionary with snapshot_id.
+            dict[str, Any]: Dictionary with snapshot_id.
 
         Raises:
             ToolError: If snapshot fails or not supported.
@@ -788,7 +784,7 @@ class SandboxBridge(ToolBridgeBase):
             snapshot_id: ID of the snapshot to restore.
 
         Returns:
-            Success confirmation.
+            dict[str, Any]: Success confirmation.
 
         Raises:
             ToolError: If restore fails or not supported.
@@ -828,7 +824,7 @@ class SandboxBridge(ToolBridgeBase):
             instance_id: ID of the QEMU sandbox instance.
 
         Returns:
-            Dictionary with list of snapshot names.
+            dict[str, Any]: Dictionary with list of snapshot names.
 
         Raises:
             ToolError: If listing fails or not supported.
@@ -873,7 +869,7 @@ class SandboxBridge(ToolBridgeBase):
             name: Name of the snapshot to delete.
 
         Returns:
-            Success confirmation.
+            dict[str, Any]: Success confirmation.
 
         Raises:
             ToolError: If deletion fails or not supported.
@@ -917,7 +913,7 @@ class SandboxBridge(ToolBridgeBase):
             instance_id: ID of the QEMU sandbox instance.
 
         Returns:
-            Command response dictionary.
+            dict[str, Any]: Command response dictionary.
 
         Raises:
             ToolError: If resume fails or not supported.
@@ -962,7 +958,7 @@ class SandboxBridge(ToolBridgeBase):
             instance_id: ID of the QEMU sandbox instance.
 
         Returns:
-            Dictionary with list of pending messages.
+            dict[str, Any]: Dictionary with list of pending messages.
 
         Raises:
             ToolError: If retrieval fails or not supported.
@@ -1015,7 +1011,7 @@ class SandboxBridge(ToolBridgeBase):
             instance_id: Associated sandbox instance ID.
 
         Returns:
-            Dictionary representation.
+            dict[str, Any]: Dictionary representation.
         """
         return {
             "instance_id": instance_id,

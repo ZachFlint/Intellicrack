@@ -326,7 +326,7 @@ class TestVNCWidget:
             qapp.processEvents()
             time.sleep(CONNECT_POLL_SEC)
 
-        assert len(statuses) >= 1
+        assert statuses
         assert statuses[-1] is False
 
     @staticmethod

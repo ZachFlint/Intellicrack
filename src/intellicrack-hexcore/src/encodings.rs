@@ -1,0 +1,541 @@
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum EncodingError {
+    #[error("unsupported encoding: {0}")]
+    UnsupportedEncoding(String),
+    #[error("encode failed: {0}")]
+    EncodeFailed(String),
+}
+
+static EBCDIC_TO_UNICODE: [char; 256] = [
+    // 0x00-0x0F
+    '\0', '\x01', '\x02', '\x03', '\u{009C}', '\x09', '\u{0086}', '\x7F',
+    '\u{0097}', '\u{008D}', '\u{008E}', '\x0B', '\x0C', '\r', '\x0E', '\x0F',
+    // 0x10-0x1F
+    '\x10', '\x11', '\x12', '\x13', '\u{009D}', '\u{0085}', '\x08', '\u{0087}',
+    '\x18', '\x19', '\u{0092}', '\u{008F}', '\x1C', '\x1D', '\x1E', '\x1F',
+    // 0x20-0x2F
+    '\u{0080}', '\u{0081}', '\u{0082}', '\u{0083}', '\u{0084}', '\n', '\x17', '\x1B',
+    '\u{0088}', '\u{0089}', '\u{008A}', '\u{008B}', '\u{008C}', '\x05', '\x06', '\x07',
+    // 0x30-0x3F
+    '\u{0090}', '\u{0091}', '\x16', '\u{0093}', '\u{0094}', '\u{0095}', '\u{0096}', '\x04',
+    '\u{0098}', '\u{0099}', '\u{009A}', '\u{009B}', '\x14', '\x15', '\u{009E}', '\x1A',
+    // 0x40-0x4F
+    ' ', '\u{00A0}', '\u{00E2}', '\u{00E4}', '\u{00E0}', '\u{00E1}', '\u{00E3}', '\u{00E5}',
+    '\u{00E7}', '\u{00F1}', '\u{00A2}', '.', '<', '(', '+', '|',
+    // 0x50-0x5F
+    '&', '\u{00E9}', '\u{00EA}', '\u{00EB}', '\u{00E8}', '\u{00ED}', '\u{00EE}', '\u{00EF}',
+    '\u{00EC}', '\u{00DF}', '!', '$', '*', ')', ';', '\u{00AC}',
+    // 0x60-0x6F
+    '-', '/', '\u{00C2}', '\u{00C4}', '\u{00C0}', '\u{00C1}', '\u{00C3}', '\u{00C5}',
+    '\u{00C7}', '\u{00D1}', '\u{00A6}', ',', '%', '_', '>', '?',
+    // 0x70-0x7F
+    '\u{00F8}', '\u{00C9}', '\u{00CA}', '\u{00CB}', '\u{00C8}', '\u{00CD}', '\u{00CE}', '\u{00CF}',
+    '\u{00CC}', '`', ':', '#', '@', '\'', '=', '"',
+    // 0x80-0x8F
+    '\u{00D8}', 'a', 'b', 'c', 'd', 'e', 'f', 'g',
+    'h', 'i', '\u{00AB}', '\u{00BB}', '\u{00F0}', '\u{00FD}', '\u{00FE}', '\u{00B1}',
+    // 0x90-0x9F
+    '\u{00B0}', 'j', 'k', 'l', 'm', 'n', 'o', 'p',
+    'q', 'r', '\u{00AA}', '\u{00BA}', '\u{00E6}', '\u{00B8}', '\u{00C6}', '\u{00A4}',
+    // 0xA0-0xAF
+    '\u{00B5}', '~', 's', 't', 'u', 'v', 'w', 'x',
+    'y', 'z', '\u{00A1}', '\u{00BF}', '\u{00D0}', '\u{00DD}', '\u{00DE}', '\u{00AE}',
+    // 0xB0-0xBF
+    '^', '\u{00A3}', '\u{00A5}', '\u{00B7}', '\u{00A9}', '\u{00A7}', '\u{00B6}', '\u{00BC}',
+    '\u{00BD}', '\u{00BE}', '[', ']', '\u{00AF}', '\u{00A8}', '\u{00B4}', '\u{00D7}',
+    // 0xC0-0xCF
+    '{', 'A', 'B', 'C', 'D', 'E', 'F', 'G',
+    'H', 'I', '\u{00AD}', '\u{00F4}', '\u{00F6}', '\u{00F2}', '\u{00F3}', '\u{00F5}',
+    // 0xD0-0xDF
+    '}', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+    'Q', 'R', '\u{00B9}', '\u{00FB}', '\u{00FC}', '\u{00F9}', '\u{00FA}', '\u{00FF}',
+    // 0xE0-0xEF
+    '\\', '\u{00F7}', 'S', 'T', 'U', 'V', 'W', 'X',
+    'Y', 'Z', '\u{00B2}', '\u{00D4}', '\u{00D6}', '\u{00D2}', '\u{00D3}', '\u{00D5}',
+    // 0xF0-0xFF
+    '0', '1', '2', '3', '4', '5', '6', '7',
+    '8', '9', '\u{00B3}', '\u{00DB}', '\u{00DC}', '\u{00D9}', '\u{00DA}', '\u{009F}',
+];
+
+fn resolve_encoding(name: &str) -> Result<&'static encoding_rs::Encoding, EncodingError> {
+    let lower = name.to_lowercase();
+    let enc = match lower.as_str() {
+        "utf-8" | "utf8" => encoding_rs::UTF_8,
+        "utf-16le" | "utf16le" => encoding_rs::UTF_16LE,
+        "utf-16be" | "utf16be" => encoding_rs::UTF_16BE,
+        "iso-8859-1" | "iso8859-1" | "iso_8859-1" | "latin1" | "latin-1" => encoding_rs::WINDOWS_1252,
+        "iso-8859-2" | "iso8859-2" => encoding_rs::ISO_8859_2,
+        "iso-8859-3" | "iso8859-3" => encoding_rs::ISO_8859_3,
+        "iso-8859-4" | "iso8859-4" => encoding_rs::ISO_8859_4,
+        "iso-8859-5" | "iso8859-5" => encoding_rs::ISO_8859_5,
+        "iso-8859-6" | "iso8859-6" => encoding_rs::ISO_8859_6,
+        "iso-8859-7" | "iso8859-7" => encoding_rs::ISO_8859_7,
+        "iso-8859-8" | "iso8859-8" => encoding_rs::ISO_8859_8,
+        "iso-8859-10" | "iso8859-10" => encoding_rs::ISO_8859_10,
+        "iso-8859-13" | "iso8859-13" => encoding_rs::ISO_8859_13,
+        "iso-8859-14" | "iso8859-14" => encoding_rs::ISO_8859_14,
+        "iso-8859-15" | "iso8859-15" => encoding_rs::ISO_8859_15,
+        "iso-8859-16" | "iso8859-16" => encoding_rs::ISO_8859_16,
+        "windows-1250" | "cp1250" => encoding_rs::WINDOWS_1250,
+        "windows-1251" | "cp1251" => encoding_rs::WINDOWS_1251,
+        "windows-1252" | "cp1252" => encoding_rs::WINDOWS_1252,
+        "windows-1253" | "cp1253" => encoding_rs::WINDOWS_1253,
+        "windows-1254" | "cp1254" => encoding_rs::WINDOWS_1254,
+        "windows-1255" | "cp1255" => encoding_rs::WINDOWS_1255,
+        "windows-1256" | "cp1256" => encoding_rs::WINDOWS_1256,
+        "windows-1257" | "cp1257" => encoding_rs::WINDOWS_1257,
+        "windows-1258" | "cp1258" => encoding_rs::WINDOWS_1258,
+        "shift_jis" | "shift-jis" | "sjis" | "shiftjis" => encoding_rs::SHIFT_JIS,
+        "euc-jp" | "eucjp" => encoding_rs::EUC_JP,
+        "iso-2022-jp" | "iso2022jp" => encoding_rs::ISO_2022_JP,
+        "euc-kr" | "euckr" => encoding_rs::EUC_KR,
+        "gb2312" | "gbk" | "gb_2312" | "gb-2312" => encoding_rs::GBK,
+        "gb18030" => encoding_rs::GB18030,
+        "big5" | "big-5" => encoding_rs::BIG5,
+        "koi8-r" | "koi8r" => encoding_rs::KOI8_R,
+        "koi8-u" | "koi8u" => encoding_rs::KOI8_U,
+        _ => {
+            return Err(EncodingError::UnsupportedEncoding(name.to_string()));
+        }
+    };
+    Ok(enc)
+}
+
+fn decode_ebcdic(data: &[u8]) -> (String, bool) {
+    let mut result = String::with_capacity(data.len());
+    let mut had_replacement = false;
+    for &byte in data {
+        let ch = EBCDIC_TO_UNICODE[byte as usize];
+        if ch == '\u{FFFD}' {
+            had_replacement = true;
+        }
+        result.push(ch);
+    }
+    (result, had_replacement)
+}
+
+fn build_ebcdic_reverse_table() -> std::collections::HashMap<char, u8> {
+    let mut map = std::collections::HashMap::with_capacity(256);
+    for (byte_val, &ch) in EBCDIC_TO_UNICODE.iter().enumerate() {
+        map.entry(ch).or_insert(byte_val as u8);
+    }
+    map
+}
+
+fn encode_ebcdic(text: &str) -> Result<Vec<u8>, EncodingError> {
+    let reverse = build_ebcdic_reverse_table();
+    let mut result = Vec::with_capacity(text.len());
+    for ch in text.chars() {
+        match reverse.get(&ch) {
+            Some(&b) => result.push(b),
+            None => {
+                return Err(EncodingError::EncodeFailed(format!(
+                    "character '{}' (U+{:04X}) cannot be encoded in EBCDIC CP037",
+                    ch, ch as u32
+                )));
+            }
+        }
+    }
+    Ok(result)
+}
+
+pub fn decode_text(data: &[u8], encoding_name: &str) -> Result<(String, bool), EncodingError> {
+    let lower = encoding_name.to_lowercase();
+    match lower.as_str() {
+        "ascii" => {
+            let s: String = data.iter().map(|&b| (b & 0x7F) as char).collect();
+            let had_replacement = data.iter().any(|&b| b & 0x80 != 0);
+            Ok((s, had_replacement))
+        }
+        "ebcdic" | "ebcdic-cp037" | "cp037" => Ok(decode_ebcdic(data)),
+        _ => {
+            let enc = resolve_encoding(encoding_name)?;
+            let (cow, _enc_used, had_errors) = enc.decode(data);
+            Ok((cow.into_owned(), had_errors))
+        }
+    }
+}
+
+pub fn encode_text(text: &str, encoding_name: &str) -> Result<Vec<u8>, EncodingError> {
+    let lower = encoding_name.to_lowercase();
+    match lower.as_str() {
+        "ascii" => {
+            let bytes: Vec<u8> = text.chars().map(|c| c as u32 as u8).collect();
+            Ok(bytes)
+        }
+        "utf-8" | "utf8" => Ok(text.as_bytes().to_vec()),
+        "utf-16le" | "utf16le" => {
+            let encoded: Vec<u8> = text.encode_utf16().flat_map(|u| u.to_le_bytes()).collect();
+            Ok(encoded)
+        }
+        "utf-16be" | "utf16be" => {
+            let encoded: Vec<u8> = text.encode_utf16().flat_map(|u| u.to_be_bytes()).collect();
+            Ok(encoded)
+        }
+        "ebcdic" | "ebcdic-cp037" | "cp037" => encode_ebcdic(text),
+        _ => {
+            let enc = resolve_encoding(encoding_name)?;
+            let (cow, _enc_used, had_unmappable) = enc.encode(text);
+            if had_unmappable {
+                return Err(EncodingError::EncodeFailed(format!(
+                    "text contains characters that cannot be encoded in '{}'",
+                    encoding_name
+                )));
+            }
+            Ok(cow.into_owned())
+        }
+    }
+}
+
+pub fn search_text_encoded(
+    data: &[u8],
+    text: &str,
+    encoding_name: &str,
+    case_sensitive: bool,
+    max_results: usize,
+) -> Vec<(usize, usize)> {
+    if text.is_empty() || max_results == 0 {
+        return Vec::new();
+    }
+
+    let mut results: Vec<(usize, usize)> = Vec::new();
+
+    let search_bytes = match encode_text(text, encoding_name) {
+        Ok(b) => b,
+        Err(_) => return Vec::new(),
+    };
+
+    if search_bytes.is_empty() {
+        return Vec::new();
+    }
+
+    find_pattern(data, &search_bytes, max_results, &mut results);
+
+    if !case_sensitive {
+        let lower_text = text.to_lowercase();
+        if lower_text != text {
+            if let Ok(lower_bytes) = encode_text(&lower_text, encoding_name) {
+                if lower_bytes != search_bytes {
+                    let before_count = results.len();
+                    find_pattern(data, &lower_bytes, max_results, &mut results);
+                    if results.len() > before_count {
+                        results.sort_unstable_by_key(|&(offset, _)| offset);
+                        results.dedup();
+                    }
+                }
+            }
+        }
+
+        let upper_text = text.to_uppercase();
+        if upper_text != text && upper_text != lower_text {
+            if let Ok(upper_bytes) = encode_text(&upper_text, encoding_name) {
+                if upper_bytes != search_bytes {
+                    let before_count = results.len();
+                    find_pattern(data, &upper_bytes, max_results, &mut results);
+                    if results.len() > before_count {
+                        results.sort_unstable_by_key(|&(offset, _)| offset);
+                        results.dedup();
+                    }
+                }
+            }
+        }
+
+        results.truncate(max_results);
+    }
+
+    results
+}
+
+fn find_pattern(data: &[u8], pattern: &[u8], max_results: usize, results: &mut Vec<(usize, usize)>) {
+    if pattern.is_empty() || results.len() >= max_results {
+        return;
+    }
+    let pat_len = pattern.len();
+    let data_len = data.len();
+    if pat_len > data_len {
+        return;
+    }
+    let mut pos = 0;
+    while pos <= data_len - pat_len && results.len() < max_results {
+        if data[pos..pos + pat_len] == *pattern {
+            results.push((pos, pat_len));
+            pos += pat_len;
+        } else {
+            pos += 1;
+        }
+    }
+}
+
+pub fn list_encodings() -> Vec<(String, String)> {
+    vec![
+        ("utf-8".to_string(), "UTF-8".to_string()),
+        ("utf-16le".to_string(), "UTF-16 Little Endian".to_string()),
+        ("utf-16be".to_string(), "UTF-16 Big Endian".to_string()),
+        ("ascii".to_string(), "ASCII (7-bit)".to_string()),
+        ("ebcdic".to_string(), "EBCDIC Code Page 037".to_string()),
+        ("iso-8859-1".to_string(), "ISO-8859-1 (Latin-1)".to_string()),
+        ("iso-8859-2".to_string(), "ISO-8859-2 (Latin-2, Central European)".to_string()),
+        ("iso-8859-3".to_string(), "ISO-8859-3 (Latin-3, South European)".to_string()),
+        ("iso-8859-4".to_string(), "ISO-8859-4 (Latin-4, North European)".to_string()),
+        ("iso-8859-5".to_string(), "ISO-8859-5 (Latin/Cyrillic)".to_string()),
+        ("iso-8859-6".to_string(), "ISO-8859-6 (Latin/Arabic)".to_string()),
+        ("iso-8859-7".to_string(), "ISO-8859-7 (Latin/Greek)".to_string()),
+        ("iso-8859-8".to_string(), "ISO-8859-8 (Latin/Hebrew)".to_string()),
+        ("iso-8859-10".to_string(), "ISO-8859-10 (Latin-6, Nordic)".to_string()),
+        ("iso-8859-13".to_string(), "ISO-8859-13 (Latin-7, Baltic Rim)".to_string()),
+        ("iso-8859-14".to_string(), "ISO-8859-14 (Latin-8, Celtic)".to_string()),
+        ("iso-8859-15".to_string(), "ISO-8859-15 (Latin-9)".to_string()),
+        ("iso-8859-16".to_string(), "ISO-8859-16 (Latin-10, South-Eastern European)".to_string()),
+        ("windows-1250".to_string(), "Windows-1250 (Central European)".to_string()),
+        ("windows-1251".to_string(), "Windows-1251 (Cyrillic)".to_string()),
+        ("windows-1252".to_string(), "Windows-1252 (Western European)".to_string()),
+        ("windows-1253".to_string(), "Windows-1253 (Greek)".to_string()),
+        ("windows-1254".to_string(), "Windows-1254 (Turkish)".to_string()),
+        ("windows-1255".to_string(), "Windows-1255 (Hebrew)".to_string()),
+        ("windows-1256".to_string(), "Windows-1256 (Arabic)".to_string()),
+        ("windows-1257".to_string(), "Windows-1257 (Baltic)".to_string()),
+        ("windows-1258".to_string(), "Windows-1258 (Vietnamese)".to_string()),
+        ("shift_jis".to_string(), "Shift_JIS (Japanese)".to_string()),
+        ("euc-jp".to_string(), "EUC-JP (Japanese)".to_string()),
+        ("iso-2022-jp".to_string(), "ISO-2022-JP (Japanese)".to_string()),
+        ("euc-kr".to_string(), "EUC-KR (Korean)".to_string()),
+        ("gb2312".to_string(), "GB2312/GBK (Chinese Simplified)".to_string()),
+        ("gb18030".to_string(), "GB18030 (Chinese National Standard)".to_string()),
+        ("big5".to_string(), "Big5 (Chinese Traditional)".to_string()),
+        ("koi8-r".to_string(), "KOI8-R (Russian)".to_string()),
+        ("koi8-u".to_string(), "KOI8-U (Ukrainian)".to_string()),
+    ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_decode_utf8() {
+        let data = "Hello, world!".as_bytes();
+        let (text, had_replacement) = decode_text(data, "utf-8").unwrap();
+        assert_eq!(text, "Hello, world!");
+        assert!(!had_replacement);
+    }
+
+    #[test]
+    fn test_decode_utf8_unicode() {
+        let data = "こんにちは".as_bytes();
+        let (text, had_replacement) = decode_text(data, "utf-8").unwrap();
+        assert_eq!(text, "こんにちは");
+        assert!(!had_replacement);
+    }
+
+    #[test]
+    fn test_decode_utf16le() {
+        let data: Vec<u8> = "Hello"
+            .encode_utf16()
+            .flat_map(|c| c.to_le_bytes())
+            .collect();
+        let (text, had_replacement) = decode_text(&data, "utf-16le").unwrap();
+        assert_eq!(text, "Hello");
+        assert!(!had_replacement);
+    }
+
+    #[test]
+    fn test_decode_utf16le_unicode() {
+        let original = "日本語";
+        let data: Vec<u8> = original
+            .encode_utf16()
+            .flat_map(|c| c.to_le_bytes())
+            .collect();
+        let (text, had_replacement) = decode_text(&data, "utf-16le").unwrap();
+        assert_eq!(text, original);
+        assert!(!had_replacement);
+    }
+
+    #[test]
+    fn test_decode_shift_jis() {
+        let enc = encoding_rs::SHIFT_JIS;
+        let (encoded, _, _) = enc.encode("テスト");
+        let (text, had_replacement) = decode_text(&encoded, "shift_jis").unwrap();
+        assert_eq!(text, "テスト");
+        assert!(!had_replacement);
+    }
+
+    #[test]
+    fn test_decode_windows_1252() {
+        let data: Vec<u8> = vec![0xE9, 0xE0, 0xFC];
+        let (text, had_replacement) = decode_text(&data, "windows-1252").unwrap();
+        assert_eq!(text, "\u{00E9}\u{00E0}\u{00FC}");
+        assert!(!had_replacement);
+    }
+
+    #[test]
+    fn test_decode_ascii() {
+        let data = b"Hello";
+        let (text, had_replacement) = decode_text(data, "ascii").unwrap();
+        assert_eq!(text, "Hello");
+        assert!(!had_replacement);
+    }
+
+    #[test]
+    fn test_decode_ascii_strips_high_bit() {
+        let data: Vec<u8> = vec![0xC8, 0xE5, 0xEC, 0xEC, 0xEF];
+        let (text, had_replacement) = decode_text(&data, "ascii").unwrap();
+        assert_eq!(text, "Hello");
+        assert!(had_replacement);
+    }
+
+    #[test]
+    fn test_encode_utf8_roundtrip() {
+        let original = "Hello, world! こんにちは";
+        let encoded = encode_text(original, "utf-8").unwrap();
+        let (decoded, had_replacement) = decode_text(&encoded, "utf-8").unwrap();
+        assert_eq!(decoded, original);
+        assert!(!had_replacement);
+    }
+
+    #[test]
+    fn test_encode_ascii() {
+        let encoded = encode_text("Hi", "ascii").unwrap();
+        assert_eq!(encoded, b"Hi");
+    }
+
+    #[test]
+    fn test_encode_windows_1252_roundtrip() {
+        let original = "café";
+        let encoded = encode_text(original, "windows-1252").unwrap();
+        let (decoded, _) = decode_text(&encoded, "windows-1252").unwrap();
+        assert_eq!(decoded, original);
+    }
+
+    #[test]
+    fn test_ebcdic_decode_known_bytes() {
+        let data: Vec<u8> = vec![0xC1, 0xC2, 0xC3];
+        let (text, had_replacement) = decode_text(&data, "ebcdic").unwrap();
+        assert_eq!(text, "ABC");
+        assert!(!had_replacement);
+    }
+
+    #[test]
+    fn test_ebcdic_decode_digits() {
+        let data: Vec<u8> = vec![0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9];
+        let (text, _) = decode_text(&data, "ebcdic").unwrap();
+        assert_eq!(text, "0123456789");
+    }
+
+    #[test]
+    fn test_ebcdic_decode_space() {
+        let data: Vec<u8> = vec![0x40];
+        let (text, _) = decode_text(&data, "ebcdic").unwrap();
+        assert_eq!(text, " ");
+    }
+
+    #[test]
+    fn test_ebcdic_decode_lowercase() {
+        let data: Vec<u8> = vec![0x81, 0x82, 0x83];
+        let (text, _) = decode_text(&data, "ebcdic").unwrap();
+        assert_eq!(text, "abc");
+    }
+
+    #[test]
+    fn test_ebcdic_roundtrip() {
+        let original = "Hello World 0123";
+        let encoded = encode_text(original, "ebcdic").unwrap();
+        let (decoded, _) = decode_text(&encoded, "ebcdic").unwrap();
+        assert_eq!(decoded, original);
+    }
+
+    #[test]
+    fn test_ebcdic_alias_cp037() {
+        let data: Vec<u8> = vec![0xC8, 0x85, 0x93, 0x93, 0x96];
+        let (text, _) = decode_text(&data, "cp037").unwrap();
+        assert_eq!(text, "Hello");
+    }
+
+    #[test]
+    fn test_list_encodings_count() {
+        let encodings = list_encodings();
+        assert!(encodings.len() > 30);
+    }
+
+    #[test]
+    fn test_list_encodings_has_required() {
+        let encodings = list_encodings();
+        let names: Vec<&str> = encodings.iter().map(|(n, _)| n.as_str()).collect();
+        assert!(names.contains(&"utf-8"));
+        assert!(names.contains(&"utf-16le"));
+        assert!(names.contains(&"utf-16be"));
+        assert!(names.contains(&"ascii"));
+        assert!(names.contains(&"ebcdic"));
+        assert!(names.contains(&"shift_jis"));
+        assert!(names.contains(&"euc-jp"));
+        assert!(names.contains(&"gb18030"));
+        assert!(names.contains(&"koi8-r"));
+        assert!(names.contains(&"koi8-u"));
+    }
+
+    #[test]
+    fn test_search_text_utf8() {
+        let data = b"Hello, world! Hello again!";
+        let results = search_text_encoded(data, "Hello", "utf-8", true, 10);
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0], (0, 5));
+        assert_eq!(results[1], (14, 5));
+    }
+
+    #[test]
+    fn test_search_text_utf8_not_found() {
+        let data = b"Hello, world!";
+        let results = search_text_encoded(data, "xyz", "utf-8", true, 10);
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_search_text_utf16le() {
+        let haystack_str = "Hello World Hello";
+        let haystack: Vec<u8> = haystack_str
+            .encode_utf16()
+            .flat_map(|c| c.to_le_bytes())
+            .collect();
+        let results = search_text_encoded(&haystack, "Hello", "utf-16le", true, 10);
+        assert_eq!(results.len(), 2);
+    }
+
+    #[test]
+    fn test_search_text_max_results() {
+        let data = b"aaa aaa aaa aaa aaa";
+        let results = search_text_encoded(data, "aaa", "utf-8", true, 2);
+        assert_eq!(results.len(), 2);
+    }
+
+    #[test]
+    fn test_search_text_case_insensitive() {
+        let data = b"Hello hello HELLO";
+        let results = search_text_encoded(data, "hello", "utf-8", false, 10);
+        assert!(results.len() >= 2);
+    }
+
+    #[test]
+    fn test_unsupported_encoding() {
+        let result = decode_text(b"test", "unknown-encoding-xyz");
+        assert!(result.is_err());
+        if let Err(EncodingError::UnsupportedEncoding(name)) = result {
+            assert_eq!(name, "unknown-encoding-xyz");
+        }
+    }
+
+    #[test]
+    fn test_case_insensitive_encoding_name() {
+        let data = b"Hello";
+        assert!(decode_text(data, "UTF-8").is_ok());
+        assert!(decode_text(data, "Utf-8").is_ok());
+        assert!(decode_text(data, "ASCII").is_ok());
+    }
+
+    #[test]
+    fn test_search_empty_text() {
+        let data = b"Hello";
+        let results = search_text_encoded(data, "", "utf-8", true, 10);
+        assert!(results.is_empty());
+    }
+}

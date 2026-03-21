@@ -1,0 +1,254 @@
+    Checking intellicrack-hexcore v0.1.0 (D:\Intellicrack\src\intellicrack-hexcore)
+warning: unnecessary parentheses around block return value
+   --> src\search.rs:385:13
+    |
+385 |             ((shifted as i64) >> 40)
+    |             ^                      ^
+    |
+    = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+help: remove these parentheses
+    |
+385 -             ((shifted as i64) >> 40)
+385 +             (shifted as i64) >> 40 
+    |
+
+warning: manual `RangeInclusive::contains` implementation
+   --> src\data_inspector.rs:178:41
+    |
+178 |         if month >= 1 && month <= 12 && day >= 1 && day <= 31 && year <= 2107 {
+    |                                         ^^^^^^^^^^^^^^^^^^^^^ help: use: `(1..=31).contains(&day)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#manual_range_contains
+    = note: `#[warn(clippy::manual_range_contains)]` on by default
+
+warning: manual `RangeInclusive::contains` implementation
+   --> src\data_inspector.rs:178:12
+    |
+178 |         if month >= 1 && month <= 12 && day >= 1 && day <= 31 && year <= 2107 {
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^ help: use: `(1..=12).contains(&month)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#manual_range_contains
+
+warning: manually reimplementing `div_ceil`
+  --> src\diff.rs:42:22
+   |
+42 |     let num_blocks = (min_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
+   |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: consider using `.div_ceil()`: `min_len.div_ceil(BLOCK_SIZE)`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#manual_div_ceil
+   = note: `#[warn(clippy::manual_div_ceil)]` on by default
+
+warning: manual `RangeInclusive::contains` implementation
+   --> src\entropy.rs:164:8
+    |
+164 |     if entropy >= 4.5 && entropy <= 7.0 {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: use: `(4.5..=7.0).contains(&entropy)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#manual_range_contains
+
+warning: this `if` has identical blocks
+   --> src\piece_table.rs:201:45
+    |
+201 |           if start_piece_idx == end_piece_idx {
+    |  _____________________________________________^
+202 | |             let piece = &self.pieces[end_piece_idx];
+203 | |             if end_inner < piece.length {
+204 | |                 new_pieces.push(Piece {
+...   |
+210 | |         } else {
+    | |_________^
+    |
+note: same as this
+   --> src\piece_table.rs:210:16
+    |
+210 |           } else {
+    |  ________________^
+211 | |             let piece = &self.pieces[end_piece_idx];
+212 | |             if end_inner < piece.length {
+213 | |                 new_pieces.push(Piece {
+...   |
+219 | |         }
+    | |_________^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#if_same_then_else
+    = note: `#[warn(clippy::if_same_then_else)]` on by default
+
+warning: manual implementation of `.is_multiple_of()`
+   --> src\search.rs:131:8
+    |
+131 |     if nibbles.len() % 2 != 0 {
+    |        ^^^^^^^^^^^^^^^^^^^^^^ help: replace with: `!nibbles.len().is_multiple_of(2)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#manual_is_multiple_of
+    = note: `#[warn(clippy::manual_is_multiple_of)]` on by default
+
+warning: this `if` has identical blocks
+   --> src\search.rs:247:31
+    |
+247 |               if case_sensitive {
+    |  _______________________________^
+248 | |                 search_text.as_bytes().to_vec()
+249 | |             } else {
+    | |_____________^
+    |
+note: same as this
+   --> src\search.rs:249:20
+    |
+249 |               } else {
+    |  ____________________^
+250 | |                 search_text.as_bytes().to_vec()
+251 | |             }
+    | |_____________^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#if_same_then_else
+
+warning: manual `!RangeInclusive::contains` implementation
+   --> src\search.rs:405:20
+    |
+405 |                 if value < -8_388_608 || value > 8_388_607 {
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: use: `!(-8_388_608..=8_388_607).contains(&value)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#manual_range_contains
+
+warning: this function has too many arguments (8/7)
+   --> src\search.rs:678:1
+    |
+678 | / pub fn search_numeric_range(
+679 | |     data: &[u8],
+680 | |     min_val: i64,
+681 | |     max_val: i64,
+...   |
+686 | |     max_results: usize,
+687 | | ) -> Vec<SearchResult> {
+    | |______________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#too_many_arguments
+    = note: `#[warn(clippy::too_many_arguments)]` on by default
+
+warning: manual implementation of `.is_multiple_of()`
+   --> src\transforms.rs:203:21
+    |
+203 |     let padded = if data.len() % 16 != 0 {
+    |                     ^^^^^^^^^^^^^^^^^^^^ help: replace with: `!data.len().is_multiple_of(16)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#manual_is_multiple_of
+
+warning: manually reimplementing `div_ceil`
+   --> src\transforms.rs:210:18
+    |
+210 |         p.resize(((data.len() + 15) / 16) * 16, 0);
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^ help: consider using `.div_ceil()`: `data.len().div_ceil(16)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#manual_div_ceil
+
+warning: this function has too many arguments (8/7)
+   --> src\lib.rs:576:5
+    |
+576 | /     fn search_numeric(
+577 | |         &self,
+578 | |         py: Python<'_>,
+579 | |         value: i64,
+...   |
+584 | |         max_results: usize,
+585 | |     ) -> Vec<(usize, usize)> {
+    | |____________________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (8/7)
+   --> src\lib.rs:593:5
+    |
+593 | /     fn search_numeric_float(
+594 | |         &self,
+595 | |         py: Python<'_>,
+596 | |         value: f64,
+...   |
+601 | |         max_results: usize,
+602 | |     ) -> Vec<(usize, usize)> {
+    | |____________________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (9/7)
+   --> src\lib.rs:610:5
+    |
+610 | /     fn search_numeric_range(
+611 | |         &self,
+612 | |         py: Python<'_>,
+613 | |         min_val: i64,
+...   |
+619 | |         max_results: usize,
+620 | |     ) -> Vec<(usize, usize)> {
+    | |____________________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (10/7)
+   --> src\lib.rs:628:5
+    |
+628 | /     fn compute_hash_custom_crc(
+629 | |         &self,
+630 | |         py: Python<'_>,
+631 | |         start: usize,
+...   |
+638 | |         xorout: u64,
+639 | |     ) -> PyResult<String> {
+    | |_________________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#too_many_arguments
+
+warning: `intellicrack-hexcore` (lib) generated 16 warnings (run `cargo clippy --fix --lib -p intellicrack-hexcore` to apply 9 suggestions)
+warning: unused import: `StructTemplate`
+   --> src\templates\eval.rs:885:56
+    |
+885 |     use crate::templates::{FieldDefinition, FieldType, StructTemplate};
+    |                                                        ^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+error: approximate value of `f{32, 64}::consts::PI` found
+   --> src\data_inspector.rs:464:24
+    |
+464 |         let val: f32 = 3.14;
+    |                        ^^^^
+    |
+    = help: consider using the constant directly
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#approx_constant
+    = note: `#[deny(clippy::approx_constant)]` on by default
+
+error: approximate value of `f{32, 64}::consts::PI` found
+   --> src\data_inspector.rs:471:27
+    |
+471 |         assert!((parsed - 3.14).abs() < 0.001);
+    |                           ^^^^
+    |
+    = help: consider using the constant directly
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#approx_constant
+
+warning: useless conversion to the same type: `std::vec::Vec<u8>`
+   --> src\data_inspector.rs:602:24
+    |
+602 |         let mut data = Vec::from(encoded);
+    |                        ^^^^^^^^^^^^^^^^^^ help: consider removing `Vec::from()`: `encoded`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#useless_conversion
+    = note: `#[warn(clippy::useless_conversion)]` on by default
+
+error: approximate value of `f{32, 64}::consts::PI` found
+   --> src\search.rs:926:24
+    |
+926 |         let val: f32 = 3.14;
+    |                        ^^^^
+    |
+    = help: consider using the constant directly
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#approx_constant
+
+error: approximate value of `f{32, 64}::consts::PI` found
+   --> src\search.rs:929:51
+    |
+929 |         let results = search_numeric_float(&data, 3.14, 4, false, 0.001, 1, 100);
+    |                                                   ^^^^
+    |
+    = help: consider using the constant directly
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#approx_constant
+
+warning: `intellicrack-hexcore` (lib test) generated 18 warnings (16 duplicates)
+error: could not compile `intellicrack-hexcore` (lib test) due to 4 previous errors; 18 warnings emitted

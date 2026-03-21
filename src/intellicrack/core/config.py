@@ -30,7 +30,7 @@ def get_project_root() -> Path:
     """Compute the project root directory from this file's location.
 
     Returns:
-        Path to the repository root (parent of ``src/``).
+        Path: Path to the repository root (parent of ``src/``).
     """
     return Path(__file__).resolve().parents[3]
 
@@ -39,7 +39,7 @@ def get_config_dir() -> Path:
     """Return the project-local configuration directory.
 
     Returns:
-        Path to ``<project_root>/.intellicrack/``.
+        Path: Path to ``<project_root>/.intellicrack/``.
     """
     return get_project_root() / ".intellicrack"
 
@@ -51,7 +51,7 @@ def get_config_file(filename: str) -> Path:
         filename: Name of the configuration file (e.g. ``"providers.json"``).
 
     Returns:
-        Path to ``<project_root>/.intellicrack/<filename>``.
+        Path: Path to ``<project_root>/.intellicrack/<filename>``.
     """
     return get_config_dir() / filename
 
@@ -170,7 +170,7 @@ def _default_providers() -> dict[ProviderName, ProviderConfig]:
     """Create default provider configurations.
 
     Returns:
-        Dictionary mapping provider names to their default configurations.
+        dict[ProviderName, ProviderConfig]: Dictionary mapping provider names to their default configurations.
     """
     return {
         ProviderName.ANTHROPIC: ProviderConfig(
@@ -213,7 +213,7 @@ def _default_tools() -> dict[ToolName, ToolConfig]:
     """Create default tool configurations.
 
     Returns:
-        Dictionary mapping tool names to their default configurations.
+        dict[ToolName, ToolConfig]: Dictionary mapping tool names to their default configurations.
     """
     return {
         ToolName.GHIDRA: ToolConfig(
@@ -290,7 +290,7 @@ class Config:
             path: Path to the TOML configuration file.
 
         Returns:
-            Loaded Config instance with defaults for missing values.
+            Config: Loaded Config instance with defaults for missing values.
         """
         _logger.debug("config_load_started", path=str(path))
         with path.open("rb") as f:
@@ -313,7 +313,7 @@ class Config:
             general: Dictionary with general configuration values.
 
         Returns:
-            Tuple of (tools_dir, logs_dir, data_dir, default_provider, confirmation_level).
+            tuple[Path, Path, Path, ProviderName, ConfirmationLevel]: Tuple of (tools_dir, logs_dir, data_dir, default_provider, confirmation_level).
         """
         root = get_project_root()
         tools_dir = Path(general.get("tools_directory", str(root / "tools")))
@@ -352,7 +352,7 @@ class Config:
             providers_data: Dictionary with provider configuration values.
 
         Returns:
-            Dictionary mapping provider names to their configurations.
+            dict[ProviderName, ProviderConfig]: Dictionary mapping provider names to their configurations.
         """
         providers = _default_providers()
         for name_str, prov_data in providers_data.items():
@@ -381,7 +381,7 @@ class Config:
             tools_data: Dictionary with tool configuration values.
 
         Returns:
-            Dictionary mapping tool names to their configurations.
+            dict[ToolName, ToolConfig]: Dictionary mapping tool names to their configurations.
         """
         tools = _default_tools()
         for name_str, tool_data in tools_data.items():
@@ -413,7 +413,7 @@ class Config:
             data: Full configuration dictionary.
 
         Returns:
-            Tuple of (sandbox, ui, session, log) configurations.
+            tuple[SandboxConfig, UIConfig, SessionConfig, LogConfig]: Tuple of (sandbox, ui, session, log) configurations.
         """
         sandbox_data = data.get("sandbox", {})
         sandbox = SandboxConfig(
@@ -459,7 +459,7 @@ class Config:
             data: Dictionary with configuration values.
 
         Returns:
-            Config instance with values from dict and defaults for missing.
+            Config: Config instance with values from dict and defaults for missing.
         """
         general = data.get("general", {})
         tools_dir, logs_dir, data_dir, default_provider, confirmation_level = cls._parse_general(general)
@@ -507,7 +507,7 @@ class Config:
         """Convert Config to dictionary for TOML serialization.
 
         Returns:
-            Dictionary representation of the configuration.
+            dict[str, Any]: Dictionary representation of the configuration.
         """
         data: dict[str, Any] = {
             "general": {
@@ -578,7 +578,7 @@ class Config:
         """Create default configuration.
 
         Returns:
-            Config instance with all default values.
+            Config: Config instance with all default values.
         """
         return cls()
 
@@ -598,7 +598,7 @@ class Config:
             provider: The provider to get configuration for.
 
         Returns:
-            ProviderConfig for the specified provider.
+            ProviderConfig: ProviderConfig for the specified provider.
         """
         return self.providers.get(provider, ProviderConfig())
 
@@ -609,7 +609,7 @@ class Config:
             tool: The tool to get configuration for.
 
         Returns:
-            ToolConfig for the specified tool.
+            ToolConfig: ToolConfig for the specified tool.
         """
         return self.tools.get(tool, ToolConfig())
 
@@ -620,7 +620,7 @@ class Config:
             provider: The provider to check.
 
         Returns:
-            True if the provider is enabled.
+            bool: True if the provider is enabled.
         """
         config = self.get_provider_config(provider)
         return config.enabled
@@ -632,7 +632,7 @@ class Config:
             tool: The tool to check.
 
         Returns:
-            True if the tool is enabled.
+            bool: True if the tool is enabled.
         """
         config = self.get_tool_config(tool)
         return config.enabled

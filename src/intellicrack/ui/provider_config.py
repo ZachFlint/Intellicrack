@@ -124,16 +124,17 @@ class CredentialSourceDetector:
 
     Identifies whether API credentials came from a .env file, environment
     variables, manual configuration, or are not configured at all.
+
+    Args:
+        config_path: Path to the saved configuration file.
+
+    Attributes:
+        ENV_VAR_MAPPING: Mapping of provider names to their API key environment variable names.
     """
 
     ENV_VAR_MAPPING: ClassVar[dict[str, str]] = get_api_key_env_var_mapping()
 
     def __init__(self, config_path: Path) -> None:
-        """Initialize the credential source detector.
-
-        Args:
-            config_path: Path to the saved configuration file.
-        """
         self._config_path = config_path
         self._env_file_vars: set[str] = set()
         self._load_env_file_vars()
@@ -170,7 +171,7 @@ class CredentialSourceDetector:
             current_key: The currently configured API key.
 
         Returns:
-            Credential source string from CredentialSource constants.
+            str: Credential source string from CredentialSource constants.
         """
         if not current_key:
             return CredentialSource.NOT_CONFIGURED
@@ -205,7 +206,7 @@ class CredentialSourceDetector:
             source: The credential source string.
 
         Returns:
-            QColor for the source indicator.
+            QColor: QColor for the source indicator.
         """
         color_map = {
             CredentialSource.ENV_FILE: QColor(34, 139, 34),
@@ -221,6 +222,12 @@ class ConnectionTestWorker(QThread):
 
     Runs connection tests in a separate thread to avoid blocking the UI.
 
+    Args:
+        provider_id: The provider identifier.
+        api_key: The API key to test.
+        api_base: Optional API base URL.
+        parent: Parent widget.
+
     Attributes:
         test_finished: Signal emitted when test completes with (success, message).
     """
@@ -234,14 +241,6 @@ class ConnectionTestWorker(QThread):
         api_base: str | None = None,
         parent: QWidget | None = None,
     ) -> None:
-        """Initialize the connection test worker.
-
-        Args:
-            provider_id: The provider identifier.
-            api_key: The API key to test.
-            api_base: Optional API base URL.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._provider_id = provider_id
         self._api_key = api_key
@@ -260,7 +259,7 @@ class ConnectionTestWorker(QThread):
         """Test the connection to the provider.
 
         Returns:
-            Tuple of (success, message).
+            tuple[bool, str]: Tuple of (success, message).
         """
         timeout = httpx.Timeout(10.0)
 
@@ -285,7 +284,7 @@ class ConnectionTestWorker(QThread):
             timeout: HTTP timeout configuration.
 
         Returns:
-            Tuple of (success, message).
+            tuple[bool, str]: Tuple of (success, message).
         """
         base_url = (self._api_base or "https://api.anthropic.com").rstrip("/")
         try:
@@ -316,7 +315,7 @@ class ConnectionTestWorker(QThread):
             timeout: HTTP timeout configuration.
 
         Returns:
-            Tuple of (success, message).
+            tuple[bool, str]: Tuple of (success, message).
         """
         base_url = self._api_base or "https://api.openai.com/v1"
         try:
@@ -344,7 +343,7 @@ class ConnectionTestWorker(QThread):
             timeout: HTTP timeout configuration.
 
         Returns:
-            Tuple of (success, message).
+            tuple[bool, str]: Tuple of (success, message).
         """
         try:
             with httpx.Client(timeout=timeout) as client:
@@ -371,7 +370,7 @@ class ConnectionTestWorker(QThread):
             timeout: HTTP timeout configuration.
 
         Returns:
-            Tuple of (success, message).
+            tuple[bool, str]: Tuple of (success, message).
         """
         base_url = self._api_base or "http://localhost:11434"
         try:
@@ -394,7 +393,7 @@ class ConnectionTestWorker(QThread):
             timeout: HTTP timeout configuration.
 
         Returns:
-            Tuple of (success, message).
+            tuple[bool, str]: Tuple of (success, message).
         """
         base_url = self._api_base or "https://openrouter.ai/api/v1"
         try:
@@ -422,7 +421,7 @@ class ConnectionTestWorker(QThread):
             timeout: HTTP timeout configuration.
 
         Returns:
-            Tuple of (success, message).
+            tuple[bool, str]: Tuple of (success, message).
         """
         try:
             with httpx.Client(timeout=timeout) as client:
@@ -447,6 +446,13 @@ class ConnectionTestWorker(QThread):
 class ModelRefreshWorker(QThread):
     """Worker thread for refreshing model lists from provider APIs.
 
+    Args:
+        provider_id: The provider identifier.
+        api_key: The API key for authentication.
+        api_base: Optional API base URL.
+        provider: Optional connected provider instance for direct model listing.
+        parent: Parent widget.
+
     Attributes:
         refresh_finished: Signal emitted when refresh completes with (success, models, message).
     """
@@ -461,15 +467,6 @@ class ModelRefreshWorker(QThread):
         provider: LLMProviderBase | None = None,
         parent: QWidget | None = None,
     ) -> None:
-        """Initialize the model refresh worker.
-
-        Args:
-            provider_id: The provider identifier.
-            api_key: The API key for authentication.
-            api_base: Optional API base URL.
-            provider: Optional connected provider instance for direct model listing.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._provider_id = provider_id
         self._api_key = api_key
@@ -489,7 +486,7 @@ class ModelRefreshWorker(QThread):
         """Fetch available models from the provider API.
 
         Returns:
-            Tuple of (success, model_list, message).
+            tuple[bool, list[str], str]: Tuple of (success, model_list, message).
         """
         if self._provider is not None and self._provider.is_connected:
             try:
@@ -526,7 +523,7 @@ class ModelRefreshWorker(QThread):
             timeout: HTTP request timeout configuration.
 
         Returns:
-            Tuple of (success, model_list, message).
+            tuple[bool, list[str], str]: Tuple of (success, model_list, message).
         """
         if not self._api_key:
             return False, [], "No Anthropic API key configured"
@@ -582,7 +579,7 @@ class ModelRefreshWorker(QThread):
             timeout: HTTP timeout configuration.
 
         Returns:
-            Tuple of (success, model_list, message).
+            tuple[bool, list[str], str]: Tuple of (success, model_list, message).
         """
         base_url = self._api_base or "https://api.openai.com/v1"
         try:
@@ -625,7 +622,7 @@ class ModelRefreshWorker(QThread):
             timeout: HTTP timeout configuration.
 
         Returns:
-            Tuple of (success, model_list, message).
+            tuple[bool, list[str], str]: Tuple of (success, model_list, message).
         """
         try:
             with httpx.Client(timeout=timeout) as client:
@@ -653,7 +650,7 @@ class ModelRefreshWorker(QThread):
             timeout: HTTP timeout configuration.
 
         Returns:
-            Tuple of (success, model_list, message).
+            tuple[bool, list[str], str]: Tuple of (success, model_list, message).
         """
         base_url = self._api_base or "http://localhost:11434"
         try:
@@ -675,7 +672,7 @@ class ModelRefreshWorker(QThread):
             timeout: HTTP timeout configuration.
 
         Returns:
-            Tuple of (success, model_list, message).
+            tuple[bool, list[str], str]: Tuple of (success, model_list, message).
         """
         base_url = self._api_base or "https://openrouter.ai/api/v1"
         try:
@@ -704,7 +701,7 @@ class ModelRefreshWorker(QThread):
             timeout: HTTP timeout configuration.
 
         Returns:
-            Tuple of (success, model_list, message).
+            tuple[bool, list[str], str]: Tuple of (success, model_list, message).
         """
         try:
             with httpx.Client(timeout=timeout) as client:
@@ -743,6 +740,11 @@ class ProviderConfigDialog(QDialog):
     - Set active provider for analysis
     - View connection status and model counts
 
+    Args:
+        provider_registry: Registry containing provider instances.
+        model_discovery: Discovery service for model information.
+        parent: Parent widget.
+
     Attributes:
         provider_updated: Signal emitted when a provider config changes.
         active_provider_changed: Signal emitted when active provider changes.
@@ -757,13 +759,6 @@ class ProviderConfigDialog(QDialog):
         model_discovery: ModelDiscovery | None = None,
         parent: QWidget | None = None,
     ) -> None:
-        """Initialize the provider configuration dialog.
-
-        Args:
-            provider_registry: Registry containing provider instances.
-            model_discovery: Discovery service for model information.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._registry = provider_registry
         self._discovery = model_discovery
@@ -982,7 +977,7 @@ class ProviderConfigDialog(QDialog):
         """Get the name of the currently active provider.
 
         Returns:
-            Provider ID of the active provider or None.
+            str | None: Provider ID of the active provider or None.
         """
         if self._registry is None:
             return None
@@ -1001,7 +996,7 @@ class ProviderConfigDialog(QDialog):
             provider_id: The provider identifier.
 
         Returns:
-            True if the provider is connected.
+            bool: True if the provider is connected.
         """
         if self._registry is None:
             return False
@@ -1020,7 +1015,7 @@ class ProviderConfigDialog(QDialog):
             provider_id: The provider identifier.
 
         Returns:
-            Number of available models.
+            int: Number of available models.
         """
         if self._discovery is None:
             return 0
@@ -1123,7 +1118,7 @@ class ProviderConfigDialog(QDialog):
         """Get all provider settings.
 
         Returns:
-            Dictionary mapping provider IDs to their settings.
+            dict[str, dict[str, Any]]: Dictionary mapping provider IDs to their settings.
         """
         settings: dict[str, dict[str, Any]] = {provider_id: widget.get_settings() for provider_id, widget in self._provider_widgets.items()}
         return settings
@@ -1290,6 +1285,14 @@ class ProviderSettingsWidget(QFrame):
     Displays API key input, model selection, connection settings,
     and credential source information for a specific LLM provider.
 
+    Args:
+        provider_id: The provider identifier.
+        registry: Provider registry for connection testing.
+        config_path: Path to configuration file.
+        credential_detector: Detector for credential source identification.
+        model_discovery: Discovery service for model recommendations.
+        parent: Parent widget.
+
     Attributes:
         connection_tested: Signal emitted after connection test.
     """
@@ -1305,16 +1308,6 @@ class ProviderSettingsWidget(QFrame):
         model_discovery: ModelDiscovery | None = None,
         parent: QWidget | None = None,
     ) -> None:
-        """Initialize the provider settings widget.
-
-        Args:
-            provider_id: The provider identifier.
-            registry: Provider registry for connection testing.
-            config_path: Path to configuration file.
-            credential_detector: Detector for credential source identification.
-            model_discovery: Discovery service for model recommendations.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._provider_id = provider_id
         self._registry = registry
@@ -1543,7 +1536,7 @@ class ProviderSettingsWidget(QFrame):
         """Get the display name for the provider.
 
         Returns:
-            Human-readable provider name.
+            str: Human-readable provider name.
         """
         return _PROVIDER_DISPLAY_NAMES.get(self._provider_id, self._provider_id.title())
 
@@ -1668,7 +1661,7 @@ class ProviderSettingsWidget(QFrame):
         """Load settings from the config file.
 
         Returns:
-            Dictionary of saved settings for this provider.
+            dict[str, Any]: Dictionary of saved settings for this provider.
         """
         if not self._config_path.exists():
             return {}
@@ -1844,18 +1837,16 @@ class ProviderSettingsWidget(QFrame):
         """Return the selected model, or empty string if only status text is shown.
 
         Returns:
-            Model ID string, or empty string if no real model is selected.
+            str: Model ID string, or empty string if no real model is selected.
         """
         text = self._model_combo.currentText()
-        if text.startswith(("Loading models", "No ")):
-            return ""
-        return text
+        return "" if text.startswith(("Loading models", "No ")) else text
 
     def get_settings(self) -> dict[str, Any]:
         """Get current settings as a dictionary.
 
         Returns:
-            Dictionary of current settings.
+            dict[str, Any]: Dictionary of current settings.
         """
         settings: dict[str, Any] = {
             "enabled": self._enabled_checkbox.isChecked(),
@@ -1945,7 +1936,7 @@ class ProviderSettingsWidget(QFrame):
         """Get device info for local transformer providers.
 
         Returns:
-            Device information dict or None if not applicable.
+            dict[str, object] | None: Device information dict or None if not applicable.
         """
         if self._provider_id != "local_transformers":
             return None
@@ -1982,7 +1973,7 @@ class ProviderSettingsWidget(QFrame):
             generation_id: The generation ID to look up.
 
         Returns:
-            Generation info dict or None.
+            dict[str, object] | None: Generation info dict or None.
         """
         if self._provider_id != "openrouter":
             return None
@@ -2009,7 +2000,7 @@ class ProviderSettingsWidget(QFrame):
         """Get optimal dtype for XPU inference.
 
         Returns:
-            Optimal dtype string or None.
+            str | None: Optimal dtype string or None.
         """
         if get_optimal_dtype_for_xpu is None:
             return None
@@ -2029,6 +2020,13 @@ class ModelSelectionDialog(QDialog):
     Displays available models with their capabilities and allows
     the user to select one.
 
+    Args:
+        models: List of available models.
+        current_model: Currently selected model ID.
+        provider_name: Provider identifier for discovery status lookup.
+        discovery: Discovery service for last-event status display.
+        parent: Parent widget.
+
     Attributes:
         model_selected: Signal emitted when a model is selected.
     """
@@ -2043,15 +2041,6 @@ class ModelSelectionDialog(QDialog):
         discovery: ModelDiscovery | None = None,
         parent: QWidget | None = None,
     ) -> None:
-        """Initialize the model selection dialog.
-
-        Args:
-            models: List of available models.
-            current_model: Currently selected model ID.
-            provider_name: Provider identifier for discovery status lookup.
-            discovery: Discovery service for last-event status display.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._models = models
         self._current_model = current_model
@@ -2169,7 +2158,7 @@ class ModelSelectionDialog(QDialog):
         """Get the selected model ID.
 
         Returns:
-            Selected model ID or None if nothing selected.
+            str | None: Selected model ID or None if nothing selected.
         """
         if current_item := self._model_list.currentItem():
             model: ModelInfo = current_item.data(Qt.ItemDataRole.UserRole)

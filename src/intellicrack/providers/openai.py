@@ -84,14 +84,9 @@ class OpenAIProvider(LLMProviderBase):
 
     Provides integration with OpenAI's GPT models including
     support for tool/function calling and streaming responses.
-
-    Attributes:
-        _client: The async OpenAI client instance.
-        _current_task: Reference to any in-flight async task.
     """
 
     def __init__(self) -> None:
-        """Initialize the OpenAI provider."""
         super().__init__()
         self._client: openai.AsyncOpenAI | None = None
         self._current_task: asyncio.Task[object] | None = None
@@ -102,7 +97,7 @@ class OpenAIProvider(LLMProviderBase):
         """Get the provider's name.
 
         Returns:
-            ProviderName.OPENAI
+            ProviderName: ProviderName.OPENAI
         """
         return ProviderName.OPENAI
 
@@ -167,7 +162,7 @@ class OpenAIProvider(LLMProviderBase):
             model_id: OpenAI model identifier.
 
         Returns:
-            True if the model supports chat completions.
+            bool: True if the model supports chat completions.
         """
         non_chat_prefixes = (
             "text-embedding-",
@@ -196,7 +191,7 @@ class OpenAIProvider(LLMProviderBase):
             model_id: OpenAI model identifier.
 
         Returns:
-            Estimated context window in tokens.
+            int: Estimated context window in tokens.
         """
         if model_id.startswith(("o1", "o3", "o4")):
             return 200000
@@ -214,7 +209,7 @@ class OpenAIProvider(LLMProviderBase):
             model_id: OpenAI model identifier.
 
         Returns:
-            True if the model likely supports image inputs.
+            bool: True if the model likely supports image inputs.
         """
         if model_id.startswith(("gpt-4o", "o1", "o3", "o4", "gpt-4-turbo", "gpt-4.1", "gpt-4.5")):
             return True
@@ -224,7 +219,7 @@ class OpenAIProvider(LLMProviderBase):
         """Dynamically fetch available models from OpenAI.
 
         Returns:
-            List of available GPT models.
+            list[ModelInfo]: List of available GPT models.
 
         Raises:
             ProviderError: If not connected.
@@ -292,11 +287,10 @@ class OpenAIProvider(LLMProviderBase):
             enable_cache: Whether to enable prompt caching (ignored by OpenAI).
 
         Returns:
-            Tuple of (assistant message, tool calls if any).
+            tuple[Message, list[ToolCall] | None]: Tuple of (assistant message, tool calls if any).
 
         Raises:
             ProviderError: If not connected or request fails.
-            RateLimitError: If rate limited after exhausting retries.
         """
         if not self._connected or self._client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
@@ -372,7 +366,7 @@ class OpenAIProvider(LLMProviderBase):
             tool_choice: How the model should select tools.
 
         Returns:
-            The chat completion response object.
+            ChatCompletion: The chat completion response object.
 
         Raises:
             ProviderError: If the API call fails.
@@ -438,7 +432,7 @@ class OpenAIProvider(LLMProviderBase):
             response_message: The message from the OpenAI API response.
 
         Returns:
-            List of parsed ToolCall instances.
+            list[ToolCall]: List of parsed ToolCall instances.
         """
         tool_calls: list[ToolCall] = []
         if not response_message.tool_calls:
@@ -484,7 +478,7 @@ class OpenAIProvider(LLMProviderBase):
             enable_cache: Whether to enable prompt caching (ignored by OpenAI).
 
         Yields:
-            Text chunks as they arrive.
+            str: Text chunks as they arrive.
 
         Raises:
             ProviderError: If not connected or request fails.
@@ -607,7 +601,7 @@ class OpenAIProvider(LLMProviderBase):
             messages: List of Message objects.
 
         Returns:
-            List of messages in OpenAI's format.
+            list[dict[str, object]]: List of messages in OpenAI's format.
         """
         return self._convert_messages_to_openai_format(messages)
 
@@ -622,7 +616,7 @@ class OpenAIProvider(LLMProviderBase):
             tools: List of ToolDefinition objects.
 
         Returns:
-            List of tools in OpenAI's format.
+            list[dict[str, object]]: List of tools in OpenAI's format.
         """
         openai_tools: list[dict[str, object]] = []
         for tool in tools:

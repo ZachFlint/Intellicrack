@@ -65,8 +65,8 @@ def _parse_args() -> tuple[_CLIOptions, list[str]]:
     """Parse CLI arguments into typed options.
 
     Returns:
-        Tuple of parsed CLI options and remaining arguments
-        (passed through to QApplication).
+        tuple[_CLIOptions, list[str]]: Tuple of parsed CLI options and remaining arguments
+            (passed through to QApplication).
     """
     parser = argparse.ArgumentParser(
         prog="intellicrack",
@@ -154,7 +154,7 @@ def _import_config_class() -> type[Config]:
     """Import the Config class dynamically.
 
     Returns:
-        The Config class.
+        type[Config]: The Config class.
     """
     mod = importlib.import_module("intellicrack.core.config")
     return cast("type[Config]", mod.Config)
@@ -164,7 +164,7 @@ def _import_logging_funcs() -> tuple[Callable[[str], BoundLogger], Callable[[Log
     """Import logging functions dynamically.
 
     Returns:
-        Tuple of (get_logger function, setup_logging function).
+        tuple[Callable[[str], BoundLogger], Callable[[LogConfig], None]]: Tuple of (get_logger function, setup_logging function).
     """
     mod = importlib.import_module("intellicrack.core.logging")
     return cast(
@@ -177,7 +177,7 @@ def _import_process_manager() -> type[ProcessManager]:
     """Import the ProcessManager class dynamically.
 
     Returns:
-        The ProcessManager class.
+        type[ProcessManager]: The ProcessManager class.
     """
     mod = importlib.import_module("intellicrack.core.process_manager")
     return cast("type[ProcessManager]", mod.ProcessManager)
@@ -187,7 +187,7 @@ def _import_qt_app() -> type[QApplication]:
     """Import QApplication dynamically.
 
     Returns:
-        The QApplication class.
+        type[QApplication]: The QApplication class.
     """
     mod = importlib.import_module("PyQt6.QtWidgets")
     return cast("type[QApplication]", mod.QApplication)
@@ -197,7 +197,7 @@ def _import_splash_screen() -> type[SplashScreen]:
     """Import SplashScreen dynamically.
 
     Returns:
-        The SplashScreen class.
+        type[SplashScreen]: The SplashScreen class.
     """
     mod = importlib.import_module("intellicrack.ui.dialogs")
     return cast("type[SplashScreen]", mod.SplashScreen)
@@ -207,7 +207,7 @@ def _import_theme_icon_managers() -> tuple[type[ThemeManager], type[IconManager]
     """Import theme and icon manager classes dynamically.
 
     Returns:
-        Tuple of (ThemeManager class, IconManager class).
+        tuple[type[ThemeManager], type[IconManager]]: Tuple of (ThemeManager class, IconManager class).
     """
     mod = importlib.import_module("intellicrack.ui.resources")
     return cast(
@@ -220,7 +220,7 @@ def _import_orchestrator() -> type[Orchestrator]:
     """Import the Orchestrator class dynamically.
 
     Returns:
-        The Orchestrator class.
+        type[Orchestrator]: The Orchestrator class.
     """
     mod = importlib.import_module("intellicrack.core.orchestrator")
     return cast("type[Orchestrator]", mod.Orchestrator)
@@ -230,7 +230,7 @@ def _import_session_classes() -> tuple[type[SessionManager], type[SessionStore]]
     """Import session management classes dynamically.
 
     Returns:
-        Tuple of (SessionManager class, SessionStore class).
+        tuple[type[SessionManager], type[SessionStore]]: Tuple of (SessionManager class, SessionStore class).
     """
     mod = importlib.import_module("intellicrack.core.session")
     return (
@@ -243,7 +243,7 @@ def _import_tool_registry() -> type[ToolRegistry]:
     """Import the ToolRegistry class dynamically.
 
     Returns:
-        The ToolRegistry class.
+        type[ToolRegistry]: The ToolRegistry class.
     """
     mod = importlib.import_module("intellicrack.core.tools")
     return cast("type[ToolRegistry]", mod.ToolRegistry)
@@ -253,7 +253,7 @@ def _import_credential_loader() -> type[CredentialLoader]:
     """Import the CredentialLoader class dynamically.
 
     Returns:
-        The CredentialLoader class.
+        type[CredentialLoader]: The CredentialLoader class.
     """
     mod = importlib.import_module("intellicrack.credentials.env_loader")
     return cast("type[CredentialLoader]", mod.CredentialLoader)
@@ -263,7 +263,7 @@ def _get_provider_registry() -> ProviderRegistry:
     """Get the global provider registry singleton instance.
 
     Returns:
-        The singleton ProviderRegistry instance.
+        ProviderRegistry: The singleton ProviderRegistry instance.
     """
     mod = importlib.import_module("intellicrack.providers.registry")
     get_registry = cast("Callable[[], ProviderRegistry]", mod.get_provider_registry)
@@ -274,7 +274,7 @@ def _import_main_window() -> type[MainWindow]:
     """Import the MainWindow class dynamically.
 
     Returns:
-        The MainWindow class.
+        type[MainWindow]: The MainWindow class.
     """
     mod = importlib.import_module("intellicrack.ui.app")
     return cast("type[MainWindow]", mod.MainWindow)
@@ -305,7 +305,7 @@ def _setup_qt_and_splash(
         logger: BoundLogger for error reporting.
 
     Returns:
-        Tuple of (app, splash) or None if imports failed.
+        tuple[QApplication, SplashScreen] | None: Tuple of (app, splash) or None if imports failed.
     """
     try:
         t0 = time.perf_counter()
@@ -436,7 +436,7 @@ def main() -> int:
     """Run the Intellicrack application.
 
     Returns:
-        Exit code (0 for success, non-zero for failure).
+        int: Exit code (0 for success, non-zero for failure).
     """
     config_cls = _import_config_class()
     get_logger, setup_logging = _import_logging_funcs()
@@ -504,7 +504,7 @@ def _init_script_engine(config: Config, logger: BoundLogger) -> tuple[object, ob
         logger: BoundLogger instance.
 
     Returns:
-        Tuple of (script_manager, script_validator).
+        tuple[object, object]: Tuple of (script_manager, script_validator).
     """
     script_gen_mod = importlib.import_module("intellicrack.core.script_gen")
     scripts_dir = config.data_directory / "scripts"
@@ -527,7 +527,7 @@ async def _init_model_discovery(
         logger: BoundLogger instance.
 
     Returns:
-        Tuple of (model_discovery, discovery_cache_path).
+        tuple[object, Path]: Tuple of (model_discovery, discovery_cache_path).
     """
     discovery_mod = importlib.import_module("intellicrack.providers.discovery")
     model_discovery = discovery_mod.ModelDiscovery(provider_registry)
@@ -576,7 +576,7 @@ async def _run_application(
         logger: BoundLogger instance.
 
     Returns:
-        Application exit code.
+        int: Application exit code.
     """
     splash.set_progress(10, "Loading credentials...")
     app.processEvents()

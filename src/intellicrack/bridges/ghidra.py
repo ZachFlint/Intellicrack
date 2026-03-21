@@ -82,16 +82,12 @@ class GhidraBridge(StaticAnalysisBridge):
     using the ghidra_bridge Python interface.
 
     Attributes:
-        _ghidra_path: Path to Ghidra installation.
-        _bridge: The ghidra_bridge connection.
-        _process: Ghidra headless process.
-        _binary_path: Path to loaded binary.
+        DEFAULT_PORT: TCP port for the ghidra_bridge RPC connection.
     """
 
     DEFAULT_PORT = 4768
 
     def __init__(self) -> None:
-        """Initialize the Ghidra bridge."""
         super().__init__()
         self._ghidra_path: Path | None = None
         self._bridge: object | None = None
@@ -113,7 +109,7 @@ class GhidraBridge(StaticAnalysisBridge):
         """Get the Ghidra installation path.
 
         Returns:
-            Path to Ghidra installation, or None if not set.
+            Path | None: Path to Ghidra installation, or None if not set.
         """
         return self._ghidra_path
 
@@ -131,7 +127,7 @@ class GhidraBridge(StaticAnalysisBridge):
         """Get the active Ghidra project path.
 
         Returns:
-            Path to the active Ghidra project, or None if no project is open.
+            Path | None: Path to the active Ghidra project, or None if no project is open.
         """
         return self._project_path
 
@@ -140,7 +136,7 @@ class GhidraBridge(StaticAnalysisBridge):
         """Get the tool's name.
 
         Returns:
-            ToolName.GHIDRA
+            ToolName: ToolName.GHIDRA
         """
         return ToolName.GHIDRA
 
@@ -149,7 +145,7 @@ class GhidraBridge(StaticAnalysisBridge):
         """Get tool definition for LLM function calling.
 
         Returns:
-            ToolDefinition with all available functions.
+            ToolDefinition: ToolDefinition with all available functions.
         """
         return ToolDefinition(
             tool_name=ToolName.GHIDRA,
@@ -573,8 +569,7 @@ class GhidraBridge(StaticAnalysisBridge):
             port: Bridge server port. Uses DEFAULT_PORT (4768) if not specified.
 
         Raises:
-            ToolError: If ghidra_bridge package is not installed.
-            ToolError: If connection to Ghidra fails.
+            ToolError: If ghidra_bridge is not installed or connection fails.
         """
         self._ghidra_path = tool_path
         if port is not None:
@@ -665,7 +660,7 @@ class GhidraBridge(StaticAnalysisBridge):
         """Check if Ghidra is available.
 
         Returns:
-            True if Ghidra can be used.
+            bool: True if Ghidra can be used.
         """
         if self._ghidra_path is None:
             return False
@@ -808,7 +803,7 @@ class GhidraBridge(StaticAnalysisBridge):
         """Create the Ghidra bridge startup script.
 
         Returns:
-            Path to the created script.
+            Path: Path to the created script.
         """
         script_content = f"""
 # @category: IntelliCrack
@@ -836,7 +831,7 @@ ghidra_bridge_server.GhidraBridgeServer(
             path: Path to the binary file.
 
         Returns:
-            BinaryInfo with file details.
+            BinaryInfo: BinaryInfo with file details.
 
         Raises:
             ToolError: If load fails.
@@ -899,7 +894,7 @@ ghidra_bridge_server.GhidraBridgeServer(
         """Extract entry point, sections, imports, and exports from Ghidra.
 
         Returns:
-            Tuple of (entry_point, sections, imports, exports).
+            tuple[int, list[SectionInfo], list[ImportInfo], list[ExportInfo]]: Tuple of (entry_point, sections, imports, exports).
         """
         if self._bridge is None:
             return 0, [], [], []
@@ -1049,7 +1044,7 @@ metadata
             data: Binary data.
 
         Returns:
-            Format string.
+            str: Format string.
         """
         if len(data) < _MIN_HEADER_SIZE:
             return "raw"
@@ -1068,7 +1063,7 @@ metadata
             data: Binary data.
 
         Returns:
-            Tuple of (architecture, is_64bit).
+            tuple[str, bool]: Tuple of (architecture, is_64bit).
         """
         if len(data) < _MIN_ELF_HEADER:
             return "unknown", False
@@ -1096,8 +1091,7 @@ metadata
         """Run full Ghidra analysis.
 
         Raises:
-            ToolError: If Ghidra is not connected.
-            ToolError: If analysis fails.
+            ToolError: If Ghidra is not connected or analysis fails.
         """
         if self._bridge is None:
             error_message = "Ghidra not connected"
@@ -1121,7 +1115,7 @@ metadata
             filter_pattern: Optional regex to filter names.
 
         Returns:
-            List of function information.
+            list[FunctionInfo]: List of function information.
 
         Raises:
             ToolError: If Ghidra is not connected.
@@ -1181,7 +1175,7 @@ metadata
             address: Function address.
 
         Returns:
-            Function info or None if not found.
+            FunctionInfo | None: Function info or None if not found.
 
         Raises:
             ToolError: If Ghidra is not connected.
@@ -1270,7 +1264,7 @@ metadata
             address: Function address.
 
         Returns:
-            Decompiled C pseudocode.
+            str: Decompiled C pseudocode.
 
         Raises:
             ToolError: If decompilation fails.
@@ -1318,7 +1312,7 @@ metadata
             count: Number of instructions.
 
         Returns:
-            List of disassembly lines.
+            list[DisassemblyLine]: List of disassembly lines.
 
         Raises:
             ToolError: If Ghidra is not connected.
@@ -1373,7 +1367,7 @@ metadata
             address: Target address.
 
         Returns:
-            List of cross-references.
+            list[CrossReference]: List of cross-references.
 
         Raises:
             ToolError: If Ghidra is not connected.
@@ -1420,7 +1414,7 @@ metadata
             address: Source address.
 
         Returns:
-            List of cross-references.
+            list[CrossReference]: List of cross-references.
 
         Raises:
             ToolError: If Ghidra is not connected.
@@ -1467,7 +1461,7 @@ metadata
             pattern: Regex pattern.
 
         Returns:
-            List of matching strings.
+            list[StringInfo]: List of matching strings.
 
         Raises:
             ToolError: If Ghidra is not connected.
@@ -1516,7 +1510,7 @@ metadata
             pattern: Bytes to find.
 
         Returns:
-            List of addresses.
+            list[int]: List of addresses.
 
         Raises:
             ToolError: If Ghidra is not connected.
@@ -1558,7 +1552,7 @@ metadata
             new_name: New name.
 
         Returns:
-            True if renamed.
+            bool: True if renamed.
 
         Raises:
             ToolError: If operation fails.
@@ -1599,7 +1593,7 @@ metadata
             comment_type: Type of comment.
 
         Returns:
-            True if added.
+            bool: True if added.
 
         Raises:
             ToolError: If operation fails.
@@ -1638,7 +1632,7 @@ metadata
         """Get imported functions.
 
         Returns:
-            List of imports.
+            list[ImportInfo]: List of imports.
 
         Raises:
             ToolError: If Ghidra is not connected.
@@ -1681,7 +1675,7 @@ metadata
         """Get exported functions.
 
         Returns:
-            List of exports.
+            list[ExportInfo]: List of exports.
 
         Raises:
             ToolError: If Ghidra is not connected.
@@ -1726,7 +1720,7 @@ metadata
             address: Address to check.
 
         Returns:
-            DataTypeInfo if data is defined, otherwise None.
+            DataTypeInfo | None: DataTypeInfo if data is defined, otherwise None.
 
         Raises:
             ToolError: If Ghidra is not connected.
@@ -1793,7 +1787,7 @@ metadata
             data_type: Data type name.
 
         Returns:
-            True if the data type was applied.
+            bool: True if the data type was applied.
 
         Raises:
             ToolError: If setting the data type fails.
@@ -1837,7 +1831,7 @@ metadata
             code: Jython code to execute.
 
         Returns:
-            String representation of the script result.
+            str: String representation of the script result.
         """
         _logger.debug("script_executing", code_length=len(code))
         result = await self._execute_remote(code)
@@ -1851,7 +1845,7 @@ metadata
             name: Label name.
 
         Returns:
-            Dict with address, name, and success status.
+            dict[str, Any]: Dict with address, name, and success status.
 
         Raises:
             ToolError: If Ghidra is not connected or operation fails.
@@ -1877,7 +1871,7 @@ metadata
             radius: Search radius in bytes.
 
         Returns:
-            List of label dicts with name, address, and type fields.
+            list[dict[str, Any]]: List of label dicts with name, address, and type fields.
 
         Raises:
             ToolError: If Ghidra is not connected.
@@ -1917,7 +1911,7 @@ metadata
             comment: Bookmark comment text.
 
         Returns:
-            Dict with address, category, comment, and success status.
+            dict[str, Any]: Dict with address, category, comment, and success status.
 
         Raises:
             ToolError: If Ghidra is not connected or operation fails.
@@ -1940,7 +1934,7 @@ metadata
             category: Optional category filter.
 
         Returns:
-            List of bookmark dicts with address, category, and comment.
+            list[dict[str, Any]]: List of bookmark dicts with address, category, and comment.
 
         Raises:
             ToolError: If Ghidra is not connected.
@@ -1980,7 +1974,7 @@ metadata
             name: Optional function name.
 
         Returns:
-            Dict with function info including address and name.
+            dict[str, Any]: Dict with function info including address and name.
 
         Raises:
             ToolError: If Ghidra is not connected or function creation fails.
@@ -2016,7 +2010,7 @@ metadata
             address: Function entry point address.
 
         Returns:
-            Dict with address and success status.
+            dict[str, Any]: Dict with address and success status.
 
         Raises:
             ToolError: If Ghidra is not connected or deletion fails.
@@ -2055,7 +2049,7 @@ metadata
             name: New function name.
 
         Returns:
-            Dict with updated function information.
+            dict[str, Any]: Dict with updated function information.
 
         Raises:
             ToolError: If Ghidra is not connected or modification fails.
@@ -2121,7 +2115,7 @@ metadata
             new_type: New data type name.
 
         Returns:
-            Dict with variable name, new type, and success status.
+            dict[str, Any]: Dict with variable name, new type, and success status.
 
         Raises:
             ToolError: If Ghidra is not connected or retype fails.
@@ -2168,7 +2162,7 @@ metadata
             fields: List of field definitions, each with 'name', 'type', and 'size' keys.
 
         Returns:
-            Dict with structure name, size, and field count.
+            dict[str, Any]: Dict with structure name, size, and field count.
 
         Raises:
             ToolError: If Ghidra is not connected or definition fails.
@@ -2223,7 +2217,7 @@ metadata
             filter_name: Optional substring filter for structure names.
 
         Returns:
-            List of structure dicts with name, size, and field_count.
+            list[dict[str, Any]]: List of structure dicts with name, size, and field_count.
 
         Raises:
             ToolError: If Ghidra is not connected.
@@ -2262,7 +2256,7 @@ metadata
             struct_name: Name of the structure type.
 
         Returns:
-            Dict with address, struct_name, and success status.
+            dict[str, Any]: Dict with address, struct_name, and success status.
 
         Raises:
             ToolError: If Ghidra is not connected or application fails.
@@ -2306,7 +2300,7 @@ metadata
         """Get all memory blocks with addresses, sizes, and permissions.
 
         Returns:
-            List of memory block dicts.
+            list[dict[str, Any]]: List of memory block dicts.
 
         Raises:
             ToolError: If Ghidra is not connected.
@@ -2345,7 +2339,7 @@ metadata
             depth: Maximum call depth to traverse.
 
         Returns:
-            Dict with call graph tree structure containing callers and callees.
+            dict[str, Any]: Dict with call graph tree structure containing callers and callees.
 
         Raises:
             ToolError: If Ghidra is not connected.
@@ -2419,7 +2413,7 @@ metadata
         """Get program segments with detailed permissions and attributes.
 
         Returns:
-            List of segment dicts with name, addresses, permissions, and source info.
+            list[dict[str, Any]]: List of segment dicts with name, addresses, permissions, and source info.
 
         Raises:
             ToolError: If Ghidra is not connected.
@@ -2457,7 +2451,7 @@ metadata
         """Get program metadata including language, compiler, and layout info.
 
         Returns:
-            Dict with language, compiler, endianness, pointer_size, image_base,
+            dict[str, Any]: Dict with language, compiler, endianness, pointer_size, image_base,
             and executable_format.
 
         Raises:
@@ -2499,7 +2493,7 @@ metadata
             data: Hex string of bytes (e.g. '90 90 90' or '909090').
 
         Returns:
-            Dict with address and bytes_written count.
+            dict[str, Any]: Dict with address and bytes_written count.
 
         Raises:
             ToolError: If Ghidra is not connected or write fails.
@@ -2529,7 +2523,7 @@ metadata
         """Undo the last change in Ghidra.
 
         Returns:
-            Dict with success status.
+            dict[str, Any]: Dict with success status.
 
         Raises:
             ToolError: If Ghidra is not connected or undo fails.
@@ -2554,7 +2548,7 @@ metadata
         """Redo the last undone change in Ghidra.
 
         Returns:
-            Dict with success status.
+            dict[str, Any]: Dict with success status.
 
         Raises:
             ToolError: If Ghidra is not connected or redo fails.
@@ -2582,7 +2576,7 @@ metadata
             code: Python code to execute.
 
         Returns:
-            Result of execution.
+            object: Result of execution.
 
         Raises:
             ToolError: If execution fails.

@@ -91,12 +91,7 @@ class OrchestratorConfig:
 
 @dataclass
 class PendingConfirmation:
-    """A tool call waiting for user confirmation.
-
-    Attributes:
-        call: The tool call awaiting confirmation.
-        future: Future to resolve when confirmation received.
-    """
+    """A tool call waiting for user confirmation."""
 
     call: ToolCall
     future: asyncio.Future[bool]
@@ -139,7 +134,7 @@ class OrchestratorStats:
         """Convert statistics to dictionary for reporting.
 
         Returns:
-            Dictionary containing all statistics.
+            dict[str, Any]: Dictionary containing all statistics.
         """
         return {
             "total_requests": self.total_requests,
@@ -157,14 +152,14 @@ class Orchestrator:
     Manages the conversation loop between the user, LLM, and tools.
     Coordinates tool execution and handles confirmations.
 
+    Args:
+        provider_registry: Registry of LLM providers.
+        tool_registry: Registry of tool bridges.
+        session_manager: Session state manager.
+        config: Optional configuration override.
+
     Attributes:
-        _providers: Registry of LLM providers.
-        _tools: Registry of tool bridges.
-        _sessions: Session state manager.
-        _config: Orchestrator configuration.
-        _current_session: Currently active session.
-        _state: Current orchestrator state.
-        _stats: Operation statistics.
+        DESTRUCTIVE_PATTERNS: Substrings identifying tool calls that modify state and require user confirmation.
     """
 
     DESTRUCTIVE_PATTERNS: tuple[str, ...] = (
@@ -189,14 +184,6 @@ class Orchestrator:
         session_manager: SessionManager,
         config: OrchestratorConfig | None = None,
     ) -> None:
-        """Initialize the orchestrator.
-
-        Args:
-            provider_registry: Registry of LLM providers.
-            tool_registry: Registry of tool bridges.
-            session_manager: Session state manager.
-            config: Optional configuration override.
-        """
         self._providers = provider_registry
         self._tools = tool_registry
         self._sessions = session_manager
@@ -224,7 +211,7 @@ class Orchestrator:
         """Get current orchestrator state.
 
         Returns:
-            Current state.
+            OrchestratorState: Current state.
         """
         return self._state
 
@@ -233,7 +220,7 @@ class Orchestrator:
         """Get current session.
 
         Returns:
-            Current session or None.
+            Session | None: Current session or None.
         """
         return self._current_session
 
@@ -242,7 +229,7 @@ class Orchestrator:
         """Get orchestrator statistics.
 
         Returns:
-            Statistics instance.
+            OrchestratorStats: Statistics instance.
         """
         return self._stats
 
@@ -251,7 +238,7 @@ class Orchestrator:
         """Get the provider registry.
 
         Returns:
-            The provider registry instance.
+            ProviderRegistry: The provider registry instance.
         """
         return self._providers
 
@@ -277,7 +264,7 @@ class Orchestrator:
             binary_path: Optional binary to load.
 
         Returns:
-            New session instance.
+            Session: New session instance.
 
         Raises:
             ValueError: If provider not available.
@@ -330,7 +317,7 @@ class Orchestrator:
             session_id: ID of session to load.
 
         Returns:
-            Loaded session.
+            Session: Loaded session.
 
         Raises:
             ValueError: If session not found.
@@ -359,7 +346,7 @@ class Orchestrator:
             path: Path to the binary.
 
         Returns:
-            Binary information.
+            BinaryInfo: Binary information.
         """
         _logger.debug("binary_load_started", path=str(path))
         binary_bridge = self._tools.get_binary_bridge()
@@ -431,7 +418,7 @@ class Orchestrator:
 
         Raises:
             RuntimeError: If provider is not available.
-            CancelledError: If the operation is cancelled.
+            asyncio.CancelledError: If the operation is cancelled.
         """
         if self._current_session is None:
             return
@@ -497,7 +484,7 @@ class Orchestrator:
         """Determine whether a final response is expected.
 
         Returns:
-            True if the next response is likely final.
+            bool: True if the next response is likely final.
         """
         if self._current_session is None:
             return False
@@ -509,7 +496,7 @@ class Orchestrator:
         """Build message list for LLM including system prompt.
 
         Returns:
-            List of messages with system prompt prepended.
+            list[Message]: List of messages with system prompt prepended.
         """
         if self._current_session is None:
             return []
@@ -533,7 +520,7 @@ class Orchestrator:
         """Generate system prompt for the LLM.
 
         Returns:
-            System prompt describing available tools and capabilities.
+            str: System prompt describing available tools and capabilities.
         """
         if self._current_session is None:
             return ""
@@ -736,7 +723,7 @@ class Orchestrator:
             text: Text to estimate tokens for.
 
         Returns:
-            Estimated token count.
+            int: Estimated token count.
         """
         return len(text) // 4
 
@@ -750,7 +737,7 @@ class Orchestrator:
             provider: The LLM provider to query.
 
         Returns:
-            Context window size in tokens.
+            int: Context window size in tokens.
         """
         if self._current_session is None:
             return 128000
@@ -778,7 +765,7 @@ class Orchestrator:
             context_window: Maximum context window in tokens.
 
         Returns:
-            Trimmed list of messages.
+            list[Message]: Trimmed list of messages.
         """
         budget = int(context_window * 0.85)
         total = sum(Orchestrator._estimate_tokens(m.content) for m in messages)
@@ -817,7 +804,7 @@ class Orchestrator:
             is_final_response: Whether a final response is expected.
 
         Returns:
-            Tuple of (response message, tool calls if any).
+            tuple[Message, list[ToolCall] | None]: Tuple of (response message, tool calls if any).
 
         Raises:
             RuntimeError: If no active session.
@@ -890,7 +877,7 @@ class Orchestrator:
             is_final_response: Whether a final response is expected.
 
         Returns:
-            True if streaming should be used.
+            bool: True if streaming should be used.
         """
         if not self._config.stream_responses:
             return False
@@ -926,11 +913,11 @@ class Orchestrator:
             enable_cache: Whether to enable prompt caching.
 
         Returns:
-            Tuple of (response message, tool calls if any).
+            tuple[Message, list[ToolCall] | None]: Tuple of (response message, tool calls if any).
 
         Raises:
             RuntimeError: If no active session.
-            CancelledError: If the operation is cancelled.
+            asyncio.CancelledError: If the operation is cancelled.
         """
         if self._current_session is None:
             error_message = "No active session"
@@ -993,7 +980,7 @@ class Orchestrator:
             enable_cache: Whether to enable prompt caching.
 
         Returns:
-            Tuple of (response message, tool calls if any).
+            tuple[Message, list[ToolCall] | None]: Tuple of (response message, tool calls if any).
 
         Raises:
             RuntimeError: If no active session.
@@ -1031,10 +1018,10 @@ class Orchestrator:
             tool_calls: Tool calls to execute.
 
         Returns:
-            List of tool results.
+            list[ToolResult]: List of tool results.
 
         Raises:
-            CancelledError: If the operation is cancelled.
+            asyncio.CancelledError: If the operation is cancelled.
         """
         results: list[ToolResult] = []
 
@@ -1073,7 +1060,7 @@ class Orchestrator:
             call: The tool call to execute.
 
         Returns:
-            Result of the tool execution.
+            ToolResult: Result of the tool execution.
         """
         start_time = time.time()
         self._stats.total_tool_calls += 1
@@ -1186,7 +1173,7 @@ class Orchestrator:
             call: The tool call to check.
 
         Returns:
-            True if confirmation needed.
+            bool: True if confirmation needed.
         """
         if self._config.confirmation_level == ConfirmationLevel.NONE:
             _logger.debug(
@@ -1224,7 +1211,7 @@ class Orchestrator:
             call: The tool call to check.
 
         Returns:
-            True if operation is destructive.
+            bool: True if operation is destructive.
         """
         function_lower = call.function_name.lower()
         return any(pattern in function_lower for pattern in self.DESTRUCTIVE_PATTERNS)
@@ -1236,7 +1223,7 @@ class Orchestrator:
             call: The tool call requiring confirmation.
 
         Returns:
-            True if user confirmed, False otherwise.
+            bool: True if user confirmed, False otherwise.
         """
         self._state = "waiting_confirmation"
 
@@ -1298,7 +1285,7 @@ class Orchestrator:
             run_bridge_analysis: Whether to run bridge analysis automatically.
 
         Returns:
-            Binary information.
+            BinaryInfo: Binary information.
 
         Raises:
             RuntimeError: If no active session.
@@ -1328,7 +1315,7 @@ class Orchestrator:
             binary_info: Loaded binary metadata.
 
         Returns:
-            BridgeAnalysisSummary results or None on failure.
+            BridgeAnalysisSummary | None: Aggregated results or None on failure.
         """
         log_analysis_operation("bridge_analysis", binary_info.name)
         try:
@@ -1348,7 +1335,7 @@ class Orchestrator:
             binary_name: Optional binary name; uses active binary if not specified.
 
         Returns:
-            BridgeAnalysisSummary results or None.
+            BridgeAnalysisSummary | None: Refreshed results or None on failure.
         """
         if self._current_session is None:
             return None
@@ -1473,7 +1460,7 @@ class Orchestrator:
         """Get status of all tools.
 
         Returns:
-            List of tool status dictionaries.
+            list[dict[str, Any]]: List of tool status dictionaries.
         """
         _logger.debug("tool_status_queried")
         statuses = await self._tools.get_all_status()
@@ -1493,7 +1480,7 @@ class Orchestrator:
         """Get names of all available tools.
 
         Returns:
-            List of available tool name strings.
+            list[str]: List of available tool name strings.
         """
         return [t.value for t in self._tools.get_available_tools()]
 
@@ -1504,7 +1491,7 @@ class Orchestrator:
             binary_name: Name of the binary.
 
         Returns:
-            BridgeAnalysisSummary if available, None otherwise.
+            BridgeAnalysisSummary | None: Cached results if available, None otherwise.
         """
         if self._current_session is None:
             return None
@@ -1519,7 +1506,7 @@ class Orchestrator:
             tool_name: Name of the tool bridge to retrieve.
 
         Returns:
-            Typed bridge instance or None if not available.
+            object | None: Typed bridge instance or None if not available.
         """
         getter_map: dict[str, str] = {
             "process": "get_process_bridge",
@@ -1547,7 +1534,7 @@ class Orchestrator:
             tool_name: Name of the tool to initialize.
 
         Returns:
-            True if initialization succeeded.
+            bool: True if initialization succeeded.
         """
         _logger.info("tool_initialization_requested", tool_name=str(tool_name))
         if isinstance(tool_name, str):
@@ -1575,7 +1562,7 @@ class Orchestrator:
         """Get comprehensive system status report.
 
         Returns:
-            Dictionary containing session, metrics, and tool status.
+            dict[str, Any]: Dictionary containing session, metrics, and tool status.
         """
         _logger.debug("system_status_queried")
         return {

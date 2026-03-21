@@ -52,19 +52,7 @@ _ERR_NO_XPU_DEVICES = "No XPU devices are available"
 
 @dataclass(frozen=True)
 class XPUDeviceInfo:
-    """Information about an Intel XPU device.
-
-    Attributes:
-        device_index: Index of the device (0-based).
-        device_name: Human-readable device name.
-        total_memory_bytes: Total device memory in bytes.
-        driver_version: Driver version string.
-        device_id: PCI device ID.
-        is_arc_b580: Whether this is an Arc B580 device.
-        supports_fp16: Whether device supports FP16.
-        supports_bf16: Whether device supports BF16.
-        supports_int8: Whether device supports INT8.
-    """
+    """Information about an Intel XPU device."""
 
     device_index: int
     device_name: str
@@ -81,7 +69,7 @@ def _import_torch() -> types.ModuleType | None:
     """Safely import torch with XPU support.
 
     Returns:
-        The torch module if available with XPU support, None otherwise.
+        types.ModuleType | None: The torch module if available with XPU support, None otherwise.
     """
     if _torch_module is None:
         _logger.debug("xpu_torch_import_failed", reason="torch not installed")
@@ -96,7 +84,7 @@ def is_xpu_available() -> bool:
     This function never raises exceptions - returns False on any error.
 
     Returns:
-        True if at least one XPU device is available and usable.
+        bool: True if at least one XPU device is available and usable.
     """
     torch = _import_torch()
     if torch is None:
@@ -121,7 +109,7 @@ def get_xpu_device_count() -> int:
     """Get the number of available XPU devices.
 
     Returns:
-        Number of XPU devices, 0 if XPU is not available.
+        int: Number of XPU devices, 0 if XPU is not available.
     """
     torch = _import_torch()
     if torch is None:
@@ -145,7 +133,7 @@ def _get_device_name_from_sycl(device_index: int) -> str:
         device_index: Index of the device.
 
     Returns:
-        Device name string or empty string if unavailable.
+        str: Device name string or empty string if unavailable.
     """
     torch = _import_torch()
     if torch is None:
@@ -168,7 +156,7 @@ def _get_windows_gpu_info() -> list[dict[str, str]]:
     """Get GPU information on Windows using WMI.
 
     Returns:
-        List of dictionaries with GPU information.
+        list[dict[str, str]]: List of dictionaries with GPU information.
     """
     if platform.system() != "Windows":
         return []
@@ -216,7 +204,7 @@ def _parse_device_id_from_pnp(pnp_id: str) -> str:
         pnp_id: PNP device ID string (e.g., PCI\VEN_8086&DEV_E20B...).
 
     Returns:
-        Extracted device ID or empty string.
+        str: Extracted device ID or empty string.
     """
     if match := re.search(r"DEV_([0-9A-Fa-f]{4})", pnp_id):
         return match[1].lower()
@@ -230,7 +218,7 @@ def get_xpu_device_info(device_index: int) -> XPUDeviceInfo | None:
         device_index: Index of the XPU device (0-based).
 
     Returns:
-        XPUDeviceInfo containing device details, or None if unavailable.
+        XPUDeviceInfo | None: XPUDeviceInfo containing device details, or None if unavailable.
     """
     torch = _import_torch()
     if torch is None:
@@ -304,7 +292,7 @@ def _estimate_memory_from_name(device_name: str) -> int:
         device_name: Device name string.
 
     Returns:
-        Estimated memory in bytes.
+        int: Estimated memory in bytes.
     """
     name_lower = device_name.lower()
     estimated: int
@@ -336,7 +324,7 @@ def _is_b580_device(device_name: str, device_id: str) -> bool:
         device_id: PCI device ID.
 
     Returns:
-        True if device is an Arc B580.
+        bool: True if device is an Arc B580.
     """
     result = device_id.lower() in {"e20b", "0xe20b"} or "b580" in device_name.lower()
     _logger.debug(
@@ -352,7 +340,7 @@ def is_arc_b580() -> bool:
     """Check if an Intel Arc B580 is available.
 
     Returns:
-        True if at least one Arc B580 device is detected.
+        bool: True if at least one Arc B580 device is detected.
     """
     if not is_xpu_available():
         _logger.debug("xpu_b580_check_skipped", reason="xpu not available")
@@ -376,7 +364,7 @@ def initialize_xpu(device_index: int = 0) -> torch.device:
         device_index: Index of the XPU device to use.
 
     Returns:
-        A torch.device configured for the specified XPU.
+        torch.device: Device configured for the specified XPU index.
 
     Raises:
         RuntimeError: If XPU initialization fails.
@@ -435,7 +423,7 @@ def get_xpu_memory_info(device_index: int = 0) -> tuple[int, int]:
         device_index: Index of the XPU device.
 
     Returns:
-        Tuple of (allocated_bytes, total_bytes).
+        tuple[int, int]: Tuple of (allocated_bytes, total_bytes).
     """
     torch = _import_torch()
     if torch is None:
@@ -494,7 +482,7 @@ def check_windows_requirements() -> tuple[bool, list[str]]:
     - Resizable BAR (ReBAR) status
 
     Returns:
-        Tuple of (all_requirements_met, list_of_warning_messages).
+        tuple[bool, list[str]]: Tuple of (all_requirements_met, list_of_warning_messages).
     """
     if platform.system() != "Windows":
         _logger.debug("xpu_windows_check_skipped", platform=platform.system())
@@ -532,7 +520,7 @@ def _check_intel_driver() -> tuple[bool, str]:
     """Check Intel GPU driver status.
 
     Returns:
-        Tuple of (driver_ok, warning_message).
+        tuple[bool, str]: Tuple of (driver_ok, warning_message).
     """
     _logger.debug("xpu_driver_check_started")
     try:
@@ -561,7 +549,7 @@ def _check_rebar_status() -> tuple[bool, str]:
     """Check Resizable BAR status.
 
     Returns:
-        Tuple of (rebar_enabled, warning_message).
+        tuple[bool, str]: Tuple of (rebar_enabled, warning_message).
     """
     _logger.debug("xpu_rebar_check_started")
     try:
@@ -594,7 +582,7 @@ def get_optimal_dtype_for_xpu() -> str:
     Intel Arc B580 supports FP16 and BF16, but not FP64 on Windows.
 
     Returns:
-        String dtype name ("float16", "bfloat16", or "float32").
+        str: String dtype name ("float16", "bfloat16", or "float32").
     """
     _logger.debug("xpu_dtype_detection_started")
     torch = _import_torch()

@@ -1,6 +1,20 @@
 file,line,rule,description
-tests\test_providers\test_message_conversion.py,120,simplify-str-len-comparison,Simplify comparison to string length
-tests\test_providers\test_message_conversion.py,120,simplify-empty-collection-comparison,Replaces an empty collection equality with a boolean operation
-tests\test_ui\test_binary_panel_fixes.py,54,remove-redundant-slice-index,Replace a[0:x] with a[:x] and a with a
-tests\test_ui\test_binary_panel_fixes.py,80,remove-redundant-slice-index,Replace a[0:x] with a[:x] and a with a
-tests\test_ui\test_binary_panel_fixes.py,94,remove-redundant-slice-index,Replace a[0:x] with a[:x] and a with a
+tests\test_bridges\test_frida_bridge.py,245,simplify-empty-collection-comparison,Replaces an empty collection equality with a boolean operation
+tests\test_bridges\test_frida_bridge.py,592,simplify-boolean-comparison,Simplify comparison to boolean
+tests\test_bridges\test_frida_bridge.py,616,simplify-boolean-comparison,Simplify comparison to boolean
+tests\test_bridges\test_frida_bridge.py,633,simplify-str-len-comparison,Simplify comparison to string length
+tests\test_bridges\test_frida_bridge.py,660,simplify-len-comparison,Simplify sequence length comparison
+tests\test_bridges\test_frida_bridge.py,672,simplify-len-comparison,Simplify sequence length comparison
+tests\test_bridges\test_schemas.py,277,simplify-len-comparison,Simplify sequence length comparison
+tests\test_bridges\test_schemas.py,284,simplify-len-comparison,Simplify sequence length comparison
+tests\test_bridges\test_schemas.py,318,simplify-len-comparison,Simplify sequence length comparison
+tests\test_bridges\test_schemas.py,465,simplify-len-comparison,Simplify sequence length comparison
+tests\test_core\test_logging.py,75,dict-assign-update-to-union,Merge dictionary updates via the union operator
+tests\test_core\test_logging.py,66,dict-assign-update-to-union,Merge dictionary updates via the union operator
+tests\test_core\test_script_gen.py,273,dict-assign-update-to-union,Merge dictionary updates via the union operator
+tests\test_core\test_script_gen.py,266,dict-assign-update-to-union,Merge dictionary updates via the union operator
+tests\test_ui\test_vnc_widget.py,329,simplify-len-comparison,Simplify sequence length comparison
+tests\test_ui\test_win32_embed.py,118,simplify-len-comparison,Simplify sequence length comparison
+tests\test_ui\test_win32_embed.py,139,simplify-len-comparison,Simplify sequence length comparison
+tests\test_ui\test_graph_view.py:220-220 simplify-constant-sum                 
+

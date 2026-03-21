@@ -50,7 +50,7 @@ def validate_file_operation(op: str) -> FileOperation:
         op: The operation string to validate.
 
     Returns:
-        A valid FileOperation literal.
+        FileOperation: A valid FileOperation literal.
     """
     op_lower = op.lower()
     if op_lower in {"created", "create", "add", "new"}:
@@ -69,7 +69,7 @@ def validate_registry_operation(op: str) -> RegistryOperation:
         op: The operation string to validate.
 
     Returns:
-        A valid RegistryOperation literal.
+        RegistryOperation: A valid RegistryOperation literal.
     """
     op_lower = op.lower()
     if op_lower in {"created", "create", "add", "new", "setvalue"}:
@@ -88,7 +88,7 @@ def validate_process_operation(op: str) -> ProcessOperation:
         op: The operation string to validate.
 
     Returns:
-        A valid ProcessOperation literal.
+        ProcessOperation: A valid ProcessOperation literal.
     """
     op_lower = op.lower()
     if op_lower in {"created", "create", "start", "spawn", "launched"}:
@@ -204,11 +204,11 @@ class ExecutionReport:
     """Report of a binary execution in the sandbox.
 
     Attributes:
-        result: Execution result status.
+        result: Outcome of the execution.
         exit_code: Process exit code.
-        stdout: Standard output.
-        stderr: Standard error.
-        duration_seconds: Execution duration.
+        stdout: Standard output captured from the binary.
+        stderr: Standard error captured from the binary.
+        duration_seconds: Total execution duration in seconds.
         file_changes: File system changes detected.
         registry_changes: Registry changes detected.
         network_activity: Network activity detected.
@@ -232,17 +232,11 @@ class SandboxBase:
     Provides common functionality for all sandbox types.
     Subclasses should override methods to provide actual sandbox functionality.
 
-    Attributes:
-        _config: Sandbox configuration.
-        _state: Current sandbox state.
+    Args:
+        config: Optional sandbox configuration.
     """
 
     def __init__(self, config: SandboxConfig | None = None) -> None:
-        """Initialize the sandbox.
-
-        Args:
-            config: Optional sandbox configuration.
-        """
         self._config = config or SandboxConfig()
         self._state = SandboxState()
 
@@ -251,7 +245,7 @@ class SandboxBase:
         """Get current sandbox state.
 
         Returns:
-            Current SandboxState.
+            SandboxState: Current SandboxState.
         """
         return self._state
 
@@ -260,7 +254,7 @@ class SandboxBase:
         """Get sandbox configuration.
 
         Returns:
-            Current SandboxConfig.
+            SandboxConfig: Current SandboxConfig.
         """
         return self._config
 
@@ -269,7 +263,7 @@ class SandboxBase:
         """Get the VNC port if available.
 
         Returns:
-            VNC port number, or None if not supported.
+            int | None: VNC port number, or None if not supported.
         """
         return None
 
@@ -277,7 +271,7 @@ class SandboxBase:
         """Check if this sandbox type is available.
 
         Returns:
-            True if sandbox can be used.
+            bool: True if sandbox can be used.
         """
         _logger.debug("base_sandbox_is_available_called", class_name=type(self).__name__)
         return False
@@ -327,8 +321,8 @@ class SandboxBase:
             timeout: Optional timeout override.
             working_directory: Optional working directory.
 
-        Note:
-            Subclasses must override to return tuple of (exit_code, stdout, stderr).
+        Returns:
+            tuple[int, str, str]: Tuple of (exit_code, stdout, stderr).
 
         Raises:
             SandboxError: If execution fails.
@@ -359,8 +353,8 @@ class SandboxBase:
             timeout: Optional timeout override.
             monitor: Whether to monitor behavior.
 
-        Note:
-            Subclasses must override to return ExecutionReport with results and activity.
+        Returns:
+            ExecutionReport: ExecutionReport with results and activity.
 
         Raises:
             SandboxError: If execution fails.
@@ -424,8 +418,8 @@ class SandboxBase:
         Args:
             name: Snapshot name.
 
-        Note:
-            Subclasses must override to return the snapshot identifier.
+        Returns:
+            str: The snapshot identifier.
 
         Raises:
             SandboxError: If not supported.
@@ -455,6 +449,9 @@ class SandboxBase:
 
     async def list_snapshots(self) -> list[str]:
         """List available snapshots.
+
+        Returns:
+            list[str]: List of snapshot names.
 
         Raises:
             SandboxError: If not supported.

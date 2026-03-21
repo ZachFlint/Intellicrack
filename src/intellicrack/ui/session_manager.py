@@ -60,9 +60,15 @@ class SessionManagerDialog(QDialog):
     - Delete old sessions
     - Export/import sessions
 
+    Args:
+        session_manager: Session manager instance.
+        current_session_id: ID of currently active session.
+        parent: Parent widget.
+
     Attributes:
         session_loaded: Signal emitted when a session is loaded.
         session_deleted: Signal emitted when a session is deleted.
+        SESSIONS_DIR: Directory where serialized session files are stored.
     """
 
     session_loaded: ClassVar[pyqtSignal] = pyqtSignal(str)
@@ -76,13 +82,6 @@ class SessionManagerDialog(QDialog):
         current_session_id: str | None = None,
         parent: QWidget | None = None,
     ) -> None:
-        """Initialize the session manager dialog.
-
-        Args:
-            session_manager: Session manager instance.
-            current_session_id: ID of currently active session.
-            parent: Parent widget.
-        """
         super().__init__(parent)
         self._manager = session_manager
         self._current_session_id = current_session_id
@@ -110,7 +109,7 @@ class SessionManagerDialog(QDialog):
         """Create the left panel with session table.
 
         Returns:
-            Widget containing the session table and action buttons.
+            QWidget: Widget containing the session table and action buttons.
         """
         panel = QWidget()
         panel_layout = QVBoxLayout(panel)
@@ -145,7 +144,7 @@ class SessionManagerDialog(QDialog):
         """Create refresh and delete buttons for the table.
 
         Returns:
-            Layout containing the table action buttons.
+            QHBoxLayout: Layout containing the table action buttons.
         """
         layout = QHBoxLayout()
         self._refresh_btn = QPushButton("Refresh")
@@ -162,7 +161,7 @@ class SessionManagerDialog(QDialog):
         """Create the right panel with details and preview.
 
         Returns:
-            Widget containing session details and preview.
+            QWidget: Widget containing session details and preview.
         """
         panel = QWidget()
         panel_layout = QVBoxLayout(panel)
@@ -175,7 +174,7 @@ class SessionManagerDialog(QDialog):
         """Create the session details group box.
 
         Returns:
-            Group box containing session detail labels.
+            QGroupBox: Group box containing session detail labels.
         """
         group = QGroupBox("Session Details")
         form = QFormLayout()
@@ -201,7 +200,7 @@ class SessionManagerDialog(QDialog):
         """Create the preview group box.
 
         Returns:
-            Group box containing the preview text widget.
+            QGroupBox: Group box containing the preview text widget.
         """
         group = QGroupBox("Preview")
         layout = QVBoxLayout()
@@ -216,7 +215,7 @@ class SessionManagerDialog(QDialog):
         """Create the bottom button row.
 
         Returns:
-            Layout containing export, import, load and close buttons.
+            QHBoxLayout: Layout containing export, import, load and close buttons.
         """
         layout = QHBoxLayout()
         export_btn = QPushButton("Export...")
@@ -343,7 +342,7 @@ class SessionManagerDialog(QDialog):
             metadata: SessionMetadata object to convert.
 
         Returns:
-            Dictionary representation of the session metadata.
+            dict[str, Any]: Dictionary representation of the session metadata.
         """
         try:
             return {
@@ -541,7 +540,7 @@ class SessionManagerDialog(QDialog):
             session_id: Session identifier.
 
         Returns:
-            True if deleted successfully.
+            bool: True if deleted successfully.
         """
         session_file = self.SESSIONS_DIR / f"{session_id}.json"
         if session_file.exists():
@@ -638,7 +637,7 @@ class SessionManagerDialog(QDialog):
             session_data: Raw session data.
 
         Returns:
-            Cleaned session data suitable for JSON export.
+            dict[str, Any]: Cleaned session data suitable for JSON export.
         """
         export_data = {
             "id": session_data.get("id"),
@@ -785,7 +784,7 @@ class SessionManagerDialog(QDialog):
         """Get the ID of the currently selected session.
 
         Returns:
-            Selected session ID or None.
+            str | None: Selected session ID or None.
         """
         sel_model = self._session_table.selectionModel()
         if sel_model is not None and (selected_rows := sel_model.selectedRows()):
@@ -801,14 +800,12 @@ class NewSessionDialog(QDialog):
     """Dialog for creating a new session.
 
     Allows users to specify session name and initial settings.
+
+    Args:
+        parent: Parent widget.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the new session dialog.
-
-        Args:
-            parent: Parent widget.
-        """
         super().__init__(parent)
 
         self._setup_ui()
@@ -847,7 +844,7 @@ class NewSessionDialog(QDialog):
         """Get the entered session name.
 
         Returns:
-            Session name.
+            str: Session name.
         """
         return str(self._name_input.text()).strip()
 
@@ -855,6 +852,6 @@ class NewSessionDialog(QDialog):
         """Get the entered description.
 
         Returns:
-            Session description.
+            str: Session description.
         """
         return str(self._description_input.text()).strip()

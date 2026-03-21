@@ -62,19 +62,14 @@ class OllamaProvider(LLMProviderBase):
     prefixed to distinguish their origin (local/ or cloud/).
 
     Attributes:
-        _local_client: HTTP client for local Ollama instance.
-        _cloud_client: HTTP client for Ollama cloud API.
-        _local_url: Base URL for local Ollama.
-        _cloud_api_key: API key for Ollama cloud authentication.
-        _local_available: Whether local Ollama is connected.
-        _cloud_available: Whether cloud API is connected.
+        DEFAULT_LOCAL_URL: Base URL for the local Ollama REST API server.
+        CLOUD_API_URL: Ollama cloud API endpoint URL.
     """
 
     DEFAULT_LOCAL_URL = "http://localhost:11434"
     CLOUD_API_URL = os.environ.get("INTELLICRACK_OLLAMA_CLOUD_URL", "https://ollama.com/api")
 
     def __init__(self) -> None:
-        """Initialize the Ollama provider with dual-client support."""
         super().__init__()
         self._local_client: httpx.AsyncClient | None = None
         self._cloud_client: httpx.AsyncClient | None = None
@@ -90,7 +85,7 @@ class OllamaProvider(LLMProviderBase):
         """Get the provider's name.
 
         Returns:
-            ProviderName.OLLAMA
+            ProviderName: ProviderName.OLLAMA
         """
         return ProviderName.OLLAMA
 
@@ -99,7 +94,7 @@ class OllamaProvider(LLMProviderBase):
         """Check if local Ollama is available.
 
         Returns:
-            True if local Ollama instance is connected.
+            bool: True if local Ollama instance is connected.
         """
         return self._local_available
 
@@ -108,7 +103,7 @@ class OllamaProvider(LLMProviderBase):
         """Check if Ollama cloud is available.
 
         Returns:
-            True if cloud API is connected.
+            bool: True if cloud API is connected.
         """
         return self._cloud_available
 
@@ -216,7 +211,7 @@ class OllamaProvider(LLMProviderBase):
         Returns models prefixed with their source (local/ or cloud/).
 
         Returns:
-            List of available models from all connected sources.
+            list[ModelInfo]: List of available models from all connected sources.
 
         Raises:
             ProviderError: If not connected.
@@ -241,7 +236,7 @@ class OllamaProvider(LLMProviderBase):
         """Fetch models from local Ollama instance.
 
         Returns:
-            List of local models with 'local/' prefix.
+            list[ModelInfo]: List of local models with 'local/' prefix.
         """
         models: list[ModelInfo] = []
         if not self._local_client:
@@ -286,7 +281,7 @@ class OllamaProvider(LLMProviderBase):
         """Fetch models from Ollama cloud API.
 
         Returns:
-            List of cloud models with 'cloud/' prefix.
+            list[ModelInfo]: List of cloud models with 'cloud/' prefix.
         """
         models: list[ModelInfo] = []
         if not self._cloud_client:
@@ -333,7 +328,7 @@ class OllamaProvider(LLMProviderBase):
             model: Model ID, optionally prefixed with 'local/' or 'cloud/'.
 
         Returns:
-            Tuple of (client, base_url, actual_model_name).
+            tuple[httpx.AsyncClient, str, str]: Tuple of (client, base_url, actual_model_name).
 
         Raises:
             ProviderError: If requested source is not available.
@@ -373,7 +368,7 @@ class OllamaProvider(LLMProviderBase):
             model_names: List of model names to query.
 
         Returns:
-            Mapping of model name to (context_window, supports_tools) tuple.
+            dict[str, tuple[int, bool]]: Mapping of model name to (context_window, supports_tools) tuple.
         """
 
         async def _query_single(name: str) -> tuple[str, int, bool]:
@@ -431,7 +426,7 @@ class OllamaProvider(LLMProviderBase):
             enable_cache: Whether to enable prompt caching (ignored by Ollama).
 
         Returns:
-            Tuple of (assistant message, tool calls if any).
+            tuple[Message, list[ToolCall] | None]: Tuple of (assistant message, tool calls if any).
 
         Raises:
             ProviderError: If not connected or request fails.
@@ -503,7 +498,7 @@ class OllamaProvider(LLMProviderBase):
             request_body: The request payload.
 
         Returns:
-            Parsed JSON response dictionary.
+            dict[str, Any]: Parsed JSON response dictionary.
 
         Raises:
             ProviderError: If the API call fails.
@@ -529,7 +524,7 @@ class OllamaProvider(LLMProviderBase):
             data: The parsed JSON response from Ollama.
 
         Returns:
-            List of parsed ToolCall instances.
+            list[ToolCall]: List of parsed ToolCall instances.
         """
         tool_calls: list[ToolCall] = []
         message_data = data.get("message")
@@ -591,7 +586,7 @@ class OllamaProvider(LLMProviderBase):
             enable_cache: Whether to enable prompt caching (ignored by Ollama).
 
         Yields:
-            Text chunks as they arrive.
+            str: Text chunks as they arrive.
 
         Raises:
             ProviderError: If not connected or request fails.
@@ -680,7 +675,7 @@ class OllamaProvider(LLMProviderBase):
             messages: List of Message objects.
 
         Returns:
-            List of messages in Ollama's format.
+            list[dict[str, object]]: List of messages in Ollama's format.
         """
         return self._convert_messages_to_openai_format(
             messages,
@@ -699,7 +694,7 @@ class OllamaProvider(LLMProviderBase):
             tools: List of ToolDefinition objects.
 
         Returns:
-            List of tools in Ollama's format.
+            list[dict[str, object]]: List of tools in Ollama's format.
         """
         ollama_tools: list[dict[str, object]] = []
         for tool in tools:
@@ -714,7 +709,7 @@ class OllamaProvider(LLMProviderBase):
             model_name: Name of model to pull (may be prefixed with local/).
 
         Yields:
-            Progress status messages.
+            str: Progress status messages.
 
         Raises:
             ProviderError: If local Ollama not connected or pull fails.

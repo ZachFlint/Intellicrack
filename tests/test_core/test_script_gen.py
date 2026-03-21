@@ -269,8 +269,7 @@ def _make_script(**overrides: Any) -> Script:
         "language": ScriptLanguage.PYTHON,
         "content": "print('hello')",
         "description": "Test script",
-    }
-    defaults.update(overrides)
+    } | overrides
     return Script(**defaults)
 
 
