@@ -5,7 +5,7 @@
 
 """HexPat DSL compiler: lexer, parser, and JSON codegen.
 
-Compiles a C-like pattern definition language (inspired by ImHex .hexpat)
+Compiles a C-like pattern definition language (.hexpat)
 into JSON template definitions consumable by the Rust hex editor core.
 """
 
@@ -32,6 +32,13 @@ class HexPatError(Exception):
     """
 
     def __init__(self, message: str, line: int = 0, column: int = 0) -> None:
+        """Initialize a HexPat compilation error.
+
+        Args:
+            message: Human-readable error description.
+            line: Source line number where the error occurred.
+            column: Source column number where the error occurred.
+        """
         self.message = message
         self.line = line
         self.column = column
@@ -47,6 +54,9 @@ class TokenType(enum.Enum):
     BITFIELD = "bitfield"
     IF = "if"
     ELSE = "else"
+    MATCH = "match"
+    WHILE = "while"
+    FOR = "for"
     U8 = "u8"
     U16 = "u16"
     U32 = "u32"
@@ -126,6 +136,9 @@ _KEYWORD_MAP: dict[str, TokenType] = {
     "bitfield": TokenType.BITFIELD,
     "if": TokenType.IF,
     "else": TokenType.ELSE,
+    "match": TokenType.MATCH,
+    "while": TokenType.WHILE,
+    "for": TokenType.FOR,
     "u8": TokenType.U8,
     "u16": TokenType.U16,
     "u32": TokenType.U32,
@@ -144,6 +157,12 @@ _KEYWORD_MAP: dict[str, TokenType] = {
     "sizeof": TokenType.SIZEOF,
     "addressof": TokenType.ADDRESSOF,
 }
+
+_RUNTIME_ONLY_TOKENS: frozenset[TokenType] = frozenset({
+    TokenType.MATCH,
+    TokenType.WHILE,
+    TokenType.FOR,
+})
 
 _PRIMITIVE_TOKENS: frozenset[TokenType] = frozenset({
     TokenType.U8,
@@ -309,7 +328,22 @@ class PaddingType:
     size: ExprNode
 
 
-TypeNode = PrimitiveType | StructRefType | PaddingType
+@dataclass
+class PointerType:
+    """Pointer type AST node.
+
+    Args:
+        pointee: The type this pointer points to.
+        line: Source line number.
+        column: Source column number.
+    """
+
+    pointee: TypeNode
+    line: int
+    column: int
+
+
+TypeNode = PrimitiveType | StructRefType | PaddingType | PointerType
 
 
 @dataclass
@@ -322,7 +356,6 @@ class FieldNode:
         endianness: Endianness prefix or None.
         array_size: Array size expression or None.
         annotations: Annotation key-value pairs.
-        is_pointer: Whether this is a pointer field.
     """
 
     name: str
@@ -330,7 +363,6 @@ class FieldNode:
     endianness: str | None = None
     array_size: ExprNode | None = None
     annotations: dict[str, ExprNode] = field(default_factory=dict)
-    is_pointer: bool = False
 
 
 @dataclass
@@ -435,6 +467,11 @@ class HexPatLexer:
     """
 
     def __init__(self, source: str) -> None:
+        """Initialize the lexer with source code to tokenize.
+
+        Args:
+            source: HexPat DSL source code string.
+        """
         self._source = source
         self._pos = 0
         self._line = 1
@@ -654,6 +691,11 @@ class HexPatParser:
     """
 
     def __init__(self, tokens: list[Token]) -> None:
+        """Initialize the parser with a token sequence.
+
+        Args:
+            tokens: Token list produced by the lexer.
+        """
         self._tokens = tokens
         self._pos = 0
 
@@ -747,6 +789,13 @@ class HexPatParser:
             return self._parse_enum()
         if tok.type == TokenType.BITFIELD:
             return self._parse_bitfield()
+        if tok.type in _RUNTIME_ONLY_TOKENS:
+            msg = (
+                f"'{tok.value}' is a runtime construct that cannot be compiled "
+                f"to a static JSON template; use the HexPat interpreter "
+                f"for patterns containing {tok.value} statements"
+            )
+            raise HexPatError(msg, tok.line, tok.column)
         if tok.type == TokenType.SEMICOLON:
             self._advance()
             return None
@@ -857,12 +906,15 @@ class HexPatParser:
         if self._current().type == TokenType.PADDING:
             return self._parse_padding_field(endianness)
 
-        type_node = self._parse_type_spec()
+        type_node: TypeNode = self._parse_type_spec()
 
-        is_pointer = False
         if self._current().type == TokenType.STAR:
-            self._advance()
-            is_pointer = True
+            star_tok = self._advance()
+            type_node = PointerType(
+                pointee=type_node,
+                line=star_tok.line,
+                column=star_tok.column,
+            )
 
         name_tok = self._expect(TokenType.IDENTIFIER)
 
@@ -883,7 +935,6 @@ class HexPatParser:
             endianness=endianness,
             array_size=array_size,
             annotations=annotations,
-            is_pointer=is_pointer,
         )
 
     def _parse_padding_field(self, endianness: str | None) -> FieldNode:
@@ -1099,6 +1150,11 @@ class HexPatCodegen:
     """
 
     def __init__(self, declarations: list[DeclNode]) -> None:
+        """Initialize the code generator with parsed declarations.
+
+        Args:
+            declarations: Parsed declaration AST nodes from the parser.
+        """
         self._decls = declarations
         self._nested_structs: dict[str, StructDecl] = {}
         self._nested_unions: dict[str, UnionDecl] = {}
@@ -1172,9 +1228,17 @@ class HexPatCodegen:
         """
         field_type = self._gen_type(node.type_node)
 
-        if node.is_pointer and isinstance(node.type_node, (PrimitiveType, StructRefType)):
-            target = node.type_node.name if isinstance(node.type_node, StructRefType) else ""
-            ptr_base = _TYPE_MAP.get(node.type_node.name, {"type": "UInt32"}) if isinstance(node.type_node, PrimitiveType) else {"type": "UInt64"}
+        if isinstance(node.type_node, PointerType):
+            pointee = node.type_node.pointee
+            if isinstance(pointee, StructRefType):
+                target = pointee.name
+                ptr_base: dict[str, Any] = {"type": "UInt64"}
+            elif isinstance(pointee, PrimitiveType):
+                target = ""
+                ptr_base = dict(_TYPE_MAP.get(pointee.name, {"type": "UInt32"}))
+            else:
+                target = ""
+                ptr_base = {"type": "UInt32"}
             field_type = {
                 "type": "Pointer",
                 "params": {
@@ -1331,6 +1395,12 @@ class HexPatCodegen:
         if isinstance(type_node, PaddingType):
             size = self._eval_const_expr(type_node.size)
             return {"type": "Padding", "params": size}
+        if isinstance(type_node, PointerType):
+            inner = self._gen_type(type_node.pointee)
+            return {
+                "type": "Pointer",
+                "params": {"pointer_type": inner, "target_template": ""},
+            }
 
         if type_node.name in self._nested_enums:
             enum_decl = self._nested_enums[type_node.name]

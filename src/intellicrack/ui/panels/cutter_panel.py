@@ -121,7 +121,7 @@ class CutterPanel(AnalysisPanelBase):
         if self._bridge is not None and self._bridge.state.is_ready():
             try:
                 run_bridge_coroutine(self._bridge.shutdown())
-            except Exception:
+            except (RuntimeError, ConnectionError, OSError):
                 _logger.exception("cutter_shutdown_failed", bridge_type="cutter")
 
     def _create_code_zone(self) -> QSplitter:

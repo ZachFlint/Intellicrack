@@ -769,7 +769,7 @@ class ScriptManagerPanel(QWidget):
         if file_path:
             try:
                 content = Path(file_path).read_text(encoding="utf-8")
-            except Exception:
+            except OSError:
                 _logger.exception("script_file_load_failed", path=file_path)
                 QMessageBox.critical(self, "Error", "Failed to load file. Check logs for details.")
             else:
@@ -793,7 +793,7 @@ class ScriptManagerPanel(QWidget):
 
         try:
             is_valid, error_msg = self._validator.validate(script)
-        except Exception:
+        except (RuntimeError, ValueError):
             _logger.exception("script_validation_failed", script_name=name)
             self._status_bar.showMessage("Validation error. Check logs for details.")
             self._status_bar.setStyleSheet("background-color: #f14c4c; color: white;")

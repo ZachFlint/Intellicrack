@@ -18,7 +18,7 @@ import inspect
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Protocol, cast, runtime_checkable
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QPoint, Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QSyntaxHighlighter, QTextCursor
 from PyQt6.QtWidgets import (
     QFrame,
@@ -26,6 +26,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QListWidget,
     QListWidgetItem,
+    QMenu,
     QPlainTextEdit,
     QSplitter,
     QTabWidget,
@@ -39,6 +40,7 @@ from ..core.logging import get_logger
 from .highlighter import (
     get_highlighter_for_language,
 )
+from .panel_dock import DetachedPanelWindow
 
 
 @runtime_checkable
@@ -284,6 +286,8 @@ class SandboxPanelProtocol(ToolWidget, Protocol):
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from ..core.script_gen import ScriptManager, ScriptValidator
     from ..core.types import BridgeAnalysisSummary
     from ..sandbox.base import SandboxBase
@@ -696,6 +700,7 @@ class ToolOutputPanel(QFrame):
         self._tabs: dict[str, ToolTab] = {}
         self._embedded_tools: dict[str, QWidget] = {}
         self._panels: dict[str, QWidget] = {}
+        self._detached_windows: dict[str, DetachedPanelWindow] = {}
         self._setup_ui()
         self._setup_embedded_tabs()
 
@@ -727,6 +732,7 @@ class ToolOutputPanel(QFrame):
         self._main_splitter = QSplitter(Qt.Orientation.Horizontal)
 
         left_panel = QFrame()
+        left_panel.setMinimumWidth(300)
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(0)
@@ -734,13 +740,18 @@ class ToolOutputPanel(QFrame):
         self._tab_widget = QTabWidget()
         self._tab_widget.setObjectName("analysis_tabs")
         self._tab_widget.setTabsClosable(True)
+        tab_bar = self._tab_widget.tabBar()
+        if tab_bar is not None:
+            tab_bar.setMovable(True)
+            tab_bar.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            tab_bar.customContextMenuRequested.connect(self._on_tab_context_menu)
         self._tab_widget.tabCloseRequested.connect(self._on_tab_close_requested)
 
         left_layout.addWidget(self._tab_widget)
         self._main_splitter.addWidget(left_panel)
 
         right_panel = QFrame()
-        right_panel.setMaximumWidth(250)
+        right_panel.setMinimumWidth(150)
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(0)
@@ -1627,6 +1638,146 @@ class ToolOutputPanel(QFrame):
 
         _logger.info("embedded_tools_closed", panel_count=len(self._panels))
 
+    def _on_tab_context_menu(self, pos: QPoint) -> None:
+        """Show a context menu for the tab bar at the given position.
+
+        Args:
+            pos: Position of the right-click in tab bar coordinates.
+        """
+        tab_bar = self._tab_widget.tabBar()
+        if tab_bar is None:
+            return
+        index = tab_bar.tabAt(pos)
+        if index < 0:
+            return
+
+        menu = QMenu(self)
+
+        detach_action = menu.addAction("Detach to Window")
+        if detach_action is not None:
+            detach_action.triggered.connect(lambda: self.detach_tab(index))
+
+        menu.addSeparator()
+
+        close_action = menu.addAction("Close Tab")
+        if close_action is not None:
+            close_action.triggered.connect(lambda: self._on_tab_close_requested(index))
+
+        close_others_action = menu.addAction("Close Other Tabs")
+        if close_others_action is not None:
+            close_others_action.triggered.connect(lambda: self._close_other_tabs(index))
+
+        close_all_action = menu.addAction("Close All Tabs")
+        if close_all_action is not None:
+            close_all_action.triggered.connect(self._close_all_tabs)
+
+        global_pos = tab_bar.mapToGlobal(pos)
+        menu.exec(global_pos)
+
+    def detach_tab(self, index: int) -> DetachedPanelWindow | None:
+        """Detach a tab into a separate floating window.
+
+        Removes the widget from the tab container and hosts it in a
+        ``DetachedPanelWindow``. The panel is not destroyed; it can
+        be re-docked via the window's re-dock button or close event.
+
+        Args:
+            index: Tab index to detach.
+
+        Returns:
+            DetachedPanelWindow | None: The created window, or None
+                if the index is invalid.
+        """
+        widget = self._tab_widget.widget(index)
+        if widget is None:
+            return None
+
+        title = self._tab_widget.tabText(index)
+        self._tab_widget.removeTab(index)
+
+        window = DetachedPanelWindow(widget, title, self)
+        window.reattach_requested.connect(self._reattach_panel)
+        self._detached_windows[title] = window
+        window.show()
+
+        _logger.info("tab_detached", title=title)
+        return window
+
+    def _reattach_panel(self, widget: QWidget, title: str) -> None:
+        """Re-dock a previously detached panel back into the tab bar.
+
+        Args:
+            widget: The panel widget being returned.
+            title: The tab title to restore.
+        """
+        window = self._detached_windows.pop(title, None)
+        if window is not None:
+            window.hide()
+
+        self._tab_widget.addTab(widget, title)
+        self._tab_widget.setCurrentWidget(widget)
+        _logger.info("tab_reattached", title=title)
+
+    def _close_other_tabs(self, keep_index: int) -> None:
+        """Close all tabs except the one at the given index.
+
+        Args:
+            keep_index: Tab index to keep open.
+        """
+        keep_widget = self._tab_widget.widget(keep_index)
+        indices_to_close = [
+            i for i in range(self._tab_widget.count() - 1, -1, -1)
+            if self._tab_widget.widget(i) is not keep_widget
+        ]
+        for i in indices_to_close:
+            self._on_tab_close_requested(i)
+
+    def _close_all_tabs(self) -> None:
+        """Close every tab in the tab widget."""
+        for i in range(self._tab_widget.count() - 1, -1, -1):
+            self._on_tab_close_requested(i)
+
+    def detach_current_tab(self) -> DetachedPanelWindow | None:
+        """Detach the currently active tab into a floating window.
+
+        Returns:
+            DetachedPanelWindow | None: The created window, or None
+                if no tab is active.
+        """
+        index = self._tab_widget.currentIndex()
+        if index < 0:
+            return None
+        return self.detach_tab(index)
+
+    def close_detached_windows(self) -> None:
+        """Close all detached panel windows and re-dock their panels."""
+        for title in list(self._detached_windows):
+            window = self._detached_windows.get(title)
+            if window is not None:
+                self._reattach_panel(window.panel, window.panel_title)
+
+    def get_detached_state(self) -> list[str]:
+        """Get the titles of currently detached panels.
+
+        Returns:
+            list[str]: Titles of detached panel windows.
+        """
+        return list(self._detached_windows.keys())
+
+    def find_tab_by_title(self, title: str) -> int:
+        """Find a tab index by its title text.
+
+        Args:
+            title: Tab title to search for.
+
+        Returns:
+            int: Tab index, or -1 if not found.
+        """
+        for i in range(self._tab_widget.count()):
+            if self._tab_widget.tabText(i) == title:
+                return i
+        return -1
+
     def get_bridge_for_tool(self, tool_id: str) -> object | None:
         """Get the bridge instance for a specific tool.
 
@@ -1876,3 +2027,91 @@ class ToolOutputPanel(QFrame):
             )
             self._pending_script_backend = None
             self._pending_script_validator = None
+
+    def save_tab_state(self) -> dict[str, object]:
+        """Capture the current tab layout state for persistence.
+
+        Returns:
+            dict[str, object]: Serialisable snapshot of open tabs, their
+                order, the active tab index, and splitter proportions.
+        """
+        tab_names: list[str] = []
+        for i in range(self._tab_widget.count()):
+            text = self._tab_widget.tabText(i)
+            tab_names.append(text)
+
+        return {
+            "tab_names": tab_names,
+            "active_index": self._tab_widget.currentIndex(),
+            "splitter_sizes": self._main_splitter.sizes(),
+        }
+
+    def restore_tab_state(self, state: dict[str, object]) -> None:
+        """Restore a previously saved tab layout.
+
+        Re-opens panels whose names appear in *state* and sets the
+        active tab and splitter proportions.
+
+        Args:
+            state: Dict previously returned by ``save_tab_state``.
+        """
+        tab_openers: dict[str, Callable[[], object]] = {
+            "Hex Editor": self.add_hex_editor_tab,
+            "Frida": self.add_frida_tab,
+            "Ghidra": self.add_ghidra_tab,
+            "Cutter": self.add_cutter_tab,
+            "Process": self.add_process_tab,
+            "Binary": self.add_binary_tab,
+            "Sandbox": self.add_sandbox_tab,
+            "Analysis": self.add_analysis_panel,
+            "Scripts": self.add_script_panel,
+            "Stack": self.add_stack_panel,
+        }
+
+        names_val: object = state.get("tab_names")
+        stored_names = cast("list[str]", names_val) if isinstance(names_val, list) else []
+        for tab_name in stored_names:
+            opener = tab_openers.get(tab_name)
+            if opener is not None:
+                opener()
+
+        idx_val: object = state.get("active_index")
+        if isinstance(idx_val, int) and 0 <= idx_val < self._tab_widget.count():
+            self._tab_widget.setCurrentIndex(idx_val)
+
+        sizes_val: object = state.get("splitter_sizes")
+        stored_sizes = cast("list[int]", sizes_val) if isinstance(sizes_val, list) else []
+        if len(stored_sizes) == 2:  # noqa: PLR2004
+            self._main_splitter.setSizes([int(stored_sizes[0]), int(stored_sizes[1])])
+
+    def has_unsaved_changes(self) -> bool:
+        """Check whether any panel has unsaved modifications.
+
+        Currently checks the hex editor document state.
+
+        Returns:
+            bool: True if unsaved changes exist.
+        """
+        if self._hex_editor_panel is None:
+            return False
+        doc = getattr(self._hex_editor_panel, "_document", None)
+        if doc is None:
+            return False
+        is_modified = getattr(doc, "is_modified", None)
+        if callable(is_modified):
+            return bool(is_modified())
+        return False
+
+    def save_hex_editor(self) -> bool:
+        """Delegate save to the hex editor panel.
+
+        Returns:
+            bool: True if saved successfully.
+        """
+        if self._hex_editor_panel is None:
+            return False
+        save_fn = getattr(self._hex_editor_panel, "_on_save", None)
+        if callable(save_fn):
+            save_fn()
+            return True
+        return False

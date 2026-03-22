@@ -295,6 +295,49 @@ def _enumerate_threads(pid: int) -> list[dict[str, int]]:
     return results
 
 
+class _TrackedRefreshWorker(QThread):
+    """Background worker for fetching tracked process data without blocking the UI.
+
+    Queries ProcessManager for all tracked processes and their running state
+    in a separate thread, then emits the serialized results back to the main thread.
+
+    Args:
+        parent: Parent QObject.
+
+    Attributes:
+        refresh_finished: Signal emitted with tracked process data when collection completes.
+    """
+
+    refresh_finished: pyqtSignal = pyqtSignal(list)
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+
+    def run(self) -> None:
+        """Execute tracked process data collection in the background thread."""
+        result: list[dict[str, str | int | None]] = []
+        try:
+            manager = ProcessManager.get_instance()
+            all_tracked: list[TrackedProcess] = manager.get_all_tracked()
+            running_pids: set[int | None] = {p.pid for p in manager.get_running_processes()}
+
+            for tracked in all_tracked:
+                pid = tracked.pid
+                status = "Running" if pid in running_pids else "Stopped"
+                registered_str = tracked.registered_at.strftime("%Y-%m-%d %H:%M:%S")
+                result.append({
+                    "pid": pid,
+                    "name": tracked.name,
+                    "process_type": tracked.process_type.value,
+                    "status": status,
+                    "registered_at": registered_str,
+                })
+        except (RuntimeError, ValueError, KeyError) as e:
+            _logger.warning("tracked_refresh_failed", error=str(e))
+
+        self.refresh_finished.emit(result)
+
+
 class _ProcessRefreshWorker(QThread):
     """Background worker for enumerating processes without blocking the UI.
 
@@ -339,7 +382,7 @@ class _ProcessRefreshWorker(QThread):
                     "mem_mb": round(mem_mb, 1),
                     "thread_count": thread_count,
                 })
-        except Exception as e:
+        except (OSError, PermissionError) as e:
             _logger.warning("process_enumeration_failed", error=str(e))
 
         self.refresh_finished.emit(result)
@@ -370,6 +413,7 @@ class ProcessPanel(QWidget):
         super().__init__(parent)
         self._selected_pid: int | None = None
         self._refresh_worker: _ProcessRefreshWorker | None = None
+        self._tracked_refresh_worker: _TrackedRefreshWorker | None = None
         self._auto_refresh_timer = QTimer(self)
         self._auto_refresh_timer.timeout.connect(self._on_refresh)
         self._tracked_refresh_timer = QTimer(self)
@@ -652,23 +696,46 @@ class ProcessPanel(QWidget):
             self._refresh_tracked_tab()
 
     def _refresh_tracked_tab(self) -> None:
-        """Refresh the tracked processes table from ProcessManager."""
-        try:
-            manager = ProcessManager.get_instance()
-            all_tracked: list[TrackedProcess] = manager.get_all_tracked()
-            running_pids: set[int | None] = {p.pid for p in manager.get_running_processes()}
-        except Exception as e:
-            _logger.warning("tracked_refresh_failed", error=str(e))
+        """Refresh the tracked processes table from ProcessManager.
+
+        Spawns a background worker to query ProcessManager without blocking
+        the UI thread. If a worker is already running, the request is skipped
+        to prevent concurrent queries.
+        """
+        if self._tracked_refresh_worker is not None and self._tracked_refresh_worker.isRunning():
+            _logger.debug("tracked_refresh_skipped_already_running", reason="worker active")
             return
+
+        if self._tracked_refresh_worker is not None:
+            self._tracked_refresh_worker.deleteLater()
+            self._tracked_refresh_worker = None
+
+        _logger.debug("tracked_refresh_started", source="user_action")
+
+        self._tracked_refresh_btn.setEnabled(False)
+        self._tracked_refresh_btn.setText("Refreshing...")
+
+        self._tracked_refresh_worker = _TrackedRefreshWorker(self)
+        self._tracked_refresh_worker.refresh_finished.connect(self._on_tracked_refresh_finished)
+        self._tracked_refresh_worker.start()
+
+    def _on_tracked_refresh_finished(self, tracked_data: list[dict[str, str | int | None]]) -> None:
+        """Handle tracked process data from the background worker.
+
+        Updates the tracked processes table on the main thread with the
+        collected data. Re-enables the refresh button.
+
+        Args:
+            tracked_data: List of tracked process info dicts from the worker thread.
+        """
+        self._tracked_refresh_btn.setEnabled(True)
+        self._tracked_refresh_btn.setText("Refresh")
 
         set_sorting_enabled(self._tracked_table, enable=False)
         self._tracked_table.setRowCount(0)
 
-        for tracked in all_tracked:
-            pid = tracked.pid
-            status = "Running" if pid in running_pids else "Stopped"
-            registered_str = tracked.registered_at.strftime("%Y-%m-%d %H:%M:%S")
-
+        for entry in tracked_data:
+            pid = entry["pid"]
             row = self._tracked_table.rowCount()
             self._tracked_table.insertRow(row)
 
@@ -676,12 +743,12 @@ class ProcessPanel(QWidget):
             pid_item.setData(Qt.ItemDataRole.DisplayRole, pid if pid is not None else -1)
             self._tracked_table.setItem(row, _TRACKED_COL_PID, pid_item)
 
-            self._tracked_table.setItem(row, _TRACKED_COL_NAME, QTableWidgetItem(tracked.name))
-            self._tracked_table.setItem(row, _TRACKED_COL_TYPE, QTableWidgetItem(tracked.process_type.value))
-            self._tracked_table.setItem(row, _TRACKED_COL_STATUS, QTableWidgetItem(status))
-            self._tracked_table.setItem(row, _TRACKED_COL_REGISTERED, QTableWidgetItem(registered_str))
+            self._tracked_table.setItem(row, _TRACKED_COL_NAME, QTableWidgetItem(str(entry["name"])))
+            self._tracked_table.setItem(row, _TRACKED_COL_TYPE, QTableWidgetItem(str(entry["process_type"])))
+            self._tracked_table.setItem(row, _TRACKED_COL_STATUS, QTableWidgetItem(str(entry["status"])))
+            self._tracked_table.setItem(row, _TRACKED_COL_REGISTERED, QTableWidgetItem(str(entry["registered_at"])))
 
-        count = len(all_tracked)
+        count = len(tracked_data)
         set_sorting_enabled(self._tracked_table, enable=True)
         self._tracked_count_label.setText(f"{count} tracked")
         _logger.debug("tracked_tab_refreshed", count=count)
@@ -769,7 +836,7 @@ class ProcessPanel(QWidget):
                 _logger.info("process_terminated", pid=self._selected_pid)
                 self._selected_pid = None
                 QTimer.singleShot(500, self._on_refresh)
-        except Exception as e:
+        except OSError as e:
             _logger.exception("process_terminate_failed", pid=self._selected_pid, error=str(e))
 
     def get_selected_pid(self) -> int | None:
@@ -793,8 +860,8 @@ class ProcessPanel(QWidget):
     def stop_tool(self) -> bool:
         """Stop the process panel and cleanup.
 
-        Stops the auto-refresh timer and waits for any running background
-        worker to finish before emitting the tool_closed signal.
+        Stops the auto-refresh timers and waits for any running background
+        workers to finish before emitting the tool_closed signal.
 
         Returns:
             bool: True if cleanup succeeded.
@@ -806,5 +873,10 @@ class ProcessPanel(QWidget):
                 self._refresh_worker.wait(2000)
             self._refresh_worker.deleteLater()
         self._refresh_worker = None
+        if self._tracked_refresh_worker is not None:
+            if self._tracked_refresh_worker.isRunning():
+                self._tracked_refresh_worker.wait(2000)
+            self._tracked_refresh_worker.deleteLater()
+        self._tracked_refresh_worker = None
         self.tool_closed.emit()
         return True

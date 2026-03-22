@@ -124,7 +124,7 @@ class GhidraPanel(AnalysisPanelBase):
         if self._bridge is not None and self._bridge.state.is_ready():
             try:
                 run_bridge_coroutine(self._bridge.shutdown())
-            except Exception:
+            except (RuntimeError, ConnectionError, OSError):
                 _logger.exception("ghidra_shutdown_failed", bridge_type="ghidra")
 
     def _create_code_tabs(self) -> QTabWidget:

@@ -65,6 +65,7 @@ class AnalysisPanelBase(QWidget):
 
     def _setup_ui(self) -> None:
         """Build the standard panel layout with toolbar and content."""
+        self.setMinimumSize(200, 150)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(4)

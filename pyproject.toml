@@ -43,109 +43,7 @@ dependencies = [
   "psutil>=7.2.2,<8",
   "keyring>=25.7.0,<26",
   "torch",
-  "black",
-  "pylint",
-  "autopep8",
-  "flake8",
-  "flake8-pyproject",
-  "ruff",
-  "isort",
-  "pycodestyle",
-  "bandit",
-  "blinter",
-  "vulture",
-  "pyupgrade",
-  "pydocstyle",
-  "sourcery",
-  "wemake-python-styleguide",
-  "darglint",
-  "pydoclint",
-  "pyroma",
-  "yapf",
-  "mccabe",
-  "xenon",
-  "codespell",
-  "detect-secrets",
-  "safety",
-  "yamllint",
-  "jsonlint",
-  "interrogate",
-  "deptry",
-  "radon",
-  "dead",
-  "uncalled",
-  "deadcode",
-  "pygount",
-  "basedpyright",
-  "mypy",
-  "mypy-extensions",
-  "monkeytype",
-  "ty",
-  "pyannotate",
-  "types-requests",
-  "types-pyyaml",
-  "build",
-  "pyclean",
-  "pre-commit",
-  "pre-commit-hooks",
-  "commitizen",
-  "bumpversion",
-  "setuptools-scm",
-  "twine",
-  "rope",
-  "astor",
-  "nodeenv",
-  "pipdeptree",
-  "pip-audit",
-  "poetry",
-  "validate-pyproject",
-  "pytest",
-  "pytest-cov",
-  "pytest-mock",
-  "pytest-asyncio",
-  "pytest-xdist",
-  "pytest-timeout",
-  "pytest-qt",
-  "pytest-benchmark",
-  "pytest-html",
-  "pytest-randomly",
-  "pytest-sugar",
-  "pytest-env",
-  "pytest-instafail",
-  "pytest-deadfixtures",
-  "hypothesis",
-  "tox",
-  "nox",
-  "coverage",
-  "freezegun",
-  "responses",
-  "faker",
-  "sphinx",
-  "sphinx-rtd-theme",
-  "sphinx-autodoc-typehints",
-  "sphinx-copybutton",
-  "sphinx-tabs",
-  "sphinxcontrib-mermaid",
-  "sphinx-autobuild",
-  "pdoc3",
-  "mkdocs-material",
-  "pymdown-extensions",
-  "myst-parser",
-  "ipdb",
-  "line-profiler",
-  "memory-profiler",
-  "py-spy",
-  "snakeviz",
-  "pyinstrument",
-  "scalene",
-  "pycallgraph2",
-  "transformers",
-  "accelerate",
-  "bitsandbytes",
-  "sentencepiece",
-  "safetensors",
-  "yara-python>=4.5",
-  "cxxfilt>=0.3",
+  "yara-python>=4.5.4,<5", "black", "pylint", "autopep8", "flake8", "flake8-pyproject", "ruff", "isort", "pycodestyle", "bandit", "blinter", "vulture", "pyupgrade", "pydocstyle", "sourcery", "wemake-python-styleguide", "darglint", "pydoclint", "pyroma", "yapf", "mccabe", "xenon", "codespell", "detect-secrets", "safety", "yamllint", "jsonlint", "interrogate", "deptry", "radon", "dead", "uncalled", "deadcode", "pygount", "basedpyright", "mypy", "mypy-extensions", "monkeytype", "ty", "pyannotate", "types-requests", "types-pyyaml", "build", "pyclean", "pre-commit", "pre-commit-hooks", "commitizen", "bumpversion", "setuptools-scm", "twine", "rope", "astor", "nodeenv", "pipdeptree", "pip-audit", "poetry", "validate-pyproject", "pytest", "pytest-cov", "pytest-mock", "pytest-asyncio", "pytest-xdist", "pytest-timeout", "pytest-qt", "pytest-benchmark", "pytest-html", "pytest-randomly", "pytest-sugar", "pytest-env", "pytest-instafail", "pytest-deadfixtures", "hypothesis", "tox", "nox", "coverage", "freezegun", "responses", "faker", "sphinx", "sphinx-rtd-theme", "sphinx-autodoc-typehints", "sphinx-copybutton", "sphinx-tabs", "sphinxcontrib-mermaid", "sphinx-autobuild", "pdoc3", "mkdocs-material", "pymdown-extensions", "myst-parser", "ipdb", "line-profiler", "memory-profiler", "py-spy", "snakeviz", "pyinstrument", "scalene", "pycallgraph2", "transformers", "accelerate", "bitsandbytes", "sentencepiece", "safetensors",
 ]
 
 [project.optional-dependencies]
@@ -288,13 +186,13 @@ taplo = ">=0.10.0,<0.11"
 yamlfmt = ">=0.21.0,<0.22"
 pixi-pycharm = ">=0.0.10,<0.0.11"
 capstone = ">=5.0.7,<6"
-rust = "*"
+rust = ">=1.94.0,<1.95"
 
 [tool.pixi.pypi-dependencies]
 intellicrack = { path = ".", editable = true }
 # Build/packaging
 pip = ">=26.0.1, <27"
-maturin = "*"
+maturin = ">=1.12.6, <2"
 wheel = ">=0.46.3, <0.47"
 setuptools = "*"
 build = ">=1.4.0, <2"
@@ -354,7 +252,7 @@ pydocstyle = ">=6.3.0, <7"
 sourcery = ">=1.43.0, <2"
 wemake-python-styleguide = ">=1.6.1, <2"
 darglint = ">=1.8.1, <2"
-pydoclint = ">=0.5.0, <1"
+pydoclint = ">=0.8.3, <0.9"
 pyroma = ">=5.0.1, <6"
 mypy-extensions = ">=1.1.0, <2"
 dead = ">=2.1.0, <3"
@@ -370,7 +268,7 @@ xenon = ">=0.9.3, <0.10"
 safety = ">=3.7.0, <4"
 yamllint = ">=1.38.0, <2"
 jsonlint = ">=0.1, <0.2"
-pytest-cov = ">=7.0.0, <8"
+pytest-cov = ">=7.1.0, <8"
 pytest-mock = ">=3.15.1, <4"
 pytest-asyncio = ">=1.3.0, <2"
 pytest-xdist = ">=3.8.0, <4"
@@ -411,7 +309,7 @@ scalene = ">=2.1.4, <3"
 pre-commit = ">=4.5.1, <5"
 commitizen = ">=4.13.9, <5"
 bumpversion = ">=0.6.0, <0.7"
-pipdeptree = ">=2.32.0, <3"
+pipdeptree = ">=2.33.0, <3"
 rope = ">=1.14.0, <2"
 astor = ">=0.8.1, <0.9"
 yapf = ">=0.43.0, <0.44"
@@ -428,7 +326,7 @@ codespell = ">=2.4.2, <3"
 detect-secrets = ">=1.5.0, <2"
 pyannotate = ">=1.2.0, <2"
 flake8-pyproject = ">=1.2.4, <2"
-cxxfilt = ">=0.3"
+cxxfilt = ">=0.3.0, <0.4"
 
 [tool.pixi.pypi-options]
 extra-index-urls = [ "https://download.pytorch.org/whl/xpu" ]
@@ -681,11 +579,24 @@ dummy-variable-rgx = "^(_+|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 "src/intellicrack/core/tools.py" = [ "PLC0415" ]
 "src/intellicrack/main.py" = [ "PLC0415" ]
 "src/intellicrack/ui/app.py" = [ "PLC0415" ]
+"src/intellicrack/core/hexpat/interpreter.py" = [ "PLC0415" ]
 "src/intellicrack/bridges/x64dbg.py" = [ "PLR0904" ]
 "src/intellicrack/bridges/ghidra.py" = [ "PLR0904" ]
 "src/intellicrack/bridges/hex_editor.py" = [ "PLR0904" ]
+"src/intellicrack/ui/tools.py" = [ "PLR0904" ]
 "src/intellicrack/ui/panels/async_bridge.py" = [ "UP047" ]
 "src/intellicrack/ui/panels/hex_editor_panel.py" = [ "N802", "S324", "PLR0914" ]
+"src/intellicrack/ui/panels/hex_editor/panel.py" = [ "PLR0914" ]
+"src/intellicrack/ui/panels/hex_editor/_disassembly.py" = [ "PLR0914" ]
+"src/intellicrack/ui/panels/hex_editor/_search.py" = [ "PLR0914" ]
+"src/intellicrack/ui/panels/hex_editor/_widgets.py" = [ "N802" ]
+"src/intellicrack/core/hexpat/evaluator.py" = [ "PLR0914", "PLR2004", "C901", "TRY003" ]
+"src/intellicrack/core/hexpat/parser.py" = [ "PLR0914", "C901" ]
+"src/intellicrack/core/hexpat/pattern_registry.py" = [ "TC003" ]
+"src/intellicrack/core/hexpat/preprocessor.py" = [ "TC003", "PLR0914" ]
+"src/intellicrack/core/hexpat/lexer.py" = [ "C901" ]
+"src/intellicrack/core/hexpat/ast_nodes.py" = [ "UP040" ]
+"src/intellicrack/core/hexpat/stdlib.py" = [ "PLR2004", "TRY003" ]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 30

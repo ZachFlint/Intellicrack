@@ -187,7 +187,6 @@ class GoogleProvider(LLMProviderBase):
                         provider=ProviderName.GOOGLE,
                         context_window=input_limit,
                         supports_vision=supports_vision,
-                        supports_vision=supports_vision,
                         supports_streaming=supports_streaming,
                         input_cost_per_1m_tokens=None,
                         output_cost_per_1m_tokens=None,

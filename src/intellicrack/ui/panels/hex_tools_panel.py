@@ -901,7 +901,7 @@ class HexToolsPanel(QWidget):
                 result = _cxxfilt_demangle(mangled)
                 if result != mangled:
                     return result
-            except Exception:
+            except (ValueError, OSError):
                 pass
 
         if mangled.startswith("?"):

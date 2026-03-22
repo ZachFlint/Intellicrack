@@ -13,16 +13,24 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, cast
+from pathlib import Path
+from typing import Any, cast
 
 from intellicrack.core.logging import get_logger
 
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
-
 _logger = get_logger("core.template_manager")
+
+_PatternRegistry: type[Any] | None = None
+_hexpat_registry_available: bool = False
+try:
+    from intellicrack.core.hexpat.pattern_registry import (
+        PatternRegistry as _PatternRegistry,
+    )
+
+    _hexpat_registry_available = True
+except Exception:
+    _logger.debug("hexpat_registry_unavailable")
 
 
 @dataclass(frozen=True)
@@ -64,6 +72,7 @@ class TemplateManager:
         self._templates_dir = config_dir / "templates"
         self._builtin_dir = self._templates_dir / "builtin"
         self._user_dir = self._templates_dir / "user"
+        self._pattern_registry: Any | None = None
 
     def ensure_directories(self) -> None:
         """Create the template directory structure if it doesn't exist."""
@@ -283,3 +292,79 @@ class TemplateManager:
                 error=str(exc),
             )
             return None
+
+    @property
+    def patterns_dir(self) -> Path:
+        """Get the community .hexpat patterns directory.
+
+        Returns:
+            Path: The vendor community patterns directory path.
+        """
+        project_root = Path(__file__).resolve().parents[3]
+        return project_root / "vendor" / "community-patterns" / "patterns"
+
+    def get_pattern_registry(self) -> Any | None:
+        """Get or create the PatternRegistry for .hexpat pattern discovery.
+
+        Returns:
+            Any | None: A PatternRegistry instance, or None if unavailable.
+        """
+        if self._pattern_registry is not None:
+            return self._pattern_registry
+
+        if not _hexpat_registry_available or _PatternRegistry is None:
+            _logger.debug("hexpat_registry_unavailable")
+            return None
+
+        pattern_dirs: list[Path] = []
+        patterns_root = self.patterns_dir
+        if patterns_root.exists():
+            pattern_dirs.append(patterns_root)
+
+        self._pattern_registry = _PatternRegistry(pattern_dirs)
+        return self._pattern_registry
+
+    def list_hexpat_patterns(self) -> list[dict[str, str]]:
+        """List all discovered .hexpat patterns with metadata.
+
+        Returns:
+            list[dict[str, str]]: List of dicts with name, description,
+                category, and file_path keys.
+        """
+        registry = self.get_pattern_registry()
+        if registry is None:
+            return []
+
+        patterns = registry.list_patterns()
+        return [
+            {
+                "name": pattern.name,
+                "description": pattern.description or "",
+                "category": pattern.category,
+                "file_path": str(pattern.file_path),
+            }
+            for pattern in patterns
+        ]
+
+    def list_hexpat_by_category(self) -> dict[str, list[dict[str, str]]]:
+        """List .hexpat patterns grouped by category.
+
+        Returns:
+            dict[str, list[dict[str, str]]]: Category name to list of pattern dicts.
+        """
+        registry = self.get_pattern_registry()
+        if registry is None:
+            return {}
+
+        by_cat = registry.list_by_category()
+        result: dict[str, list[dict[str, str]]] = {}
+        for category, patterns in by_cat.items():
+            result[category] = [
+                {
+                    "name": p.name,
+                    "description": p.description or "",
+                    "file_path": str(p.file_path),
+                }
+                for p in patterns
+            ]
+        return result

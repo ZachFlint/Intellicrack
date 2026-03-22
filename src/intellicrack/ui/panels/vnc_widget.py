@@ -106,7 +106,7 @@ class RFBClient:
             self.framebuffer.fill(QColor(0, 0, 0))
             self._connected = True
 
-        except Exception:
+        except (TimeoutError, OSError, struct.error):
             _logger.exception("vnc_connect_failed", host=host, port=port)
             return False
 
@@ -279,7 +279,7 @@ class RFBClient:
         except TimeoutError:
             _logger.warning("vnc_message_timeout")
             return False
-        except Exception:
+        except (OSError, struct.error):
             _logger.exception("vnc_message_error", connected=self._connected)
             self._connected = False
             return False
@@ -396,7 +396,7 @@ class RFBClient:
             try:
                 self._writer.close()
                 await self._writer.wait_closed()
-            except Exception:
+            except OSError:
                 _logger.debug("vnc_disconnect_error", exc_info=True)
         self._reader = None
         self._writer = None
@@ -495,7 +495,7 @@ class VNCWidget(QWidget):
             else:
                 self.connection_status_changed.emit(False)
                 _logger.warning("vnc_widget_connect_failed", host=host, port=port)
-        except Exception:
+        except (OSError, struct.error, RuntimeError):
             _logger.exception("vnc_widget_connect_error", host=host, port=port)
             self.connection_status_changed.emit(False)
 
@@ -504,7 +504,7 @@ class VNCWidget(QWidget):
         self._update_timer.stop()
         try:
             run_bridge_coroutine(self._client.disconnect())
-        except Exception:
+        except (OSError, RuntimeError):
             _logger.debug("vnc_widget_disconnect_error", exc_info=True)
         self.connection_status_changed.emit(False)
 
@@ -518,7 +518,7 @@ class VNCWidget(QWidget):
         try:
             run_bridge_coroutine(self._client.request_framebuffer_update(incremental=True))
             run_bridge_coroutine(self._client.handle_server_message())
-        except Exception:
+        except (OSError, struct.error, RuntimeError):
             _logger.debug("vnc_update_tick_error", exc_info=True)
 
         self.update()
@@ -595,7 +595,7 @@ class VNCWidget(QWidget):
         x, y = self._scale_coords(a0)
         try:
             run_bridge_coroutine(self._client.send_pointer_event(x, y, self._button_mask(a0)))
-        except Exception:
+        except (OSError, RuntimeError):
             _logger.debug("vnc_pointer_error", exc_info=True)
 
     @override
@@ -610,7 +610,7 @@ class VNCWidget(QWidget):
         x, y = self._scale_coords(a0)
         try:
             run_bridge_coroutine(self._client.send_pointer_event(x, y, self._button_mask(a0)))
-        except Exception:
+        except (OSError, RuntimeError):
             _logger.debug("vnc_pointer_error", exc_info=True)
 
     @override
@@ -625,7 +625,7 @@ class VNCWidget(QWidget):
         x, y = self._scale_coords(a0)
         try:
             run_bridge_coroutine(self._client.send_pointer_event(x, y, 0))
-        except Exception:
+        except (OSError, RuntimeError):
             _logger.debug("vnc_pointer_error", exc_info=True)
 
     @override
@@ -640,7 +640,7 @@ class VNCWidget(QWidget):
         keysym = _qt_key_to_x11(a0.key(), a0.text())
         try:
             run_bridge_coroutine(self._client.send_key_event(keysym, down=True))
-        except Exception:
+        except (OSError, RuntimeError):
             _logger.debug("vnc_key_error", exc_info=True)
 
     @override
@@ -655,5 +655,5 @@ class VNCWidget(QWidget):
         keysym = _qt_key_to_x11(a0.key(), a0.text())
         try:
             run_bridge_coroutine(self._client.send_key_event(keysym, down=False))
-        except Exception:
+        except (OSError, RuntimeError):
             _logger.debug("vnc_key_error", exc_info=True)

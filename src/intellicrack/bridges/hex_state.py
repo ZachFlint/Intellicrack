@@ -16,6 +16,7 @@ from __future__ import annotations
 import enum
 import threading
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 
@@ -43,6 +44,7 @@ class HexDocumentEvent(enum.Enum):
         HIGHLIGHT_RULE_ADDED: A byte highlight rule was added.
         HIGHLIGHT_RULE_REMOVED: A byte highlight rule was removed.
         DISPLAY_MODE_CHANGED: The hex display mode changed.
+        PATTERN_EXECUTED: A .hexpat pattern was executed against the document.
     """
 
     DOCUMENT_OPENED = "document_opened"
@@ -56,28 +58,23 @@ class HexDocumentEvent(enum.Enum):
     HIGHLIGHT_RULE_ADDED = "highlight_rule_added"
     HIGHLIGHT_RULE_REMOVED = "highlight_rule_removed"
     DISPLAY_MODE_CHANGED = "display_mode_changed"
+    PATTERN_EXECUTED = "pattern_executed"
 
 
 StateCallbackFn = Callable[[HexDocumentEvent, dict[str, Any]], None]
 
 
+@dataclass(slots=True)
 class _CallbackEntry:
     """Internal storage for a registered callback with its source_id.
 
-    Args:
+    Attributes:
         fn: The callback callable.
         source_id: Identifier for loop-guard filtering.
     """
 
-    __slots__ = ("fn", "source_id")
-
-    def __init__(
-        self,
-        fn: StateCallbackFn,
-        source_id: str,
-    ) -> None:
-        self.fn = fn
-        self.source_id = source_id
+    fn: StateCallbackFn
+    source_id: str
 
 
 class HexDocumentState:
@@ -359,6 +356,26 @@ class HexDocumentState:
         self._notify(
             HexDocumentEvent.DISPLAY_MODE_CHANGED,
             {"mode": mode},
+            source=source,
+        )
+
+    def notify_pattern_executed(
+        self,
+        pattern_name: str,
+        field_count: int,
+        *,
+        source: str = "",
+    ) -> None:
+        """Notify observers that a .hexpat pattern was executed.
+
+        Args:
+            pattern_name: Name of the executed pattern.
+            field_count: Number of top-level fields produced.
+            source: Identifier of the caller for loop-guard filtering.
+        """
+        self._notify(
+            HexDocumentEvent.PATTERN_EXECUTED,
+            {"pattern_name": pattern_name, "field_count": field_count},
             source=source,
         )
 

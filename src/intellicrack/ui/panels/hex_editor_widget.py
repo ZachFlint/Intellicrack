@@ -1031,7 +1031,7 @@ class HexEditorWidget(QAbstractScrollArea):
                     try:
                         write_fn(self._cursor_offset, data)
                         self._modified_offsets.add(self._cursor_offset)
-                    except Exception:
+                    except (RuntimeError, ValueError, IndexError, OSError):
                         _logger.debug("write_failed", offset=self._cursor_offset)
             else:
                 insert_fn = getattr(self._document, "insert_bytes", None)
@@ -1039,7 +1039,7 @@ class HexEditorWidget(QAbstractScrollArea):
                     try:
                         insert_fn(self._cursor_offset, data)
                         self._modified_offsets.add(self._cursor_offset)
-                    except Exception:
+                    except (RuntimeError, ValueError, IndexError, OSError):
                         _logger.debug("insert_failed", offset=self._cursor_offset)
 
             self._nibble_index = 0
@@ -1064,7 +1064,7 @@ class HexEditorWidget(QAbstractScrollArea):
                 try:
                     write_fn(self._cursor_offset, data)
                     self._modified_offsets.add(self._cursor_offset)
-                except Exception:
+                except (RuntimeError, ValueError, IndexError, OSError):
                     _logger.debug("ascii_write_failed", offset=self._cursor_offset)
         else:
             insert_fn = getattr(self._document, "insert_bytes", None)
@@ -1072,7 +1072,7 @@ class HexEditorWidget(QAbstractScrollArea):
                 try:
                     insert_fn(self._cursor_offset, data)
                     self._modified_offsets.add(self._cursor_offset)
-                except Exception:
+                except (RuntimeError, ValueError, IndexError, OSError):
                     _logger.debug("ascii_insert_failed", offset=self._cursor_offset)
 
         self.data_changed.emit()
@@ -1101,7 +1101,7 @@ class HexEditorWidget(QAbstractScrollArea):
                 self._selection_end = -1
                 self.data_changed.emit()
                 self._move_cursor(start)
-            except Exception:
+            except (RuntimeError, ValueError, IndexError, OSError):
                 _logger.debug("delete_selection_failed")
         else:
             offset = self._cursor_offset
@@ -1111,7 +1111,7 @@ class HexEditorWidget(QAbstractScrollArea):
                 delete_fn(offset, 1)
                 self.data_changed.emit()
                 self._move_cursor(offset)
-            except Exception:
+            except (RuntimeError, ValueError, IndexError, OSError):
                 _logger.debug("delete_byte_failed", offset=offset)
 
         self._update_scrollbar()
@@ -1179,7 +1179,7 @@ class HexEditorWidget(QAbstractScrollArea):
                     write_fn(self._cursor_offset, data)
                     for i in range(len(data)):
                         self._modified_offsets.add(self._cursor_offset + i)
-                except Exception:
+                except (RuntimeError, ValueError, IndexError, OSError):
                     _logger.debug("paste_write_failed", offset=self._cursor_offset)
         else:
             insert_fn = getattr(self._document, "insert_bytes", None)
@@ -1188,7 +1188,7 @@ class HexEditorWidget(QAbstractScrollArea):
                     insert_fn(self._cursor_offset, data)
                     for i in range(len(data)):
                         self._modified_offsets.add(self._cursor_offset + i)
-                except Exception:
+                except (RuntimeError, ValueError, IndexError, OSError):
                     _logger.debug("paste_insert_failed", offset=self._cursor_offset)
 
         self.data_changed.emit()
