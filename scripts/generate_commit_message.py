@@ -15,11 +15,23 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
 from typing import Final
 
+from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from google.genai.errors import ClientError
+
+
+def load_env() -> None:
+    """Load environment variables from .env file."""
+    env_path = Path(__file__).parent.parent / ".env"
+    load_dotenv(dotenv_path=env_path)
+
+
+# Load environment variables
+load_env()
 
 
 # Truncation thresholds (characters)

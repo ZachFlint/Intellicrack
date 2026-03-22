@@ -1,0 +1,453 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
+"""Statistics mixin for the hex editor panel."""
+
+from __future__ import annotations
+
+import dataclasses
+import math
+from typing import TYPE_CHECKING, Any, cast, override
+
+from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtWidgets import QLabel, QTreeWidget, QTreeWidgetItem
+
+from intellicrack.ui.panels.hex_editor._base import (
+    BYTE_TYPE_DIST_MIN_LEN,
+    BYTE_VALUES_COUNT,
+    ENTROPY_BLOCK_SIZE,
+    logger,
+)
+
+
+if TYPE_CHECKING:
+    from intellicrack.ui.panels.hex_editor._widgets import (
+        ByteDistributionWidget,
+        EntropyGraphWidget,
+    )
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class _StatisticsResult:
+    """Container for statistics computed on a background thread.
+
+    Attributes:
+        byte_stats: List of (byte_value, count) tuples from the document.
+        total: Total byte count across all byte values.
+        entropy: Shannon entropy in bits per byte.
+        entropy_values: Per-block entropy values, or None if unavailable.
+        entropy_block_size: Block size used for per-block entropy.
+        dist_counts: 256-element byte frequency distribution, or None.
+        type_dist: Byte type distribution tuple, or None.
+        classification: Per-block content classification list, or None.
+        classification_block_size: Block size used for classification.
+    """
+
+    byte_stats: list[tuple[int, int]]
+    total: int
+    entropy: float
+    entropy_values: list[float] | None
+    entropy_block_size: int
+    dist_counts: list[int] | None
+    type_dist: tuple[int, ...] | None
+    classification: list[int] | None
+    classification_block_size: int
+
+
+class StatisticsWorker(QThread):
+    """Background worker for computing hex editor statistics.
+
+    Performs entropy calculation, byte distribution, byte type
+    distribution, and content classification on a background thread
+    to avoid blocking the Qt main thread on large files.
+
+    Args:
+        document: The hex document to analyze.
+        entropy_block_size: Block size for entropy map and classification.
+        parent: Parent QObject for lifecycle management.
+
+    Attributes:
+        stats_finished: Signal emitted with the result on success.
+        stats_error: Signal emitted with the exception on failure.
+    """
+
+    stats_finished: pyqtSignal = pyqtSignal(object)
+    stats_error: pyqtSignal = pyqtSignal(object)
+
+    def __init__(
+        self,
+        document: Any,
+        entropy_block_size: int,
+        parent: QThread | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self._document: Any = document
+        self._entropy_block_size: int = entropy_block_size
+        _: object = self.finished.connect(self.deleteLater)
+
+    @override
+    def run(self) -> None:
+        """Execute all statistics computations in the background thread."""
+        try:
+            result = self._compute()
+            self.stats_finished.emit(result)
+        except Exception as exc:
+            logger.debug("statistics_worker_failed", error=str(exc))
+            self.stats_error.emit(exc)
+
+    def _compute(self) -> _StatisticsResult:
+        """Perform the actual statistics computation.
+
+        Returns:
+            _StatisticsResult: Computed statistics data.
+        """
+        stats: list[tuple[int, int]] = list(self._document.byte_statistics())
+        total: int = sum(s[1] for s in stats)
+
+        entropy: float = 0.0
+        if total > 0:
+            for _byte_val, count in stats:
+                if count > 0:
+                    prob = count / total
+                    entropy -= prob * math.log2(prob)
+
+        return _StatisticsResult(
+            byte_stats=stats,
+            total=total,
+            entropy=entropy,
+            entropy_values=self._compute_entropy_map(),
+            entropy_block_size=self._entropy_block_size,
+            dist_counts=self._compute_byte_distribution(),
+            type_dist=self._compute_type_distribution(),
+            classification=self._compute_classification(),
+            classification_block_size=self._entropy_block_size,
+        )
+
+    def _compute_entropy_map(self) -> list[float] | None:
+        """Compute per-block entropy values from the document.
+
+        Returns:
+            list[float] | None: Per-block entropy values, or None if unavailable.
+        """
+        entropy_map_fn: Any = getattr(self._document, "entropy_map", None)
+        if not callable(entropy_map_fn):
+            return None
+        try:
+            raw_map: list[float] = cast("list[float]", entropy_map_fn(self._entropy_block_size))
+            return [float(v) for v in raw_map] if raw_map else []
+        except (AttributeError, ValueError, TypeError) as exc:
+            logger.debug("entropy_map_failed", error=str(exc))
+            return None
+
+    def _compute_byte_distribution(self) -> list[int] | None:
+        """Compute the 256-element byte frequency distribution.
+
+        Returns:
+            list[int] | None: Byte frequency counts, or None if unavailable.
+        """
+        dist_fn: Any = getattr(self._document, "byte_distribution_full", None)
+        if not callable(dist_fn):
+            return None
+        try:
+            raw_dist: list[int] = cast("list[int]", dist_fn())
+            return [int(v) for v in raw_dist] if raw_dist else [0] * BYTE_VALUES_COUNT
+        except (AttributeError, ValueError, TypeError) as exc:
+            logger.debug("byte_distribution_failed", error=str(exc))
+            return None
+
+    def _compute_type_distribution(self) -> tuple[int, ...] | None:
+        """Compute byte type distribution counts.
+
+        Returns:
+            tuple[int, ...] | None: Byte type counts, or None if unavailable.
+        """
+        type_fn: Any = getattr(self._document, "byte_type_distribution", None)
+        if not callable(type_fn):
+            return None
+        try:
+            raw_type: tuple[int, ...] = cast("tuple[int, ...]", type_fn())
+            return tuple(int(v) for v in raw_type)
+        except (AttributeError, ValueError, TypeError) as exc:
+            logger.debug("byte_type_distribution_failed", error=str(exc))
+            return None
+
+    def _compute_classification(self) -> list[int] | None:
+        """Compute per-block content classification.
+
+        Returns:
+            list[int] | None: Classification values per block, or None if unavailable.
+        """
+        class_fn: Any = getattr(self._document, "content_classification", None)
+        if not callable(class_fn):
+            return None
+        try:
+            raw_class: list[int] = cast("list[int]", class_fn(self._entropy_block_size))
+            return [int(v) for v in raw_class] if raw_class else None
+        except (AttributeError, ValueError, TypeError) as exc:
+            logger.debug("content_classification_failed", error=str(exc))
+            return None
+
+
+class StatisticsMixin:
+    """Mixin providing statistics and analysis for the hex editor panel."""
+
+    _document: Any | None
+    _statistics_tree: QTreeWidget | None
+    _entropy_graph: EntropyGraphWidget | None
+    _byte_dist_widget: ByteDistributionWidget | None
+    _entropy_label: QLabel | None
+    _null_pct_label: QLabel | None
+    _printable_pct_label: QLabel | None
+    _control_pct_label: QLabel | None
+    _high_pct_label: QLabel | None
+    _classification_label: QLabel | None
+    _statistics_worker: StatisticsWorker | None
+
+    def _update_statistics(self) -> None:
+        """Update the statistics tab with entropy graph, histogram, and byte tree.
+
+        Launches a background worker to compute entropy, byte distribution,
+        byte type distribution, and content classification without blocking
+        the Qt main thread.  UI widgets display "Computing..." status text
+        until the worker completes.
+        """
+        if self._document is None:
+            return
+
+        worker_attr: StatisticsWorker | None = getattr(self, "_statistics_worker", None)
+        if worker_attr is not None and worker_attr.isRunning():
+            logger.debug("statistics_update_skipped", reason="worker active")
+            return
+
+        if worker_attr is not None:
+            worker_attr.deleteLater()
+
+        if self._statistics_tree is not None:
+            self._statistics_tree.clear()
+
+        self._set_statistics_computing()
+
+        parent_obj: QThread | None = self if isinstance(self, QThread) else None
+        worker = StatisticsWorker(self._document, ENTROPY_BLOCK_SIZE, parent_obj)
+        _ = worker.stats_finished.connect(self._on_statistics_computed)
+        _ = worker.stats_error.connect(self._on_statistics_error)
+        self._statistics_worker = worker
+        worker.start()
+
+    def _set_statistics_computing(self) -> None:
+        """Set all statistics labels to the in-progress status text."""
+        computing_text: str = "Computing..."
+        if self._entropy_label is not None:
+            self._entropy_label.setText(computing_text)
+        if self._null_pct_label is not None:
+            self._null_pct_label.setText(computing_text)
+        if self._printable_pct_label is not None:
+            self._printable_pct_label.setText(computing_text)
+        if self._control_pct_label is not None:
+            self._control_pct_label.setText(computing_text)
+        if self._high_pct_label is not None:
+            self._high_pct_label.setText(computing_text)
+        if self._classification_label is not None:
+            self._classification_label.setText(computing_text)
+
+    def _on_statistics_computed(self, result: object) -> None:
+        """Apply computed statistics results to the UI widgets.
+
+        Called on the main thread when the background worker completes
+        successfully.
+
+        Args:
+            result: The _StatisticsResult from the background worker.
+        """
+        if not isinstance(result, _StatisticsResult):
+            return
+
+        if result.total == 0:
+            self._set_statistics_empty()
+            return
+
+        self._apply_byte_tree(result)
+        self._apply_entropy_label(result)
+        self._apply_entropy_graph(result)
+        self._apply_byte_distribution(result)
+        self._apply_byte_type_distribution(result)
+        self._apply_content_classification(result)
+
+    def _on_statistics_error(self, exc: object) -> None:
+        """Handle a statistics worker failure.
+
+        Called on the main thread when the background worker encounters
+        an error.
+
+        Args:
+            exc: The exception from the background worker.
+        """
+        logger.debug("statistics_update_failed", error=str(exc))
+        error_text: str = "\u2014"
+        if self._entropy_label is not None:
+            self._entropy_label.setText(error_text)
+        if self._null_pct_label is not None:
+            self._null_pct_label.setText(error_text)
+        if self._printable_pct_label is not None:
+            self._printable_pct_label.setText(error_text)
+        if self._control_pct_label is not None:
+            self._control_pct_label.setText(error_text)
+        if self._high_pct_label is not None:
+            self._high_pct_label.setText(error_text)
+        if self._classification_label is not None:
+            self._classification_label.setText(error_text)
+
+    def _set_statistics_empty(self) -> None:
+        """Reset all statistics labels to the empty em-dash default."""
+        dash: str = "\u2014"
+        if self._entropy_label is not None:
+            self._entropy_label.setText(dash)
+        if self._null_pct_label is not None:
+            self._null_pct_label.setText(dash)
+        if self._printable_pct_label is not None:
+            self._printable_pct_label.setText(dash)
+        if self._control_pct_label is not None:
+            self._control_pct_label.setText(dash)
+        if self._high_pct_label is not None:
+            self._high_pct_label.setText(dash)
+        if self._classification_label is not None:
+            self._classification_label.setText(dash)
+
+    def _apply_byte_tree(self, result: _StatisticsResult) -> None:
+        """Populate the statistics tree widget with byte frequency data.
+
+        Args:
+            result: The computed statistics result.
+        """
+        if self._statistics_tree is None:
+            return
+        entropy_item = QTreeWidgetItem(["Entropy", f"{result.entropy:.4f}", "bits/byte"])
+        self._statistics_tree.addTopLevelItem(entropy_item)
+        for byte_val, count in result.byte_stats:
+            if count > 0:
+                pct = f"{(count / result.total) * 100:.2f}%"
+                item = QTreeWidgetItem([f"0x{byte_val:02X}", str(count), pct])
+                self._statistics_tree.addTopLevelItem(item)
+
+    def _apply_entropy_label(self, result: _StatisticsResult) -> None:
+        """Set the entropy summary label text.
+
+        Args:
+            result: The computed statistics result.
+        """
+        if self._entropy_label is not None:
+            self._entropy_label.setText(f"{result.entropy:.4f} bits/byte")
+
+    def _apply_entropy_graph(self, result: _StatisticsResult) -> None:
+        """Update the entropy graph widget with per-block data.
+
+        Args:
+            result: The computed statistics result.
+        """
+        if result.entropy_values is not None and self._entropy_graph is not None:
+            self._entropy_graph.set_data(result.entropy_values, result.entropy_block_size)
+
+    def _apply_byte_distribution(self, result: _StatisticsResult) -> None:
+        """Update the byte distribution histogram widget.
+
+        Args:
+            result: The computed statistics result.
+        """
+        if result.dist_counts is not None and self._byte_dist_widget is not None:
+            self._byte_dist_widget.set_data(result.dist_counts)
+
+    def _apply_byte_type_distribution(self, result: _StatisticsResult) -> None:
+        """Apply byte type distribution percentages to labels.
+
+        Args:
+            result: The computed statistics result.
+        """
+        if result.type_dist is None:
+            return
+        if len(result.type_dist) < BYTE_TYPE_DIST_MIN_LEN:
+            return
+        null_c: int = int(result.type_dist[0])
+        printable_c: int = int(result.type_dist[1])
+        control_c: int = int(result.type_dist[2])
+        high_c: int = int(result.type_dist[3])
+        total_b: int = max(null_c + printable_c + control_c + high_c, 1)
+        if self._null_pct_label is not None:
+            self._null_pct_label.setText(f"{null_c / total_b * 100:.1f}% ({null_c})")
+        if self._printable_pct_label is not None:
+            self._printable_pct_label.setText(f"{printable_c / total_b * 100:.1f}% ({printable_c})")
+        if self._control_pct_label is not None:
+            self._control_pct_label.setText(f"{control_c / total_b * 100:.1f}% ({control_c})")
+        if self._high_pct_label is not None:
+            self._high_pct_label.setText(f"{high_c / total_b * 100:.1f}% ({high_c})")
+
+    def _apply_content_classification(self, result: _StatisticsResult) -> None:
+        """Apply content classification summary to the label.
+
+        Args:
+            result: The computed statistics result.
+        """
+        if result.classification is None:
+            return
+        if not result.classification:
+            return
+        class_names: dict[int, str] = {0: "null", 1: "text", 2: "structured", 3: "encrypted", 4: "code"}
+        counts: dict[str, int] = {}
+        for c_val in result.classification:
+            label: str = class_names.get(int(c_val), "unknown")
+            counts[label] = counts.get(label, 0) + 1
+        parts: list[str] = [f"{k}: {v}" for k, v in counts.items()]
+        if self._classification_label is not None:
+            self._classification_label.setText(", ".join(parts))
+
+    def _update_byte_type_distribution(self) -> None:
+        """Fetch and display byte type distribution percentages."""
+        if self._document is None:
+            return
+        type_fn: Any = getattr(self._document, "byte_type_distribution", None)
+        if not callable(type_fn):
+            return
+        try:
+            type_dist: tuple[int, ...] = cast("tuple[int, ...]", type_fn())
+        except (AttributeError, ValueError, TypeError) as exc:
+            logger.debug("byte_type_distribution_failed", error=str(exc))
+            return
+        if len(type_dist) < BYTE_TYPE_DIST_MIN_LEN:
+            return
+        null_c: int = int(type_dist[0])
+        printable_c: int = int(type_dist[1])
+        control_c: int = int(type_dist[2])
+        high_c: int = int(type_dist[3])
+        total_b: int = max(null_c + printable_c + control_c + high_c, 1)
+        if self._null_pct_label is not None:
+            self._null_pct_label.setText(f"{null_c / total_b * 100:.1f}% ({null_c})")
+        if self._printable_pct_label is not None:
+            self._printable_pct_label.setText(f"{printable_c / total_b * 100:.1f}% ({printable_c})")
+        if self._control_pct_label is not None:
+            self._control_pct_label.setText(f"{control_c / total_b * 100:.1f}% ({control_c})")
+        if self._high_pct_label is not None:
+            self._high_pct_label.setText(f"{high_c / total_b * 100:.1f}% ({high_c})")
+
+    def _update_content_classification(self) -> None:
+        """Fetch and display content classification summary."""
+        if self._document is None:
+            return
+        class_fn: Any = getattr(self._document, "content_classification", None)
+        if not callable(class_fn):
+            return
+        try:
+            classification: list[int] = cast("list[int]", class_fn(ENTROPY_BLOCK_SIZE))
+        except (AttributeError, ValueError, TypeError) as exc:
+            logger.debug("content_classification_failed", error=str(exc))
+            return
+        if not classification:
+            return
+        class_names: dict[int, str] = {0: "null", 1: "text", 2: "structured", 3: "encrypted", 4: "code"}
+        counts: dict[str, int] = {}
+        for c_val in classification:
+            label: str = class_names.get(int(c_val), "unknown")
+            counts[label] = counts.get(label, 0) + 1
+        parts: list[str] = [f"{k}: {v}" for k, v in counts.items()]
+        if self._classification_label is not None:
+            self._classification_label.setText(", ".join(parts))

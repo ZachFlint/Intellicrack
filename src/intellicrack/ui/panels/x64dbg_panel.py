@@ -194,7 +194,7 @@ class X64DbgPanel(AnalysisPanelBase):
             if self._bridge.state.is_ready():
                 try:
                     run_bridge_coroutine(self._bridge.stop())
-                except Exception:
+                except (RuntimeError, ConnectionError, OSError):
                     _logger.exception("x64dbg_stop_failed", bridge_type="x64dbg")
 
     def _create_disasm_section(self) -> QWidget:

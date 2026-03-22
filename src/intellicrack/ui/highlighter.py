@@ -5,8 +5,8 @@
 
 """Syntax highlighting for code display.
 
-This module provides syntax highlighters for C/C++ decompiled code
-and x86/x64 assembly disassembly.
+This module provides syntax highlighters for C/C++ decompiled code,
+x86/x64 assembly disassembly, and HexPat binary pattern definitions.
 """
 
 from __future__ import annotations
@@ -1049,17 +1049,17 @@ class JavaScriptSyntaxHighlighter(QSyntaxHighlighter):
 
 
 class HexPatSyntaxHighlighter(QSyntaxHighlighter):
-    """Syntax highlighter for HexPat pattern definition language.
+    """Syntax highlighter for the HexPat pattern definition language.
 
-    Highlights struct/union/enum/bitfield keywords, primitive types,
-    endianness prefixes, annotations, strings, numbers, and comments
-    in HexPat DSL source code.
+    Highlights keywords (structural, control flow, namespace), primitive types
+    (including 128-bit and char16/str), endianness prefixes, annotations,
+    strings, numbers, and comments in HexPat source code.
 
     Args:
         parent: Parent QTextDocument or None.
 
     Attributes:
-        KEYWORDS: HexPat structural keywords for syntax highlighting.
+        KEYWORDS: HexPat keywords for syntax highlighting.
         TYPES: HexPat primitive type names for syntax highlighting.
         ENDIANNESS: Endianness prefix keywords.
         BUILTINS: Built-in function names.
@@ -1075,6 +1075,23 @@ class HexPatSyntaxHighlighter(QSyntaxHighlighter):
         "match",
         "while",
         "for",
+        "fn",
+        "return",
+        "break",
+        "continue",
+        "namespace",
+        "using",
+        "in",
+        "out",
+        "ref",
+        "null",
+        "true",
+        "false",
+        "auto",
+        "this",
+        "parent",
+        "try",
+        "catch",
     )
 
     TYPES: ClassVar[tuple[str, ...]] = (
@@ -1082,14 +1099,18 @@ class HexPatSyntaxHighlighter(QSyntaxHighlighter):
         "u16",
         "u32",
         "u64",
+        "u128",
         "s8",
         "s16",
         "s32",
         "s64",
+        "s128",
         "float",
         "double",
         "char",
+        "char16",
         "bool",
+        "str",
         "padding",
     )
 
@@ -1226,7 +1247,7 @@ def get_highlighter_for_language(
     """Get the appropriate syntax highlighter for a language.
 
     Args:
-        language: Language name (c, cpp, asm, python, javascript, frida, hexpat, pattern).
+        language: Language name (c, cpp, asm, python, javascript, frida, hexpat, pattern, hexpattern).
         parent: Parent QTextDocument.
 
     Returns:

@@ -167,7 +167,7 @@ class FridaPanel(AnalysisPanelBase):
         if self._bridge is not None and self._bridge.state.process_attached:
             try:
                 run_bridge_coroutine(self._bridge.detach())
-            except Exception:
+            except (RuntimeError, ConnectionError, OSError):
                 _logger.debug("frida_detach_skipped", exc_info=True)
         self._attached_pid = None
 

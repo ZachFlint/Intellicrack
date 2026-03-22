@@ -852,7 +852,7 @@ class BinaryPanel(QWidget):
                 item = QTreeWidgetItem([func_name, f"0x{address:08X}", ""])
                 self._exports_tree.addTopLevelItem(item)
 
-        except Exception as e:
+        except (ValueError, AttributeError) as e:
             _logger.debug("elf_section_parse_error", error=str(e))
 
     def _parse_macho_sections(self) -> None:
@@ -890,7 +890,7 @@ class BinaryPanel(QWidget):
                 item = QTreeWidgetItem([func_name, f"0x{address:08X}", ""])
                 self._exports_tree.addTopLevelItem(item)
 
-        except Exception as e:
+        except (ValueError, AttributeError) as e:
             _logger.debug("macho_section_parse_error", error=str(e))
 
     @staticmethod

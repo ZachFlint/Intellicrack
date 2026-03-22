@@ -468,7 +468,7 @@ fn launch_update(script_path: &Path, log: &mut Logger) {
         .creation_flags(0x08000000)
         .raw_arg("/c start \"\" /max")
         .raw_arg(format!("\"{}\"", pwsh.display()))
-        .raw_arg("-NoLogo -NoProfile -ExecutionPolicy Bypass -File")
+        .raw_arg("-NoLogo -ExecutionPolicy Bypass -File")
         .raw_arg(format!("\"{}\"", script_path.display()))
         .spawn()
     {

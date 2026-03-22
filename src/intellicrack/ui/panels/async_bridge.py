@@ -206,7 +206,7 @@ def shutdown_bridge_loop() -> None:
 
     _state.loop = None
     _state.thread = None
-    _logger.debug("bridge_event_loop_shutdown", had_loop=_state.loop is not None)
+    _logger.debug("bridge_event_loop_shutdown", had_loop=True)
 
 
 def _log_task_exception(task: asyncio.Task[object]) -> None:

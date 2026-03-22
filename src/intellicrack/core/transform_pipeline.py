@@ -123,7 +123,7 @@ def _eval_ast_node(node: ast.expr, b: int, i: int) -> int:
         return 1
 
     if isinstance(node, ast.IfExp):
-        if test := _eval_ast_node(node.test, b, i):
+        if _eval_ast_node(node.test, b, i):
             return _eval_ast_node(node.body, b, i)
         return _eval_ast_node(node.orelse, b, i)
 

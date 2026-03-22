@@ -20,7 +20,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, cast, override
 
-from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
+from PyQt6.QtCore import QByteArray, QSettings, Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QApplication,
@@ -225,6 +225,7 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(self._icon_manager.get_app_icon())
 
         self._apply_smart_window_size()
+        self._restore_window_state()
 
     def _apply_smart_window_size(self) -> None:
         """Size and center the window based on available screen geometry.
@@ -262,6 +263,65 @@ class MainWindow(QMainWindow):
         except Exception:
             _logger.debug("screen_detection_failed_using_default_size", exc_info=True)
             self.resize(max_w, max_h)
+
+    def _save_window_state(self) -> None:
+        """Persist window geometry, splitter sizes, tab state, and detached panels to QSettings."""
+        settings = QSettings("Intellicrack", "MainWindow")
+        settings.setValue("geometry", self.saveGeometry())
+        settings.setValue("splitter_sizes", self._splitter.sizes())
+
+        tab_state = self._tool_panel.save_tab_state()
+        settings.setValue("tab_state/tab_names", tab_state.get("tab_names"))
+        settings.setValue("tab_state/active_index", tab_state.get("active_index"))
+        settings.setValue("tab_state/splitter_sizes", tab_state.get("splitter_sizes"))
+
+        detached_titles = self._tool_panel.get_detached_state()
+        settings.setValue("detached_panels", detached_titles)
+
+        _logger.debug("window_state_saved")
+
+    def _restore_window_state(self) -> None:
+        """Restore window geometry, splitter sizes, and tab state from QSettings."""
+        settings = QSettings("Intellicrack", "MainWindow")
+
+        geometry = settings.value("geometry")
+        if isinstance(geometry, QByteArray):
+            self.restoreGeometry(geometry)
+
+        raw_splitter = settings.value("splitter_sizes")
+        if isinstance(raw_splitter, list):
+            parsed_sizes: list[int] = [
+                int(val) for val in cast("list[object]", raw_splitter)
+                if isinstance(val, (str, int, float))
+            ]
+            if len(parsed_sizes) == 2:  # noqa: PLR2004
+                self._splitter.setSizes(parsed_sizes)
+
+        tab_state: dict[str, object] = {}
+        tab_names = settings.value("tab_state/tab_names")
+        if tab_names is not None:
+            tab_state["tab_names"] = tab_names
+        active_idx = settings.value("tab_state/active_index")
+        if isinstance(active_idx, str):
+            tab_state["active_index"] = int(active_idx)
+        elif isinstance(active_idx, int):
+            tab_state["active_index"] = active_idx
+        tool_splitter = settings.value("tab_state/splitter_sizes")
+        if tool_splitter is not None:
+            tab_state["splitter_sizes"] = tool_splitter
+
+        if tab_state:
+            self._tool_panel.restore_tab_state(tab_state)
+
+        detached_raw = settings.value("detached_panels")
+        if isinstance(detached_raw, list):
+            detached_list = cast("list[str]", detached_raw)
+            for title in detached_list:
+                tab_idx = self._tool_panel.find_tab_by_title(title)
+                if tab_idx >= 0:
+                    self._tool_panel.detach_tab(tab_idx)
+
+        _logger.debug("window_state_restored")
 
     def wire_script_manager(self, manager: object, validator: object | None = None) -> None:
         """Wire a script manager and validator into the UI.
@@ -420,6 +480,8 @@ class MainWindow(QMainWindow):
         self._add_menu_action(view_menu, "Analysis", self._on_view_analysis)
         self._add_menu_action(view_menu, "Scripts Manager", self._on_view_scripts)
         self._add_menu_action(view_menu, "Stack Viewer", self._on_view_stack)
+        view_menu.addSeparator()
+        self._add_menu_action(view_menu, "Detach Current Panel", self._on_detach_current, "Ctrl+Shift+D")
 
     def _on_view_analysis(self) -> None:
         """Show the bridge analysis panel."""
@@ -438,6 +500,10 @@ class MainWindow(QMainWindow):
     def _on_view_stack(self) -> None:
         """Show the stack viewer panel."""
         self._tool_panel.activate_stack_tab()
+
+    def _on_detach_current(self) -> None:
+        """Detach the currently active tool panel into a floating window."""
+        self._tool_panel.detach_current_tab()
 
     def _setup_tools_menu(self, menubar: QMenuBar) -> None:
         """Set up the Tools menu.
@@ -1902,9 +1968,32 @@ class MainWindow(QMainWindow):
     def closeEvent(self, a0: QCloseEvent | None) -> None:
         """Handle window close event.
 
+        Checks for unsaved hex editor changes, persists window state,
+        then shuts down bridges, sandbox, and background workers.
+
         Args:
             a0: Close event.
         """
+        if self._tool_panel.has_unsaved_changes():
+            reply = QMessageBox.question(
+                self,
+                "Unsaved Changes",
+                "The hex editor has unsaved changes. Save before closing?",
+                QMessageBox.StandardButton.Save
+                | QMessageBox.StandardButton.Discard
+                | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Save,
+            )
+            if reply == QMessageBox.StandardButton.Cancel:
+                if a0 is not None:
+                    a0.ignore()
+                return
+            if reply == QMessageBox.StandardButton.Save:
+                self._tool_panel.save_hex_editor()
+
+        self._save_window_state()
+        self._tool_panel.close_detached_windows()
+
         try:
             from ..core.process_manager import ProcessManager
 

@@ -1,0 +1,371 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+
+"""Integration tests for the HexPat interpreter against real binary data."""
+
+from __future__ import annotations
+
+import struct
+
+import pytest
+
+from intellicrack.core.hexpat.errors import HexPatError, HexPatRuntimeError
+from intellicrack.core.hexpat.interpreter import HexPatInterpreter
+
+
+@pytest.fixture
+def interp() -> HexPatInterpreter:
+    return HexPatInterpreter()
+
+
+class TestPrimitiveReads:
+    def test_u8(self, interp: HexPatInterpreter) -> None:
+        data = bytes([0xFF])
+        results = interp.execute_bytes("u8 v @ 0;", data)
+        assert results[0]["display_value"] == "0xFF"
+        assert results[0]["size"] == 1
+
+    def test_u16_little_endian(self, interp: HexPatInterpreter) -> None:
+        data = struct.pack("<H", 0x1234)
+        results = interp.execute_bytes("u16 v @ 0;", data)
+        assert results[0]["display_value"] == "0x1234"
+
+    def test_u32_big_endian(self, interp: HexPatInterpreter) -> None:
+        data = struct.pack(">I", 0x12345678)
+        results = interp.execute_bytes("be u32 v @ 0;", data)
+        assert results[0]["display_value"] == "0x12345678"
+
+    def test_s32_negative(self, interp: HexPatInterpreter) -> None:
+        data = struct.pack("<i", -42)
+        results = interp.execute_bytes("s32 v @ 0;", data)
+        assert results[0]["display_value"] == "-42"
+
+    def test_float(self, interp: HexPatInterpreter) -> None:
+        data = struct.pack("<f", 3.14)
+        results = interp.execute_bytes("float v @ 0;", data)
+        assert results[0]["display_value"].startswith("3.14")
+
+    def test_double(self, interp: HexPatInterpreter) -> None:
+        data = struct.pack("<d", 2.71828)
+        results = interp.execute_bytes("double v @ 0;", data)
+        assert "2.718" in results[0]["display_value"]
+
+    def test_bool_true(self, interp: HexPatInterpreter) -> None:
+        results = interp.execute_bytes("bool v @ 0;", bytes([1]))
+        assert results[0]["display_value"] == "true"
+
+    def test_bool_false(self, interp: HexPatInterpreter) -> None:
+        results = interp.execute_bytes("bool v @ 0;", bytes([0]))
+        assert results[0]["display_value"] == "false"
+
+    def test_char(self, interp: HexPatInterpreter) -> None:
+        results = interp.execute_bytes("char v @ 0;", b"A")
+        assert results[0]["display_value"] == "'A'"
+
+    def test_u64(self, interp: HexPatInterpreter) -> None:
+        data = struct.pack("<Q", 0xDEADBEEFCAFEBABE)
+        results = interp.execute_bytes("u64 v @ 0;", data)
+        assert results[0]["display_value"] == "0xDEADBEEFCAFEBABE"
+
+    def test_out_of_bounds_raises(self, interp: HexPatInterpreter) -> None:
+        with pytest.raises(HexPatRuntimeError, match="out of bounds"):
+            interp.execute_bytes("u32 v @ 0;", bytes([0, 1]))
+
+
+class TestStructs:
+    def test_simple_struct(self, interp: HexPatInterpreter) -> None:
+        data = struct.pack("<HI", 0x1234, 0xDEADBEEF)
+        source = "struct S { u16 a; u32 b; }; S s @ 0;"
+        results = interp.execute_bytes(source, data)
+        assert results[0]["name"] == "s"
+        kids = results[0]["children"]
+        assert kids[0]["name"] == "a"
+        assert kids[0]["display_value"] == "0x1234"
+        assert kids[1]["name"] == "b"
+        assert kids[1]["display_value"] == "0xDEADBEEF"
+
+    def test_nested_struct(self, interp: HexPatInterpreter) -> None:
+        data = struct.pack("<HHI", 0x1111, 0x2222, 0xAABBCCDD)
+        source = """
+            struct Inner { u16 x; u16 y; };
+            struct Outer { Inner i; u32 z; };
+            Outer o @ 0;
+        """
+        results = interp.execute_bytes(source, data)
+        outer = results[0]
+        assert outer["children"][0]["name"] == "i"
+        assert len(outer["children"][0]["children"]) == 2
+        assert outer["children"][1]["display_value"] == "0xAABBCCDD"
+
+    def test_struct_with_padding(self, interp: HexPatInterpreter) -> None:
+        data = struct.pack("<H", 0x1234) + bytes(6) + struct.pack("<I", 0xBEEF)
+        source = "struct S { u16 a; padding[6]; u32 b; }; S s @ 0;"
+        results = interp.execute_bytes(source, data)
+        kids = results[0]["children"]
+        assert kids[0]["display_value"] == "0x1234"
+        assert kids[1]["name"] == "_padding"
+        assert kids[1]["size"] == 6
+        assert kids[2]["display_value"] == "0xBEEF"
+
+    def test_multiple_placements(self, interp: HexPatInterpreter) -> None:
+        data = struct.pack("<II", 0xAAAA, 0xBBBB)
+        source = "u32 a @ 0; u32 b @ 4;"
+        results = interp.execute_bytes(source, data)
+        assert len(results) == 2
+        assert results[0]["offset"] == 0
+        assert results[1]["offset"] == 4
+
+
+class TestEnums:
+    def test_enum_named_value(self, interp: HexPatInterpreter) -> None:
+        data = bytes([2])
+        source = "enum Color : u8 { Red = 0, Green = 1, Blue = 2 }; Color c @ 0;"
+        results = interp.execute_bytes(source, data)
+        assert "Blue" in results[0]["display_value"]
+        assert "0x2" in results[0]["display_value"]
+
+    def test_enum_unknown_value(self, interp: HexPatInterpreter) -> None:
+        data = bytes([99])
+        source = "enum E : u8 { A = 1, B = 2 }; E e @ 0;"
+        results = interp.execute_bytes(source, data)
+        assert "<unknown>" in results[0]["display_value"]
+
+    def test_enum_auto_increment(self, interp: HexPatInterpreter) -> None:
+        data = bytes([2])
+        source = "enum E : u8 { A, B, C }; E e @ 0;"
+        results = interp.execute_bytes(source, data)
+        assert "C" in results[0]["display_value"]
+
+
+class TestConditionals:
+    def test_if_true_branch(self, interp: HexPatInterpreter) -> None:
+        data = bytearray(8)
+        data[0] = 1
+        struct.pack_into("<I", data, 1, 0xDEAD)
+        source = """
+            struct S { u8 flag; if (flag == 1) { u32 val; } };
+            S s @ 0;
+        """
+        results = interp.execute_bytes(source, bytes(data))
+        kids = results[0]["children"]
+        assert len(kids) == 2
+        assert kids[1]["name"] == "val"
+
+    def test_if_false_branch(self, interp: HexPatInterpreter) -> None:
+        data = bytearray(8)
+        data[0] = 0
+        struct.pack_into("<H", data, 1, 0xBEEF)
+        source = """
+            struct S { u8 flag; if (flag == 1) { u32 a; } else { u16 b; } };
+            S s @ 0;
+        """
+        results = interp.execute_bytes(source, bytes(data))
+        kids = results[0]["children"]
+        assert kids[1]["name"] == "b"
+        assert kids[1]["display_value"] == "0xBEEF"
+
+    def test_enum_conditional(self, interp: HexPatInterpreter) -> None:
+        data = bytearray(8)
+        data[0] = 2
+        struct.pack_into("<I", data, 1, 0xCAFE)
+        source = """
+            enum T : u8 { A=1, B=2, C=3 };
+            struct S { T t; if (t == 2) { u32 d; } };
+            S s @ 0;
+        """
+        results = interp.execute_bytes(source, bytes(data))
+        kids = results[0]["children"]
+        assert len(kids) == 2
+        assert kids[1]["name"] == "d"
+        assert kids[1]["display_value"] == "0xCAFE"
+
+
+class TestBitfields:
+    def test_bitfield_extraction(self, interp: HexPatInterpreter) -> None:
+        data = bytes([0b10110101])
+        source = "bitfield F { a : 1; b : 1; c : 2; d : 4; }; F f @ 0;"
+        results = interp.execute_bytes(source, data)
+        kids = results[0]["children"]
+        assert len(kids) == 4
+        assert kids[0]["name"] == "a"
+        assert kids[3]["name"] == "d"
+
+
+class TestArrays:
+    def test_fixed_array(self, interp: HexPatInterpreter) -> None:
+        data = struct.pack("<III", 100, 200, 300)
+        source = "struct S { u32 vals[3]; }; S s @ 0;"
+        results = interp.execute_bytes(source, data)
+        arr = results[0]["children"][0]
+        assert arr["name"] == "vals"
+        assert len(arr["children"]) == 3
+
+    def test_u8_array(self, interp: HexPatInterpreter) -> None:
+        data = bytes([10, 20, 30, 40])
+        source = "u8 bytes[4] @ 0;"
+        results = interp.execute_bytes(source, data)
+        assert results[0]["size"] == 4
+
+
+class TestAtOffset:
+    def test_field_at_offset(self, interp: HexPatInterpreter) -> None:
+        data = bytearray(16)
+        struct.pack_into("<I", data, 0, 8)
+        struct.pack_into("<I", data, 8, 0xBEEF)
+        source = """
+            struct S {
+                u32 ptr;
+                u32 target @ ptr;
+            };
+            S s @ 0;
+        """
+        results = interp.execute_bytes(source, data)
+        kids = results[0]["children"]
+        assert kids[1]["offset"] == 8
+        assert kids[1]["display_value"] == "0xBEEF"
+
+
+class TestEndianness:
+    def test_le_prefix(self, interp: HexPatInterpreter) -> None:
+        data = struct.pack("<I", 0x12345678)
+        results = interp.execute_bytes("le u32 v @ 0;", data)
+        assert results[0]["display_value"] == "0x12345678"
+
+    def test_be_prefix(self, interp: HexPatInterpreter) -> None:
+        data = struct.pack(">I", 0x12345678)
+        results = interp.execute_bytes("be u32 v @ 0;", data)
+        assert results[0]["display_value"] == "0x12345678"
+
+    def test_mixed_endianness_in_struct(self, interp: HexPatInterpreter) -> None:
+        data = struct.pack("<H", 0x1234) + struct.pack(">H", 0x5678)
+        source = "struct S { le u16 a; be u16 b; }; S s @ 0;"
+        results = interp.execute_bytes(source, data)
+        kids = results[0]["children"]
+        assert kids[0]["display_value"] == "0x1234"
+        assert kids[1]["display_value"] == "0x5678"
+
+
+class TestOutputFormat:
+    def test_parsed_field_keys(self, interp: HexPatInterpreter) -> None:
+        results = interp.execute_bytes("u8 v @ 0;", bytes([42]))
+        field = results[0]
+        required_keys = {"name", "offset", "size", "raw_bytes", "display_value",
+                         "children", "color", "validation_passed", "description"}
+        assert required_keys.issubset(set(field.keys()))
+
+    def test_raw_bytes_is_list_of_int(self, interp: HexPatInterpreter) -> None:
+        results = interp.execute_bytes("u16 v @ 0;", bytes([0xAB, 0xCD]))
+        raw = results[0]["raw_bytes"]
+        assert isinstance(raw, list)
+        assert all(isinstance(b, int) for b in raw)
+        assert raw == [0xAB, 0xCD]
+
+    def test_children_is_list(self, interp: HexPatInterpreter) -> None:
+        data = struct.pack("<HH", 1, 2)
+        results = interp.execute_bytes("struct S{u16 a;u16 b;}; S s @ 0;", data)
+        assert isinstance(results[0]["children"], list)
+        assert len(results[0]["children"]) == 2
+
+
+class TestRealBinaryFormats:
+    def test_pe_dos_header(self, interp: HexPatInterpreter, pe_header_bytes: bytes) -> None:
+        source = """
+            struct DOSHeader {
+                u16 e_magic;
+                u16 e_cblp;
+                padding[56];
+                u32 e_lfanew;
+            };
+            DOSHeader h @ 0;
+        """
+        results = interp.execute_bytes(source, pe_header_bytes)
+        kids = results[0]["children"]
+        assert kids[0]["display_value"] == "0x5A4D"
+        assert kids[3]["display_value"] == "0x50"
+
+    def test_elf_header(self, interp: HexPatInterpreter, elf_header_bytes: bytes) -> None:
+        source = """
+            enum ElfClass : u8 { NONE=0, ELF32=1, ELF64=2 };
+            enum ElfData : u8 { NONE=0, LSB=1, MSB=2 };
+            struct ElfIdent {
+                u8 magic[4];
+                ElfClass ei_class;
+                ElfData ei_data;
+                u8 ei_version;
+                padding[9];
+            };
+            struct Elf64 {
+                ElfIdent ident;
+                u16 e_type;
+                u16 e_machine;
+                u32 e_version;
+                u64 e_entry;
+                u64 e_phoff;
+            };
+            Elf64 hdr @ 0;
+        """
+        results = interp.execute_bytes(source, elf_header_bytes)
+        ident = results[0]["children"][0]
+        assert "ELF64" in ident["children"][1]["display_value"]
+        assert "LSB" in ident["children"][2]["display_value"]
+        entry = results[0]["children"][4]
+        assert entry["display_value"] == "0x1000"
+
+    def test_bmp_header(self, interp: HexPatInterpreter, bmp_header_bytes: bytes) -> None:
+        source = """
+            enum Compression : u32 { BI_RGB, BI_RLE8, BI_RLE4 };
+            struct FileHeader { u8 bfType[2]; u32 bfSize; u16 r1; u16 r2; u32 bfOffBits; };
+            struct InfoHeader {
+                u32 biSize; s32 biWidth; s32 biHeight; u16 biPlanes;
+                u16 biBitCount; Compression biCompression;
+            };
+            struct BMP { FileHeader fh; InfoHeader ih; };
+            BMP bmp @ 0;
+        """
+        results = interp.execute_bytes(source, bmp_header_bytes)
+        fh = results[0]["children"][0]
+        ih = results[0]["children"][1]
+        assert int(fh["children"][1]["display_value"], 16) == 58
+        assert ih["children"][1]["display_value"] == "1"
+        assert "BI_RGB" in ih["children"][5]["display_value"]
+
+    def test_zip_local_header(self, interp: HexPatInterpreter, zip_local_header_bytes: bytes) -> None:
+        source = """
+            struct ZipLocal {
+                u32 signature;
+                u16 version;
+                u16 flags;
+                u16 compression;
+                u16 mod_time;
+                u16 mod_date;
+                u32 crc32;
+                u32 compressed_size;
+                u32 uncompressed_size;
+                u16 filename_length;
+                u16 extra_length;
+            };
+            ZipLocal z @ 0;
+        """
+        results = interp.execute_bytes(source, zip_local_header_bytes)
+        kids = results[0]["children"]
+        assert kids[0]["display_value"] == "0x4034B50"
+        assert kids[1]["display_value"] == "0x14"
+        assert kids[9]["display_value"] == "0x8"
+
+
+class TestErrorHandling:
+    def test_unknown_type_raises(self, interp: HexPatInterpreter) -> None:
+        with pytest.raises(HexPatError):
+            interp.execute_bytes("UnknownType v @ 0;", bytes(4))
+
+    def test_syntax_error_raises(self, interp: HexPatInterpreter) -> None:
+        with pytest.raises(HexPatError):
+            interp.execute_bytes("struct { }", bytes(4))
+
+    def test_empty_source(self, interp: HexPatInterpreter) -> None:
+        results = interp.execute_bytes("", bytes(4))
+        assert results == []
+
+    def test_empty_data(self, interp: HexPatInterpreter) -> None:
+        with pytest.raises(HexPatRuntimeError):
+            interp.execute_bytes("u32 v @ 0;", b"")

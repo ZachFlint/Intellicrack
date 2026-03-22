@@ -63,6 +63,21 @@ try:
 except Exception as _exc:
     _logger.debug("hexpat_compiler_unavailable", error=str(_exc))
 
+_HexPatInterpreter: Any = None
+_PatternRegistry: Any = None
+_DataReader: Any = None
+_hexpat_interpreter_available: bool = False
+try:
+    from intellicrack.core.hexpat import (
+        HexPatInterpreter as _HexPatInterpreter,
+        PatternRegistry as _PatternRegistry,
+    )
+    from intellicrack.core.hexpat.data_reader import DataReader as _DataReader
+
+    _hexpat_interpreter_available = True
+except Exception as _exc:
+    _logger.debug("hexpat_interpreter_unavailable", error=str(_exc))
+
 _HexDisassembler: type[HexDisassembler] | None = None
 _disasm_available: bool = False
 try:
@@ -116,7 +131,10 @@ class HexEditorBridge(ToolBridgeBase):
         self._selection: tuple[int, int] | None = None
         self._hexcore_available: bool = _hexcore_available
         self._hexpat_available: bool = _hexpat_available
+        self._hexpat_interpreter_available: bool = _hexpat_interpreter_available
         self._pipeline_available: bool = _pipeline_available
+        self._interpreter: Any | None = None
+        self._pattern_registry: Any | None = None
         self._state_holder: HexDocumentState | None = None
         self._tool_registry: ToolRegistry | None = None
         self._highlight_rules: dict[str, dict[str, Any]] = {}
@@ -325,6 +343,36 @@ class HexEditorBridge(ToolBridgeBase):
                         ),
                     ],
                     returns="Compiled JSON template string",
+                ),
+                ToolFunction(
+                    name="hex_editor.execute_pattern",
+                    description="Execute .hexpat pattern source against the open document.",
+                    parameters=[
+                        ToolParameter(name="source", type="string", description="HexPat source code."),
+                        ToolParameter(name="offset", type="integer", description="Base offset.", required=False, default=0),
+                    ],
+                    returns="List of parsed field dicts with name, offset, size, display_value, children",
+                ),
+                ToolFunction(
+                    name="hex_editor.execute_pattern_file",
+                    description="Execute a .hexpat pattern file against the open document.",
+                    parameters=[
+                        ToolParameter(name="pattern_path", type="string", description="Path to the .hexpat file."),
+                        ToolParameter(name="offset", type="integer", description="Base offset.", required=False, default=0),
+                    ],
+                    returns="List of parsed field dicts",
+                ),
+                ToolFunction(
+                    name="hex_editor.list_hexpat_patterns",
+                    description="List available .hexpat community patterns.",
+                    parameters=[],
+                    returns="List of {name, description, category} dicts",
+                ),
+                ToolFunction(
+                    name="hex_editor.auto_detect_pattern",
+                    description="Auto-detect .hexpat patterns matching the open file by magic bytes.",
+                    parameters=[],
+                    returns="List of {name, description, category} dicts sorted by specificity",
                 ),
                 ToolFunction(
                     name="hex_editor.export_template",
@@ -1270,6 +1318,172 @@ class HexEditorBridge(ToolBridgeBase):
         except _HexPatError as exc:
             msg = f"compilation error at line {exc.line}, column {exc.column}: {exc.message}"
             raise ValueError(msg) from exc
+
+    def _get_interpreter(self) -> Any:
+        """Get or create the HexPat interpreter instance.
+
+        Returns:
+            Any: A HexPatInterpreter instance.
+
+        Raises:
+            RuntimeError: If the interpreter module is not available.
+        """
+        if self._interpreter is not None:
+            return self._interpreter
+        if not self._hexpat_interpreter_available or _HexPatInterpreter is None:
+            msg = "hexpat interpreter not available"
+            raise RuntimeError(msg)
+        self._interpreter = _HexPatInterpreter()
+        return self._interpreter
+
+    def _get_pattern_registry(self) -> Any:
+        """Get or create the pattern registry instance.
+
+        Returns:
+            Any: A PatternRegistry instance.
+
+        Raises:
+            RuntimeError: If the pattern registry module is not available.
+        """
+        if self._pattern_registry is not None:
+            return self._pattern_registry
+        if not self._hexpat_interpreter_available or _PatternRegistry is None:
+            msg = "pattern registry not available"
+            raise RuntimeError(msg)
+        project_root = Path(__file__).resolve().parents[2]
+        patterns_dir = project_root / "vendor" / "community-patterns" / "patterns"
+        pattern_dirs: list[Path] = []
+        if patterns_dir.exists():
+            pattern_dirs.append(patterns_dir)
+        self._pattern_registry = _PatternRegistry(pattern_dirs)
+        return self._pattern_registry
+
+    async def execute_pattern(
+        self,
+        source: str,
+        offset: int = 0,
+    ) -> list[dict[str, Any]]:
+        """Execute .hexpat pattern source against the open document.
+
+        Args:
+            source: HexPat source code string.
+            offset: Base offset in the binary data.
+
+        Returns:
+            list[dict[str, Any]]: List of parsed field dicts with name,
+                offset, size, display_value, and children.
+
+        Raises:
+            RuntimeError: If no document is open or interpreter unavailable.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        interpreter = self._get_interpreter()
+        fields: list[dict[str, Any]] = interpreter.execute(source, self._document, offset)
+        _logger.info("pattern_executed", field_count=len(fields), offset=offset)
+        if self._state_holder is not None:
+            self._state_holder.notify_pattern_executed(
+                "<inline>", len(fields), source="bridge"
+            )
+        return fields
+
+    async def execute_pattern_file(
+        self,
+        pattern_path: str,
+        offset: int = 0,
+    ) -> list[dict[str, Any]]:
+        """Execute a .hexpat pattern file against the open document.
+
+        Args:
+            pattern_path: Filesystem path to the .hexpat file.
+            offset: Base offset in the binary data.
+
+        Returns:
+            list[dict[str, Any]]: List of parsed field dicts.
+
+        Raises:
+            RuntimeError: If no document is open or interpreter unavailable.
+            FileNotFoundError: If the pattern file does not exist.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        path = Path(pattern_path)
+        if not path.exists():
+            msg = f"pattern file not found: {pattern_path}"
+            raise FileNotFoundError(msg)
+
+        interpreter = self._get_interpreter()
+        fields: list[dict[str, Any]] = interpreter.execute_file(path, self._document, offset)
+        _logger.info(
+            "pattern_file_executed",
+            pattern_path=pattern_path,
+            field_count=len(fields),
+            offset=offset,
+        )
+        if self._state_holder is not None:
+            self._state_holder.notify_pattern_executed(
+                path.stem, len(fields), source="bridge"
+            )
+        return fields
+
+    async def list_hexpat_patterns(self) -> list[dict[str, str]]:
+        """List all available .hexpat community patterns.
+
+        Returns:
+            list[dict[str, str]]: List of dicts with name, description, and category.
+        """
+        try:
+            registry = self._get_pattern_registry()
+        except RuntimeError:
+            return []
+
+        patterns = registry.list_patterns()
+        _logger.debug("hexpat_patterns_listed", count=len(patterns))
+        return [
+            {
+                "name": p.name,
+                "description": p.description or "",
+                "category": p.category,
+            }
+            for p in patterns
+        ]
+
+    async def auto_detect_pattern(self) -> list[dict[str, str]]:
+        """Auto-detect .hexpat patterns matching the open file by magic bytes.
+
+        Returns:
+            list[dict[str, str]]: List of matching pattern dicts sorted by specificity.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        if not self._hexpat_interpreter_available or _DataReader is None:
+            return []
+
+        try:
+            registry = self._get_pattern_registry()
+        except RuntimeError:
+            return []
+
+        data_reader = _DataReader.from_document(self._document)
+        matches = registry.match_file(data_reader)
+        _logger.debug("pattern_auto_detect", match_count=len(matches))
+        return [
+            {
+                "name": m.name,
+                "description": m.description or "",
+                "category": m.category,
+            }
+            for m in matches
+        ]
 
     async def export_template(self, template_name: str) -> str:
         """Export a registered template as JSON.

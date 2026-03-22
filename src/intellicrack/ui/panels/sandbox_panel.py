@@ -204,7 +204,7 @@ class SandboxPanel(AnalysisPanelBase):
         if self._sandbox is not None and self._sandbox_id is not None:
             try:
                 run_bridge_coroutine(self._sandbox.stop())
-            except Exception:
+            except (RuntimeError, ConnectionError, OSError):
                 _logger.debug("sandbox_stop_skipped", exc_info=True)
 
     def set_sandbox(self, sandbox: SandboxBase) -> None:
@@ -612,7 +612,7 @@ class SandboxPanel(AnalysisPanelBase):
             state = self._sandbox.state
             status_text = state.status if hasattr(state, "status") else "Unknown"
             self._status_indicator.setText(f"Active ({status_text})")
-        except Exception:
+        except (RuntimeError, AttributeError):
             _logger.exception("sandbox_status_query_failed")
             self._status_indicator.setText("Active (status unavailable)")
 
