@@ -1,3 +1,18 @@
+6 findings in src/intellicrack/bridges\hex_editor.py
+
+src/intellicrack/bridges\hex_editor.py:632:141: E501 line too long (157 > 140 characters)
+
+src/intellicrack/bridges\hex_editor.py:633:141: E501 line too long (142 > 140 characters)
+
+src/intellicrack/bridges\hex_editor.py:660:141: E501 line too long (167 > 140 characters)
+
+src/intellicrack/bridges\hex_editor.py:733:141: E501 line too long (162 > 140 characters)
+
+src/intellicrack/bridges\hex_editor.py:734:141: E501 line too long (157 > 140 characters)
+
+src/intellicrack/bridges\hex_editor.py:744:141: E501 line too long (153 > 140 characters)
+
+
 3 findings in tests/test_bridges\test_x64dbg_new_methods.py
 
 tests/test_bridges\test_x64dbg_new_methods.py:206:9: F841 local variable '_buf_addr' is assigned to but never used
@@ -9,9 +24,9 @@ tests/test_bridges\test_x64dbg_new_methods.py:236:9: F841 local variable '_buf_a
 
 2 findings in src/intellicrack/providers\xpu_utils.py
 
-src/intellicrack/providers\xpu_utils.py:543:141: E501 line too long (146 > 140 characters)
+src/intellicrack/providers\xpu_utils.py:531:141: E501 line too long (146 > 140 characters)
 
-src/intellicrack/providers\xpu_utils.py:572:141: E501 line too long (179 > 140 characters)
+src/intellicrack/providers\xpu_utils.py:560:141: E501 line too long (179 > 140 characters)
 
 
 2 findings in tests/test_providers\test_agentic_capabilities.py
@@ -23,12 +38,22 @@ tests/test_providers\test_agentic_capabilities.py:217:9: F841 local variable '_c
 
 1 findings in src/intellicrack/bridges\ghidra.py
 
-src/intellicrack/bridges\ghidra.py:2390:141: E501 line too long (146 > 140 characters)
+src/intellicrack/bridges\ghidra.py:2384:141: E501 line too long (146 > 140 characters)
+
+
+1 findings in src/intellicrack/bridges\x64dbg.py
+
+src/intellicrack/bridges\x64dbg.py:2983:141: E501 line too long (143 > 140 characters)
+
+
+1 findings in src/intellicrack/core\config.py
+
+src/intellicrack/core\config.py:316:141: E501 line too long (149 > 140 characters)
 
 
 1 findings in src/intellicrack/sandbox\windows.py
 
-src/intellicrack/sandbox\windows.py:442:141: E501 line too long (160 > 140 characters)
+src/intellicrack/sandbox\windows.py:439:141: E501 line too long (160 > 140 characters)
 
 
 1 findings in src/intellicrack/ui\app.py
@@ -43,9 +68,14 @@ src/intellicrack/ui\chat.py:488:13: F824 `nonlocal content_label` is unused: nam
 
 1 findings in src/intellicrack/ui\tool_config.py
 
-src/intellicrack/ui\tool_config.py:82:141: E501 line too long (142 > 140 characters)
+src/intellicrack/ui\tool_config.py:88:141: E501 line too long (142 > 140 characters)
 
 
 1 findings in tests/test_core\test_main.py
 
 tests/test_core\test_main.py:47:9: F841 local variable '_store' is assigned to but never used
+
+
+1 findings in tests/test_ui\test_graph_view.py
+
+tests/test_ui\test_graph_view.py:221:22: E128 continuation line under-indented for visual indent

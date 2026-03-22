@@ -1491,6 +1491,12 @@
     {
       "complexity": 0,
       "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::get_display_mode",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::get_selection",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
@@ -1498,6 +1504,12 @@
       "complexity": 0,
       "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::is_available",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::list_highlight_rules",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -1551,7 +1563,43 @@
     {
       "complexity": 1,
       "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::export_template",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::get_byte_distribution",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::get_byte_statistics",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::get_content_classification",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::get_digram_matrix",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::get_entropy",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::get_entropy_map",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -1564,6 +1612,12 @@
       "complexity": 1,
       "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::list_bookmarks",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::list_hexpat_patterns",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -1611,6 +1665,12 @@
     {
       "complexity": 2,
       "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::add_highlight_rule",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::apply_template",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
@@ -1624,6 +1684,18 @@
       "complexity": 2,
       "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::delete_bytes",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::execute_pattern",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::get_byte_type_distribution",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -1653,7 +1725,37 @@
     {
       "complexity": 2,
       "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::list_encodings",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::list_transforms",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::register_template",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::set_display_mode",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::write_bytes",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::_get_interpreter",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -1665,7 +1767,25 @@
     {
       "complexity": 3,
       "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::compile_pattern",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::execute_pattern_file",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::redo",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::remove_highlight_rule",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -1683,13 +1803,79 @@
     {
       "complexity": 4,
       "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::_get_pattern_registry",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::auto_detect_pattern",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::import_patches",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::open_file",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::remove_template",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::export_patches",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
       "complexity": 5,
       "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::list_templates",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::list_templates_detailed",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::decode_text",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::yara_scan",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::yara_scan_files",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::_pack_numeric_needle",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::disassemble",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -1711,13 +1897,37 @@
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
+      "complexity": 9,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::apply_pipeline",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::apply_transform",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
       "complexity": 10,
       "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::get_context_for_ai",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
-      "complexity": 11,
+      "complexity": 18,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::calculate_hash_custom_crc",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 22,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::search_numeric",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 30,
       "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::copy_as",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
@@ -1761,7 +1971,43 @@
     {
       "complexity": 0,
       "file_name": "hex_state.py",
+      "function_name": "HexDocumentState::notify_display_mode_changed",
+      "path": "src\\intellicrack\\bridges\\hex_state.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_state.py",
       "function_name": "HexDocumentState::notify_document_saved",
+      "path": "src\\intellicrack\\bridges\\hex_state.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_state.py",
+      "function_name": "HexDocumentState::notify_highlight_rule_added",
+      "path": "src\\intellicrack\\bridges\\hex_state.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_state.py",
+      "function_name": "HexDocumentState::notify_highlight_rule_removed",
+      "path": "src\\intellicrack\\bridges\\hex_state.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_state.py",
+      "function_name": "HexDocumentState::notify_pattern_executed",
+      "path": "src\\intellicrack\\bridges\\hex_state.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_state.py",
+      "function_name": "HexDocumentState::notify_template_registered",
+      "path": "src\\intellicrack\\bridges\\hex_state.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_state.py",
+      "function_name": "HexDocumentState::notify_template_removed",
       "path": "src\\intellicrack\\bridges\\hex_state.py"
     },
     {
@@ -1792,12 +2038,6 @@
       "complexity": 0,
       "file_name": "hex_state.py",
       "function_name": "HexDocumentState::unregister_callback",
-      "path": "src\\intellicrack\\bridges\\hex_state.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "hex_state.py",
-      "function_name": "_CallbackEntry::__init__",
       "path": "src\\intellicrack\\bridges\\hex_state.py"
     },
     {
@@ -1843,6 +2083,12 @@
       "path": "src\\intellicrack\\bridges\\installer.py"
     },
     {
+      "complexity": 1,
+      "file_name": "installer.py",
+      "function_name": "_find_plugin_source",
+      "path": "src\\intellicrack\\bridges\\installer.py"
+    },
+    {
       "complexity": 2,
       "file_name": "installer.py",
       "function_name": "ToolVersion::__ge__",
@@ -1870,12 +2116,6 @@
       "complexity": 4,
       "file_name": "installer.py",
       "function_name": "ToolInstaller::_extract_archive",
-      "path": "src\\intellicrack\\bridges\\installer.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "installer.py",
-      "function_name": "_find_plugin_source",
       "path": "src\\intellicrack\\bridges\\installer.py"
     },
     {
@@ -2985,6 +3225,12 @@
     {
       "complexity": 16,
       "file_name": "x64dbg.py",
+      "function_name": "X64DbgBridge::find_pattern",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 16,
+      "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::get_stack_trace",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
@@ -2992,12 +3238,6 @@
       "complexity": 17,
       "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::_get_threads",
-      "path": "src\\intellicrack\\bridges\\x64dbg.py"
-    },
-    {
-      "complexity": 24,
-      "file_name": "x64dbg.py",
-      "function_name": "X64DbgBridge::find_pattern",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
@@ -3025,6 +3265,12 @@
       "path": "src\\intellicrack\\core\\analysis_aggregator.py"
     },
     {
+      "complexity": 2,
+      "file_name": "analysis_aggregator.py",
+      "function_name": "AnalysisAggregator::_collect_from_binary_bridge",
+      "path": "src\\intellicrack\\core\\analysis_aggregator.py"
+    },
+    {
       "complexity": 3,
       "file_name": "analysis_aggregator.py",
       "function_name": "_deduplicate_exports",
@@ -3034,12 +3280,6 @@
       "complexity": 3,
       "file_name": "analysis_aggregator.py",
       "function_name": "_deduplicate_imports",
-      "path": "src\\intellicrack\\core\\analysis_aggregator.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "analysis_aggregator.py",
-      "function_name": "AnalysisAggregator::_collect_from_binary_bridge",
       "path": "src\\intellicrack\\core\\analysis_aggregator.py"
     },
     {
@@ -3161,6 +3401,1536 @@
       "file_name": "config.py",
       "function_name": "Config::_to_dict",
       "path": "src\\intellicrack\\core\\config.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "disassembler.py",
+      "function_name": "HexDisassembler::available",
+      "path": "src\\intellicrack\\core\\disassembler.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "disassembler.py",
+      "function_name": "HexDisassembler::disassemble_to_lines",
+      "path": "src\\intellicrack\\core\\disassembler.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "disassembler.py",
+      "function_name": "_to_disassembly_line",
+      "path": "src\\intellicrack\\core\\disassembler.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "disassembler.py",
+      "function_name": "HexDisassembler::__init__",
+      "path": "src\\intellicrack\\core\\disassembler.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "disassembler.py",
+      "function_name": "get_disassembler",
+      "path": "src\\intellicrack\\core\\disassembler.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "disassembler.py",
+      "function_name": "HexDisassembler::disassemble",
+      "path": "src\\intellicrack\\core\\disassembler.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "disassembler.py",
+      "function_name": "HexDisassembler::get_supported_architectures",
+      "path": "src\\intellicrack\\core\\disassembler.py"
+    },
+    {
+      "complexity": 28,
+      "file_name": "disassembler.py",
+      "function_name": "HexDisassembler::_resolve_arch_mode",
+      "path": "src\\intellicrack\\core\\disassembler.py"
+    },
+    {
+      "complexity": 60,
+      "file_name": "disassembler.py",
+      "function_name": "HexDisassembler::auto_detect_arch",
+      "path": "src\\intellicrack\\core\\disassembler.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::__init__",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::from_bytes",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::from_document",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::read_bool",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::read_char",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::read_fixed_string",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::read_s8",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::read_u8",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::size",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::read_char16",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::read_double",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::read_float",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::read_s128",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::read_s16",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::read_s32",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::read_s64",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::read_string",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::read_u128",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::read_u16",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::read_u32",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::read_u64",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::read",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "data_reader.py",
+      "function_name": "DataReader::find_sequence",
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "errors.py",
+      "function_name": "HexPatRuntimeError::__init__",
+      "path": "src\\intellicrack\\core\\hexpat\\errors.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "errors.py",
+      "function_name": "HexPatError::__init__",
+      "path": "src\\intellicrack\\core\\hexpat\\errors.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "evaluator.py",
+      "function_name": "EvalScope::__init__",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "evaluator.py",
+      "function_name": "EvalScope::bindings",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "evaluator.py",
+      "function_name": "EvalScope::define",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_next_color",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::scope",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "evaluator.py",
+      "function_name": "_ReturnSignalError::__init__",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "evaluator.py",
+      "function_name": "_make_parsed_field",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::__init__",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_member_access",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_namespace_decl",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_sizeof",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_var_decl",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "evaluator.py",
+      "function_name": "EvalScope::get",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "evaluator.py",
+      "function_name": "EvalScope::set",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_apply_compound_assign",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_call",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_conditional",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_enum_instance",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_identifier",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_pointer_field",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_union_instance",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_normalize_endian",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_array_field",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_namespace_access",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_bitfield_instance",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_subscript",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_resolve_type_node_to_primitive",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::evaluate",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "evaluator.py",
+      "function_name": "_truthy",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_plain_field",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_struct_instance",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_try",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_instantiate_named_type",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_register_using",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_decl",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_field",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_unary",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_extract_description",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_register_enum",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_call_user_function",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_while",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "evaluator.py",
+      "function_name": "_values_equal",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_placement",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_sizeof_type_node",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 13,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_instantiate_type",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 14,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_assign",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 15,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_match",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 16,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_stmt",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 17,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_binary",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 18,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_format_value",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 18,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_read_primitive",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 19,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_expr",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 20,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_cast",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 20,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_for",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 20,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_stmt_collect",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 23,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_apply_numeric_op",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 23,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_array_type",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 62,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_build_builtins",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "interpreter.py",
+      "function_name": "HexPatInterpreter::execute_file",
+      "path": "src\\intellicrack\\core\\hexpat\\interpreter.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "interpreter.py",
+      "function_name": "HexPatInterpreter::can_compile_to_json",
+      "path": "src\\intellicrack\\core\\hexpat\\interpreter.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "interpreter.py",
+      "function_name": "HexPatInterpreter::compile_to_json",
+      "path": "src\\intellicrack\\core\\hexpat\\interpreter.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "interpreter.py",
+      "function_name": "HexPatInterpreter::execute",
+      "path": "src\\intellicrack\\core\\hexpat\\interpreter.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "interpreter.py",
+      "function_name": "HexPatInterpreter::execute_bytes",
+      "path": "src\\intellicrack\\core\\hexpat\\interpreter.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "interpreter.py",
+      "function_name": "HexPatInterpreter::__init__",
+      "path": "src\\intellicrack\\core\\hexpat\\interpreter.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "lexer.py",
+      "function_name": "HexPatLexer::__init__",
+      "path": "src\\intellicrack\\core\\hexpat\\lexer.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "lexer.py",
+      "function_name": "HexPatLexer::_add",
+      "path": "src\\intellicrack\\core\\hexpat\\lexer.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "lexer.py",
+      "function_name": "HexPatLexer::_error",
+      "path": "src\\intellicrack\\core\\hexpat\\lexer.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "lexer.py",
+      "function_name": "HexPatLexer::_peek",
+      "path": "src\\intellicrack\\core\\hexpat\\lexer.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "lexer.py",
+      "function_name": "HexPatLexer::_skip_whitespace",
+      "path": "src\\intellicrack\\core\\hexpat\\lexer.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "lexer.py",
+      "function_name": "HexPatLexer::tokenize",
+      "path": "src\\intellicrack\\core\\hexpat\\lexer.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "lexer.py",
+      "function_name": "HexPatLexer::_advance",
+      "path": "src\\intellicrack\\core\\hexpat\\lexer.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "lexer.py",
+      "function_name": "HexPatLexer::_match",
+      "path": "src\\intellicrack\\core\\hexpat\\lexer.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "lexer.py",
+      "function_name": "HexPatLexer::_scan_identifier",
+      "path": "src\\intellicrack\\core\\hexpat\\lexer.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "lexer.py",
+      "function_name": "HexPatLexer::_skip_line_comment",
+      "path": "src\\intellicrack\\core\\hexpat\\lexer.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "lexer.py",
+      "function_name": "HexPatLexer::_scan_char",
+      "path": "src\\intellicrack\\core\\hexpat\\lexer.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "lexer.py",
+      "function_name": "HexPatLexer::_scan_string",
+      "path": "src\\intellicrack\\core\\hexpat\\lexer.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "lexer.py",
+      "function_name": "HexPatLexer::_scan_escape",
+      "path": "src\\intellicrack\\core\\hexpat\\lexer.py"
+    },
+    {
+      "complexity": 12,
+      "file_name": "lexer.py",
+      "function_name": "HexPatLexer::_skip_block_comment",
+      "path": "src\\intellicrack\\core\\hexpat\\lexer.py"
+    },
+    {
+      "complexity": 15,
+      "file_name": "lexer.py",
+      "function_name": "HexPatLexer::_scan_token",
+      "path": "src\\intellicrack\\core\\hexpat\\lexer.py"
+    },
+    {
+      "complexity": 46,
+      "file_name": "lexer.py",
+      "function_name": "HexPatLexer::_scan_number",
+      "path": "src\\intellicrack\\core\\hexpat\\lexer.py"
+    },
+    {
+      "complexity": 83,
+      "file_name": "lexer.py",
+      "function_name": "HexPatLexer::_scan_operator",
+      "path": "src\\intellicrack\\core\\hexpat\\lexer.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::__init__",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_at_end",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_error",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_looks_like_field",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_expr_stmt",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_try_stmt",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_union",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_using",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_while_stmt",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_restore",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_save",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_advance",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_current",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_expect",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_match",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_expr_or_placement_stmt",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_return_stmt",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_struct",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_peek",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_try_parse_annotations",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_bitfield",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_block",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_if_stmt",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_const_decl",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_enum",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_top_level_statement",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_for_stmt",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_paren_or_cast",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_check_field_lookahead",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_annotations",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_function",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_match_stmt",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_namespace",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 12,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_type",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 12,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::parse",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 13,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_field_or_placement",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 16,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_statement",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 22,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_prefix",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 25,
+      "file_name": "parser.py",
+      "function_name": "HexPatParser::_parse_expression",
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "pattern_registry.py",
+      "function_name": "PatternRegistry::load_source",
+      "path": "src\\intellicrack\\core\\hexpat\\pattern_registry.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "pattern_registry.py",
+      "function_name": "PatternRegistry::__init__",
+      "path": "src\\intellicrack\\core\\hexpat\\pattern_registry.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "pattern_registry.py",
+      "function_name": "PatternRegistry::get_pattern",
+      "path": "src\\intellicrack\\core\\hexpat\\pattern_registry.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "pattern_registry.py",
+      "function_name": "PatternRegistry::list_patterns",
+      "path": "src\\intellicrack\\core\\hexpat\\pattern_registry.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "pattern_registry.py",
+      "function_name": "PatternRegistry::_extract_metadata",
+      "path": "src\\intellicrack\\core\\hexpat\\pattern_registry.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "pattern_registry.py",
+      "function_name": "PatternRegistry::list_by_category",
+      "path": "src\\intellicrack\\core\\hexpat\\pattern_registry.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "pattern_registry.py",
+      "function_name": "PatternRegistry::scan",
+      "path": "src\\intellicrack\\core\\hexpat\\pattern_registry.py"
+    },
+    {
+      "complexity": 15,
+      "file_name": "pattern_registry.py",
+      "function_name": "PatternRegistry::match_file",
+      "path": "src\\intellicrack\\core\\hexpat\\pattern_registry.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "preprocessor.py",
+      "function_name": "HexPatPreprocessor::__init__",
+      "path": "src\\intellicrack\\core\\hexpat\\preprocessor.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "preprocessor.py",
+      "function_name": "_parse_int_value",
+      "path": "src\\intellicrack\\core\\hexpat\\preprocessor.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "preprocessor.py",
+      "function_name": "HexPatPreprocessor::_process_defines",
+      "path": "src\\intellicrack\\core\\hexpat\\preprocessor.py"
+    },
+    {
+      "complexity": 12,
+      "file_name": "preprocessor.py",
+      "function_name": "HexPatPreprocessor::_resolve_include",
+      "path": "src\\intellicrack\\core\\hexpat\\preprocessor.py"
+    },
+    {
+      "complexity": 22,
+      "file_name": "preprocessor.py",
+      "function_name": "HexPatPreprocessor::_process_source",
+      "path": "src\\intellicrack\\core\\hexpat\\preprocessor.py"
+    },
+    {
+      "complexity": 24,
+      "file_name": "preprocessor.py",
+      "function_name": "extract_pragmas_fast",
+      "path": "src\\intellicrack\\core\\hexpat\\preprocessor.py"
+    },
+    {
+      "complexity": 25,
+      "file_name": "preprocessor.py",
+      "function_name": "HexPatPreprocessor::_process_conditionals",
+      "path": "src\\intellicrack\\core\\hexpat\\preprocessor.py"
+    },
+    {
+      "complexity": 28,
+      "file_name": "preprocessor.py",
+      "function_name": "HexPatPreprocessor::process",
+      "path": "src\\intellicrack\\core\\hexpat\\preprocessor.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::__init__",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_core_array_index",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_io_print",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_mem_base_address",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_mem_size",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::set_array_index",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_core_get_endian",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_math_ceil",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_math_floor",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_math_pow",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_mem_find_sequence",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_string_contains",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_string_ends_with",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_string_length",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_string_reverse",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_string_starts_with",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_string_substr",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::register_all",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_math_abs",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_math_log2",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_math_sqrt",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_string_at",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_core_set_endian",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_mem_read_signed",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_mem_read_string",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_mem_read_unsigned",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_string_to_int",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_io_format",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_math_max",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_math_min",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_read_struct_field",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "type_system.py",
+      "function_name": "BuiltinTypes::all_names",
+      "path": "src\\intellicrack\\core\\hexpat\\type_system.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "type_system.py",
+      "function_name": "BuiltinTypes::get",
+      "path": "src\\intellicrack\\core\\hexpat\\type_system.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "type_system.py",
+      "function_name": "TypeRegistry::__init__",
+      "path": "src\\intellicrack\\core\\hexpat\\type_system.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "type_system.py",
+      "function_name": "TypeRegistry::register_alias",
+      "path": "src\\intellicrack\\core\\hexpat\\type_system.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "type_system.py",
+      "function_name": "TypeRegistry::register_bitfield",
+      "path": "src\\intellicrack\\core\\hexpat\\type_system.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "type_system.py",
+      "function_name": "TypeRegistry::register_enum",
+      "path": "src\\intellicrack\\core\\hexpat\\type_system.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "type_system.py",
+      "function_name": "TypeRegistry::register_struct",
+      "path": "src\\intellicrack\\core\\hexpat\\type_system.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "type_system.py",
+      "function_name": "TypeRegistry::register_union",
+      "path": "src\\intellicrack\\core\\hexpat\\type_system.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "type_system.py",
+      "function_name": "TypeRegistry::resolve_primitive",
+      "path": "src\\intellicrack\\core\\hexpat\\type_system.py"
+    },
+    {
+      "complexity": 14,
+      "file_name": "type_system.py",
+      "function_name": "TypeRegistry::resolve",
+      "path": "src\\intellicrack\\core\\hexpat\\type_system.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatCodegen::__init__",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatCompiler::compile",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatCompiler::compile_to_dict",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatError::__init__",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatLexer::__init__",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::__init__",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_at_end",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_current",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_parse_expression",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_parse_struct",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatCodegen::_gen_field",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatLexer::_peek",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_advance",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_expect",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_match",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_parse_additive",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_parse_comparison",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_parse_conditional",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_parse_multiplicative",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_parse_padding_field",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_parse_unary",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatCodegen::generate",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_parse_annotations",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_parse_bitfield",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_parse_enum",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_parse_field_list",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatLexer::_read_identifier",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_parse_type_spec",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::parse",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatLexer::_advance",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_parse_union",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatCodegen::_collect_nested",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatCodegen::_gen_type",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_parse_declaration",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_parse_field",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_parse_primary",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatLexer::_read_string",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatLexer::_read_number",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatLexer::tokenize",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 12,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatCodegen::_gen_conditional",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 16,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatCodegen::_eval_const_expr",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 23,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatLexer::_skip_whitespace_and_comments",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 26,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatCodegen::_gen_regular_field",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 26,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatLexer::_read_multi_char_operator",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
     },
     {
       "complexity": 0,
@@ -4304,6 +6074,84 @@
     },
     {
       "complexity": 0,
+      "file_name": "template_manager.py",
+      "function_name": "TemplateManager::__init__",
+      "path": "src\\intellicrack\\core\\template_manager.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "template_manager.py",
+      "function_name": "TemplateManager::patterns_dir",
+      "path": "src\\intellicrack\\core\\template_manager.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "template_manager.py",
+      "function_name": "TemplateManager::_sanitize_name",
+      "path": "src\\intellicrack\\core\\template_manager.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "template_manager.py",
+      "function_name": "TemplateManager::ensure_directories",
+      "path": "src\\intellicrack\\core\\template_manager.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "template_manager.py",
+      "function_name": "TemplateManager::list_hexpat_patterns",
+      "path": "src\\intellicrack\\core\\template_manager.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "template_manager.py",
+      "function_name": "TemplateManager::load_template",
+      "path": "src\\intellicrack\\core\\template_manager.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "template_manager.py",
+      "function_name": "TemplateManager::_parse_template_file",
+      "path": "src\\intellicrack\\core\\template_manager.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "template_manager.py",
+      "function_name": "TemplateManager::list_hexpat_by_category",
+      "path": "src\\intellicrack\\core\\template_manager.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "template_manager.py",
+      "function_name": "TemplateManager::save_user_template",
+      "path": "src\\intellicrack\\core\\template_manager.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "template_manager.py",
+      "function_name": "TemplateManager::delete_user_template",
+      "path": "src\\intellicrack\\core\\template_manager.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "template_manager.py",
+      "function_name": "TemplateManager::get_pattern_registry",
+      "path": "src\\intellicrack\\core\\template_manager.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "template_manager.py",
+      "function_name": "TemplateManager::list_all_templates",
+      "path": "src\\intellicrack\\core\\template_manager.py"
+    },
+    {
+      "complexity": 13,
+      "file_name": "template_manager.py",
+      "function_name": "TemplateManager::bootstrap_builtins",
+      "path": "src\\intellicrack\\core\\template_manager.py"
+    },
+    {
+      "complexity": 0,
       "file_name": "tools.py",
       "function_name": "ToolRegistry::__init__",
       "path": "src\\intellicrack\\core\\tools.py"
@@ -4421,6 +6269,240 @@
       "file_name": "tools.py",
       "function_name": "ToolRegistry::execute_tool_call",
       "path": "src\\intellicrack\\core\\tools.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "CustomExpressionNode::category",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "CustomExpressionNode::description",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "CustomExpressionNode::name",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "PadNode::category",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "PadNode::description",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "PadNode::name",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "RegexReplaceNode::category",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "RegexReplaceNode::description",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "RegexReplaceNode::name",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "RepeatNode::category",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "RepeatNode::description",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "RepeatNode::name",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "RustTransformNode::__init__",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "RustTransformNode::category",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "RustTransformNode::description",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "RustTransformNode::name",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "TransformNode::category",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "TransformNode::description",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "TransformNode::name",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "TransformNode::process",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "TransformPipeline::__init__",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "TransformPipeline::add_step",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "TransformPipeline::clear",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "TransformPipeline::steps",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "TruncateNode::category",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "TruncateNode::description",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "transform_pipeline.py",
+      "function_name": "TruncateNode::name",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "transform_pipeline.py",
+      "function_name": "TransformPipeline::execute",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "transform_pipeline.py",
+      "function_name": "TransformPipeline::preview",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "transform_pipeline.py",
+      "function_name": "RepeatNode::process",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "transform_pipeline.py",
+      "function_name": "TransformPipeline::move_step",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "transform_pipeline.py",
+      "function_name": "TransformPipeline::remove_step",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "transform_pipeline.py",
+      "function_name": "get_all_transform_nodes",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "transform_pipeline.py",
+      "function_name": "TruncateNode::process",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "transform_pipeline.py",
+      "function_name": "CustomExpressionNode::process",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "transform_pipeline.py",
+      "function_name": "PadNode::process",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "transform_pipeline.py",
+      "function_name": "RegexReplaceNode::process",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 16,
+      "file_name": "transform_pipeline.py",
+      "function_name": "RustTransformNode::process",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
+    },
+    {
+      "complexity": 45,
+      "file_name": "transform_pipeline.py",
+      "function_name": "_eval_ast_node",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py"
     },
     {
       "complexity": 0,
@@ -4565,6 +6647,60 @@
       "file_name": "types.py",
       "function_name": "DataTypeInfo::display_type",
       "path": "src\\intellicrack\\core\\types.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "yara_scanner.py",
+      "function_name": "YaraScanner::available",
+      "path": "src\\intellicrack\\core\\yara_scanner.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "yara_scanner.py",
+      "function_name": "YaraScanner::scan_data_async",
+      "path": "src\\intellicrack\\core\\yara_scanner.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "yara_scanner.py",
+      "function_name": "YaraScanner::scan_file_async",
+      "path": "src\\intellicrack\\core\\yara_scanner.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "yara_scanner.py",
+      "function_name": "YaraScanner::__init__",
+      "path": "src\\intellicrack\\core\\yara_scanner.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "yara_scanner.py",
+      "function_name": "YaraScanner::scan_data",
+      "path": "src\\intellicrack\\core\\yara_scanner.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "yara_scanner.py",
+      "function_name": "YaraScanner::scan_file",
+      "path": "src\\intellicrack\\core\\yara_scanner.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "yara_scanner.py",
+      "function_name": "YaraScanner::compile_source",
+      "path": "src\\intellicrack\\core\\yara_scanner.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "yara_scanner.py",
+      "function_name": "YaraScanner::compile_rules",
+      "path": "src\\intellicrack\\core\\yara_scanner.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "yara_scanner.py",
+      "function_name": "YaraScanner::_convert_matches",
+      "path": "src\\intellicrack\\core\\yara_scanner.py"
     },
     {
       "complexity": 0,
@@ -7197,6 +9333,12 @@
     {
       "complexity": 0,
       "file_name": "app.py",
+      "function_name": "MainWindow::_on_detach_current",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "app.py",
       "function_name": "MainWindow::_on_focus_chat_input",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -7258,6 +9400,12 @@
       "complexity": 0,
       "file_name": "app.py",
       "function_name": "MainWindow::_run_async",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_save_window_state",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -7615,12 +9763,6 @@
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
-      "complexity": 8,
-      "file_name": "app.py",
-      "function_name": "MainWindow::closeEvent",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
       "complexity": 9,
       "file_name": "app.py",
       "function_name": "MainWindow::_on_browse_models_result",
@@ -7666,6 +9808,18 @@
       "complexity": 14,
       "file_name": "app.py",
       "function_name": "MainWindow::_on_save_patched_binary",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 15,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_restore_window_state",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 16,
+      "file_name": "app.py",
+      "function_name": "MainWindow::closeEvent",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -7959,6 +10113,12 @@
     {
       "complexity": 0,
       "file_name": "highlighter.py",
+      "function_name": "HexPatSyntaxHighlighter::__init__",
+      "path": "src\\intellicrack\\ui\\highlighter.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "highlighter.py",
       "function_name": "HighlightRule::__init__",
       "path": "src\\intellicrack\\ui\\highlighter.py"
     },
@@ -7990,6 +10150,12 @@
       "complexity": 2,
       "file_name": "highlighter.py",
       "function_name": "CSyntaxHighlighter::_setup_rules",
+      "path": "src\\intellicrack\\ui\\highlighter.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "highlighter.py",
+      "function_name": "HexPatSyntaxHighlighter::_create_format",
       "path": "src\\intellicrack\\ui\\highlighter.py"
     },
     {
@@ -8035,7 +10201,13 @@
       "path": "src\\intellicrack\\ui\\highlighter.py"
     },
     {
-      "complexity": 4,
+      "complexity": 5,
+      "file_name": "highlighter.py",
+      "function_name": "HexPatSyntaxHighlighter::_setup_rules",
+      "path": "src\\intellicrack\\ui\\highlighter.py"
+    },
+    {
+      "complexity": 5,
       "file_name": "highlighter.py",
       "function_name": "get_highlighter_for_language",
       "path": "src\\intellicrack\\ui\\highlighter.py"
@@ -8049,6 +10221,12 @@
     {
       "complexity": 13,
       "file_name": "highlighter.py",
+      "function_name": "HexPatSyntaxHighlighter::highlightBlock",
+      "path": "src\\intellicrack\\ui\\highlighter.py"
+    },
+    {
+      "complexity": 13,
+      "file_name": "highlighter.py",
       "function_name": "JavaScriptSyntaxHighlighter::highlightBlock",
       "path": "src\\intellicrack\\ui\\highlighter.py"
     },
@@ -8057,6 +10235,48 @@
       "file_name": "highlighter.py",
       "function_name": "PythonSyntaxHighlighter::_highlight_triple_quotes",
       "path": "src\\intellicrack\\ui\\highlighter.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "panel_dock.py",
+      "function_name": "DetachedPanelWindow::__init__",
+      "path": "src\\intellicrack\\ui\\panel_dock.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "panel_dock.py",
+      "function_name": "DetachedPanelWindow::_on_redock",
+      "path": "src\\intellicrack\\ui\\panel_dock.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "panel_dock.py",
+      "function_name": "DetachedPanelWindow::_save_geometry",
+      "path": "src\\intellicrack\\ui\\panel_dock.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "panel_dock.py",
+      "function_name": "DetachedPanelWindow::panel",
+      "path": "src\\intellicrack\\ui\\panel_dock.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "panel_dock.py",
+      "function_name": "DetachedPanelWindow::panel_title",
+      "path": "src\\intellicrack\\ui\\panel_dock.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "panel_dock.py",
+      "function_name": "DetachedPanelWindow::_restore_geometry",
+      "path": "src\\intellicrack\\ui\\panel_dock.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "panel_dock.py",
+      "function_name": "DetachedPanelWindow::closeEvent",
+      "path": "src\\intellicrack\\ui\\panel_dock.py"
     },
     {
       "complexity": 0,
@@ -9421,7 +11641,7 @@
       "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py"
     },
     {
-      "complexity": 4,
+      "complexity": 5,
       "file_name": "ghidra_panel.py",
       "function_name": "GhidraPanel::_on_start_headless",
       "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py"
@@ -9511,268 +11731,898 @@
       "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
     },
     {
-      "complexity": 0,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::__init__",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_create_content",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_make_tree",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_on_cursor_moved",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_populate_toolbar",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_setup_shortcuts",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
       "complexity": 1,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_build_side_panels",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_focus_goto",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_focus_search",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_on_edit_mode_changed",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_on_string_double_clicked",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+      "file_name": "_base.py",
+      "function_name": "_reflect_bits",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_base.py"
     },
     {
       "complexity": 2,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_on_add_bookmark",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_on_open_file",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_select_template",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+      "file_name": "_base.py",
+      "function_name": "_compute_hash_siphash",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_base.py"
     },
     {
       "complexity": 3,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_cleanup",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_on_find_next",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_on_find_prev",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_populate_template_combo",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_refresh_bookmarks",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::goto_offset",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "_format_size",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+      "file_name": "_base.py",
+      "function_name": "format_size",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_base.py"
     },
     {
       "complexity": 4,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_on_remove_bookmark",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_on_save_as",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+      "file_name": "_base.py",
+      "function_name": "_compute_hash_stdlib",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_base.py"
     },
     {
       "complexity": 5,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_on_save",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+      "file_name": "_base.py",
+      "function_name": "_compute_hash_checksums",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_base.py"
     },
     {
-      "complexity": 6,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_highlight_template_fields",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 6,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_on_data_changed",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 6,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_on_redo",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 6,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_on_undo",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 6,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_populate_template_tree",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 7,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_on_apply_template",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 8,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_cache_original_byte",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 8,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_on_goto_offset",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+      "complexity": 5,
+      "file_name": "_base.py",
+      "function_name": "_compute_hash_xxhash",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_base.py"
     },
     {
       "complexity": 9,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_on_send_to_ai",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+      "file_name": "_base.py",
+      "function_name": "compute_custom_crc",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_base.py"
     },
     {
-      "complexity": 10,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_populate_sections",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+      "complexity": 11,
+      "file_name": "_base.py",
+      "function_name": "compute_hash",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_base.py"
+    },
+    {
+      "complexity": 12,
+      "file_name": "_base.py",
+      "function_name": "_compute_hash_fnv",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_base.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "_bookmarks.py",
+      "function_name": "BookmarksMixin::_on_add_bookmark",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_bookmarks.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "_bookmarks.py",
+      "function_name": "BookmarksMixin::_refresh_bookmarks",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_bookmarks.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "_bookmarks.py",
+      "function_name": "BookmarksMixin::_on_remove_bookmark",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_bookmarks.py"
     },
     {
       "complexity": 15,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_update_data_inspector",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+      "file_name": "_data_inspector.py",
+      "function_name": "DataInspectorMixin::_update_data_inspector",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_data_inspector.py"
     },
     {
-      "complexity": 15,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_update_statistics",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+      "complexity": 0,
+      "file_name": "_disassembly.py",
+      "function_name": "DisassemblyMixin::goto_offset",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_disassembly.py"
     },
     {
-      "complexity": 15,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::load_file",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+      "complexity": 2,
+      "file_name": "_disassembly.py",
+      "function_name": "DisassemblyMixin::_create_disassembly_tab",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_disassembly.py"
     },
     {
-      "complexity": 17,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_auto_detect_file_type",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+      "complexity": 2,
+      "file_name": "_disassembly.py",
+      "function_name": "DisassemblyMixin::_on_cursor_moved_disasm",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_disassembly.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "_disassembly.py",
+      "function_name": "DisassemblyMixin::_on_disasm_row_double_clicked",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_disassembly.py"
+    },
+    {
+      "complexity": 23,
+      "file_name": "_disassembly.py",
+      "function_name": "DisassemblyMixin::_on_disassemble",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_disassembly.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "_hashing.py",
+      "function_name": "HashingMixin::_on_calculate_hash",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_hashing.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "_hashing.py",
+      "function_name": "HashingMixin::_on_custom_crc",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_hashing.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_patches.py",
+      "function_name": "PatchesMixin::_on_data_changed",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_patches.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "_patches.py",
+      "function_name": "PatchesMixin::_cache_original_byte",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_patches.py"
+    },
+    {
+      "complexity": 22,
+      "file_name": "_patches.py",
+      "function_name": "PatchesMixin::_on_export_patches",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_patches.py"
+    },
+    {
+      "complexity": 30,
+      "file_name": "_patches.py",
+      "function_name": "PatchesMixin::_update_patches",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_patches.py"
+    },
+    {
+      "complexity": 32,
+      "file_name": "_patches.py",
+      "function_name": "PatchesMixin::_on_import_patches",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_patches.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_pattern_editor.py",
+      "function_name": "PatternEditorMixin::_build_pattern_editor",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_pattern_editor.py",
+      "function_name": "PatternEditorMixin::_highlight_template_fields",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_pattern_editor.py",
+      "function_name": "PatternEditorMixin::_populate_template_combo",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_pattern_editor.py",
+      "function_name": "PatternEditorMixin::_populate_template_tree",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_pattern_editor.py",
+      "function_name": "PatternEditorMixin::_refresh_template_combo",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "_pattern_editor.py",
+      "function_name": "PatternEditorMixin::_on_pattern_new",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "_pattern_editor.py",
+      "function_name": "PatternEditorMixin::_load_hexpat_from_library",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "_pattern_editor.py",
+      "function_name": "PatternEditorMixin::_toggle_pattern_editor",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "_pattern_editor.py",
+      "function_name": "PatternEditorMixin::_on_pattern_library_clicked",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
+    },
+    {
+      "complexity": 12,
+      "file_name": "_pattern_editor.py",
+      "function_name": "PatternEditorMixin::_populate_hexpat_library_entries",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
+    },
+    {
+      "complexity": 14,
+      "file_name": "_pattern_editor.py",
+      "function_name": "PatternEditorMixin::_populate_pattern_library",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
+    },
+    {
+      "complexity": 16,
+      "file_name": "_pattern_editor.py",
+      "function_name": "PatternEditorMixin::_on_pattern_save",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
+    },
+    {
+      "complexity": 19,
+      "file_name": "_pattern_editor.py",
+      "function_name": "PatternEditorMixin::_apply_via_interpreter",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
+    },
+    {
+      "complexity": 21,
+      "file_name": "_pattern_editor.py",
+      "function_name": "PatternEditorMixin::_on_pattern_apply",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
+    },
+    {
+      "complexity": 21,
+      "file_name": "_pattern_editor.py",
+      "function_name": "PatternEditorMixin::_on_pattern_open",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
+    },
+    {
+      "complexity": 23,
+      "file_name": "_pattern_editor.py",
+      "function_name": "PatternEditorMixin::_on_pattern_compile",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_search.py",
+      "function_name": "NumericSearchWorker::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_search.py",
+      "function_name": "NumericSearchWorker::_search_native",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_search.py",
+      "function_name": "SearchMixin::_build_numeric_search_panel",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_search.py",
+      "function_name": "SearchWorker::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "_search.py",
+      "function_name": "SearchMixin::_on_numeric_range_toggled",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "_search.py",
+      "function_name": "SearchMixin::_on_search_error",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "_search.py",
+      "function_name": "SearchWorker::run",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "_search.py",
+      "function_name": "SearchMixin::_on_numeric_search_error",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "_search.py",
+      "function_name": "SearchMixin::_on_search_mode_changed",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "_search.py",
+      "function_name": "NumericSearchWorker::run",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "_search.py",
+      "function_name": "SearchMixin::_on_find_next",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "_search.py",
+      "function_name": "SearchMixin::_on_find_prev",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "_search.py",
+      "function_name": "SearchWorker::_execute_search",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "_search.py",
+      "function_name": "SearchMixin::_on_numeric_search_finished",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "_search.py",
+      "function_name": "SearchMixin::_on_search",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "_search.py",
+      "function_name": "SearchMixin::_on_search_finished",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py"
     },
     {
       "complexity": 20,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_on_search",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+      "file_name": "_search.py",
+      "function_name": "NumericSearchWorker::_search_fallback",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py"
+    },
+    {
+      "complexity": 25,
+      "file_name": "_search.py",
+      "function_name": "SearchMixin::_on_numeric_search",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_sections.py",
+      "function_name": "SectionsMixin::_select_template",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_sections.py",
+      "function_name": "SectionsMixin::goto_offset",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "_sections.py",
+      "function_name": "SectionsMixin::_on_string_double_clicked",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "_sections.py",
+      "function_name": "SectionsMixin::_populate_sections",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "_sections.py",
+      "function_name": "SectionsMixin::_try_pattern_registry_match",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py"
+    },
+    {
+      "complexity": 17,
+      "file_name": "_sections.py",
+      "function_name": "SectionsMixin::_auto_detect_file_type",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py"
     },
     {
       "complexity": 27,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_populate_strings",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 28,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_populate_imports",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
-    },
-    {
-      "complexity": 28,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_update_patches",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+      "file_name": "_sections.py",
+      "function_name": "SectionsMixin::_populate_strings",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py"
     },
     {
       "complexity": 29,
-      "file_name": "hex_editor_panel.py",
-      "function_name": "HexEditorPanel::_populate_exports",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+      "file_name": "_sections.py",
+      "function_name": "SectionsMixin::_populate_imports",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py"
     },
     {
-      "complexity": 31,
-      "file_name": "hex_editor_panel.py",
+      "complexity": 30,
+      "file_name": "_sections.py",
+      "function_name": "SectionsMixin::_populate_exports",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_statistics.py",
+      "function_name": "StatisticsWorker::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "_statistics.py",
+      "function_name": "StatisticsMixin::_apply_entropy_label",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "_statistics.py",
+      "function_name": "StatisticsWorker::run",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "_statistics.py",
+      "function_name": "StatisticsMixin::_apply_byte_distribution",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "_statistics.py",
+      "function_name": "StatisticsMixin::_apply_entropy_graph",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "_statistics.py",
+      "function_name": "StatisticsMixin::_on_statistics_computed",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "_statistics.py",
+      "function_name": "StatisticsWorker::_compute_type_distribution",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "_statistics.py",
+      "function_name": "StatisticsMixin::_apply_byte_tree",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "_statistics.py",
+      "function_name": "StatisticsMixin::_apply_content_classification",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "_statistics.py",
+      "function_name": "StatisticsWorker::_compute_byte_distribution",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "_statistics.py",
+      "function_name": "StatisticsWorker::_compute_classification",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "_statistics.py",
+      "function_name": "StatisticsWorker::_compute_entropy_map",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "_statistics.py",
+      "function_name": "StatisticsMixin::_apply_byte_type_distribution",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "_statistics.py",
+      "function_name": "StatisticsMixin::_on_statistics_error",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "_statistics.py",
+      "function_name": "StatisticsMixin::_set_statistics_computing",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "_statistics.py",
+      "function_name": "StatisticsMixin::_set_statistics_empty",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "_statistics.py",
+      "function_name": "StatisticsMixin::_update_content_classification",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "_statistics.py",
+      "function_name": "StatisticsMixin::_update_statistics",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "_statistics.py",
+      "function_name": "StatisticsWorker::_compute",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "_statistics.py",
+      "function_name": "StatisticsMixin::_update_byte_type_distribution",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "_templates.py",
+      "function_name": "TemplatesMixin::_add_field_children",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_templates.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "_templates.py",
+      "function_name": "TemplatesMixin::_highlight_template_fields",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_templates.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "_templates.py",
+      "function_name": "TemplatesMixin::_populate_template_tree",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_templates.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "_templates.py",
+      "function_name": "TemplatesMixin::_select_template",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_templates.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "_templates.py",
+      "function_name": "TemplatesMixin::_populate_template_combo",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_templates.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "_templates.py",
+      "function_name": "TemplatesMixin::_on_apply_template",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_templates.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "_templates.py",
+      "function_name": "TemplatesMixin::_collect_field_highlights",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_templates.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_transforms.py",
+      "function_name": "TransformsMixin::_on_data_changed",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "_transforms.py",
+      "function_name": "TransformsMixin::_on_pipeline_move_down",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "_transforms.py",
+      "function_name": "TransformsMixin::_on_pipeline_move_up",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "_transforms.py",
+      "function_name": "TransformsMixin::_on_pipeline_remove_step",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "_transforms.py",
+      "function_name": "TransformsMixin::_create_transforms_tab",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "_transforms.py",
+      "function_name": "TransformsMixin::_run_single_transform",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "_transforms.py",
+      "function_name": "TransformsMixin::_on_pipeline_add_step",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "_transforms.py",
+      "function_name": "TransformsMixin::_collect_transform_params",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "_transforms.py",
+      "function_name": "TransformsMixin::_on_transform_node_changed",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
+    },
+    {
+      "complexity": 15,
+      "file_name": "_transforms.py",
+      "function_name": "TransformsMixin::_on_transform_preview",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
+    },
+    {
+      "complexity": 22,
+      "file_name": "_transforms.py",
+      "function_name": "TransformsMixin::_on_transform_apply",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
+    },
+    {
+      "complexity": 27,
+      "file_name": "_transforms.py",
+      "function_name": "TransformsMixin::_on_pipeline_execute",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_widgets.py",
+      "function_name": "ByteDistributionWidget::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_widgets.py",
+      "function_name": "ByteDistributionWidget::toggle_log_scale",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_widgets.py",
+      "function_name": "CustomCrcDialog::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_widgets.py",
+      "function_name": "EntropyGraphWidget::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_widgets.py",
+      "function_name": "EntropyGraphWidget::set_data",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "_widgets.py",
+      "function_name": "ByteDistributionWidget::set_data",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "_widgets.py",
+      "function_name": "CustomCrcDialog::_calculate",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "_widgets.py",
+      "function_name": "ByteDistributionWidget::mouseMoveEvent",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "_widgets.py",
+      "function_name": "EntropyGraphWidget::mousePressEvent",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "_widgets.py",
+      "function_name": "EntropyGraphWidget::paintEvent",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "_widgets.py",
+      "function_name": "ByteDistributionWidget::paintEvent",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_yara.py",
+      "function_name": "YaraMixin::_create_yara_tab",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_yara.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_yara.py",
+      "function_name": "YaraMixin::goto_offset",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_yara.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "_yara.py",
+      "function_name": "YaraMixin::_on_yara_result_double_clicked",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_yara.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "_yara.py",
+      "function_name": "YaraMixin::_on_yara_select_files",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_yara.py"
+    },
+    {
+      "complexity": 26,
+      "file_name": "_yara.py",
+      "function_name": "YaraMixin::_on_yara_scan",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_yara.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "panel.py",
+      "function_name": "HexEditorPanel::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "panel.py",
+      "function_name": "HexEditorPanel::_make_tree",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "panel.py",
+      "function_name": "HexEditorPanel::_on_cursor_moved",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "panel.py",
+      "function_name": "HexEditorPanel::_setup_shortcuts",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "panel.py",
+      "function_name": "HexEditorPanel::_build_side_panels",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "panel.py",
+      "function_name": "HexEditorPanel::_create_content",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "panel.py",
+      "function_name": "HexEditorPanel::_focus_goto",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "panel.py",
+      "function_name": "HexEditorPanel::_focus_search",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "panel.py",
+      "function_name": "HexEditorPanel::_on_edit_mode_changed",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "panel.py",
+      "function_name": "HexEditorPanel::_on_open_file",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "panel.py",
+      "function_name": "HexEditorPanel::_cleanup",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "panel.py",
+      "function_name": "HexEditorPanel::goto_offset",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "panel.py",
+      "function_name": "HexEditorPanel::_on_save_as",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "panel.py",
+      "function_name": "HexEditorPanel::_on_save",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "panel.py",
+      "function_name": "HexEditorPanel::_on_data_changed",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "panel.py",
+      "function_name": "HexEditorPanel::_on_redo",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "panel.py",
+      "function_name": "HexEditorPanel::_on_undo",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "panel.py",
+      "function_name": "HexEditorPanel::_on_goto_offset",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "panel.py",
+      "function_name": "HexEditorPanel::_populate_toolbar",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "panel.py",
+      "function_name": "HexEditorPanel::_on_send_to_ai",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
+    },
+    {
+      "complexity": 15,
+      "file_name": "panel.py",
+      "function_name": "HexEditorPanel::load_file",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
+    },
+    {
+      "complexity": 34,
+      "file_name": "panel.py",
       "function_name": "HexEditorPanel::set_state_holder",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py"
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "EntropyMiniMap::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "EntropyMiniMap::paintEvent",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "EntropyMiniMap::set_entropy_data",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "EntropyMiniMap::set_viewport",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
     },
     {
       "complexity": 0,
@@ -9783,7 +12633,37 @@
     {
       "complexity": 0,
       "file_name": "hex_editor_widget.py",
+      "function_name": "HexEditorWidget::_get_mode_params",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "HexEditorWidget::_paint_hex_byte",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_editor_widget.py",
       "function_name": "HexEditorWidget::_paint_separators",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "HexEditorWidget::add_highlight_rule",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "HexEditorWidget::clear_highlight_rules",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "HexEditorWidget::get_highlight_rules",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
     },
     {
@@ -9802,6 +12682,12 @@
       "complexity": 0,
       "file_name": "hex_editor_widget.py",
       "function_name": "HexEditorWidget::resizeEvent",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "HexEditorWidget::_on_scroll_changed",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
     },
     {
@@ -9835,9 +12721,33 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
     },
     {
+      "complexity": 1,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "HexEditorWidget::remove_highlight_rule",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "HexEditorWidget::set_display_mode",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "EntropyMiniMap::mousePressEvent",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
       "complexity": 2,
       "file_name": "hex_editor_widget.py",
       "function_name": "HexEditorWidget::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "HexEditorWidget::_format_markdown_table",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
     },
     {
@@ -9849,7 +12759,25 @@
     {
       "complexity": 2,
       "file_name": "hex_editor_widget.py",
+      "function_name": "HexEditorWidget::_position_minimap",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hex_editor_widget.py",
       "function_name": "HexEditorWidget::set_document",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "HexEditorWidget::show_minimap",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "HexEditorWidget::_copy_as_action",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
     },
     {
@@ -9927,12 +12855,6 @@
     {
       "complexity": 7,
       "file_name": "hex_editor_widget.py",
-      "function_name": "HexEditorWidget::_paint_hex_byte",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
-    },
-    {
-      "complexity": 7,
-      "file_name": "hex_editor_widget.py",
       "function_name": "HexEditorWidget::get_selection_bytes",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
     },
@@ -9949,9 +12871,9 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
     },
     {
-      "complexity": 8,
+      "complexity": 9,
       "file_name": "hex_editor_widget.py",
-      "function_name": "HexEditorWidget::_paint_ascii_byte",
+      "function_name": "EntropyMiniMap::_draw_minimap",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
     },
     {
@@ -9969,7 +12891,19 @@
     {
       "complexity": 10,
       "file_name": "hex_editor_widget.py",
-      "function_name": "HexEditorWidget::_paint_data_rows",
+      "function_name": "HexEditorWidget::_get_highlight_color",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "HexEditorWidget::_paint_ascii_byte",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "HexEditorWidget::copy_as",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
     },
     {
@@ -9979,9 +12913,15 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
     },
     {
-      "complexity": 18,
+      "complexity": 15,
       "file_name": "hex_editor_widget.py",
-      "function_name": "HexEditorWidget::copy_as",
+      "function_name": "HexEditorWidget::_paint_data_rows",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
+      "complexity": 16,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "HexEditorWidget::contextMenuEvent",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
     },
     {
@@ -9991,70 +12931,238 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
     },
     {
-      "complexity": 43,
+      "complexity": 25,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "HexEditorWidget::copy_as_format",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
+      "complexity": 26,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "HexEditorWidget::_paint_hex_group",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
+      "complexity": 42,
       "file_name": "hex_editor_widget.py",
       "function_name": "HexEditorWidget::keyPressEvent",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
     },
     {
-      "complexity": 0,
-      "file_name": "hxd_panel.py",
-      "function_name": "HxDPanel::__init__",
-      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+      "complexity": 49,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "HexEditorWidget::_format_group",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
     },
     {
       "complexity": 0,
-      "file_name": "hxd_panel.py",
-      "function_name": "HxDPanel::_cleanup",
-      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
     },
     {
       "complexity": 0,
-      "file_name": "hxd_panel.py",
-      "function_name": "HxDPanel::_create_content",
-      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_build_ascii_tab",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
     },
     {
       "complexity": 0,
-      "file_name": "hxd_panel.py",
-      "function_name": "HxDPanel::_show_not_installed_dialog",
-      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_build_base_converter_tab",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
     },
     {
       "complexity": 0,
-      "file_name": "hxd_panel.py",
-      "function_name": "HxDPanel::stop_tool",
-      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_build_byte_swapper_tab",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_build_calculator_tab",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_build_demangler_tab",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_build_file_splitter_tab",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "_IEEE754BitWidget::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "_IEEE754BitWidget::set_bits",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "_safe_eval_expr",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_browse_combine_add",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_browse_combine_output",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_browse_split_outdir",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_browse_split_source",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_build_ieee754_tab",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_combine_move_down",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_combine_move_up",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_combine_remove_selected",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "_IEEE754BitWidget::sizeHint",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "_set_hint",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
     },
     {
       "complexity": 2,
-      "file_name": "hxd_panel.py",
-      "function_name": "HxDPanel::_populate_toolbar",
-      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_do_demangle",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
     },
     {
       "complexity": 4,
-      "file_name": "hxd_panel.py",
-      "function_name": "HxDPanel::_terminate_existing",
-      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_on_swap_input_changed",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
     },
     {
       "complexity": 5,
-      "file_name": "hxd_panel.py",
-      "function_name": "_find_hxd_executable",
-      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_update_ieee754_display",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_do_calculate",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_populate_ascii_table",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "_IEEE754BitWidget::paintEvent",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_demangle_msvc",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_demangle_symbol",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 12,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_demangle_rust",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 12,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_do_combine_files",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 12,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_do_split_file",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 12,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_filter_ascii_table",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 14,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_on_base_input_changed",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
     },
     {
       "complexity": 15,
-      "file_name": "hxd_panel.py",
-      "function_name": "HxDPanel::start_tool",
-      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_on_ieee754_input_changed",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
     },
     {
-      "complexity": 17,
-      "file_name": "hxd_panel.py",
-      "function_name": "HxDPanel::load_file",
-      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+      "complexity": 15,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "_ast_eval_node",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
     },
     {
       "complexity": 0,
@@ -10087,6 +13195,12 @@
       "path": "src\\intellicrack\\ui\\panels\\process_panel.py"
     },
     {
+      "complexity": 0,
+      "file_name": "process_panel.py",
+      "function_name": "_TrackedRefreshWorker::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\process_panel.py"
+    },
+    {
       "complexity": 1,
       "file_name": "process_panel.py",
       "function_name": "ProcessPanel::_build_tracked_tab",
@@ -10108,6 +13222,12 @@
       "complexity": 1,
       "file_name": "process_panel.py",
       "function_name": "ProcessPanel::_on_top_tab_changed",
+      "path": "src\\intellicrack\\ui\\panels\\process_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "process_panel.py",
+      "function_name": "ProcessPanel::_on_tracked_refresh_finished",
       "path": "src\\intellicrack\\ui\\panels\\process_panel.py"
     },
     {
@@ -10137,19 +13257,13 @@
     {
       "complexity": 3,
       "file_name": "process_panel.py",
-      "function_name": "ProcessPanel::stop_tool",
+      "function_name": "ProcessPanel::_refresh_tracked_tab",
       "path": "src\\intellicrack\\ui\\panels\\process_panel.py"
     },
     {
       "complexity": 4,
       "file_name": "process_panel.py",
       "function_name": "ProcessPanel::_load_process_details",
-      "path": "src\\intellicrack\\ui\\panels\\process_panel.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "process_panel.py",
-      "function_name": "ProcessPanel::_refresh_tracked_tab",
       "path": "src\\intellicrack\\ui\\panels\\process_panel.py"
     },
     {
@@ -10168,6 +13282,18 @@
       "complexity": 5,
       "file_name": "process_panel.py",
       "function_name": "ProcessPanel::_on_terminate",
+      "path": "src\\intellicrack\\ui\\panels\\process_panel.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "process_panel.py",
+      "function_name": "ProcessPanel::stop_tool",
+      "path": "src\\intellicrack\\ui\\panels\\process_panel.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "process_panel.py",
+      "function_name": "_TrackedRefreshWorker::run",
       "path": "src\\intellicrack\\ui\\panels\\process_panel.py"
     },
     {
@@ -13221,12 +16347,6 @@
     {
       "complexity": 0,
       "file_name": "tools.py",
-      "function_name": "ToolOutputPanel::_setup_ui",
-      "path": "src\\intellicrack\\ui\\tools.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "tools.py",
       "function_name": "ToolOutputPanel::clear_analysis_tab",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
@@ -13234,6 +16354,12 @@
       "complexity": 0,
       "file_name": "tools.py",
       "function_name": "ToolOutputPanel::get_active_tool_widget",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::get_detached_state",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
     {
@@ -13389,6 +16515,30 @@
     {
       "complexity": 1,
       "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::_close_all_tabs",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::_close_other_tabs",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::_reattach_panel",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::_setup_ui",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "tools.py",
       "function_name": "ToolOutputPanel::add_analysis_panel",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
@@ -13413,6 +16563,18 @@
     {
       "complexity": 1,
       "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::detach_current_tab",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::detach_tab",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "tools.py",
       "function_name": "ToolOutputPanel::display_analysis_result",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
@@ -13420,6 +16582,12 @@
       "complexity": 1,
       "file_name": "tools.py",
       "function_name": "ToolOutputPanel::log",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::save_tab_state",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
     {
@@ -13521,6 +16689,12 @@
     {
       "complexity": 2,
       "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::save_hex_editor",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "tools.py",
       "function_name": "ToolOutputPanel::update_bridge_analysis",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
@@ -13539,7 +16713,25 @@
     {
       "complexity": 3,
       "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::close_detached_windows",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::find_tab_by_title",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "tools.py",
       "function_name": "ToolOutputPanel::get_bridge_for_tool",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::has_unsaved_changes",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
     {
@@ -13581,6 +16773,12 @@
     {
       "complexity": 6,
       "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::_on_tab_context_menu",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "tools.py",
       "function_name": "ToolOutputPanel::get_script_panel_state",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
@@ -13606,6 +16804,12 @@
       "complexity": 6,
       "file_name": "tools.py",
       "function_name": "XRefPanel::set_xrefs",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::restore_tab_state",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
     {

@@ -1,9 +1,57 @@
 {
   "tool": "flake8",
-  "generated": "2026-03-20T17:20:21.650905",
-  "total_findings": 13,
-  "total_files": 9,
+  "generated": "2026-03-22T02:15:39.799126",
+  "total_findings": 22,
+  "total_files": 13,
   "files": [
+    {
+      "path": "src/intellicrack/bridges\\hex_editor.py",
+      "count": 6,
+      "findings": [
+        {
+          "line": 632,
+          "column": 141,
+          "code": "E501",
+          "message": "line too long (157 > 140 characters)",
+          "raw": "src/intellicrack/bridges\\hex_editor.py:632:141: E501 line too long (157 > 140 characters)"
+        },
+        {
+          "line": 633,
+          "column": 141,
+          "code": "E501",
+          "message": "line too long (142 > 140 characters)",
+          "raw": "src/intellicrack/bridges\\hex_editor.py:633:141: E501 line too long (142 > 140 characters)"
+        },
+        {
+          "line": 660,
+          "column": 141,
+          "code": "E501",
+          "message": "line too long (167 > 140 characters)",
+          "raw": "src/intellicrack/bridges\\hex_editor.py:660:141: E501 line too long (167 > 140 characters)"
+        },
+        {
+          "line": 733,
+          "column": 141,
+          "code": "E501",
+          "message": "line too long (162 > 140 characters)",
+          "raw": "src/intellicrack/bridges\\hex_editor.py:733:141: E501 line too long (162 > 140 characters)"
+        },
+        {
+          "line": 734,
+          "column": 141,
+          "code": "E501",
+          "message": "line too long (157 > 140 characters)",
+          "raw": "src/intellicrack/bridges\\hex_editor.py:734:141: E501 line too long (157 > 140 characters)"
+        },
+        {
+          "line": 744,
+          "column": 141,
+          "code": "E501",
+          "message": "line too long (153 > 140 characters)",
+          "raw": "src/intellicrack/bridges\\hex_editor.py:744:141: E501 line too long (153 > 140 characters)"
+        }
+      ]
+    },
     {
       "path": "tests/test_bridges\\test_x64dbg_new_methods.py",
       "count": 3,
@@ -36,18 +84,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 543,
+          "line": 531,
           "column": 141,
           "code": "E501",
           "message": "line too long (146 > 140 characters)",
-          "raw": "src/intellicrack/providers\\xpu_utils.py:543:141: E501 line too long (146 > 140 characters)"
+          "raw": "src/intellicrack/providers\\xpu_utils.py:531:141: E501 line too long (146 > 140 characters)"
         },
         {
-          "line": 572,
+          "line": 560,
           "column": 141,
           "code": "E501",
           "message": "line too long (179 > 140 characters)",
-          "raw": "src/intellicrack/providers\\xpu_utils.py:572:141: E501 line too long (179 > 140 characters)"
+          "raw": "src/intellicrack/providers\\xpu_utils.py:560:141: E501 line too long (179 > 140 characters)"
         }
       ]
     },
@@ -76,11 +124,37 @@
       "count": 1,
       "findings": [
         {
-          "line": 2390,
+          "line": 2384,
           "column": 141,
           "code": "E501",
           "message": "line too long (146 > 140 characters)",
-          "raw": "src/intellicrack/bridges\\ghidra.py:2390:141: E501 line too long (146 > 140 characters)"
+          "raw": "src/intellicrack/bridges\\ghidra.py:2384:141: E501 line too long (146 > 140 characters)"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/bridges\\x64dbg.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 2983,
+          "column": 141,
+          "code": "E501",
+          "message": "line too long (143 > 140 characters)",
+          "raw": "src/intellicrack/bridges\\x64dbg.py:2983:141: E501 line too long (143 > 140 characters)"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core\\config.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 316,
+          "column": 141,
+          "code": "E501",
+          "message": "line too long (149 > 140 characters)",
+          "raw": "src/intellicrack/core\\config.py:316:141: E501 line too long (149 > 140 characters)"
         }
       ]
     },
@@ -89,11 +163,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 442,
+          "line": 439,
           "column": 141,
           "code": "E501",
           "message": "line too long (160 > 140 characters)",
-          "raw": "src/intellicrack/sandbox\\windows.py:442:141: E501 line too long (160 > 140 characters)"
+          "raw": "src/intellicrack/sandbox\\windows.py:439:141: E501 line too long (160 > 140 characters)"
         }
       ]
     },
@@ -128,11 +202,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 82,
+          "line": 88,
           "column": 141,
           "code": "E501",
           "message": "line too long (142 > 140 characters)",
-          "raw": "src/intellicrack/ui\\tool_config.py:82:141: E501 line too long (142 > 140 characters)"
+          "raw": "src/intellicrack/ui\\tool_config.py:88:141: E501 line too long (142 > 140 characters)"
         }
       ]
     },
@@ -146,6 +220,19 @@
           "code": "F841",
           "message": "local variable '_store' is assigned to but never used",
           "raw": "tests/test_core\\test_main.py:47:9: F841 local variable '_store' is assigned to but never used"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_ui\\test_graph_view.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 221,
+          "column": 22,
+          "code": "E128",
+          "message": "continuation line under-indented for visual indent",
+          "raw": "tests/test_ui\\test_graph_view.py:221:22: E128 continuation line under-indented for visual indent"
         }
       ]
     }

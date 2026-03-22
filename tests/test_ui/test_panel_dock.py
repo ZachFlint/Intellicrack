@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QToolBar, QWidget
+from PyQt6.QtWidgets import QPushButton, QToolBar, QWidget
 
 from intellicrack.ui.panel_dock import DetachedPanelWindow
 
@@ -36,13 +36,12 @@ class TestDetachedPanelWindowConstruction:
         for child in window.children():
             if isinstance(child, QToolBar):
                 toolbar_found = True
-                actions_and_widgets = [child.widgetForAction(a) for a in child.actions()]
-                redock_labels = [
-                    w.text()
-                    for w in actions_and_widgets
-                    if w is not None and hasattr(w, "text")
-                ]
-                assert "Re-dock" in redock_labels
+                has_redock = False
+                for action in child.actions():
+                    widget = child.widgetForAction(action)
+                    if isinstance(widget, QPushButton) and widget.text() == "Re-dock":
+                        has_redock = True
+                assert has_redock
                 break
 
         assert toolbar_found

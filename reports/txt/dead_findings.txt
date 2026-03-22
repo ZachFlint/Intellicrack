@@ -1,91 +1,178 @@
+42 findings in src/intellicrack/bridges/hex_editor.py
+
+_ is never read, defined in src/intellicrack/bridges/hex_editor.py:811
+
+_disasm_available is never read, defined in src/intellicrack/bridges/hex_editor.py:82, src/intellicrack/bridges/hex_editor.py:86
+
+_disasm_available is never read, defined in src/intellicrack/bridges/hex_editor.py:82, src/intellicrack/bridges/hex_editor.py:86
+
+_yara_bridge_available is never read, defined in src/intellicrack/bridges/hex_editor.py:91, src/intellicrack/bridges/hex_editor.py:95
+
+_yara_bridge_available is never read, defined in src/intellicrack/bridges/hex_editor.py:91, src/intellicrack/bridges/hex_editor.py:95
+
+set_state_holder is never read, defined in src/intellicrack/bridges/hex_editor.py:149, src/intellicrack/ui/panels/hex_editor/panel.py:679
+
+open_file is never read, defined in src/intellicrack/bridges/hex_editor.py:838
+
+close_file is never read, defined in src/intellicrack/bridges/hex_editor.py:875
+
+get_cursor_position is never read, defined in src/intellicrack/bridges/hex_editor.py:1001
+
+select_range is never read, defined in src/intellicrack/bridges/hex_editor.py:1009
+
+get_selection is never read, defined in src/intellicrack/bridges/hex_editor.py:1025
+
+inspect_data_at is never read, defined in src/intellicrack/bridges/hex_editor.py:1157
+
+calculate_hash is never read, defined in src/intellicrack/bridges/hex_editor.py:1180
+
+get_byte_statistics is never read, defined in src/intellicrack/bridges/hex_editor.py:1200
+
+register_template is never read, defined in src/intellicrack/bridges/hex_editor.py:1258
+
+compile_pattern is never read, defined in src/intellicrack/bridges/hex_editor.py:1299
+
+execute_pattern is never read, defined in src/intellicrack/bridges/hex_editor.py:1361
+
+execute_pattern_file is never read, defined in src/intellicrack/bridges/hex_editor.py:1392
+
+list_hexpat_patterns is never read, defined in src/intellicrack/bridges/hex_editor.py:1433, src/intellicrack/core/template_manager.py:327
+
+auto_detect_pattern is never read, defined in src/intellicrack/bridges/hex_editor.py:1455
+
+export_template is never read, defined in src/intellicrack/bridges/hex_editor.py:1488
+
+compare_files is never read, defined in src/intellicrack/bridges/hex_editor.py:1533
+
+save_as is never read, defined in src/intellicrack/bridges/hex_editor.py:1731
+
+calculate_hash_range is never read, defined in src/intellicrack/bridges/hex_editor.py:1742
+
+get_context_for_ai is never read, defined in src/intellicrack/bridges/hex_editor.py:1793
+
+test_in_sandbox is never read, defined in src/intellicrack/bridges/hex_editor.py:1893
+
+get_entropy_map is never read, defined in src/intellicrack/bridges/hex_editor.py:1970
+
+get_byte_distribution is never read, defined in src/intellicrack/bridges/hex_editor.py:1990
+
+get_byte_type_distribution is never read, defined in src/intellicrack/bridges/hex_editor.py:2007
+
+get_digram_matrix is never read, defined in src/intellicrack/bridges/hex_editor.py:2032
+
+get_content_classification is never read, defined in src/intellicrack/bridges/hex_editor.py:2049
+
+yara_scan is never read, defined in src/intellicrack/bridges/hex_editor.py:2130
+
+yara_scan_files is never read, defined in src/intellicrack/bridges/hex_editor.py:2177
+
+apply_transform is never read, defined in src/intellicrack/bridges/hex_editor.py:2225
+
+apply_pipeline is never read, defined in src/intellicrack/bridges/hex_editor.py:2272
+
+calculate_hash_custom_crc is never read, defined in src/intellicrack/bridges/hex_editor.py:2398
+
+export_patches is never read, defined in src/intellicrack/bridges/hex_editor.py:2483
+
+import_patches is never read, defined in src/intellicrack/bridges/hex_editor.py:2511
+
+add_highlight_rule is never read, defined in src/intellicrack/bridges/hex_editor.py:2635, src/intellicrack/ui/panels/hex_editor_widget.py:856
+
+remove_highlight_rule is never read, defined in src/intellicrack/bridges/hex_editor.py:2668, src/intellicrack/ui/panels/hex_editor_widget.py:866
+
+list_highlight_rules is never read, defined in src/intellicrack/bridges/hex_editor.py:2685
+
+get_display_mode is never read, defined in src/intellicrack/bridges/hex_editor.py:2711
+
+
 34 findings in src/intellicrack/bridges/x64dbg.py
 
-assemble_at is never read, defined in src/intellicrack/bridges/base.py:868, src/intellicrack/bridges/cutter.py:1319, src/intellicrack/bridges/x64dbg.py:2219
+assemble_at is never read, defined in src/intellicrack/bridges/base.py:858, src/intellicrack/bridges/cutter.py:1313, src/intellicrack/bridges/x64dbg.py:2216
 
-allocate_memory is never read, defined in src/intellicrack/bridges/frida_bridge.py:1580, src/intellicrack/bridges/x64dbg.py:1972
+allocate_memory is never read, defined in src/intellicrack/bridges/frida_bridge.py:1572, src/intellicrack/bridges/x64dbg.py:1969
 
-set_label is never read, defined in src/intellicrack/bridges/ghidra.py:1846, src/intellicrack/bridges/x64dbg.py:2706
+set_label is never read, defined in src/intellicrack/bridges/ghidra.py:1840, src/intellicrack/bridges/x64dbg.py:2702
 
-get_labels is never read, defined in src/intellicrack/bridges/ghidra.py:1872, src/intellicrack/bridges/x64dbg.py:2720
+get_labels is never read, defined in src/intellicrack/bridges/ghidra.py:1866, src/intellicrack/bridges/x64dbg.py:2716
 
-_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2101, src/intellicrack/bridges/x64dbg.py:2414, src/intellicrack/bridges/x64dbg.py:2483, src/intellicrack/bridges/x64dbg.py:251, src/intellicrack/bridges/x64dbg.py:3132, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
+_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2098, src/intellicrack/bridges/x64dbg.py:2411, src/intellicrack/bridges/x64dbg.py:2480, src/intellicrack/bridges/x64dbg.py:253, src/intellicrack/bridges/x64dbg.py:3128, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
 
-_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2101, src/intellicrack/bridges/x64dbg.py:2414, src/intellicrack/bridges/x64dbg.py:2483, src/intellicrack/bridges/x64dbg.py:251, src/intellicrack/bridges/x64dbg.py:3132, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
+_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2098, src/intellicrack/bridges/x64dbg.py:2411, src/intellicrack/bridges/x64dbg.py:2480, src/intellicrack/bridges/x64dbg.py:253, src/intellicrack/bridges/x64dbg.py:3128, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
 
-_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2101, src/intellicrack/bridges/x64dbg.py:2414, src/intellicrack/bridges/x64dbg.py:2483, src/intellicrack/bridges/x64dbg.py:251, src/intellicrack/bridges/x64dbg.py:3132, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
+_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2098, src/intellicrack/bridges/x64dbg.py:2411, src/intellicrack/bridges/x64dbg.py:2480, src/intellicrack/bridges/x64dbg.py:253, src/intellicrack/bridges/x64dbg.py:3128, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
 
-_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2101, src/intellicrack/bridges/x64dbg.py:2414, src/intellicrack/bridges/x64dbg.py:2483, src/intellicrack/bridges/x64dbg.py:251, src/intellicrack/bridges/x64dbg.py:3132, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
+_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2098, src/intellicrack/bridges/x64dbg.py:2411, src/intellicrack/bridges/x64dbg.py:2480, src/intellicrack/bridges/x64dbg.py:253, src/intellicrack/bridges/x64dbg.py:3128, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
 
-_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2101, src/intellicrack/bridges/x64dbg.py:2414, src/intellicrack/bridges/x64dbg.py:2483, src/intellicrack/bridges/x64dbg.py:251, src/intellicrack/bridges/x64dbg.py:3132, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
+_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2098, src/intellicrack/bridges/x64dbg.py:2411, src/intellicrack/bridges/x64dbg.py:2480, src/intellicrack/bridges/x64dbg.py:253, src/intellicrack/bridges/x64dbg.py:3128, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
 
-get_process_info is never read, defined in src/intellicrack/bridges/process.py:1231, src/intellicrack/bridges/x64dbg.py:2552
+get_process_info is never read, defined in src/intellicrack/bridges/process.py:1248, src/intellicrack/bridges/x64dbg.py:2549
 
-WIN_PAGE_EXECUTE_READWRITE is never read, defined in src/intellicrack/bridges/x64dbg.py:110
+WIN_PAGE_EXECUTE_READWRITE is never read, defined in src/intellicrack/bridges/x64dbg.py:112
 
-MAX_LOCAL_VARS is never read, defined in src/intellicrack/bridges/x64dbg.py:142
+MAX_LOCAL_VARS is never read, defined in src/intellicrack/bridges/x64dbg.py:144
 
-breakpoints is never read, defined in src/intellicrack/bridges/x64dbg.py:470
+breakpoints is never read, defined in src/intellicrack/bridges/x64dbg.py:469
 
-watchpoints is never read, defined in src/intellicrack/bridges/x64dbg.py:497
+watchpoints is never read, defined in src/intellicrack/bridges/x64dbg.py:496
 
-set_watchpoint is never read, defined in src/intellicrack/bridges/x64dbg.py:1678
+set_watchpoint is never read, defined in src/intellicrack/bridges/x64dbg.py:1675
 
-remove_watchpoint is never read, defined in src/intellicrack/bridges/x64dbg.py:1720
+remove_watchpoint is never read, defined in src/intellicrack/bridges/x64dbg.py:1717
 
-get_watchpoints is never read, defined in src/intellicrack/bridges/x64dbg.py:1742
+get_watchpoints is never read, defined in src/intellicrack/bridges/x64dbg.py:1739
 
-free_memory is never read, defined in src/intellicrack/bridges/x64dbg.py:2040
+free_memory is never read, defined in src/intellicrack/bridges/x64dbg.py:2037
 
-find_pattern is never read, defined in src/intellicrack/bridges/x64dbg.py:2580
+find_pattern is never read, defined in src/intellicrack/bridges/x64dbg.py:2577
 
-run_to is never read, defined in src/intellicrack/bridges/x64dbg.py:2637
+run_to is never read, defined in src/intellicrack/bridges/x64dbg.py:2633
 
-execute_til_return is never read, defined in src/intellicrack/bridges/x64dbg.py:2650
+execute_til_return is never read, defined in src/intellicrack/bridges/x64dbg.py:2646
 
-skip_instruction is never read, defined in src/intellicrack/bridges/x64dbg.py:2660
+skip_instruction is never read, defined in src/intellicrack/bridges/x64dbg.py:2656
 
-set_ip is never read, defined in src/intellicrack/bridges/x64dbg.py:2692
+set_ip is never read, defined in src/intellicrack/bridges/x64dbg.py:2688
 
-set_comment is never read, defined in src/intellicrack/bridges/x64dbg.py:2749
+set_comment is never read, defined in src/intellicrack/bridges/x64dbg.py:2745
 
-get_comments is never read, defined in src/intellicrack/bridges/x64dbg.py:2763
+get_comments is never read, defined in src/intellicrack/bridges/x64dbg.py:2759
 
-enable_breakpoint is never read, defined in src/intellicrack/bridges/x64dbg.py:2792
+enable_breakpoint is never read, defined in src/intellicrack/bridges/x64dbg.py:2788
 
-disable_breakpoint is never read, defined in src/intellicrack/bridges/x64dbg.py:2815
+disable_breakpoint is never read, defined in src/intellicrack/bridges/x64dbg.py:2811
 
-set_breakpoint_on_api is never read, defined in src/intellicrack/bridges/x64dbg.py:2838
+set_breakpoint_on_api is never read, defined in src/intellicrack/bridges/x64dbg.py:2834
 
-dump_memory_to_file is never read, defined in src/intellicrack/bridges/x64dbg.py:2853
+dump_memory_to_file is never read, defined in src/intellicrack/bridges/x64dbg.py:2849
 
-get_module_sections is never read, defined in src/intellicrack/bridges/x64dbg.py:2950
+get_module_sections is never read, defined in src/intellicrack/bridges/x64dbg.py:2946
 
-get_module_exports is never read, defined in src/intellicrack/bridges/x64dbg.py:3021
+get_module_exports is never read, defined in src/intellicrack/bridges/x64dbg.py:3017
 
-trace_start is never read, defined in src/intellicrack/bridges/x64dbg.py:3061
+trace_start is never read, defined in src/intellicrack/bridges/x64dbg.py:3057
 
-trace_stop is never read, defined in src/intellicrack/bridges/x64dbg.py:3084
+trace_stop is never read, defined in src/intellicrack/bridges/x64dbg.py:3080
 
-set_exception_config is never read, defined in src/intellicrack/bridges/x64dbg.py:3094
+set_exception_config is never read, defined in src/intellicrack/bridges/x64dbg.py:3090
 
 
 24 findings in src/intellicrack/bridges/frida_bridge.py
 
-_ is never read, defined in src/intellicrack/bridges/frida_bridge.py:2346
+_ is never read, defined in src/intellicrack/bridges/frida_bridge.py:2338
 
-enumerate_modules is never read, defined in src/intellicrack/bridges/base.py:897, src/intellicrack/bridges/frida_bridge.py:1029
+enumerate_modules is never read, defined in src/intellicrack/bridges/base.py:886, src/intellicrack/bridges/frida_bridge.py:1021
 
-enumerate_exports is never read, defined in src/intellicrack/bridges/base.py:910, src/intellicrack/bridges/frida_bridge.py:1084
+enumerate_exports is never read, defined in src/intellicrack/bridges/base.py:898, src/intellicrack/bridges/frida_bridge.py:1076
 
-get_hooks is never read, defined in src/intellicrack/bridges/base.py:965, src/intellicrack/bridges/frida_bridge.py:1243
+get_hooks is never read, defined in src/intellicrack/bridges/base.py:950, src/intellicrack/bridges/frida_bridge.py:1235
 
-execute_script is never read, defined in src/intellicrack/bridges/base.py:978, src/intellicrack/bridges/frida_bridge.py:1252, src/intellicrack/bridges/ghidra.py:1833
+execute_script is never read, defined in src/intellicrack/bridges/base.py:962, src/intellicrack/bridges/frida_bridge.py:1244, src/intellicrack/bridges/ghidra.py:1827
 
-intercept_return is never read, defined in src/intellicrack/bridges/base.py:994, src/intellicrack/bridges/frida_bridge.py:1328
+intercept_return is never read, defined in src/intellicrack/bridges/base.py:977, src/intellicrack/bridges/frida_bridge.py:1320
 
-call_function is never read, defined in src/intellicrack/bridges/base.py:1011, src/intellicrack/bridges/frida_bridge.py:1345
+call_function is never read, defined in src/intellicrack/bridges/base.py:993, src/intellicrack/bridges/frida_bridge.py:1337
 
-enumerate_imports is never read, defined in src/intellicrack/bridges/base.py:1032, src/intellicrack/bridges/frida_bridge.py:1466
+enumerate_imports is never read, defined in src/intellicrack/bridges/base.py:1013, src/intellicrack/bridges/frida_bridge.py:1458
 
 _ERR_NO_SESSION is never read, defined in src/intellicrack/bridges/frida_bridge.py:65
 
@@ -93,121 +180,121 @@ _ERR_HOOK_FAILED is never read, defined in src/intellicrack/bridges/frida_bridge
 
 _ERR_STALKER_FAILED is never read, defined in src/intellicrack/bridges/frida_bridge.py:77
 
-allocate_memory is never read, defined in src/intellicrack/bridges/frida_bridge.py:1580, src/intellicrack/bridges/x64dbg.py:1972
+allocate_memory is never read, defined in src/intellicrack/bridges/frida_bridge.py:1572, src/intellicrack/bridges/x64dbg.py:1969
 
-protect_memory is never read, defined in src/intellicrack/bridges/frida_bridge.py:1642
+protect_memory is never read, defined in src/intellicrack/bridges/frida_bridge.py:1634
 
-find_base_address is never read, defined in src/intellicrack/bridges/frida_bridge.py:1691
+find_base_address is never read, defined in src/intellicrack/bridges/frida_bridge.py:1683
 
-resolve_symbol is never read, defined in src/intellicrack/bridges/frida_bridge.py:1729
+resolve_symbol is never read, defined in src/intellicrack/bridges/frida_bridge.py:1721
 
-find_functions_named is never read, defined in src/intellicrack/bridges/frida_bridge.py:1777
+find_functions_named is never read, defined in src/intellicrack/bridges/frida_bridge.py:1769
 
-resolve_api is never read, defined in src/intellicrack/bridges/frida_bridge.py:1838
+resolve_api is never read, defined in src/intellicrack/bridges/frida_bridge.py:1830
 
-replace_function is never read, defined in src/intellicrack/bridges/frida_bridge.py:1890
+replace_function is never read, defined in src/intellicrack/bridges/frida_bridge.py:1882
 
-enable_child_gating is never read, defined in src/intellicrack/bridges/frida_bridge.py:2191
+enable_child_gating is never read, defined in src/intellicrack/bridges/frida_bridge.py:2183
 
-disable_child_gating is never read, defined in src/intellicrack/bridges/frida_bridge.py:2236
+disable_child_gating is never read, defined in src/intellicrack/bridges/frida_bridge.py:2228
 
-get_pending_children is never read, defined in src/intellicrack/bridges/frida_bridge.py:2258
+get_pending_children is never read, defined in src/intellicrack/bridges/frida_bridge.py:2250
 
-resume_child is never read, defined in src/intellicrack/bridges/frida_bridge.py:2269
+resume_child is never read, defined in src/intellicrack/bridges/frida_bridge.py:2261
 
-enable_crash_reporting is never read, defined in src/intellicrack/bridges/frida_bridge.py:2290
+enable_crash_reporting is never read, defined in src/intellicrack/bridges/frida_bridge.py:2282
 
-get_crashes is never read, defined in src/intellicrack/bridges/frida_bridge.py:2329
+get_crashes is never read, defined in src/intellicrack/bridges/frida_bridge.py:2321
 
 
 23 findings in src/intellicrack/bridges/ghidra.py
 
-get_function is never read, defined in src/intellicrack/bridges/base.py:392, src/intellicrack/bridges/cutter.py:822, src/intellicrack/bridges/ghidra.py:1177
+get_function is never read, defined in src/intellicrack/bridges/base.py:384, src/intellicrack/bridges/cutter.py:816, src/intellicrack/bridges/ghidra.py:1171
 
-search_bytes is never read, defined in src/intellicrack/bridges/base.py:487, src/intellicrack/bridges/cutter.py:1104, src/intellicrack/bridges/ghidra.py:1512
+search_bytes is never read, defined in src/intellicrack/bridges/base.py:479, src/intellicrack/bridges/cutter.py:1098, src/intellicrack/bridges/ghidra.py:1506
 
-rename_function is never read, defined in src/intellicrack/bridges/base.py:526, src/intellicrack/bridges/cutter.py:1250, src/intellicrack/bridges/ghidra.py:1553
+rename_function is never read, defined in src/intellicrack/bridges/base.py:518, src/intellicrack/bridges/cutter.py:1244, src/intellicrack/bridges/ghidra.py:1547
 
-add_comment is never read, defined in src/intellicrack/bridges/base.py:542, src/intellicrack/bridges/cutter.py:1272, src/intellicrack/bridges/ghidra.py:1588
+add_comment is never read, defined in src/intellicrack/bridges/base.py:534, src/intellicrack/bridges/cutter.py:1266, src/intellicrack/bridges/ghidra.py:1582
 
-execute_script is never read, defined in src/intellicrack/bridges/base.py:978, src/intellicrack/bridges/frida_bridge.py:1252, src/intellicrack/bridges/ghidra.py:1833
+execute_script is never read, defined in src/intellicrack/bridges/base.py:962, src/intellicrack/bridges/frida_bridge.py:1244, src/intellicrack/bridges/ghidra.py:1827
 
 _RemoteExecFunc is never read, defined in src/intellicrack/bridges/ghidra.py:57
 
 _PE_MAGIC is never read, defined in src/intellicrack/bridges/ghidra.py:63
 
-get_data_type is never read, defined in src/intellicrack/bridges/ghidra.py:1722
+get_data_type is never read, defined in src/intellicrack/bridges/ghidra.py:1716
 
-set_data_type is never read, defined in src/intellicrack/bridges/ghidra.py:1788
+set_data_type is never read, defined in src/intellicrack/bridges/ghidra.py:1782
 
-set_label is never read, defined in src/intellicrack/bridges/ghidra.py:1846, src/intellicrack/bridges/x64dbg.py:2706
+set_label is never read, defined in src/intellicrack/bridges/ghidra.py:1840, src/intellicrack/bridges/x64dbg.py:2702
 
-get_labels is never read, defined in src/intellicrack/bridges/ghidra.py:1872, src/intellicrack/bridges/x64dbg.py:2720
+get_labels is never read, defined in src/intellicrack/bridges/ghidra.py:1866, src/intellicrack/bridges/x64dbg.py:2716
 
-create_bookmark is never read, defined in src/intellicrack/bridges/ghidra.py:1911
+create_bookmark is never read, defined in src/intellicrack/bridges/ghidra.py:1905
 
-get_bookmarks is never read, defined in src/intellicrack/bridges/ghidra.py:1936
+get_bookmarks is never read, defined in src/intellicrack/bridges/ghidra.py:1930
 
-create_function is never read, defined in src/intellicrack/bridges/ghidra.py:1975
+create_function is never read, defined in src/intellicrack/bridges/ghidra.py:1969
 
-delete_function is never read, defined in src/intellicrack/bridges/ghidra.py:2012
+delete_function is never read, defined in src/intellicrack/bridges/ghidra.py:2006
 
-edit_function_signature is never read, defined in src/intellicrack/bridges/ghidra.py:2042
+edit_function_signature is never read, defined in src/intellicrack/bridges/ghidra.py:2036
 
-set_function_variable_type is never read, defined in src/intellicrack/bridges/ghidra.py:2115
+set_function_variable_type is never read, defined in src/intellicrack/bridges/ghidra.py:2109
 
-define_structure is never read, defined in src/intellicrack/bridges/ghidra.py:2163
+define_structure is never read, defined in src/intellicrack/bridges/ghidra.py:2157
 
-get_structures is never read, defined in src/intellicrack/bridges/ghidra.py:2219
+get_structures is never read, defined in src/intellicrack/bridges/ghidra.py:2213
 
-apply_structure_at is never read, defined in src/intellicrack/bridges/ghidra.py:2257
+apply_structure_at is never read, defined in src/intellicrack/bridges/ghidra.py:2251
 
-get_call_graph is never read, defined in src/intellicrack/bridges/ghidra.py:2340
+get_call_graph is never read, defined in src/intellicrack/bridges/ghidra.py:2334
 
-get_segments is never read, defined in src/intellicrack/bridges/ghidra.py:2418
+get_segments is never read, defined in src/intellicrack/bridges/ghidra.py:2412
 
-get_program_info is never read, defined in src/intellicrack/bridges/ghidra.py:2456
+get_program_info is never read, defined in src/intellicrack/bridges/ghidra.py:2450
 
 
 19 findings in src/intellicrack/ui/tools.py
 
-_ is never read, defined in src/intellicrack/ui/tools.py:72
+_ is never read, defined in src/intellicrack/ui/tools.py:74
 
-_ is never read, defined in src/intellicrack/ui/tools.py:81
+_ is never read, defined in src/intellicrack/ui/tools.py:83
 
-_ is never read, defined in src/intellicrack/ui/tools.py:98
+_ is never read, defined in src/intellicrack/ui/tools.py:100
 
-_ is never read, defined in src/intellicrack/ui/tools.py:107
+_ is never read, defined in src/intellicrack/ui/tools.py:109
 
-_ is never read, defined in src/intellicrack/ui/tools.py:120
+_ is never read, defined in src/intellicrack/ui/tools.py:122
 
-_ is never read, defined in src/intellicrack/ui/tools.py:131
+_ is never read, defined in src/intellicrack/ui/tools.py:133
 
-_ is never read, defined in src/intellicrack/ui/tools.py:145
+_ is never read, defined in src/intellicrack/ui/tools.py:147
 
-_ is never read, defined in src/intellicrack/ui/tools.py:156
+_ is never read, defined in src/intellicrack/ui/tools.py:158
 
-_ is never read, defined in src/intellicrack/ui/tools.py:170
+_ is never read, defined in src/intellicrack/ui/tools.py:172
 
-_ is never read, defined in src/intellicrack/ui/tools.py:181
+_ is never read, defined in src/intellicrack/ui/tools.py:183
 
-_ is never read, defined in src/intellicrack/ui/tools.py:195
+_ is never read, defined in src/intellicrack/ui/tools.py:197
 
-_ is never read, defined in src/intellicrack/ui/tools.py:203
+_ is never read, defined in src/intellicrack/ui/tools.py:205
 
-_ is never read, defined in src/intellicrack/ui/tools.py:222
+_ is never read, defined in src/intellicrack/ui/tools.py:224
 
-_ is never read, defined in src/intellicrack/ui/tools.py:235
+_ is never read, defined in src/intellicrack/ui/tools.py:237
 
-_ is never read, defined in src/intellicrack/ui/tools.py:252
+_ is never read, defined in src/intellicrack/ui/tools.py:254
 
-_ is never read, defined in src/intellicrack/ui/tools.py:266
+_ is never read, defined in src/intellicrack/ui/tools.py:268
 
-_ is never read, defined in src/intellicrack/ui/tools.py:274
+_ is never read, defined in src/intellicrack/ui/tools.py:276
 
-_ is never read, defined in src/intellicrack/ui/tools.py:283
+_ is never read, defined in src/intellicrack/ui/tools.py:285
 
-get_highlighter is never read, defined in src/intellicrack/ui/tools.py:355
+get_highlighter is never read, defined in src/intellicrack/ui/tools.py:357
 
 
 18 findings in src/intellicrack/bridges/base.py
@@ -216,137 +303,156 @@ supports_arch is never read, defined in src/intellicrack/bridges/base.py:179
 
 supports_format is never read, defined in src/intellicrack/bridges/base.py:190
 
-get_function is never read, defined in src/intellicrack/bridges/base.py:392, src/intellicrack/bridges/cutter.py:822, src/intellicrack/bridges/ghidra.py:1177
+get_function is never read, defined in src/intellicrack/bridges/base.py:384, src/intellicrack/bridges/cutter.py:816, src/intellicrack/bridges/ghidra.py:1171
 
-search_bytes is never read, defined in src/intellicrack/bridges/base.py:487, src/intellicrack/bridges/cutter.py:1104, src/intellicrack/bridges/ghidra.py:1512
+search_bytes is never read, defined in src/intellicrack/bridges/base.py:479, src/intellicrack/bridges/cutter.py:1098, src/intellicrack/bridges/ghidra.py:1506
 
-rename_function is never read, defined in src/intellicrack/bridges/base.py:526, src/intellicrack/bridges/cutter.py:1250, src/intellicrack/bridges/ghidra.py:1553
+rename_function is never read, defined in src/intellicrack/bridges/base.py:518, src/intellicrack/bridges/cutter.py:1244, src/intellicrack/bridges/ghidra.py:1547
 
-add_comment is never read, defined in src/intellicrack/bridges/base.py:542, src/intellicrack/bridges/cutter.py:1272, src/intellicrack/bridges/ghidra.py:1588
+add_comment is never read, defined in src/intellicrack/bridges/base.py:534, src/intellicrack/bridges/cutter.py:1266, src/intellicrack/bridges/ghidra.py:1582
 
-assemble_at is never read, defined in src/intellicrack/bridges/base.py:868, src/intellicrack/bridges/cutter.py:1319, src/intellicrack/bridges/x64dbg.py:2219
+assemble_at is never read, defined in src/intellicrack/bridges/base.py:858, src/intellicrack/bridges/cutter.py:1313, src/intellicrack/bridges/x64dbg.py:2216
 
-enumerate_modules is never read, defined in src/intellicrack/bridges/base.py:897, src/intellicrack/bridges/frida_bridge.py:1029
+enumerate_modules is never read, defined in src/intellicrack/bridges/base.py:886, src/intellicrack/bridges/frida_bridge.py:1021
 
-enumerate_exports is never read, defined in src/intellicrack/bridges/base.py:910, src/intellicrack/bridges/frida_bridge.py:1084
+enumerate_exports is never read, defined in src/intellicrack/bridges/base.py:898, src/intellicrack/bridges/frida_bridge.py:1076
 
-get_hooks is never read, defined in src/intellicrack/bridges/base.py:965, src/intellicrack/bridges/frida_bridge.py:1243
+get_hooks is never read, defined in src/intellicrack/bridges/base.py:950, src/intellicrack/bridges/frida_bridge.py:1235
 
-execute_script is never read, defined in src/intellicrack/bridges/base.py:978, src/intellicrack/bridges/frida_bridge.py:1252, src/intellicrack/bridges/ghidra.py:1833
+execute_script is never read, defined in src/intellicrack/bridges/base.py:962, src/intellicrack/bridges/frida_bridge.py:1244, src/intellicrack/bridges/ghidra.py:1827
 
-intercept_return is never read, defined in src/intellicrack/bridges/base.py:994, src/intellicrack/bridges/frida_bridge.py:1328
+intercept_return is never read, defined in src/intellicrack/bridges/base.py:977, src/intellicrack/bridges/frida_bridge.py:1320
 
-call_function is never read, defined in src/intellicrack/bridges/base.py:1011, src/intellicrack/bridges/frida_bridge.py:1345
+call_function is never read, defined in src/intellicrack/bridges/base.py:993, src/intellicrack/bridges/frida_bridge.py:1337
 
-enumerate_imports is never read, defined in src/intellicrack/bridges/base.py:1032, src/intellicrack/bridges/frida_bridge.py:1466
+enumerate_imports is never read, defined in src/intellicrack/bridges/base.py:1013, src/intellicrack/bridges/frida_bridge.py:1458
 
-apply_patch is never read, defined in src/intellicrack/bridges/base.py:1125, src/intellicrack/bridges/binary.py:790
+apply_patch is never read, defined in src/intellicrack/bridges/base.py:1101, src/intellicrack/bridges/binary.py:782
 
-revert_patch is never read, defined in src/intellicrack/bridges/base.py:1141, src/intellicrack/bridges/binary.py:843
+revert_patch is never read, defined in src/intellicrack/bridges/base.py:1116, src/intellicrack/bridges/binary.py:835
 
-search_pattern is never read, defined in src/intellicrack/bridges/base.py:1173, src/intellicrack/bridges/binary.py:901, src/intellicrack/bridges/process.py:1116
+search_pattern is never read, defined in src/intellicrack/bridges/base.py:1146, src/intellicrack/bridges/binary.py:893, src/intellicrack/bridges/process.py:1133
 
-calculate_checksum is never read, defined in src/intellicrack/bridges/base.py:1196, src/intellicrack/bridges/binary.py:1032
+calculate_checksum is never read, defined in src/intellicrack/bridges/base.py:1168, src/intellicrack/bridges/binary.py:1024
 
 
-15 findings in src/intellicrack/bridges/hex_editor.py
+15 findings in src/intellicrack/ui/panels/hex_editor_widget.py
 
-_ is never read, defined in src/intellicrack/bridges/hex_editor.py:422
+_ is never read, defined in src/intellicrack/ui/panels/hex_editor_widget.py:134
 
-set_state_holder is never read, defined in src/intellicrack/bridges/hex_editor.py:78, src/intellicrack/ui/panels/hex_editor_panel.py:886
+_ is never read, defined in src/intellicrack/ui/panels/hex_editor_widget.py:424
 
-open_file is never read, defined in src/intellicrack/bridges/hex_editor.py:449
+add_highlight_rule is never read, defined in src/intellicrack/bridges/hex_editor.py:2635, src/intellicrack/ui/panels/hex_editor_widget.py:856
 
-close_file is never read, defined in src/intellicrack/bridges/hex_editor.py:486
+remove_highlight_rule is never read, defined in src/intellicrack/bridges/hex_editor.py:2668, src/intellicrack/ui/panels/hex_editor_widget.py:866
 
-get_cursor_position is never read, defined in src/intellicrack/bridges/hex_editor.py:612
+wheelEvent is never read, defined in src/intellicrack/ui/panels/binary_panel.py:465, src/intellicrack/ui/panels/graph_view.py:478, src/intellicrack/ui/panels/hex_editor_widget.py:1272
 
-select_range is never read, defined in src/intellicrack/bridges/hex_editor.py:620
+paintEvent is never read, defined in src/intellicrack/ui/panels/hex_editor/_widgets.py:191, src/intellicrack/ui/panels/hex_editor/_widgets.py:82, src/intellicrack/ui/panels/hex_editor_widget.py:128, src/intellicrack/ui/panels/hex_editor_widget.py:418, src/intellicrack/ui/panels/hex_tools_panel.py:287, src/intellicrack/ui/panels/vnc_widget.py:527
 
-get_selection is never read, defined in src/intellicrack/bridges/hex_editor.py:636
+paintEvent is never read, defined in src/intellicrack/ui/panels/hex_editor/_widgets.py:191, src/intellicrack/ui/panels/hex_editor/_widgets.py:82, src/intellicrack/ui/panels/hex_editor_widget.py:128, src/intellicrack/ui/panels/hex_editor_widget.py:418, src/intellicrack/ui/panels/hex_tools_panel.py:287, src/intellicrack/ui/panels/vnc_widget.py:527
 
-inspect_data_at is never read, defined in src/intellicrack/bridges/hex_editor.py:768
+mouseMoveEvent is never read, defined in src/intellicrack/ui/panels/hex_editor/_widgets.py:230, src/intellicrack/ui/panels/hex_editor_widget.py:1233, src/intellicrack/ui/panels/vnc_widget.py:587
 
-calculate_hash is never read, defined in src/intellicrack/bridges/hex_editor.py:791
+set_entropy_data is never read, defined in src/intellicrack/ui/panels/hex_editor_widget.py:105
 
-get_byte_statistics is never read, defined in src/intellicrack/bridges/hex_editor.py:811
+_paint_hex_byte is never read, defined in src/intellicrack/ui/panels/hex_editor_widget.py:700
 
-compare_files is never read, defined in src/intellicrack/bridges/hex_editor.py:869
+clear_highlight_rules is never read, defined in src/intellicrack/ui/panels/hex_editor_widget.py:882
 
-save_as is never read, defined in src/intellicrack/bridges/hex_editor.py:1032
+get_highlight_rules is never read, defined in src/intellicrack/ui/panels/hex_editor_widget.py:887
 
-calculate_hash_range is never read, defined in src/intellicrack/bridges/hex_editor.py:1046
+mouseReleaseEvent is never read, defined in src/intellicrack/ui/panels/hex_editor_widget.py:1258, src/intellicrack/ui/panels/vnc_widget.py:617
 
-get_context_for_ai is never read, defined in src/intellicrack/bridges/hex_editor.py:1097
+contextMenuEvent is never read, defined in src/intellicrack/ui/panels/hex_editor_widget.py:1532
 
-test_in_sandbox is never read, defined in src/intellicrack/bridges/hex_editor.py:1199
+highlight_offsets is never read, defined in src/intellicrack/ui/panels/hex_editor_widget.py:1616
 
 
 11 findings in src/intellicrack/bridges/process.py
 
-_ is never read, defined in src/intellicrack/bridges/process.py:497
+_ is never read, defined in src/intellicrack/bridges/process.py:514
 
-search_pattern is never read, defined in src/intellicrack/bridges/base.py:1173, src/intellicrack/bridges/binary.py:901, src/intellicrack/bridges/process.py:1116
+search_pattern is never read, defined in src/intellicrack/bridges/base.py:1146, src/intellicrack/bridges/binary.py:893, src/intellicrack/bridges/process.py:1133
 
-_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2101, src/intellicrack/bridges/x64dbg.py:2414, src/intellicrack/bridges/x64dbg.py:2483, src/intellicrack/bridges/x64dbg.py:251, src/intellicrack/bridges/x64dbg.py:3132, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
+_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2098, src/intellicrack/bridges/x64dbg.py:2411, src/intellicrack/bridges/x64dbg.py:2480, src/intellicrack/bridges/x64dbg.py:253, src/intellicrack/bridges/x64dbg.py:3128, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
 
-_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2101, src/intellicrack/bridges/x64dbg.py:2414, src/intellicrack/bridges/x64dbg.py:2483, src/intellicrack/bridges/x64dbg.py:251, src/intellicrack/bridges/x64dbg.py:3132, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
+_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2098, src/intellicrack/bridges/x64dbg.py:2411, src/intellicrack/bridges/x64dbg.py:2480, src/intellicrack/bridges/x64dbg.py:253, src/intellicrack/bridges/x64dbg.py:3128, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
 
-_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2101, src/intellicrack/bridges/x64dbg.py:2414, src/intellicrack/bridges/x64dbg.py:2483, src/intellicrack/bridges/x64dbg.py:251, src/intellicrack/bridges/x64dbg.py:3132, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
+_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2098, src/intellicrack/bridges/x64dbg.py:2411, src/intellicrack/bridges/x64dbg.py:2480, src/intellicrack/bridges/x64dbg.py:253, src/intellicrack/bridges/x64dbg.py:3128, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
 
-_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2101, src/intellicrack/bridges/x64dbg.py:2414, src/intellicrack/bridges/x64dbg.py:2483, src/intellicrack/bridges/x64dbg.py:251, src/intellicrack/bridges/x64dbg.py:3132, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
+_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2098, src/intellicrack/bridges/x64dbg.py:2411, src/intellicrack/bridges/x64dbg.py:2480, src/intellicrack/bridges/x64dbg.py:253, src/intellicrack/bridges/x64dbg.py:3128, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
 
-open_process is never read, defined in src/intellicrack/bridges/process.py:561
+open_process is never read, defined in src/intellicrack/bridges/process.py:578
 
-suspend is never read, defined in src/intellicrack/bridges/process.py:669
+suspend is never read, defined in src/intellicrack/bridges/process.py:686
 
-protect is never read, defined in src/intellicrack/bridges/process.py:876
+protect is never read, defined in src/intellicrack/bridges/process.py:893
 
-inject_dll is never read, defined in src/intellicrack/bridges/process.py:1168
+inject_dll is never read, defined in src/intellicrack/bridges/process.py:1185
 
-get_process_info is never read, defined in src/intellicrack/bridges/process.py:1231, src/intellicrack/bridges/x64dbg.py:2552
+get_process_info is never read, defined in src/intellicrack/bridges/process.py:1248, src/intellicrack/bridges/x64dbg.py:2549
 
 
 10 findings in src/intellicrack/bridges/cutter.py
 
-get_function is never read, defined in src/intellicrack/bridges/base.py:392, src/intellicrack/bridges/cutter.py:822, src/intellicrack/bridges/ghidra.py:1177
+get_function is never read, defined in src/intellicrack/bridges/base.py:384, src/intellicrack/bridges/cutter.py:816, src/intellicrack/bridges/ghidra.py:1171
 
-search_bytes is never read, defined in src/intellicrack/bridges/base.py:487, src/intellicrack/bridges/cutter.py:1104, src/intellicrack/bridges/ghidra.py:1512
+search_bytes is never read, defined in src/intellicrack/bridges/base.py:479, src/intellicrack/bridges/cutter.py:1098, src/intellicrack/bridges/ghidra.py:1506
 
-rename_function is never read, defined in src/intellicrack/bridges/base.py:526, src/intellicrack/bridges/cutter.py:1250, src/intellicrack/bridges/ghidra.py:1553
+rename_function is never read, defined in src/intellicrack/bridges/base.py:518, src/intellicrack/bridges/cutter.py:1244, src/intellicrack/bridges/ghidra.py:1547
 
-add_comment is never read, defined in src/intellicrack/bridges/base.py:542, src/intellicrack/bridges/cutter.py:1272, src/intellicrack/bridges/ghidra.py:1588
+add_comment is never read, defined in src/intellicrack/bridges/base.py:534, src/intellicrack/bridges/cutter.py:1266, src/intellicrack/bridges/ghidra.py:1582
 
-assemble_at is never read, defined in src/intellicrack/bridges/base.py:868, src/intellicrack/bridges/cutter.py:1319, src/intellicrack/bridges/x64dbg.py:2219
+assemble_at is never read, defined in src/intellicrack/bridges/base.py:858, src/intellicrack/bridges/cutter.py:1313, src/intellicrack/bridges/x64dbg.py:2216
 
 _ERR_CMD_FAILED is never read, defined in src/intellicrack/bridges/cutter.py:62
 
 _ERR_TOOL_NOT_AVAILABLE is never read, defined in src/intellicrack/bridges/cutter.py:63
 
-search_bytes_wildcard is never read, defined in src/intellicrack/bridges/cutter.py:1128
+search_bytes_wildcard is never read, defined in src/intellicrack/bridges/cutter.py:1122
 
-seek is never read, defined in src/intellicrack/bridges/cutter.py:1388
+seek is never read, defined in src/intellicrack/bridges/cutter.py:1382
 
-get_function_address is never read, defined in src/intellicrack/bridges/cutter.py:1426
+get_function_address is never read, defined in src/intellicrack/bridges/cutter.py:1420
 
 
 8 findings in src/intellicrack/bridges/binary.py
 
 _ is never read, defined in src/intellicrack/bridges/binary.py:59
 
-apply_patch is never read, defined in src/intellicrack/bridges/base.py:1125, src/intellicrack/bridges/binary.py:790
+apply_patch is never read, defined in src/intellicrack/bridges/base.py:1101, src/intellicrack/bridges/binary.py:782
 
-revert_patch is never read, defined in src/intellicrack/bridges/base.py:1141, src/intellicrack/bridges/binary.py:843
+revert_patch is never read, defined in src/intellicrack/bridges/base.py:1116, src/intellicrack/bridges/binary.py:835
 
-search_pattern is never read, defined in src/intellicrack/bridges/base.py:1173, src/intellicrack/bridges/binary.py:901, src/intellicrack/bridges/process.py:1116
+search_pattern is never read, defined in src/intellicrack/bridges/base.py:1146, src/intellicrack/bridges/binary.py:893, src/intellicrack/bridges/process.py:1133
 
-calculate_checksum is never read, defined in src/intellicrack/bridges/base.py:1196, src/intellicrack/bridges/binary.py:1032
+calculate_checksum is never read, defined in src/intellicrack/bridges/base.py:1168, src/intellicrack/bridges/binary.py:1024
 
-search_pattern_with_wildcards is never read, defined in src/intellicrack/bridges/binary.py:943
+search_pattern_with_wildcards is never read, defined in src/intellicrack/bridges/binary.py:935
 
-disassemble_at_offset is never read, defined in src/intellicrack/bridges/binary.py:984
+disassemble_at_offset is never read, defined in src/intellicrack/bridges/binary.py:976
 
-offset_to_rva is never read, defined in src/intellicrack/bridges/binary.py:1077
+offset_to_rva is never read, defined in src/intellicrack/bridges/binary.py:1069
+
+
+8 findings in src/intellicrack/core/template_manager.py
+
+list_hexpat_patterns is never read, defined in src/intellicrack/bridges/hex_editor.py:1433, src/intellicrack/core/template_manager.py:327
+
+TemplateManager is never read, defined in src/intellicrack/core/template_manager.py:60
+
+bootstrap_builtins is never read, defined in src/intellicrack/core/template_manager.py:85
+
+list_all_templates is never read, defined in src/intellicrack/core/template_manager.py:135
+
+save_user_template is never read, defined in src/intellicrack/core/template_manager.py:177
+
+load_template is never read, defined in src/intellicrack/core/template_manager.py:212
+
+delete_user_template is never read, defined in src/intellicrack/core/template_manager.py:229
+
+list_hexpat_by_category is never read, defined in src/intellicrack/core/template_manager.py:349
 
 
 7 findings in src/intellicrack/core/process_manager.py
@@ -359,11 +465,11 @@ _SIGNAL_SIGTERM is never read, defined in src/intellicrack/core/process_manager.
 
 ASYNC_SUBPROCESS is never read, defined in src/intellicrack/core/process_manager.py:49
 
-_SignalHandler is never read, defined in src/intellicrack/core/process_manager.py:126
+_SignalHandler is never read, defined in src/intellicrack/core/process_manager.py:121
 
-reset_instance is never read, defined in src/intellicrack/core/process_manager.py:168, src/intellicrack/ui/resources/font_manager.py:82, src/intellicrack/ui/resources/icon_manager.py:220, src/intellicrack/ui/resources/theme_manager.py:1021
+reset_instance is never read, defined in src/intellicrack/core/process_manager.py:162, src/intellicrack/ui/resources/font_manager.py:81, src/intellicrack/ui/resources/icon_manager.py:219, src/intellicrack/ui/resources/theme_manager.py:1020
 
-_terminate_process_sync is never read, defined in src/intellicrack/core/process_manager.py:328
+_terminate_process_sync is never read, defined in src/intellicrack/core/process_manager.py:322
 
 
 6 findings in src/intellicrack/main.py
@@ -381,49 +487,34 @@ _ is never read, defined in src/intellicrack/main.py:104, src/intellicrack/main.
 _ is never read, defined in src/intellicrack/main.py:104, src/intellicrack/main.py:110, src/intellicrack/main.py:75, src/intellicrack/main.py:82, src/intellicrack/main.py:89, src/intellicrack/main.py:96
 
 
-6 findings in src/intellicrack/ui/panels/hex_editor_widget.py
-
-_ is never read, defined in src/intellicrack/ui/panels/hex_editor_widget.py:211
-
-wheelEvent is never read, defined in src/intellicrack/ui/panels/binary_panel.py:461, src/intellicrack/ui/panels/graph_view.py:490, src/intellicrack/ui/panels/hex_editor_widget.py:795
-
-paintEvent is never read, defined in src/intellicrack/ui/panels/hex_editor_widget.py:205, src/intellicrack/ui/panels/vnc_widget.py:531
-
-mouseMoveEvent is never read, defined in src/intellicrack/ui/panels/hex_editor_widget.py:756, src/intellicrack/ui/panels/vnc_widget.py:591
-
-mouseReleaseEvent is never read, defined in src/intellicrack/ui/panels/hex_editor_widget.py:781, src/intellicrack/ui/panels/vnc_widget.py:621
-
-highlight_offsets is never read, defined in src/intellicrack/ui/panels/hex_editor_widget.py:956
-
-
 6 findings in src/intellicrack/bridges/sandbox_bridge.py
 
-copy_to is never read, defined in src/intellicrack/bridges/sandbox_bridge.py:617
+copy_to is never read, defined in src/intellicrack/bridges/sandbox_bridge.py:613
 
-copy_from is never read, defined in src/intellicrack/bridges/sandbox_bridge.py:664
+copy_from is never read, defined in src/intellicrack/bridges/sandbox_bridge.py:660
 
-snapshot_create is never read, defined in src/intellicrack/bridges/sandbox_bridge.py:737
+snapshot_create is never read, defined in src/intellicrack/bridges/sandbox_bridge.py:733
 
-snapshot_restore is never read, defined in src/intellicrack/bridges/sandbox_bridge.py:779
+snapshot_restore is never read, defined in src/intellicrack/bridges/sandbox_bridge.py:775
 
-snapshot_list is never read, defined in src/intellicrack/bridges/sandbox_bridge.py:821
+snapshot_list is never read, defined in src/intellicrack/bridges/sandbox_bridge.py:817
 
-snapshot_delete is never read, defined in src/intellicrack/bridges/sandbox_bridge.py:864
+snapshot_delete is never read, defined in src/intellicrack/bridges/sandbox_bridge.py:860
 
 
 6 findings in src/intellicrack/core/tools.py
 
-get_process_bridge is never read, defined in src/intellicrack/core/tools.py:239
+get_process_bridge is never read, defined in src/intellicrack/core/tools.py:232
 
-get_frida_bridge is never read, defined in src/intellicrack/core/tools.py:256
+get_frida_bridge is never read, defined in src/intellicrack/core/tools.py:249
 
-get_x64dbg_bridge is never read, defined in src/intellicrack/core/tools.py:307
+get_x64dbg_bridge is never read, defined in src/intellicrack/core/tools.py:300
 
-get_sandbox_bridge is never read, defined in src/intellicrack/core/tools.py:324
+get_sandbox_bridge is never read, defined in src/intellicrack/core/tools.py:317
 
-get_hex_editor_bridge is never read, defined in src/intellicrack/core/tools.py:341
+get_hex_editor_bridge is never read, defined in src/intellicrack/core/tools.py:334
 
-ensure_tool_ready is never read, defined in src/intellicrack/core/tools.py:555
+ensure_tool_ready is never read, defined in src/intellicrack/core/tools.py:548
 
 
 6 findings in src/intellicrack/core/types.py
@@ -438,66 +529,138 @@ display_type is never read, defined in src/intellicrack/core/types.py:400
 
 has_code is never read, defined in src/intellicrack/core/types.py:440
 
-signature is never read, defined in src/intellicrack/core/types.py:1039
+signature is never read, defined in src/intellicrack/core/types.py:1060
 
 
 5 findings in src/intellicrack/providers/xpu_utils.py
 
-_ is never read, defined in src/intellicrack/providers/xpu_utils.py:421
+_ is never read, defined in src/intellicrack/providers/xpu_utils.py:409
 
-_ is never read, defined in src/intellicrack/providers/xpu_utils.py:612, src/intellicrack/providers/xpu_utils.py:624
+_ is never read, defined in src/intellicrack/providers/xpu_utils.py:600, src/intellicrack/providers/xpu_utils.py:612
 
-_ is never read, defined in src/intellicrack/providers/xpu_utils.py:612, src/intellicrack/providers/xpu_utils.py:624
+_ is never read, defined in src/intellicrack/providers/xpu_utils.py:600, src/intellicrack/providers/xpu_utils.py:612
 
 _B580_DEVICE_IDS is never read, defined in src/intellicrack/providers/xpu_utils.py:40
 
 _INTEL_VENDOR_ID is never read, defined in src/intellicrack/providers/xpu_utils.py:43
 
 
+5 findings in src/intellicrack/ui/panels/hex_editor/_statistics.py
+
+_ is never read, defined in src/intellicrack/ui/panels/hex_editor/_statistics.py:88
+
+_ is never read, defined in src/intellicrack/ui/panels/hex_editor/_statistics.py:234, src/intellicrack/ui/panels/hex_editor/_statistics.py:235
+
+_ is never read, defined in src/intellicrack/ui/panels/hex_editor/_statistics.py:234, src/intellicrack/ui/panels/hex_editor/_statistics.py:235
+
+_update_byte_type_distribution is never read, defined in src/intellicrack/ui/panels/hex_editor/_statistics.py:404
+
+_update_content_classification is never read, defined in src/intellicrack/ui/panels/hex_editor/_statistics.py:432
+
+
+5 findings in src/intellicrack/ui/panels/hex_editor/_widgets.py
+
+_ is never read, defined in src/intellicrack/ui/panels/hex_editor/_widgets.py:88
+
+_ is never read, defined in src/intellicrack/ui/panels/hex_editor/_widgets.py:197
+
+paintEvent is never read, defined in src/intellicrack/ui/panels/hex_editor/_widgets.py:191, src/intellicrack/ui/panels/hex_editor/_widgets.py:82, src/intellicrack/ui/panels/hex_editor_widget.py:128, src/intellicrack/ui/panels/hex_editor_widget.py:418, src/intellicrack/ui/panels/hex_tools_panel.py:287, src/intellicrack/ui/panels/vnc_widget.py:527
+
+paintEvent is never read, defined in src/intellicrack/ui/panels/hex_editor/_widgets.py:191, src/intellicrack/ui/panels/hex_editor/_widgets.py:82, src/intellicrack/ui/panels/hex_editor_widget.py:128, src/intellicrack/ui/panels/hex_editor_widget.py:418, src/intellicrack/ui/panels/hex_tools_panel.py:287, src/intellicrack/ui/panels/vnc_widget.py:527
+
+mouseMoveEvent is never read, defined in src/intellicrack/ui/panels/hex_editor/_widgets.py:230, src/intellicrack/ui/panels/hex_editor_widget.py:1233, src/intellicrack/ui/panels/vnc_widget.py:587
+
+
+5 findings in src/intellicrack/ui/highlighter.py
+
+highlightBlock is never read, defined in src/intellicrack/ui/highlighter.py:1007, src/intellicrack/ui/highlighter.py:1199, src/intellicrack/ui/highlighter.py:221, src/intellicrack/ui/highlighter.py:569, src/intellicrack/ui/highlighter.py:776
+
+highlightBlock is never read, defined in src/intellicrack/ui/highlighter.py:1007, src/intellicrack/ui/highlighter.py:1199, src/intellicrack/ui/highlighter.py:221, src/intellicrack/ui/highlighter.py:569, src/intellicrack/ui/highlighter.py:776
+
+highlightBlock is never read, defined in src/intellicrack/ui/highlighter.py:1007, src/intellicrack/ui/highlighter.py:1199, src/intellicrack/ui/highlighter.py:221, src/intellicrack/ui/highlighter.py:569, src/intellicrack/ui/highlighter.py:776
+
+highlightBlock is never read, defined in src/intellicrack/ui/highlighter.py:1007, src/intellicrack/ui/highlighter.py:1199, src/intellicrack/ui/highlighter.py:221, src/intellicrack/ui/highlighter.py:569, src/intellicrack/ui/highlighter.py:776
+
+highlightBlock is never read, defined in src/intellicrack/ui/highlighter.py:1007, src/intellicrack/ui/highlighter.py:1199, src/intellicrack/ui/highlighter.py:221, src/intellicrack/ui/highlighter.py:569, src/intellicrack/ui/highlighter.py:776
+
+
 5 findings in src/intellicrack/ui/panels/vnc_widget.py
 
-paintEvent is never read, defined in src/intellicrack/ui/panels/hex_editor_widget.py:205, src/intellicrack/ui/panels/vnc_widget.py:531
+paintEvent is never read, defined in src/intellicrack/ui/panels/hex_editor/_widgets.py:191, src/intellicrack/ui/panels/hex_editor/_widgets.py:82, src/intellicrack/ui/panels/hex_editor_widget.py:128, src/intellicrack/ui/panels/hex_editor_widget.py:418, src/intellicrack/ui/panels/hex_tools_panel.py:287, src/intellicrack/ui/panels/vnc_widget.py:527
 
-mouseMoveEvent is never read, defined in src/intellicrack/ui/panels/hex_editor_widget.py:756, src/intellicrack/ui/panels/vnc_widget.py:591
+mouseMoveEvent is never read, defined in src/intellicrack/ui/panels/hex_editor/_widgets.py:230, src/intellicrack/ui/panels/hex_editor_widget.py:1233, src/intellicrack/ui/panels/vnc_widget.py:587
 
-mouseReleaseEvent is never read, defined in src/intellicrack/ui/panels/hex_editor_widget.py:781, src/intellicrack/ui/panels/vnc_widget.py:621
+mouseReleaseEvent is never read, defined in src/intellicrack/ui/panels/hex_editor_widget.py:1258, src/intellicrack/ui/panels/vnc_widget.py:617
 
 _PIXEL_FORMAT_32BIT is never read, defined in src/intellicrack/ui/panels/vnc_widget.py:36
 
-keyReleaseEvent is never read, defined in src/intellicrack/ui/panels/vnc_widget.py:651
+keyReleaseEvent is never read, defined in src/intellicrack/ui/panels/vnc_widget.py:647
+
+
+4 findings in src/intellicrack/core/disassembler.py
+
+_ is never read, defined in src/intellicrack/core/disassembler.py:415
+
+disassemble_to_lines is never read, defined in src/intellicrack/core/disassembler.py:262
+
+get_supported_architectures is never read, defined in src/intellicrack/core/disassembler.py:365
+
+get_disassembler is never read, defined in src/intellicrack/core/disassembler.py:431
+
+
+4 findings in src/intellicrack/core/transform_pipeline.py
+
+_ is never read, defined in src/intellicrack/core/transform_pipeline.py:198
+
+remove_step is never read, defined in src/intellicrack/core/transform_pipeline.py:702
+
+move_step is never read, defined in src/intellicrack/core/transform_pipeline.py:718
+
+preview is never read, defined in src/intellicrack/core/transform_pipeline.py:759
 
 
 4 findings in src/intellicrack/ui/panels/async_bridge.py
 
-_ is never read, defined in src/intellicrack/ui/panels/async_bridge.py:112
+_ is never read, defined in src/intellicrack/ui/panels/async_bridge.py:114
 
-_ is never read, defined in src/intellicrack/ui/panels/async_bridge.py:185, src/intellicrack/ui/panels/async_bridge.py:187
+_ is never read, defined in src/intellicrack/ui/panels/async_bridge.py:187, src/intellicrack/ui/panels/async_bridge.py:189
 
-_ is never read, defined in src/intellicrack/ui/panels/async_bridge.py:185, src/intellicrack/ui/panels/async_bridge.py:187
+_ is never read, defined in src/intellicrack/ui/panels/async_bridge.py:187, src/intellicrack/ui/panels/async_bridge.py:189
 
-_ is never read, defined in src/intellicrack/ui/panels/async_bridge.py:200
+_ is never read, defined in src/intellicrack/ui/panels/async_bridge.py:202
 
 
 4 findings in src/intellicrack/ui/panels/process_panel.py
 
-_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2101, src/intellicrack/bridges/x64dbg.py:2414, src/intellicrack/bridges/x64dbg.py:2483, src/intellicrack/bridges/x64dbg.py:251, src/intellicrack/bridges/x64dbg.py:3132, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
+_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2098, src/intellicrack/bridges/x64dbg.py:2411, src/intellicrack/bridges/x64dbg.py:2480, src/intellicrack/bridges/x64dbg.py:253, src/intellicrack/bridges/x64dbg.py:3128, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
 
-_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2101, src/intellicrack/bridges/x64dbg.py:2414, src/intellicrack/bridges/x64dbg.py:2483, src/intellicrack/bridges/x64dbg.py:251, src/intellicrack/bridges/x64dbg.py:3132, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
+_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2098, src/intellicrack/bridges/x64dbg.py:2411, src/intellicrack/bridges/x64dbg.py:2480, src/intellicrack/bridges/x64dbg.py:253, src/intellicrack/bridges/x64dbg.py:3128, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
 
-_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2101, src/intellicrack/bridges/x64dbg.py:2414, src/intellicrack/bridges/x64dbg.py:2483, src/intellicrack/bridges/x64dbg.py:251, src/intellicrack/bridges/x64dbg.py:3132, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
+_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2098, src/intellicrack/bridges/x64dbg.py:2411, src/intellicrack/bridges/x64dbg.py:2480, src/intellicrack/bridges/x64dbg.py:253, src/intellicrack/bridges/x64dbg.py:3128, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
 
-_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2101, src/intellicrack/bridges/x64dbg.py:2414, src/intellicrack/bridges/x64dbg.py:2483, src/intellicrack/bridges/x64dbg.py:251, src/intellicrack/bridges/x64dbg.py:3132, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
+_fields_ is never read, defined in src/intellicrack/bridges/process.py:100, src/intellicrack/bridges/process.py:117, src/intellicrack/bridges/process.py:69, src/intellicrack/bridges/process.py:86, src/intellicrack/bridges/x64dbg.py:2098, src/intellicrack/bridges/x64dbg.py:2411, src/intellicrack/bridges/x64dbg.py:2480, src/intellicrack/bridges/x64dbg.py:253, src/intellicrack/bridges/x64dbg.py:3128, src/intellicrack/ui/panels/process_panel.py:103, src/intellicrack/ui/panels/process_panel.py:114, src/intellicrack/ui/panels/process_panel.py:75, src/intellicrack/ui/panels/process_panel.py:89
+
+
+4 findings in src/intellicrack/core/hexpat/interpreter.py
+
+_PATTERNS_DIR is never read, defined in src/intellicrack/core/hexpat/interpreter.py:39
+
+execute_bytes is never read, defined in src/intellicrack/core/hexpat/interpreter.py:161
+
+can_compile_to_json is never read, defined in src/intellicrack/core/hexpat/interpreter.py:218
+
+compile_to_json is never read, defined in src/intellicrack/core/hexpat/interpreter.py:247
 
 
 4 findings in src/intellicrack/ui/resources/font_manager.py
 
-reset_instance is never read, defined in src/intellicrack/core/process_manager.py:168, src/intellicrack/ui/resources/font_manager.py:82, src/intellicrack/ui/resources/icon_manager.py:220, src/intellicrack/ui/resources/theme_manager.py:1021
+reset_instance is never read, defined in src/intellicrack/core/process_manager.py:162, src/intellicrack/ui/resources/font_manager.py:81, src/intellicrack/ui/resources/icon_manager.py:219, src/intellicrack/ui/resources/theme_manager.py:1020
 
-code_font_family is never read, defined in src/intellicrack/ui/resources/font_manager.py:286
+code_font_family is never read, defined in src/intellicrack/ui/resources/font_manager.py:285
 
-ui_font_family is never read, defined in src/intellicrack/ui/resources/font_manager.py:297
+ui_font_family is never read, defined in src/intellicrack/ui/resources/font_manager.py:296
 
-loaded_families is never read, defined in src/intellicrack/ui/resources/font_manager.py:308
+loaded_families is never read, defined in src/intellicrack/ui/resources/font_manager.py:307
 
 
 4 findings in src/intellicrack/credentials/oauth.py
@@ -513,109 +676,192 @@ log_request is never read, defined in src/intellicrack/credentials/oauth.py:334
 
 4 findings in src/intellicrack/providers/local_transformers.py
 
-xpu_available is never read, defined in src/intellicrack/providers/local_transformers.py:208
+xpu_available is never read, defined in src/intellicrack/providers/local_transformers.py:200
 
-is_b580_detected is never read, defined in src/intellicrack/providers/local_transformers.py:217
+is_b580_detected is never read, defined in src/intellicrack/providers/local_transformers.py:209
 
-current_model_id is never read, defined in src/intellicrack/providers/local_transformers.py:226
+current_model_id is never read, defined in src/intellicrack/providers/local_transformers.py:218
 
-unload_model is never read, defined in src/intellicrack/providers/local_transformers.py:1029
+unload_model is never read, defined in src/intellicrack/providers/local_transformers.py:1020
 
 
-4 findings in src/intellicrack/ui/highlighter.py
+4 findings in src/intellicrack/ui/panels/hex_editor/_base.py
 
-highlightBlock is never read, defined in src/intellicrack/ui/highlighter.py:1004, src/intellicrack/ui/highlighter.py:225, src/intellicrack/ui/highlighter.py:570, src/intellicrack/ui/highlighter.py:775
+hex_state_available is never read, defined in src/intellicrack/ui/panels/hex_editor/_base.py:86, src/intellicrack/ui/panels/hex_editor/_base.py:90
 
-highlightBlock is never read, defined in src/intellicrack/ui/highlighter.py:1004, src/intellicrack/ui/highlighter.py:225, src/intellicrack/ui/highlighter.py:570, src/intellicrack/ui/highlighter.py:775
+hex_state_available is never read, defined in src/intellicrack/ui/panels/hex_editor/_base.py:86, src/intellicrack/ui/panels/hex_editor/_base.py:90
 
-highlightBlock is never read, defined in src/intellicrack/ui/highlighter.py:1004, src/intellicrack/ui/highlighter.py:225, src/intellicrack/ui/highlighter.py:570, src/intellicrack/ui/highlighter.py:775
+transform_pipeline_available is never read, defined in src/intellicrack/ui/panels/hex_editor/_base.py:113, src/intellicrack/ui/panels/hex_editor/_base.py:119
 
-highlightBlock is never read, defined in src/intellicrack/ui/highlighter.py:1004, src/intellicrack/ui/highlighter.py:225, src/intellicrack/ui/highlighter.py:570, src/intellicrack/ui/highlighter.py:775
+transform_pipeline_available is never read, defined in src/intellicrack/ui/panels/hex_editor/_base.py:113, src/intellicrack/ui/panels/hex_editor/_base.py:119
 
 
 4 findings in src/intellicrack/ui/panels/stack_viewer.py
 
 StackDataSource is never read, defined in src/intellicrack/ui/panels/stack_viewer.py:63
 
-get_source_name is never read, defined in src/intellicrack/ui/panels/stack_viewer.py:162, src/intellicrack/ui/panels/stack_viewer.py:244, src/intellicrack/ui/panels/stack_viewer.py:89
+get_source_name is never read, defined in src/intellicrack/ui/panels/stack_viewer.py:161, src/intellicrack/ui/panels/stack_viewer.py:242, src/intellicrack/ui/panels/stack_viewer.py:89
 
-get_source_name is never read, defined in src/intellicrack/ui/panels/stack_viewer.py:162, src/intellicrack/ui/panels/stack_viewer.py:244, src/intellicrack/ui/panels/stack_viewer.py:89
+get_source_name is never read, defined in src/intellicrack/ui/panels/stack_viewer.py:161, src/intellicrack/ui/panels/stack_viewer.py:242, src/intellicrack/ui/panels/stack_viewer.py:89
 
-get_source_name is never read, defined in src/intellicrack/ui/panels/stack_viewer.py:162, src/intellicrack/ui/panels/stack_viewer.py:244, src/intellicrack/ui/panels/stack_viewer.py:89
-
-
-3 findings in src/intellicrack/ui/panels/hex_editor_panel.py
-
-_ is never read, defined in src/intellicrack/ui/panels/hex_editor_panel.py:1044
-
-set_state_holder is never read, defined in src/intellicrack/bridges/hex_editor.py:78, src/intellicrack/ui/panels/hex_editor_panel.py:886
-
-_cache_original_byte is never read, defined in src/intellicrack/ui/panels/hex_editor_panel.py:1092
+get_source_name is never read, defined in src/intellicrack/ui/panels/stack_viewer.py:161, src/intellicrack/ui/panels/stack_viewer.py:242, src/intellicrack/ui/panels/stack_viewer.py:89
 
 
 3 findings in src/intellicrack/ui/panels/sandbox_panel.py
 
-_ is never read, defined in src/intellicrack/ui/panels/sandbox_panel.py:352
+_ is never read, defined in src/intellicrack/ui/panels/sandbox_panel.py:354
 
-_ is never read, defined in src/intellicrack/ui/panels/sandbox_panel.py:363
+_ is never read, defined in src/intellicrack/ui/panels/sandbox_panel.py:365
 
-load_execution_report is never read, defined in src/intellicrack/ui/panels/sandbox_panel.py:653
+load_execution_report is never read, defined in src/intellicrack/ui/panels/sandbox_panel.py:655
+
+
+3 findings in src/intellicrack/bridges/hex_state.py
+
+selection is never read, defined in src/intellicrack/bridges/hex_state.py:126
+
+unregister_callback is never read, defined in src/intellicrack/bridges/hex_state.py:151
+
+clear_selection is never read, defined in src/intellicrack/bridges/hex_state.py:226
 
 
 3 findings in src/intellicrack/ui/resources/icon_manager.py
 
-reset_instance is never read, defined in src/intellicrack/core/process_manager.py:168, src/intellicrack/ui/resources/font_manager.py:82, src/intellicrack/ui/resources/icon_manager.py:220, src/intellicrack/ui/resources/theme_manager.py:1021
+reset_instance is never read, defined in src/intellicrack/core/process_manager.py:162, src/intellicrack/ui/resources/font_manager.py:81, src/intellicrack/ui/resources/icon_manager.py:219, src/intellicrack/ui/resources/theme_manager.py:1020
 
-list_available_icons is never read, defined in src/intellicrack/ui/resources/icon_manager.py:451
+list_available_icons is never read, defined in src/intellicrack/ui/resources/icon_manager.py:450
 
-icon_exists is never read, defined in src/intellicrack/ui/resources/icon_manager.py:459
+icon_exists is never read, defined in src/intellicrack/ui/resources/icon_manager.py:458
 
 
 3 findings in src/intellicrack/ui/resources/theme_manager.py
 
-reset_instance is never read, defined in src/intellicrack/core/process_manager.py:168, src/intellicrack/ui/resources/font_manager.py:82, src/intellicrack/ui/resources/icon_manager.py:220, src/intellicrack/ui/resources/theme_manager.py:1021
+reset_instance is never read, defined in src/intellicrack/core/process_manager.py:162, src/intellicrack/ui/resources/font_manager.py:81, src/intellicrack/ui/resources/icon_manager.py:219, src/intellicrack/ui/resources/theme_manager.py:1020
 
-current_theme is never read, defined in src/intellicrack/ui/resources/theme_manager.py:1127
+current_theme is never read, defined in src/intellicrack/ui/resources/theme_manager.py:1126
 
-get_available_themes is never read, defined in src/intellicrack/ui/resources/theme_manager.py:1150
+get_available_themes is never read, defined in src/intellicrack/ui/resources/theme_manager.py:1149
 
 
 3 findings in src/intellicrack/core/script_gen.py
 
-ensure_script_saved is never read, defined in src/intellicrack/core/script_gen.py:609
+ensure_script_saved is never read, defined in src/intellicrack/core/script_gen.py:623
 
-reload_script is never read, defined in src/intellicrack/core/script_gen.py:620
+reload_script is never read, defined in src/intellicrack/core/script_gen.py:634
 
-prepare_ai_prompt is never read, defined in src/intellicrack/core/script_gen.py:756
+prepare_ai_prompt is never read, defined in src/intellicrack/core/script_gen.py:770
+
+
+3 findings in src/intellicrack/ui/panels/hex_tools_panel.py
+
+paintEvent is never read, defined in src/intellicrack/ui/panels/hex_editor/_widgets.py:191, src/intellicrack/ui/panels/hex_editor/_widgets.py:82, src/intellicrack/ui/panels/hex_editor_widget.py:128, src/intellicrack/ui/panels/hex_editor_widget.py:418, src/intellicrack/ui/panels/hex_tools_panel.py:287, src/intellicrack/ui/panels/vnc_widget.py:527
+
+sizeHint is never read, defined in src/intellicrack/ui/panels/hex_tools_panel.py:277
+
+HexToolsPanel is never read, defined in src/intellicrack/ui/panels/hex_tools_panel.py:331
+
+
+2 findings in src/intellicrack/ui/panels/hex_editor/_disassembly.py
+
+_ is never read, defined in src/intellicrack/ui/panels/hex_editor/_disassembly.py:195
+
+_ is never read, defined in src/intellicrack/ui/panels/hex_editor/_disassembly.py:206
+
+
+2 findings in src/intellicrack/ui/panels/hex_editor/_pattern_editor.py
+
+_ is never read, defined in src/intellicrack/ui/panels/hex_editor/_pattern_editor.py:426
+
+_refresh_template_combo is never read, defined in src/intellicrack/ui/panels/hex_editor/_pattern_editor.py:573
+
+
+2 findings in src/intellicrack/ui/panels/hex_editor/_search.py
+
+_ is never read, defined in src/intellicrack/ui/panels/hex_editor/_search.py:67
+
+_ is never read, defined in src/intellicrack/ui/panels/hex_editor/_search.py:149
 
 
 2 findings in src/intellicrack/ui/panels/script_manager.py
 
-_ is never read, defined in src/intellicrack/ui/panels/script_manager.py:414
+_ is never read, defined in src/intellicrack/ui/panels/script_manager.py:422
 
-get_selected_id is never read, defined in src/intellicrack/ui/panels/script_manager.py:365
+get_selected_id is never read, defined in src/intellicrack/ui/panels/script_manager.py:371
+
+
+2 findings in src/intellicrack/core/hexpat/pattern_registry.py
+
+get_pattern is never read, defined in src/intellicrack/core/hexpat/pattern_registry.py:126
+
+load_source is never read, defined in src/intellicrack/core/hexpat/pattern_registry.py:185
+
+
+2 findings in src/intellicrack/core/hexpat/preprocessor.py
+
+_PRAGMA_DEBUG_RE is never read, defined in src/intellicrack/core/hexpat/preprocessor.py:35
+
+_PRAGMA_BITFIELD_ORDER_RE is never read, defined in src/intellicrack/core/hexpat/preprocessor.py:37
+
+
+2 findings in src/intellicrack/core/hexpat/stdlib.py
+
+set_array_index is never read, defined in src/intellicrack/core/hexpat/stdlib.py:54
+
+_read_struct_field is never read, defined in src/intellicrack/core/hexpat/stdlib.py:529
+
+
+2 findings in src/intellicrack/core/yara_scanner.py
+
+scan_data_async is never read, defined in src/intellicrack/core/yara_scanner.py:204
+
+scan_file_async is never read, defined in src/intellicrack/core/yara_scanner.py:219
 
 
 2 findings in src/intellicrack/providers/ollama.py
 
-local_available is never read, defined in src/intellicrack/providers/ollama.py:98
+local_available is never read, defined in src/intellicrack/providers/ollama.py:93
 
-cloud_available is never read, defined in src/intellicrack/providers/ollama.py:107
+cloud_available is never read, defined in src/intellicrack/providers/ollama.py:102
 
 
 1 findings in src/intellicrack/providers/google.py
 
-_ is never read, defined in src/intellicrack/providers/google.py:105
+_ is never read, defined in src/intellicrack/providers/google.py:100
+
+
+1 findings in src/intellicrack/ui/panels/hex_editor/_sections.py
+
+_ is never read, defined in src/intellicrack/ui/panels/hex_editor/_sections.py:213
+
+
+1 findings in src/intellicrack/ui/panels/hex_editor/_yara.py
+
+_ is never read, defined in src/intellicrack/ui/panels/hex_editor/_yara.py:180
 
 
 1 findings in src/intellicrack/ui/tool_config.py
 
-_ is never read, defined in src/intellicrack/ui/tool_config.py:634
+_ is never read, defined in src/intellicrack/ui/tool_config.py:629
+
+
+1 findings in src/intellicrack/ui/panels/hex_editor/panel.py
+
+set_state_holder is never read, defined in src/intellicrack/bridges/hex_editor.py:149, src/intellicrack/ui/panels/hex_editor/panel.py:679
 
 
 1 findings in src/intellicrack/bridges/installer.py
 
 _ERR_EXTRACTION_FAILED is never read, defined in src/intellicrack/bridges/installer.py:41
+
+
+1 findings in src/intellicrack/core/hexpat/data_reader.py
+
+read_fixed_string is never read, defined in src/intellicrack/core/hexpat/data_reader.py:386
+
+
+1 findings in src/intellicrack/core/hexpat/type_system.py
+
+all_names is never read, defined in src/intellicrack/core/hexpat/type_system.py:78
 
 
 1 findings in src/intellicrack/core/logging.py
@@ -625,7 +871,7 @@ get_structlog_logger is never read, defined in src/intellicrack/core/logging.py:
 
 1 findings in src/intellicrack/core/session.py
 
-cleanup is never read, defined in src/intellicrack/core/session.py:945
+cleanup is never read, defined in src/intellicrack/core/session.py:932
 
 
 1 findings in src/intellicrack/providers/anthropic.py
@@ -635,7 +881,7 @@ _MSG_NO_MODELS_AVAILABLE is never read, defined in src/intellicrack/providers/an
 
 1 findings in src/intellicrack/providers/discovery.py
 
-filter is never read, defined in src/intellicrack/providers/discovery.py:579
+filter is never read, defined in src/intellicrack/providers/discovery.py:558
 
 
 1 findings in src/intellicrack/providers/grok.py
@@ -660,32 +906,37 @@ _MSG_NO_ACTIVE_PROVIDER is never read, defined in src/intellicrack/providers/reg
 
 1 findings in src/intellicrack/ui/app.py
 
-closeEvent is never read, defined in src/intellicrack/ui/app.py:1894
+closeEvent is never read, defined in src/intellicrack/ui/app.py:1968, src/intellicrack/ui/panel_dock.py:121
+
+
+1 findings in src/intellicrack/ui/panel_dock.py
+
+closeEvent is never read, defined in src/intellicrack/ui/app.py:1968, src/intellicrack/ui/panel_dock.py:121
 
 
 1 findings in src/intellicrack/ui/confirmation_dialog.py
 
-remember_similar is never read, defined in src/intellicrack/ui/confirmation_dialog.py:81
+remember_similar is never read, defined in src/intellicrack/ui/confirmation_dialog.py:74
 
 
 1 findings in src/intellicrack/ui/panels/analysis_panel.py
 
-get_current_analysis is never read, defined in src/intellicrack/ui/panels/analysis_panel.py:362
+get_current_analysis is never read, defined in src/intellicrack/ui/panels/analysis_panel.py:360
 
 
 1 findings in src/intellicrack/ui/panels/binary_panel.py
 
-wheelEvent is never read, defined in src/intellicrack/ui/panels/binary_panel.py:461, src/intellicrack/ui/panels/graph_view.py:490, src/intellicrack/ui/panels/hex_editor_widget.py:795
+wheelEvent is never read, defined in src/intellicrack/ui/panels/binary_panel.py:465, src/intellicrack/ui/panels/graph_view.py:478, src/intellicrack/ui/panels/hex_editor_widget.py:1272
 
 
 1 findings in src/intellicrack/ui/panels/graph_view.py
 
-wheelEvent is never read, defined in src/intellicrack/ui/panels/binary_panel.py:461, src/intellicrack/ui/panels/graph_view.py:490, src/intellicrack/ui/panels/hex_editor_widget.py:795
+wheelEvent is never read, defined in src/intellicrack/ui/panels/binary_panel.py:465, src/intellicrack/ui/panels/graph_view.py:478, src/intellicrack/ui/panels/hex_editor_widget.py:1272
 
 
-1 findings in src/intellicrack/ui/panels/hxd_panel.py
+1 findings in src/intellicrack/ui/panels/hex_editor/_patches.py
 
-HxDPanel is never read, defined in src/intellicrack/ui/panels/hxd_panel.py:72
+_cache_original_byte is never read, defined in src/intellicrack/ui/panels/hex_editor/_patches.py:79
 
 
 1 findings in src/intellicrack/ui/panels/qt_compat.py

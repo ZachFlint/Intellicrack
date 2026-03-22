@@ -212,19 +212,6 @@ src\intellicrack\bridges\binary.py:28:8: DEP003 'lief' imported but it is a tran
 src\intellicrack\bridges\binary.py:29:8: DEP003 'pefile' imported but it is a transitive dependency
 
 
-5 findings in src\intellicrack\ui\panels\hex_editor_panel.py
-
-src\intellicrack\ui\panels\hex_editor_panel.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency
-
-src\intellicrack\ui\panels\hex_editor_panel.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency
-
-src\intellicrack\ui\panels\hex_editor_panel.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency
-
-src\intellicrack\ui\panels\hex_editor_panel.py:48:12: DEP003 'pefile' imported but it is a transitive dependency
-
-src\intellicrack\ui\panels\hex_editor_panel.py:62:12: DEP003 'intellicrack_hexcore' imported but it is a transitive dependency
-
-
 4 findings in src\intellicrack\ui\panels\binary_panel.py
 
 src\intellicrack\ui\panels\binary_panel.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency
@@ -234,6 +221,17 @@ src\intellicrack\ui\panels\binary_panel.py:21:1: DEP003 'PyQt6' imported but it 
 src\intellicrack\ui\panels\binary_panel.py:22:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
 src\intellicrack\ui\panels\binary_panel.py:44:12: DEP003 'lief' imported but it is a transitive dependency
+
+
+4 findings in src\intellicrack\ui\panels\hex_tools_panel.py
+
+src\intellicrack\ui\panels\hex_tools_panel.py:23:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\hex_tools_panel.py:24:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\hex_tools_panel.py:25:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\hex_tools_panel.py:52:5: DEP003 'cxxfilt' imported but it is a transitive dependency
 
 
 4 findings in src\intellicrack\ui\provider_config.py
@@ -348,22 +346,40 @@ src\intellicrack\ui\panels\graph_view.py:20:1: DEP003 'PyQt6' imported but it is
 src\intellicrack\ui\panels\graph_view.py:30:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
 
+3 findings in src\intellicrack\ui\panels\hex_editor\_base.py
+
+src\intellicrack\ui\panels\hex_editor\_base.py:57:12: DEP003 'pefile' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\hex_editor\_base.py:67:12: DEP001 'xxhash' imported but missing from the dependency definitions
+
+src\intellicrack\ui\panels\hex_editor\_base.py:78:12: DEP003 'intellicrack_hexcore' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\ui\panels\hex_editor\_widgets.py
+
+src\intellicrack\ui\panels\hex_editor\_widgets.py:13:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\hex_editor\_widgets.py:14:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\hex_editor\_widgets.py:22:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\ui\panels\hex_editor\panel.py
+
+src\intellicrack\ui\panels\hex_editor\panel.py:13:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\hex_editor\panel.py:14:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\hex_editor\panel.py:15:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
 3 findings in src\intellicrack\ui\panels\hex_editor_widget.py
 
-src\intellicrack\ui\panels\hex_editor_widget.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency
+src\intellicrack\ui\panels\hex_editor_widget.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
-src\intellicrack\ui\panels\hex_editor_widget.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency
+src\intellicrack\ui\panels\hex_editor_widget.py:22:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
-src\intellicrack\ui\panels\hex_editor_widget.py:32:1: DEP003 'PyQt6' imported but it is a transitive dependency
-
-
-3 findings in src\intellicrack\ui\panels\hxd_panel.py
-
-src\intellicrack\ui\panels\hxd_panel.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency
-
-src\intellicrack\ui\panels\hxd_panel.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency
-
-src\intellicrack\ui\panels\hxd_panel.py:22:1: DEP003 'PyQt6' imported but it is a transitive dependency
+src\intellicrack\ui\panels\hex_editor_widget.py:36:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
 
 3 findings in src\intellicrack\ui\panels\process_panel.py
@@ -449,9 +465,9 @@ src\intellicrack\ui\tools.py:23:1: DEP003 'PyQt6' imported but it is a transitiv
 
 2 findings in src\intellicrack\bridges\x64dbg.py
 
-src\intellicrack\bridges\x64dbg.py:70:12: DEP003 'capstone' imported but it is a transitive dependency
+src\intellicrack\bridges\x64dbg.py:72:12: DEP003 'capstone' imported but it is a transitive dependency
 
-src\intellicrack\bridges\x64dbg.py:77:12: DEP003 'keystone' imported but it is a transitive dependency
+src\intellicrack\bridges\x64dbg.py:79:12: DEP003 'keystone' imported but it is a transitive dependency
 
 
 2 findings in src\intellicrack\main.py
@@ -475,11 +491,39 @@ src\intellicrack\ui\highlighter.py:16:1: DEP003 'PyQt6' imported but it is a tra
 src\intellicrack\ui\highlighter.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
 
+2 findings in src\intellicrack\ui\panel_dock.py
+
+src\intellicrack\ui\panel_dock.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panel_dock.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
 2 findings in src\intellicrack\ui\panels\base_panel.py
 
 src\intellicrack\ui\panels\base_panel.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
 src\intellicrack\ui\panels\base_panel.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+2 findings in src\intellicrack\ui\panels\hex_editor\_pattern_editor.py
+
+src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:13:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:14:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+2 findings in src\intellicrack\ui\panels\hex_editor\_search.py
+
+src\intellicrack\ui\panels\hex_editor\_search.py:13:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\hex_editor\_search.py:14:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+2 findings in src\intellicrack\ui\panels\hex_editor\_statistics.py
+
+src\intellicrack\ui\panels\hex_editor\_statistics.py:14:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+src\intellicrack\ui\panels\hex_editor\_statistics.py:15:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
 
 2 findings in src\intellicrack\ui\panels\qt_compat.py
@@ -527,12 +571,17 @@ src\intellicrack\bridges\frida_bridge.py:21:8: DEP003 'frida' imported but it is
 
 1 findings in src\intellicrack\bridges\hex_editor.py
 
-src\intellicrack\bridges\hex_editor.py:36:12: DEP003 'intellicrack_hexcore' imported but it is a transitive dependency
+src\intellicrack\bridges\hex_editor.py:46:12: DEP003 'intellicrack_hexcore' imported but it is a transitive dependency
 
 
 1 findings in src\intellicrack\bridges\installer.py
 
 src\intellicrack\bridges\installer.py:24:8: DEP003 'httpx' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\core\disassembler.py
+
+src\intellicrack\core\disassembler.py:30:12: DEP003 'capstone' imported but it is a transitive dependency
 
 
 1 findings in src\intellicrack\core\logging.py
@@ -543,6 +592,11 @@ src\intellicrack\core\logging.py:24:8: DEP003 'structlog' imported but it is a t
 1 findings in src\intellicrack\core\orchestrator.py
 
 src\intellicrack\core\orchestrator.py:23:8: DEP003 'structlog' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\core\transform_pipeline.py
+
+src\intellicrack\core\transform_pipeline.py:29:12: DEP003 'intellicrack_hexcore' imported but it is a transitive dependency
 
 
 1 findings in src\intellicrack\credentials\oauth.py
@@ -585,6 +639,51 @@ src\intellicrack\ui\confirmation_dialog.py:17:1: DEP003 'PyQt6' imported but it 
 src\intellicrack\ui\panels\async_bridge.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
 
+1 findings in src\intellicrack\ui\panels\hex_editor\_bookmarks.py
+
+src\intellicrack\ui\panels\hex_editor\_bookmarks.py:12:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\ui\panels\hex_editor\_data_inspector.py
+
+src\intellicrack\ui\panels\hex_editor\_data_inspector.py:12:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\ui\panels\hex_editor\_disassembly.py
+
+src\intellicrack\ui\panels\hex_editor\_disassembly.py:12:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\ui\panels\hex_editor\_hashing.py
+
+src\intellicrack\ui\panels\hex_editor\_hashing.py:12:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\ui\panels\hex_editor\_patches.py
+
+src\intellicrack\ui\panels\hex_editor\_patches.py:14:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\ui\panels\hex_editor\_sections.py
+
+src\intellicrack\ui\panels\hex_editor\_sections.py:13:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\ui\panels\hex_editor\_templates.py
+
+src\intellicrack\ui\panels\hex_editor\_templates.py:12:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\ui\panels\hex_editor\_transforms.py
+
+src\intellicrack\ui\panels\hex_editor\_transforms.py:12:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+1 findings in src\intellicrack\ui\panels\hex_editor\_yara.py
+
+src\intellicrack\ui\panels\hex_editor\_yara.py:12:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
 1 findings in src\intellicrack\ui\resources\font_manager.py
 
 src\intellicrack\ui\resources\font_manager.py:16:1: DEP003 'PyQt6' imported but it is a transitive dependency
@@ -593,3 +692,13 @@ src\intellicrack\ui\resources\font_manager.py:16:1: DEP003 'PyQt6' imported but 
 1 findings in src\intellicrack\ui\resources\theme_manager.py
 
 src\intellicrack\ui\resources\theme_manager.py:16:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
+
+1 findings in vendor\community-patterns\scripts\ksy2pat.py
+
+vendor\community-patterns\scripts\ksy2pat.py:1:8: DEP003 'yaml' imported but it is a transitive dependency
+
+
+1 findings in vendor\ImHex-Patterns\scripts\ksy2pat.py
+
+vendor\ImHex-Patterns\scripts\ksy2pat.py:1:8: DEP003 'yaml' imported but it is a transitive dependency

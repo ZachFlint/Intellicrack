@@ -1,3 +1,35 @@
+7 findings in src\intellicrack\ui\panels\hex_editor_widget.py
+
+src\intellicrack\ui\panels\hex_editor_widget.py: Unused function clear_highlight_rules
+
+src\intellicrack\ui\panels\hex_editor_widget.py: Unused function contextMenuEvent
+
+src\intellicrack\ui\panels\hex_editor_widget.py: Unused function get_highlight_rules
+
+src\intellicrack\ui\panels\hex_editor_widget.py: Unused function mouseMoveEvent
+
+src\intellicrack\ui\panels\hex_editor_widget.py: Unused function mouseReleaseEvent
+
+src\intellicrack\ui\panels\hex_editor_widget.py: Unused function paintEvent
+
+src\intellicrack\ui\panels\hex_editor_widget.py: Unused function wheelEvent
+
+
+6 findings in src\intellicrack\core\template_manager.py
+
+src\intellicrack\core\template_manager.py: Unused function bootstrap_builtins
+
+src\intellicrack\core\template_manager.py: Unused function delete_user_template
+
+src\intellicrack\core\template_manager.py: Unused function list_all_templates
+
+src\intellicrack\core\template_manager.py: Unused function list_hexpat_by_category
+
+src\intellicrack\core\template_manager.py: Unused function load_template
+
+src\intellicrack\core\template_manager.py: Unused function save_user_template
+
+
 5 findings in src\intellicrack\core\types.py
 
 src\intellicrack\core\types.py: Unused function display_type
@@ -11,17 +43,6 @@ src\intellicrack\core\types.py: Unused function is_readable
 src\intellicrack\core\types.py: Unused function is_writable
 
 
-4 findings in src\intellicrack\ui\panels\hex_editor_widget.py
-
-src\intellicrack\ui\panels\hex_editor_widget.py: Unused function mouseMoveEvent
-
-src\intellicrack\ui\panels\hex_editor_widget.py: Unused function mouseReleaseEvent
-
-src\intellicrack\ui\panels\hex_editor_widget.py: Unused function paintEvent
-
-src\intellicrack\ui\panels\hex_editor_widget.py: Unused function wheelEvent
-
-
 4 findings in src\intellicrack\ui\panels\vnc_widget.py
 
 src\intellicrack\ui\panels\vnc_widget.py: Unused function keyReleaseEvent
@@ -31,6 +52,33 @@ src\intellicrack\ui\panels\vnc_widget.py: Unused function mouseMoveEvent
 src\intellicrack\ui\panels\vnc_widget.py: Unused function mouseReleaseEvent
 
 src\intellicrack\ui\panels\vnc_widget.py: Unused function paintEvent
+
+
+3 findings in src\intellicrack\core\disassembler.py
+
+src\intellicrack\core\disassembler.py: Unused function disassemble_to_lines
+
+src\intellicrack\core\disassembler.py: Unused function get_disassembler
+
+src\intellicrack\core\disassembler.py: Unused function get_supported_architectures
+
+
+3 findings in src\intellicrack\core\hexpat\interpreter.py
+
+src\intellicrack\core\hexpat\interpreter.py: Unused function can_compile_to_json
+
+src\intellicrack\core\hexpat\interpreter.py: Unused function compile_to_json
+
+src\intellicrack\core\hexpat\interpreter.py: Unused function execute_bytes
+
+
+3 findings in src\intellicrack\core\transform_pipeline.py
+
+src\intellicrack\core\transform_pipeline.py: Unused function move_step
+
+src\intellicrack\core\transform_pipeline.py: Unused function preview
+
+src\intellicrack\core\transform_pipeline.py: Unused function remove_step
 
 
 3 findings in src\intellicrack\credentials\oauth.py
@@ -83,6 +131,13 @@ src\intellicrack\bridges\hex_state.py: Unused function clear_selection
 src\intellicrack\bridges\hex_state.py: Unused function unregister_callback
 
 
+2 findings in src\intellicrack\core\hexpat\pattern_registry.py
+
+src\intellicrack\core\hexpat\pattern_registry.py: Unused function get_pattern
+
+src\intellicrack\core\hexpat\pattern_registry.py: Unused function load_source
+
+
 2 findings in src\intellicrack\providers\local_transformers.py
 
 src\intellicrack\providers\local_transformers.py: Unused function current_model_id
@@ -95,6 +150,30 @@ src\intellicrack\providers\local_transformers.py: Unused function is_b580_detect
 src\intellicrack\providers\ollama.py: Unused function cloud_available
 
 src\intellicrack\providers\ollama.py: Unused function local_available
+
+
+2 findings in src\intellicrack\ui\panels\hex_editor\_widgets.py
+
+src\intellicrack\ui\panels\hex_editor\_widgets.py: Unused function mouseMoveEvent
+
+src\intellicrack\ui\panels\hex_editor\_widgets.py: Unused function paintEvent
+
+
+2 findings in src\intellicrack\ui\panels\hex_tools_panel.py
+
+src\intellicrack\ui\panels\hex_tools_panel.py: Unused function paintEvent
+
+src\intellicrack\ui\panels\hex_tools_panel.py: Unused function sizeHint
+
+
+1 findings in src\intellicrack\core\hexpat\data_reader.py
+
+src\intellicrack\core\hexpat\data_reader.py: Unused function read_fixed_string
+
+
+1 findings in src\intellicrack\core\hexpat\type_system.py
+
+src\intellicrack\core\hexpat\type_system.py: Unused function all_names
 
 
 1 findings in src\intellicrack\core\logging.py
@@ -125,6 +204,11 @@ src\intellicrack\ui\confirmation_dialog.py: Unused function remember_similar
 1 findings in src\intellicrack\ui\highlighter.py
 
 src\intellicrack\ui\highlighter.py: Unused function highlightBlock
+
+
+1 findings in src\intellicrack\ui\panel_dock.py
+
+src\intellicrack\ui\panel_dock.py: Unused function closeEvent
 
 
 1 findings in src\intellicrack\ui\panels\binary_panel.py

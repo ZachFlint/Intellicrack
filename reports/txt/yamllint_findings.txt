@@ -54,6 +54,17 @@
 .\.github\workflows\gemini-triage.yml:163:121: [warning] line too long (127 > 120 characters)  (line-length)
 
 
+4 findings in .\vendor\PatternLanguage\.github\workflows\tests.yml
+
+.\vendor\PatternLanguage\.github\workflows\tests.yml:1:19: [error] wrong new line character: expected \n  (new-lines)
+
+.\vendor\PatternLanguage\.github\workflows\tests.yml:44:121: [warning] line too long (995 > 120 characters)  (line-length)
+
+.\vendor\PatternLanguage\.github\workflows\tests.yml:67:121: [warning] line too long (170 > 120 characters)  (line-length)
+
+.\vendor\PatternLanguage\.github\workflows\tests.yml:68:121: [warning] line too long (127 > 120 characters)  (line-length)
+
+
 3 findings in .\.github\workflows\ci.yml
 
 .\.github\workflows\ci.yml:1:9: [error] wrong new line character: expected \n  (new-lines)
@@ -112,7 +123,7 @@
 
 .\.sourcery.yaml:1:56: [error] wrong new line character: expected \n  (new-lines)
 
-.\.sourcery.yaml:33:121: [warning] line too long (168 > 120 characters)  (line-length)
+.\.sourcery.yaml:33:121: [warning] line too long (169 > 120 characters)  (line-length)
 
 
 2 findings in .\.github\workflows\qodana_code_quality.yml
@@ -120,6 +131,27 @@
 .\.github\workflows\qodana_code_quality.yml:1:13: [error] wrong new line character: expected \n  (new-lines)
 
 .\.github\workflows\qodana_code_quality.yml:19:121: [warning] line too long (124 > 120 characters)  (line-length)
+
+
+2 findings in .\vendor\community-patterns\.github\workflows\dispatch.yml
+
+.\vendor\community-patterns\.github\workflows\dispatch.yml:1:17: [error] wrong new line character: expected \n  (new-lines)
+
+.\vendor\community-patterns\.github\workflows\dispatch.yml:36:121: [warning] line too long (172 > 120 characters)  (line-length)
+
+
+2 findings in .\vendor\ImHex-Patterns\.github\workflows\dispatch.yml
+
+.\vendor\ImHex-Patterns\.github\workflows\dispatch.yml:1:17: [error] wrong new line character: expected \n  (new-lines)
+
+.\vendor\ImHex-Patterns\.github\workflows\dispatch.yml:36:121: [warning] line too long (172 > 120 characters)  (line-length)
+
+
+2 findings in .\vendor\PatternLanguage\.github\codecov.yml
+
+.\vendor\PatternLanguage\.github\codecov.yml:1:15: [error] wrong new line character: expected \n  (new-lines)
+
+.\vendor\PatternLanguage\.github\codecov.yml:3:121: [warning] line too long (123 > 120 characters)  (line-length)
 
 
 1 findings in .\.readthedocs.yaml
@@ -140,3 +172,38 @@
 1 findings in .\.github\dependabot.yml
 
 .\.github\dependabot.yml:1:11: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\vendor\community-patterns\.github\FUNDING.yml
+
+.\vendor\community-patterns\.github\FUNDING.yml:1:16: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\vendor\community-patterns\.github\workflows\tests.yml
+
+.\vendor\community-patterns\.github\workflows\tests.yml:1:19: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\vendor\ImHex-Patterns\.github\FUNDING.yml
+
+.\vendor\ImHex-Patterns\.github\FUNDING.yml:1:16: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\vendor\ImHex-Patterns\.github\workflows\tests.yml
+
+.\vendor\ImHex-Patterns\.github\workflows\tests.yml:1:19: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\vendor\PatternLanguage\.github\FUNDING.yml
+
+.\vendor\PatternLanguage\.github\FUNDING.yml:1:16: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\vendor\PatternLanguage\.github\workflows\build.yml
+
+.\vendor\PatternLanguage\.github\workflows\build.yml:1:14: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\vendor\PatternLanguage\tests\files\export\yaml.yml
+
+.\vendor\PatternLanguage\tests\files\export\yaml.yml:1:6: [error] wrong new line character: expected \n  (new-lines)
