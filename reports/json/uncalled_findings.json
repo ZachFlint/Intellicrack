@@ -1,9 +1,99 @@
 {
   "tool": "uncalled",
-  "generated": "2026-03-20T17:21:28.561790",
-  "total_findings": 44,
-  "total_files": 22,
+  "generated": "2026-03-22T02:17:08.471308",
+  "total_findings": 71,
+  "total_files": 32,
   "files": [
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py",
+      "count": 7,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: clear_highlight_rules",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function clear_highlight_rules"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: contextMenuEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function contextMenuEvent"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_highlight_rules",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function get_highlight_rules"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: mouseMoveEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function mouseMoveEvent"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: mouseReleaseEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function mouseReleaseEvent"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: paintEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function paintEvent"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: wheelEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function wheelEvent"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\template_manager.py",
+      "count": 6,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: bootstrap_builtins",
+          "raw": "src\\intellicrack\\core\\template_manager.py: Unused function bootstrap_builtins"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: delete_user_template",
+          "raw": "src\\intellicrack\\core\\template_manager.py: Unused function delete_user_template"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: list_all_templates",
+          "raw": "src\\intellicrack\\core\\template_manager.py: Unused function list_all_templates"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: list_hexpat_by_category",
+          "raw": "src\\intellicrack\\core\\template_manager.py: Unused function list_hexpat_by_category"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: load_template",
+          "raw": "src\\intellicrack\\core\\template_manager.py: Unused function load_template"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: save_user_template",
+          "raw": "src\\intellicrack\\core\\template_manager.py: Unused function save_user_template"
+        }
+      ]
+    },
     {
       "path": "src\\intellicrack\\core\\types.py",
       "count": 5,
@@ -41,36 +131,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py",
-      "count": 4,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: mouseMoveEvent",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function mouseMoveEvent"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: mouseReleaseEvent",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function mouseReleaseEvent"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: paintEvent",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function paintEvent"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: wheelEvent",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function wheelEvent"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py",
       "count": 4,
       "findings": [
@@ -97,6 +157,78 @@
           "column": null,
           "message": "Unused function: paintEvent",
           "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py: Unused function paintEvent"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\disassembler.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: disassemble_to_lines",
+          "raw": "src\\intellicrack\\core\\disassembler.py: Unused function disassemble_to_lines"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_disassembler",
+          "raw": "src\\intellicrack\\core\\disassembler.py: Unused function get_disassembler"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_supported_architectures",
+          "raw": "src\\intellicrack\\core\\disassembler.py: Unused function get_supported_architectures"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\hexpat\\interpreter.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: can_compile_to_json",
+          "raw": "src\\intellicrack\\core\\hexpat\\interpreter.py: Unused function can_compile_to_json"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: compile_to_json",
+          "raw": "src\\intellicrack\\core\\hexpat\\interpreter.py: Unused function compile_to_json"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: execute_bytes",
+          "raw": "src\\intellicrack\\core\\hexpat\\interpreter.py: Unused function execute_bytes"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\transform_pipeline.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: move_step",
+          "raw": "src\\intellicrack\\core\\transform_pipeline.py: Unused function move_step"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: preview",
+          "raw": "src\\intellicrack\\core\\transform_pipeline.py: Unused function preview"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: remove_step",
+          "raw": "src\\intellicrack\\core\\transform_pipeline.py: Unused function remove_step"
         }
       ]
     },
@@ -233,6 +365,24 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\core\\hexpat\\pattern_registry.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_pattern",
+          "raw": "src\\intellicrack\\core\\hexpat\\pattern_registry.py: Unused function get_pattern"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: load_source",
+          "raw": "src\\intellicrack\\core\\hexpat\\pattern_registry.py: Unused function load_source"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\providers\\local_transformers.py",
       "count": 2,
       "findings": [
@@ -265,6 +415,66 @@
           "column": null,
           "message": "Unused function: local_available",
           "raw": "src\\intellicrack\\providers\\ollama.py: Unused function local_available"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: mouseMoveEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py: Unused function mouseMoveEvent"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: paintEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py: Unused function paintEvent"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: paintEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py: Unused function paintEvent"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: sizeHint",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py: Unused function sizeHint"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\hexpat\\data_reader.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: read_fixed_string",
+          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py: Unused function read_fixed_string"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\hexpat\\type_system.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: all_names",
+          "raw": "src\\intellicrack\\core\\hexpat\\type_system.py: Unused function all_names"
         }
       ]
     },
@@ -337,6 +547,18 @@
           "column": null,
           "message": "Unused function: highlightBlock",
           "raw": "src\\intellicrack\\ui\\highlighter.py: Unused function highlightBlock"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panel_dock.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: closeEvent",
+          "raw": "src\\intellicrack\\ui\\panel_dock.py: Unused function closeEvent"
         }
       ]
     },

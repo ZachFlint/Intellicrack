@@ -1,8 +1,8 @@
 {
   "tool": "yamllint",
-  "generated": "2026-03-20T17:21:21.077881",
-  "total_findings": 48,
-  "total_files": 16,
+  "generated": "2026-03-22T02:16:58.731654",
+  "total_findings": 65,
+  "total_files": 27,
   "files": [
     {
       "path": ".\\.serena\\project.yml",
@@ -205,6 +205,44 @@
       ]
     },
     {
+      "path": ".\\vendor\\PatternLanguage\\.github\\workflows\\tests.yml",
+      "count": 4,
+      "findings": [
+        {
+          "line": 1,
+          "column": 19,
+          "severity": "error",
+          "code": "",
+          "message": "wrong new line character: expected \\n  (new-lines)",
+          "raw": ".\\vendor\\PatternLanguage\\.github\\workflows\\tests.yml:1:19: [error] wrong new line character: expected \\n  (new-lines)"
+        },
+        {
+          "line": 44,
+          "column": 121,
+          "severity": "warning",
+          "code": "",
+          "message": "line too long (995 > 120 characters)  (line-length)",
+          "raw": ".\\vendor\\PatternLanguage\\.github\\workflows\\tests.yml:44:121: [warning] line too long (995 > 120 characters)  (line-length)"
+        },
+        {
+          "line": 67,
+          "column": 121,
+          "severity": "warning",
+          "code": "",
+          "message": "line too long (170 > 120 characters)  (line-length)",
+          "raw": ".\\vendor\\PatternLanguage\\.github\\workflows\\tests.yml:67:121: [warning] line too long (170 > 120 characters)  (line-length)"
+        },
+        {
+          "line": 68,
+          "column": 121,
+          "severity": "warning",
+          "code": "",
+          "message": "line too long (127 > 120 characters)  (line-length)",
+          "raw": ".\\vendor\\PatternLanguage\\.github\\workflows\\tests.yml:68:121: [warning] line too long (127 > 120 characters)  (line-length)"
+        }
+      ]
+    },
+    {
       "path": ".\\.github\\workflows\\ci.yml",
       "count": 3,
       "findings": [
@@ -401,8 +439,8 @@
           "column": 121,
           "severity": "warning",
           "code": "",
-          "message": "line too long (168 > 120 characters)  (line-length)",
-          "raw": ".\\.sourcery.yaml:33:121: [warning] line too long (168 > 120 characters)  (line-length)"
+          "message": "line too long (169 > 120 characters)  (line-length)",
+          "raw": ".\\.sourcery.yaml:33:121: [warning] line too long (169 > 120 characters)  (line-length)"
         }
       ]
     },
@@ -425,6 +463,72 @@
           "code": "",
           "message": "line too long (124 > 120 characters)  (line-length)",
           "raw": ".\\.github\\workflows\\qodana_code_quality.yml:19:121: [warning] line too long (124 > 120 characters)  (line-length)"
+        }
+      ]
+    },
+    {
+      "path": ".\\vendor\\community-patterns\\.github\\workflows\\dispatch.yml",
+      "count": 2,
+      "findings": [
+        {
+          "line": 1,
+          "column": 17,
+          "severity": "error",
+          "code": "",
+          "message": "wrong new line character: expected \\n  (new-lines)",
+          "raw": ".\\vendor\\community-patterns\\.github\\workflows\\dispatch.yml:1:17: [error] wrong new line character: expected \\n  (new-lines)"
+        },
+        {
+          "line": 36,
+          "column": 121,
+          "severity": "warning",
+          "code": "",
+          "message": "line too long (172 > 120 characters)  (line-length)",
+          "raw": ".\\vendor\\community-patterns\\.github\\workflows\\dispatch.yml:36:121: [warning] line too long (172 > 120 characters)  (line-length)"
+        }
+      ]
+    },
+    {
+      "path": ".\\vendor\\ImHex-Patterns\\.github\\workflows\\dispatch.yml",
+      "count": 2,
+      "findings": [
+        {
+          "line": 1,
+          "column": 17,
+          "severity": "error",
+          "code": "",
+          "message": "wrong new line character: expected \\n  (new-lines)",
+          "raw": ".\\vendor\\ImHex-Patterns\\.github\\workflows\\dispatch.yml:1:17: [error] wrong new line character: expected \\n  (new-lines)"
+        },
+        {
+          "line": 36,
+          "column": 121,
+          "severity": "warning",
+          "code": "",
+          "message": "line too long (172 > 120 characters)  (line-length)",
+          "raw": ".\\vendor\\ImHex-Patterns\\.github\\workflows\\dispatch.yml:36:121: [warning] line too long (172 > 120 characters)  (line-length)"
+        }
+      ]
+    },
+    {
+      "path": ".\\vendor\\PatternLanguage\\.github\\codecov.yml",
+      "count": 2,
+      "findings": [
+        {
+          "line": 1,
+          "column": 15,
+          "severity": "error",
+          "code": "",
+          "message": "wrong new line character: expected \\n  (new-lines)",
+          "raw": ".\\vendor\\PatternLanguage\\.github\\codecov.yml:1:15: [error] wrong new line character: expected \\n  (new-lines)"
+        },
+        {
+          "line": 3,
+          "column": 121,
+          "severity": "warning",
+          "code": "",
+          "message": "line too long (123 > 120 characters)  (line-length)",
+          "raw": ".\\vendor\\PatternLanguage\\.github\\codecov.yml:3:121: [warning] line too long (123 > 120 characters)  (line-length)"
         }
       ]
     },
@@ -481,6 +585,104 @@
           "code": "",
           "message": "wrong new line character: expected \\n  (new-lines)",
           "raw": ".\\.github\\dependabot.yml:1:11: [error] wrong new line character: expected \\n  (new-lines)"
+        }
+      ]
+    },
+    {
+      "path": ".\\vendor\\community-patterns\\.github\\FUNDING.yml",
+      "count": 1,
+      "findings": [
+        {
+          "line": 1,
+          "column": 16,
+          "severity": "error",
+          "code": "",
+          "message": "wrong new line character: expected \\n  (new-lines)",
+          "raw": ".\\vendor\\community-patterns\\.github\\FUNDING.yml:1:16: [error] wrong new line character: expected \\n  (new-lines)"
+        }
+      ]
+    },
+    {
+      "path": ".\\vendor\\community-patterns\\.github\\workflows\\tests.yml",
+      "count": 1,
+      "findings": [
+        {
+          "line": 1,
+          "column": 19,
+          "severity": "error",
+          "code": "",
+          "message": "wrong new line character: expected \\n  (new-lines)",
+          "raw": ".\\vendor\\community-patterns\\.github\\workflows\\tests.yml:1:19: [error] wrong new line character: expected \\n  (new-lines)"
+        }
+      ]
+    },
+    {
+      "path": ".\\vendor\\ImHex-Patterns\\.github\\FUNDING.yml",
+      "count": 1,
+      "findings": [
+        {
+          "line": 1,
+          "column": 16,
+          "severity": "error",
+          "code": "",
+          "message": "wrong new line character: expected \\n  (new-lines)",
+          "raw": ".\\vendor\\ImHex-Patterns\\.github\\FUNDING.yml:1:16: [error] wrong new line character: expected \\n  (new-lines)"
+        }
+      ]
+    },
+    {
+      "path": ".\\vendor\\ImHex-Patterns\\.github\\workflows\\tests.yml",
+      "count": 1,
+      "findings": [
+        {
+          "line": 1,
+          "column": 19,
+          "severity": "error",
+          "code": "",
+          "message": "wrong new line character: expected \\n  (new-lines)",
+          "raw": ".\\vendor\\ImHex-Patterns\\.github\\workflows\\tests.yml:1:19: [error] wrong new line character: expected \\n  (new-lines)"
+        }
+      ]
+    },
+    {
+      "path": ".\\vendor\\PatternLanguage\\.github\\FUNDING.yml",
+      "count": 1,
+      "findings": [
+        {
+          "line": 1,
+          "column": 16,
+          "severity": "error",
+          "code": "",
+          "message": "wrong new line character: expected \\n  (new-lines)",
+          "raw": ".\\vendor\\PatternLanguage\\.github\\FUNDING.yml:1:16: [error] wrong new line character: expected \\n  (new-lines)"
+        }
+      ]
+    },
+    {
+      "path": ".\\vendor\\PatternLanguage\\.github\\workflows\\build.yml",
+      "count": 1,
+      "findings": [
+        {
+          "line": 1,
+          "column": 14,
+          "severity": "error",
+          "code": "",
+          "message": "wrong new line character: expected \\n  (new-lines)",
+          "raw": ".\\vendor\\PatternLanguage\\.github\\workflows\\build.yml:1:14: [error] wrong new line character: expected \\n  (new-lines)"
+        }
+      ]
+    },
+    {
+      "path": ".\\vendor\\PatternLanguage\\tests\\files\\export\\yaml.yml",
+      "count": 1,
+      "findings": [
+        {
+          "line": 1,
+          "column": 6,
+          "severity": "error",
+          "code": "",
+          "message": "wrong new line character: expected \\n  (new-lines)",
+          "raw": ".\\vendor\\PatternLanguage\\tests\\files\\export\\yaml.yml:1:6: [error] wrong new line character: expected \\n  (new-lines)"
         }
       ]
     }

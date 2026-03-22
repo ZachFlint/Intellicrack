@@ -197,7 +197,7 @@ class NumericSearchWorker(QThread):
                             break
                 except struct.error:
                     continue
-            offset += read_len - self._byte_width + 1
+            offset += max(1, read_len - self._byte_width + 1)
         return results
 
 

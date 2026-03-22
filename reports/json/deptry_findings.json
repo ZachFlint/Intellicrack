@@ -1,8 +1,8 @@
 {
   "tool": "deptry",
-  "generated": "2026-03-20T17:24:31.199179",
-  "total_findings": 219,
-  "total_files": 53,
+  "generated": "2026-03-22T02:21:36.777740",
+  "total_findings": 245,
+  "total_files": 72,
   "files": [
     {
       "path": "pyproject.toml",
@@ -745,47 +745,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py",
-      "count": 5,
-      "findings": [
-        {
-          "line": 19,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 20,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 21,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 48,
-          "column": 12,
-          "code": "DEP003",
-          "message": "'pefile' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:48:12: DEP003 'pefile' imported but it is a transitive dependency"
-        },
-        {
-          "line": 62,
-          "column": 12,
-          "code": "DEP003",
-          "message": "'intellicrack_hexcore' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_panel.py:62:12: DEP003 'intellicrack_hexcore' imported but it is a transitive dependency"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\panels\\binary_panel.py",
       "count": 4,
       "findings": [
@@ -816,6 +775,40 @@
           "code": "DEP003",
           "message": "'lief' imported but it is a transitive dependency",
           "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:44:12: DEP003 'lief' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": 23,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py:23:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 24,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py:24:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 25,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py:25:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 52,
+          "column": 5,
+          "code": "DEP003",
+          "message": "'cxxfilt' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py:52:5: DEP003 'cxxfilt' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1158,56 +1151,110 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_base.py",
       "count": 3,
       "findings": [
         {
-          "line": 18,
-          "column": 1,
+          "line": 57,
+          "column": 12,
           "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "message": "'pefile' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_base.py:57:12: DEP003 'pefile' imported but it is a transitive dependency"
         },
         {
-          "line": 19,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "line": 67,
+          "column": 12,
+          "code": "DEP001",
+          "message": "'xxhash' imported but missing from the dependency definitions",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_base.py:67:12: DEP001 'xxhash' imported but missing from the dependency definitions"
         },
         {
-          "line": 32,
-          "column": 1,
+          "line": 78,
+          "column": 12,
           "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:32:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "message": "'intellicrack_hexcore' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_base.py:78:12: DEP003 'intellicrack_hexcore' imported but it is a transitive dependency"
         }
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py",
       "count": 3,
       "findings": [
         {
-          "line": 20,
+          "line": 13,
           "column": 1,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hxd_panel.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py:13:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         },
         {
-          "line": 21,
+          "line": 14,
           "column": 1,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hxd_panel.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py:14:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         },
         {
           "line": 22,
           "column": 1,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hxd_panel.py:22:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py:22:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 13,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:13:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 14,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:14:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 15,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:15:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 21,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 22,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:22:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 36,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:36:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1459,18 +1506,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 70,
+          "line": 72,
           "column": 12,
           "code": "DEP003",
           "message": "'capstone' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:70:12: DEP003 'capstone' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:72:12: DEP003 'capstone' imported but it is a transitive dependency"
         },
         {
-          "line": 77,
+          "line": 79,
           "column": 12,
           "code": "DEP003",
           "message": "'keystone' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:77:12: DEP003 'keystone' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:79:12: DEP003 'keystone' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1535,6 +1582,26 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\panel_dock.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 18,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panel_dock.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 19,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panel_dock.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\panels\\base_panel.py",
       "count": 2,
       "findings": [
@@ -1551,6 +1618,66 @@
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
           "raw": "src\\intellicrack\\ui\\panels\\base_panel.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 13,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:13:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 14,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:14:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 13,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:13:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 14,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:14:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 14,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py:14:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 15,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py:15:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1678,11 +1805,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 36,
+          "line": 46,
           "column": 12,
           "code": "DEP003",
           "message": "'intellicrack_hexcore' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:36:12: DEP003 'intellicrack_hexcore' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:46:12: DEP003 'intellicrack_hexcore' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1696,6 +1823,19 @@
           "code": "DEP003",
           "message": "'httpx' imported but it is a transitive dependency",
           "raw": "src\\intellicrack\\bridges\\installer.py:24:8: DEP003 'httpx' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\disassembler.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 30,
+          "column": 12,
+          "code": "DEP003",
+          "message": "'capstone' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\core\\disassembler.py:30:12: DEP003 'capstone' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1722,6 +1862,19 @@
           "code": "DEP003",
           "message": "'structlog' imported but it is a transitive dependency",
           "raw": "src\\intellicrack\\core\\orchestrator.py:23:8: DEP003 'structlog' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\transform_pipeline.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 29,
+          "column": 12,
+          "code": "DEP003",
+          "message": "'intellicrack_hexcore' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\core\\transform_pipeline.py:29:12: DEP003 'intellicrack_hexcore' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1830,6 +1983,123 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_bookmarks.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 12,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_bookmarks.py:12:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_data_inspector.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 12,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_data_inspector.py:12:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_disassembly.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 12,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_disassembly.py:12:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_hashing.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 12,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_hashing.py:12:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_patches.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 14,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_patches.py:14:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 13,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py:13:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_templates.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 12,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_templates.py:12:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 12,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py:12:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_yara.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 12,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_yara.py:12:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\resources\\font_manager.py",
       "count": 1,
       "findings": [
@@ -1852,6 +2122,32 @@
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
           "raw": "src\\intellicrack\\ui\\resources\\theme_manager.py:16:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "vendor\\community-patterns\\scripts\\ksy2pat.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 1,
+          "column": 8,
+          "code": "DEP003",
+          "message": "'yaml' imported but it is a transitive dependency",
+          "raw": "vendor\\community-patterns\\scripts\\ksy2pat.py:1:8: DEP003 'yaml' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "vendor\\ImHex-Patterns\\scripts\\ksy2pat.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 1,
+          "column": 8,
+          "code": "DEP003",
+          "message": "'yaml' imported but it is a transitive dependency",
+          "raw": "vendor\\ImHex-Patterns\\scripts\\ksy2pat.py:1:8: DEP003 'yaml' imported but it is a transitive dependency"
         }
       ]
     }

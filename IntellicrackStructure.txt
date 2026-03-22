@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Sat, Mar 21, 2026 12:04:59 AM
+Generated: Sun, Mar 22, 2026 02:21:31 AM
 Directory: D:\Intellicrack
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -1980,6 +1980,16 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   ├── wemake_findings.sarif
 │   │   ├── xenon_findings.sarif
 │   │   └── yamllint_findings.sarif
+│   ├── tests/
+│   │   ├── coverage/
+│   │   ├── results/
+│   │   │   ├── custom_20260322_003435.txt
+│   │   │   ├── custom_20260322_003435.xml
+│   │   │   └── custom_20260322_020835.txt
+│   │   ├── _sandbox_exitcode
+│   │   ├── _sandbox_output.txt
+│   │   ├── _sandbox_pytest_args.txt
+│   │   └── _sandbox_verbose.log
 │   ├── txt/
 │   │   ├── bandit_findings.txt
 │   │   ├── basedpyright_findings.txt
@@ -2233,6 +2243,21 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   │   ├── schemas.py
 │   │   │   └── x64dbg.py
 │   │   ├── core/
+│   │   │   ├── hexpat/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── _pragma.py
+│   │   │   │   ├── ast_nodes.py
+│   │   │   │   ├── data_reader.py
+│   │   │   │   ├── errors.py
+│   │   │   │   ├── evaluator.py
+│   │   │   │   ├── interpreter.py
+│   │   │   │   ├── lexer.py
+│   │   │   │   ├── parser.py
+│   │   │   │   ├── pattern_registry.py
+│   │   │   │   ├── preprocessor.py
+│   │   │   │   ├── stdlib.py
+│   │   │   │   ├── tokens.py
+│   │   │   │   └── type_system.py
 │   │   │   ├── __init__.py
 │   │   │   ├── _subprocess.py
 │   │   │   ├── _subprocess.pyi
@@ -2283,6 +2308,23 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   │   │   ├── __init__.py
 │   │   │   │   └── splash_screen.py
 │   │   │   ├── panels/
+│   │   │   │   ├── hex_editor/
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── _base.py
+│   │   │   │   │   ├── _bookmarks.py
+│   │   │   │   │   ├── _data_inspector.py
+│   │   │   │   │   ├── _disassembly.py
+│   │   │   │   │   ├── _hashing.py
+│   │   │   │   │   ├── _patches.py
+│   │   │   │   │   ├── _pattern_editor.py
+│   │   │   │   │   ├── _search.py
+│   │   │   │   │   ├── _sections.py
+│   │   │   │   │   ├── _statistics.py
+│   │   │   │   │   ├── _templates.py
+│   │   │   │   │   ├── _transforms.py
+│   │   │   │   │   ├── _widgets.py
+│   │   │   │   │   ├── _yara.py
+│   │   │   │   │   └── panel.py
 │   │   │   │   ├── __init__.py
 │   │   │   │   ├── _async_bridge.pyi
 │   │   │   │   ├── _qt_compat.pyi
@@ -2297,7 +2339,6 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   │   │   ├── hex_editor_panel.py
 │   │   │   │   ├── hex_editor_widget.py
 │   │   │   │   ├── hex_tools_panel.py
-│   │   │   │   ├── hxd_panel.py
 │   │   │   │   ├── process_panel.py
 │   │   │   │   ├── qt_compat.py
 │   │   │   │   ├── sandbox_panel.py
@@ -2319,6 +2360,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   │   ├── chat.py
 │   │   │   ├── confirmation_dialog.py
 │   │   │   ├── highlighter.py
+│   │   │   ├── panel_dock.py
 │   │   │   ├── preferences.py
 │   │   │   ├── provider_config.py
 │   │   │   ├── sandbox_config.py
@@ -3736,7 +3778,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   ├── examples/
 │       │   │   ├── incremental/
 │       │   │   │   ├── intellicrack_hexcore-0kdzqcywb6a1r/
-│       │   │   │   │   ├── s-hgurkgxb5f-0ra9xvz-87ng1nnk3ox3nbrif0rntbdm4/
+│       │   │   │   │   ├── s-hguvovj2xd-17l37wm-87ng1nnk3ox3nbrif0rntbdm4/
 │       │   │   │   │   │   ├── 01wxan51x8yaszc2eswdtuqzg.o
 │       │   │   │   │   │   ├── 031jm7xj0vuguwr2t5kk24mnb.o
 │       │   │   │   │   │   ├── 07e4r59azm15svcuajm13dif8.o
@@ -3996,49 +4038,55 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   │   │   ├── f3w72jynjw9wyg1uiyfjsjk82.o
 │       │   │   │   │   │   ├── query-cache.bin
 │       │   │   │   │   │   └── work-products.bin
-│       │   │   │   │   ├── s-hgurkmhqak-052i546-bqdou30boe2pz1a28hkjdo6bc/
-│       │   │   │   │   │   ├── 00izr46y2eu0x2c2kb904npmi.o
-│       │   │   │   │   │   ├── 01fzawl57b82a51w9w5s4t9uh.o
+│       │   │   │   │   ├── s-hguw8fe1fc-134iouv-87ng1nnk3ox3nbrif0rntbdm4/
+│       │   │   │   │   │   ├── 01wxan51x8yaszc2eswdtuqzg.o
 │       │   │   │   │   │   ├── 031jm7xj0vuguwr2t5kk24mnb.o
 │       │   │   │   │   │   ├── 07e4r59azm15svcuajm13dif8.o
 │       │   │   │   │   │   ├── 0b2ya29zvucayq0jk0a5hnxl9.o
 │       │   │   │   │   │   ├── 0eeamndx93t3k65y62bucqx3d.o
+│       │   │   │   │   │   ├── 0ekuwiv3w8i6t46kywt176y1a.o
 │       │   │   │   │   │   ├── 0gkxh7grx929v6f89xrk9qjy7.o
+│       │   │   │   │   │   ├── 0hebswwuzng1mc2gdaj3udqnz.o
 │       │   │   │   │   │   ├── 0qh3cja1x1rokwlqd6llkw0ww.o
 │       │   │   │   │   │   ├── 0r21nom8o7l65xdvi14hfgbvy.o
 │       │   │   │   │   │   ├── 0sbwxqnt060ibdwgdw98z7cta.o
-│       │   │   │   │   │   ├── 0syao1cvpnhwrcnbs24jrti47.o
 │       │   │   │   │   │   ├── 0x1v11q8sgoe60djvbghrelvi.o
+│       │   │   │   │   │   ├── 0z6223eb24iby4b2svoz728bo.o
 │       │   │   │   │   │   ├── 0zi051083suoh2i9nz27hfq93.o
+│       │   │   │   │   │   ├── 0zzuoqrwj5knln9qw3j6qeibs.o
 │       │   │   │   │   │   ├── 107jr8dh7sk6rjsag8wqh10xm.o
+│       │   │   │   │   │   ├── 10k8zrpwx1fo00hcj6io20yu2.o
 │       │   │   │   │   │   ├── 12e8nmdcyphzlmgvxm1cbfrlp.o
 │       │   │   │   │   │   ├── 167hg1sg6dyyy980js3aysd7z.o
-│       │   │   │   │   │   ├── 16k83x4qkqfwe2gehl2m8ym6a.o
 │       │   │   │   │   │   ├── 18vni93jwmg6de6s20p23x18f.o
 │       │   │   │   │   │   ├── 1bss9ljk77gp02vhdxx0ako89.o
 │       │   │   │   │   │   ├── 1crrocto61f6igxft1bqevs8n.o
 │       │   │   │   │   │   ├── 1dcfpv9yyryoknsysm0ybdbja.o
 │       │   │   │   │   │   ├── 1g86b79edh915x7co5j1diakf.o
+│       │   │   │   │   │   ├── 1h6gt6ftt65uu343hhwf0yj13.o
 │       │   │   │   │   │   ├── 1i4pai6zrlptqa0gzisrgqeau.o
-│       │   │   │   │   │   ├── 1jrd0wcy45xs8alxrp5jvpg8k.o
+│       │   │   │   │   │   ├── 1k7v2u03rg9cizv3l65k1lu4z.o
 │       │   │   │   │   │   ├── 1kxvnicfv5qm93ka4fbq1dvo9.o
 │       │   │   │   │   │   ├── 1rprsc6ni29q5fbnxw2n67zpm.o
 │       │   │   │   │   │   ├── 1s0m03h1tmrkt0isb1ckim1bk.o
 │       │   │   │   │   │   ├── 1soa1mzmktq42yuxoow5godne.o
 │       │   │   │   │   │   ├── 1ufjbx458q6kgsxxrb2swbwz0.o
-│       │   │   │   │   │   ├── 1uimtk722sfh2ug4h6gou1rie.o
 │       │   │   │   │   │   ├── 1w6tqrcc0yyz0gzeggruf5lou.o
 │       │   │   │   │   │   ├── 1wi99u1tlbza6gj0gjnd5nf5q.o
+│       │   │   │   │   │   ├── 1x6aepmczxhsu2dgc5xf0j5cb.o
 │       │   │   │   │   │   ├── 1z5se4fpbcxyvrie7et64sbnx.o
-│       │   │   │   │   │   ├── 20cjvklrsuiyvwhwrnnrghff2.o
 │       │   │   │   │   │   ├── 21b3h08civjm0q9jmzs7l69fv.o
+│       │   │   │   │   │   ├── 22kbijpqja7jrg53y7komkq6w.o
 │       │   │   │   │   │   ├── 242stps42ons1xsp2c0nhfr00.o
 │       │   │   │   │   │   ├── 25jr51vey5xsjoldiw77w8qj7.o
 │       │   │   │   │   │   ├── 27l8zeme9ustwgyqfpl6ls9li.o
 │       │   │   │   │   │   ├── 2am9y55l9uo4qbaj65n1f1xe7.o
 │       │   │   │   │   │   ├── 2aorkcvq04vd4jhkn0mmc1a6u.o
+│       │   │   │   │   │   ├── 2cek5bskkx5sypc8wqe2ixs60.o
+│       │   │   │   │   │   ├── 2ck8zpjc8xzasatldgobodwy3.o
 │       │   │   │   │   │   ├── 2dgcl4io4fmd7ctqbu686ruux.o
 │       │   │   │   │   │   ├── 2fsshadwnmtyfubnxxwyoapa6.o
+│       │   │   │   │   │   ├── 2gjguxqlvxa70rfuqvcqz8hwj.o
 │       │   │   │   │   │   ├── 2k0vf55m3o4hr9bxztpx7y0yp.o
 │       │   │   │   │   │   ├── 2lcvdhb1l99k0wmtl3uyuivzx.o
 │       │   │   │   │   │   ├── 2mwt2e9hrfdb3ll69f693v57l.o
@@ -4047,51 +4095,48 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   │   │   ├── 2pmyh5c4hajjtvbar73nt0muf.o
 │       │   │   │   │   │   ├── 2qjyq8f2y4lma3ld9fjqz2f1f.o
 │       │   │   │   │   │   ├── 2t6ysxvreh0xkocar59d5vi3v.o
-│       │   │   │   │   │   ├── 2ucyj1326h1fzkqfezwx3i2x1.o
-│       │   │   │   │   │   ├── 2v6py78xp5573i6toacht5cy9.o
-│       │   │   │   │   │   ├── 2w9x4nve77xehb1hjrzzrftfz.o
 │       │   │   │   │   │   ├── 2wp6znxgy6pq482jihres8u4p.o
 │       │   │   │   │   │   ├── 2yvnwt22j9gouvsdvfnc1gbbi.o
 │       │   │   │   │   │   ├── 2zxpbfun9j3p6pbf3napx1ilu.o
-│       │   │   │   │   │   ├── 30ffejdar80oq9ss4bj7s3a7x.o
-│       │   │   │   │   │   ├── 32qkt88rgnqbd9t8mnzza09rn.o
 │       │   │   │   │   │   ├── 36qir1vcbr40ar5pj8bd37rka.o
-│       │   │   │   │   │   ├── 39mog23s8q01ygwzp5ykrlhz8.o
+│       │   │   │   │   │   ├── 3a0eosznzb345nxo7vgk1jtfo.o
 │       │   │   │   │   │   ├── 3bezngfx1knjs56igdkfm6x4q.o
+│       │   │   │   │   │   ├── 3bgullo1m6rl81buv2cm6nie5.o
 │       │   │   │   │   │   ├── 3ci5jgomdq7591wcus8si5ohz.o
 │       │   │   │   │   │   ├── 3cq6ylneuosua2ufm0jgd3356.o
 │       │   │   │   │   │   ├── 3daxfu5ubz3ezsvwbsgg6i19n.o
 │       │   │   │   │   │   ├── 3eu9oucc12zwpfwnk4fr8xu8l.o
 │       │   │   │   │   │   ├── 3f14yr4yo8ai2fxq7k4x8frsl.o
+│       │   │   │   │   │   ├── 3h6x7h281czhk7sn3mkv8fdds.o
 │       │   │   │   │   │   ├── 3hzheyr9oayowryvxko7i6d0y.o
 │       │   │   │   │   │   ├── 3j8s9rrz4qphuryudkqdjr84h.o
 │       │   │   │   │   │   ├── 3lxguh941lxqqq9gs2r28o3vu.o
+│       │   │   │   │   │   ├── 3mq4bar33yjk2shrbtddzqqfh.o
 │       │   │   │   │   │   ├── 3rl77pplwbfuw85936v5jxv2q.o
+│       │   │   │   │   │   ├── 3xi5z42fikoxhnuv1khubfnta.o
 │       │   │   │   │   │   ├── 3xlmyjjn8cs491ixkaozo83gj.o
-│       │   │   │   │   │   ├── 3xu4sef4ry9ju3f6kkntfhy6b.o
 │       │   │   │   │   │   ├── 3z54kh6i40vio57o52drp05zh.o
 │       │   │   │   │   │   ├── 3zkax1pcuepis0kwoopy6467s.o
 │       │   │   │   │   │   ├── 410acnk6jw3ap3nxzpkiju8uo.o
+│       │   │   │   │   │   ├── 42mrj6re07197t4s0734c1pt9.o
 │       │   │   │   │   │   ├── 44eifsycqs2j95e0gkse41wk1.o
 │       │   │   │   │   │   ├── 46hftbup86juu67mhtq43zkem.o
-│       │   │   │   │   │   ├── 4cd1gs5e99k95cy1wt3xvor10.o
 │       │   │   │   │   │   ├── 4hp0hwgzs32lftc1fsn274kdw.o
 │       │   │   │   │   │   ├── 4lsw4gphefpz9j22p2lxc5fka.o
 │       │   │   │   │   │   ├── 4nxcmilvknklblkn8bh1juyus.o
 │       │   │   │   │   │   ├── 4os3mft9e3pr8n93j9uapzwun.o
-│       │   │   │   │   │   ├── 4s12ax7ked5yh6eqlnhqmpuli.o
 │       │   │   │   │   │   ├── 4txxuyrst864j8ivd6oee2857.o
 │       │   │   │   │   │   ├── 4vchqslp2wr9skwgzrl42nbay.o
 │       │   │   │   │   │   ├── 4w7ipmhnqgw39gd9g4jqloe90.o
+│       │   │   │   │   │   ├── 4zwt8bd43ogao2md4pnlciw7r.o
 │       │   │   │   │   │   ├── 4zzt4jypmlwyagnsdsy8eq7m0.o
 │       │   │   │   │   │   ├── 51f1l1i6i6tihz5j6bmaia4d1.o
 │       │   │   │   │   │   ├── 53g1j7nm28ikj7ffg0b8tfz41.o
-│       │   │   │   │   │   ├── 56jbpozrmbbna6p3fopzch4zb.o
-│       │   │   │   │   │   ├── 57ita60bl9hx9k7dkc7va299s.o
 │       │   │   │   │   │   ├── 58ir6nzhgoaezdwdwy7jlbgz6.o
 │       │   │   │   │   │   ├── 5f638zuxcxc64pimpaw8fr9ng.o
 │       │   │   │   │   │   ├── 5fa8ckcs04s1bgv0oq64o7bgp.o
 │       │   │   │   │   │   ├── 5kjcjdy8fyko0gpogeeh7rmtp.o
+│       │   │   │   │   │   ├── 5m5npz3yyo006mjkqc972kjmu.o
 │       │   │   │   │   │   ├── 5mm14o6277beyoibneqejqjmy.o
 │       │   │   │   │   │   ├── 5nweg1dtlvlb4zlbmje758ykg.o
 │       │   │   │   │   │   ├── 5svxq9j9173a6fzb2kl6kv6e1.o
@@ -4102,26 +4147,21 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   │   │   ├── 619h90cj2up6fpc1f87g5qzim.o
 │       │   │   │   │   │   ├── 62pesf1n5pigibx7rhl34ymob.o
 │       │   │   │   │   │   ├── 648pxj0uh0wn6jupqegb93xv6.o
-│       │   │   │   │   │   ├── 65ppmg6a1zmovnwr44saxiblf.o
 │       │   │   │   │   │   ├── 69mbzo7mkw8izax6l6x4xm3qe.o
 │       │   │   │   │   │   ├── 69x71g026f1k11222mxwp1cke.o
-│       │   │   │   │   │   ├── 6bhkf1d001bwp9ygiobqjfsm0.o
-│       │   │   │   │   │   ├── 6d41kiw84xvri0ts59yrnix1r.o
-│       │   │   │   │   │   ├── 6eei6rm5taaz7jzws4u6b043q.o
-│       │   │   │   │   │   ├── 6f1oqmzwhmsvqyt5k4fu3vpnx.o
-│       │   │   │   │   │   ├── 6jvarzkee2tc6i1l9whoe50od.o
 │       │   │   │   │   │   ├── 6n5rwc3qe56q0zqd4wfjny865.o
 │       │   │   │   │   │   ├── 6prcl8i2yd6mmza8a2pdxnd4h.o
-│       │   │   │   │   │   ├── 6smw7xq0ugi7g7iooveqeso2z.o
+│       │   │   │   │   │   ├── 6qh9c29lihelvewwb7ot3rctt.o
 │       │   │   │   │   │   ├── 6xr5zhnh5qi8zgoo4a6ssk2lu.o
 │       │   │   │   │   │   ├── 6y5a2szjeb3zmsh6i9dmo3nhc.o
+│       │   │   │   │   │   ├── 6zdwhjo8poqkbscmlx0vq0vas.o
 │       │   │   │   │   │   ├── 70we110gitmvv888f0gfc81d2.o
-│       │   │   │   │   │   ├── 70yb1f8j4qpd3k73e6rntjrrl.o
 │       │   │   │   │   │   ├── 72peswjqv3h8x16zwtqcrh2pf.o
 │       │   │   │   │   │   ├── 7337ppzaiwx0mnyacz6ef2dul.o
 │       │   │   │   │   │   ├── 7390bkene7ntc3g8imrm60109.o
 │       │   │   │   │   │   ├── 75u1sbng86cfmcy4bzykm05lw.o
 │       │   │   │   │   │   ├── 78oche4py5px0itu3q98c5g7z.o
+│       │   │   │   │   │   ├── 790us7cnctog8qn7mwf3dbaox.o
 │       │   │   │   │   │   ├── 7awkcerwd0ijcsuon760sr48u.o
 │       │   │   │   │   │   ├── 7dr4pk4k81l3v1kols8sc0nik.o
 │       │   │   │   │   │   ├── 7hqhhbnda888ynyx1bjf1hfwh.o
@@ -4132,22 +4172,20 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   │   │   ├── 7s588pggl1sebgnb2dvpruw7s.o
 │       │   │   │   │   │   ├── 7tt0ca8kneu6e1tgsgbnktjw3.o
 │       │   │   │   │   │   ├── 7ybebl1g13sekwzc3yxag9umk.o
-│       │   │   │   │   │   ├── 8273jadrpdq5ub6s8chfup2kg.o
 │       │   │   │   │   │   ├── 82pr8otz34ovn9n91zoi9q9n1.o
-│       │   │   │   │   │   ├── 82v994cir9lqnxkyo1jux2z72.o
 │       │   │   │   │   │   ├── 85zjwp4wabdlt514trmxgv4gt.o
 │       │   │   │   │   │   ├── 867a87hgex87h74rmdpclo72g.o
 │       │   │   │   │   │   ├── 86kpnnsjoswywep5vr09m2h20.o
+│       │   │   │   │   │   ├── 87h2642iavwfl0k64zl09lim5.o
 │       │   │   │   │   │   ├── 87u9pi2qcdrto9xxwxhsk4xq2.o
 │       │   │   │   │   │   ├── 8axhd2daoqlda2ha4bmkjc6x1.o
 │       │   │   │   │   │   ├── 8b8su7zvcwfzjlnw69uxiwtdy.o
-│       │   │   │   │   │   ├── 8csp1xv74bcr86ko9ps6m4elg.o
 │       │   │   │   │   │   ├── 8hwrwba5kusxsp68pjx7bnwst.o
 │       │   │   │   │   │   ├── 8jjyg5zu41epnysitsqcaot8s.o
-│       │   │   │   │   │   ├── 8l2e51jq5tnozzu3kwxi1gk8d.o
+│       │   │   │   │   │   ├── 8joi7asmy1whwxkqo4ibyjyes.o
 │       │   │   │   │   │   ├── 8pzsjc9tijhisr29pvkcpc7mm.o
 │       │   │   │   │   │   ├── 8qoly3fznlxm1p4gv2i5itw0r.o
-│       │   │   │   │   │   ├── 8s546vis4undvtwkj97oksdcd.o
+│       │   │   │   │   │   ├── 8sdfdenbxb4zoyzqc5g7w0koo.o
 │       │   │   │   │   │   ├── 8xwpqn5sqfzdzz6n4jg816ppb.o
 │       │   │   │   │   │   ├── 8yx4vxzgs5hewasvar6b9m4yq.o
 │       │   │   │   │   │   ├── 8z3s4ieu7pf2ktj9jq2txami1.o
@@ -4161,40 +4199,39 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   │   │   ├── 9bdsvn78sgrtarzmbvv1pp4tb.o
 │       │   │   │   │   │   ├── 9dfh2ftmdagmmc1r3jg5arbz3.o
 │       │   │   │   │   │   ├── 9dqpmt2hcv6w82tpgyi8y7y2p.o
+│       │   │   │   │   │   ├── 9dr5748fmrd7dfm9p6xl13qeq.o
 │       │   │   │   │   │   ├── 9e6ng8nf1o8x9cjo2vgw2yxpi.o
-│       │   │   │   │   │   ├── 9h0vph6a7h8leaha0ewno2wm3.o
-│       │   │   │   │   │   ├── 9j70vd5wq9229pwa1suvph4a0.o
+│       │   │   │   │   │   ├── 9hxuq9otifthnoj5lxrgc21zy.o
+│       │   │   │   │   │   ├── 9iy20dxcnlu7w4qeviwcsg0m0.o
 │       │   │   │   │   │   ├── 9lkugyj13blbnqczvsvxyn0s8.o
-│       │   │   │   │   │   ├── 9n1h2u5upxl4ykbid0bneljyg.o
+│       │   │   │   │   │   ├── 9muk0s0w423ts8ut47rus4dzl.o
 │       │   │   │   │   │   ├── 9nddtizoykt1knzkrc6lcyewk.o
 │       │   │   │   │   │   ├── 9p1saiisnj4e8zouhd5f0v88e.o
 │       │   │   │   │   │   ├── 9ve9hclisfycu4ppwmmmrec23.o
 │       │   │   │   │   │   ├── 9vx3hvvlil8fxtrd67jed1bhn.o
+│       │   │   │   │   │   ├── 9wyfxo8o5c3t3dl07ikorplwd.o
 │       │   │   │   │   │   ├── a1gt0btsrc58u9ht3ofjpbffw.o
 │       │   │   │   │   │   ├── a1l1eimpnr4fnaagrvctqusw8.o
 │       │   │   │   │   │   ├── a8ouva0rxumubf4ltf0ftbajn.o
 │       │   │   │   │   │   ├── a9tznb77h3oazd15fxe3sok02.o
 │       │   │   │   │   │   ├── abf2sgwa9za6r6qwpmh8f0gdx.o
-│       │   │   │   │   │   ├── accifxnrygx785wf7sjfur3x6.o
+│       │   │   │   │   │   ├── add9vzc3iuysq0rsm6xi3wiob.o
 │       │   │   │   │   │   ├── adunnvunh3ewbiqxxzhf0u161.o
 │       │   │   │   │   │   ├── ah7wrb6jy44hncibhmh5taa4y.o
 │       │   │   │   │   │   ├── amuc9yjcvauk0foy9pdk25k1i.o
 │       │   │   │   │   │   ├── ap3qxkrzubrurrtr26yyk9evt.o
-│       │   │   │   │   │   ├── aq7dsymhhjt5q9l3azr69d7l5.o
 │       │   │   │   │   │   ├── aycl3jmy00h3mg72sh6o2vkpj.o
+│       │   │   │   │   │   ├── azrn0sujyu9q2fsbw3zm6zgbr.o
 │       │   │   │   │   │   ├── b0mc4lvmrlkv867yitwpvdmxa.o
 │       │   │   │   │   │   ├── b1ltsq1fp4scxmvc8rh4clhs7.o
-│       │   │   │   │   │   ├── b4767lku4p63prbn1qa4dix43.o
-│       │   │   │   │   │   ├── b4bjh9bi3zjut59hv7a3pdhhp.o
-│       │   │   │   │   │   ├── b90s25v73cmymzcrvo6nm2bix.o
+│       │   │   │   │   │   ├── ben7tog59f4ffp2iwxyw6u7gb.o
 │       │   │   │   │   │   ├── bhhd2shxmcjkn284btgspfhqe.o
-│       │   │   │   │   │   ├── bi4qmern1defeeh2gryamiq99.o
-│       │   │   │   │   │   ├── bm9mqxb8pfpsqvx5i7u00p5fa.o
+│       │   │   │   │   │   ├── bn6j2mce2w7pc2g8h41et70oy.o
 │       │   │   │   │   │   ├── boy404i5x95e8dn3jvgk9toxl.o
-│       │   │   │   │   │   ├── bu19u24apebootwmwybrhp9mp.o
+│       │   │   │   │   │   ├── bsxieiylb05ekrtpgn6r6t4f8.o
+│       │   │   │   │   │   ├── bwrdwplianc39rgqnv8eplzx6.o
 │       │   │   │   │   │   ├── bxa4d03koyp4rhgf10dvhmzom.o
 │       │   │   │   │   │   ├── by8tx88hi4i6m7ugk81jeg9qa.o
-│       │   │   │   │   │   ├── c0chog1svqa7nzzgwlejp6nar.o
 │       │   │   │   │   │   ├── c48qw4thqhty1magndn903hrm.o
 │       │   │   │   │   │   ├── c4nny39hzsf7od9j1h49v0zxo.o
 │       │   │   │   │   │   ├── c81z70nrg8ozhsm934re7gqn3.o
@@ -4207,57 +4244,62 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   │   │   ├── cs0kqk8utw4lw0igo4j7rhz3f.o
 │       │   │   │   │   │   ├── cvnj4ol9j9y4bq1zb0irpu7ze.o
 │       │   │   │   │   │   ├── cvojbtb9wtv1ygs4ytmarmcah.o
+│       │   │   │   │   │   ├── cw8bclpcd6nrw90k11lof49qd.o
 │       │   │   │   │   │   ├── cxug1apafzyzaz1o6to2uixso.o
 │       │   │   │   │   │   ├── czhbgwjtbv9cx07ar8fh4gveu.o
+│       │   │   │   │   │   ├── d09mupi8yhhbk086wie47jej2.o
 │       │   │   │   │   │   ├── d174jgfbmpi3okbjuk21hogwo.o
-│       │   │   │   │   │   ├── d2r2gozhnz4rx5oehv2b23skr.o
+│       │   │   │   │   │   ├── d35jnnzj1z3tgn3bywxyr3ayl.o
 │       │   │   │   │   │   ├── d571rq8fzlwlj2i8g38fvjq92.o
+│       │   │   │   │   │   ├── d5mtutt69v2gsl6m0rya1wrau.o
 │       │   │   │   │   │   ├── d5rij9tihl4n4073oazznwpou.o
+│       │   │   │   │   │   ├── d864cig0q61e4hw40p0dia8w0.o
 │       │   │   │   │   │   ├── d9af7gn93kdgq8zwebul1k8gi.o
+│       │   │   │   │   │   ├── d9h91pzc3s4n2tc8xg168y43v.o
 │       │   │   │   │   │   ├── d9z62k9qwmob956jk66hhodjf.o
 │       │   │   │   │   │   ├── dc2th6qj8r7ezpclrwv1v71aa.o
 │       │   │   │   │   │   ├── dek27xbnxml00kajxtgsuemfd.o
 │       │   │   │   │   │   ├── dep-graph.bin
 │       │   │   │   │   │   ├── dgdphhfenx2c5bj7iwkrc5vm0.o
+│       │   │   │   │   │   ├── djni6xxe2q9p3spwqnjgh73db.o
 │       │   │   │   │   │   ├── dl3vaso3atl33qlm358l5dx5b.o
 │       │   │   │   │   │   ├── dm5kodcbp50qgjddcmx9gzix2.o
 │       │   │   │   │   │   ├── dooaux14xl2g4vyblg1k6p5qc.o
-│       │   │   │   │   │   ├── ds2bl1k7f0iimhn3jclot6o3b.o
 │       │   │   │   │   │   ├── dsf8reyppqnusysj0jshpz4ki.o
 │       │   │   │   │   │   ├── dtko9xxjuzqwk8x5cjf8b8e52.o
-│       │   │   │   │   │   ├── dvtb3i5odmjvxzihhuwkwvu1k.o
+│       │   │   │   │   │   ├── dvichgt27lfgrbdc193vas7z3.o
 │       │   │   │   │   │   ├── dvxun9l5velle7oicrra8zi3b.o
 │       │   │   │   │   │   ├── dwz92mkryo63f247bcsjiwmz6.o
 │       │   │   │   │   │   ├── dzm9apg0ukr4rnngbt1s2fdhd.o
+│       │   │   │   │   │   ├── e4mq1ol4k6yq76cfse7lnj54a.o
 │       │   │   │   │   │   ├── e4mvgkwdl6g14qhc8ibv0fpgs.o
 │       │   │   │   │   │   ├── e7x9636diai640ia8cqaivjfi.o
 │       │   │   │   │   │   ├── e89q37a5q1rhxp94i3ez7dv0l.o
 │       │   │   │   │   │   ├── e8d33hlp1f3l4b2u4fzpq6sdj.o
+│       │   │   │   │   │   ├── eajmhnzvfl4vnrmqvauyvcai1.o
 │       │   │   │   │   │   ├── ecz9izmg88q463satoh03e4f8.o
 │       │   │   │   │   │   ├── ed4jsmm17biew4lx3sig5es7x.o
 │       │   │   │   │   │   ├── edclcbau616z2ugr35a28lf4d.o
 │       │   │   │   │   │   ├── eekwmayh8iciuemk6bel5u55o.o
 │       │   │   │   │   │   ├── eg04eq96mj3tlg2qbs4345amm.o
+│       │   │   │   │   │   ├── ehyp06dg8nphod69r0oak0kwj.o
 │       │   │   │   │   │   ├── eiyzrk1zcjztfqvc9cq5a4xta.o
 │       │   │   │   │   │   ├── ej7wbf6anh9go28rxf6tfre27.o
 │       │   │   │   │   │   ├── el9t0p17kb7q0lxg7qmk43ukx.o
 │       │   │   │   │   │   ├── en5f4vi3dieol3w4ijo0tsdml.o
-│       │   │   │   │   │   ├── enc2d6nrnxork9lo77no4nyjl.o
 │       │   │   │   │   │   ├── erk0d7fdje39tarcregax3vxc.o
 │       │   │   │   │   │   ├── es4xlnwf8vorsx3ut5mheoe7l.o
 │       │   │   │   │   │   ├── eswmgi5tgwjwe4b38ch8382zp.o
 │       │   │   │   │   │   ├── etd95y2vo6mg0hva6yi1ksucg.o
 │       │   │   │   │   │   ├── etjyytwi7am40uxp80i8whd7y.o
-│       │   │   │   │   │   ├── eufl40nngkzjq2orxml5fz14c.o
 │       │   │   │   │   │   ├── ev2b0it700jr76jfv4c1ax5dt.o
 │       │   │   │   │   │   ├── ewbzuo5c1ykypdoh3gq8bck5e.o
 │       │   │   │   │   │   ├── ey0nihsqv1eae1zje390qp33t.o
-│       │   │   │   │   │   ├── f1mkf5mvxj8wxuiu37fsx430q.o
-│       │   │   │   │   │   ├── f3dzuzkvlf8wps3ptdrg3wnj6.o
+│       │   │   │   │   │   ├── f3w72jynjw9wyg1uiyfjsjk82.o
 │       │   │   │   │   │   ├── query-cache.bin
 │       │   │   │   │   │   └── work-products.bin
-│       │   │   │   │   ├── s-hgurkgxb5f-0ra9xvz.lock
-│       │   │   │   │   └── s-hgurkmhqak-052i546.lock
+│       │   │   │   │   ├── s-hguvovj2xd-17l37wm.lock
+│       │   │   │   │   └── s-hguw8fe1fc-134iouv.lock
 │       │   │   │   ├── intellicrack_hexcore-0xsw2n1sqgods/
 │       │   │   │   │   ├── s-hgobtf8b89-19u1yp3-b98zui3ssm8ycb6shdgowk7z1/
 │       │   │   │   │   │   ├── dep-graph.bin
@@ -5905,6 +5947,8 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 ├── stubs/
 │   └── r2pipe/
 │       └── __init__.pyi
+├── test_data/
+│   └── test.bmp
 ├── tests/
 │   ├── core/
 │   │   ├── test_process_cleanup.py
@@ -5933,6 +5977,11 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   └── test_types.py
 │   ├── test_credentials/
 │   │   └── __init__.py
+│   ├── test_hexpat/
+│   │   ├── __init__.py
+│   │   ├── conftest.py
+│   │   ├── test_interpreter.py
+│   │   └── test_lexer.py
 │   ├── test_integration/
 │   │   └── __init__.py
 │   ├── test_providers/
@@ -5966,10 +6015,14 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   ├── test_graph_view.py
 │   │   ├── test_hxd_panel.py
 │   │   ├── test_icon_manager.py
+│   │   ├── test_panel_dock.py
 │   │   ├── test_resource_helper.py
 │   │   ├── test_sandbox_panel_fixes.py
+│   │   ├── test_search_async.py
 │   │   ├── test_splash_screen.py
+│   │   ├── test_state_persistence.py
 │   │   ├── test_theme_manager.py
+│   │   ├── test_tool_panel_detach.py
 │   │   ├── test_tools_logic.py
 │   │   ├── test_vnc_widget.py
 │   │   └── test_win32_embed.py
@@ -20648,6 +20701,1546 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   ├── __init__.pyi
 │   │   └── modeling_outputs.pyi
 │   └── pefile.pyi
+├── vendor/
+│   ├── community-patterns/
+│   │   ├── .github/
+│   │   │   ├── PULL_REQUEST_TEMPLATE/
+│   │   │   │   └── pattern_template.md
+│   │   │   ├── workflows/
+│   │   │   │   ├── dispatch.yml
+│   │   │   │   └── tests.yml
+│   │   │   └── FUNDING.yml
+│   │   ├── constants/
+│   │   │   ├── _schema.json
+│   │   │   ├── crc16.json
+│   │   │   └── crc32.json
+│   │   ├── disassemblers/
+│   │   │   ├── 8051.json
+│   │   │   └── jvm.json
+│   │   ├── encodings/
+│   │   │   ├── arabic_iso.tbl
+│   │   │   ├── arabic_windows.tbl
+│   │   │   ├── ascii.tbl
+│   │   │   ├── ascii_ansi.tbl
+│   │   │   ├── ascii_oem.tbl
+│   │   │   ├── baltic_iso.tbl
+│   │   │   ├── baltic_windows.tbl
+│   │   │   ├── big5.tbl
+│   │   │   ├── cyrillic_cp866.tbl
+│   │   │   ├── cyrillic_iso.tbl
+│   │   │   ├── cyrillic_koi8_r.tbl
+│   │   │   ├── cyrillic_koi8_u.tbl
+│   │   │   ├── cyrillic_windows.tbl
+│   │   │   ├── eastern_europe_iso.tbl
+│   │   │   ├── eastern_europe_windows.tbl
+│   │   │   ├── ebcdic.tbl
+│   │   │   ├── euc_jp.tbl
+│   │   │   ├── euc_kr.tbl
+│   │   │   ├── gbk.tbl
+│   │   │   ├── greek_iso.tbl
+│   │   │   ├── greek_windows.tbl
+│   │   │   ├── hebrew_iso.tbl
+│   │   │   ├── hebrew_windows.tbl
+│   │   │   ├── iso_646.tbl
+│   │   │   ├── iso_6937.tbl
+│   │   │   ├── jis_x_0201.tbl
+│   │   │   ├── jis_x_0211.tbl
+│   │   │   ├── jis_x_0213.tbl
+│   │   │   ├── macintosh.tbl
+│   │   │   ├── ms932.tbl
+│   │   │   ├── pokegen1_en.tbl
+│   │   │   ├── pokegen3_en.tbl
+│   │   │   ├── shiftjis.tbl
+│   │   │   ├── thai.tbl
+│   │   │   ├── turkish_iso.tbl
+│   │   │   ├── turkish_windows.tbl
+│   │   │   ├── utf8.tbl
+│   │   │   └── vietnamese.tbl
+│   │   ├── includes/
+│   │   │   ├── hex/
+│   │   │   │   ├── impl/
+│   │   │   │   │   └── imhex_check.pat
+│   │   │   │   ├── type/
+│   │   │   │   │   ├── encstr.pat
+│   │   │   │   │   ├── instruction.pat
+│   │   │   │   │   ├── json.pat
+│   │   │   │   │   └── mangled.pat
+│   │   │   │   ├── core.pat
+│   │   │   │   ├── dec.pat
+│   │   │   │   ├── http.pat
+│   │   │   │   └── provider.pat
+│   │   │   ├── std/
+│   │   │   │   ├── array.pat
+│   │   │   │   ├── attrs.pat
+│   │   │   │   ├── bit.pat
+│   │   │   │   ├── core.pat
+│   │   │   │   ├── ctype.pat
+│   │   │   │   ├── file.pat
+│   │   │   │   ├── fxpt.pat
+│   │   │   │   ├── hash.pat
+│   │   │   │   ├── io.pat
+│   │   │   │   ├── limits.pat
+│   │   │   │   ├── math.pat
+│   │   │   │   ├── mem.pat
+│   │   │   │   ├── ptr.pat
+│   │   │   │   ├── random.pat
+│   │   │   │   ├── string.pat
+│   │   │   │   ├── sys.pat
+│   │   │   │   └── time.pat
+│   │   │   └── type/
+│   │   │       ├── types/
+│   │   │       │   ├── 010.pat
+│   │   │       │   ├── c.pat
+│   │   │       │   ├── linux.pat
+│   │   │       │   ├── rust.pat
+│   │   │       │   └── win32.pat
+│   │   │       ├── base.pat
+│   │   │       ├── base64.pat
+│   │   │       ├── bcd.pat
+│   │   │       ├── byte.pat
+│   │   │       ├── color.pat
+│   │   │       ├── float16.pat
+│   │   │       ├── fmt.pat
+│   │   │       ├── guid.pat
+│   │   │       ├── ip.pat
+│   │   │       ├── leb128.pat
+│   │   │       ├── mac.pat
+│   │   │       ├── magic.pat
+│   │   │       ├── path.pat
+│   │   │       ├── size.pat
+│   │   │       └── time.pat
+│   │   ├── magic/
+│   │   │   ├── arma3_magic
+│   │   │   ├── nintendo_switch_magic
+│   │   │   └── portable_executable_magic
+│   │   ├── nodes/
+│   │   │   ├── caesar.hexnode
+│   │   │   └── xor.hexnode
+│   │   ├── patterns/
+│   │   │   ├── a3/
+│   │   │   │   ├── a3_bmtr.hexpat
+│   │   │   │   ├── a3_p3d_mlod.hexpat
+│   │   │   │   ├── a3_paa.hexpat
+│   │   │   │   ├── a3_rap.hexpat
+│   │   │   │   ├── a3_rtm.hexpat
+│   │   │   │   └── a3_texheaders.hexpat
+│   │   │   ├── AC Unity/
+│   │   │   │   ├── acu_data_compressed.hexpat
+│   │   │   │   ├── acu_data_decompressed.hexpat
+│   │   │   │   └── acu_forge.hexpat
+│   │   │   ├── bastion/
+│   │   │   ├── Devil May Cry HD Collection/
+│   │   │   │   └── dmc3_hd_mod.hexpat
+│   │   │   ├── DFIR/
+│   │   │   │   ├── DFIR_README.md
+│   │   │   │   ├── DISK_PARSER.hexpat
+│   │   │   │   ├── exFAT.hexpat
+│   │   │   │   ├── FAT32.hexpat
+│   │   │   │   └── NTFS.hexpat
+│   │   │   ├── ffx/
+│   │   │   ├── fs/
+│   │   │   │   ├── apfs.hexpat
+│   │   │   │   ├── exfat.hexpat
+│   │   │   │   ├── ext4.hexpat
+│   │   │   │   ├── fat32.hexpat
+│   │   │   │   ├── ntfs.hexpat
+│   │   │   │   ├── pattern.hexpat
+│   │   │   │   └── refs.hexpat
+│   │   │   ├── 3ds.hexpat
+│   │   │   ├── 7z.hexpat
+│   │   │   ├── adtfdat.hexpat
+│   │   │   ├── adts.hexpat
+│   │   │   ├── afe2.hexpat
+│   │   │   ├── ani.hexpat
+│   │   │   ├── apple_single_double.hexpat
+│   │   │   ├── ar.hexpat
+│   │   │   ├── arc.hexpat
+│   │   │   ├── aria2.hexpat
+│   │   │   ├── arm_cm_vtor.hexpat
+│   │   │   ├── bcss.hexpat
+│   │   │   ├── bencode.hexpat
+│   │   │   ├── bgcode.hexpat
+│   │   │   ├── binka.hexpat
+│   │   │   ├── blend.hexpat
+│   │   │   ├── blf.hexpat
+│   │   │   ├── bmp.hexpat
+│   │   │   ├── bplist.hexpat
+│   │   │   ├── bson.hexpat
+│   │   │   ├── bsp_goldsrc.hexpat
+│   │   │   ├── bzip3.hexpat
+│   │   │   ├── cab.hexpat
+│   │   │   ├── cchva.hexpat
+│   │   │   ├── ccpal.hexpat
+│   │   │   ├── ccvxl.hexpat
+│   │   │   ├── cda.hexpat
+│   │   │   ├── chd.hexpat
+│   │   │   ├── chm.hexpat
+│   │   │   ├── chromium_pak.hexpat
+│   │   │   ├── coff.hexpat
+│   │   │   ├── commodore_basic.hexpat
+│   │   │   ├── cpio.hexpat
+│   │   │   ├── cpio_new_ascii.hexpat
+│   │   │   ├── cpio_portable_ascii.hexpat
+│   │   │   ├── Crashlvl.hexpat
+│   │   │   ├── credhist.hexpat
+│   │   │   ├── dds.hexpat
+│   │   │   ├── dex.hexpat
+│   │   │   ├── dicom.hexpat
+│   │   │   ├── dmc3_hd_mod.hexpat
+│   │   │   ├── dmg.hexpat
+│   │   │   ├── dmp64.hexpat
+│   │   │   ├── dos.hexpat
+│   │   │   ├── dotnet_binaryformatter.hexpat
+│   │   │   ├── dpapiblob.hexpat
+│   │   │   ├── dpapimasterkey.hexpat
+│   │   │   ├── dsstore.hexpat
+│   │   │   ├── dted.hexpat
+│   │   │   ├── elf.hexpat
+│   │   │   ├── esp32_image.hexpat
+│   │   │   ├── evtx.hexpat
+│   │   │   ├── fas_oskasoftware.hexpat
+│   │   │   ├── fas_oskasoftware_old.hexpat
+│   │   │   ├── fbx.hexpat
+│   │   │   ├── fdt.hexpat
+│   │   │   ├── flac.hexpat
+│   │   │   ├── flc.hexpat
+│   │   │   ├── flipper_settings.hexpat
+│   │   │   ├── flv.hexpat
+│   │   │   ├── fs.hexpat
+│   │   │   ├── gb.hexpat
+│   │   │   ├── gba.hexpat
+│   │   │   ├── gbx.hexpat
+│   │   │   ├── gen.hexpat
+│   │   │   ├── gguf.hexpat
+│   │   │   ├── gif.hexpat
+│   │   │   ├── gltf.hexpat
+│   │   │   ├── gmf.hexpat
+│   │   │   ├── gzip.hexpat
+│   │   │   ├── hinf_luas.hexpat
+│   │   │   ├── hinf_module.hexpat
+│   │   │   ├── hinf_tag.hexpat
+│   │   │   ├── hprof.hexpat
+│   │   │   ├── hsdt.hexpat
+│   │   │   ├── ico.hexpat
+│   │   │   ├── id3.hexpat
+│   │   │   ├── imah.hexpat
+│   │   │   ├── intel_hex.hexpat
+│   │   │   ├── ip.hexpat
+│   │   │   ├── ips.hexpat
+│   │   │   ├── iso.hexpat
+│   │   │   ├── java_class.hexpat
+│   │   │   ├── jpeg.hexpat
+│   │   │   ├── kindle_update.hexpat
+│   │   │   ├── ktx.hexpat
+│   │   │   ├── lcesave.hexpat
+│   │   │   ├── lnk.hexpat
+│   │   │   ├── loc.hexpat
+│   │   │   ├── lua40.hexpat
+│   │   │   ├── lua50.hexpat
+│   │   │   ├── lua51.hexpat
+│   │   │   ├── lua52.hexpat
+│   │   │   ├── lua53.hexpat
+│   │   │   ├── lua54.hexpat
+│   │   │   ├── lznt1.hexpat
+│   │   │   ├── macho.hexpat
+│   │   │   ├── max_v104.hexpat
+│   │   │   ├── midi.hexpat
+│   │   │   ├── minidump.hexpat
+│   │   │   ├── mo.hexpat
+│   │   │   ├── mp4.hexpat
+│   │   │   ├── msgpack.hexpat
+│   │   │   ├── msscmp.hexpat
+│   │   │   ├── n64.hexpat
+│   │   │   ├── nacp.hexpat
+│   │   │   ├── nbt.hexpat
+│   │   │   ├── nds.hexpat
+│   │   │   ├── ne.hexpat
+│   │   │   ├── nes.hexpat
+│   │   │   ├── notepad-cache.hexpat
+│   │   │   ├── notepad-state.hexpat
+│   │   │   ├── notepadwindowstate.hexpat
+│   │   │   ├── nro.hexpat
+│   │   │   ├── nsf.hexpat
+│   │   │   ├── nsfe.hexpat
+│   │   │   ├── ntag.hexpat
+│   │   │   ├── ogg.hexpat
+│   │   │   ├── optee_ta.hexpat
+│   │   │   ├── orp.hexpat
+│   │   │   ├── parquet.hexpat
+│   │   │   ├── pbz.hexpat
+│   │   │   ├── pcap.hexpat
+│   │   │   ├── pcapng.hexpat
+│   │   │   ├── pck.hexpat
+│   │   │   ├── pcx.hexpat
+│   │   │   ├── pe.hexpat
+│   │   │   ├── pef.hexpat
+│   │   │   ├── pex.hexpat
+│   │   │   ├── pf.hexpat
+│   │   │   ├── pfs0.hexpat
+│   │   │   ├── pickle.hexpat
+│   │   │   ├── pif.hexpat
+│   │   │   ├── pkm.hexpat
+│   │   │   ├── png.hexpat
+│   │   │   ├── png2.hexpat
+│   │   │   ├── popcap_luc.hexpat
+│   │   │   ├── prodinfo.hexpat
+│   │   │   ├── protobuf.hexpat
+│   │   │   ├── psafe3.hexpat
+│   │   │   ├── pyc.hexpat
+│   │   │   ├── pyinstaller.hexpat
+│   │   │   ├── q3demo.hexpat
+│   │   │   ├── qbcl.hexpat
+│   │   │   ├── qoi.hexpat
+│   │   │   ├── quantized-mesh.hexpat
+│   │   │   ├── rar.hexpat
+│   │   │   ├── ras.hexpat
+│   │   │   ├── rcf_v1_2.hexpat
+│   │   │   ├── rgbds.hexpat
+│   │   │   ├── roblox_pack.hexpat
+│   │   │   ├── rpm.hexpat
+│   │   │   ├── sdb.hexpat
+│   │   │   ├── selinux.hexpat
+│   │   │   ├── selinuxpp.hexpat
+│   │   │   ├── shp.hexpat
+│   │   │   ├── SHR.hexpat
+│   │   │   ├── shx.hexpat
+│   │   │   ├── sit5.hexpat
+│   │   │   ├── smk.hexpat
+│   │   │   ├── snes.hexpat
+│   │   │   ├── spc.hexpat
+│   │   │   ├── spirv.hexpat
+│   │   │   ├── sqlite3.hexpat
+│   │   │   ├── stdfv4.hexpat
+│   │   │   ├── stl.hexpat
+│   │   │   ├── sup.hexpat
+│   │   │   ├── swf.hexpat
+│   │   │   ├── tar.hexpat
+│   │   │   ├── tarc.hexpat
+│   │   │   ├── terminfo.hexpat
+│   │   │   ├── tga.hexpat
+│   │   │   ├── thumbcache.hexpat
+│   │   │   ├── tiff.hexpat
+│   │   │   ├── ttf.hexpat
+│   │   │   ├── ubiquiti.hexpat
+│   │   │   ├── uefi.hexpat
+│   │   │   ├── uefi_boot_entry.hexpat
+│   │   │   ├── uefi_fv_varstore.hexpat
+│   │   │   ├── uf2.hexpat
+│   │   │   ├── unity-asset-bundle.hexpat
+│   │   │   ├── upk-ue3.hexpat
+│   │   │   ├── usb.hexpat
+│   │   │   ├── valve_vpk.hexpat
+│   │   │   ├── vbmeta.hexpat
+│   │   │   ├── vdf.hexpat
+│   │   │   ├── veado.hexpat
+│   │   │   ├── vgm.hexpat
+│   │   │   ├── vhdx.hexpat
+│   │   │   ├── vox.hexpat
+│   │   │   ├── wad.hexpat
+│   │   │   ├── was_oskasoftware.hexpat
+│   │   │   ├── wav.hexpat
+│   │   │   ├── webp.hexpat
+│   │   │   ├── wintec_tes.hexpat
+│   │   │   ├── xbeh.hexpat
+│   │   │   ├── xci.hexpat
+│   │   │   ├── xex.hexpat
+│   │   │   ├── xgspak.hexpat
+│   │   │   ├── xgstexture.hexpat
+│   │   │   ├── xilinx_bit.hexpat
+│   │   │   ├── xilinx_bootgen.hexpat
+│   │   │   ├── zim.hexpat
+│   │   │   ├── zip.hexpat
+│   │   │   ├── zlib.hexpat
+│   │   │   └── zstd.hexpat
+│   │   ├── plugins/
+│   │   │   └── extra-hashes.json
+│   │   ├── scripts/
+│   │   │   ├── csv2tbl.py
+│   │   │   ├── extract_legacy_hexproj.py
+│   │   │   ├── ksy2pat.py
+│   │   │   ├── svd2pat.py
+│   │   │   └── utf8tblgen.py
+│   │   ├── tests/
+│   │   │   ├── includes/
+│   │   │   │   ├── source/
+│   │   │   │   │   └── main.cpp
+│   │   │   │   └── CMakeLists.txt
+│   │   │   ├── magic/
+│   │   │   │   ├── source/
+│   │   │   │   │   └── main.cpp
+│   │   │   │   └── CMakeLists.txt
+│   │   │   ├── patterns/
+│   │   │   │   ├── source/
+│   │   │   │   │   └── main.cpp
+│   │   │   │   ├── test_data/
+│   │   │   │   │   ├── bcss.hexpat/
+│   │   │   │   │   │   ├── test.bcss
+│   │   │   │   │   │   └── test.bcss_content
+│   │   │   │   │   ├── blend.hexpat/
+│   │   │   │   │   │   ├── blend.hexpat.blend
+│   │   │   │   │   │   └── blend_zstd.hexpat.blend
+│   │   │   │   │   ├── chromium_pak.hexpat/
+│   │   │   │   │   │   ├── kEmptyPakContents.pak
+│   │   │   │   │   │   ├── kSampleCompressPakContentsV5.pak
+│   │   │   │   │   │   ├── kSampleCompressScaledPakContents.pak
+│   │   │   │   │   │   ├── kSamplePakContents2x.pak
+│   │   │   │   │   │   └── kSamplePakContentsV4.pak
+│   │   │   │   │   ├── dicom.hexpat/
+│   │   │   │   │   │   ├── jpeg-wsi.dcm
+│   │   │   │   │   │   └── le-explicit-vlp.dcm
+│   │   │   │   │   ├── flipper_settings.hexpat/
+│   │   │   │   │   │   ├── bt.settings
+│   │   │   │   │   │   ├── desktop.settings
+│   │   │   │   │   │   ├── dolphin.state
+│   │   │   │   │   │   ├── expansion.settings
+│   │   │   │   │   │   ├── infrared.settings
+│   │   │   │   │   │   └── notification.settings
+│   │   │   │   │   ├── gmf.hexpat/
+│   │   │   │   │   │   ├── gmf.hexpat_data/
+│   │   │   │   │   │   │   └── help
+│   │   │   │   │   │   └── gmf.hexpat.gmf
+│   │   │   │   │   ├── ktx.hexpat/
+│   │   │   │   │   │   └── rgb-mipmap-reference.ktx
+│   │   │   │   │   ├── lcesave.hexpat/
+│   │   │   │   │   │   ├── MC-TU033PreRelease_savegameDecompressed.dat
+│   │   │   │   │   │   └── MC-TU5-Release_savegameDecompressed.dat
+│   │   │   │   │   ├── tiff.hexpat/
+│   │   │   │   │   │   ├── bigtiff-be-tiled.tiff
+│   │   │   │   │   │   ├── bigtiff-le-stripped.tiff
+│   │   │   │   │   │   ├── classic-be-stripped.tiff
+│   │   │   │   │   │   ├── classic-le-stripped.tiff
+│   │   │   │   │   │   └── classic-le-tiled.tiff
+│   │   │   │   │   ├── zip.hexpat/
+│   │   │   │   │   │   └── regular.zip
+│   │   │   │   │   ├── 3ds.hexpat.3ds
+│   │   │   │   │   ├── 7z.hexpat.7z
+│   │   │   │   │   ├── a3_bmtr.hexpat.rtm
+│   │   │   │   │   ├── a3_p3d_mlod.hexpad.p3d
+│   │   │   │   │   ├── a3_paa.hexpat.paa
+│   │   │   │   │   ├── a3_rap.hexpat.bin
+│   │   │   │   │   ├── a3_rtm.hexpat.rtm
+│   │   │   │   │   ├── a3_texheaders.hexpat.bin
+│   │   │   │   │   ├── adtfdat.hexpat.adtfdat
+│   │   │   │   │   ├── adts.hexpat.aac
+│   │   │   │   │   ├── afe2.hexpat.bin
+│   │   │   │   │   ├── ani.compatibility.hexpat.ani
+│   │   │   │   │   ├── ani.hexpat.ani
+│   │   │   │   │   ├── ar.hexpat.ar
+│   │   │   │   │   ├── arc.hexpat.arc
+│   │   │   │   │   ├── aria2.hexpat.aria2
+│   │   │   │   │   ├── arm_cm_vtor.hexpat.bin
+│   │   │   │   │   ├── bencode.hexpat.torrent
+│   │   │   │   │   ├── bgcode.hexpat.bgcode
+│   │   │   │   │   ├── bmp.hexpat.bmp
+│   │   │   │   │   ├── bplist.hexpat.bplist
+│   │   │   │   │   ├── bson.hexpat.bin
+│   │   │   │   │   ├── bsp_goldsrc.hexpat.bsp
+│   │   │   │   │   ├── bzip3.hexpat.bz3
+│   │   │   │   │   ├── cab.hexpat.cab
+│   │   │   │   │   ├── ccvxl.hexpat.vxl
+│   │   │   │   │   ├── cda.hexpat.cda
+│   │   │   │   │   ├── chm.hexpat.chm
+│   │   │   │   │   ├── coff.hexpat.obj
+│   │   │   │   │   ├── commodore_basic.hexpat.prg
+│   │   │   │   │   ├── cpio.hexpat.cpio
+│   │   │   │   │   ├── cpio_new_ascii.hexpat.cpio
+│   │   │   │   │   ├── cpio_portable_ascii.hexpat.cpio
+│   │   │   │   │   ├── CrashLvl.hexpat
+│   │   │   │   │   ├── credhist.hexpat.bin
+│   │   │   │   │   ├── dds.hexpat.dds
+│   │   │   │   │   ├── dex.hexpat.dex
+│   │   │   │   │   ├── dmg.hexpat.dmg
+│   │   │   │   │   ├── dmp64.hexpat.bin
+│   │   │   │   │   ├── dos.hexpat.exe
+│   │   │   │   │   ├── dotnet_binaryformatter.hexpat.bin
+│   │   │   │   │   ├── dpapiblob.hexpat.bin
+│   │   │   │   │   ├── dpapimasterkey.hexpat.bin
+│   │   │   │   │   ├── dsstore.hexpat.dsstore
+│   │   │   │   │   ├── dted.hexpat.dt0
+│   │   │   │   │   ├── elf.hexpat.elf
+│   │   │   │   │   ├── esp32_image.hexpat.bin
+│   │   │   │   │   ├── evtx.hexpat.evtx
+│   │   │   │   │   ├── ext4.hexpat.img
+│   │   │   │   │   ├── fbx.hexpat.fbx
+│   │   │   │   │   ├── fdt.hexpat.dtb
+│   │   │   │   │   ├── flac.hexpat.flac
+│   │   │   │   │   ├── flc.hexpat.flc
+│   │   │   │   │   ├── flv.hexpat.flv
+│   │   │   │   │   ├── fs.hexpat.img
+│   │   │   │   │   ├── gb.hexpat.gb
+│   │   │   │   │   ├── gguf.hexpat.gguf
+│   │   │   │   │   ├── gif.hexpat.gif
+│   │   │   │   │   ├── gltf.hexpat.glb
+│   │   │   │   │   ├── gzip.hexpat.gz
+│   │   │   │   │   ├── hinf_luas.hexpat.luas
+│   │   │   │   │   ├── hinf_module.hexpat.module
+│   │   │   │   │   ├── hinf_tag.hexpat.tag
+│   │   │   │   │   ├── hprof.hexpat.bin
+│   │   │   │   │   ├── hsdt.hexpat.hsdt
+│   │   │   │   │   ├── ico.hexpat.ico
+│   │   │   │   │   ├── id3.hexpat.mp3
+│   │   │   │   │   ├── imah.hexpat.fw.sig
+│   │   │   │   │   ├── intel_hex.hexpat.hex
+│   │   │   │   │   ├── ips.hexpat.ips
+│   │   │   │   │   ├── iso.hexpat.iso
+│   │   │   │   │   ├── java_class.hexpat.class
+│   │   │   │   │   ├── jpeg.hexpat.jpeg
+│   │   │   │   │   ├── kindle_update.hexpat.bin
+│   │   │   │   │   ├── lnk.hexpat.lnk
+│   │   │   │   │   ├── lua50.hexpat.lua
+│   │   │   │   │   ├── lua51.hexpat.lua
+│   │   │   │   │   ├── lua52.hexpat.lua
+│   │   │   │   │   ├── lua53.hexpat.lua
+│   │   │   │   │   ├── lua54.hexpat.lua
+│   │   │   │   │   ├── lznt1.hexpat.lznt1
+│   │   │   │   │   ├── macho.hexpat.o
+│   │   │   │   │   ├── max_v104.hexpat.dta
+│   │   │   │   │   ├── midi.hexpat.mid
+│   │   │   │   │   ├── minidump.hexpat.dmp
+│   │   │   │   │   ├── mo.hexpat.mo
+│   │   │   │   │   ├── mp4.hexpat.mp4
+│   │   │   │   │   ├── msgpack.hexpat.bin
+│   │   │   │   │   ├── nacp.hexpat.nacp
+│   │   │   │   │   ├── nbt.hexpat.nbt
+│   │   │   │   │   ├── ne.hexpat.exe
+│   │   │   │   │   ├── nes.hexpat.nes
+│   │   │   │   │   ├── notepad-cache.hexpat.bin
+│   │   │   │   │   ├── notepadwindowstate.hexpat.bin
+│   │   │   │   │   ├── nro.hexpat.nro
+│   │   │   │   │   ├── ntag.hexpat.bin
+│   │   │   │   │   ├── ogg.hexpat.ogg
+│   │   │   │   │   ├── orp.hexpat.orp
+│   │   │   │   │   ├── parquet.hexpat.parquet
+│   │   │   │   │   ├── pcap.hexpat.pcap
+│   │   │   │   │   ├── pcapng.hexpat.bin
+│   │   │   │   │   ├── pck.hexpat.pck
+│   │   │   │   │   ├── pcx.hexpat.pcx
+│   │   │   │   │   ├── pe.hexpat.exe
+│   │   │   │   │   ├── pef.hexpat.pef
+│   │   │   │   │   ├── pex.hexpat.pex
+│   │   │   │   │   ├── pfs0.hexpat.nsp
+│   │   │   │   │   ├── pickle.hexpat.bin
+│   │   │   │   │   ├── pif.hexpat.pif
+│   │   │   │   │   ├── pkm.hexpat.pkm
+│   │   │   │   │   ├── png.hexpat.png
+│   │   │   │   │   ├── popcap_luc.hexpat.luc
+│   │   │   │   │   ├── protobuf.hexpat.bin
+│   │   │   │   │   ├── psafe3.hexpat.psafe3
+│   │   │   │   │   ├── pyc.hexpat.pyc
+│   │   │   │   │   ├── pyinstaller.hexpat.elf
+│   │   │   │   │   ├── q3demo.hexpat.dm_16
+│   │   │   │   │   ├── qoi.hexpat.qoi
+│   │   │   │   │   ├── rar.hexpat.rar
+│   │   │   │   │   ├── ras.hexpat.ras
+│   │   │   │   │   ├── rgbds.hexpat.o
+│   │   │   │   │   ├── roblox_pack.hexpat.pack
+│   │   │   │   │   ├── sdb.hexpat.sdb
+│   │   │   │   │   ├── selinux.hexpat.bin
+│   │   │   │   │   ├── selinuxpp.hexpat.pp
+│   │   │   │   │   ├── shp.hexpat.shp
+│   │   │   │   │   ├── SHR_animation#C20000
+│   │   │   │   │   ├── shx.hexpat.shx
+│   │   │   │   │   ├── sit5.hexpat.sit
+│   │   │   │   │   ├── sqlite3.hexpat.db
+│   │   │   │   │   ├── stl.hexpat.stl
+│   │   │   │   │   ├── sup.hexpat.sup
+│   │   │   │   │   ├── swf.hexpat.swf
+│   │   │   │   │   ├── tar.hexpat.tar
+│   │   │   │   │   ├── terminfo.hexpat.bin
+│   │   │   │   │   ├── tga.hexpat.tga
+│   │   │   │   │   ├── ttf.hexpat.ttf
+│   │   │   │   │   ├── ubiquiti.hexpat.bin
+│   │   │   │   │   ├── uefi_boot_entry.hexpat.bin
+│   │   │   │   │   ├── uefi_fv_varstore.hexpat.fd
+│   │   │   │   │   ├── uf2.hexpat.uf2
+│   │   │   │   │   ├── usb.hexpat.bin
+│   │   │   │   │   ├── valve_vpk.hexpat.vpk
+│   │   │   │   │   ├── vbmeta.hexpat.img
+│   │   │   │   │   ├── vdf.hexpat.vdf
+│   │   │   │   │   ├── veado.hexpat.veado
+│   │   │   │   │   ├── vox.hexpat.vox
+│   │   │   │   │   ├── wad.hexpat.wad
+│   │   │   │   │   ├── was_oskasoftware.hexpat.was
+│   │   │   │   │   ├── wav.hexpat.wav
+│   │   │   │   │   ├── webp.hexpat.webp
+│   │   │   │   │   ├── xex.hexpat.xex
+│   │   │   │   │   ├── xilinx_bootgen.hexpat.bin
+│   │   │   │   │   ├── zim.hexpat.zim
+│   │   │   │   │   ├── zlib.hexpat.zlib
+│   │   │   │   │   └── zstd.hexpat.zst
+│   │   │   │   └── CMakeLists.txt
+│   │   │   └── CMakeLists.txt
+│   │   ├── themes/
+│   │   │   ├── catppuccin-frappe.json
+│   │   │   ├── catppuccin-latte.json
+│   │   │   ├── catppuccin-macchiato.json
+│   │   │   ├── catppuccin-mocha.json
+│   │   │   ├── Nocturne.json
+│   │   │   ├── one_dark.json
+│   │   │   ├── retina_dark.json
+│   │   │   ├── solarized_dark.json
+│   │   │   ├── theme_lion.json
+│   │   │   └── vs_dark.json
+│   │   ├── tips/
+│   │   │   ├── _schema.json
+│   │   │   ├── imhex.json
+│   │   │   └── re.json
+│   │   ├── yara/
+│   │   │   ├── advanced_analysis/
+│   │   │   │   ├── compiler.yar
+│   │   │   │   ├── cryptography.yar
+│   │   │   │   ├── environment.yar
+│   │   │   │   └── language.yar
+│   │   │   └── official_rules/
+│   │   ├── .gitattributes
+│   │   ├── .gitignore
+│   │   ├── .gitmodules
+│   │   ├── CMakeLists.txt
+│   │   ├── CONTRIBUTING.md
+│   │   ├── LICENSE
+│   │   └── README.md
+│   ├── ImHex-Patterns/
+│   │   ├── .github/
+│   │   │   ├── PULL_REQUEST_TEMPLATE/
+│   │   │   │   └── pattern_template.md
+│   │   │   ├── workflows/
+│   │   │   │   ├── dispatch.yml
+│   │   │   │   └── tests.yml
+│   │   │   └── FUNDING.yml
+│   │   ├── constants/
+│   │   │   ├── _schema.json
+│   │   │   ├── crc16.json
+│   │   │   └── crc32.json
+│   │   ├── disassemblers/
+│   │   │   ├── 8051.json
+│   │   │   └── jvm.json
+│   │   ├── encodings/
+│   │   │   ├── arabic_iso.tbl
+│   │   │   ├── arabic_windows.tbl
+│   │   │   ├── ascii.tbl
+│   │   │   ├── ascii_ansi.tbl
+│   │   │   ├── ascii_oem.tbl
+│   │   │   ├── baltic_iso.tbl
+│   │   │   ├── baltic_windows.tbl
+│   │   │   ├── big5.tbl
+│   │   │   ├── cyrillic_cp866.tbl
+│   │   │   ├── cyrillic_iso.tbl
+│   │   │   ├── cyrillic_koi8_r.tbl
+│   │   │   ├── cyrillic_koi8_u.tbl
+│   │   │   ├── cyrillic_windows.tbl
+│   │   │   ├── eastern_europe_iso.tbl
+│   │   │   ├── eastern_europe_windows.tbl
+│   │   │   ├── ebcdic.tbl
+│   │   │   ├── euc_jp.tbl
+│   │   │   ├── euc_kr.tbl
+│   │   │   ├── gbk.tbl
+│   │   │   ├── greek_iso.tbl
+│   │   │   ├── greek_windows.tbl
+│   │   │   ├── hebrew_iso.tbl
+│   │   │   ├── hebrew_windows.tbl
+│   │   │   ├── iso_646.tbl
+│   │   │   ├── iso_6937.tbl
+│   │   │   ├── jis_x_0201.tbl
+│   │   │   ├── jis_x_0211.tbl
+│   │   │   ├── jis_x_0213.tbl
+│   │   │   ├── macintosh.tbl
+│   │   │   ├── ms932.tbl
+│   │   │   ├── pokegen1_en.tbl
+│   │   │   ├── pokegen3_en.tbl
+│   │   │   ├── shiftjis.tbl
+│   │   │   ├── thai.tbl
+│   │   │   ├── turkish_iso.tbl
+│   │   │   ├── turkish_windows.tbl
+│   │   │   ├── utf8.tbl
+│   │   │   └── vietnamese.tbl
+│   │   ├── includes/
+│   │   │   ├── hex/
+│   │   │   │   ├── impl/
+│   │   │   │   │   └── imhex_check.pat
+│   │   │   │   ├── type/
+│   │   │   │   │   ├── encstr.pat
+│   │   │   │   │   ├── instruction.pat
+│   │   │   │   │   ├── json.pat
+│   │   │   │   │   └── mangled.pat
+│   │   │   │   ├── core.pat
+│   │   │   │   ├── dec.pat
+│   │   │   │   ├── http.pat
+│   │   │   │   └── provider.pat
+│   │   │   ├── std/
+│   │   │   │   ├── array.pat
+│   │   │   │   ├── attrs.pat
+│   │   │   │   ├── bit.pat
+│   │   │   │   ├── core.pat
+│   │   │   │   ├── ctype.pat
+│   │   │   │   ├── file.pat
+│   │   │   │   ├── fxpt.pat
+│   │   │   │   ├── hash.pat
+│   │   │   │   ├── io.pat
+│   │   │   │   ├── limits.pat
+│   │   │   │   ├── math.pat
+│   │   │   │   ├── mem.pat
+│   │   │   │   ├── ptr.pat
+│   │   │   │   ├── random.pat
+│   │   │   │   ├── string.pat
+│   │   │   │   ├── sys.pat
+│   │   │   │   └── time.pat
+│   │   │   └── type/
+│   │   │       ├── types/
+│   │   │       │   ├── 010.pat
+│   │   │       │   ├── c.pat
+│   │   │       │   ├── linux.pat
+│   │   │       │   ├── rust.pat
+│   │   │       │   └── win32.pat
+│   │   │       ├── base.pat
+│   │   │       ├── base64.pat
+│   │   │       ├── bcd.pat
+│   │   │       ├── byte.pat
+│   │   │       ├── color.pat
+│   │   │       ├── float16.pat
+│   │   │       ├── fmt.pat
+│   │   │       ├── guid.pat
+│   │   │       ├── ip.pat
+│   │   │       ├── leb128.pat
+│   │   │       ├── mac.pat
+│   │   │       ├── magic.pat
+│   │   │       ├── path.pat
+│   │   │       ├── size.pat
+│   │   │       └── time.pat
+│   │   ├── magic/
+│   │   │   ├── arma3_magic
+│   │   │   ├── nintendo_switch_magic
+│   │   │   └── portable_executable_magic
+│   │   ├── nodes/
+│   │   │   ├── caesar.hexnode
+│   │   │   └── xor.hexnode
+│   │   ├── patterns/
+│   │   │   ├── a3/
+│   │   │   │   ├── a3_bmtr.hexpat
+│   │   │   │   ├── a3_p3d_mlod.hexpat
+│   │   │   │   ├── a3_paa.hexpat
+│   │   │   │   ├── a3_rap.hexpat
+│   │   │   │   ├── a3_rtm.hexpat
+│   │   │   │   └── a3_texheaders.hexpat
+│   │   │   ├── AC Unity/
+│   │   │   │   ├── acu_data_compressed.hexpat
+│   │   │   │   ├── acu_data_decompressed.hexpat
+│   │   │   │   └── acu_forge.hexpat
+│   │   │   ├── bastion/
+│   │   │   ├── Devil May Cry HD Collection/
+│   │   │   │   └── dmc3_hd_mod.hexpat
+│   │   │   ├── DFIR/
+│   │   │   │   ├── DFIR_README.md
+│   │   │   │   ├── DISK_PARSER.hexpat
+│   │   │   │   ├── exFAT.hexpat
+│   │   │   │   ├── FAT32.hexpat
+│   │   │   │   └── NTFS.hexpat
+│   │   │   ├── ffx/
+│   │   │   ├── fs/
+│   │   │   │   ├── apfs.hexpat
+│   │   │   │   ├── exfat.hexpat
+│   │   │   │   ├── ext4.hexpat
+│   │   │   │   ├── fat32.hexpat
+│   │   │   │   ├── ntfs.hexpat
+│   │   │   │   ├── pattern.hexpat
+│   │   │   │   └── refs.hexpat
+│   │   │   ├── 3ds.hexpat
+│   │   │   ├── 7z.hexpat
+│   │   │   ├── adtfdat.hexpat
+│   │   │   ├── adts.hexpat
+│   │   │   ├── afe2.hexpat
+│   │   │   ├── ani.hexpat
+│   │   │   ├── apple_single_double.hexpat
+│   │   │   ├── ar.hexpat
+│   │   │   ├── arc.hexpat
+│   │   │   ├── aria2.hexpat
+│   │   │   ├── arm_cm_vtor.hexpat
+│   │   │   ├── bcss.hexpat
+│   │   │   ├── bencode.hexpat
+│   │   │   ├── bgcode.hexpat
+│   │   │   ├── binka.hexpat
+│   │   │   ├── blend.hexpat
+│   │   │   ├── blf.hexpat
+│   │   │   ├── bmp.hexpat
+│   │   │   ├── bplist.hexpat
+│   │   │   ├── bson.hexpat
+│   │   │   ├── bsp_goldsrc.hexpat
+│   │   │   ├── bzip3.hexpat
+│   │   │   ├── cab.hexpat
+│   │   │   ├── cchva.hexpat
+│   │   │   ├── ccpal.hexpat
+│   │   │   ├── ccvxl.hexpat
+│   │   │   ├── cda.hexpat
+│   │   │   ├── chd.hexpat
+│   │   │   ├── chm.hexpat
+│   │   │   ├── chromium_pak.hexpat
+│   │   │   ├── coff.hexpat
+│   │   │   ├── commodore_basic.hexpat
+│   │   │   ├── cpio.hexpat
+│   │   │   ├── cpio_new_ascii.hexpat
+│   │   │   ├── cpio_portable_ascii.hexpat
+│   │   │   ├── Crashlvl.hexpat
+│   │   │   ├── credhist.hexpat
+│   │   │   ├── dds.hexpat
+│   │   │   ├── dex.hexpat
+│   │   │   ├── dicom.hexpat
+│   │   │   ├── dmc3_hd_mod.hexpat
+│   │   │   ├── dmg.hexpat
+│   │   │   ├── dmp64.hexpat
+│   │   │   ├── dos.hexpat
+│   │   │   ├── dotnet_binaryformatter.hexpat
+│   │   │   ├── dpapiblob.hexpat
+│   │   │   ├── dpapimasterkey.hexpat
+│   │   │   ├── dsstore.hexpat
+│   │   │   ├── dted.hexpat
+│   │   │   ├── elf.hexpat
+│   │   │   ├── esp32_image.hexpat
+│   │   │   ├── evtx.hexpat
+│   │   │   ├── fas_oskasoftware.hexpat
+│   │   │   ├── fas_oskasoftware_old.hexpat
+│   │   │   ├── fbx.hexpat
+│   │   │   ├── fdt.hexpat
+│   │   │   ├── flac.hexpat
+│   │   │   ├── flc.hexpat
+│   │   │   ├── flipper_settings.hexpat
+│   │   │   ├── flv.hexpat
+│   │   │   ├── fs.hexpat
+│   │   │   ├── gb.hexpat
+│   │   │   ├── gba.hexpat
+│   │   │   ├── gbx.hexpat
+│   │   │   ├── gen.hexpat
+│   │   │   ├── gguf.hexpat
+│   │   │   ├── gif.hexpat
+│   │   │   ├── gltf.hexpat
+│   │   │   ├── gmf.hexpat
+│   │   │   ├── gzip.hexpat
+│   │   │   ├── hinf_luas.hexpat
+│   │   │   ├── hinf_module.hexpat
+│   │   │   ├── hinf_tag.hexpat
+│   │   │   ├── hprof.hexpat
+│   │   │   ├── hsdt.hexpat
+│   │   │   ├── ico.hexpat
+│   │   │   ├── id3.hexpat
+│   │   │   ├── imah.hexpat
+│   │   │   ├── intel_hex.hexpat
+│   │   │   ├── ip.hexpat
+│   │   │   ├── ips.hexpat
+│   │   │   ├── iso.hexpat
+│   │   │   ├── java_class.hexpat
+│   │   │   ├── jpeg.hexpat
+│   │   │   ├── kindle_update.hexpat
+│   │   │   ├── ktx.hexpat
+│   │   │   ├── lcesave.hexpat
+│   │   │   ├── lnk.hexpat
+│   │   │   ├── loc.hexpat
+│   │   │   ├── lua40.hexpat
+│   │   │   ├── lua50.hexpat
+│   │   │   ├── lua51.hexpat
+│   │   │   ├── lua52.hexpat
+│   │   │   ├── lua53.hexpat
+│   │   │   ├── lua54.hexpat
+│   │   │   ├── lznt1.hexpat
+│   │   │   ├── macho.hexpat
+│   │   │   ├── max_v104.hexpat
+│   │   │   ├── midi.hexpat
+│   │   │   ├── minidump.hexpat
+│   │   │   ├── mo.hexpat
+│   │   │   ├── mp4.hexpat
+│   │   │   ├── msgpack.hexpat
+│   │   │   ├── msscmp.hexpat
+│   │   │   ├── n64.hexpat
+│   │   │   ├── nacp.hexpat
+│   │   │   ├── nbt.hexpat
+│   │   │   ├── nds.hexpat
+│   │   │   ├── ne.hexpat
+│   │   │   ├── nes.hexpat
+│   │   │   ├── notepad-cache.hexpat
+│   │   │   ├── notepad-state.hexpat
+│   │   │   ├── notepadwindowstate.hexpat
+│   │   │   ├── nro.hexpat
+│   │   │   ├── nsf.hexpat
+│   │   │   ├── nsfe.hexpat
+│   │   │   ├── ntag.hexpat
+│   │   │   ├── ogg.hexpat
+│   │   │   ├── optee_ta.hexpat
+│   │   │   ├── orp.hexpat
+│   │   │   ├── parquet.hexpat
+│   │   │   ├── pbz.hexpat
+│   │   │   ├── pcap.hexpat
+│   │   │   ├── pcapng.hexpat
+│   │   │   ├── pck.hexpat
+│   │   │   ├── pcx.hexpat
+│   │   │   ├── pe.hexpat
+│   │   │   ├── pef.hexpat
+│   │   │   ├── pex.hexpat
+│   │   │   ├── pf.hexpat
+│   │   │   ├── pfs0.hexpat
+│   │   │   ├── pickle.hexpat
+│   │   │   ├── pif.hexpat
+│   │   │   ├── pkm.hexpat
+│   │   │   ├── png.hexpat
+│   │   │   ├── png2.hexpat
+│   │   │   ├── popcap_luc.hexpat
+│   │   │   ├── prodinfo.hexpat
+│   │   │   ├── protobuf.hexpat
+│   │   │   ├── psafe3.hexpat
+│   │   │   ├── pyc.hexpat
+│   │   │   ├── pyinstaller.hexpat
+│   │   │   ├── q3demo.hexpat
+│   │   │   ├── qbcl.hexpat
+│   │   │   ├── qoi.hexpat
+│   │   │   ├── quantized-mesh.hexpat
+│   │   │   ├── rar.hexpat
+│   │   │   ├── ras.hexpat
+│   │   │   ├── rcf_v1_2.hexpat
+│   │   │   ├── rgbds.hexpat
+│   │   │   ├── roblox_pack.hexpat
+│   │   │   ├── rpm.hexpat
+│   │   │   ├── sdb.hexpat
+│   │   │   ├── selinux.hexpat
+│   │   │   ├── selinuxpp.hexpat
+│   │   │   ├── shp.hexpat
+│   │   │   ├── SHR.hexpat
+│   │   │   ├── shx.hexpat
+│   │   │   ├── sit5.hexpat
+│   │   │   ├── smk.hexpat
+│   │   │   ├── snes.hexpat
+│   │   │   ├── spc.hexpat
+│   │   │   ├── spirv.hexpat
+│   │   │   ├── sqlite3.hexpat
+│   │   │   ├── stdfv4.hexpat
+│   │   │   ├── stl.hexpat
+│   │   │   ├── sup.hexpat
+│   │   │   ├── swf.hexpat
+│   │   │   ├── tar.hexpat
+│   │   │   ├── tarc.hexpat
+│   │   │   ├── terminfo.hexpat
+│   │   │   ├── tga.hexpat
+│   │   │   ├── thumbcache.hexpat
+│   │   │   ├── tiff.hexpat
+│   │   │   ├── ttf.hexpat
+│   │   │   ├── ubiquiti.hexpat
+│   │   │   ├── uefi.hexpat
+│   │   │   ├── uefi_boot_entry.hexpat
+│   │   │   ├── uefi_fv_varstore.hexpat
+│   │   │   ├── uf2.hexpat
+│   │   │   ├── unity-asset-bundle.hexpat
+│   │   │   ├── upk-ue3.hexpat
+│   │   │   ├── usb.hexpat
+│   │   │   ├── valve_vpk.hexpat
+│   │   │   ├── vbmeta.hexpat
+│   │   │   ├── vdf.hexpat
+│   │   │   ├── veado.hexpat
+│   │   │   ├── vgm.hexpat
+│   │   │   ├── vhdx.hexpat
+│   │   │   ├── vox.hexpat
+│   │   │   ├── wad.hexpat
+│   │   │   ├── was_oskasoftware.hexpat
+│   │   │   ├── wav.hexpat
+│   │   │   ├── webp.hexpat
+│   │   │   ├── wintec_tes.hexpat
+│   │   │   ├── xbeh.hexpat
+│   │   │   ├── xci.hexpat
+│   │   │   ├── xex.hexpat
+│   │   │   ├── xgspak.hexpat
+│   │   │   ├── xgstexture.hexpat
+│   │   │   ├── xilinx_bit.hexpat
+│   │   │   ├── xilinx_bootgen.hexpat
+│   │   │   ├── zim.hexpat
+│   │   │   ├── zip.hexpat
+│   │   │   ├── zlib.hexpat
+│   │   │   └── zstd.hexpat
+│   │   ├── plugins/
+│   │   │   └── extra-hashes.json
+│   │   ├── scripts/
+│   │   │   ├── csv2tbl.py
+│   │   │   ├── extract_legacy_hexproj.py
+│   │   │   ├── ksy2pat.py
+│   │   │   ├── svd2pat.py
+│   │   │   └── utf8tblgen.py
+│   │   ├── tests/
+│   │   │   ├── includes/
+│   │   │   │   ├── source/
+│   │   │   │   │   └── main.cpp
+│   │   │   │   └── CMakeLists.txt
+│   │   │   ├── magic/
+│   │   │   │   ├── source/
+│   │   │   │   │   └── main.cpp
+│   │   │   │   └── CMakeLists.txt
+│   │   │   ├── patterns/
+│   │   │   │   ├── source/
+│   │   │   │   │   └── main.cpp
+│   │   │   │   ├── test_data/
+│   │   │   │   │   ├── bcss.hexpat/
+│   │   │   │   │   │   ├── test.bcss
+│   │   │   │   │   │   └── test.bcss_content
+│   │   │   │   │   ├── blend.hexpat/
+│   │   │   │   │   │   ├── blend.hexpat.blend
+│   │   │   │   │   │   └── blend_zstd.hexpat.blend
+│   │   │   │   │   ├── chromium_pak.hexpat/
+│   │   │   │   │   │   ├── kEmptyPakContents.pak
+│   │   │   │   │   │   ├── kSampleCompressPakContentsV5.pak
+│   │   │   │   │   │   ├── kSampleCompressScaledPakContents.pak
+│   │   │   │   │   │   ├── kSamplePakContents2x.pak
+│   │   │   │   │   │   └── kSamplePakContentsV4.pak
+│   │   │   │   │   ├── dicom.hexpat/
+│   │   │   │   │   │   ├── jpeg-wsi.dcm
+│   │   │   │   │   │   └── le-explicit-vlp.dcm
+│   │   │   │   │   ├── flipper_settings.hexpat/
+│   │   │   │   │   │   ├── bt.settings
+│   │   │   │   │   │   ├── desktop.settings
+│   │   │   │   │   │   ├── dolphin.state
+│   │   │   │   │   │   ├── expansion.settings
+│   │   │   │   │   │   ├── infrared.settings
+│   │   │   │   │   │   └── notification.settings
+│   │   │   │   │   ├── gmf.hexpat/
+│   │   │   │   │   │   ├── gmf.hexpat_data/
+│   │   │   │   │   │   │   └── help
+│   │   │   │   │   │   └── gmf.hexpat.gmf
+│   │   │   │   │   ├── ktx.hexpat/
+│   │   │   │   │   │   └── rgb-mipmap-reference.ktx
+│   │   │   │   │   ├── lcesave.hexpat/
+│   │   │   │   │   │   ├── MC-TU033PreRelease_savegameDecompressed.dat
+│   │   │   │   │   │   └── MC-TU5-Release_savegameDecompressed.dat
+│   │   │   │   │   ├── tiff.hexpat/
+│   │   │   │   │   │   ├── bigtiff-be-tiled.tiff
+│   │   │   │   │   │   ├── bigtiff-le-stripped.tiff
+│   │   │   │   │   │   ├── classic-be-stripped.tiff
+│   │   │   │   │   │   ├── classic-le-stripped.tiff
+│   │   │   │   │   │   └── classic-le-tiled.tiff
+│   │   │   │   │   ├── zip.hexpat/
+│   │   │   │   │   │   └── regular.zip
+│   │   │   │   │   ├── 3ds.hexpat.3ds
+│   │   │   │   │   ├── 7z.hexpat.7z
+│   │   │   │   │   ├── a3_bmtr.hexpat.rtm
+│   │   │   │   │   ├── a3_p3d_mlod.hexpad.p3d
+│   │   │   │   │   ├── a3_paa.hexpat.paa
+│   │   │   │   │   ├── a3_rap.hexpat.bin
+│   │   │   │   │   ├── a3_rtm.hexpat.rtm
+│   │   │   │   │   ├── a3_texheaders.hexpat.bin
+│   │   │   │   │   ├── adtfdat.hexpat.adtfdat
+│   │   │   │   │   ├── adts.hexpat.aac
+│   │   │   │   │   ├── afe2.hexpat.bin
+│   │   │   │   │   ├── ani.compatibility.hexpat.ani
+│   │   │   │   │   ├── ani.hexpat.ani
+│   │   │   │   │   ├── ar.hexpat.ar
+│   │   │   │   │   ├── arc.hexpat.arc
+│   │   │   │   │   ├── aria2.hexpat.aria2
+│   │   │   │   │   ├── arm_cm_vtor.hexpat.bin
+│   │   │   │   │   ├── bencode.hexpat.torrent
+│   │   │   │   │   ├── bgcode.hexpat.bgcode
+│   │   │   │   │   ├── bmp.hexpat.bmp
+│   │   │   │   │   ├── bplist.hexpat.bplist
+│   │   │   │   │   ├── bson.hexpat.bin
+│   │   │   │   │   ├── bsp_goldsrc.hexpat.bsp
+│   │   │   │   │   ├── bzip3.hexpat.bz3
+│   │   │   │   │   ├── cab.hexpat.cab
+│   │   │   │   │   ├── ccvxl.hexpat.vxl
+│   │   │   │   │   ├── cda.hexpat.cda
+│   │   │   │   │   ├── chm.hexpat.chm
+│   │   │   │   │   ├── coff.hexpat.obj
+│   │   │   │   │   ├── commodore_basic.hexpat.prg
+│   │   │   │   │   ├── cpio.hexpat.cpio
+│   │   │   │   │   ├── cpio_new_ascii.hexpat.cpio
+│   │   │   │   │   ├── cpio_portable_ascii.hexpat.cpio
+│   │   │   │   │   ├── CrashLvl.hexpat
+│   │   │   │   │   ├── credhist.hexpat.bin
+│   │   │   │   │   ├── dds.hexpat.dds
+│   │   │   │   │   ├── dex.hexpat.dex
+│   │   │   │   │   ├── dmg.hexpat.dmg
+│   │   │   │   │   ├── dmp64.hexpat.bin
+│   │   │   │   │   ├── dos.hexpat.exe
+│   │   │   │   │   ├── dotnet_binaryformatter.hexpat.bin
+│   │   │   │   │   ├── dpapiblob.hexpat.bin
+│   │   │   │   │   ├── dpapimasterkey.hexpat.bin
+│   │   │   │   │   ├── dsstore.hexpat.dsstore
+│   │   │   │   │   ├── dted.hexpat.dt0
+│   │   │   │   │   ├── elf.hexpat.elf
+│   │   │   │   │   ├── esp32_image.hexpat.bin
+│   │   │   │   │   ├── evtx.hexpat.evtx
+│   │   │   │   │   ├── ext4.hexpat.img
+│   │   │   │   │   ├── fbx.hexpat.fbx
+│   │   │   │   │   ├── fdt.hexpat.dtb
+│   │   │   │   │   ├── flac.hexpat.flac
+│   │   │   │   │   ├── flc.hexpat.flc
+│   │   │   │   │   ├── flv.hexpat.flv
+│   │   │   │   │   ├── fs.hexpat.img
+│   │   │   │   │   ├── gb.hexpat.gb
+│   │   │   │   │   ├── gguf.hexpat.gguf
+│   │   │   │   │   ├── gif.hexpat.gif
+│   │   │   │   │   ├── gltf.hexpat.glb
+│   │   │   │   │   ├── gzip.hexpat.gz
+│   │   │   │   │   ├── hinf_luas.hexpat.luas
+│   │   │   │   │   ├── hinf_module.hexpat.module
+│   │   │   │   │   ├── hinf_tag.hexpat.tag
+│   │   │   │   │   ├── hprof.hexpat.bin
+│   │   │   │   │   ├── hsdt.hexpat.hsdt
+│   │   │   │   │   ├── ico.hexpat.ico
+│   │   │   │   │   ├── id3.hexpat.mp3
+│   │   │   │   │   ├── imah.hexpat.fw.sig
+│   │   │   │   │   ├── intel_hex.hexpat.hex
+│   │   │   │   │   ├── ips.hexpat.ips
+│   │   │   │   │   ├── iso.hexpat.iso
+│   │   │   │   │   ├── java_class.hexpat.class
+│   │   │   │   │   ├── jpeg.hexpat.jpeg
+│   │   │   │   │   ├── kindle_update.hexpat.bin
+│   │   │   │   │   ├── lnk.hexpat.lnk
+│   │   │   │   │   ├── lua50.hexpat.lua
+│   │   │   │   │   ├── lua51.hexpat.lua
+│   │   │   │   │   ├── lua52.hexpat.lua
+│   │   │   │   │   ├── lua53.hexpat.lua
+│   │   │   │   │   ├── lua54.hexpat.lua
+│   │   │   │   │   ├── lznt1.hexpat.lznt1
+│   │   │   │   │   ├── macho.hexpat.o
+│   │   │   │   │   ├── max_v104.hexpat.dta
+│   │   │   │   │   ├── midi.hexpat.mid
+│   │   │   │   │   ├── minidump.hexpat.dmp
+│   │   │   │   │   ├── mo.hexpat.mo
+│   │   │   │   │   ├── mp4.hexpat.mp4
+│   │   │   │   │   ├── msgpack.hexpat.bin
+│   │   │   │   │   ├── nacp.hexpat.nacp
+│   │   │   │   │   ├── nbt.hexpat.nbt
+│   │   │   │   │   ├── ne.hexpat.exe
+│   │   │   │   │   ├── nes.hexpat.nes
+│   │   │   │   │   ├── notepad-cache.hexpat.bin
+│   │   │   │   │   ├── notepadwindowstate.hexpat.bin
+│   │   │   │   │   ├── nro.hexpat.nro
+│   │   │   │   │   ├── ntag.hexpat.bin
+│   │   │   │   │   ├── ogg.hexpat.ogg
+│   │   │   │   │   ├── orp.hexpat.orp
+│   │   │   │   │   ├── parquet.hexpat.parquet
+│   │   │   │   │   ├── pcap.hexpat.pcap
+│   │   │   │   │   ├── pcapng.hexpat.bin
+│   │   │   │   │   ├── pck.hexpat.pck
+│   │   │   │   │   ├── pcx.hexpat.pcx
+│   │   │   │   │   ├── pe.hexpat.exe
+│   │   │   │   │   ├── pef.hexpat.pef
+│   │   │   │   │   ├── pex.hexpat.pex
+│   │   │   │   │   ├── pfs0.hexpat.nsp
+│   │   │   │   │   ├── pickle.hexpat.bin
+│   │   │   │   │   ├── pif.hexpat.pif
+│   │   │   │   │   ├── pkm.hexpat.pkm
+│   │   │   │   │   ├── png.hexpat.png
+│   │   │   │   │   ├── popcap_luc.hexpat.luc
+│   │   │   │   │   ├── protobuf.hexpat.bin
+│   │   │   │   │   ├── psafe3.hexpat.psafe3
+│   │   │   │   │   ├── pyc.hexpat.pyc
+│   │   │   │   │   ├── pyinstaller.hexpat.elf
+│   │   │   │   │   ├── q3demo.hexpat.dm_16
+│   │   │   │   │   ├── qoi.hexpat.qoi
+│   │   │   │   │   ├── rar.hexpat.rar
+│   │   │   │   │   ├── ras.hexpat.ras
+│   │   │   │   │   ├── rgbds.hexpat.o
+│   │   │   │   │   ├── roblox_pack.hexpat.pack
+│   │   │   │   │   ├── sdb.hexpat.sdb
+│   │   │   │   │   ├── selinux.hexpat.bin
+│   │   │   │   │   ├── selinuxpp.hexpat.pp
+│   │   │   │   │   ├── shp.hexpat.shp
+│   │   │   │   │   ├── SHR_animation#C20000
+│   │   │   │   │   ├── shx.hexpat.shx
+│   │   │   │   │   ├── sit5.hexpat.sit
+│   │   │   │   │   ├── sqlite3.hexpat.db
+│   │   │   │   │   ├── stl.hexpat.stl
+│   │   │   │   │   ├── sup.hexpat.sup
+│   │   │   │   │   ├── swf.hexpat.swf
+│   │   │   │   │   ├── tar.hexpat.tar
+│   │   │   │   │   ├── terminfo.hexpat.bin
+│   │   │   │   │   ├── tga.hexpat.tga
+│   │   │   │   │   ├── ttf.hexpat.ttf
+│   │   │   │   │   ├── ubiquiti.hexpat.bin
+│   │   │   │   │   ├── uefi_boot_entry.hexpat.bin
+│   │   │   │   │   ├── uefi_fv_varstore.hexpat.fd
+│   │   │   │   │   ├── uf2.hexpat.uf2
+│   │   │   │   │   ├── usb.hexpat.bin
+│   │   │   │   │   ├── valve_vpk.hexpat.vpk
+│   │   │   │   │   ├── vbmeta.hexpat.img
+│   │   │   │   │   ├── vdf.hexpat.vdf
+│   │   │   │   │   ├── veado.hexpat.veado
+│   │   │   │   │   ├── vox.hexpat.vox
+│   │   │   │   │   ├── wad.hexpat.wad
+│   │   │   │   │   ├── was_oskasoftware.hexpat.was
+│   │   │   │   │   ├── wav.hexpat.wav
+│   │   │   │   │   ├── webp.hexpat.webp
+│   │   │   │   │   ├── xex.hexpat.xex
+│   │   │   │   │   ├── xilinx_bootgen.hexpat.bin
+│   │   │   │   │   ├── zim.hexpat.zim
+│   │   │   │   │   ├── zlib.hexpat.zlib
+│   │   │   │   │   └── zstd.hexpat.zst
+│   │   │   │   └── CMakeLists.txt
+│   │   │   └── CMakeLists.txt
+│   │   ├── themes/
+│   │   │   ├── catppuccin-frappe.json
+│   │   │   ├── catppuccin-latte.json
+│   │   │   ├── catppuccin-macchiato.json
+│   │   │   ├── catppuccin-mocha.json
+│   │   │   ├── Nocturne.json
+│   │   │   ├── one_dark.json
+│   │   │   ├── retina_dark.json
+│   │   │   ├── solarized_dark.json
+│   │   │   ├── theme_lion.json
+│   │   │   └── vs_dark.json
+│   │   ├── tips/
+│   │   │   ├── _schema.json
+│   │   │   ├── imhex.json
+│   │   │   └── re.json
+│   │   ├── yara/
+│   │   │   ├── advanced_analysis/
+│   │   │   │   ├── compiler.yar
+│   │   │   │   ├── cryptography.yar
+│   │   │   │   ├── environment.yar
+│   │   │   │   └── language.yar
+│   │   │   └── official_rules/
+│   │   ├── .gitattributes
+│   │   ├── .gitignore
+│   │   ├── .gitmodules
+│   │   ├── CMakeLists.txt
+│   │   ├── CONTRIBUTING.md
+│   │   ├── LICENSE
+│   │   └── README.md
+│   └── PatternLanguage/
+│       ├── .github/
+│       │   ├── workflows/
+│       │   │   ├── build.yml
+│       │   │   └── tests.yml
+│       │   ├── codecov.yml
+│       │   └── FUNDING.yml
+│       ├── cli/
+│       │   ├── include/
+│       │   │   └── pl/
+│       │   │       └── cli/
+│       │   │           ├── helpers/
+│       │   │           │   ├── info_utils.hpp
+│       │   │           │   └── utils.hpp
+│       │   │           └── cli.hpp
+│       │   ├── source/
+│       │   │   ├── helpers/
+│       │   │   │   ├── info_utils.cpp
+│       │   │   │   └── utils.cpp
+│       │   │   ├── subcommands/
+│       │   │   │   ├── docs.cpp
+│       │   │   │   ├── format.cpp
+│       │   │   │   ├── info.cpp
+│       │   │   │   └── run.cpp
+│       │   │   └── main.cpp
+│       │   └── CMakeLists.txt
+│       ├── example/
+│       │   ├── source/
+│       │   │   ├── .idea/
+│       │   │   │   ├── .gitignore
+│       │   │   │   ├── modules.xml
+│       │   │   │   ├── source.iml
+│       │   │   │   └── vcs.xml
+│       │   │   └── main.cpp
+│       │   └── CMakeLists.txt
+│       ├── external/
+│       │   ├── cli11/
+│       │   ├── fmt/
+│       │   ├── libwolv/
+│       │   ├── nlohmann_json/
+│       │   │   ├── cmake/
+│       │   │   │   ├── config.cmake.in
+│       │   │   │   ├── nlohmann_jsonConfigVersion.cmake.in
+│       │   │   │   └── pkg-config.pc.in
+│       │   │   ├── include/
+│       │   │   │   └── nlohmann/
+│       │   │   │       ├── detail/
+│       │   │   │       │   ├── conversions/
+│       │   │   │       │   │   ├── from_json.hpp
+│       │   │   │       │   │   ├── to_chars.hpp
+│       │   │   │       │   │   └── to_json.hpp
+│       │   │   │       │   ├── input/
+│       │   │   │       │   │   ├── binary_reader.hpp
+│       │   │   │       │   │   ├── input_adapters.hpp
+│       │   │   │       │   │   ├── json_sax.hpp
+│       │   │   │       │   │   ├── lexer.hpp
+│       │   │   │       │   │   ├── parser.hpp
+│       │   │   │       │   │   └── position_t.hpp
+│       │   │   │       │   ├── iterators/
+│       │   │   │       │   │   ├── internal_iterator.hpp
+│       │   │   │       │   │   ├── iter_impl.hpp
+│       │   │   │       │   │   ├── iteration_proxy.hpp
+│       │   │   │       │   │   ├── iterator_traits.hpp
+│       │   │   │       │   │   ├── json_reverse_iterator.hpp
+│       │   │   │       │   │   └── primitive_iterator.hpp
+│       │   │   │       │   ├── meta/
+│       │   │   │       │   │   ├── call_std/
+│       │   │   │       │   │   │   ├── begin.hpp
+│       │   │   │       │   │   │   └── end.hpp
+│       │   │   │       │   │   ├── cpp_future.hpp
+│       │   │   │       │   │   ├── detected.hpp
+│       │   │   │       │   │   ├── identity_tag.hpp
+│       │   │   │       │   │   ├── is_sax.hpp
+│       │   │   │       │   │   ├── std_fs.hpp
+│       │   │   │       │   │   ├── type_traits.hpp
+│       │   │   │       │   │   └── void_t.hpp
+│       │   │   │       │   ├── output/
+│       │   │   │       │   │   ├── binary_writer.hpp
+│       │   │   │       │   │   ├── output_adapters.hpp
+│       │   │   │       │   │   └── serializer.hpp
+│       │   │   │       │   ├── abi_macros.hpp
+│       │   │   │       │   ├── exceptions.hpp
+│       │   │   │       │   ├── hash.hpp
+│       │   │   │       │   ├── json_custom_base_class.hpp
+│       │   │   │       │   ├── json_pointer.hpp
+│       │   │   │       │   ├── json_ref.hpp
+│       │   │   │       │   ├── macro_scope.hpp
+│       │   │   │       │   ├── macro_unscope.hpp
+│       │   │   │       │   ├── string_concat.hpp
+│       │   │   │       │   ├── string_escape.hpp
+│       │   │   │       │   ├── string_utils.hpp
+│       │   │   │       │   └── value_t.hpp
+│       │   │   │       ├── thirdparty/
+│       │   │   │       │   └── hedley/
+│       │   │   │       │       ├── hedley.hpp
+│       │   │   │       │       └── hedley_undef.hpp
+│       │   │   │       ├── adl_serializer.hpp
+│       │   │   │       ├── byte_container_with_subtype.hpp
+│       │   │   │       ├── json.hpp
+│       │   │   │       ├── json_fwd.hpp
+│       │   │   │       └── ordered_map.hpp
+│       │   │   ├── single_include/
+│       │   │   │   └── nlohmann/
+│       │   │   │       ├── json.hpp
+│       │   │   │       └── json_fwd.hpp
+│       │   │   ├── CMakeLists.txt
+│       │   │   ├── LICENSE.MIT
+│       │   │   └── nlohmann_json.natvis
+│       │   └── throwing_ptr/
+│       ├── fuzz/
+│       │   ├── dict/
+│       │   │   └── hexpat.dict
+│       │   ├── inputs/
+│       │   │   ├── a.hexpat
+│       │   │   ├── complex-struct.hexpat
+│       │   │   ├── omni.hexpat
+│       │   │   ├── preprocessor.hexpat
+│       │   │   └── struct.hexpat
+│       │   ├── source/
+│       │   │   └── main.cpp
+│       │   ├── .gitignore
+│       │   ├── afl-pytmin.py
+│       │   ├── CMakeLists.txt
+│       │   └── README.md
+│       ├── generators/
+│       │   ├── include/
+│       │   │   └── pl/
+│       │   │       ├── formatters/
+│       │   │       │   ├── formatter.hpp
+│       │   │       │   ├── formatter_html.hpp
+│       │   │       │   ├── formatter_json.hpp
+│       │   │       │   └── formatter_yaml.hpp
+│       │   │       └── formatters.hpp
+│       │   └── CMakeLists.txt
+│       ├── lib/
+│       │   ├── include/
+│       │   │   ├── pl/
+│       │   │   │   ├── core/
+│       │   │   │   │   ├── ast/
+│       │   │   │   │   │   ├── ast_node.hpp
+│       │   │   │   │   │   ├── ast_node_array_variable_decl.hpp
+│       │   │   │   │   │   ├── ast_node_attribute.hpp
+│       │   │   │   │   │   ├── ast_node_bitfield.hpp
+│       │   │   │   │   │   ├── ast_node_bitfield_array_variable_decl.hpp
+│       │   │   │   │   │   ├── ast_node_bitfield_field.hpp
+│       │   │   │   │   │   ├── ast_node_builtin_type.hpp
+│       │   │   │   │   │   ├── ast_node_cast.hpp
+│       │   │   │   │   │   ├── ast_node_compound_statement.hpp
+│       │   │   │   │   │   ├── ast_node_conditional_statement.hpp
+│       │   │   │   │   │   ├── ast_node_control_flow_statement.hpp
+│       │   │   │   │   │   ├── ast_node_enum.hpp
+│       │   │   │   │   │   ├── ast_node_function_call.hpp
+│       │   │   │   │   │   ├── ast_node_function_definition.hpp
+│       │   │   │   │   │   ├── ast_node_imported_type.hpp
+│       │   │   │   │   │   ├── ast_node_literal.hpp
+│       │   │   │   │   │   ├── ast_node_lvalue_assignment.hpp
+│       │   │   │   │   │   ├── ast_node_match_statement.hpp
+│       │   │   │   │   │   ├── ast_node_mathematical_expression.hpp
+│       │   │   │   │   │   ├── ast_node_multi_variable_decl.hpp
+│       │   │   │   │   │   ├── ast_node_parameter_pack.hpp
+│       │   │   │   │   │   ├── ast_node_pointer_variable_decl.hpp
+│       │   │   │   │   │   ├── ast_node_rvalue.hpp
+│       │   │   │   │   │   ├── ast_node_rvalue_assignment.hpp
+│       │   │   │   │   │   ├── ast_node_scope_resolution.hpp
+│       │   │   │   │   │   ├── ast_node_struct.hpp
+│       │   │   │   │   │   ├── ast_node_template_parameter.hpp
+│       │   │   │   │   │   ├── ast_node_ternary_expression.hpp
+│       │   │   │   │   │   ├── ast_node_try_catch_statement.hpp
+│       │   │   │   │   │   ├── ast_node_type_appilication.hpp
+│       │   │   │   │   │   ├── ast_node_type_decl.hpp
+│       │   │   │   │   │   ├── ast_node_type_operator.hpp
+│       │   │   │   │   │   ├── ast_node_union.hpp
+│       │   │   │   │   │   ├── ast_node_variable_decl.hpp
+│       │   │   │   │   │   └── ast_node_while_statement.hpp
+│       │   │   │   │   ├── errors/
+│       │   │   │   │   │   ├── error.hpp
+│       │   │   │   │   │   ├── result.hpp
+│       │   │   │   │   │   └── runtime_errors.hpp
+│       │   │   │   │   ├── evaluator.hpp
+│       │   │   │   │   ├── lexer.hpp
+│       │   │   │   │   ├── location.hpp
+│       │   │   │   │   ├── log_console.hpp
+│       │   │   │   │   ├── parser.hpp
+│       │   │   │   │   ├── parser_manager.hpp
+│       │   │   │   │   ├── preprocessor.hpp
+│       │   │   │   │   ├── resolver.hpp
+│       │   │   │   │   ├── resolvers.hpp
+│       │   │   │   │   ├── token.hpp
+│       │   │   │   │   ├── tokens.hpp
+│       │   │   │   │   └── validator.hpp
+│       │   │   │   ├── helpers/
+│       │   │   │   │   ├── buffered_reader.hpp
+│       │   │   │   │   ├── concepts.hpp
+│       │   │   │   │   ├── safe_iterator.hpp
+│       │   │   │   │   ├── safe_pointer.hpp
+│       │   │   │   │   ├── types.hpp
+│       │   │   │   │   ├── utils.hpp
+│       │   │   │   │   └── variant_type_index.hpp
+│       │   │   │   ├── lib/
+│       │   │   │   │   └── std/
+│       │   │   │   │       ├── libstd.hpp
+│       │   │   │   │       └── types.hpp
+│       │   │   │   ├── patterns/
+│       │   │   │   │   ├── pattern.hpp
+│       │   │   │   │   ├── pattern_array_dynamic.hpp
+│       │   │   │   │   ├── pattern_array_static.hpp
+│       │   │   │   │   ├── pattern_bitfield.hpp
+│       │   │   │   │   ├── pattern_boolean.hpp
+│       │   │   │   │   ├── pattern_character.hpp
+│       │   │   │   │   ├── pattern_enum.hpp
+│       │   │   │   │   ├── pattern_error.hpp
+│       │   │   │   │   ├── pattern_float.hpp
+│       │   │   │   │   ├── pattern_padding.hpp
+│       │   │   │   │   ├── pattern_pointer.hpp
+│       │   │   │   │   ├── pattern_signed.hpp
+│       │   │   │   │   ├── pattern_string.hpp
+│       │   │   │   │   ├── pattern_struct.hpp
+│       │   │   │   │   ├── pattern_union.hpp
+│       │   │   │   │   ├── pattern_unsigned.hpp
+│       │   │   │   │   ├── pattern_wide_character.hpp
+│       │   │   │   │   └── pattern_wide_string.hpp
+│       │   │   │   ├── api.hpp
+│       │   │   │   ├── pattern_language.hpp
+│       │   │   │   └── pattern_visitor.hpp
+│       │   │   └── pl.hpp
+│       │   ├── source/
+│       │   │   └── pl/
+│       │   │       ├── core/
+│       │   │       │   ├── ast/
+│       │   │       │   │   ├── ast_node.cpp
+│       │   │       │   │   ├── ast_node_array_variable_decl.cpp
+│       │   │       │   │   ├── ast_node_attribute.cpp
+│       │   │       │   │   ├── ast_node_bitfield.cpp
+│       │   │       │   │   ├── ast_node_bitfield_array_variable_decl.cpp
+│       │   │       │   │   ├── ast_node_bitfield_field.cpp
+│       │   │       │   │   ├── ast_node_builtin_type.cpp
+│       │   │       │   │   ├── ast_node_cast.cpp
+│       │   │       │   │   ├── ast_node_compound_statement.cpp
+│       │   │       │   │   ├── ast_node_conditional_statement.cpp
+│       │   │       │   │   ├── ast_node_control_flow_statement.cpp
+│       │   │       │   │   ├── ast_node_enum.cpp
+│       │   │       │   │   ├── ast_node_function_call.cpp
+│       │   │       │   │   ├── ast_node_function_definition.cpp
+│       │   │       │   │   ├── ast_node_imported_type.cpp
+│       │   │       │   │   ├── ast_node_literal.cpp
+│       │   │       │   │   ├── ast_node_lvalue_assignment.cpp
+│       │   │       │   │   ├── ast_node_match_statement.cpp
+│       │   │       │   │   ├── ast_node_mathematical_expression.cpp
+│       │   │       │   │   ├── ast_node_multi_variable_decl.cpp
+│       │   │       │   │   ├── ast_node_parameter_pack.cpp
+│       │   │       │   │   ├── ast_node_pointer_variable_decl.cpp
+│       │   │       │   │   ├── ast_node_rvalue.cpp
+│       │   │       │   │   ├── ast_node_rvalue_assignment.cpp
+│       │   │       │   │   ├── ast_node_scope_resolution.cpp
+│       │   │       │   │   ├── ast_node_struct.cpp
+│       │   │       │   │   ├── ast_node_ternary_expression.cpp
+│       │   │       │   │   ├── ast_node_try_catch_statement.cpp
+│       │   │       │   │   ├── ast_node_type_application.cpp
+│       │   │       │   │   ├── ast_node_type_decl.cpp
+│       │   │       │   │   ├── ast_node_type_operator.cpp
+│       │   │       │   │   ├── ast_node_union.cpp
+│       │   │       │   │   ├── ast_node_variable_decl.cpp
+│       │   │       │   │   └── ast_node_while_statement.cpp
+│       │   │       │   ├── error.cpp
+│       │   │       │   ├── evaluator.cpp
+│       │   │       │   ├── lexer.cpp
+│       │   │       │   ├── parser.cpp
+│       │   │       │   ├── parser_manager.cpp
+│       │   │       │   ├── preprocessor.cpp
+│       │   │       │   ├── resolver.cpp
+│       │   │       │   ├── resolvers.cpp
+│       │   │       │   ├── token.cpp
+│       │   │       │   └── validator.cpp
+│       │   │       ├── helpers/
+│       │   │       │   └── utils.cpp
+│       │   │       ├── lib/
+│       │   │       │   └── std/
+│       │   │       │       ├── core.cpp
+│       │   │       │       ├── file.cpp
+│       │   │       │       ├── hash.cpp
+│       │   │       │       ├── math.cpp
+│       │   │       │       ├── mem.cpp
+│       │   │       │       ├── pragmas.cpp
+│       │   │       │       ├── random.cpp
+│       │   │       │       ├── std.cpp
+│       │   │       │       ├── string.cpp
+│       │   │       │       └── time.cpp
+│       │   │       └── pattern_language.cpp
+│       │   └── CMakeLists.txt
+│       ├── tests/
+│       │   ├── files/
+│       │   │   └── export/
+│       │   │       ├── json.json
+│       │   │       └── yaml.yml
+│       │   ├── include/
+│       │   │   └── test_patterns/
+│       │   │       ├── test_pattern.hpp
+│       │   │       ├── test_pattern_arrays.hpp
+│       │   │       ├── test_pattern_attributes.hpp
+│       │   │       ├── test_pattern_bitfields.hpp
+│       │   │       ├── test_pattern_custom_builtin_type.hpp
+│       │   │       ├── test_pattern_doc_comments.hpp
+│       │   │       ├── test_pattern_enums.hpp
+│       │   │       ├── test_pattern_example.hpp
+│       │   │       ├── test_pattern_extra_semicolon.hpp
+│       │   │       ├── test_pattern_failing_assert.hpp
+│       │   │       ├── test_pattern_format.hpp
+│       │   │       ├── test_pattern_import.hpp
+│       │   │       ├── test_pattern_include.hpp
+│       │   │       ├── test_pattern_literals.hpp
+│       │   │       ├── test_pattern_match.hpp
+│       │   │       ├── test_pattern_math.hpp
+│       │   │       ├── test_pattern_namespaces.hpp
+│       │   │       ├── test_pattern_nested_structs.hpp
+│       │   │       ├── test_pattern_padding.hpp
+│       │   │       ├── test_pattern_placement.hpp
+│       │   │       ├── test_pattern_pointers.hpp
+│       │   │       ├── test_pattern_pragmas.hpp
+│       │   │       ├── test_pattern_pragmas_fail.hpp
+│       │   │       ├── test_pattern_rvalues.hpp
+│       │   │       ├── test_pattern_rvalues_assignment_in_struct.hpp
+│       │   │       ├── test_pattern_strings.hpp
+│       │   │       ├── test_pattern_struct_inheritance.hpp
+│       │   │       ├── test_pattern_structs.hpp
+│       │   │       ├── test_pattern_succeeding_assert.hpp
+│       │   │       ├── test_pattern_template_parameters_scope.hpp
+│       │   │       ├── test_pattern_typenameof.hpp
+│       │   │       ├── test_pattern_unions.hpp
+│       │   │       └── test_pattern_using.hpp
+│       │   ├── integration/
+│       │   │   ├── integration.py
+│       │   │   ├── invalid.hexpat
+│       │   │   ├── test.hexpat
+│       │   │   ├── test.hexpat.json
+│       │   │   └── test_data
+│       │   ├── source/
+│       │   │   ├── main.cpp
+│       │   │   └── tests.cpp
+│       │   ├── CMakeLists.txt
+│       │   └── test_data
+│       ├── .gitignore
+│       ├── .gitmodules
+│       ├── CMakeLists.txt
+│       ├── LICENSE
+│       └── README.md
 ├── .aider.chat.history.md
 ├── .aider.input.history
 ├── .aiderignore
@@ -20659,10 +22252,12 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 ├── .envrc
 ├── .gitattributes
 ├── .gitignore
+├── .gitmodules
 ├── .mcp.json
 ├── .pre-commit-config.yaml
 ├── .readthedocs.yaml
 ├── .rooignore
+├── .secrets.baseline
 ├── .sourcery.yaml
 ├── .taplo.toml
 ├── .yamlfmt

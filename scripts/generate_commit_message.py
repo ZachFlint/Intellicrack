@@ -9,12 +9,17 @@
 This script reads a git diff from stdin and generates a conventional commit
 message using the Gemini API. It implements honest truncation thresholds
 that reflect actual model capabilities.
+
+Exit codes:
+    0 - Success, commit message printed to stdout.
+    1 - Error, diagnostic printed to stderr (for caller capture).
 """
 
 from __future__ import annotations
 
 import os
 import sys
+import traceback
 from pathlib import Path
 from typing import Final
 
@@ -24,21 +29,30 @@ from google.genai import types
 from google.genai.errors import ClientError
 
 
+class CommitMessageError(RuntimeError):
+    """Raised when commit message generation fails."""
+
+
+class ApiKeyError(CommitMessageError):
+    """Raised when the Gemini API key is missing or invalid."""
+
+
+class ApiCallError(CommitMessageError):
+    """Raised when the Gemini API call fails."""
+
+
 def load_env() -> None:
     """Load environment variables from .env file."""
     env_path = Path(__file__).parent.parent / ".env"
     load_dotenv(dotenv_path=env_path)
 
 
-# Load environment variables
 load_env()
 
 
-# Truncation thresholds (characters)
-TRUNCATION_THRESHOLD: Final = 500_000  # ~125K tokens, 12.5% of 1M limit
-FALLBACK_THRESHOLD: Final = 1_000_000  # ~250K tokens, 25% of 1M limit
+TRUNCATION_THRESHOLD: Final = 500_000
+FALLBACK_THRESHOLD: Final = 1_000_000
 
-# Prompt template
 COMMIT_MESSAGE_PROMPT: Final = """Write a git commit message for these changes.
 
 Rules:
@@ -55,18 +69,42 @@ Rules:
 """
 
 
+def _log(msg: str) -> None:
+    """Write a diagnostic line to stderr.
+
+    Args:
+        msg: The diagnostic message to write.
+    """
+    print(f"[commit-msg] {msg}", file=sys.stderr, flush=True)
+
+
+def _fail(msg: str) -> int:
+    """Log an error to stderr and return exit code 1.
+
+    Args:
+        msg: The error message to log.
+
+    Returns:
+        int: Always returns 1 (failure exit code).
+    """
+    _log(f"ERROR: {msg}")
+    return 1
+
+
 def get_client() -> genai.Client:
     """Create and return a Gemini API client.
 
     Returns:
-        genai.Client: Configured Gemini API client.
+        genai.Client: Configured Gemini API client instance.
 
     Raises:
-        SystemExit: If API key is not configured.
+        ApiKeyError: If GOOGLE_API_KEY is not set.
     """
-    api_key = os.environ.get("GOOGLE_API_KEY")
+    api_key = os.environ.get("GOOGLE_API_KEY", "").strip()
     if not api_key:
-        raise SystemExit("GOOGLE_API_KEY environment variable not set")
+        msg = "GOOGLE_API_KEY not set. Add it to .env or export it."
+        raise ApiKeyError(msg)
+    _log(f"API key loaded ({len(api_key)} chars, ends ...{api_key[-4:]})")
     return genai.Client(api_key=api_key)
 
 
@@ -81,33 +119,39 @@ def generate_commit_message(diff_input: str, client: genai.Client) -> str:
         str: Generated commit message.
 
     Raises:
-        SystemExit: If generation fails.
+        ApiCallError: If the API call fails or returns empty response.
     """
     truncation_notice = ""
     actual_input = diff_input
 
-    # Determine truncation strategy
     diff_length = len(diff_input)
     if diff_length >= FALLBACK_THRESHOLD:
-        # Too large even for truncation - use stat summary only
-        print(
-            f"Diff too large ({diff_length:,} chars), using file summary only",
-            file=sys.stderr,
+        _log(f"Diff very large ({diff_length:,} chars), using stat summary only")
+        actual_input = (
+            diff_input.split("DIFF:\n")[1].split("\n", maxsplit=1)[0]
+            if "DIFF:\n" in diff_input
+            else diff_input[:10_000]
         )
-        actual_input = diff_input.split("DIFF:\n")[1].split("\n", maxsplit=1)[0] if "DIFF:\n" in diff_input else diff_input[:10000]
-        truncation_notice = "Note: Full diff exceeds practical limits. Message based on file change summary only.\n"
+        truncation_notice = (
+            "Note: Full diff exceeds practical limits. "
+            "Message based on file change summary only.\n"
+        )
     elif diff_length >= TRUNCATION_THRESHOLD:
-        # Truncate with notice
+        _log(f"Diff large ({diff_length:,} chars), truncating to {TRUNCATION_THRESHOLD:,}")
         actual_input = diff_input[:TRUNCATION_THRESHOLD]
-        truncation_notice = f"Note: Diff truncated at {TRUNCATION_THRESHOLD:,} characters for practical processing. Message reflects visible changes.\n"
+        truncation_notice = (
+            f"Note: Diff truncated at {TRUNCATION_THRESHOLD:,} characters "
+            "for practical processing. Message reflects visible changes.\n"
+        )
+    else:
+        _log(f"Diff size: {diff_length:,} chars")
 
-    # Build the prompt
     prompt = COMMIT_MESSAGE_PROMPT.format(
         truncation_notice=truncation_notice,
         diff_input=actual_input,
     )
 
-    # Call the API
+    _log("Calling Gemini 2.5 Flash...")
     try:
         response = client.models.generate_content(
             model="gemini-2.5-flash",
@@ -117,33 +161,55 @@ def generate_commit_message(diff_input: str, client: genai.Client) -> str:
                 max_output_tokens=512,
             ),
         )
+    except ClientError as exc:
+        msg = f"Gemini API client error: {exc}"
+        raise ApiCallError(msg) from exc
+    except ConnectionError as exc:
+        msg = f"Network error connecting to Gemini API: {exc}"
+        raise ApiCallError(msg) from exc
 
-        if not response.text:
-            raise SystemExit("No response text from API")
+    if not response.text:
+        candidates_info = ""
+        if hasattr(response, "candidates") and response.candidates:
+            first = response.candidates[0]
+            finish = getattr(first, "finish_reason", "unknown")
+            candidates_info = f" (finish_reason={finish})"
+        msg = f"Gemini returned empty response{candidates_info}"
+        raise ApiCallError(msg)
 
-        return response.text.strip()
-
-    except ClientError as e:
-        raise SystemExit(f"API request failed: {e}") from e
-    except Exception as e:
-        raise SystemExit(f"Unexpected error: {e}") from e
+    result = response.text.strip()
+    _log(f"Generated message ({len(result)} chars): {result.splitlines()[0]}")
+    return result
 
 
-def main() -> None:
-    """Main entry point."""
-    # Read diff from stdin
+def main() -> int:
+    """Read diff from stdin, generate commit message, print to stdout.
+
+    Returns:
+        int: Exit code (0=success, 1=failure).
+    """
     diff_input = sys.stdin.read()
 
     if not diff_input.strip():
-        raise SystemExit("No diff input provided")
+        return _fail("No diff input provided on stdin")
 
-    # Get client and generate message
-    client = get_client()
-    message = generate_commit_message(diff_input, client)
+    try:
+        client = get_client()
+    except CommitMessageError as exc:
+        return _fail(str(exc))
+    except Exception:
+        return _fail(f"Unexpected error creating client:\n{traceback.format_exc()}")
 
-    # Output the commit message
+    try:
+        message = generate_commit_message(diff_input, client)
+    except CommitMessageError as exc:
+        return _fail(str(exc))
+    except Exception:
+        return _fail(f"Unexpected error generating message:\n{traceback.format_exc()}")
+
     print(message)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

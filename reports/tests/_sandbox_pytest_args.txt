@@ -1,1 +1,1 @@
-tests/test_ui/test_panel_dock.py tests/test_ui/test_tool_panel_detach.py -v --no-header
+tests/test_ui/test_state_persistence.py tests/test_ui/test_search_async.py -v -p no:metadata

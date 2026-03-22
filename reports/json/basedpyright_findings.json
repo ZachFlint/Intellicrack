@@ -1,28 +1,596 @@
 {
   "tool": "basedpyright",
-  "generated": "2026-03-20T17:22:53.524119",
-  "total_findings": 2,
-  "total_files": 1,
+  "generated": "2026-03-22T02:19:20.470931",
+  "total_findings": 70,
+  "total_files": 5,
   "files": [
     {
-      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_panel.py",
-      "count": 2,
+      "path": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py",
+      "count": 56,
       "findings": [
         {
-          "line": 934,
-          "column": 31,
+          "line": 168,
+          "column": 17,
           "severity": "error",
-          "rule": "reportUnknownArgumentType",
-          "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"__new__\"\n\u00a0\u00a0Argument type is \"list[Unknown] | bytearray\"",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_panel.py:934:31: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"__new__\"\n\u00a0\u00a0Argument type is \"list[Unknown] | bytearray\""
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:168:17: [error] Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\""
         },
         {
-          "line": 1069,
-          "column": 21,
+          "line": 274,
+          "column": 13,
           "severity": "error",
           "rule": "reportUnknownVariableType",
-          "message": "Type of \"current_byte\" is partially unknown\n\u00a0\u00a0Type of \"current_byte\" is \"Unknown | int\"",
-          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_panel.py:1069:21: [error] Type of \"current_byte\" is partially unknown\n\u00a0\u00a0Type of \"current_byte\" is \"Unknown | int\""
+          "message": "Type of \"processes\" is partially unknown\n\u00a0\u00a0Type of \"processes\" is \"list[Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:274:13: [error] Type of \"processes\" is partially unknown\n\u00a0\u00a0Type of \"processes\" is \"list[Unknown]\""
+        },
+        {
+          "line": 274,
+          "column": 30,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:274:30: [error] Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 274,
+          "column": 30,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"iterable\" in function \"__init__\"\n\u00a0\u00a0Argument type is \"dict_values[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:274:30: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"iterable\" in function \"__init__\"\n\u00a0\u00a0Argument type is \"dict_values[Unknown, Unknown]\""
+        },
+        {
+          "line": 275,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Type of \"external_pids\" is partially unknown\n\u00a0\u00a0Type of \"external_pids\" is \"list[Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:275:13: [error] Type of \"external_pids\" is partially unknown\n\u00a0\u00a0Type of \"external_pids\" is \"list[Unknown]\""
+        },
+        {
+          "line": 275,
+          "column": 34,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_external_pids\" is partially unknown\n\u00a0\u00a0Type of \"_external_pids\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:275:34: [error] Type of \"_external_pids\" is partially unknown\n\u00a0\u00a0Type of \"_external_pids\" is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 275,
+          "column": 34,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"iterable\" in function \"__init__\"\n\u00a0\u00a0Argument type is \"dict_keys[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:275:34: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"iterable\" in function \"__init__\"\n\u00a0\u00a0Argument type is \"dict_keys[Unknown, Unknown]\""
+        },
+        {
+          "line": 279,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Type of \"root_pids\" is partially unknown\n\u00a0\u00a0Type of \"root_pids\" is \"list[Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:279:9: [error] Type of \"root_pids\" is partially unknown\n\u00a0\u00a0Type of \"root_pids\" is \"list[Unknown]\""
+        },
+        {
+          "line": 279,
+          "column": 22,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"pid\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:279:22: [error] Type of \"pid\" is unknown"
+        },
+        {
+          "line": 279,
+          "column": 32,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Type of \"p\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:279:32: [error] Type of \"p\" is unknown"
+        },
+        {
+          "line": 279,
+          "column": 50,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"pid\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:279:50: [error] Type of \"pid\" is unknown"
+        },
+        {
+          "line": 281,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Type of \"pid\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:281:13: [error] Type of \"pid\" is unknown"
+        },
+        {
+          "line": 283,
+          "column": 39,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"pid\" in function \"__init__\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:283:39: [error] Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"pid\" in function \"__init__\""
+        },
+        {
+          "line": 315,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:315:13: [error] Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 316,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_external_pids\" is partially unknown\n\u00a0\u00a0Type of \"_external_pids\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:316:13: [error] Type of \"_external_pids\" is partially unknown\n\u00a0\u00a0Type of \"_external_pids\" is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 420,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:420:13: [error] Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 441,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Type of \"tracked\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:441:13: [error] Type of \"tracked\" is unknown"
+        },
+        {
+          "line": 441,
+          "column": 23,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:441:23: [error] Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 441,
+          "column": 23,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"pop\" is partially unknown\n\u00a0\u00a0Type of \"pop\" is \"Overload[(key: Unknown, /) -> Unknown, (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@pop, /) -> (Unknown | _T@pop)]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:441:23: [error] Type of \"pop\" is partially unknown\n\u00a0\u00a0Type of \"pop\" is \"Overload[(key: Unknown, /) -> Unknown, (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@pop, /) -> (Unknown | _T@pop)]\""
+        },
+        {
+          "line": 446,
+          "column": 30,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"name\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:446:30: [error] Type of \"name\" is unknown"
+        },
+        {
+          "line": 450,
+          "column": 16,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Return type is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:450:16: [error] Return type is unknown"
+        },
+        {
+          "line": 462,
+          "column": 20,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:462:20: [error] Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 462,
+          "column": 20,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"get\" is partially unknown\n\u00a0\u00a0Type of \"get\" is \"Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:462:20: [error] Type of \"get\" is partially unknown\n\u00a0\u00a0Type of \"get\" is \"Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]\""
+        },
+        {
+          "line": 462,
+          "column": 20,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Return type, \"Unknown | None\", is partially unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:462:20: [error] Return type, \"Unknown | None\", is partially unknown"
+        },
+        {
+          "line": 471,
+          "column": 25,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:471:25: [error] Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 471,
+          "column": 25,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"iterable\" in function \"__init__\"\n\u00a0\u00a0Argument type is \"dict_values[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:471:25: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"iterable\" in function \"__init__\"\n\u00a0\u00a0Argument type is \"dict_values[Unknown, Unknown]\""
+        },
+        {
+          "line": 480,
+          "column": 27,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Type of \"p\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:480:27: [error] Type of \"p\" is unknown"
+        },
+        {
+          "line": 480,
+          "column": 32,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:480:32: [error] Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 480,
+          "column": 60,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"is_running\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:480:60: [error] Type of \"is_running\" is unknown"
+        },
+        {
+          "line": 627,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Type of \"pids\" is partially unknown\n\u00a0\u00a0Type of \"pids\" is \"list[Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:627:13: [error] Type of \"pids\" is partially unknown\n\u00a0\u00a0Type of \"pids\" is \"list[Unknown]\""
+        },
+        {
+          "line": 627,
+          "column": 25,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:627:25: [error] Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 627,
+          "column": 25,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"iterable\" in function \"__init__\"\n\u00a0\u00a0Argument type is \"dict_keys[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:627:25: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"iterable\" in function \"__init__\"\n\u00a0\u00a0Argument type is \"dict_keys[Unknown, Unknown]\""
+        },
+        {
+          "line": 628,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Type of \"external_pids\" is partially unknown\n\u00a0\u00a0Type of \"external_pids\" is \"list[Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:628:13: [error] Type of \"external_pids\" is partially unknown\n\u00a0\u00a0Type of \"external_pids\" is \"list[Unknown]\""
+        },
+        {
+          "line": 628,
+          "column": 34,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_external_pids\" is partially unknown\n\u00a0\u00a0Type of \"_external_pids\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:628:34: [error] Type of \"_external_pids\" is partially unknown\n\u00a0\u00a0Type of \"_external_pids\" is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 628,
+          "column": 34,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"iterable\" in function \"__init__\"\n\u00a0\u00a0Argument type is \"dict_keys[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:628:34: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"iterable\" in function \"__init__\"\n\u00a0\u00a0Argument type is \"dict_keys[Unknown, Unknown]\""
+        },
+        {
+          "line": 630,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Type of \"pid\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:630:13: [error] Type of \"pid\" is unknown"
+        },
+        {
+          "line": 632,
+          "column": 78,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"obj\" in function \"len\"\n\u00a0\u00a0Argument type is \"list[Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:632:78: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"obj\" in function \"len\"\n\u00a0\u00a0Argument type is \"list[Unknown]\""
+        },
+        {
+          "line": 635,
+          "column": 46,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"pid\" in function \"terminate_process\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:635:46: [error] Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"pid\" in function \"terminate_process\""
+        },
+        {
+          "line": 639,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Type of \"ext_pid\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:639:13: [error] Type of \"ext_pid\" is unknown"
+        },
+        {
+          "line": 642,
+          "column": 70,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"pid\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:642:70: [error] Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"pid\""
+        },
+        {
+          "line": 647,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_external_pids\" is partially unknown\n\u00a0\u00a0Type of \"_external_pids\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:647:13: [error] Type of \"_external_pids\" is partially unknown\n\u00a0\u00a0Type of \"_external_pids\" is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 679,
+          "column": 24,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:679:24: [error] Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 679,
+          "column": 24,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"obj\" in function \"len\"\n\u00a0\u00a0Argument type is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:679:24: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"obj\" in function \"len\"\n\u00a0\u00a0Argument type is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 689,
+          "column": 29,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"is_running\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:689:29: [error] Type of \"is_running\" is unknown"
+        },
+        {
+          "line": 689,
+          "column": 29,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"__new__\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:689:29: [error] Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"__new__\""
+        },
+        {
+          "line": 689,
+          "column": 47,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Type of \"p\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:689:47: [error] Type of \"p\" is unknown"
+        },
+        {
+          "line": 689,
+          "column": 52,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:689:52: [error] Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 862,
+          "column": 23,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:862:23: [error] Type of \"_processes\" is partially unknown\n\u00a0\u00a0Type of \"_processes\" is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 862,
+          "column": 49,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_external_pids\" is partially unknown\n\u00a0\u00a0Type of \"_external_pids\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:862:49: [error] Type of \"_external_pids\" is partially unknown\n\u00a0\u00a0Type of \"_external_pids\" is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 866,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_external_pids\" is partially unknown\n\u00a0\u00a0Type of \"_external_pids\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:866:13: [error] Type of \"_external_pids\" is partially unknown\n\u00a0\u00a0Type of \"_external_pids\" is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 890,
+          "column": 23,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_external_pids\" is partially unknown\n\u00a0\u00a0Type of \"_external_pids\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:890:23: [error] Type of \"_external_pids\" is partially unknown\n\u00a0\u00a0Type of \"_external_pids\" is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 891,
+          "column": 21,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_external_pids\" is partially unknown\n\u00a0\u00a0Type of \"_external_pids\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:891:21: [error] Type of \"_external_pids\" is partially unknown\n\u00a0\u00a0Type of \"_external_pids\" is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 909,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Type of \"info\" is partially unknown\n\u00a0\u00a0Type of \"info\" is \"Unknown | None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:909:13: [error] Type of \"info\" is partially unknown\n\u00a0\u00a0Type of \"info\" is \"Unknown | None\""
+        },
+        {
+          "line": 909,
+          "column": 20,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"_external_pids\" is partially unknown\n\u00a0\u00a0Type of \"_external_pids\" is \"dict[Unknown, Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:909:20: [error] Type of \"_external_pids\" is partially unknown\n\u00a0\u00a0Type of \"_external_pids\" is \"dict[Unknown, Unknown]\""
+        },
+        {
+          "line": 909,
+          "column": 20,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"get\" is partially unknown\n\u00a0\u00a0Type of \"get\" is \"Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:909:20: [error] Type of \"get\" is partially unknown\n\u00a0\u00a0Type of \"get\" is \"Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]\""
+        },
+        {
+          "line": 910,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Type of \"name\" is partially unknown\n\u00a0\u00a0Type of \"name\" is \"Unknown | str\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\core\\process_manager.py:910:13: [error] Type of \"name\" is partially unknown\n\u00a0\u00a0Type of \"name\" is \"Unknown | str\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_widget.py",
+      "count": 9,
+      "findings": [
+        {
+          "line": 1483,
+          "column": 17,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"append\" is partially unknown\n\u00a0\u00a0Type of \"append\" is \"(object: Unknown, /) -> None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1483:17: [error] Type of \"append\" is partially unknown\n\u00a0\u00a0Type of \"append\" is \"(object: Unknown, /) -> None\""
+        },
+        {
+          "line": 1484,
+          "column": 34,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"iterable\" in function \"join\"\n\u00a0\u00a0Argument type is \"list[Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1484:34: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"iterable\" in function \"join\"\n\u00a0\u00a0Argument type is \"list[Unknown]\""
+        },
+        {
+          "line": 1492,
+          "column": 21,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"append\" is partially unknown\n\u00a0\u00a0Type of \"append\" is \"(object: Unknown, /) -> None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1492:21: [error] Type of \"append\" is partially unknown\n\u00a0\u00a0Type of \"append\" is \"(object: Unknown, /) -> None\""
+        },
+        {
+          "line": 1494,
+          "column": 21,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"append\" is partially unknown\n\u00a0\u00a0Type of \"append\" is \"(object: Unknown, /) -> None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1494:21: [error] Type of \"append\" is partially unknown\n\u00a0\u00a0Type of \"append\" is \"(object: Unknown, /) -> None\""
+        },
+        {
+          "line": 1495,
+          "column": 47,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"iterable\" in function \"join\"\n\u00a0\u00a0Argument type is \"list[Unknown]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1495:47: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"iterable\" in function \"join\"\n\u00a0\u00a0Argument type is \"list[Unknown]\""
+        },
+        {
+          "line": 1566,
+          "column": 46,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"slot\" in function \"connect\"\n\u00a0\u00a0Argument type is \"(_checked: Unknown, k: str = fmt_key) -> None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1566:46: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"slot\" in function \"connect\"\n\u00a0\u00a0Argument type is \"(_checked: Unknown, k: str = fmt_key) -> None\""
+        },
+        {
+          "line": 1566,
+          "column": 53,
+          "severity": "error",
+          "rule": "reportUnknownLambdaType",
+          "message": "Type of parameter \"_checked\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1566:53: [error] Type of parameter \"_checked\" is unknown"
+        },
+        {
+          "line": 1595,
+          "column": 46,
+          "severity": "error",
+          "rule": "reportUnknownArgumentType",
+          "message": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"slot\" in function \"connect\"\n\u00a0\u00a0Argument type is \"(_checked: Unknown, m: str = mode_key) -> None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1595:46: [error] Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"slot\" in function \"connect\"\n\u00a0\u00a0Argument type is \"(_checked: Unknown, m: str = mode_key) -> None\""
+        },
+        {
+          "line": 1595,
+          "column": 53,
+          "severity": "error",
+          "rule": "reportUnknownLambdaType",
+          "message": "Type of parameter \"_checked\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1595:53: [error] Type of parameter \"_checked\" is unknown"
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 52,
+          "column": 37,
+          "severity": "error",
+          "rule": "reportUnknownVariableType",
+          "message": "Type of \"_cxxfilt_demangle\" is unknown",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py:52:37: [error] Type of \"_cxxfilt_demangle\" is unknown"
+        },
+        {
+          "line": 287,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportIncompatibleMethodOverride",
+          "message": "Method \"paintEvent\" overrides class \"QWidget\" in an incompatible manner\n\u00a0\u00a0Parameter 2 name mismatch: base parameter is named \"a0\", override parameter is named \"event\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py:287:9: [error] Method \"paintEvent\" overrides class \"QWidget\" in an incompatible manner\n\u00a0\u00a0Parameter 2 name mismatch: base parameter is named \"a0\", override parameter is named \"event\""
+        },
+        {
+          "line": 450,
+          "column": 46,
+          "severity": "error",
+          "rule": "reportOptionalMemberAccess",
+          "message": "\"setStretchLastSection\" is not a known attribute of \"None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py:450:46: [error] \"setStretchLastSection\" is not a known attribute of \"None\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\providers\\google.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 184,
+          "column": 21,
+          "severity": "error",
+          "rule": "reportCallIssue",
+          "message": "Argument missing for parameter \"supports_tools\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\providers\\google.py:184:21: [error] Argument missing for parameter \"supports_tools\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_base.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 67,
+          "column": 12,
+          "severity": "warning",
+          "rule": "reportMissingImports",
+          "message": "Import \"xxhash\" could not be resolved",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_base.py:67:12: [warning] Import \"xxhash\" could not be resolved"
         }
       ]
     }
