@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Sun, Mar 22, 2026 02:21:31 AM
+Generated: Sun, Mar 22, 2026 06:22:18 PM
 Directory: D:\Intellicrack
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -1985,7 +1985,9 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   ├── results/
 │   │   │   ├── custom_20260322_003435.txt
 │   │   │   ├── custom_20260322_003435.xml
-│   │   │   └── custom_20260322_020835.txt
+│   │   │   ├── custom_20260322_020835.txt
+│   │   │   ├── custom_20260322_022321.txt
+│   │   │   └── custom_20260322_022321.xml
 │   │   ├── _sandbox_exitcode
 │   │   ├── _sandbox_output.txt
 │   │   ├── _sandbox_pytest_args.txt

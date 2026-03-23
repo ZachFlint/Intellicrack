@@ -25,11 +25,79 @@
               "shortDescription": {
                 "text": "[FIXED] Fixed"
               }
+            },
+            {
+              "id": "fix-byte-order-marker",
+              "shortDescription": {
+                "text": "[FIXED] removed byte-order marker"
+              }
+            },
+            {
+              "id": "check-json",
+              "shortDescription": {
+                "text": "Failed to json decode (Extra data: line 2 column 1 (char 932))"
+              }
             }
           ]
         }
       },
       "results": [
+        {
+          "ruleId": "trailing-whitespace",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] Fixed"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "trailing-whitespace",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] Fixed"
+          }
+        },
+        {
+          "ruleId": "end-of-file-fixer",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] Fixed"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "trailing-whitespace",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] Fixed"
+          }
+        },
+        {
+          "ruleId": "end-of-file-fixer",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] Fixed"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
         {
           "ruleId": "trailing-whitespace",
           "level": "warning",
@@ -500,6 +568,41 @@
           }
         },
         {
+          "ruleId": "fix-byte-order-marker",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] removed byte-order marker"
+          }
+        },
+        {
+          "ruleId": "end-of-file-fixer",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] Fixed"
+          }
+        },
+        {
+          "ruleId": "end-of-file-fixer",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] Fixed"
+          }
+        },
+        {
+          "ruleId": "end-of-file-fixer",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] Fixed"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
           "ruleId": "end-of-file-fixer",
           "level": "warning",
           "message": {
@@ -647,27 +750,6 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "mixed-line-ending",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
-          }
-        },
-        {
           "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
@@ -731,31 +813,10 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
-          }
-        },
-        {
           "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
             "text": "[FIXED] fixed mixed line endings"
-          }
-        },
-        {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
-          }
-        },
-        {
-          "ruleId": "end-of-file-fixer",
-          "level": "warning",
-          "message": {
-            "text": "[FIXED] Fixed"
           }
         },
         {
@@ -1053,31 +1114,598 @@
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
-          "ruleId": "end-of-file-fixer",
+          "ruleId": "mixed-line-ending",
           "level": "warning",
           "message": {
-            "text": "[FIXED] Fixed"
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "check-json",
+          "level": "warning",
+          "message": {
+            "text": "Failed to json decode (Extra data: line 2 column 1 (char 932))"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
+          }
+        },
+        {
+          "ruleId": "mixed-line-ending",
+          "level": "warning",
+          "message": {
+            "text": "[FIXED] fixed mixed line endings"
           }
         },
         {
@@ -1302,7 +1930,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-03-20T17:24:50.805433"
+          "endTimeUtc": "2026-03-22T02:22:04.560835"
         }
       ]
     }

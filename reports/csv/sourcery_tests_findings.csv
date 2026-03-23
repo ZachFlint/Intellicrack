@@ -16,5 +16,4 @@ tests\test_core\test_script_gen.py,266,dict-assign-update-to-union,Merge diction
 tests\test_ui\test_vnc_widget.py,329,simplify-len-comparison,Simplify sequence length comparison
 tests\test_ui\test_win32_embed.py,118,simplify-len-comparison,Simplify sequence length comparison
 tests\test_ui\test_win32_embed.py,139,simplify-len-comparison,Simplify sequence length comparison
-tests\test_ui\test_graph_view.py:220-220 simplify-constant-sum                 
-
+tests\test_ui\test_graph_view.py:220-220 simplify-constant-sum

@@ -23,4 +23,3 @@ src\intellicrack\ui\panels\hex_editor_panel.py,3328,low-code-quality,Low code qu
 src\intellicrack\ui\panels\hex_editor_widget.py,540,low-code-quality,Low code quality found in HexEditorWidget._format_group - 18%
 src\intellicrack\ui\panels\hex_editor_widget.py,614,low-code-quality,Low code quality found in HexEditorWidget._paint_hex_group - 16%
 src\intellicrack\ui\panels\hex_editor_widget.py,896,low-code-quality,Low code quality found in HexEditorWidget.keyPressEvent - 8%
-

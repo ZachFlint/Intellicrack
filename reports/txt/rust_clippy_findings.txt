@@ -9,7 +9,7 @@ warning: unnecessary parentheses around block return value
 help: remove these parentheses
     |
 385 -             ((shifted as i64) >> 40)
-385 +             (shifted as i64) >> 40 
+385 +             (shifted as i64) >> 40
     |
 
 warning: manual `RangeInclusive::contains` implementation
