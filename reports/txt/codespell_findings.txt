@@ -148,6 +148,17 @@ src/intellicrack-hexcore\target\debug\deps\serde_json-9c1e4cfcd0d5b9b1.d:10: ser
 src/intellicrack-hexcore\target\debug\deps\serde_json-9c1e4cfcd0d5b9b1.d:16: ser ==> set
 
 
+4 findings in src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d
+
+src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d:1: inout ==> input, in out
+
+src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d:3: inout ==> input, in out
+
+src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d:5: inout ==> input, in out
+
+src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d:9: inout ==> input, in out
+
+
 4 findings in src/intellicrack-hexcore\target\debug\deps\serde-7d0f1529218a447f.d
 
 src/intellicrack-hexcore\target\debug\deps\serde-7d0f1529218a447f.d:1: ser ==> set
@@ -159,6 +170,17 @@ src/intellicrack-hexcore\target\debug\deps\serde-7d0f1529218a447f.d:5: ser ==> s
 src/intellicrack-hexcore\target\debug\deps\serde-7d0f1529218a447f.d:11: ser ==> set
 
 
+4 findings in src/intellicrack-hexcore\target\release\deps\inout-1bc1f231b1054c07.d
+
+src/intellicrack-hexcore\target\release\deps\inout-1bc1f231b1054c07.d:1: inout ==> input, in out
+
+src/intellicrack-hexcore\target\release\deps\inout-1bc1f231b1054c07.d:3: inout ==> input, in out
+
+src/intellicrack-hexcore\target\release\deps\inout-1bc1f231b1054c07.d:5: inout ==> input, in out
+
+src/intellicrack-hexcore\target\release\deps\inout-1bc1f231b1054c07.d:9: inout ==> input, in out
+
+
 4 findings in src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d
 
 src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d:1: ser ==> set
@@ -168,6 +190,15 @@ src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d:3: ser ==>
 src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d:5: ser ==> set
 
 src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d:11: ser ==> set
+
+
+3 findings in src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d
+
+src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d:1: inout ==> input, in out
+
+src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d:3: inout ==> input, in out
+
+src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d:7: inout ==> input, in out
 
 
 3 findings in src/intellicrack-hexcore\target\debug\deps\serde-b4ec85fafc863481.d
