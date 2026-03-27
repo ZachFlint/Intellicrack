@@ -20,20 +20,6 @@ from openai.types.chat.chat_completion_message_function_tool_call import (
     ChatCompletionMessageFunctionToolCall,
 )
 
-
-if TYPE_CHECKING:
-    import asyncio
-    from collections.abc import AsyncIterator
-
-    from openai.types.chat import (
-        ChatCompletionChunk,
-        ChatCompletionMessageParam,
-        ChatCompletionToolChoiceOptionParam,
-        ChatCompletionToolParam,
-    )
-    from openai.types.chat.chat_completion import ChatCompletion
-    from openai.types.chat.chat_completion_message import ChatCompletionMessage
-
 from ..core.logging import get_logger, log_provider_request
 from ..core.types import (
     AuthenticationError,
@@ -49,6 +35,20 @@ from ..core.types import (
     ToolDefinition,
 )
 from .base import LLMProviderBase, ToolCallBufferManager, create_openai_tool_schema
+
+
+if TYPE_CHECKING:
+    import asyncio
+    from collections.abc import AsyncIterator
+
+    from openai.types.chat import (
+        ChatCompletionChunk,
+        ChatCompletionMessageParam,
+        ChatCompletionToolChoiceOptionParam,
+        ChatCompletionToolParam,
+    )
+    from openai.types.chat.chat_completion import ChatCompletion
+    from openai.types.chat.chat_completion_message import ChatCompletionMessage
 
 
 _ERR_NOT_CONNECTED = "Not connected to OpenAI API"

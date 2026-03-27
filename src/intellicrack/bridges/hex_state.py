@@ -19,11 +19,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from ..core.logging import get_logger
+
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-from ..core.logging import get_logger
 
 
 _logger = get_logger("bridges.hex_state")
@@ -94,6 +94,8 @@ class HexDocumentState:
         self._callbacks: list[_CallbackEntry] = []
         self._lock = threading.Lock()
         self._notify_guard: bool = False
+        self._highlight_rules: dict[str, dict[str, Any]] = {}
+        self._display_mode: str = "hex8"
 
     @property
     def document(self) -> Any | None:
@@ -130,6 +132,25 @@ class HexDocumentState:
             tuple[int, int] | None: Tuple of (start, end) offsets or None if no selection.
         """
         return self._selection
+
+    def get_current_state(self) -> dict[str, Any]:
+        """Get a consistent snapshot of all document state.
+
+        Takes the lock to ensure an atomic read of all fields.
+
+        Returns:
+            dict[str, Any]: Dict with document, file_path, cursor_offset,
+                selection, highlight_rules, display_mode.
+        """
+        with self._lock:
+            return {
+                "document": self._document,
+                "file_path": str(self._file_path) if self._file_path else None,
+                "cursor_offset": self._cursor_offset,
+                "selection": self._selection,
+                "highlight_rules": dict(self._highlight_rules),
+                "display_mode": self._display_mode,
+            }
 
     def register_callback(
         self,
@@ -235,6 +256,59 @@ class HexDocumentState:
             {"start": -1, "end": -1},
             source=source,
         )
+
+    def get_highlight_rules(self) -> dict[str, dict[str, Any]]:
+        """Get a copy of all stored highlight rules.
+
+        Returns:
+            dict[str, dict[str, Any]]: Copy of the highlight rules dict keyed by rule ID.
+        """
+        with self._lock:
+            return dict(self._highlight_rules)
+
+    def set_highlight_rule(self, rule_id: str, rule: dict[str, Any]) -> None:
+        """Store a highlight rule in state.
+
+        Args:
+            rule_id: Unique identifier for the rule.
+            rule: Rule dict with id, condition_type, condition_params, color.
+        """
+        with self._lock:
+            self._highlight_rules[rule_id] = rule
+
+    def remove_highlight_rule_state(self, rule_id: str) -> bool:
+        """Remove a highlight rule from state.
+
+        Args:
+            rule_id: The rule ID to remove.
+
+        Returns:
+            bool: True if the rule was found and removed, False otherwise.
+        """
+        with self._lock:
+            if rule_id in self._highlight_rules:
+                del self._highlight_rules[rule_id]
+                return True
+            return False
+
+    def get_display_mode(self) -> str:
+        """Get the stored display mode.
+
+        Returns:
+            str: Current display mode string.
+        """
+        return self._display_mode
+
+    def set_display_mode_state(self, mode: str) -> None:
+        """Store the display mode in state.
+
+        Named with ``_state`` suffix to avoid collision with the notification
+        method ``notify_display_mode_changed``.
+
+        Args:
+            mode: Display mode string (e.g. ``"hex8"``, ``"hex16_le"``).
+        """
+        self._display_mode = mode
 
     def notify_data_modified(
         self,
@@ -388,20 +462,21 @@ class HexDocumentState:
     ) -> None:
         """Dispatch a state change notification to all registered callbacks.
 
-        Uses a reentrancy guard to prevent infinite notification loops.
-        Callbacks whose source_id matches the source are skipped.
+        Uses a reentrancy guard under the lock to prevent infinite
+        notification loops and TOCTOU races.  Callbacks whose source_id
+        matches the source are skipped.
 
         Args:
             event_type: The event type being emitted.
             data: Event-specific payload dictionary.
             source: Identifier of the originating caller.
         """
-        if self._notify_guard:
-            return
-        self._notify_guard = True
+        with self._lock:
+            if self._notify_guard:
+                return
+            self._notify_guard = True
+            callbacks = list(self._callbacks)
         try:
-            with self._lock:
-                callbacks = list(self._callbacks)
             for entry in callbacks:
                 if entry.source_id and entry.source_id == source:
                     continue
@@ -412,6 +487,7 @@ class HexDocumentState:
                         "callback_error",
                         event_type_value=event_type.value,
                         source_id=entry.source_id,
+                        callback_repr=repr(entry.fn),
                         exc_info=True,
                     )
         finally:

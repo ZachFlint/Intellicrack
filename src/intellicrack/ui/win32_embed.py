@@ -17,17 +17,16 @@ import ctypes
 import ctypes.wintypes
 from typing import TYPE_CHECKING, Any, Final
 
+from PyQt6.QtCore import QTimer
 from PyQt6.QtGui import QWindow
+from PyQt6.QtWidgets import QWidget
 from PyQt6.sip import voidptr
+
+from intellicrack.core.logging import get_logger
 
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-from PyQt6.QtCore import QTimer
-from PyQt6.QtWidgets import QWidget
-
-from intellicrack.core.logging import get_logger
 
 
 _logger = get_logger("ui.win32_embed")

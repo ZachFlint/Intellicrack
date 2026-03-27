@@ -653,7 +653,7 @@ impl HexDocument {
         #[cfg(windows)]
         {
             use data_source::{DataSource, ProcessDataSource};
-            let source = ProcessDataSource::attach(pid, address, size)
+            let source = ProcessDataSource::attach(pid, address, size, false)
                 .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
             let data = source
                 .read(0, size)
@@ -679,7 +679,7 @@ impl HexDocument {
         #[cfg(windows)]
         {
             use data_source::ProcessDataSource;
-            let source = ProcessDataSource::attach(pid, 0, 0)
+            let source = ProcessDataSource::attach(pid, 0, 0, true)
                 .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
             let regions = source
                 .list_regions()

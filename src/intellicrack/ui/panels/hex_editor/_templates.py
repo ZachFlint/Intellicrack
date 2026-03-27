@@ -111,7 +111,7 @@ class TemplatesMixin:
 
         highlight_fn = getattr(self._hex_widget, "highlight_offsets", None)
         if callable(highlight_fn):
-            highlight_fn(highlights)
+            highlight_fn(highlights, "template")
 
     @staticmethod
     def _collect_field_highlights(
@@ -142,7 +142,11 @@ class TemplatesMixin:
             return
 
         self._template_combo.clear()
-        templates = self._document.list_templates()
+        try:
+            templates: list[tuple[str, str]] = self._document.list_templates()
+        except (AttributeError, ValueError, RuntimeError) as exc:
+            logger.debug("list_templates_failed", error=str(exc))
+            templates = []
         for name, _description in templates:
             self._template_combo.addItem(str(name))
 

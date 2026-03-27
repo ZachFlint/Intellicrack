@@ -1084,6 +1084,8 @@ class MainWindow(QMainWindow):
         self.status_update.emit(f"Loading {binary_name}...")
         self._run_async(load())
 
+        self._tool_panel.open_in_hex_editor(str(path))
+
         cached_analysis = self._orchestrator.get_current_bridge_analysis(binary_name)
         if cached_analysis is not None:
             self._tool_panel.display_analysis_result(

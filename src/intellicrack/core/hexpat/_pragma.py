@@ -23,6 +23,9 @@ class PragmaInfo:
         pattern_limit: Maximum total number of patterns placed.
         author: Author name from the pragma, or None.
         description: Description from the pragma, or None.
+        pointer_size: Size of a pointer in bytes (4 for 32-bit, 8 for 64-bit).
+        bitfield_order: Bitfield bit ordering — ``"left_to_right"`` or
+            ``"right_to_left"``, or None for the default.
     """
 
     endian: str | None = None
@@ -34,3 +37,5 @@ class PragmaInfo:
     pattern_limit: int = 0x40000
     author: str | None = None
     description: str | None = None
+    pointer_size: int = 8
+    bitfield_order: str | None = None

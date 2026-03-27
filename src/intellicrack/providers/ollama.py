@@ -21,10 +21,6 @@ from typing import TYPE_CHECKING, Any, cast, override
 
 import httpx
 
-
-if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
-
 from ..core.logging import get_logger, log_provider_request
 from ..core.types import (
     Message,
@@ -38,6 +34,10 @@ from ..core.types import (
     ToolDefinition,
 )
 from .base import LLMProviderBase, create_openai_tool_schema
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 _logger = get_logger("providers.ollama")

@@ -132,6 +132,10 @@ class HexEditorPanel(
         self._state_holder: HexDocumentState | None = None
         self._find_next_btn: QPushButton | None = None
         self._find_prev_btn: QPushButton | None = None
+        self._state_callback: Any | None = None
+        self._search_status_label: QLabel | None = None
+        self._selection_start: int = -1
+        self._selection_end: int = -1
 
         self._pattern_frame: QFrame | None = None
         self._pattern_dsl_editor: QPlainTextEdit | None = None
@@ -161,7 +165,7 @@ class HexEditorPanel(
         self._transform_params_widget: QWidget | None = None
         self._transform_preview_pane: QPlainTextEdit | None = None
         self._transform_pipeline_list: QListWidget | None = None
-        self._transform_pipeline: list[tuple[str, dict[str, str]]] = []
+        self._transform_pipeline: Any = None
         self._transform_nodes_cache: list[Any] = []
 
         self._entropy_graph: EntropyGraphWidget | None = None
@@ -218,6 +222,9 @@ class HexEditorPanel(
         self._add_secondary_button(toolbar, "Find", self._on_search)
         self._find_next_btn = self._add_secondary_button(toolbar, "Next", self._on_find_next)
         self._find_prev_btn = self._add_secondary_button(toolbar, "Prev", self._on_find_prev)
+        self._search_status_label = QLabel("")
+        self._search_status_label.setStyleSheet("color: #AAA; font-size: 11px;")
+        toolbar.addWidget(self._search_status_label)
         toolbar.addSeparator()
 
         self._undo_btn = self._add_secondary_button(toolbar, "Undo", self._on_undo)
@@ -258,6 +265,10 @@ class HexEditorPanel(
         self._hex_widget.cursor_moved.connect(self._on_cursor_moved)
         self._hex_widget.data_changed.connect(self._on_data_changed)
         self._hex_widget.edit_mode_changed.connect(self._on_edit_mode_changed)
+        self._hex_widget.about_to_modify.connect(self._cache_original_byte)
+        self._hex_widget.selection_changed.connect(self._on_selection_changed)
+        if self._encoding_combo is not None:
+            self._encoding_combo.currentTextChanged.connect(self._on_encoding_changed)
         hsplit.addWidget(self._hex_widget)
 
         self._side_tabs = QTabWidget()
@@ -348,6 +359,7 @@ class HexEditorPanel(
         self._side_tabs.addTab(self._exports_tree, "Exports")
 
         self._strings_tree = self._make_tree(["Offset", "Length", "String"])
+        self._strings_tree.itemDoubleClicked.connect(self._on_string_double_clicked)
         self._side_tabs.addTab(self._strings_tree, "Strings")
 
         stats_container = QWidget()
@@ -718,10 +730,79 @@ class HexEditorPanel(
             elif event_type == evt.TEMPLATE_REGISTERED:
                 self._populate_template_combo()
 
+        self._state_callback = on_state_event
         state_holder.register_callback(on_state_event, source_id="panel")
+
+    def _on_selection_changed(self, start: int, end: int) -> None:
+        """Handle selection range changes from the hex widget.
+
+        Updates the data inspector, hash display, and stored selection
+        range for use by sub-panels.
+
+        Args:
+            start: Selection start offset.
+            end: Selection end offset.
+        """
+        self._selection_start = start
+        self._selection_end = end
+        if start >= 0:
+            self._update_data_inspector(start)
+
+    def _on_encoding_changed(self, text: str) -> None:
+        """Handle encoding combo box selection changes.
+
+        Skips separator entries and forwards the encoding name to the
+        hex widget for ASCII column rendering.
+
+        Args:
+            text: The selected combo box text.
+        """
+        if text.startswith("---"):
+            return
+        if self._hex_widget is not None:
+            self._hex_widget.set_encoding(text.lower().replace("-", ""))
+
+    def has_unsaved_changes(self) -> bool:
+        """Check whether the current document has unsaved modifications.
+
+        Returns:
+            bool: True if unsaved changes exist.
+        """
+        if self._document is None:
+            return False
+        is_modified = getattr(self._document, "is_modified", None)
+        if callable(is_modified):
+            return bool(is_modified())
+        return False
+
+    def save(self) -> bool:
+        """Save the current document.
+
+        Returns:
+            bool: True if the save completed successfully.
+        """
+        if self._document is None:
+            return False
+        try:
+            self._on_save()
+        except OSError:
+            return False
+        return True
 
     def _cleanup(self) -> None:
         """Release resources when the panel is closed."""
+        for worker in (self._statistics_worker, self._search_worker, self._numeric_search_worker):
+            if worker is not None and worker.isRunning():
+                worker.requestInterruption()
+                worker.wait(2000)
+        self._statistics_worker = None
+        self._search_worker = None
+        self._numeric_search_worker = None
+
+        if self._state_holder is not None and self._state_callback is not None:
+            self._state_holder.unregister_callback(self._state_callback)
+        self._state_callback = None
+
         self._document = None
         self._file_path = None
         self._original_data_cache.clear()

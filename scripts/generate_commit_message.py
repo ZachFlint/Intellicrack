@@ -58,8 +58,8 @@ _load_env()
 API_KEY_MODEL: Final[str] = os.environ.get(
     "GEMINI_COMMIT_MODEL", "gemini-3.1-flash-lite-preview"
 )
-TRUNCATION_THRESHOLD: Final[int] = 500_000
-FALLBACK_THRESHOLD: Final[int] = 1_000_000
+TRUNCATION_THRESHOLD: Final[int] = 3_500_000
+FALLBACK_THRESHOLD: Final[int] = 3_800_000
 CLI_TIMEOUT_SECONDS: Final[int] = 120
 
 COMMIT_MESSAGE_PROMPT: Final[str] = """Write a git commit message for these changes.
@@ -211,7 +211,7 @@ def _try_gemini_cli(prompt: str) -> str | None:
         "-o", "text",
     ]
 
-    _log("Running Gemini CLI (latest model)...")
+    _log("Running Gemini CLI...")
     try:
         result = subprocess.run(
             cmd,

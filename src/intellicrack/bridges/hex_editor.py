@@ -139,6 +139,7 @@ class HexEditorBridge(ToolBridgeBase):
         self._tool_registry: ToolRegistry | None = None
         self._highlight_rules: dict[str, dict[str, Any]] = {}
         self._display_mode: str = "hex8"
+        self._transform_node_cache: dict[str, Any] | None = None
         self._capabilities = BridgeCapabilities(
             supports_static_analysis=True,
             supports_patching=True,
@@ -629,8 +630,16 @@ class HexEditorBridge(ToolBridgeBase):
                     parameters=[
                         ToolParameter(name="offset", type="integer", description="Byte offset to disassemble from."),
                         ToolParameter(name="count", type="integer", description="Number of instructions.", required=False, default=50),
-                        ToolParameter(name="arch", type="string", description="Architecture (x86, arm, arm64, mips, etc.).", required=False, default="auto"),
-                        ToolParameter(name="mode", type="string", description="Mode (16, 32, 64, arm, thumb).", required=False, default="64"),
+                        ToolParameter(
+                            name="arch",
+                            type="string",
+                            description="Architecture (x86, arm, arm64, mips, etc.).",
+                            required=False,
+                            default="auto",
+                        ),
+                        ToolParameter(
+                            name="mode", type="string", description="Mode (16, 32, 64, arm, thumb).", required=False, default="64"
+                        ),
                     ],
                     returns="List of {address, bytes, mnemonic, operands, size} dicts",
                 ),
@@ -657,7 +666,13 @@ class HexEditorBridge(ToolBridgeBase):
                         ToolParameter(name="name", type="string", description="Transform name (e.g. xor_single, base64_encode)."),
                         ToolParameter(name="offset", type="integer", description="Start offset."),
                         ToolParameter(name="length", type="integer", description="Number of bytes."),
-                        ToolParameter(name="params_json", type="string", description="JSON dict of params. Byte values as hex strings.", required=False, default="{}"),
+                        ToolParameter(
+                            name="params_json",
+                            type="string",
+                            description="JSON dict of params. Byte values as hex strings.",
+                            required=False,
+                            default="{}",
+                        ),
                     ],
                     returns="Hex string of transformed bytes",
                 ),
@@ -730,8 +745,22 @@ class HexEditorBridge(ToolBridgeBase):
                     parameters=[
                         ToolParameter(name="value", type="integer", description="Value to search for."),
                         ToolParameter(name="size", type="integer", description="Byte size: 1, 2, 4, or 8."),
-                        ToolParameter(name="value_type", type="string", description="Value type.", enum=["uint", "int", "float"], required=False, default="uint"),
-                        ToolParameter(name="endianness", type="string", description="Byte order.", enum=["little", "big"], required=False, default="little"),
+                        ToolParameter(
+                            name="value_type",
+                            type="string",
+                            description="Value type.",
+                            enum=["uint", "int", "float"],
+                            required=False,
+                            default="uint",
+                        ),
+                        ToolParameter(
+                            name="endianness",
+                            type="string",
+                            description="Byte order.",
+                            enum=["little", "big"],
+                            required=False,
+                            default="little",
+                        ),
                         ToolParameter(name="alignment", type="integer", description="Search alignment.", required=False, default=1),
                         ToolParameter(name="max_results", type="integer", description="Max results.", required=False, default=100),
                     ],
@@ -741,7 +770,12 @@ class HexEditorBridge(ToolBridgeBase):
                     name="hex_editor.add_highlight_rule",
                     description="Add a byte highlighting rule.",
                     parameters=[
-                        ToolParameter(name="condition_type", type="string", description="Condition type.", enum=["byte_value", "byte_range", "pattern"]),
+                        ToolParameter(
+                            name="condition_type",
+                            type="string",
+                            description="Condition type.",
+                            enum=["byte_value", "byte_range", "pattern"],
+                        ),
                         ToolParameter(name="condition_params", type="string", description="JSON condition parameters."),
                         ToolParameter(name="color", type="string", description="Highlight color hex.", required=False, default="#FFFF00"),
                     ],
@@ -810,8 +844,16 @@ class HexEditorBridge(ToolBridgeBase):
         """
         _ = tool_path
         if self._hexcore_available:
+            if _hexcore_mod is None or not hasattr(_hexcore_mod, "HexDocument"):
+                self._state.connected = False
+                self._state.tool_running = False
+                _logger.warning("hex_editor_probe_failed", backend="intellicrack_hexcore")
+                return
             self._state.connected = True
             self._state.tool_running = True
+            if self._state_holder is not None:
+                self._highlight_rules = self._state_holder.get_highlight_rules()
+                self._display_mode = self._state_holder.get_display_mode()
             _logger.info("hex_editor_initialized", backend="rust_hexcore")
         else:
             self._state.connected = False
@@ -1123,7 +1165,8 @@ class HexEditorBridge(ToolBridgeBase):
         count: int = self._document.replace_bytes(pattern, replacement)
         _logger.debug("bytes_replaced", pattern_length=len(pattern), replacements=count)
         if count > 0 and self._state_holder is not None:
-            self._state_holder.notify_data_modified(0, 0, source="bridge")
+            doc_len: int = self._document.length()
+            self._state_holder.notify_data_modified(0, doc_len, source="bridge")
         return count
 
     async def undo(self) -> bool:
@@ -1137,7 +1180,8 @@ class HexEditorBridge(ToolBridgeBase):
         result: bool = self._document.undo()
         _logger.debug("undo_performed", success=result)
         if result and self._state_holder is not None:
-            self._state_holder.notify_data_modified(0, 0, source="bridge")
+            doc_len: int = self._document.length()
+            self._state_holder.notify_data_modified(0, doc_len, source="bridge")
         return result
 
     async def redo(self) -> bool:
@@ -1151,7 +1195,8 @@ class HexEditorBridge(ToolBridgeBase):
         result: bool = self._document.redo()
         _logger.debug("redo_performed", success=result)
         if result and self._state_holder is not None:
-            self._state_holder.notify_data_modified(0, 0, source="bridge")
+            doc_len: int = self._document.length()
+            self._state_holder.notify_data_modified(0, doc_len, source="bridge")
         return result
 
     async def inspect_data_at(self, offset: int) -> dict[str, str]:
@@ -1247,7 +1292,11 @@ class HexEditorBridge(ToolBridgeBase):
         if self._document is None:
             if not self._hexcore_available or _hexcore_mod is None:
                 return []
-            doc = _hexcore_mod.HexDocument()
+            try:
+                doc = _hexcore_mod.HexDocument()
+            except Exception:
+                _logger.warning("hexdocument_default_init_failed", exc_info=True)
+                return []
             templates = doc.list_templates()
         else:
             templates = self._document.list_templates()
@@ -1384,9 +1433,7 @@ class HexEditorBridge(ToolBridgeBase):
         fields: list[dict[str, Any]] = interpreter.execute(source, self._document, offset)
         _logger.info("pattern_executed", field_count=len(fields), offset=offset)
         if self._state_holder is not None:
-            self._state_holder.notify_pattern_executed(
-                "<inline>", len(fields), source="bridge"
-            )
+            self._state_holder.notify_pattern_executed("<inline>", len(fields), source="bridge")
         return fields
 
     async def execute_pattern_file(
@@ -1425,9 +1472,7 @@ class HexEditorBridge(ToolBridgeBase):
             offset=offset,
         )
         if self._state_holder is not None:
-            self._state_holder.notify_pattern_executed(
-                path.stem, len(fields), source="bridge"
-            )
+            self._state_holder.notify_pattern_executed(path.stem, len(fields), source="bridge")
         return fields
 
     async def list_hexpat_patterns(self) -> list[dict[str, str]]:
@@ -1514,7 +1559,11 @@ class HexEditorBridge(ToolBridgeBase):
         if self._document is None:
             if not self._hexcore_available or _hexcore_mod is None:
                 return []
-            doc = _hexcore_mod.HexDocument()
+            try:
+                doc = _hexcore_mod.HexDocument()
+            except Exception:
+                _logger.warning("hexdocument_default_init_failed", exc_info=True)
+                return []
             templates = doc.list_templates_detailed()
         else:
             templates = self._document.list_templates_detailed()
@@ -1576,6 +1625,7 @@ class HexEditorBridge(ToolBridgeBase):
             start, end = self._selection
             length = end - start + 1
         else:
+            _logger.warning("copy_as_no_selection", cursor_offset=self._cursor_offset)
             start = self._cursor_offset
             length = 1
 
@@ -1713,16 +1763,17 @@ class HexEditorBridge(ToolBridgeBase):
             raise RuntimeError(msg)
 
         if path is not None:
+            saved_path = path
             self._document.save(path)
         else:
             file_path = self._document.file_path()
             if file_path is not None:
+                saved_path = file_path
                 self._document.save(file_path)
             else:
                 msg = "no file path; use save_as"
                 raise RuntimeError(msg)
 
-        saved_path = path or self._document.file_path() or ""
         _logger.info("file_saved", path=saved_path)
         if self._state_holder is not None:
             self._state_holder.notify_document_saved(str(saved_path), source="bridge")
@@ -1824,11 +1875,13 @@ class HexEditorBridge(ToolBridgeBase):
                 inspection = self._document.inspect_at(cursor)
                 if isinstance(inspection, dict):
                     context["inspection"] = {k: str(v) for k, v in cast("dict[str, object]", inspection).items()}
-            except Exception:
-                context["inspection"] = {}
+            except Exception as exc:
+                _logger.warning("inspect_at_failed", offset=cursor, exc_info=True)
+                context["inspection"] = {"error": str(exc)}
 
             if self._selection is not None:
                 sel_start, sel_end = self._selection
+                sel_start, sel_end = min(sel_start, sel_end), max(sel_start, sel_end)
                 sel_len = sel_end - sel_start + 1
                 capped = min(sel_len, include_bytes)
                 sel_raw = self._document.read(sel_start, capped)
@@ -1874,18 +1927,26 @@ class HexEditorBridge(ToolBridgeBase):
             raise RuntimeError(msg)
 
         file_path_str = self._document.file_path()
+        tmp_path: str | None = None
         if file_path_str is None:
             tmp_fd, tmp_path = tempfile.mkstemp(suffix=".bin")
             os.close(tmp_fd)
             self._document.save(tmp_path)
             file_path_str = tmp_path
 
-        copy_fn = getattr(sandbox_bridge, "copy_to_sandbox", None)
-        if callable(copy_fn):
-            if _inspect_mod.iscoroutinefunction(copy_fn):
-                await copy_fn(file_path_str, dest_path, sandbox_type)
-            else:
-                await asyncio.to_thread(copy_fn, file_path_str, dest_path, sandbox_type)
+        try:
+            copy_fn = getattr(sandbox_bridge, "copy_to_sandbox", None)
+            if callable(copy_fn):
+                if _inspect_mod.iscoroutinefunction(copy_fn):
+                    await copy_fn(file_path_str, dest_path, sandbox_type)
+                else:
+                    await asyncio.to_thread(copy_fn, file_path_str, dest_path, sandbox_type)
+        finally:
+            if tmp_path is not None:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    _logger.debug("tmp_file_cleanup_failed", path=tmp_path)
 
         _logger.info("saved_to_sandbox", dest=dest_path, sandbox_type=sandbox_type)
         return {"sandbox_path": dest_path, "status": "copied"}
@@ -2101,6 +2162,7 @@ class HexEditorBridge(ToolBridgeBase):
         doc_len: int = self._document.length()
         read_len = min(max_bytes, doc_len - offset)
         if read_len <= 0:
+            _logger.info("disassemble_out_of_bounds", offset=offset, doc_len=doc_len)
             return []
 
         raw = self._document.read(offset, read_len)
@@ -2166,10 +2228,7 @@ class HexEditorBridge(ToolBridgeBase):
                 "tags": m.tags,
                 "meta": m.meta,
                 "namespace": m.namespace,
-                "strings": [
-                    {"identifier": s.identifier, "offset": s.offset, "data": s.data.hex()}
-                    for s in m.strings
-                ],
+                "strings": [{"identifier": s.identifier, "offset": s.offset, "data": s.data.hex()} for s in m.strings],
             }
             for m in raw_matches
         ]
@@ -2214,10 +2273,7 @@ class HexEditorBridge(ToolBridgeBase):
                 "tags": m.tags,
                 "meta": m.meta,
                 "namespace": m.namespace,
-                "strings": [
-                    {"identifier": s.identifier, "offset": s.offset, "data": s.data.hex()}
-                    for s in m.strings
-                ],
+                "strings": [{"identifier": s.identifier, "offset": s.offset, "data": s.data.hex()} for s in m.strings],
             }
             for m in raw_matches
         ]
@@ -2259,6 +2315,9 @@ class HexEditorBridge(ToolBridgeBase):
             else:
                 params[k] = v
 
+        if not hasattr(self._document, "transform_data"):
+            msg = "backend does not support transform_data"
+            raise RuntimeError(msg)
         result = self._document.transform_data(name, offset, length, params)
         if isinstance(result, bytes):
             data = result
@@ -2307,7 +2366,9 @@ class HexEditorBridge(ToolBridgeBase):
         else:
             data = bytes(cast("list[int]", raw))
 
-        node_map = {n.name: n for n in _get_all_transform_nodes()}
+        if self._transform_node_cache is None:
+            self._transform_node_cache = {n.name: n for n in _get_all_transform_nodes()}
+        node_map = self._transform_node_cache
         pipeline = _TransformPipeline()
         for step in steps:
             step_name = str(step.get("name", ""))
@@ -2351,9 +2412,10 @@ class HexEditorBridge(ToolBridgeBase):
 
         if hasattr(self._document, "decode_text"):
             result: str = self._document.decode_text(offset, length, encoding)
-            _logger.debug("text_decoded", offset=hex(offset), length=length, encoding=encoding)
+            _logger.debug("text_decoded", offset=hex(offset), length=length, encoding=encoding, backend="rust")
             return result
 
+        _logger.info("decode_text_fallback_used", offset=hex(offset), length=length, encoding=encoding)
         raw = self._document.read(offset, length)
         if isinstance(raw, bytes):
             data = raw
@@ -2362,7 +2424,7 @@ class HexEditorBridge(ToolBridgeBase):
         else:
             data = bytes(cast("list[int]", raw))
         decoded = data.decode(encoding, errors="replace")
-        _logger.debug("text_decoded", offset=hex(offset), length=length, encoding=encoding)
+        _logger.debug("text_decoded", offset=hex(offset), length=length, encoding=encoding, backend="python")
         return decoded
 
     async def list_encodings(self) -> list[dict[str, str]]:
@@ -2430,9 +2492,7 @@ class HexEditorBridge(ToolBridgeBase):
             raise RuntimeError(msg)
 
         if hasattr(self._document, "compute_hash_custom_crc"):
-            result: str = self._document.compute_hash_custom_crc(
-                start, end, poly, init, width, refin, refout, xorout
-            )
+            result: str = self._document.compute_hash_custom_crc(start, end, poly, init, width, refin, refout, xorout)
             _logger.debug("custom_crc_computed", width=width)
             return result
 
@@ -2466,11 +2526,7 @@ class HexEditorBridge(ToolBridgeBase):
             b = reflect(byte, 8) if refin else byte
             crc ^= b << (width - 8)
             for _ in range(8):
-                crc = (
-                    ((crc << 1) ^ poly) & mask
-                    if crc & (1 << (width - 1))
-                    else (crc << 1) & mask
-                )
+                crc = ((crc << 1) ^ poly) & mask if crc & (1 << (width - 1)) else (crc << 1) & mask
         if refout:
             crc = reflect(crc, width)
         crc ^= xorout
@@ -2501,6 +2557,9 @@ class HexEditorBridge(ToolBridgeBase):
             raw = self._document.export_patches_ips32()
         elif hasattr(self._document, "export_patches_ips"):
             raw = self._document.export_patches_ips()
+        elif hasattr(self._document, "get_patches"):
+            patches: list[tuple[int, bytes]] = self._document.get_patches()
+            raw = self._build_ips_from_patches(patches, ips32=(patch_format == "ips32"))
         else:
             msg = f"patch export format '{patch_format}' not supported by backend"
             raise RuntimeError(msg)
@@ -2525,14 +2584,102 @@ class HexEditorBridge(ToolBridgeBase):
             raise RuntimeError(msg)
 
         raw = base64.b64decode(data_b64)
-        if not hasattr(self._document, "import_patches_ips"):
-            msg = "patch import not supported by backend"
-            raise RuntimeError(msg)
+        if hasattr(self._document, "import_patches_ips"):
+            count: int = self._document.import_patches_ips(raw)
+        else:
+            count = self._apply_ips_patches(raw)
 
-        count: int = self._document.import_patches_ips(raw)
         _logger.debug("patches_imported", count=count)
         if count > 0 and self._state_holder is not None:
-            self._state_holder.notify_data_modified(0, 0, source="bridge")
+            doc_len: int = self._document.length()
+            self._state_holder.notify_data_modified(0, doc_len, source="bridge")
+        return count
+
+    @staticmethod
+    def _build_ips_from_patches(
+        patches: list[tuple[int, bytes]],
+        *,
+        ips32: bool = False,
+    ) -> bytes:
+        """Build IPS or IPS32 binary data from a list of patch tuples.
+
+        Args:
+            patches: List of (offset, data) tuples.
+            ips32: If True, produce IPS32 format; otherwise standard IPS.
+
+        Returns:
+            bytes: Complete IPS/IPS32 binary blob.
+        """
+        parts: list[bytes] = []
+        if ips32:
+            parts.append(b"IPS32")
+        else:
+            parts.append(b"PATCH")
+        for offset, data in patches:
+            size = len(data)
+            if ips32:
+                parts.append(struct.pack(">I", offset))
+                parts.append(struct.pack(">H", size))
+            else:
+                parts.append(struct.pack(">I", offset)[1:])
+                parts.append(struct.pack(">H", size))
+            parts.append(data)
+        if ips32:
+            parts.append(b"EEOF")
+        else:
+            parts.append(b"EOF")
+        return b"".join(parts)
+
+    def _apply_ips_patches(self, raw: bytes) -> int:
+        """Parse and apply IPS/IPS32 patches to the current document.
+
+        Args:
+            raw: Raw IPS or IPS32 binary data.
+
+        Returns:
+            int: Number of patches applied.
+
+        Raises:
+            RuntimeError: If the header is invalid.
+        """
+        pos = 0
+        if raw[:5] == b"IPS32":
+            ips32 = True
+            pos = 5
+            eof_marker = b"EEOF"
+        elif raw[:5] == b"PATCH":
+            ips32 = False
+            pos = 5
+            eof_marker = b"EOF"
+        else:
+            msg = "invalid IPS header"
+            raise RuntimeError(msg)
+
+        count = 0
+        while pos < len(raw):
+            if raw[pos : pos + len(eof_marker)] == eof_marker:
+                break
+            if ips32:
+                if pos + 6 > len(raw):
+                    break
+                offset = struct.unpack(">I", raw[pos : pos + 4])[0]
+                size = struct.unpack(">H", raw[pos + 4 : pos + 6])[0]
+                pos += 6
+            else:
+                if pos + 5 > len(raw):
+                    break
+                offset = struct.unpack(">I", b"\x00" + raw[pos : pos + 3])[0]
+                size = struct.unpack(">H", raw[pos + 3 : pos + 5])[0]
+                pos += 5
+            if pos + size > len(raw):
+                break
+            patch_data = raw[pos : pos + size]
+            pos += size
+            if self._document is not None and hasattr(self._document, "write_bytes"):
+                self._document.write_bytes(offset, list(patch_data))
+            elif self._document is not None:
+                self._document.overwrite(offset, list(patch_data))
+            count += 1
         return count
 
     async def search_numeric(
@@ -2661,7 +2808,8 @@ class HexEditorBridge(ToolBridgeBase):
         }
         self._highlight_rules[rule_id] = rule
         _logger.debug("highlight_rule_added", rule_id=rule_id, condition_type=condition_type)
-        if self._state_holder is not None and hasattr(self._state_holder, "notify_highlight_rule_added"):
+        if self._state_holder is not None:
+            self._state_holder.set_highlight_rule(rule_id, rule)
             self._state_holder.notify_highlight_rule_added(rule, source="bridge")
         return rule_id
 
@@ -2678,7 +2826,8 @@ class HexEditorBridge(ToolBridgeBase):
             return False
         del self._highlight_rules[rule_id]
         _logger.debug("highlight_rule_removed", rule_id=rule_id)
-        if self._state_holder is not None and hasattr(self._state_holder, "notify_highlight_rule_removed"):
+        if self._state_holder is not None:
+            self._state_holder.remove_highlight_rule_state(rule_id)
             self._state_holder.notify_highlight_rule_removed(rule_id, source="bridge")
         return True
 
@@ -2704,7 +2853,8 @@ class HexEditorBridge(ToolBridgeBase):
         """
         self._display_mode = mode
         _logger.debug("display_mode_set", mode=mode)
-        if self._state_holder is not None and hasattr(self._state_holder, "notify_display_mode_changed"):
+        if self._state_holder is not None:
+            self._state_holder.set_display_mode_state(mode)
             self._state_holder.notify_display_mode_changed(mode, source="bridge")
         return True
 

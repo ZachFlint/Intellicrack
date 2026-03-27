@@ -5106,6 +5106,36 @@ Returns:
 Raises:
     RuntimeError: If no document is open or import is unsupported.</data>
     </node>
+    <node id="src.intellicrack.bridges.hex_editor._build_ips_from_patches">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_build_ips_from_patches</data>
+      <data key="d5">['patches']</data>
+      <data key="d4">Build IPS or IPS32 binary data from a list of patch tuples.
+
+Args:
+    patches: List of (offset, data) tuples.
+    ips32: If True, produce IPS32 format; otherwise standard IPS.
+
+Returns:
+    bytes: Complete IPS/IPS32 binary blob.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_editor._apply_ips_patches">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_apply_ips_patches</data>
+      <data key="d5">['self', 'raw']</data>
+      <data key="d4">Parse and apply IPS/IPS32 patches to the current document.
+
+Args:
+    raw: Raw IPS or IPS32 binary data.
+
+Returns:
+    int: Number of patches applied.
+
+Raises:
+    RuntimeError: If the header is invalid.</data>
+    </node>
     <node id="src.intellicrack.bridges.hex_editor.search_numeric">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -5305,6 +5335,19 @@ Returns:
 Returns:
     tuple[int, int] | None: Tuple of (start, end) offsets or None if no selection.</data>
     </node>
+    <node id="src.intellicrack.bridges.hex_state.get_current_state">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_current_state</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Get a consistent snapshot of all document state.
+
+Takes the lock to ensure an atomic read of all fields.
+
+Returns:
+    dict[str, Any]: Dict with document, file_path, cursor_offset,
+        selection, highlight_rules, display_mode.</data>
+    </node>
     <node id="src.intellicrack.bridges.hex_state.register_callback">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -5372,6 +5415,63 @@ Args:
 
 Args:
     source: Identifier of the caller for loop-guard filtering.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_state.get_highlight_rules">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_highlight_rules</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Get a copy of all stored highlight rules.
+
+Returns:
+    dict[str, dict[str, Any]]: Copy of the highlight rules dict keyed by rule ID.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_state.set_highlight_rule">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_highlight_rule</data>
+      <data key="d5">['self', 'rule_id', 'rule']</data>
+      <data key="d4">Store a highlight rule in state.
+
+Args:
+    rule_id: Unique identifier for the rule.
+    rule: Rule dict with id, condition_type, condition_params, color.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_state.remove_highlight_rule_state">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">remove_highlight_rule_state</data>
+      <data key="d5">['self', 'rule_id']</data>
+      <data key="d4">Remove a highlight rule from state.
+
+Args:
+    rule_id: The rule ID to remove.
+
+Returns:
+    bool: True if the rule was found and removed, False otherwise.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_state.get_display_mode">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">get_display_mode</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Get the stored display mode.
+
+Returns:
+    str: Current display mode string.</data>
+    </node>
+    <node id="src.intellicrack.bridges.hex_state.set_display_mode_state">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_display_mode_state</data>
+      <data key="d5">['self', 'mode']</data>
+      <data key="d4">Store the display mode in state.
+
+Named with ``_state`` suffix to avoid collision with the notification
+method ``notify_display_mode_changed``.
+
+Args:
+    mode: Display mode string (e.g. ``"hex8"``, ``"hex16_le"``).</data>
     </node>
     <node id="src.intellicrack.bridges.hex_state.notify_data_modified">
       <data key="d0">function</data>
@@ -5470,8 +5570,9 @@ Args:
       <data key="d5">['self', 'event_type', 'data']</data>
       <data key="d4">Dispatch a state change notification to all registered callbacks.
 
-Uses a reentrancy guard to prevent infinite notification loops.
-Callbacks whose source_id matches the source are skipped.
+Uses a reentrancy guard under the lock to prevent infinite
+notification loops and TOCTOU races.  Callbacks whose source_id
+matches the source are skipped.
 
 Args:
     event_type: The event type being emitted.
@@ -9262,6 +9363,13 @@ Returns:
 Raises:
     HexPatError: On unexpected tokens.</data>
     </node>
+    <node id="src.intellicrack.core.hexpat_compiler._skip_construct">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_skip_construct</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Skip an unsupported construct by consuming tokens until balanced.</data>
+    </node>
     <node id="src.intellicrack.core.hexpat_compiler._parse_struct">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -9287,7 +9395,7 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">_parse_enum</data>
       <data key="d5">['self']</data>
-      <data key="d4">Parse an enum declaration.
+      <data key="d4">Parse an enum declaration with optional auto-incrementing values.
 
 Returns:
     EnumDecl: Parsed enum declaration.</data>
@@ -9443,7 +9551,7 @@ Raises:
       <data key="d1">python</data>
       <data key="d3">generate</data>
       <data key="d5">['self']</data>
-      <data key="d4">Generate the JSON template dict from the first struct declaration.
+      <data key="d4">Generate the JSON template dict from all declarations.
 
 Returns:
     dict[str, Any]: JSON-serializable template definition.
@@ -14407,8 +14515,8 @@ Attributes:
     at_offset: Optional explicit offset expression for the placement.
     annotations: Tuple of name-value pairs representing placement attributes.
     in_section: Optional expression naming the section the placement belongs to.
-    line: Source line number where this node appears.
-    column: Source column numb...</data>
+    array_size: Optional expression giving the fixed array length.
+    while_conditi...</data>
     </node>
     <node id="src.intellicrack.core.hexpat.ast_nodes.FunctionParam">
       <data key="d0">class</data>
@@ -15050,10 +15158,10 @@ Args:
 Attributes:
     value: The value being returned.</data>
     </node>
-    <node id="src.intellicrack.core.hexpat.evaluator._BuiltinCallable">
+    <node id="src.intellicrack.core.hexpat.evaluator.BuiltinCallable">
       <data key="d0">class</data>
       <data key="d1">python</data>
-      <data key="d3">_BuiltinCallable</data>
+      <data key="d3">BuiltinCallable</data>
       <data key="d4">Wrapper for a built-in Python callable stored as a PatternValue.
 
 Attributes:
@@ -15285,6 +15393,16 @@ Args:
 
 Raises:
     HexPatTypeError: If a backing type for an enum cannot be resolved.</data>
+    </node>
+    <node id="src.intellicrack.core.hexpat.evaluator._register_namespaced">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_register_namespaced</data>
+      <data key="d5">['self', 'name']</data>
+      <data key="d4">Register a namespace-qualified alias for a type when inside a namespace.
+
+Args:
+    name: The unqualified type name.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.evaluator._register_enum">
       <data key="d0">function</data>
@@ -15873,6 +15991,45 @@ Args:
 Returns:
     The size in bytes, or 0 for variable-size or unknown types.</data>
     </node>
+    <node id="src.intellicrack.core.hexpat.evaluator._sizeof_struct">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_sizeof_struct</data>
+      <data key="d5">['self', 'info']</data>
+      <data key="d4">Compute the total byte size of a struct type.
+
+Args:
+    info: The resolved struct type info.
+
+Returns:
+    The sum of all field sizes in bytes.</data>
+    </node>
+    <node id="src.intellicrack.core.hexpat.evaluator._sizeof_union">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_sizeof_union</data>
+      <data key="d5">['self', 'info']</data>
+      <data key="d4">Compute the byte size of a union type (maximum field size).
+
+Args:
+    info: The resolved union type info.
+
+Returns:
+    The size of the largest field in bytes.</data>
+    </node>
+    <node id="src.intellicrack.core.hexpat.evaluator._sizeof_bitfield">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_sizeof_bitfield</data>
+      <data key="d5">['self', 'info']</data>
+      <data key="d4">Compute the byte size of a bitfield type.
+
+Args:
+    info: The resolved bitfield type info.
+
+Returns:
+    The total size rounded up to the nearest byte.</data>
+    </node>
     <node id="src.intellicrack.core.hexpat.evaluator._eval_cast">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -15920,7 +16077,7 @@ Returns:
       <data key="d4">Construct the built-in function table.
 
 Returns:
-    A dict mapping function name to a _BuiltinCallable wrapper.</data>
+    A dict mapping function name to a BuiltinCallable wrapper.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.evaluator.builtin_sizeof">
       <data key="d0">function</data>
@@ -17185,13 +17342,14 @@ Args:
     current_file: Path of the file containing the include.
     is_angle: True for angle-bracket includes, False for quoted.
     line: Source line number of the include directive.
+    depth: Current include nesting depth.
 
 Returns:
     The preprocessed contents of the included file, or None if
     the file was already included with #pragma once.
 
 Raises:
-    HexPatPreprocessorError: If the included file cannot be found.</data>
+    HexPatPreprocessorError: If t...</data>
     </node>
     <node id="src.intellicrack.core.hexpat.preprocessor._process_conditionals">
       <data key="d0">function</data>
@@ -17252,6 +17410,19 @@ Attributes:
 Args:
     data_reader: The DataReader wrapping the target binary.</data>
     </node>
+    <node id="src.intellicrack.core.hexpat.stdlib._unwrap">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_unwrap</data>
+      <data key="d5">['arg']</data>
+      <data key="d4">Extract the raw value from a PatternValue argument.
+
+Args:
+    arg: A PatternValue or raw value.
+
+Returns:
+    The unwrapped raw value.</data>
+    </node>
     <node id="src.intellicrack.core.hexpat.stdlib.set_array_index">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -17283,7 +17454,7 @@ Args:
     *args: (offset: int, size: int) where size is byte count (1,2,4,8,16).
 
 Returns:
-    The unsigned integer value.
+    A PatternValue containing the unsigned integer value.
 
 Raises:
     HexPatRuntimeError: If the read is out of bounds.</data>
@@ -17299,7 +17470,7 @@ Args:
     *args: (offset: int, size: int) where size is byte count.
 
 Returns:
-    The signed integer value.
+    A PatternValue containing the signed integer value.
 
 Raises:
     HexPatRuntimeError: If the read is out of bounds.</data>
@@ -17315,7 +17486,7 @@ Args:
     *args: (offset: int, length: int).
 
 Returns:
-    The decoded string.
+    A PatternValue containing the decoded string.
 
 Raises:
     HexPatRuntimeError: If the read is out of bounds.</data>
@@ -17325,13 +17496,13 @@ Raises:
       <data key="d1">python</data>
       <data key="d3">_mem_find_sequence</data>
       <data key="d5">['self']</data>
-      <data key="d4">Find a byte sequence in binary data.
+      <data key="d4">Find a byte sequence in a range of binary data.
 
 Args:
     *args: (start: int, end: int, pattern_bytes...).
 
 Returns:
-    The offset of the first match, or -1 if not found.</data>
+    A PatternValue containing the offset of the first match, or -1.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._mem_size">
       <data key="d0">function</data>
@@ -17341,7 +17512,7 @@ Returns:
       <data key="d4">Get the total size of the binary data.
 
 Returns:
-    The data size in bytes.</data>
+    A PatternValue containing the data size in bytes.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._mem_base_address">
       <data key="d0">function</data>
@@ -17351,189 +17522,189 @@ Returns:
       <data key="d4">Get the base address (always 0 for file-based analysis).
 
 Returns:
-    The base address.</data>
+    A PatternValue containing the base address.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._string_length">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_string_length</data>
-      <data key="d5">[]</data>
+      <data key="d5">['self']</data>
       <data key="d4">Get the length of a string.
 
 Args:
     *args: (s: str).
 
 Returns:
-    The string length.</data>
+    A PatternValue containing the string length.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._string_at">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_string_at</data>
-      <data key="d5">[]</data>
+      <data key="d5">['self']</data>
       <data key="d4">Get a character at an index.
 
 Args:
     *args: (s: str, index: int).
 
 Returns:
-    The character at the given index.</data>
+    A PatternValue containing the character at the given index.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._string_substr">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_string_substr</data>
-      <data key="d5">[]</data>
+      <data key="d5">['self']</data>
       <data key="d4">Extract a substring.
 
 Args:
     *args: (s: str, start: int, length: int).
 
 Returns:
-    The extracted substring.</data>
+    A PatternValue containing the extracted substring.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._string_contains">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_string_contains</data>
-      <data key="d5">[]</data>
+      <data key="d5">['self']</data>
       <data key="d4">Check if a string contains a substring.
 
 Args:
     *args: (s: str, sub: str).
 
 Returns:
-    True if the substring is found.</data>
+    A PatternValue containing True if the substring is found.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._string_starts_with">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_string_starts_with</data>
-      <data key="d5">[]</data>
+      <data key="d5">['self']</data>
       <data key="d4">Check if a string starts with a prefix.
 
 Args:
     *args: (s: str, prefix: str).
 
 Returns:
-    True if the string starts with the prefix.</data>
+    A PatternValue containing True if the string starts with the prefix.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._string_ends_with">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_string_ends_with</data>
-      <data key="d5">[]</data>
+      <data key="d5">['self']</data>
       <data key="d4">Check if a string ends with a suffix.
 
 Args:
     *args: (s: str, suffix: str).
 
 Returns:
-    True if the string ends with the suffix.</data>
+    A PatternValue containing True if the string ends with the suffix.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._string_to_int">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_string_to_int</data>
-      <data key="d5">[]</data>
+      <data key="d5">['self']</data>
       <data key="d4">Parse a string as an integer.
 
 Args:
     *args: (s: str, base: int).
 
 Returns:
-    The parsed integer value.</data>
+    A PatternValue containing the parsed integer value.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._string_reverse">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_string_reverse</data>
-      <data key="d5">[]</data>
+      <data key="d5">['self']</data>
       <data key="d4">Reverse a string.
 
 Args:
     *args: (s: str).
 
 Returns:
-    The reversed string.</data>
+    A PatternValue containing the reversed string.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._math_abs">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_math_abs</data>
-      <data key="d5">[]</data>
+      <data key="d5">['self']</data>
       <data key="d4">Compute the absolute value.
 
 Args:
     *args: (x: int | float).
 
 Returns:
-    The absolute value.</data>
+    A PatternValue containing the absolute value.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._math_min">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_math_min</data>
-      <data key="d5">[]</data>
+      <data key="d5">['self']</data>
       <data key="d4">Return the minimum of two values.
 
 Args:
     *args: (a: int | float, b: int | float).
 
 Returns:
-    The smaller value.</data>
+    A PatternValue containing the smaller value.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._math_max">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_math_max</data>
-      <data key="d5">[]</data>
+      <data key="d5">['self']</data>
       <data key="d4">Return the maximum of two values.
 
 Args:
     *args: (a: int | float, b: int | float).
 
 Returns:
-    The larger value.</data>
+    A PatternValue containing the larger value.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._math_floor">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_math_floor</data>
-      <data key="d5">[]</data>
+      <data key="d5">['self']</data>
       <data key="d4">Compute the floor of a value.
 
 Args:
     *args: (x: float).
 
 Returns:
-    The floor as an integer.</data>
+    A PatternValue containing the floor as an integer.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._math_ceil">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_math_ceil</data>
-      <data key="d5">[]</data>
+      <data key="d5">['self']</data>
       <data key="d4">Compute the ceiling of a value.
 
 Args:
     *args: (x: float).
 
 Returns:
-    The ceiling as an integer.</data>
+    A PatternValue containing the ceiling as an integer.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._math_log2">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_math_log2</data>
-      <data key="d5">[]</data>
+      <data key="d5">['self']</data>
       <data key="d4">Compute the base-2 logarithm.
 
 Args:
     *args: (x: float).
 
 Returns:
-    The log base 2 value.
+    A PatternValue containing the log base 2 value.
 
 Raises:
     HexPatRuntimeError: If the value is non-positive.</data>
@@ -17542,27 +17713,27 @@ Raises:
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_math_pow</data>
-      <data key="d5">[]</data>
+      <data key="d5">['self']</data>
       <data key="d4">Compute a power.
 
 Args:
     *args: (base: float, exp: float).
 
 Returns:
-    base raised to the power of exp.</data>
+    A PatternValue containing base raised to the power of exp.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._math_sqrt">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_math_sqrt</data>
-      <data key="d5">[]</data>
+      <data key="d5">['self']</data>
       <data key="d4">Compute the square root.
 
 Args:
     *args: (x: float).
 
 Returns:
-    The square root.
+    A PatternValue containing the square root.
 
 Raises:
     HexPatRuntimeError: If the value is negative.</data>
@@ -17575,7 +17746,10 @@ Raises:
       <data key="d4">Set the default endianness.
 
 Args:
-    *args: (endian: int) where 0=little, 1=big.</data>
+    *args: (endian: int) where 0=little, 1=big.
+
+Returns:
+    A PatternValue containing None.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._core_get_endian">
       <data key="d0">function</data>
@@ -17585,7 +17759,7 @@ Args:
       <data key="d4">Get the current endianness.
 
 Returns:
-    0 for little-endian, 1 for big-endian.</data>
+    A PatternValue containing 0 for little-endian, 1 for big-endian.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._core_array_index">
       <data key="d0">function</data>
@@ -17595,30 +17769,33 @@ Returns:
       <data key="d4">Get the current array iteration index.
 
 Returns:
-    The current array index.</data>
+    A PatternValue containing the current array index.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._io_print">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_io_print</data>
-      <data key="d5">[]</data>
+      <data key="d5">['self']</data>
       <data key="d4">Print a message to the log.
 
 Args:
-    *args: Values to print.</data>
+    *args: Values to print.
+
+Returns:
+    A PatternValue containing None.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._io_format">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_io_format</data>
-      <data key="d5">[]</data>
+      <data key="d5">['self']</data>
       <data key="d4">Format a string with arguments.
 
 Args:
     *args: (format_str: str, ...values).
 
 Returns:
-    The formatted string.</data>
+    A PatternValue containing the formatted string.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._read_struct_field">
       <data key="d0">function</data>
@@ -17631,7 +17808,7 @@ Args:
     *args: (offset: int, size: int).
 
 Returns:
-    The unsigned integer value.</data>
+    A PatternValue containing the unsigned integer value.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.tokens">
       <data key="d0">module</data>
@@ -27741,6 +27918,16 @@ Returns:
 Returns:
     HexEditorPanelProtocol | None: The created HexEditorPanel or None on failure.</data>
     </node>
+    <node id="src.intellicrack.ui.tools.add_hex_tools_tab">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">add_hex_tools_tab</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Add the hex analysis tools panel as a tab.
+
+Returns:
+    QWidget | None: The created HexToolsPanel or None on failure.</data>
+    </node>
     <node id="src.intellicrack.ui.tools.add_x64dbg_tab">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -28219,6 +28406,10 @@ Args:
       <data key="d3">_on_hex_context_push</data>
       <data key="d5">['self', 'context']</data>
       <data key="d4">Handle hex editor context push for AI integration.
+
+Formats the hex editor context into a readable analysis prompt
+and emits it via the ``hex_context_ready`` signal for the chat
+panel to consume.
 
 Args:
     context: Hex editor context dictionary.</data>
@@ -32199,11 +32390,43 @@ Args:
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">highlight_offsets</data>
-      <data key="d5">['self', 'highlights']</data>
+      <data key="d5">['self', 'highlights', 'source']</data>
       <data key="d4">Set highlight regions for template/bookmark visualization.
 
+Each source maintains its own set of highlights. The merged result
+of all sources is used for rendering.
+
 Args:
-    highlights: List of (offset, length, color_hex_string) tuples.</data>
+    highlights: List of (offset, length, color_hex_string) tuples.
+    source: Identifier for the highlight source (e.g. "search",
+        "yara", "template", "bookmark").</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_widget.clear_highlights">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">clear_highlights</data>
+      <data key="d5">['self', 'source']</data>
+      <data key="d4">Remove all highlights from a specific source.
+
+Args:
+    source: The source identifier whose highlights should be cleared.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_widget._rebuild_highlights">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_rebuild_highlights</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Merge all per-source highlights into the flat rendering list.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_widget.set_encoding">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_encoding</data>
+      <data key="d5">['self', 'encoding']</data>
+      <data key="d4">Set the text encoding used for the ASCII column display.
+
+Args:
+    encoding: Encoding name (e.g. "ascii", "utf-8", "latin-1").</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_tools_panel">
       <data key="d0">module</data>
@@ -32335,6 +32558,32 @@ Returns:
 
 Args:
     event: The paint event.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_tools_panel.set_selected_bytes">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_selected_bytes</data>
+      <data key="d5">['self', 'data', 'offset']</data>
+      <data key="d4">Update tool sub-tabs with externally selected bytes.
+
+Populates the base converter with the hex value of the selected
+bytes, the IEEE 754 inspector with float/double interpretation,
+and the byte swapper with the raw hex.
+
+Args:
+    data: The selected bytes from the hex editor.
+    offset: The starting offset of the selection.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_tools_panel.set_cursor_value">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">set_cursor_value</data>
+      <data key="d5">['self', 'offset', 'byte_val']</data>
+      <data key="d4">Update tool sub-tabs with a single cursor byte.
+
+Args:
+    offset: The byte offset in the document.
+    byte_val: The byte value at the cursor position.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_tools_panel._build_demangler_tab">
       <data key="d0">function</data>
@@ -35305,6 +35554,53 @@ Args:
 Args:
     state_holder: The shared HexDocumentState instance.</data>
     </node>
+    <node id="src.intellicrack.ui.panels.hex_editor.panel._on_selection_changed">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_selection_changed</data>
+      <data key="d5">['self', 'start', 'end']</data>
+      <data key="d4">Handle selection range changes from the hex widget.
+
+Updates the data inspector, hash display, and stored selection
+range for use by sub-panels.
+
+Args:
+    start: Selection start offset.
+    end: Selection end offset.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor.panel._on_encoding_changed">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_on_encoding_changed</data>
+      <data key="d5">['self', 'text']</data>
+      <data key="d4">Handle encoding combo box selection changes.
+
+Skips separator entries and forwards the encoding name to the
+hex widget for ASCII column rendering.
+
+Args:
+    text: The selected combo box text.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor.panel.has_unsaved_changes">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">has_unsaved_changes</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Check whether the current document has unsaved modifications.
+
+Returns:
+    bool: True if unsaved changes exist.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor.panel.save">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">save</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Save the current document.
+
+Returns:
+    bool: True if the save completed successfully.</data>
+    </node>
     <node id="src.intellicrack.ui.panels.hex_editor.panel._cleanup">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -35483,7 +35779,7 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">_on_add_bookmark</data>
       <data key="d5">['self']</data>
-      <data key="d4">Add a bookmark at the current cursor position.</data>
+      <data key="d4">Add a bookmark at the current cursor position with user-specified attributes.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._bookmarks._on_remove_bookmark">
       <data key="d0">function</data>
@@ -36304,20 +36600,6 @@ Args:
 Args:
     result: The computed statistics result.</data>
     </node>
-    <node id="src.intellicrack.ui.panels.hex_editor._statistics._update_byte_type_distribution">
-      <data key="d0">function</data>
-      <data key="d1">python</data>
-      <data key="d3">_update_byte_type_distribution</data>
-      <data key="d5">['self']</data>
-      <data key="d4">Fetch and display byte type distribution percentages.</data>
-    </node>
-    <node id="src.intellicrack.ui.panels.hex_editor._statistics._update_content_classification">
-      <data key="d0">function</data>
-      <data key="d1">python</data>
-      <data key="d3">_update_content_classification</data>
-      <data key="d5">['self']</data>
-      <data key="d4">Fetch and display content classification summary.</data>
-    </node>
     <node id="src.intellicrack.ui.panels.hex_editor._templates">
       <data key="d0">module</data>
       <data key="d1">python</data>
@@ -36478,6 +36760,23 @@ Returns:
       <data key="d3">_on_transform_apply</data>
       <data key="d5">['self']</data>
       <data key="d4">Apply the selected transform to the current selection or cursor region and write to document.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor._transforms._pipeline_step_count">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_pipeline_step_count</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Return the number of steps in the current pipeline.
+
+Returns:
+    int: Number of pipeline steps.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor._transforms._refresh_pipeline_list">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_refresh_pipeline_list</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Rebuild the pipeline QListWidget from the TransformPipeline steps.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._transforms._on_pipeline_add_step">
       <data key="d0">function</data>
@@ -100694,6 +100993,12 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.bridges.hex_editor" target="src.intellicrack.bridges.hex_editor.import_patches">
       <data key="d6">defines</data>
     </edge>
+    <edge source="src.intellicrack.bridges.hex_editor" target="src.intellicrack.bridges.hex_editor._build_ips_from_patches">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_editor" target="src.intellicrack.bridges.hex_editor._apply_ips_patches">
+      <data key="d6">defines</data>
+    </edge>
     <edge source="src.intellicrack.bridges.hex_editor" target="src.intellicrack.bridges.hex_editor.search_numeric">
       <data key="d6">defines</data>
     </edge>
@@ -100914,6 +101219,9 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.core.hexpat_compiler" target="src.intellicrack.core.hexpat_compiler._parse_declaration">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.hexpat_compiler" target="src.intellicrack.core.hexpat_compiler._skip_construct">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.core.hexpat_compiler" target="src.intellicrack.core.hexpat_compiler._parse_struct">
@@ -101312,6 +101620,9 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.selection">
       <data key="d6">defines</data>
     </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.get_current_state">
+      <data key="d6">defines</data>
+    </edge>
     <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.register_callback">
       <data key="d6">defines</data>
     </edge>
@@ -101328,6 +101639,21 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.clear_selection">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.get_highlight_rules">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.set_highlight_rule">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.remove_highlight_rule_state">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.get_display_mode">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.set_display_mode_state">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.bridges.hex_state" target="src.intellicrack.bridges.hex_state.notify_data_modified">
@@ -103658,7 +103984,7 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.core.hexpat.evaluator" target="src.intellicrack.core.hexpat.evaluator._ReturnSignalError">
       <data key="d6">defines</data>
     </edge>
-    <edge source="src.intellicrack.core.hexpat.evaluator" target="src.intellicrack.core.hexpat.evaluator._BuiltinCallable">
+    <edge source="src.intellicrack.core.hexpat.evaluator" target="src.intellicrack.core.hexpat.evaluator.BuiltinCallable">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.core.hexpat.evaluator" target="src.intellicrack.core.hexpat.evaluator.PatternValue">
@@ -103719,6 +104045,9 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.core.hexpat.evaluator" target="src.intellicrack.core.hexpat.evaluator._eval_decl">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.hexpat.evaluator" target="src.intellicrack.core.hexpat.evaluator._register_namespaced">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.core.hexpat.evaluator" target="src.intellicrack.core.hexpat.evaluator._register_enum">
@@ -103833,6 +104162,15 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.core.hexpat.evaluator" target="src.intellicrack.core.hexpat.evaluator._sizeof_type_node">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.hexpat.evaluator" target="src.intellicrack.core.hexpat.evaluator._sizeof_struct">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.hexpat.evaluator" target="src.intellicrack.core.hexpat.evaluator._sizeof_union">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.hexpat.evaluator" target="src.intellicrack.core.hexpat.evaluator._sizeof_bitfield">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.core.hexpat.evaluator" target="src.intellicrack.core.hexpat.evaluator._eval_cast">
@@ -104286,6 +104624,9 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">imports</data>
     </edge>
     <edge source="src.intellicrack.core.hexpat.stdlib" target="src.intellicrack.core.hexpat.stdlib.__init__">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.core.hexpat.stdlib" target="src.intellicrack.core.hexpat.stdlib._unwrap">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.core.hexpat.stdlib" target="src.intellicrack.core.hexpat.stdlib.set_array_index">
@@ -108119,6 +108460,9 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.add_hex_editor_tab">
       <data key="d6">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.add_hex_tools_tab">
+      <data key="d6">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.tools" target="src.intellicrack.ui.tools.add_x64dbg_tab">
       <data key="d6">defines</data>
     </edge>
@@ -109112,16 +109456,16 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.ui.win32_embed" target="typing">
       <data key="d6">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.win32_embed" target="PyQt6.QtGui">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="src.intellicrack.ui.win32_embed" target="PyQt6.sip">
-      <data key="d6">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.win32_embed" target="PyQt6.QtCore">
       <data key="d6">imports</data>
     </edge>
+    <edge source="src.intellicrack.ui.win32_embed" target="PyQt6.QtGui">
+      <data key="d6">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.win32_embed" target="PyQt6.QtWidgets">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.win32_embed" target="PyQt6.sip">
       <data key="d6">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.win32_embed" target="intellicrack.core.logging">
@@ -110357,6 +110701,15 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.ui.panels.hex_editor_widget" target="src.intellicrack.ui.panels.hex_editor_widget.highlight_offsets">
       <data key="d6">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_widget" target="src.intellicrack.ui.panels.hex_editor_widget.clear_highlights">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_widget" target="src.intellicrack.ui.panels.hex_editor_widget._rebuild_highlights">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_widget" target="src.intellicrack.ui.panels.hex_editor_widget.set_encoding">
+      <data key="d6">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.panels.hex_editor_widget.EntropyMiniMap" target="PyQt6.QtWidgets.QWidget">
       <data key="d6">inherits</data>
     </edge>
@@ -110427,6 +110780,12 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="src.intellicrack.ui.panels.hex_tools_panel.paintEvent">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="src.intellicrack.ui.panels.hex_tools_panel.set_selected_bytes">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="src.intellicrack.ui.panels.hex_tools_panel.set_cursor_value">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="src.intellicrack.ui.panels.hex_tools_panel._build_demangler_tab">
@@ -111416,6 +111775,18 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.ui.panels.hex_editor.panel" target="src.intellicrack.ui.panels.hex_editor.panel.set_state_holder">
       <data key="d6">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor.panel" target="src.intellicrack.ui.panels.hex_editor.panel._on_selection_changed">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor.panel" target="src.intellicrack.ui.panels.hex_editor.panel._on_encoding_changed">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor.panel" target="src.intellicrack.ui.panels.hex_editor.panel.has_unsaved_changes">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor.panel" target="src.intellicrack.ui.panels.hex_editor.panel.save">
+      <data key="d6">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.panels.hex_editor.panel" target="src.intellicrack.ui.panels.hex_editor.panel._cleanup">
       <data key="d6">defines</data>
     </edge>
@@ -111540,6 +111911,9 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.hex_editor._bookmarks" target="typing">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor._bookmarks" target="PyQt6.QtGui">
       <data key="d6">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.hex_editor._bookmarks" target="PyQt6.QtWidgets">
@@ -111953,12 +112327,6 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.ui.panels.hex_editor._statistics" target="src.intellicrack.ui.panels.hex_editor._statistics._apply_content_classification">
       <data key="d6">defines</data>
     </edge>
-    <edge source="src.intellicrack.ui.panels.hex_editor._statistics" target="src.intellicrack.ui.panels.hex_editor._statistics._update_byte_type_distribution">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.panels.hex_editor._statistics" target="src.intellicrack.ui.panels.hex_editor._statistics._update_content_classification">
-      <data key="d6">defines</data>
-    </edge>
     <edge source="src.intellicrack.ui.panels.hex_editor._statistics.StatisticsWorker" target="PyQt6.QtCore.QThread">
       <data key="d6">inherits</data>
     </edge>
@@ -112013,6 +112381,9 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.ui.panels.hex_editor._transforms" target="src.intellicrack.ui.panels.hex_editor._transforms.TransformsMixin">
       <data key="d6">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor._transforms" target="intellicrack.core.transform_pipeline">
+      <data key="d6">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.panels.hex_editor._transforms" target="src.intellicrack.ui.panels.hex_editor._transforms._on_data_changed">
       <data key="d6">defines</data>
     </edge>
@@ -112032,6 +112403,12 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.hex_editor._transforms" target="src.intellicrack.ui.panels.hex_editor._transforms._on_transform_apply">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor._transforms" target="src.intellicrack.ui.panels.hex_editor._transforms._pipeline_step_count">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor._transforms" target="src.intellicrack.ui.panels.hex_editor._transforms._refresh_pipeline_list">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.hex_editor._transforms" target="src.intellicrack.ui.panels.hex_editor._transforms._on_pipeline_add_step">

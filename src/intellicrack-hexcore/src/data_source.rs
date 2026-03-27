@@ -92,6 +92,7 @@ pub struct ProcessDataSource {
     pub pid: u32,
     pub base_address: usize,
     pub region_size: usize,
+    writable: bool,
 }
 
 #[cfg(windows)]
@@ -103,13 +104,17 @@ impl ProcessDataSource {
         pid: u32,
         base_address: usize,
         region_size: usize,
+        read_only: bool,
     ) -> Result<Self, DataSourceError> {
         use windows_sys::Win32::System::Threading::{
             OpenProcess, PROCESS_QUERY_INFORMATION, PROCESS_VM_OPERATION, PROCESS_VM_READ,
             PROCESS_VM_WRITE,
         };
-        let access =
-            PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION | PROCESS_QUERY_INFORMATION;
+        let access = if read_only {
+            PROCESS_VM_READ | PROCESS_QUERY_INFORMATION
+        } else {
+            PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION | PROCESS_QUERY_INFORMATION
+        };
         let handle = unsafe { OpenProcess(access, 0, pid) };
         if handle.is_null() {
             return Err(DataSourceError::ProcessError(format!(
@@ -122,6 +127,7 @@ impl ProcessDataSource {
             pid,
             base_address,
             region_size,
+            writable: !read_only,
         })
     }
 
@@ -187,6 +193,9 @@ impl DataSource for ProcessDataSource {
     }
 
     fn write(&mut self, offset: usize, data: &[u8]) -> Result<(), DataSourceError> {
+        if !self.writable {
+            return Err(DataSourceError::ReadOnly);
+        }
         use windows_sys::Win32::System::Diagnostics::Debug::WriteProcessMemory;
         if data.is_empty() {
             return Ok(());
@@ -215,7 +224,7 @@ impl DataSource for ProcessDataSource {
     }
 
     fn is_writable(&self) -> bool {
-        true
+        self.writable
     }
 
     fn source_type(&self) -> &str {

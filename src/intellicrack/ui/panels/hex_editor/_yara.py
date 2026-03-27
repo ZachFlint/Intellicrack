@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
+    QMessageBox,
     QPlainTextEdit,
     QPushButton,
     QTreeWidget,
@@ -104,12 +105,22 @@ class YaraMixin:
             return
 
         if not yara_scanner_available or YaraScanner_cls is None:
-            logger.debug("yara_unavailable")
+            parent = self if isinstance(self, QWidget) else None
+            QMessageBox.warning(
+                parent,
+                "YARA Unavailable",
+                "YARA is not installed. Install with: pip install yara-python",
+            )
             return
 
         scanner = YaraScanner_cls()
         if not scanner.available:
-            logger.debug("yara_unavailable")
+            parent = self if isinstance(self, QWidget) else None
+            QMessageBox.warning(
+                parent,
+                "YARA Unavailable",
+                "YARA is not installed. Install with: pip install yara-python",
+            )
             return
 
         inline_source = ""
@@ -166,7 +177,7 @@ class YaraMixin:
             highlight_fn = getattr(self._hex_widget, "highlight_offsets", None)
             if callable(highlight_fn):
                 highlights = [(off, length, "#AA44FF") for off, length in all_match_offsets]
-                highlight_fn(highlights)
+                highlight_fn(highlights, "yara")
 
         logger.debug("yara_scan_complete", match_count=len(matches))
 

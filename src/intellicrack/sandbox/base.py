@@ -14,13 +14,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal, TypedDict
 
+from ..core.logging import get_logger
+from ..core.types import SandboxError, SandboxTimeoutError
+
 
 if TYPE_CHECKING:
     from datetime import datetime
     from pathlib import Path
-
-from ..core.logging import get_logger
-from ..core.types import SandboxError, SandboxTimeoutError
 
 
 __all__ = ["SandboxError", "SandboxTimeoutError"]

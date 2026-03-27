@@ -18,6 +18,52 @@ fn build_bad_char_table(pattern: &[u8]) -> [usize; 256] {
     table
 }
 
+fn build_good_suffix_table(pattern: &[u8]) -> Vec<usize> {
+    let m = pattern.len();
+    if m == 0 {
+        return Vec::new();
+    }
+    let mut table = vec![m; m];
+    let mut suffix = vec![0usize; m];
+
+    suffix[m - 1] = m;
+    let mut g: isize = (m as isize) - 1;
+    let mut f: usize = 0;
+
+    for i in (0..m - 1).rev() {
+        if (i as isize) > g && suffix[i + m - 1 - f] < ((i as isize) - g) as usize {
+            suffix[i] = suffix[i + m - 1 - f];
+        } else {
+            if (i as isize) < g {
+                g = i as isize;
+            }
+            f = i;
+            while g >= 0 && pattern[g as usize] == pattern[(g as usize) + m - 1 - f] {
+                g -= 1;
+            }
+            suffix[i] = ((f as isize) - g) as usize;
+        }
+    }
+
+    let mut j = 0usize;
+    for i in (0..m).rev() {
+        if suffix[i] == i + 1 {
+            while j < m - 1 - i {
+                if table[j] == m {
+                    table[j] = m - 1 - i;
+                }
+                j += 1;
+            }
+        }
+    }
+
+    for i in 0..m - 1 {
+        table[m - 1 - suffix[i]] = m - 1 - i;
+    }
+
+    table
+}
+
 pub fn search_bytes(data: &[u8], pattern: &[u8], max_results: usize) -> Vec<SearchResult> {
     if pattern.is_empty() || data.len() < pattern.len() {
         return Vec::new();
@@ -63,32 +109,32 @@ fn search_bytes_single(
     }
 
     let bad_char = build_bad_char_table(pattern);
+    let good_suffix = build_good_suffix_table(pattern);
     let mut results = Vec::new();
-    let mut i: usize = plen - 1;
+    let mut i: usize = 0;
 
-    while i < data.len() && results.len() < max_results {
-        let mut j = plen - 1;
-        let mut k = i;
-
-        loop {
-            if data[k] != pattern[j] {
-                break;
-            }
-            if j == 0 {
-                let match_start = k;
-                results.push(SearchResult {
-                    offset: base_offset + match_start,
-                    length: plen,
-                    matched_bytes: data[match_start..match_start + plen].to_vec(),
-                });
-                break;
-            }
+    while i <= data.len() - plen && results.len() < max_results {
+        let mut j = plen;
+        while j > 0 && pattern[j - 1] == data[i + j - 1] {
             j -= 1;
-            k -= 1;
         }
 
-        let shift = bad_char[data[i] as usize];
-        i += shift.max(1);
+        if j == 0 {
+            results.push(SearchResult {
+                offset: base_offset + i,
+                length: plen,
+                matched_bytes: data[i..i + plen].to_vec(),
+            });
+            i += good_suffix[0];
+        } else {
+            let bc_shift = if bad_char[data[i + j - 1] as usize] > plen - j {
+                bad_char[data[i + j - 1] as usize] - (plen - j)
+            } else {
+                1
+            };
+            let gs_shift = good_suffix[j - 1];
+            i += bc_shift.max(gs_shift);
+        }
     }
 
     results
@@ -382,7 +428,7 @@ fn sign_extend(raw: u64, size: usize) -> i64 {
         2 => (raw as i16) as i64,
         3 => {
             let shifted = raw << 40;
-            ((shifted as i64) >> 40)
+            (shifted as i64) >> 40
         }
         4 => (raw as i32) as i64,
         8 => raw as i64,
@@ -960,5 +1006,20 @@ mod tests {
         data[10..14].copy_from_slice(&val.to_le_bytes());
         let results = search_numeric_int(&data, -1, 4, true, false, 1, 100);
         assert!(results.iter().any(|r| r.offset == 10));
+    }
+
+    #[test]
+    fn test_search_bytes_good_suffix() {
+        let data = b"AAAABAAAABAAAAAB";
+        let results = search_bytes(data, b"AAAAAB", 10);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].offset, 10);
+
+        let data2 = b"ABCABCABCABC";
+        let results2 = search_bytes(data2, b"ABCABC", 10);
+        assert_eq!(results2.len(), 3);
+        assert_eq!(results2[0].offset, 0);
+        assert_eq!(results2[1].offset, 3);
+        assert_eq!(results2[2].offset, 6);
     }
 }

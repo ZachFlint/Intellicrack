@@ -37,6 +37,7 @@ _MAX_INCLUDE_DEPTH = 50
 _PRAGMA_BITFIELD_ORDER_RE = re.compile(
     r"#pragma\s+bitfield_order\s+(left_to_right|right_to_left)"
 )
+_PRAGMA_POINTER_SIZE_RE = re.compile(r"#pragma\s+pointer_size\s+(\d+)")
 
 _INCLUDE_ANGLE_RE = re.compile(r'#include\s+<([^>]+)>')
 _INCLUDE_QUOTE_RE = re.compile(r'#include\s+"([^"]+)"')
@@ -117,6 +118,8 @@ class HexPatPreprocessor:
         pattern_limit: int = 0x40000
         author: str | None = None
         description: str | None = None
+        pointer_size: int = 8
+        bitfield_order: str | None = None
 
         processed = self._process_source(source, file_path, depth=0)
 
@@ -174,6 +177,16 @@ class HexPatPreprocessor:
                 description = m.group(1)
                 continue
 
+            m = _PRAGMA_BITFIELD_ORDER_RE.match(stripped)
+            if m:
+                bitfield_order = m.group(1)
+                continue
+
+            m = _PRAGMA_POINTER_SIZE_RE.match(stripped)
+            if m:
+                pointer_size = int(m.group(1))
+                continue
+
         output_lines: list[str] = []
         for line in processed.splitlines():
             stripped = line.strip()
@@ -192,6 +205,8 @@ class HexPatPreprocessor:
             pattern_limit=pattern_limit,
             author=author,
             description=description,
+            pointer_size=pointer_size,
+            bitfield_order=bitfield_order,
         )
 
         return "\n".join(output_lines), pragma
@@ -231,7 +246,7 @@ class HexPatPreprocessor:
             if m:
                 include_path = m.group(1)
                 resolved = self._resolve_include(
-                    include_path, file_path, is_angle=True, line=line_num,
+                    include_path, file_path, is_angle=True, line=line_num, depth=depth,
                 )
                 if resolved is not None:
                     output_lines.append(resolved)
@@ -241,7 +256,7 @@ class HexPatPreprocessor:
             if m:
                 include_path = m.group(1)
                 resolved = self._resolve_include(
-                    include_path, file_path, is_angle=False, line=line_num,
+                    include_path, file_path, is_angle=False, line=line_num, depth=depth,
                 )
                 if resolved is not None:
                     output_lines.append(resolved)
@@ -251,7 +266,7 @@ class HexPatPreprocessor:
             if m:
                 module_path = m.group(1).replace(".", "/") + ".pat"
                 resolved = self._resolve_include(
-                    module_path, file_path, is_angle=True, line=line_num,
+                    module_path, file_path, is_angle=True, line=line_num, depth=depth,
                 )
                 if resolved is not None:
                     output_lines.append(resolved)
@@ -283,6 +298,7 @@ class HexPatPreprocessor:
         *,
         is_angle: bool,
         line: int,
+        depth: int,
     ) -> str | None:
         """Resolve and inline an #include directive.
 
@@ -291,6 +307,7 @@ class HexPatPreprocessor:
             current_file: Path of the file containing the include.
             is_angle: True for angle-bracket includes, False for quoted.
             line: Source line number of the include directive.
+            depth: Current include nesting depth.
 
         Returns:
             The preprocessed contents of the included file, or None if
@@ -324,7 +341,7 @@ class HexPatPreprocessor:
                 return self._process_source(
                     content,
                     candidate,
-                    depth=1,
+                    depth=depth + 1,
                 )
 
         _logger.warning(
@@ -403,7 +420,7 @@ class HexPatPreprocessor:
         result = source
         for name, value in self._defines.items():
             if name in result:
-                result = result.replace(name, value)
+                result = re.sub(rf"\b{re.escape(name)}\b", value, result)
         return result
 
 
@@ -428,6 +445,8 @@ def extract_pragmas_fast(source: str) -> PragmaInfo:
     pattern_limit: int = 0x40000
     author: str | None = None
     description: str | None = None
+    pointer_size: int = 8
+    bitfield_order: str | None = None
 
     for line in source.splitlines()[:80]:
         stripped = line.strip()
@@ -483,6 +502,16 @@ def extract_pragmas_fast(source: str) -> PragmaInfo:
             description = m.group(1)
             continue
 
+        m = _PRAGMA_BITFIELD_ORDER_RE.match(stripped)
+        if m:
+            bitfield_order = m.group(1)
+            continue
+
+        m = _PRAGMA_POINTER_SIZE_RE.match(stripped)
+        if m:
+            pointer_size = int(m.group(1))
+            continue
+
     return PragmaInfo(
         endian=endian,
         mime=mime,
@@ -493,4 +522,6 @@ def extract_pragmas_fast(source: str) -> PragmaInfo:
         pattern_limit=pattern_limit,
         author=author,
         description=description,
+        pointer_size=pointer_size,
+        bitfield_order=bitfield_order,
     )

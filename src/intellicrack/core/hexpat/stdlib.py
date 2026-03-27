@@ -17,7 +17,7 @@ import struct
 from typing import TYPE_CHECKING
 
 from intellicrack.core.hexpat.errors import HexPatRuntimeError
-from intellicrack.core.hexpat.evaluator import PatternValue
+from intellicrack.core.hexpat.evaluator import BuiltinCallable, PatternValue
 from intellicrack.core.logging import get_logger
 
 
@@ -50,6 +50,20 @@ class BuiltinFunctions:
         self._data: DataReader = data_reader
         self._endian: str = "little"
         self._array_index: int = 0
+
+    @staticmethod
+    def _unwrap(arg: Any) -> Any:
+        """Extract the raw value from a PatternValue argument.
+
+        Args:
+            arg: A PatternValue or raw value.
+
+        Returns:
+            The unwrapped raw value.
+        """
+        if isinstance(arg, PatternValue):
+            return arg.value
+        return arg
 
     def set_array_index(self, index: int) -> None:
         """Set the current array iteration index.
@@ -123,420 +137,414 @@ class BuiltinFunctions:
         }
 
         for name, func in builtins.items():
-            scope.define(name, PatternValue(value=func))
+            scope.define(name, PatternValue(value=BuiltinCallable(fn=func, name=name)))
 
-    def _mem_read_unsigned(self, *args: Any) -> int:
+    def _mem_read_unsigned(self, *args: Any) -> PatternValue:
         """Read an unsigned integer from binary data.
 
         Args:
             *args: (offset: int, size: int) where size is byte count (1,2,4,8,16).
 
         Returns:
-            The unsigned integer value.
+            A PatternValue containing the unsigned integer value.
 
         Raises:
             HexPatRuntimeError: If the read is out of bounds.
         """
-        offset = int(args[0]) if args else 0
-        size = int(args[1]) if len(args) > 1 else 1
+        offset = int(self._unwrap(args[0])) if args else 0
+        size = int(self._unwrap(args[1])) if len(args) > 1 else 1
         raw = self._data.read(offset, size)
         byteorder = "little" if self._endian == "little" else "big"
-        return int.from_bytes(raw, byteorder=byteorder, signed=False)
+        return PatternValue(value=int.from_bytes(raw, byteorder=byteorder, signed=False))
 
-    def _mem_read_signed(self, *args: Any) -> int:
+    def _mem_read_signed(self, *args: Any) -> PatternValue:
         """Read a signed integer from binary data.
 
         Args:
             *args: (offset: int, size: int) where size is byte count.
 
         Returns:
-            The signed integer value.
+            A PatternValue containing the signed integer value.
 
         Raises:
             HexPatRuntimeError: If the read is out of bounds.
         """
-        offset = int(args[0]) if args else 0
-        size = int(args[1]) if len(args) > 1 else 1
+        offset = int(self._unwrap(args[0])) if args else 0
+        size = int(self._unwrap(args[1])) if len(args) > 1 else 1
         raw = self._data.read(offset, size)
         byteorder = "little" if self._endian == "little" else "big"
-        return int.from_bytes(raw, byteorder=byteorder, signed=True)
+        return PatternValue(value=int.from_bytes(raw, byteorder=byteorder, signed=True))
 
-    def _mem_read_string(self, *args: Any) -> str:
+    def _mem_read_string(self, *args: Any) -> PatternValue:
         """Read a string from binary data.
 
         Args:
             *args: (offset: int, length: int).
 
         Returns:
-            The decoded string.
+            A PatternValue containing the decoded string.
 
         Raises:
             HexPatRuntimeError: If the read is out of bounds.
         """
-        offset = int(args[0]) if args else 0
-        length = int(args[1]) if len(args) > 1 else 256
+        offset = int(self._unwrap(args[0])) if args else 0
+        length = int(self._unwrap(args[1])) if len(args) > 1 else 256
         raw = self._data.read(offset, length)
         null_idx = raw.find(b"\x00")
         if null_idx >= 0:
             raw = raw[:null_idx]
-        return raw.decode("utf-8", errors="replace")
+        return PatternValue(value=raw.decode("utf-8", errors="replace"))
 
-    def _mem_find_sequence(self, *args: Any) -> int:
-        """Find a byte sequence in binary data.
+    def _mem_find_sequence(self, *args: Any) -> PatternValue:
+        """Find a byte sequence in a range of binary data.
 
         Args:
             *args: (start: int, end: int, pattern_bytes...).
 
         Returns:
-            The offset of the first match, or -1 if not found.
+            A PatternValue containing the offset of the first match, or -1.
         """
         if len(args) < 3:
-            return -1
-        start = int(args[0])
-        pattern_args = args[2:]
+            return PatternValue(value=-1)
+        start = int(self._unwrap(args[0]))
+        end = int(self._unwrap(args[1]))
+        pattern_args = [self._unwrap(a) for a in args[2:]]
         pattern = bytes(int(b) & 0xFF for b in pattern_args)
-        return self._data.find_sequence(pattern, start)
+        result = self._data.find_sequence(pattern, start)
+        if result >= 0 and result + len(pattern) > end:
+            return PatternValue(value=-1)
+        return PatternValue(value=result)
 
-    def _mem_size(self, *_args: Any) -> int:
+    def _mem_size(self, *_args: Any) -> PatternValue:
         """Get the total size of the binary data.
 
         Returns:
-            The data size in bytes.
+            A PatternValue containing the data size in bytes.
         """
-        return self._data.size
+        return PatternValue(value=self._data.size)
 
     @staticmethod
-    def _mem_base_address(*_args: Any) -> int:
+    def _mem_base_address(*_args: Any) -> PatternValue:
         """Get the base address (always 0 for file-based analysis).
 
         Returns:
-            The base address.
+            A PatternValue containing the base address.
         """
-        return 0
+        return PatternValue(value=0)
 
-    @staticmethod
-    def _string_length(*args: Any) -> int:
+    def _string_length(self, *args: Any) -> PatternValue:
         """Get the length of a string.
 
         Args:
             *args: (s: str).
 
         Returns:
-            The string length.
+            A PatternValue containing the string length.
         """
-        return len(str(args[0])) if args else 0
+        return PatternValue(value=len(str(self._unwrap(args[0]))) if args else 0)
 
-    @staticmethod
-    def _string_at(*args: Any) -> str:
+    def _string_at(self, *args: Any) -> PatternValue:
         """Get a character at an index.
 
         Args:
             *args: (s: str, index: int).
 
         Returns:
-            The character at the given index.
+            A PatternValue containing the character at the given index.
         """
         if len(args) < 2:
-            return ""
-        s = str(args[0])
-        idx = int(args[1])
+            return PatternValue(value="")
+        s = str(self._unwrap(args[0]))
+        idx = int(self._unwrap(args[1]))
         if 0 <= idx < len(s):
-            return s[idx]
-        return ""
+            return PatternValue(value=s[idx])
+        return PatternValue(value="")
 
-    @staticmethod
-    def _string_substr(*args: Any) -> str:
+    def _string_substr(self, *args: Any) -> PatternValue:
         """Extract a substring.
 
         Args:
             *args: (s: str, start: int, length: int).
 
         Returns:
-            The extracted substring.
+            A PatternValue containing the extracted substring.
         """
         if len(args) < 3:
-            return ""
-        s = str(args[0])
-        start = int(args[1])
-        length = int(args[2])
-        return s[start : start + length]
+            return PatternValue(value="")
+        s = str(self._unwrap(args[0]))
+        start = int(self._unwrap(args[1]))
+        length = int(self._unwrap(args[2]))
+        return PatternValue(value=s[start : start + length])
 
-    @staticmethod
-    def _string_contains(*args: Any) -> bool:
+    def _string_contains(self, *args: Any) -> PatternValue:
         """Check if a string contains a substring.
 
         Args:
             *args: (s: str, sub: str).
 
         Returns:
-            True if the substring is found.
+            A PatternValue containing True if the substring is found.
         """
         if len(args) < 2:
-            return False
-        return str(args[1]) in str(args[0])
+            return PatternValue(value=False)
+        return PatternValue(value=str(self._unwrap(args[1])) in str(self._unwrap(args[0])))
 
-    @staticmethod
-    def _string_starts_with(*args: Any) -> bool:
+    def _string_starts_with(self, *args: Any) -> PatternValue:
         """Check if a string starts with a prefix.
 
         Args:
             *args: (s: str, prefix: str).
 
         Returns:
-            True if the string starts with the prefix.
+            A PatternValue containing True if the string starts with the prefix.
         """
         if len(args) < 2:
-            return False
-        return str(args[0]).startswith(str(args[1]))
+            return PatternValue(value=False)
+        return PatternValue(value=str(self._unwrap(args[0])).startswith(str(self._unwrap(args[1]))))
 
-    @staticmethod
-    def _string_ends_with(*args: Any) -> bool:
+    def _string_ends_with(self, *args: Any) -> PatternValue:
         """Check if a string ends with a suffix.
 
         Args:
             *args: (s: str, suffix: str).
 
         Returns:
-            True if the string ends with the suffix.
+            A PatternValue containing True if the string ends with the suffix.
         """
         if len(args) < 2:
-            return False
-        return str(args[0]).endswith(str(args[1]))
+            return PatternValue(value=False)
+        return PatternValue(value=str(self._unwrap(args[0])).endswith(str(self._unwrap(args[1]))))
 
-    @staticmethod
-    def _string_to_int(*args: Any) -> int:
+    def _string_to_int(self, *args: Any) -> PatternValue:
         """Parse a string as an integer.
 
         Args:
             *args: (s: str, base: int).
 
         Returns:
-            The parsed integer value.
+            A PatternValue containing the parsed integer value.
         """
         if not args:
-            return 0
-        s = str(args[0])
-        base = int(args[1]) if len(args) > 1 else 10
+            return PatternValue(value=0)
+        s = str(self._unwrap(args[0]))
+        base = int(self._unwrap(args[1])) if len(args) > 1 else 10
         try:
             result = int(s, base)
         except ValueError:
-            return 0
+            return PatternValue(value=0)
         else:
-            return result
+            return PatternValue(value=result)
 
-    @staticmethod
-    def _string_reverse(*args: Any) -> str:
+    def _string_reverse(self, *args: Any) -> PatternValue:
         """Reverse a string.
 
         Args:
             *args: (s: str).
 
         Returns:
-            The reversed string.
+            A PatternValue containing the reversed string.
         """
-        return str(args[0])[::-1] if args else ""
+        return PatternValue(value=str(self._unwrap(args[0]))[::-1] if args else "")
 
-    @staticmethod
-    def _math_abs(*args: Any) -> int | float:
+    def _math_abs(self, *args: Any) -> PatternValue:
         """Compute the absolute value.
 
         Args:
             *args: (x: int | float).
 
         Returns:
-            The absolute value.
+            A PatternValue containing the absolute value.
         """
         if not args:
-            return 0
-        val = args[0]
+            return PatternValue(value=0)
+        val = self._unwrap(args[0])
         if isinstance(val, float):
-            return abs(val)
-        return abs(int(val))
+            return PatternValue(value=abs(val))
+        return PatternValue(value=abs(int(val)))
 
-    @staticmethod
-    def _math_min(*args: Any) -> int | float:
+    def _math_min(self, *args: Any) -> PatternValue:
         """Return the minimum of two values.
 
         Args:
             *args: (a: int | float, b: int | float).
 
         Returns:
-            The smaller value.
+            A PatternValue containing the smaller value.
         """
         if len(args) < 2:
-            return int(args[0]) if args else 0
-        a, b = args[0], args[1]
+            return PatternValue(value=int(self._unwrap(args[0])) if args else 0)
+        a, b = self._unwrap(args[0]), self._unwrap(args[1])
         if isinstance(a, float) or isinstance(b, float):
-            return min(float(a), float(b))
-        return min(int(a), int(b))
+            return PatternValue(value=min(float(a), float(b)))
+        return PatternValue(value=min(int(a), int(b)))
 
-    @staticmethod
-    def _math_max(*args: Any) -> int | float:
+    def _math_max(self, *args: Any) -> PatternValue:
         """Return the maximum of two values.
 
         Args:
             *args: (a: int | float, b: int | float).
 
         Returns:
-            The larger value.
+            A PatternValue containing the larger value.
         """
         if len(args) < 2:
-            return int(args[0]) if args else 0
-        a, b = args[0], args[1]
+            return PatternValue(value=int(self._unwrap(args[0])) if args else 0)
+        a, b = self._unwrap(args[0]), self._unwrap(args[1])
         if isinstance(a, float) or isinstance(b, float):
-            return max(float(a), float(b))
-        return max(int(a), int(b))
+            return PatternValue(value=max(float(a), float(b)))
+        return PatternValue(value=max(int(a), int(b)))
 
-    @staticmethod
-    def _math_floor(*args: Any) -> int:
+    def _math_floor(self, *args: Any) -> PatternValue:
         """Compute the floor of a value.
 
         Args:
             *args: (x: float).
 
         Returns:
-            The floor as an integer.
+            A PatternValue containing the floor as an integer.
         """
-        return math.floor(float(args[0])) if args else 0
+        return PatternValue(value=math.floor(float(self._unwrap(args[0]))) if args else 0)
 
-    @staticmethod
-    def _math_ceil(*args: Any) -> int:
+    def _math_ceil(self, *args: Any) -> PatternValue:
         """Compute the ceiling of a value.
 
         Args:
             *args: (x: float).
 
         Returns:
-            The ceiling as an integer.
+            A PatternValue containing the ceiling as an integer.
         """
-        return math.ceil(float(args[0])) if args else 0
+        return PatternValue(value=math.ceil(float(self._unwrap(args[0]))) if args else 0)
 
-    @staticmethod
-    def _math_log2(*args: Any) -> float:
+    def _math_log2(self, *args: Any) -> PatternValue:
         """Compute the base-2 logarithm.
 
         Args:
             *args: (x: float).
 
         Returns:
-            The log base 2 value.
+            A PatternValue containing the log base 2 value.
 
         Raises:
             HexPatRuntimeError: If the value is non-positive.
         """
         if not args:
-            return 0.0
-        val = float(args[0])
+            return PatternValue(value=0.0)
+        val = float(self._unwrap(args[0]))
         if val <= 0:
             msg = "log2 of non-positive value"
             raise HexPatRuntimeError(msg)
-        return math.log2(val)
+        return PatternValue(value=math.log2(val))
 
-    @staticmethod
-    def _math_pow(*args: Any) -> float:
+    def _math_pow(self, *args: Any) -> PatternValue:
         """Compute a power.
 
         Args:
             *args: (base: float, exp: float).
 
         Returns:
-            base raised to the power of exp.
+            A PatternValue containing base raised to the power of exp.
         """
         if len(args) < 2:
-            return 0.0
-        return math.pow(float(args[0]), float(args[1]))
+            return PatternValue(value=0.0)
+        return PatternValue(value=math.pow(float(self._unwrap(args[0])), float(self._unwrap(args[1]))))
 
-    @staticmethod
-    def _math_sqrt(*args: Any) -> float:
+    def _math_sqrt(self, *args: Any) -> PatternValue:
         """Compute the square root.
 
         Args:
             *args: (x: float).
 
         Returns:
-            The square root.
+            A PatternValue containing the square root.
 
         Raises:
             HexPatRuntimeError: If the value is negative.
         """
         if not args:
-            return 0.0
-        val = float(args[0])
+            return PatternValue(value=0.0)
+        val = float(self._unwrap(args[0]))
         if val < 0:
             msg = "sqrt of negative value"
             raise HexPatRuntimeError(msg)
-        return math.sqrt(val)
+        return PatternValue(value=math.sqrt(val))
 
-    def _core_set_endian(self, *args: Any) -> None:
+    def _core_set_endian(self, *args: Any) -> PatternValue:
         """Set the default endianness.
 
         Args:
             *args: (endian: int) where 0=little, 1=big.
+
+        Returns:
+            A PatternValue containing None.
         """
         if args:
-            self._endian = "big" if int(args[0]) != 0 else "little"
+            self._endian = "big" if int(self._unwrap(args[0])) != 0 else "little"
+        return PatternValue(value=None)
 
-    def _core_get_endian(self, *_args: Any) -> int:
+    def _core_get_endian(self, *_args: Any) -> PatternValue:
         """Get the current endianness.
 
         Returns:
-            0 for little-endian, 1 for big-endian.
+            A PatternValue containing 0 for little-endian, 1 for big-endian.
         """
-        return 1 if self._endian == "big" else 0
+        return PatternValue(value=1 if self._endian == "big" else 0)
 
-    def _core_array_index(self, *_args: Any) -> int:
+    def _core_array_index(self, *_args: Any) -> PatternValue:
         """Get the current array iteration index.
 
         Returns:
-            The current array index.
+            A PatternValue containing the current array index.
         """
-        return self._array_index
+        return PatternValue(value=self._array_index)
 
-    @staticmethod
-    def _io_print(*args: Any) -> None:
+    def _io_print(self, *args: Any) -> PatternValue:
         """Print a message to the log.
 
         Args:
             *args: Values to print.
-        """
-        message = " ".join(str(a) for a in args)
-        _logger.info("hexpat_print", output=message)
 
-    @staticmethod
-    def _io_format(*args: Any) -> str:
+        Returns:
+            A PatternValue containing None.
+        """
+        message = " ".join(str(self._unwrap(a)) for a in args)
+        _logger.info("hexpat_print", output=message)
+        return PatternValue(value=None)
+
+    def _io_format(self, *args: Any) -> PatternValue:
         """Format a string with arguments.
 
         Args:
             *args: (format_str: str, ...values).
 
         Returns:
-            The formatted string.
+            A PatternValue containing the formatted string.
         """
         if not args:
-            return ""
-        fmt = str(args[0])
-        fmt_args = args[1:]
+            return PatternValue(value="")
+        fmt = str(self._unwrap(args[0]))
+        fmt_args = [self._unwrap(a) for a in args[1:]]
         try:
             result = fmt
             for i, arg in enumerate(fmt_args):
                 result = result.replace("{}", str(arg), 1)
                 result = result.replace(f"{{{i}}}", str(arg))
         except (IndexError, KeyError):
-            return fmt
+            return PatternValue(value=fmt)
         else:
-            return result
+            return PatternValue(value=result)
 
-    def _read_struct_field(self, *args: Any) -> int:
+    def _read_struct_field(self, *args: Any) -> PatternValue:
         """Read a struct field as unsigned integer (internal helper).
 
         Args:
             *args: (offset: int, size: int).
 
         Returns:
-            The unsigned integer value.
+            A PatternValue containing the unsigned integer value.
         """
-        offset = int(args[0]) if args else 0
-        size = int(args[1]) if len(args) > 1 else 4
+        offset = int(self._unwrap(args[0])) if args else 0
+        size = int(self._unwrap(args[1])) if len(args) > 1 else 4
         if size <= 8:
             fmt_map = {1: "B", 2: "H", 4: "I", 8: "Q"}
             fmt_char = fmt_map.get(size, "I")
@@ -544,8 +552,8 @@ class BuiltinFunctions:
             raw = self._data.read(offset, size)
             result = struct.unpack(f"{prefix}{fmt_char}", raw)[0]
             if isinstance(result, int):
-                return result
-            return int(result)
+                return PatternValue(value=result)
+            return PatternValue(value=int(result))
         raw = self._data.read(offset, size)
         byteorder = "little" if self._endian == "little" else "big"
-        return int.from_bytes(raw, byteorder=byteorder, signed=False)
+        return PatternValue(value=int.from_bytes(raw, byteorder=byteorder, signed=False))

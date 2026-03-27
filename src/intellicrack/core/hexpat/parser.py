@@ -1006,6 +1006,8 @@ class HexPatParser:
             at_offset=at_offset,
             annotations=annotations,
             in_section=in_section,
+            array_size=array_size,
+            while_condition=while_condition,
             line=tok.line,
             column=tok.column,
         )

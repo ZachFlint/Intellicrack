@@ -247,6 +247,7 @@ class HexEditorWidget(QAbstractScrollArea):
     selection_changed: pyqtSignal = pyqtSignal(int, int)
     data_changed: pyqtSignal = pyqtSignal()
     edit_mode_changed: pyqtSignal = pyqtSignal(str)
+    about_to_modify: pyqtSignal = pyqtSignal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -261,8 +262,10 @@ class HexEditorWidget(QAbstractScrollArea):
         self._pending_nibble: int = 0
         self._modified_offsets: set[int] = set()
         self._highlights: list[tuple[int, int, str]] = []
+        self._highlight_sources: dict[str, list[tuple[int, int, str]]] = {}
         self._selecting: bool = False
         self._display_mode: str = "hex8"
+        self._encoding: str = "ascii"
         self._highlight_rules: list[HighlightRule] = []
 
         self._setup_font()
@@ -387,6 +390,7 @@ class HexEditorWidget(QAbstractScrollArea):
         self._selection_end = -1
         self._modified_offsets.clear()
         self._highlights.clear()
+        self._highlight_sources.clear()
         self._nibble_index = 0
 
         total = self._total_rows()
@@ -757,7 +761,15 @@ class HexEditorWidget(QAbstractScrollArea):
             sel_end: Selection end offset (-1 if none).
         """
         ascii_x = self._ascii_col_x + col * self._char_width
-        ascii_ch = chr(byte_val) if _PRINTABLE_MIN <= byte_val <= _PRINTABLE_MAX else "."
+        if self._encoding == "ascii":
+            ascii_ch = chr(byte_val) if _PRINTABLE_MIN <= byte_val <= _PRINTABLE_MAX else "."
+        else:
+            try:
+                ascii_ch = bytes([byte_val]).decode(self._encoding, errors="replace")
+                if len(ascii_ch) != 1 or not ascii_ch.isprintable():
+                    ascii_ch = "."
+            except (UnicodeDecodeError, LookupError):
+                ascii_ch = "."
         is_selected = sel_start >= 0 and sel_start <= byte_offset <= sel_end
 
         highlight_color: str | None = None
@@ -1024,6 +1036,7 @@ class HexEditorWidget(QAbstractScrollArea):
         else:
             byte_val = (self._pending_nibble << 4) | nibble_val
             data = bytes([byte_val])
+            self.about_to_modify.emit(self._cursor_offset)
 
             if self._edit_mode == "overwrite":
                 write_fn = getattr(self._document, "write_bytes", None)
@@ -1057,6 +1070,7 @@ class HexEditorWidget(QAbstractScrollArea):
             return
 
         data = char.encode("ascii")
+        self.about_to_modify.emit(self._cursor_offset)
 
         if self._edit_mode == "overwrite":
             write_fn = getattr(self._document, "write_bytes", None)
@@ -1095,6 +1109,8 @@ class HexEditorWidget(QAbstractScrollArea):
             start = min(self._selection_start, self._selection_end)
             end = max(self._selection_start, self._selection_end)
             length = end - start + 1
+            for i in range(length):
+                self.about_to_modify.emit(start + i)
             try:
                 delete_fn(start, length)
                 self._selection_start = -1
@@ -1107,6 +1123,7 @@ class HexEditorWidget(QAbstractScrollArea):
             offset = self._cursor_offset
             if backspace and offset > 0:
                 offset -= 1
+            self.about_to_modify.emit(offset)
             try:
                 delete_fn(offset, 1)
                 self.data_changed.emit()
@@ -1171,6 +1188,9 @@ class HexEditorWidget(QAbstractScrollArea):
 
         if not data:
             return
+
+        for i in range(len(data)):
+            self.about_to_modify.emit(self._cursor_offset + i)
 
         if self._edit_mode == "overwrite":
             write_fn = getattr(self._document, "write_bytes", None)
@@ -1613,11 +1633,48 @@ class HexEditorWidget(QAbstractScrollArea):
             if clipboard is not None:
                 clipboard.setText(text)
 
-    def highlight_offsets(self, highlights: list[tuple[int, int, str]]) -> None:
+    def highlight_offsets(
+        self,
+        highlights: list[tuple[int, int, str]],
+        source: str = "default",
+    ) -> None:
         """Set highlight regions for template/bookmark visualization.
+
+        Each source maintains its own set of highlights. The merged result
+        of all sources is used for rendering.
 
         Args:
             highlights: List of (offset, length, color_hex_string) tuples.
+            source: Identifier for the highlight source (e.g. "search",
+                "yara", "template", "bookmark").
         """
-        self._highlights = highlights
+        self._highlight_sources[source] = highlights
+        self._rebuild_highlights()
+        self._update_viewport()
+
+    def clear_highlights(self, source: str) -> None:
+        """Remove all highlights from a specific source.
+
+        Args:
+            source: The source identifier whose highlights should be cleared.
+        """
+        if source in self._highlight_sources:
+            del self._highlight_sources[source]
+            self._rebuild_highlights()
+            self._update_viewport()
+
+    def _rebuild_highlights(self) -> None:
+        """Merge all per-source highlights into the flat rendering list."""
+        merged: list[tuple[int, int, str]] = []
+        for source_highlights in self._highlight_sources.values():
+            merged.extend(source_highlights)
+        self._highlights = merged
+
+    def set_encoding(self, encoding: str) -> None:
+        """Set the text encoding used for the ASCII column display.
+
+        Args:
+            encoding: Encoding name (e.g. "ascii", "utf-8", "latin-1").
+        """
+        self._encoding = encoding
         self._update_viewport()
