@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Thu, Mar 26, 2026 10:42:50 PM
+Generated: Thu, Mar 26, 2026 10:56:43 PM
 Directory: D:\Intellicrack
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -5288,8 +5288,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   │   ├── dep-lib-intellicrack_hexcore
 │       │   │   │   │   ├── invoked.timestamp
 │       │   │   │   │   ├── lib-intellicrack_hexcore
-│       │   │   │   │   ├── lib-intellicrack_hexcore.json
-│       │   │   │   │   └── output-lib-intellicrack_hexcore
+│       │   │   │   │   └── lib-intellicrack_hexcore.json
 │       │   │   │   ├── itoa-01439ce7fb02dc1d/
 │       │   │   │   │   ├── dep-lib-itoa
 │       │   │   │   │   ├── invoked.timestamp
