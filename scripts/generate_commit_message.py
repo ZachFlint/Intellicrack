@@ -21,10 +21,13 @@ Exit codes:
 from __future__ import annotations
 
 import os
+import selectors
 import shutil
 import subprocess
 import sys
+import time
 import traceback
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Final
 
@@ -60,7 +63,8 @@ API_KEY_MODEL: Final[str] = os.environ.get(
 )
 TRUNCATION_THRESHOLD: Final[int] = 3_500_000
 FALLBACK_THRESHOLD: Final[int] = 3_800_000
-CLI_TIMEOUT_SECONDS: Final[int] = 120
+CLI_TIMEOUT_SECONDS: Final[int] = 45
+CLI_INPUT_LIMIT: Final[int] = 200_000
 
 COMMIT_MESSAGE_PROMPT: Final[str] = """Write a git commit message for these changes.
 
@@ -78,6 +82,9 @@ after a blank line explaining the motivation or key design choice
 
 {diff_input}
 """
+
+STDERR_TAG: Final[int] = 0
+STDOUT_TAG: Final[int] = 1
 
 
 def _log(msg: str) -> None:
@@ -176,6 +183,92 @@ def _build_prompt(diff_input: str, truncation_notice: str) -> str:
     )
 
 
+@dataclass
+class _CliResult:
+    """Result from streaming a CLI subprocess."""
+
+    stdout: str = ""
+    stderr_lines: list[str] = field(default_factory=list)
+    returncode: int = -1
+    timed_out: bool = False
+
+
+def _stream_cli_process(
+    proc: subprocess.Popen[str],
+    timeout: int,
+) -> _CliResult:
+    """Stream stdout/stderr from a Popen process with timeout.
+
+    Reads stderr lines in real-time, logging each to the console so the
+    caller can observe CLI progress.  Stdout is buffered for return.
+
+    Args:
+        proc: An open subprocess with text-mode stdout and stderr pipes.
+        timeout: Maximum seconds to wait before killing the process.
+
+    Returns:
+        _CliResult: Captured output, collected stderr lines, return code,
+            and whether a timeout occurred.
+    """
+    result = _CliResult()
+
+    if proc.stdout is None or proc.stderr is None:
+        proc.kill()
+        proc.wait()
+        result.returncode = -1
+        return result
+
+    stderr_stream = proc.stderr
+    stdout_stream = proc.stdout
+
+    stdout_chunks: list[str] = []
+    stderr_open = True
+    stdout_open = True
+
+    sel = selectors.DefaultSelector()
+    sel.register(stderr_stream, selectors.EVENT_READ, STDERR_TAG)
+    sel.register(stdout_stream, selectors.EVENT_READ, STDOUT_TAG)
+
+    deadline = time.monotonic() + timeout
+
+    while stderr_open or stdout_open:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            proc.kill()
+            proc.wait()
+            result.timed_out = True
+            sel.close()
+            return result
+
+        events = sel.select(timeout=min(remaining, 1.0))
+        for key, _ in events:
+            is_stderr = key.data == STDERR_TAG
+            stream = stderr_stream if is_stderr else stdout_stream
+            chunk: str = stream.read(4096)
+            if not chunk:
+                sel.unregister(stream)
+                if is_stderr:
+                    stderr_open = False
+                else:
+                    stdout_open = False
+                continue
+            if is_stderr:
+                for raw_line in chunk.splitlines():
+                    stripped: str = raw_line.rstrip()
+                    if stripped:
+                        result.stderr_lines.append(stripped)
+                        _log(f"  [cli] {stripped}")
+            else:
+                stdout_chunks.append(chunk)
+
+    sel.close()
+    proc.wait()
+
+    result.stdout = "".join(stdout_chunks).strip()
+    result.returncode = proc.returncode if proc.returncode is not None else -1
+    return result
+
+
 def _try_gemini_cli(prompt: str) -> str | None:
     """Generate a commit message via Gemini CLI headless mode.
 
@@ -211,20 +304,28 @@ def _try_gemini_cli(prompt: str) -> str | None:
         "-o", "text",
     ]
 
+    cli_prompt = prompt
+    if len(cli_prompt) > CLI_INPUT_LIMIT:
+        _log(
+            f"Truncating CLI input from {len(cli_prompt):,} to {CLI_INPUT_LIMIT:,} chars"
+        )
+        cli_prompt = cli_prompt[:CLI_INPUT_LIMIT] + "\n... (truncated for CLI)"
+
     _log("Running Gemini CLI...")
     try:
-        result = subprocess.run(
+        proc = subprocess.Popen(
             cmd,
-            input=prompt,
-            capture_output=True,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            timeout=CLI_TIMEOUT_SECONDS,
             env=env,
-            check=False,
         )
-    except subprocess.TimeoutExpired:
-        _log(f"WARN: Gemini CLI timed out ({CLI_TIMEOUT_SECONDS}s)")
-        return None
+        if proc.stdin is not None:
+            proc.stdin.write(cli_prompt)
+            proc.stdin.close()
+
+        result = _stream_cli_process(proc, CLI_TIMEOUT_SECONDS)
     except FileNotFoundError:
         _log("WARN: Gemini CLI binary not executable")
         return None
@@ -232,17 +333,26 @@ def _try_gemini_cli(prompt: str) -> str | None:
         _log(f"WARN: Gemini CLI OS error: {exc}")
         return None
 
-    if result.returncode != 0:
-        stderr_preview = (result.stderr or "").strip()[:300]
-        _log(f"WARN: Gemini CLI failed (exit {result.returncode}): {stderr_preview}")
+    if result.timed_out:
+        _log(f"WARN: Gemini CLI timed out ({CLI_TIMEOUT_SECONDS}s)")
+        if result.stderr_lines:
+            _log("CLI stderr before timeout:")
+            for err_line in result.stderr_lines[-20:]:
+                _log(f"  | {err_line}")
         return None
 
-    output = result.stdout.strip()
-    if not output:
+    if result.returncode != 0:
+        _log(f"WARN: Gemini CLI failed (exit {result.returncode})")
+        if result.stderr_lines:
+            for err_line in result.stderr_lines[-10:]:
+                _log(f"  | {err_line}")
+        return None
+
+    if not result.stdout:
         _log("WARN: Gemini CLI returned empty output")
         return None
 
-    return output
+    return result.stdout
 
 
 def _try_api_key(prompt: str) -> str | None:
