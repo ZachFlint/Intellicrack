@@ -134,7 +134,6 @@ impl MmapDocument {
 
         self.path = Some(path.clone());
         self.piece_table = PieceTable::new(&data);
-        self._mmap = None;
 
         if let Ok(f) = fs::File::open(&path) {
             if let Ok(m) = unsafe { Mmap::map(&f) } {

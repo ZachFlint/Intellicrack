@@ -694,6 +694,7 @@ class ToolOutputPanel(QFrame):
     address_clicked: pyqtSignal = pyqtSignal(int)
     embedded_tool_started: pyqtSignal = pyqtSignal(str)
     embedded_tool_closed: pyqtSignal = pyqtSignal(str)
+    hex_context_ready: pyqtSignal = pyqtSignal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -899,6 +900,7 @@ class ToolOutputPanel(QFrame):
         self._script_panel: ScriptManagerPanel | None = None
         self._stack_panel: StackViewerPanel | None = None
         self._hex_editor_panel: HexEditorPanelProtocol | None = None
+        self._hex_tools_panel: QWidget | None = None
         self._x64dbg_widget: X64DbgWidgetProtocol | None = None
         self._cutter_widget: CutterWidgetProtocol | None = None
         self._ghidra_widget: GhidraWidgetProtocol | None = None
@@ -1021,6 +1023,27 @@ class ToolOutputPanel(QFrame):
             return None
         else:
             return self._hex_editor_panel
+
+    def add_hex_tools_tab(self) -> QWidget | None:
+        """Add the hex analysis tools panel as a tab.
+
+        Returns:
+            QWidget | None: The created HexToolsPanel or None on failure.
+        """
+        if self._hex_tools_panel is not None:
+            return self._hex_tools_panel
+
+        try:
+            panel_module = importlib.import_module(".panels.hex_tools_panel", "intellicrack.ui")
+            panel = panel_module.HexToolsPanel()
+            self._hex_tools_panel = panel
+            self._tab_widget.addTab(panel, "Hex Tools")
+            _logger.info("hex_tools_tab_added")
+        except Exception as exc:
+            _logger.warning("hex_tools_tab_add_failed", error=str(exc))
+            return None
+        else:
+            return self._hex_tools_panel
 
     def add_x64dbg_tab(self, is_64bit: bool = True) -> X64DbgWidgetProtocol | None:
         """Add the x64dbg debugger as a native panel tab.
@@ -1971,10 +1994,42 @@ class ToolOutputPanel(QFrame):
     def _on_hex_context_push(self, context: dict[str, object]) -> None:
         """Handle hex editor context push for AI integration.
 
+        Formats the hex editor context into a readable analysis prompt
+        and emits it via the ``hex_context_ready`` signal for the chat
+        panel to consume.
+
         Args:
             context: Hex editor context dictionary.
         """
-        self.log(f"[Hex Editor Context] cursor=0x{context.get('cursor', 0):08X}")
+        cursor_val: object = context.get("cursor", 0)
+        cursor_offset: int = int(cursor_val) if isinstance(cursor_val, (int, float)) else 0
+
+        parts: list[str] = ["[Hex Editor Context]"]
+
+        file_path: object = context.get("file_path")
+        if file_path is not None:
+            parts.append(f"File: {file_path}")
+
+        size_val: object = context.get("size")
+        if isinstance(size_val, int):
+            parts.append(f"Size: {size_val} bytes")
+
+        parts.append(f"Offset: 0x{cursor_offset:08X}")
+
+        bytes_data: object = context.get("bytes_at_cursor")
+        if isinstance(bytes_data, str):
+            parts.append(f"Data: {bytes_data}")
+
+        inspection: object = context.get("inspection")
+        if isinstance(inspection, dict):
+            for key, val in cast("dict[str, str]", inspection).items():
+                parts.append(f"  {key}: {val}")
+
+        parts.append("\nPlease analyze this binary data.")
+
+        formatted = "\n".join(parts)
+        self.hex_context_ready.emit(formatted)
+        self.log(f"[Hex Editor Context] cursor=0x{cursor_offset:08X}")
         _logger.info("hex_context_pushed", keys=list(context.keys()))
 
     def _wire_stack_viewer_bridges(self) -> None:
@@ -2057,6 +2112,7 @@ class ToolOutputPanel(QFrame):
         """
         tab_openers: dict[str, Callable[[], object]] = {
             "Hex Editor": self.add_hex_editor_tab,
+            "Hex Tools": self.add_hex_tools_tab,
             "Frida": self.add_frida_tab,
             "Ghidra": self.add_ghidra_tab,
             "Cutter": self.add_cutter_tab,
@@ -2094,12 +2150,9 @@ class ToolOutputPanel(QFrame):
         """
         if self._hex_editor_panel is None:
             return False
-        doc = getattr(self._hex_editor_panel, "_document", None)
-        if doc is None:
-            return False
-        is_modified = getattr(doc, "is_modified", None)
-        if callable(is_modified):
-            return bool(is_modified())
+        has_changes_fn = getattr(self._hex_editor_panel, "has_unsaved_changes", None)
+        if callable(has_changes_fn):
+            return bool(has_changes_fn())
         return False
 
     def save_hex_editor(self) -> bool:
@@ -2110,8 +2163,7 @@ class ToolOutputPanel(QFrame):
         """
         if self._hex_editor_panel is None:
             return False
-        save_fn = getattr(self._hex_editor_panel, "_on_save", None)
+        save_fn = getattr(self._hex_editor_panel, "save", None)
         if callable(save_fn):
-            save_fn()
-            return True
+            return bool(save_fn())
         return False

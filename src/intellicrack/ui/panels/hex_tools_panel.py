@@ -390,6 +390,51 @@ class HexToolsPanel(QWidget):
         tabs.addTab(self._build_file_splitter_tab(), "File Splitter")
         layout.addWidget(tabs)
 
+    def set_selected_bytes(self, data: bytes, offset: int) -> None:
+        """Update tool sub-tabs with externally selected bytes.
+
+        Populates the base converter with the hex value of the selected
+        bytes, the IEEE 754 inspector with float/double interpretation,
+        and the byte swapper with the raw hex.
+
+        Args:
+            data: The selected bytes from the hex editor.
+            offset: The starting offset of the selection.
+        """
+        _ = offset
+        if not data:
+            return
+        hex_str = data.hex().upper()
+        self._base_input.setText(f"0x{hex_str}")
+        self._swap_input.setText(hex_str)
+        _f32_size = 4
+        _f64_size = 8
+        if len(data) == _f32_size:
+            try:
+                float_val = struct.unpack("<f", data)[0]
+                self._ieee754_type_combo.setCurrentIndex(0)
+                self._ieee754_input.setText(f"{float_val!r}")
+            except struct.error:
+                pass
+        elif len(data) == _f64_size:
+            try:
+                double_val = struct.unpack("<d", data)[0]
+                self._ieee754_type_combo.setCurrentIndex(1)
+                self._ieee754_input.setText(f"{double_val!r}")
+            except struct.error:
+                pass
+
+    def set_cursor_value(self, offset: int, byte_val: int) -> None:
+        """Update tool sub-tabs with a single cursor byte.
+
+        Args:
+            offset: The byte offset in the document.
+            byte_val: The byte value at the cursor position.
+        """
+        _ = offset
+        self._base_input.setText(f"0x{byte_val:02X}")
+        self._swap_input.setText(f"{byte_val:02X}")
+
     def _build_demangler_tab(self) -> QWidget:
         """Build the symbol demangler sub-tab.
 

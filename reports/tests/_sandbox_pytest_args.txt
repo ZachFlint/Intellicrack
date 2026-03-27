@@ -1,1 +1,1 @@
-tests/test_ui/test_panel_dock.py tests/test_ui/test_tool_panel_detach.py tests/test_ui/test_state_persistence.py tests/test_ui/test_search_async.py -v --timeout=30 --no-header
+tests/test_hexpat/ --tb=short -q --no-header -p no:timeout

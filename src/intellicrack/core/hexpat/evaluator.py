@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from intellicrack.core.hexpat.ast_nodes import (
     AddressOfExpr,
@@ -58,6 +58,7 @@ from intellicrack.core.hexpat.ast_nodes import (
 )
 from intellicrack.core.hexpat.errors import HexPatRuntimeError, HexPatTypeError
 from intellicrack.core.hexpat.type_system import (
+    BitfieldTypeInfo,
     EnumTypeInfo,
     HexPatType,
     StructTypeInfo,
@@ -72,7 +73,7 @@ if TYPE_CHECKING:
     from intellicrack.core.hexpat._pragma import PragmaInfo
     from intellicrack.core.hexpat.ast_nodes import DeclNode, ExprNode, StmtNode, TypeNode
     from intellicrack.core.hexpat.data_reader import DataReader
-    from intellicrack.core.hexpat.type_system import BitfieldTypeInfo, TypeRegistry
+    from intellicrack.core.hexpat.type_system import TypeRegistry
 
 
 class _BreakSignalError(Exception):
@@ -104,7 +105,7 @@ _PrimValue = int | float | str | bytes | bool | None
 
 
 @dataclass
-class _BuiltinCallable:
+class BuiltinCallable:
     """Wrapper for a built-in Python callable stored as a PatternValue.
 
     Attributes:
@@ -129,7 +130,7 @@ class PatternValue:
         members: Named child values for struct/union instances.
     """
 
-    value: _PrimValue | FunctionDecl | _BuiltinCallable
+    value: _PrimValue | FunctionDecl | BuiltinCallable
     type_info: HexPatType | None = None
     offset: int = 0
     size: int = 0
@@ -261,6 +262,8 @@ class HexPatEvaluator:
         _array_index_stack: Stack of current array index values.
         _default_endian: Default endianness from pragma or "little".
         _color_index: Index into FIELD_COLORS for the next color assignment.
+        _pointer_size: Size of a pointer in bytes (4 or 8).
+        _namespace_stack: Stack of active namespace names for qualified registration.
         _builtins: Table of built-in function names to callable wrappers.
     """
 
@@ -303,7 +306,9 @@ class HexPatEvaluator:
         self._array_index_stack: list[int] = []
         self._default_endian: str = pragma.endian or "little"
         self._color_index: int = 0
-        self._builtins: dict[str, _BuiltinCallable] = self._build_builtins()
+        self._pointer_size: int = pragma.pointer_size
+        self._namespace_stack: list[str] = []
+        self._builtins: dict[str, BuiltinCallable] = self._build_builtins()
 
     @property
     def scope(self) -> EvalScope:
@@ -371,7 +376,7 @@ class HexPatEvaluator:
 
     @staticmethod
     def _format_value(
-        value: _PrimValue | FunctionDecl | _BuiltinCallable,
+        value: _PrimValue | FunctionDecl | BuiltinCallable,
         type_info: HexPatType | None,
     ) -> str:
         """Format a runtime value as a human-readable display string.
@@ -399,8 +404,10 @@ class HexPatEvaluator:
             return f"0x{value:X}"
         if isinstance(value, bytes):
             return value.hex()
-        if isinstance(value, (_BuiltinCallable, FunctionDecl)):
+        if isinstance(value, (BuiltinCallable, FunctionDecl)):
             return "<function>"
+        if type_info is not None and type_info.name in {"char", "char16"}:
+            return f"'{value}'"
         return str(value)
 
     def _eval_decl(self, node: DeclNode) -> None:
@@ -414,12 +421,16 @@ class HexPatEvaluator:
         """
         if isinstance(node, StructDecl):
             self._types.register_struct(node)
+            self._register_namespaced(node.name)
         elif isinstance(node, UnionDecl):
             self._types.register_union(node)
+            self._register_namespaced(node.name)
         elif isinstance(node, EnumDecl):
             self._register_enum(node)
+            self._register_namespaced(node.name)
         elif isinstance(node, BitfieldDecl):
             self._types.register_bitfield(node)
+            self._register_namespaced(node.name)
         elif isinstance(node, FunctionDecl):
             fn_value = PatternValue(value=node)
             self._scope.define(node.name, fn_value)
@@ -427,6 +438,16 @@ class HexPatEvaluator:
             self._eval_namespace_decl(node)
         else:
             self._register_using(node)
+
+    def _register_namespaced(self, name: str) -> None:
+        """Register a namespace-qualified alias for a type when inside a namespace.
+
+        Args:
+            name: The unqualified type name.
+        """
+        if self._namespace_stack:
+            qualified = "::".join(self._namespace_stack) + "::" + name
+            self._types.register_alias(qualified, name)
 
     def _register_enum(self, node: EnumDecl) -> None:
         """Register an enum declaration with resolved member values.
@@ -484,8 +505,10 @@ class HexPatEvaluator:
         ns_scope = EvalScope(parent=self._scope)
         saved_scope = self._scope
         self._scope = ns_scope
+        self._namespace_stack.append(node.name)
         for decl in node.body:
             self._eval_decl(decl)
+        self._namespace_stack.pop()
         self._scope = saved_scope
         ns_value = PatternValue(value=node.name)
         ns_value.members.update(ns_scope.bindings)
@@ -655,8 +678,18 @@ class HexPatEvaluator:
         color = self._next_color()
         description = self._extract_description(node.annotations)
 
+        type_node: TypeNode = node.type_node
+        if node.array_size is not None or node.while_condition is not None:
+            type_node = ArrayType(
+                element=node.type_node,
+                size=node.array_size,
+                while_condition=node.while_condition,
+                line=node.line,
+                column=node.column,
+            )
+
         result = self._instantiate_type(
-            node.type_node,
+            type_node,
             node.name,
             target_offset,
             color,
@@ -664,13 +697,16 @@ class HexPatEvaluator:
             endianness=None,
         )
         if result is not None:
+            field_size = int(result["size"])
+            if node.at_offset is None:
+                self._offset = target_offset + field_size
             self._results.append(result)
             self._pattern_count += 1
             res_size = int(result["size"])
             if node.at_offset is None:
                 self._offset = target_offset + res_size
             raw_value = result.pop("_value", None)
-            bound_value: _PrimValue | FunctionDecl | _BuiltinCallable = (
+            bound_value: _PrimValue | FunctionDecl | BuiltinCallable = (
                 raw_value if isinstance(raw_value, (int, float, str, bool, bytes)) else None
             )
             bound_val = PatternValue(
@@ -721,9 +757,10 @@ class HexPatEvaluator:
                 msg = f"unknown primitive type '{type_node.name}'"
                 raise HexPatTypeError(msg, type_node.line, type_node.column)
             pv = self._read_primitive(ptype, offset)
-            raw = self._data.read(offset, ptype.size)
+            actual_size = pv.size if ptype.size <= 0 else ptype.size
+            raw = self._data.read(offset, actual_size)
             display = self._format_value(pv.value, ptype)
-            result = _make_parsed_field(var_name, offset, ptype.size, raw, display, [], color, description)
+            result = _make_parsed_field(var_name, offset, actual_size, raw, display, [], color, description)
             result["_value"] = pv.value
             return result
 
@@ -736,11 +773,11 @@ class HexPatEvaluator:
         if isinstance(type_node, PointerType):
             ptr_type = self._types.resolve_primitive("u64", eff_endian)
             if ptr_type is None:
-                ptr_type = HexPatType("u64", self._POINTER_SIZE, False, eff_endian)
+                ptr_type = HexPatType("u64", self._pointer_size, False, eff_endian)
             pv = self._read_primitive(ptr_type, offset)
-            raw = self._data.read(offset, self._POINTER_SIZE)
+            raw = self._data.read(offset, self._pointer_size)
             display = self._format_value(pv.value, ptr_type)
-            return _make_parsed_field(var_name, offset, self._POINTER_SIZE, raw, f"*{display}", [], color, description)
+            return _make_parsed_field(var_name, offset, self._pointer_size, raw, f"*{display}", [], color, description)
 
         return None
 
@@ -974,14 +1011,15 @@ class HexPatEvaluator:
 
         total_bytes = (total_bits + 7) // 8
         raw = self._data.read(offset, total_bytes)
-        int_value = int.from_bytes(raw, byteorder="little")
+        bf_byteorder: Literal["little", "big"] = "big" if self._default_endian == "big" else "little"
+        int_value = int.from_bytes(raw, byteorder=bf_byteorder)
 
         children: list[dict[str, Any]] = []
         bit_pos = 0
         for entry_name, width in bit_widths:
             mask = (1 << width) - 1
             field_val = (int_value >> bit_pos) & mask
-            child_raw = field_val.to_bytes(max((width + 7) // 8, 1), byteorder="little")
+            child_raw = field_val.to_bytes(max((width + 7) // 8, 1), byteorder=bf_byteorder)
             children.append(
                 _make_parsed_field(
                     entry_name,
@@ -1037,7 +1075,7 @@ class HexPatEvaluator:
                 self._array_index_stack.append(i)
                 elem = self._instantiate_type(
                     type_node.element,
-                    f"{var_name}[{i}]",
+                    f"[{i}]",
                     current_offset,
                     color,
                     "",
@@ -1063,7 +1101,7 @@ class HexPatEvaluator:
                 self._array_index_stack.append(i)
                 elem = self._instantiate_type(
                     type_node.element,
-                    f"{var_name}[{i}]",
+                    f"[{i}]",
                     current_offset,
                     color,
                     "",
@@ -1136,16 +1174,16 @@ class HexPatEvaluator:
         """
         ptr_type = self._types.resolve_primitive("u64", eff_endian)
         if ptr_type is None:
-            ptr_type = HexPatType("u64", self._POINTER_SIZE, False, eff_endian)
+            ptr_type = HexPatType("u64", self._pointer_size, False, eff_endian)
         pv = self._read_primitive(ptr_type, target_offset)
-        raw = self._data.read(target_offset, self._POINTER_SIZE)
+        raw = self._data.read(target_offset, self._pointer_size)
         display = f"*{self._format_value(pv.value, ptr_type)}"
         result: dict[str, Any] = _make_parsed_field(
-            node.name, target_offset, self._POINTER_SIZE, raw, display, [], color, description
+            node.name, target_offset, self._pointer_size, raw, display, [], color, description
         )
         if node.at_offset is None:
-            self._offset = target_offset + self._POINTER_SIZE
-        bound = PatternValue(value=pv.value, type_info=ptr_type, offset=target_offset, size=self._POINTER_SIZE)
+            self._offset = target_offset + self._pointer_size
+        bound = PatternValue(value=pv.value, type_info=ptr_type, offset=target_offset, size=self._pointer_size)
         self._scope.define(node.name, bound)
         return result
 
@@ -1210,7 +1248,7 @@ class HexPatEvaluator:
             if node.at_offset is None:
                 self._offset = target_offset + field_size
             raw_value = result.pop("_value", None)
-            bound_value: _PrimValue | FunctionDecl | _BuiltinCallable = (
+            bound_value: _PrimValue | FunctionDecl | BuiltinCallable = (
                 raw_value if isinstance(raw_value, (int, float, str, bool, bytes)) else None
             )
             self._scope.define(
@@ -1508,6 +1546,8 @@ class HexPatEvaluator:
             return int(lv) << int(rv)
         if op == ">>":
             return int(lv) >> int(rv)
+        if op == "^^":
+            return bool(lv) != bool(rv)
         msg = f"unsupported operator '{op}' for numeric types"
         raise HexPatRuntimeError(msg, line, column)
 
@@ -1553,7 +1593,7 @@ class HexPatEvaluator:
         callee = self._eval_expr(node.callee)
         args = [self._eval_expr(a) for a in node.arguments]
 
-        if isinstance(callee.value, _BuiltinCallable):
+        if isinstance(callee.value, BuiltinCallable):
             return callee.value.fn(*args)
 
         if isinstance(callee.value, FunctionDecl):
@@ -1698,6 +1738,16 @@ class HexPatEvaluator:
                 self._scope.define(name, new_val)
             return new_val
 
+        if isinstance(node.target, MemberAccessExpr):
+            parent = self._eval_expr(node.target.object_expr)
+            member_name = node.target.member
+            if node.op != "=" and member_name in parent.members:
+                new_val = self._apply_compound_assign(
+                    node.op, parent.members[member_name], new_val, node.line, node.column
+                )
+            parent.members[member_name] = new_val
+            return new_val
+
         msg = "unsupported assignment target"
         raise HexPatRuntimeError(msg, node.line, node.column)
 
@@ -1767,9 +1817,64 @@ class HexPatEvaluator:
             resolved = self._types.resolve(type_node.name)
             if isinstance(resolved, HexPatType):
                 return resolved.size if resolved.size > 0 else 0
+            if isinstance(resolved, StructTypeInfo):
+                return self._sizeof_struct(resolved)
+            if isinstance(resolved, UnionTypeInfo):
+                return self._sizeof_union(resolved)
+            if isinstance(resolved, EnumTypeInfo):
+                return resolved.backing_type.size
+            if isinstance(resolved, BitfieldTypeInfo):
+                return self._sizeof_bitfield(resolved)
         if isinstance(type_node, PointerType):
-            return self._POINTER_SIZE
+            return self._pointer_size
         return 0
+
+    def _sizeof_struct(self, info: StructTypeInfo) -> int:
+        """Compute the total byte size of a struct type.
+
+        Args:
+            info: The resolved struct type info.
+
+        Returns:
+            The sum of all field sizes in bytes.
+        """
+        total = 0
+        for stmt in info.decl.body:
+            if isinstance(stmt, FieldDecl):
+                total += self._sizeof_type_node(stmt.type_node)
+        return total
+
+    def _sizeof_union(self, info: UnionTypeInfo) -> int:
+        """Compute the byte size of a union type (maximum field size).
+
+        Args:
+            info: The resolved union type info.
+
+        Returns:
+            The size of the largest field in bytes.
+        """
+        max_size = 0
+        for stmt in info.decl.body:
+            if isinstance(stmt, FieldDecl):
+                field_size = self._sizeof_type_node(stmt.type_node)
+                max_size = max(max_size, field_size)
+        return max_size
+
+    def _sizeof_bitfield(self, info: BitfieldTypeInfo) -> int:
+        """Compute the byte size of a bitfield type.
+
+        Args:
+            info: The resolved bitfield type info.
+
+        Returns:
+            The total size rounded up to the nearest byte.
+        """
+        total_bits = 0
+        for entry in info.decl.entries:
+            wv = self._eval_expr(entry.width)
+            if isinstance(wv.value, int):
+                total_bits += wv.value
+        return (total_bits + 7) // 8
 
     def _eval_cast(self, node: CastExpr) -> PatternValue:
         """Evaluate a type cast expression.
@@ -1847,11 +1952,11 @@ class HexPatEvaluator:
                     return pv.value
         return ""
 
-    def _build_builtins(self) -> dict[str, _BuiltinCallable]:
+    def _build_builtins(self) -> dict[str, BuiltinCallable]:
         """Construct the built-in function table.
 
         Returns:
-            A dict mapping function name to a _BuiltinCallable wrapper.
+            A dict mapping function name to a BuiltinCallable wrapper.
         """
         evaluator = self
 
@@ -1976,7 +2081,7 @@ class HexPatEvaluator:
             ("abs", builtin_abs),
             ("strlen", builtin_strlen),
         ]
-        return {n: _BuiltinCallable(fn=f, name=n) for n, f in names_and_fns}
+        return {n: BuiltinCallable(fn=f, name=n) for n, f in names_and_fns}
 
 
 def _truthy(value: PatternValue) -> bool:

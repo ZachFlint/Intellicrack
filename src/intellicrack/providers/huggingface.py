@@ -17,10 +17,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, override
 
 import httpx
 
-
-if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
-
 from ..core.logging import get_logger, log_provider_request
 from ..core.types import (
     AuthenticationError,
@@ -36,6 +32,10 @@ from ..core.types import (
     ToolDefinition,
 )
 from .base import LLMProviderBase, ToolCallBufferManager, create_openai_tool_schema
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 _ERR_NOT_CONNECTED = "Not connected to HuggingFace"

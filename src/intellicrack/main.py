@@ -20,6 +20,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
+from intellicrack._metadata import __version__
+
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -39,8 +41,6 @@ if TYPE_CHECKING:
     from intellicrack.ui.dialogs import SplashScreen
     from intellicrack.ui.resources.icon_manager import IconManager
     from intellicrack.ui.resources.theme_manager import ThemeManager
-
-from intellicrack._metadata import __version__
 
 
 _APP_VERSION: str = __version__

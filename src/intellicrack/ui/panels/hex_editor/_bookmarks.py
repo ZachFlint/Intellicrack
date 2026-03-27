@@ -9,7 +9,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from PyQt6.QtWidgets import QTreeWidget, QTreeWidgetItem
+from PyQt6.QtGui import QColor
+from PyQt6.QtWidgets import QColorDialog, QInputDialog, QTreeWidget, QTreeWidgetItem, QWidget
 
 
 class BookmarksMixin:
@@ -20,7 +21,7 @@ class BookmarksMixin:
     _bookmarks_tree: QTreeWidget | None
 
     def _on_add_bookmark(self) -> None:
-        """Add a bookmark at the current cursor position."""
+        """Add a bookmark at the current cursor position with user-specified attributes."""
         if self._document is None:
             return
 
@@ -28,7 +29,21 @@ class BookmarksMixin:
         if self._hex_widget is not None:
             cursor_offset = getattr(self._hex_widget, "_cursor_offset", 0)
 
-        self._document.add_bookmark(cursor_offset, 1, "Bookmark", "#FFFF00")
+        parent = self if isinstance(self, QWidget) else None
+        name, ok = QInputDialog.getText(
+            parent,
+            "Add Bookmark",
+            "Bookmark name:",
+            text=f"Bookmark @ 0x{cursor_offset:08X}",
+        )
+        if not ok or not name:
+            return
+
+        color = QColorDialog.getColor(QColor("#FFFF00"), parent, "Bookmark Color")
+        if not color.isValid():
+            return
+
+        self._document.add_bookmark(cursor_offset, 1, name, color.name())
         self._refresh_bookmarks()
 
     def _on_remove_bookmark(self) -> None:

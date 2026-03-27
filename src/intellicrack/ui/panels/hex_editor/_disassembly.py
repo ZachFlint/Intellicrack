@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QHBoxLayout,
+    QMessageBox,
     QPushButton,
     QSpinBox,
     QTableWidget,
@@ -108,7 +109,12 @@ class DisassemblyMixin:
             return
 
         if not disassembler_available or HexDisassembler_cls is None:
-            logger.debug("disasm_capstone_unavailable")
+            parent = self if isinstance(self, QWidget) else None
+            QMessageBox.warning(
+                parent,
+                "Capstone Unavailable",
+                "Capstone is not installed. Install with: pip install capstone",
+            )
             return
 
         count = self._disasm_count_spin.value() if self._disasm_count_spin is not None else DEFAULT_DISASM_COUNT
@@ -136,7 +142,12 @@ class DisassemblyMixin:
 
         disassembler = HexDisassembler_cls()
         if not disassembler.available:
-            logger.debug("disasm_capstone_unavailable")
+            parent = self if isinstance(self, QWidget) else None
+            QMessageBox.warning(
+                parent,
+                "Capstone Unavailable",
+                "Capstone is not installed. Install with: pip install capstone",
+            )
             return
 
         arch_text = self._disasm_arch_combo.currentText() if self._disasm_arch_combo is not None else "Auto Detect"

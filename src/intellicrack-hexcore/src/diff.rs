@@ -22,8 +22,109 @@ pub struct DiffResult {
 }
 
 const BLOCK_SIZE: usize = 16;
+const BYTE_LEVEL_THRESHOLD: usize = 1_048_576;
 
 pub fn diff_data(data_a: &[u8], data_b: &[u8]) -> DiffResult {
+    if data_a.len() <= BYTE_LEVEL_THRESHOLD && data_b.len() <= BYTE_LEVEL_THRESHOLD {
+        diff_data_byte_level(data_a, data_b)
+    } else {
+        diff_data_block(data_a, data_b)
+    }
+}
+
+fn diff_data_byte_level(data_a: &[u8], data_b: &[u8]) -> DiffResult {
+    if data_a == data_b {
+        return DiffResult {
+            regions: vec![DiffRegion {
+                offset_a: 0,
+                offset_b: 0,
+                length: data_a.len(),
+                diff_type: DiffType::Match,
+            }],
+            total_differences: 0,
+            files_identical: true,
+        };
+    }
+
+    let prefix_len = data_a
+        .iter()
+        .zip(data_b.iter())
+        .take_while(|(a, b)| a == b)
+        .count();
+
+    let max_suffix = data_a.len().min(data_b.len()) - prefix_len;
+    let suffix_len = data_a
+        .iter()
+        .rev()
+        .zip(data_b.iter().rev())
+        .take(max_suffix)
+        .take_while(|(a, b)| a == b)
+        .count();
+
+    let mut regions = Vec::new();
+    let mut total_diffs: usize = 0;
+
+    if prefix_len > 0 {
+        regions.push(DiffRegion {
+            offset_a: 0,
+            offset_b: 0,
+            length: prefix_len,
+            diff_type: DiffType::Match,
+        });
+    }
+
+    let mid_a_len = data_a.len() - prefix_len - suffix_len;
+    let mid_b_len = data_b.len() - prefix_len - suffix_len;
+
+    if mid_a_len > 0 && mid_b_len > 0 {
+        let common_mid = mid_a_len.min(mid_b_len);
+        total_diffs += data_a[prefix_len..prefix_len + common_mid]
+            .iter()
+            .zip(data_b[prefix_len..prefix_len + common_mid].iter())
+            .filter(|(a, b)| a != b)
+            .count();
+        total_diffs += mid_a_len.abs_diff(mid_b_len);
+        regions.push(DiffRegion {
+            offset_a: prefix_len,
+            offset_b: prefix_len,
+            length: mid_a_len.max(mid_b_len),
+            diff_type: DiffType::Modified,
+        });
+    } else if mid_a_len > 0 {
+        total_diffs += mid_a_len;
+        regions.push(DiffRegion {
+            offset_a: prefix_len,
+            offset_b: prefix_len,
+            length: mid_a_len,
+            diff_type: DiffType::InsertedA,
+        });
+    } else if mid_b_len > 0 {
+        total_diffs += mid_b_len;
+        regions.push(DiffRegion {
+            offset_a: prefix_len,
+            offset_b: prefix_len,
+            length: mid_b_len,
+            diff_type: DiffType::InsertedB,
+        });
+    }
+
+    if suffix_len > 0 {
+        regions.push(DiffRegion {
+            offset_a: data_a.len() - suffix_len,
+            offset_b: data_b.len() - suffix_len,
+            length: suffix_len,
+            diff_type: DiffType::Match,
+        });
+    }
+
+    DiffResult {
+        regions,
+        total_differences: total_diffs,
+        files_identical: false,
+    }
+}
+
+fn diff_data_block(data_a: &[u8], data_b: &[u8]) -> DiffResult {
     if data_a == data_b {
         return DiffResult {
             regions: vec![DiffRegion {
@@ -213,5 +314,29 @@ mod tests {
             .filter(|r| r.diff_type == DiffType::Match)
             .collect();
         assert!(!match_regions.is_empty());
+    }
+
+    #[test]
+    fn test_single_byte_insertion() {
+        let a = b"ABCDEF";
+        let mut b = Vec::from(&a[..]);
+        b.insert(3, b'X');
+        let result = diff_data(a, &b);
+        assert!(!result.files_identical);
+        let has_insert = result
+            .regions
+            .iter()
+            .any(|r| r.diff_type == DiffType::InsertedB);
+        assert!(
+            has_insert,
+            "Expected InsertedB region for single byte insertion, got: {:?}",
+            result.regions
+        );
+        let match_count = result
+            .regions
+            .iter()
+            .filter(|r| r.diff_type == DiffType::Match)
+            .count();
+        assert!(match_count >= 1, "Expected at least one Match region");
     }
 }

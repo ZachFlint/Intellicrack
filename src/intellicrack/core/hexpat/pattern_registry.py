@@ -152,7 +152,12 @@ class PatternRegistry:
         if not self._scanned:
             self.scan()
 
-        read_size = min(1024, data_reader.size)
+        max_magic_end = 1024
+        for pattern in self._patterns:
+            for pat_offset, magic in pattern.magic_bytes:
+                max_magic_end = max(max_magic_end, pat_offset + len(magic))
+
+        read_size = min(max_magic_end, data_reader.size)
         if read_size == 0:
             return []
 

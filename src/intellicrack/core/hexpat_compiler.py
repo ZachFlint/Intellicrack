@@ -68,7 +68,10 @@ class TokenType(enum.Enum):
     FLOAT = "float"
     DOUBLE = "double"
     CHAR = "char"
+    CHAR16 = "char16"
     BOOL = "bool"
+    U128 = "u128"
+    S128 = "s128"
     PADDING = "padding"
     LE = "le"
     BE = "be"
@@ -150,7 +153,10 @@ _KEYWORD_MAP: dict[str, TokenType] = {
     "float": TokenType.FLOAT,
     "double": TokenType.DOUBLE,
     "char": TokenType.CHAR,
+    "char16": TokenType.CHAR16,
     "bool": TokenType.BOOL,
+    "u128": TokenType.U128,
+    "s128": TokenType.S128,
     "padding": TokenType.PADDING,
     "le": TokenType.LE,
     "be": TokenType.BE,
@@ -169,13 +175,16 @@ _PRIMITIVE_TOKENS: frozenset[TokenType] = frozenset({
     TokenType.U16,
     TokenType.U32,
     TokenType.U64,
+    TokenType.U128,
     TokenType.S8,
     TokenType.S16,
     TokenType.S32,
     TokenType.S64,
+    TokenType.S128,
     TokenType.FLOAT,
     TokenType.DOUBLE,
     TokenType.CHAR,
+    TokenType.CHAR16,
     TokenType.BOOL,
 })
 
@@ -191,7 +200,10 @@ _TYPE_MAP: dict[str, dict[str, str]] = {
     "float": {"type": "Float32"},
     "double": {"type": "Float64"},
     "char": {"type": "Char"},
+    "char16": {"type": "Char16"},
     "bool": {"type": "Bool"},
+    "u128": {"type": "UInt128"},
+    "s128": {"type": "Int128"},
 }
 
 
@@ -678,8 +690,7 @@ class HexPatLexer:
         ):
             self._advance()
         text = self._source[start_pos:self._pos]
-        lower = text.lower()
-        token_type = _KEYWORD_MAP.get(lower, TokenType.IDENTIFIER)
+        token_type = _KEYWORD_MAP.get(text, TokenType.IDENTIFIER)
         self._tokens.append(Token(token_type, text, start_line, start_col))
 
 
@@ -799,8 +810,28 @@ class HexPatParser:
         if tok.type == TokenType.SEMICOLON:
             self._advance()
             return None
+        if tok.type == TokenType.IDENTIFIER and tok.value in {
+            "fn", "namespace", "using", "const", "return", "break", "continue",
+        }:
+            self._skip_construct()
+            return None
         msg = f"expected declaration, got '{tok.value}'"
         raise HexPatError(msg, tok.line, tok.column)
+
+    def _skip_construct(self) -> None:
+        """Skip an unsupported construct by consuming tokens until balanced."""
+        brace_depth = 0
+        while not self._at_end():
+            tok = self._advance()
+            if tok.type == TokenType.LBRACE:
+                brace_depth += 1
+            elif tok.type == TokenType.RBRACE:
+                if brace_depth <= 1:
+                    self._match(TokenType.SEMICOLON)
+                    return
+                brace_depth -= 1
+            elif tok.type == TokenType.SEMICOLON and brace_depth == 0:
+                return
 
     def _parse_struct(self) -> StructDecl:
         """Parse a struct declaration.
@@ -835,7 +866,7 @@ class HexPatParser:
         return UnionDecl(name=name_tok.value, fields=fields)
 
     def _parse_enum(self) -> EnumDecl:
-        """Parse an enum declaration.
+        """Parse an enum declaration with optional auto-incrementing values.
 
         Returns:
             EnumDecl: Parsed enum declaration.
@@ -846,12 +877,14 @@ class HexPatParser:
         backing = self._parse_type_spec()
         self._expect(TokenType.LBRACE)
         values: list[tuple[str, int]] = []
+        counter = 0
         while self._current().type != TokenType.RBRACE and not self._at_end():
             val_name = self._expect(TokenType.IDENTIFIER)
-            self._expect(TokenType.ASSIGN)
-            val_num = self._expect(TokenType.NUMBER)
-            num = int(val_num.value, 0)
-            values.append((val_name.value, num))
+            if self._match(TokenType.ASSIGN):
+                val_num = self._expect(TokenType.NUMBER)
+                counter = int(val_num.value, 0)
+            values.append((val_name.value, counter))
+            counter += 1
             self._match(TokenType.COMMA)
         self._expect(TokenType.RBRACE)
         self._match(TokenType.SEMICOLON)
@@ -1175,7 +1208,7 @@ class HexPatCodegen:
                 self._nested_bitfields[decl.name] = decl
 
     def generate(self) -> dict[str, Any]:
-        """Generate the JSON template dict from the first struct declaration.
+        """Generate the JSON template dict from all declarations.
 
         Returns:
             dict[str, Any]: JSON-serializable template definition.
@@ -1194,12 +1227,39 @@ class HexPatCodegen:
         for f in main_struct.fields:
             fields.extend(self._gen_field(f))
 
+        types: dict[str, dict[str, Any]] = {}
+        for decl in self._decls:
+            if isinstance(decl, StructDecl) and decl.name != main_struct.name:
+                struct_fields: list[dict[str, Any]] = []
+                for f in decl.fields:
+                    struct_fields.extend(self._gen_field(f))
+                types[decl.name] = {"kind": "struct", "fields": struct_fields}
+            elif isinstance(decl, UnionDecl):
+                union_fields: list[dict[str, Any]] = []
+                for f in decl.fields:
+                    union_fields.extend(self._gen_field(f))
+                types[decl.name] = {"kind": "union", "fields": union_fields}
+            elif isinstance(decl, EnumDecl):
+                backing = self._gen_type(decl.backing_type)
+                types[decl.name] = {
+                    "kind": "enum",
+                    "backing_type": backing,
+                    "values": list(decl.values),
+                }
+            elif isinstance(decl, BitfieldDecl):
+                types[decl.name] = {
+                    "kind": "bitfield",
+                    "fields": list(decl.fields),
+                }
+
         result: dict[str, Any] = {
             "name": main_struct.name,
             "description": f"{main_struct.name} (compiled from HexPat DSL)",
             "default_endianness": "little",
             "fields": fields,
         }
+        if types:
+            result["types"] = types
         return result
 
     def _gen_field(self, node: FieldNode | ConditionalField) -> list[dict[str, Any]]:

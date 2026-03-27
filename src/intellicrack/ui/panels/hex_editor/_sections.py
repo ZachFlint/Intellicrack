@@ -201,8 +201,6 @@ class SectionsMixin:
             ])
             self._strings_tree.addTopLevelItem(item)
 
-        self._strings_tree.itemDoubleClicked.connect(self._on_string_double_clicked)
-
     def _on_string_double_clicked(self, item: QTreeWidgetItem, column: int) -> None:
         """Navigate to the string offset when double-clicked.
 

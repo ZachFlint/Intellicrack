@@ -213,6 +213,7 @@ class SearchMixin:
     _search_index: int
     _search_worker: SearchWorker | None
     _numeric_search_worker: NumericSearchWorker | None
+    _search_status_label: QLabel | None
     _numeric_search_frame: QFrame | None
     _numeric_value_input: QLineEdit | None
     _numeric_size_combo: QComboBox | None
@@ -273,7 +274,17 @@ class SearchMixin:
             highlight_fn = getattr(self._hex_widget, "highlight_offsets", None)
             if callable(highlight_fn):
                 highlights = [(off, length, "#FFAA00") for off, length in results]
-                highlight_fn(highlights)
+                highlight_fn(highlights, "search")
+
+        if self._search_status_label is not None:
+            if not results:
+                self._search_status_label.setText("No results found")
+            elif len(results) >= MAX_SEARCH_RESULTS:
+                self._search_status_label.setText(
+                    f"Showing {MAX_SEARCH_RESULTS}+ results (capped)"
+                )
+            else:
+                self._search_status_label.setText(f"Found {len(results)} results")
 
         logger.info("search_completed", result_count=len(results))
 
@@ -467,7 +478,18 @@ class SearchMixin:
             highlight_fn = getattr(self._hex_widget, "highlight_offsets", None)
             if callable(highlight_fn):
                 highlights = [(off, length, "#FFAA00") for off, length in results]
-                highlight_fn(highlights)
+                highlight_fn(highlights, "search")
+
+        if self._search_status_label is not None:
+            if not results:
+                self._search_status_label.setText("No results found")
+            elif len(results) >= MAX_SEARCH_RESULTS:
+                self._search_status_label.setText(
+                    f"Showing {MAX_SEARCH_RESULTS}+ results (capped)"
+                )
+            else:
+                self._search_status_label.setText(f"Found {len(results)} results")
+
         logger.info("numeric_search_completed", result_count=len(results))
 
     def _on_numeric_search_error(self, exc: object) -> None:

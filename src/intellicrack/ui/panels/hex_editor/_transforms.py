@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QListWidget,
+    QMessageBox,
     QPlainTextEdit,
     QPushButton,
     QVBoxLayout,
@@ -33,6 +34,18 @@ from intellicrack.ui.panels.hex_editor._base import (
 )
 
 
+_TransformPipeline_cls: Any = None
+_pipeline_available: bool = False
+try:
+    from intellicrack.core.transform_pipeline import (
+        TransformPipeline as _TransformPipeline_cls,
+    )
+
+    _pipeline_available = True
+except ImportError:
+    logger.debug("transform_pipeline_class_import_unavailable")
+
+
 class TransformsMixin:
     """Mixin providing data transforms and pipeline execution for the hex editor panel."""
 
@@ -43,7 +56,7 @@ class TransformsMixin:
     _transform_params_widget: QWidget | None
     _transform_preview_pane: QPlainTextEdit | None
     _transform_pipeline_list: QListWidget | None
-    _transform_pipeline: list[tuple[str, dict[str, str]]]
+    _transform_pipeline: Any
     _transform_nodes_cache: list[Any]
 
     def _on_data_changed(self) -> None: ...
@@ -60,6 +73,11 @@ class TransformsMixin:
         layout.setContentsMargins(2, 2, 2, 2)
 
         self._transform_nodes_cache = get_all_transform_nodes_fn() if get_all_transform_nodes_fn is not None else []
+
+        if _pipeline_available and _TransformPipeline_cls is not None:
+            self._transform_pipeline = _TransformPipeline_cls()
+        else:
+            self._transform_pipeline = None
 
         node_row = QHBoxLayout()
         node_row.addWidget(QLabel("Transform:"))
@@ -300,6 +318,14 @@ class TransformsMixin:
             return
 
         write_len = min(len(result), read_len)
+        if len(result) > read_len:
+            parent = self if isinstance(self, QWidget) else None
+            QMessageBox.warning(
+                parent,
+                "Transform Truncated",
+                f"Transform output ({len(result)} bytes) exceeds input region "
+                f"({read_len} bytes). Output will be truncated to fit.",
+            )
         try:
             self._document.write_bytes(cursor_offset, result[:write_len])
         except (AttributeError, ValueError) as exc:
@@ -312,71 +338,93 @@ class TransformsMixin:
             self._on_data_changed()
             logger.debug("transform_applied", offset=cursor_offset, length=write_len)
 
+    def _pipeline_step_count(self) -> int:
+        """Return the number of steps in the current pipeline.
+
+        Returns:
+            int: Number of pipeline steps.
+        """
+        if self._transform_pipeline is None:
+            return 0
+        steps: list[Any] = getattr(self._transform_pipeline, "steps", [])
+        return len(steps)
+
+    def _refresh_pipeline_list(self) -> None:
+        """Rebuild the pipeline QListWidget from the TransformPipeline steps."""
+        if self._transform_pipeline_list is None:
+            return
+        self._transform_pipeline_list.clear()
+        if self._transform_pipeline is None:
+            return
+        steps: list[Any] = getattr(self._transform_pipeline, "steps", [])
+        for step in steps:
+            node_name: str = step.node.name if hasattr(step, "node") else str(step)
+            params: dict[str, Any] = step.params if hasattr(step, "params") else {}
+            param_summary = ", ".join(f"{k}={v}" for k, v in params.items() if v)
+            label = f"{node_name}({param_summary})" if param_summary else node_name
+            self._transform_pipeline_list.addItem(label)
+
     def _on_pipeline_add_step(self) -> None:
         """Add the currently selected transform as a new pipeline step."""
         if self._transform_node_combo is None or not self._transform_nodes_cache:
+            return
+        if self._transform_pipeline is None:
             return
         idx = self._transform_node_combo.currentIndex()
         if idx < 0 or idx >= len(self._transform_nodes_cache):
             return
         node = self._transform_nodes_cache[idx]
         params = self._collect_transform_params()
-        self._transform_pipeline.append((node.name, params))
-        if self._transform_pipeline_list is not None:
-            param_summary = ", ".join(f"{k}={v}" for k, v in params.items() if v)
-            label = f"{node.name}({param_summary})" if param_summary else node.name
-            self._transform_pipeline_list.addItem(label)
+        add_step_fn: Any = getattr(self._transform_pipeline, "add_step", None)
+        if callable(add_step_fn):
+            add_step_fn(node, params)
+        self._refresh_pipeline_list()
 
     def _on_pipeline_remove_step(self) -> None:
         """Remove the selected step from the pipeline."""
-        if self._transform_pipeline_list is None:
+        if self._transform_pipeline_list is None or self._transform_pipeline is None:
             return
         row = self._transform_pipeline_list.currentRow()
-        if row < 0 or row >= len(self._transform_pipeline):
+        if row < 0 or row >= self._pipeline_step_count():
             return
-        self._transform_pipeline.pop(row)
-        self._transform_pipeline_list.takeItem(row)
+        remove_fn: Any = getattr(self._transform_pipeline, "remove_step", None)
+        if callable(remove_fn):
+            remove_fn(row)
+        self._refresh_pipeline_list()
 
     def _on_pipeline_move_up(self) -> None:
         """Move the selected pipeline step one position earlier."""
-        if self._transform_pipeline_list is None:
+        if self._transform_pipeline_list is None or self._transform_pipeline is None:
             return
         row = self._transform_pipeline_list.currentRow()
-        if row <= 0 or row >= len(self._transform_pipeline):
+        if row <= 0 or row >= self._pipeline_step_count():
             return
-        self._transform_pipeline[row - 1], self._transform_pipeline[row] = (
-            self._transform_pipeline[row],
-            self._transform_pipeline[row - 1],
-        )
-        item = self._transform_pipeline_list.takeItem(row)
-        self._transform_pipeline_list.insertItem(row - 1, item)
+        move_fn: Any = getattr(self._transform_pipeline, "move_step", None)
+        if callable(move_fn):
+            move_fn(row, row - 1)
+        self._refresh_pipeline_list()
         self._transform_pipeline_list.setCurrentRow(row - 1)
 
     def _on_pipeline_move_down(self) -> None:
         """Move the selected pipeline step one position later."""
-        if self._transform_pipeline_list is None:
+        if self._transform_pipeline_list is None or self._transform_pipeline is None:
             return
         row = self._transform_pipeline_list.currentRow()
-        if row < 0 or row >= len(self._transform_pipeline) - 1:
+        if row < 0 or row >= self._pipeline_step_count() - 1:
             return
-        self._transform_pipeline[row], self._transform_pipeline[row + 1] = (
-            self._transform_pipeline[row + 1],
-            self._transform_pipeline[row],
-        )
-        item = self._transform_pipeline_list.takeItem(row)
-        self._transform_pipeline_list.insertItem(row + 1, item)
+        move_fn: Any = getattr(self._transform_pipeline, "move_step", None)
+        if callable(move_fn):
+            move_fn(row, row + 1)
+        self._refresh_pipeline_list()
         self._transform_pipeline_list.setCurrentRow(row + 1)
 
     def _on_pipeline_execute(self) -> None:
         """Execute all pipeline steps on the current document region and write results."""
-        if self._document is None or not self._transform_pipeline:
+        if self._document is None or self._transform_pipeline is None:
             return
 
-        if get_all_transform_nodes_fn is None:
-            logger.debug("transform_pipeline_unavailable")
+        if self._pipeline_step_count() == 0:
             return
-
-        all_nodes = {n.name: n for n in get_all_transform_nodes_fn()}
 
         cursor_offset = 0
         apply_len = 65536
@@ -404,19 +452,33 @@ class TransformsMixin:
             logger.debug("pipeline_read_failed", error=str(exc))
             return
 
-        result = data
-        for node_name, params in self._transform_pipeline:
-            node = all_nodes.get(node_name)
-            if node is None:
-                logger.debug("pipeline_node_not_found", node_name=node_name)
-                continue
-            try:
-                result = node.process(result, params)
-            except (ValueError, TypeError, KeyError) as exc:
-                logger.debug("pipeline_step_failed", node_name=node_name, error=str(exc))
-                return
+        execute_fn: Any = getattr(self._transform_pipeline, "execute", None)
+        if not callable(execute_fn):
+            logger.warning("pipeline_execute_not_available")
+            return
+
+        try:
+            raw_result: object = execute_fn(data)
+            result: bytes = raw_result if isinstance(raw_result, bytes) else bytes(cast("list[int]", raw_result))
+        except (ValueError, TypeError, KeyError) as exc:
+            logger.debug("pipeline_execution_failed", error=str(exc))
+            parent = self if isinstance(self, QWidget) else None
+            QMessageBox.warning(
+                parent,
+                "Pipeline Failed",
+                f"Pipeline execution failed at a step:\n{exc}",
+            )
+            return
 
         write_len = min(len(result), read_len)
+        if len(result) > read_len:
+            parent = self if isinstance(self, QWidget) else None
+            QMessageBox.warning(
+                parent,
+                "Pipeline Truncated",
+                f"Pipeline output ({len(result)} bytes) exceeds input region "
+                f"({read_len} bytes). Output will be truncated to fit.",
+            )
         try:
             self._document.write_bytes(cursor_offset, result[:write_len])
         except (AttributeError, ValueError) as exc:

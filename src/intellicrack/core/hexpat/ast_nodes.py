@@ -652,6 +652,8 @@ class PlacementStmt:
         at_offset: Optional explicit offset expression for the placement.
         annotations: Tuple of name-value pairs representing placement attributes.
         in_section: Optional expression naming the section the placement belongs to.
+        array_size: Optional expression giving the fixed array length.
+        while_condition: Optional expression for a while-terminated array.
         line: Source line number where this node appears.
         column: Source column number where this node appears.
     """
@@ -661,6 +663,8 @@ class PlacementStmt:
     at_offset: ExprNode | None
     annotations: tuple[tuple[str, ExprNode | None], ...]
     in_section: ExprNode | None
+    array_size: ExprNode | None
+    while_condition: ExprNode | None
     line: int
     column: int
 
