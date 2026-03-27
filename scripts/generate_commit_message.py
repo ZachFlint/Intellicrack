@@ -21,15 +21,19 @@ Exit codes:
 from __future__ import annotations
 
 import os
-import selectors
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import traceback
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Final
+from typing import TYPE_CHECKING, Final
+
+
+if TYPE_CHECKING:
+    from io import TextIOWrapper
 
 from dotenv import load_dotenv
 from google import genai
@@ -82,9 +86,6 @@ after a blank line explaining the motivation or key design choice
 
 {diff_input}
 """
-
-STDERR_TAG: Final[int] = 0
-STDOUT_TAG: Final[int] = 1
 
 
 def _log(msg: str) -> None:
@@ -193,14 +194,47 @@ class _CliResult:
     timed_out: bool = False
 
 
+def _read_stderr_live(stream: TextIOWrapper, dest: list[str]) -> None:
+    """Read stderr line-by-line, logging each line in real time.
+
+    Runs in a daemon thread so the main thread can enforce a timeout.
+
+    Args:
+        stream: The stderr text stream from a subprocess.
+        dest: List to append each stripped stderr line to.
+    """
+    for raw_line in stream:
+        stripped: str = raw_line.rstrip()
+        if stripped:
+            dest.append(stripped)
+            _log(f"  [cli] {stripped}")
+
+
+def _read_stdout(stream: TextIOWrapper, dest: list[str]) -> None:
+    """Read stdout in chunks, buffering for later retrieval.
+
+    Runs in a daemon thread so the main thread can enforce a timeout.
+
+    Args:
+        stream: The stdout text stream from a subprocess.
+        dest: List to append each chunk to.
+    """
+    while True:
+        chunk: str = stream.read(4096)
+        if not chunk:
+            break
+        dest.append(chunk)
+
+
 def _stream_cli_process(
     proc: subprocess.Popen[str],
     timeout: int,
 ) -> _CliResult:
     """Stream stdout/stderr from a Popen process with timeout.
 
-    Reads stderr lines in real-time, logging each to the console so the
-    caller can observe CLI progress.  Stdout is buffered for return.
+    Uses threads to read both pipes concurrently (Windows-compatible).
+    Stderr lines are logged in real time so the caller can observe CLI
+    progress.  Stdout is buffered for return.
 
     Args:
         proc: An open subprocess with text-mode stdout and stderr pipes.
@@ -218,51 +252,35 @@ def _stream_cli_process(
         result.returncode = -1
         return result
 
-    stderr_stream = proc.stderr
-    stdout_stream = proc.stdout
-
     stdout_chunks: list[str] = []
-    stderr_open = True
-    stdout_open = True
 
-    sel = selectors.DefaultSelector()
-    sel.register(stderr_stream, selectors.EVENT_READ, STDERR_TAG)
-    sel.register(stdout_stream, selectors.EVENT_READ, STDOUT_TAG)
+    stderr_thread = threading.Thread(
+        target=_read_stderr_live,
+        args=(proc.stderr, result.stderr_lines),
+        daemon=True,
+    )
+    stdout_thread = threading.Thread(
+        target=_read_stdout,
+        args=(proc.stdout, stdout_chunks),
+        daemon=True,
+    )
+    stderr_thread.start()
+    stdout_thread.start()
 
     deadline = time.monotonic() + timeout
-
-    while stderr_open or stdout_open:
+    while proc.poll() is None:
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             proc.kill()
             proc.wait()
+            stderr_thread.join(timeout=2)
+            stdout_thread.join(timeout=2)
             result.timed_out = True
-            sel.close()
             return result
+        time.sleep(0.25)
 
-        events = sel.select(timeout=min(remaining, 1.0))
-        for key, _ in events:
-            is_stderr = key.data == STDERR_TAG
-            stream = stderr_stream if is_stderr else stdout_stream
-            chunk: str = stream.read(4096)
-            if not chunk:
-                sel.unregister(stream)
-                if is_stderr:
-                    stderr_open = False
-                else:
-                    stdout_open = False
-                continue
-            if is_stderr:
-                for raw_line in chunk.splitlines():
-                    stripped: str = raw_line.rstrip()
-                    if stripped:
-                        result.stderr_lines.append(stripped)
-                        _log(f"  [cli] {stripped}")
-            else:
-                stdout_chunks.append(chunk)
-
-    sel.close()
-    proc.wait()
+    stderr_thread.join(timeout=5)
+    stdout_thread.join(timeout=5)
 
     result.stdout = "".join(stdout_chunks).strip()
     result.returncode = proc.returncode if proc.returncode is not None else -1

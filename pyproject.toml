@@ -43,6 +43,8 @@ dependencies = [
   "psutil>=7.2.2,<8",
   "keyring>=25.7.0,<26",
   "torch",
+  "requests>=2.33.0",
+  "nltk>=3.9.4",
   "yara-python>=4.5.4,<5", "black", "pylint", "autopep8", "flake8", "flake8-pyproject", "ruff", "isort", "pycodestyle", "bandit", "blinter", "vulture", "pyupgrade", "pydocstyle", "sourcery", "wemake-python-styleguide", "darglint", "pydoclint", "pyroma", "yapf", "mccabe", "xenon", "codespell", "detect-secrets", "safety", "yamllint", "jsonlint", "interrogate", "deptry", "radon", "dead", "uncalled", "deadcode", "pygount", "basedpyright", "mypy", "mypy-extensions", "monkeytype", "ty", "pyannotate", "types-requests", "types-pyyaml", "build", "pyclean", "pre-commit", "pre-commit-hooks", "commitizen", "bumpversion", "setuptools-scm", "twine", "rope", "astor", "nodeenv", "pipdeptree", "pip-audit", "poetry", "validate-pyproject", "pytest", "pytest-cov", "pytest-mock", "pytest-asyncio", "pytest-xdist", "pytest-timeout", "pytest-qt", "pytest-benchmark", "pytest-html", "pytest-randomly", "pytest-sugar", "pytest-env", "pytest-instafail", "pytest-deadfixtures", "hypothesis", "tox", "nox", "coverage", "freezegun", "responses", "faker", "sphinx", "sphinx-rtd-theme", "sphinx-autodoc-typehints", "sphinx-copybutton", "sphinx-tabs", "sphinxcontrib-mermaid", "sphinx-autobuild", "pdoc3", "mkdocs-material", "pymdown-extensions", "myst-parser", "ipdb", "line-profiler", "memory-profiler", "py-spy", "snakeviz", "pyinstrument", "scalene", "pycallgraph2", "transformers", "accelerate", "bitsandbytes", "sentencepiece", "safetensors",
 ]
 

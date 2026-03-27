@@ -93508,14 +93508,14 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\nh3-0.3.3.dist-info\sboms\nh3.cyclonedx.json</data>
       <data key="d3">nh3.cyclonedx.json</data>
     </node>
-    <node id=".pixi/envs/default/Lib/site-packages/nltk-3.9.3.dist-info/licenses/AUTHORS.md">
+    <node id=".pixi/envs/default/Lib/site-packages/nltk-3.9.4.dist-info/licenses/AUTHORS.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\nltk-3.9.3.dist-info\licenses\AUTHORS.md</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\nltk-3.9.4.dist-info\licenses\AUTHORS.md</data>
       <data key="d3">AUTHORS.md</data>
     </node>
-    <node id=".pixi/envs/default/Lib/site-packages/nltk-3.9.3.dist-info/licenses/README.md">
+    <node id=".pixi/envs/default/Lib/site-packages/nltk-3.9.4.dist-info/licenses/README.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\nltk-3.9.3.dist-info\licenses\README.md</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\nltk-3.9.4.dist-info\licenses\README.md</data>
       <data key="d3">README.md</data>
     </node>
     <node id=".pixi/envs/default/Lib/site-packages/numpy/random/LICENSE.md">
@@ -94707,6 +94707,526 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\.rustc_info.json</data>
       <data key="d3">.rustc_info.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/allocator-api2-07e5ed23aab02f3a/lib-allocator_api2.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\allocator-api2-07e5ed23aab02f3a\lib-allocator_api2.json</data>
+      <data key="d3">lib-allocator_api2.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/bitflags-0aef6ab8faa24446/lib-bitflags.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\bitflags-0aef6ab8faa24446\lib-bitflags.json</data>
+      <data key="d3">lib-bitflags.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/castaway-9640518251f0b6d4/lib-castaway.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\castaway-9640518251f0b6d4\lib-castaway.json</data>
+      <data key="d3">lib-castaway.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/cfg-if-3dcb42ca3a02dcb5/lib-cfg_if.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\cfg-if-3dcb42ca3a02dcb5\lib-cfg_if.json</data>
+      <data key="d3">lib-cfg_if.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/cli-launcher-1fc0965fb0d83475/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\cli-launcher-1fc0965fb0d83475\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/cli-launcher-3d90d63a6e4b2d6a/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\cli-launcher-3d90d63a6e4b2d6a\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/cli-launcher-f648b96f5b5751ea/bin-cli-launcher.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\cli-launcher-f648b96f5b5751ea\bin-cli-launcher.json</data>
+      <data key="d3">bin-cli-launcher.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/compact_str-fb9144a83bc7298c/lib-compact_str.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\compact_str-fb9144a83bc7298c\lib-compact_str.json</data>
+      <data key="d3">lib-compact_str.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/convert_case-db4e0135e74064fc/lib-convert_case.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\convert_case-db4e0135e74064fc\lib-convert_case.json</data>
+      <data key="d3">lib-convert_case.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/crossterm-0519a7b109575f3d/lib-crossterm.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\crossterm-0519a7b109575f3d\lib-crossterm.json</data>
+      <data key="d3">lib-crossterm.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/crossterm-52a170841005d1d1/lib-crossterm.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\crossterm-52a170841005d1d1\lib-crossterm.json</data>
+      <data key="d3">lib-crossterm.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/crossterm_winapi-6a7631b5ad68108f/lib-crossterm_winapi.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\crossterm_winapi-6a7631b5ad68108f\lib-crossterm_winapi.json</data>
+      <data key="d3">lib-crossterm_winapi.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/darling-b7f95cd61e7d09dc/lib-darling.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\darling-b7f95cd61e7d09dc\lib-darling.json</data>
+      <data key="d3">lib-darling.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/darling_core-41b1a914f2ff946c/lib-darling_core.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\darling_core-41b1a914f2ff946c\lib-darling_core.json</data>
+      <data key="d3">lib-darling_core.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/darling_macro-7ead9b49df0c78f5/lib-darling_macro.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\darling_macro-7ead9b49df0c78f5\lib-darling_macro.json</data>
+      <data key="d3">lib-darling_macro.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/deranged-3acce2d365c69143/lib-deranged.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\deranged-3acce2d365c69143\lib-deranged.json</data>
+      <data key="d3">lib-deranged.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/derive_more-d75b7c7c22bf19a7/lib-derive_more.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\derive_more-d75b7c7c22bf19a7\lib-derive_more.json</data>
+      <data key="d3">lib-derive_more.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/derive_more-impl-23d90fe3efba0013/lib-derive_more_impl.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\derive_more-impl-23d90fe3efba0013\lib-derive_more_impl.json</data>
+      <data key="d3">lib-derive_more_impl.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/document-features-e3d5159f46e2f301/lib-document_features.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\document-features-e3d5159f46e2f301\lib-document_features.json</data>
+      <data key="d3">lib-document_features.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/either-9944aad0593e288d/lib-either.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\either-9944aad0593e288d\lib-either.json</data>
+      <data key="d3">lib-either.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/equivalent-b0b9630c89b1647e/lib-equivalent.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\equivalent-b0b9630c89b1647e\lib-equivalent.json</data>
+      <data key="d3">lib-equivalent.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/foldhash-7f4017ab3738e442/lib-foldhash.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\foldhash-7f4017ab3738e442\lib-foldhash.json</data>
+      <data key="d3">lib-foldhash.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/hashbrown-d4d396ce97c85b5b/lib-hashbrown.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\hashbrown-d4d396ce97c85b5b\lib-hashbrown.json</data>
+      <data key="d3">lib-hashbrown.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/heck-b54738d5e0d607f0/lib-heck.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\heck-b54738d5e0d607f0\lib-heck.json</data>
+      <data key="d3">lib-heck.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/ident_case-191806c1d2cd87b0/lib-ident_case.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\ident_case-191806c1d2cd87b0\lib-ident_case.json</data>
+      <data key="d3">lib-ident_case.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/indexmap-5062c8f88a7beb95/lib-indexmap.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\indexmap-5062c8f88a7beb95\lib-indexmap.json</data>
+      <data key="d3">lib-indexmap.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/indoc-67543ea3aab7059b/lib-indoc.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\indoc-67543ea3aab7059b\lib-indoc.json</data>
+      <data key="d3">lib-indoc.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/instability-228f6979239ee980/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\instability-228f6979239ee980\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/instability-34631661eda5897f/lib-instability.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\instability-34631661eda5897f\lib-instability.json</data>
+      <data key="d3">lib-instability.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/instability-38e22585d445c899/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\instability-38e22585d445c899\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/itertools-c9a1d64079612310/lib-itertools.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\itertools-c9a1d64079612310\lib-itertools.json</data>
+      <data key="d3">lib-itertools.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/itoa-41a8b9ef9e35d87c/lib-itoa.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\itoa-41a8b9ef9e35d87c\lib-itoa.json</data>
+      <data key="d3">lib-itoa.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/kasuari-4e69e3f8d3561143/lib-kasuari.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\kasuari-4e69e3f8d3561143\lib-kasuari.json</data>
+      <data key="d3">lib-kasuari.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/line-clipping-1186b56bf7e694dd/lib-line_clipping.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\line-clipping-1186b56bf7e694dd\lib-line_clipping.json</data>
+      <data key="d3">lib-line_clipping.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/litrs-273b6bed62c55a4b/lib-litrs.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\litrs-273b6bed62c55a4b\lib-litrs.json</data>
+      <data key="d3">lib-litrs.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/lock_api-5dd2d45c13b27164/lib-lock_api.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\lock_api-5dd2d45c13b27164\lib-lock_api.json</data>
+      <data key="d3">lib-lock_api.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/lru-9405035e0b1630d5/lib-lru.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\lru-9405035e0b1630d5\lib-lru.json</data>
+      <data key="d3">lib-lru.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/num-conv-b7680dd2477d0d17/lib-num_conv.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\num-conv-b7680dd2477d0d17\lib-num_conv.json</data>
+      <data key="d3">lib-num_conv.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/parking_lot-9ec996e874269e04/lib-parking_lot.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\parking_lot-9ec996e874269e04\lib-parking_lot.json</data>
+      <data key="d3">lib-parking_lot.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/parking_lot_core-6199ab54f6c75a56/lib-parking_lot_core.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\parking_lot_core-6199ab54f6c75a56\lib-parking_lot_core.json</data>
+      <data key="d3">lib-parking_lot_core.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/parking_lot_core-82a53b35fb626481/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\parking_lot_core-82a53b35fb626481\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/parking_lot_core-ccbe220e1557a0b4/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\parking_lot_core-ccbe220e1557a0b4\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/powerfmt-120a97217c9de94b/lib-powerfmt.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\powerfmt-120a97217c9de94b\lib-powerfmt.json</data>
+      <data key="d3">lib-powerfmt.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/proc-macro2-9140ae78e5aa91e0/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\proc-macro2-9140ae78e5aa91e0\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/proc-macro2-ab9656a159dbbfb6/lib-proc_macro2.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\proc-macro2-ab9656a159dbbfb6\lib-proc_macro2.json</data>
+      <data key="d3">lib-proc_macro2.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/proc-macro2-e8d2bd04e12f51a1/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\proc-macro2-e8d2bd04e12f51a1\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/quote-13bc1ff4de59624a/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\quote-13bc1ff4de59624a\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/quote-435fa7b2c1d63305/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\quote-435fa7b2c1d63305\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/quote-6c6734f92489062c/lib-quote.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\quote-6c6734f92489062c\lib-quote.json</data>
+      <data key="d3">lib-quote.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/ratatui-2eeab548570a758f/lib-ratatui.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\ratatui-2eeab548570a758f\lib-ratatui.json</data>
+      <data key="d3">lib-ratatui.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/ratatui-core-c6e98947b6687453/lib-ratatui_core.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\ratatui-core-c6e98947b6687453\lib-ratatui_core.json</data>
+      <data key="d3">lib-ratatui_core.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/ratatui-crossterm-d3b584739ece9a51/lib-ratatui_crossterm.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\ratatui-crossterm-d3b584739ece9a51\lib-ratatui_crossterm.json</data>
+      <data key="d3">lib-ratatui_crossterm.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/ratatui-macros-4588c3d6e4cc0e96/lib-ratatui_macros.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\ratatui-macros-4588c3d6e4cc0e96\lib-ratatui_macros.json</data>
+      <data key="d3">lib-ratatui_macros.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/ratatui-widgets-90a8b4eaac7f707f/lib-ratatui_widgets.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\ratatui-widgets-90a8b4eaac7f707f\lib-ratatui_widgets.json</data>
+      <data key="d3">lib-ratatui_widgets.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/rustversion-060bb69dfa1c987d/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\rustversion-060bb69dfa1c987d\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/rustversion-5a54f76321baf9b2/lib-rustversion.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\rustversion-5a54f76321baf9b2\lib-rustversion.json</data>
+      <data key="d3">lib-rustversion.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/rustversion-882dbf78ca7ba90a/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\rustversion-882dbf78ca7ba90a\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/ryu-26c54866c3686547/lib-ryu.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\ryu-26c54866c3686547\lib-ryu.json</data>
+      <data key="d3">lib-ryu.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/scopeguard-3db0fba300fb4994/lib-scopeguard.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\scopeguard-3db0fba300fb4994\lib-scopeguard.json</data>
+      <data key="d3">lib-scopeguard.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/serde-24b314e32c191f03/lib-serde.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\serde-24b314e32c191f03\lib-serde.json</data>
+      <data key="d3">lib-serde.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/serde-5c8f9baa5cb62b21/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\serde-5c8f9baa5cb62b21\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/serde-a0cdc943904a753b/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\serde-a0cdc943904a753b\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/serde-b4ec85fafc863481/lib-serde.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\serde-b4ec85fafc863481\lib-serde.json</data>
+      <data key="d3">lib-serde.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/serde-df693f4fae75e6e9/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\serde-df693f4fae75e6e9\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/serde-e509b2a8907d6139/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\serde-e509b2a8907d6139\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/serde_core-41c4da796a7ac8f6/lib-serde_core.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\serde_core-41c4da796a7ac8f6\lib-serde_core.json</data>
+      <data key="d3">lib-serde_core.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/serde_core-4d6f366bb7ddf744/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\serde_core-4d6f366bb7ddf744\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/serde_core-99530115c8d26489/lib-serde_core.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\serde_core-99530115c8d26489\lib-serde_core.json</data>
+      <data key="d3">lib-serde_core.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/serde_core-a174d9b7f022b44e/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\serde_core-a174d9b7f022b44e\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/serde_derive-f8f79c2a108af0eb/lib-serde_derive.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\serde_derive-f8f79c2a108af0eb\lib-serde_derive.json</data>
+      <data key="d3">lib-serde_derive.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/serde_spanned-f9f54f2ed735e5fe/lib-serde_spanned.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\serde_spanned-f9f54f2ed735e5fe\lib-serde_spanned.json</data>
+      <data key="d3">lib-serde_spanned.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/smallvec-fc01c0a1772c31d5/lib-smallvec.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\smallvec-fc01c0a1772c31d5\lib-smallvec.json</data>
+      <data key="d3">lib-smallvec.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/static_assertions-c75a19bd6a04bedb/lib-static_assertions.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\static_assertions-c75a19bd6a04bedb\lib-static_assertions.json</data>
+      <data key="d3">lib-static_assertions.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/strsim-81676b8264968557/lib-strsim.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\strsim-81676b8264968557\lib-strsim.json</data>
+      <data key="d3">lib-strsim.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/strum-ca63598ea7c06f28/lib-strum.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\strum-ca63598ea7c06f28\lib-strum.json</data>
+      <data key="d3">lib-strum.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/strum_macros-e6be26617887849f/lib-strum_macros.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\strum_macros-e6be26617887849f\lib-strum_macros.json</data>
+      <data key="d3">lib-strum_macros.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/syn-ed37a70b817565f1/lib-syn.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\syn-ed37a70b817565f1\lib-syn.json</data>
+      <data key="d3">lib-syn.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/thiserror-12c8b6f50a20514b/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\thiserror-12c8b6f50a20514b\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/thiserror-2c22208fdd3ea455/lib-thiserror.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\thiserror-2c22208fdd3ea455\lib-thiserror.json</data>
+      <data key="d3">lib-thiserror.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/thiserror-aeab9a00eeb53913/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\thiserror-aeab9a00eeb53913\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/thiserror-impl-4edc4b3c5b3d73a7/lib-thiserror_impl.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\thiserror-impl-4edc4b3c5b3d73a7\lib-thiserror_impl.json</data>
+      <data key="d3">lib-thiserror_impl.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/time-75e916455cadc0e8/lib-time.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\time-75e916455cadc0e8\lib-time.json</data>
+      <data key="d3">lib-time.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/time-core-29e28f871d47537f/lib-time_core.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\time-core-29e28f871d47537f\lib-time_core.json</data>
+      <data key="d3">lib-time_core.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/toml-1d6f3aebb9d60bfd/lib-toml.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\toml-1d6f3aebb9d60bfd\lib-toml.json</data>
+      <data key="d3">lib-toml.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/toml-5d91843395fd85c5/lib-toml.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\toml-5d91843395fd85c5\lib-toml.json</data>
+      <data key="d3">lib-toml.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/toml_datetime-419bf3c786166ae2/lib-toml_datetime.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\toml_datetime-419bf3c786166ae2\lib-toml_datetime.json</data>
+      <data key="d3">lib-toml_datetime.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/toml_edit-b291eec546ac6628/lib-toml_edit.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\toml_edit-b291eec546ac6628\lib-toml_edit.json</data>
+      <data key="d3">lib-toml_edit.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/toml_write-3ddaedb0fd4b6322/lib-toml_write.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\toml_write-3ddaedb0fd4b6322\lib-toml_write.json</data>
+      <data key="d3">lib-toml_write.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/unicode-ident-aee44922ab25625e/lib-unicode_ident.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\unicode-ident-aee44922ab25625e\lib-unicode_ident.json</data>
+      <data key="d3">lib-unicode_ident.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/unicode-segmentation-0ebb2197cbb303af/lib-unicode_segmentation.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\unicode-segmentation-0ebb2197cbb303af\lib-unicode_segmentation.json</data>
+      <data key="d3">lib-unicode_segmentation.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/unicode-segmentation-9aa422158266dc2b/lib-unicode_segmentation.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\unicode-segmentation-9aa422158266dc2b\lib-unicode_segmentation.json</data>
+      <data key="d3">lib-unicode_segmentation.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/unicode-truncate-519938c60d8b2b29/lib-unicode_truncate.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\unicode-truncate-519938c60d8b2b29\lib-unicode_truncate.json</data>
+      <data key="d3">lib-unicode_truncate.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/unicode-width-5410a1934e4df3cc/lib-unicode_width.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\unicode-width-5410a1934e4df3cc\lib-unicode_width.json</data>
+      <data key="d3">lib-unicode_width.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/winapi-41b419c7904a203f/lib-winapi.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\winapi-41b419c7904a203f\lib-winapi.json</data>
+      <data key="d3">lib-winapi.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/winapi-4af22c7c81dcce7e/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\winapi-4af22c7c81dcce7e\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/winapi-abc9016e07255db4/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\winapi-abc9016e07255db4\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/windows-link-21627c4766c4452c/lib-windows_link.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\windows-link-21627c4766c4452c\lib-windows_link.json</data>
+      <data key="d3">lib-windows_link.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/windows-sys-7923c6b1825fa1e5/lib-windows_sys.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\windows-sys-7923c6b1825fa1e5\lib-windows_sys.json</data>
+      <data key="d3">lib-windows_sys.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/windows-targets-c78d2b0844496050/lib-windows_targets.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\windows-targets-c78d2b0844496050\lib-windows_targets.json</data>
+      <data key="d3">lib-windows_targets.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/windows_x86_64_msvc-0a06def153ddddbc/run-build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\windows_x86_64_msvc-0a06def153ddddbc\run-build-script-build-script-build.json</data>
+      <data key="d3">run-build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/windows_x86_64_msvc-0e3510ecaf0aa54e/lib-windows_x86_64_msvc.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\windows_x86_64_msvc-0e3510ecaf0aa54e\lib-windows_x86_64_msvc.json</data>
+      <data key="d3">lib-windows_x86_64_msvc.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/windows_x86_64_msvc-49ca1fa9a63d912a/build-script-build-script-build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\windows_x86_64_msvc-49ca1fa9a63d912a\build-script-build-script-build.json</data>
+      <data key="d3">build-script-build-script-build.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/winnow-1e4e294975dc544c/lib-winnow.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\winnow-1e4e294975dc544c\lib-winnow.json</data>
+      <data key="d3">lib-winnow.json</data>
+    </node>
+    <node id="CLI Coding/Launcher/target/debug/.fingerprint/winres-9cc4faa9272b33d7/lib-winres.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\target\debug\.fingerprint\winres-9cc4faa9272b33d7\lib-winres.json</data>
+      <data key="d3">lib-winres.json</data>
     </node>
     <node id="CLI Coding/Launcher/target/release/.fingerprint/allocator-api2-0902360836a5cbcd/lib-allocator_api2.json">
       <data key="d0">config</data>

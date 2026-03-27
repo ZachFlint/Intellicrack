@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Thu, Mar 26, 2026 10:56:43 PM
+Generated: Fri, Mar 27, 2026 01:56:32 PM
 Directory: D:\Intellicrack
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -64,6 +64,730 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   ├── src/
 │   │   │   └── main.rs
 │   │   ├── target/
+│   │   │   ├── debug/
+│   │   │   │   ├── .fingerprint/
+│   │   │   │   │   ├── allocator-api2-07e5ed23aab02f3a/
+│   │   │   │   │   │   ├── dep-lib-allocator_api2
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-allocator_api2
+│   │   │   │   │   │   └── lib-allocator_api2.json
+│   │   │   │   │   ├── bitflags-0aef6ab8faa24446/
+│   │   │   │   │   │   ├── dep-lib-bitflags
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-bitflags
+│   │   │   │   │   │   └── lib-bitflags.json
+│   │   │   │   │   ├── castaway-9640518251f0b6d4/
+│   │   │   │   │   │   ├── dep-lib-castaway
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-castaway
+│   │   │   │   │   │   └── lib-castaway.json
+│   │   │   │   │   ├── cfg-if-3dcb42ca3a02dcb5/
+│   │   │   │   │   │   ├── dep-lib-cfg_if
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-cfg_if
+│   │   │   │   │   │   └── lib-cfg_if.json
+│   │   │   │   │   ├── cli-launcher-1fc0965fb0d83475/
+│   │   │   │   │   │   ├── build-script-build-script-build
+│   │   │   │   │   │   ├── build-script-build-script-build.json
+│   │   │   │   │   │   ├── dep-build-script-build-script-build
+│   │   │   │   │   │   └── invoked.timestamp
+│   │   │   │   │   ├── cli-launcher-3d90d63a6e4b2d6a/
+│   │   │   │   │   │   ├── run-build-script-build-script-build
+│   │   │   │   │   │   └── run-build-script-build-script-build.json
+│   │   │   │   │   ├── cli-launcher-f648b96f5b5751ea/
+│   │   │   │   │   │   ├── bin-cli-launcher
+│   │   │   │   │   │   ├── bin-cli-launcher.json
+│   │   │   │   │   │   ├── dep-bin-cli-launcher
+│   │   │   │   │   │   └── invoked.timestamp
+│   │   │   │   │   ├── compact_str-fb9144a83bc7298c/
+│   │   │   │   │   │   ├── dep-lib-compact_str
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-compact_str
+│   │   │   │   │   │   └── lib-compact_str.json
+│   │   │   │   │   ├── convert_case-db4e0135e74064fc/
+│   │   │   │   │   │   ├── dep-lib-convert_case
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-convert_case
+│   │   │   │   │   │   └── lib-convert_case.json
+│   │   │   │   │   ├── crossterm-0519a7b109575f3d/
+│   │   │   │   │   │   ├── dep-lib-crossterm
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-crossterm
+│   │   │   │   │   │   └── lib-crossterm.json
+│   │   │   │   │   ├── crossterm-52a170841005d1d1/
+│   │   │   │   │   │   ├── dep-lib-crossterm
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-crossterm
+│   │   │   │   │   │   └── lib-crossterm.json
+│   │   │   │   │   ├── crossterm_winapi-6a7631b5ad68108f/
+│   │   │   │   │   │   ├── dep-lib-crossterm_winapi
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-crossterm_winapi
+│   │   │   │   │   │   └── lib-crossterm_winapi.json
+│   │   │   │   │   ├── darling-b7f95cd61e7d09dc/
+│   │   │   │   │   │   ├── dep-lib-darling
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-darling
+│   │   │   │   │   │   └── lib-darling.json
+│   │   │   │   │   ├── darling_core-41b1a914f2ff946c/
+│   │   │   │   │   │   ├── dep-lib-darling_core
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-darling_core
+│   │   │   │   │   │   └── lib-darling_core.json
+│   │   │   │   │   ├── darling_macro-7ead9b49df0c78f5/
+│   │   │   │   │   │   ├── dep-lib-darling_macro
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-darling_macro
+│   │   │   │   │   │   └── lib-darling_macro.json
+│   │   │   │   │   ├── deranged-3acce2d365c69143/
+│   │   │   │   │   │   ├── dep-lib-deranged
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-deranged
+│   │   │   │   │   │   └── lib-deranged.json
+│   │   │   │   │   ├── derive_more-d75b7c7c22bf19a7/
+│   │   │   │   │   │   ├── dep-lib-derive_more
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-derive_more
+│   │   │   │   │   │   └── lib-derive_more.json
+│   │   │   │   │   ├── derive_more-impl-23d90fe3efba0013/
+│   │   │   │   │   │   ├── dep-lib-derive_more_impl
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-derive_more_impl
+│   │   │   │   │   │   └── lib-derive_more_impl.json
+│   │   │   │   │   ├── document-features-e3d5159f46e2f301/
+│   │   │   │   │   │   ├── dep-lib-document_features
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-document_features
+│   │   │   │   │   │   └── lib-document_features.json
+│   │   │   │   │   ├── either-9944aad0593e288d/
+│   │   │   │   │   │   ├── dep-lib-either
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-either
+│   │   │   │   │   │   └── lib-either.json
+│   │   │   │   │   ├── equivalent-b0b9630c89b1647e/
+│   │   │   │   │   │   ├── dep-lib-equivalent
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-equivalent
+│   │   │   │   │   │   └── lib-equivalent.json
+│   │   │   │   │   ├── foldhash-7f4017ab3738e442/
+│   │   │   │   │   │   ├── dep-lib-foldhash
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-foldhash
+│   │   │   │   │   │   └── lib-foldhash.json
+│   │   │   │   │   ├── hashbrown-d4d396ce97c85b5b/
+│   │   │   │   │   │   ├── dep-lib-hashbrown
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-hashbrown
+│   │   │   │   │   │   └── lib-hashbrown.json
+│   │   │   │   │   ├── heck-b54738d5e0d607f0/
+│   │   │   │   │   │   ├── dep-lib-heck
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-heck
+│   │   │   │   │   │   └── lib-heck.json
+│   │   │   │   │   ├── ident_case-191806c1d2cd87b0/
+│   │   │   │   │   │   ├── dep-lib-ident_case
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-ident_case
+│   │   │   │   │   │   └── lib-ident_case.json
+│   │   │   │   │   ├── indexmap-5062c8f88a7beb95/
+│   │   │   │   │   │   ├── dep-lib-indexmap
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-indexmap
+│   │   │   │   │   │   └── lib-indexmap.json
+│   │   │   │   │   ├── indoc-67543ea3aab7059b/
+│   │   │   │   │   │   ├── dep-lib-indoc
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-indoc
+│   │   │   │   │   │   └── lib-indoc.json
+│   │   │   │   │   ├── instability-228f6979239ee980/
+│   │   │   │   │   │   ├── build-script-build-script-build
+│   │   │   │   │   │   ├── build-script-build-script-build.json
+│   │   │   │   │   │   ├── dep-build-script-build-script-build
+│   │   │   │   │   │   └── invoked.timestamp
+│   │   │   │   │   ├── instability-34631661eda5897f/
+│   │   │   │   │   │   ├── dep-lib-instability
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-instability
+│   │   │   │   │   │   └── lib-instability.json
+│   │   │   │   │   ├── instability-38e22585d445c899/
+│   │   │   │   │   │   ├── run-build-script-build-script-build
+│   │   │   │   │   │   └── run-build-script-build-script-build.json
+│   │   │   │   │   ├── itertools-c9a1d64079612310/
+│   │   │   │   │   │   ├── dep-lib-itertools
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-itertools
+│   │   │   │   │   │   └── lib-itertools.json
+│   │   │   │   │   ├── itoa-41a8b9ef9e35d87c/
+│   │   │   │   │   │   ├── dep-lib-itoa
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-itoa
+│   │   │   │   │   │   └── lib-itoa.json
+│   │   │   │   │   ├── kasuari-4e69e3f8d3561143/
+│   │   │   │   │   │   ├── dep-lib-kasuari
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-kasuari
+│   │   │   │   │   │   └── lib-kasuari.json
+│   │   │   │   │   ├── line-clipping-1186b56bf7e694dd/
+│   │   │   │   │   │   ├── dep-lib-line_clipping
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-line_clipping
+│   │   │   │   │   │   └── lib-line_clipping.json
+│   │   │   │   │   ├── litrs-273b6bed62c55a4b/
+│   │   │   │   │   │   ├── dep-lib-litrs
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-litrs
+│   │   │   │   │   │   └── lib-litrs.json
+│   │   │   │   │   ├── lock_api-5dd2d45c13b27164/
+│   │   │   │   │   │   ├── dep-lib-lock_api
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-lock_api
+│   │   │   │   │   │   └── lib-lock_api.json
+│   │   │   │   │   ├── lru-9405035e0b1630d5/
+│   │   │   │   │   │   ├── dep-lib-lru
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-lru
+│   │   │   │   │   │   └── lib-lru.json
+│   │   │   │   │   ├── num-conv-b7680dd2477d0d17/
+│   │   │   │   │   │   ├── dep-lib-num_conv
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-num_conv
+│   │   │   │   │   │   └── lib-num_conv.json
+│   │   │   │   │   ├── parking_lot-9ec996e874269e04/
+│   │   │   │   │   │   ├── dep-lib-parking_lot
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-parking_lot
+│   │   │   │   │   │   └── lib-parking_lot.json
+│   │   │   │   │   ├── parking_lot_core-6199ab54f6c75a56/
+│   │   │   │   │   │   ├── dep-lib-parking_lot_core
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-parking_lot_core
+│   │   │   │   │   │   └── lib-parking_lot_core.json
+│   │   │   │   │   ├── parking_lot_core-82a53b35fb626481/
+│   │   │   │   │   │   ├── run-build-script-build-script-build
+│   │   │   │   │   │   └── run-build-script-build-script-build.json
+│   │   │   │   │   ├── parking_lot_core-ccbe220e1557a0b4/
+│   │   │   │   │   │   ├── build-script-build-script-build
+│   │   │   │   │   │   ├── build-script-build-script-build.json
+│   │   │   │   │   │   ├── dep-build-script-build-script-build
+│   │   │   │   │   │   └── invoked.timestamp
+│   │   │   │   │   ├── powerfmt-120a97217c9de94b/
+│   │   │   │   │   │   ├── dep-lib-powerfmt
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-powerfmt
+│   │   │   │   │   │   └── lib-powerfmt.json
+│   │   │   │   │   ├── proc-macro2-9140ae78e5aa91e0/
+│   │   │   │   │   │   ├── build-script-build-script-build
+│   │   │   │   │   │   ├── build-script-build-script-build.json
+│   │   │   │   │   │   ├── dep-build-script-build-script-build
+│   │   │   │   │   │   └── invoked.timestamp
+│   │   │   │   │   ├── proc-macro2-ab9656a159dbbfb6/
+│   │   │   │   │   │   ├── dep-lib-proc_macro2
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-proc_macro2
+│   │   │   │   │   │   └── lib-proc_macro2.json
+│   │   │   │   │   ├── proc-macro2-e8d2bd04e12f51a1/
+│   │   │   │   │   │   ├── run-build-script-build-script-build
+│   │   │   │   │   │   └── run-build-script-build-script-build.json
+│   │   │   │   │   ├── quote-13bc1ff4de59624a/
+│   │   │   │   │   │   ├── run-build-script-build-script-build
+│   │   │   │   │   │   └── run-build-script-build-script-build.json
+│   │   │   │   │   ├── quote-435fa7b2c1d63305/
+│   │   │   │   │   │   ├── build-script-build-script-build
+│   │   │   │   │   │   ├── build-script-build-script-build.json
+│   │   │   │   │   │   ├── dep-build-script-build-script-build
+│   │   │   │   │   │   └── invoked.timestamp
+│   │   │   │   │   ├── quote-6c6734f92489062c/
+│   │   │   │   │   │   ├── dep-lib-quote
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-quote
+│   │   │   │   │   │   └── lib-quote.json
+│   │   │   │   │   ├── ratatui-2eeab548570a758f/
+│   │   │   │   │   │   ├── dep-lib-ratatui
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-ratatui
+│   │   │   │   │   │   └── lib-ratatui.json
+│   │   │   │   │   ├── ratatui-core-c6e98947b6687453/
+│   │   │   │   │   │   ├── dep-lib-ratatui_core
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-ratatui_core
+│   │   │   │   │   │   └── lib-ratatui_core.json
+│   │   │   │   │   ├── ratatui-crossterm-d3b584739ece9a51/
+│   │   │   │   │   │   ├── dep-lib-ratatui_crossterm
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-ratatui_crossterm
+│   │   │   │   │   │   └── lib-ratatui_crossterm.json
+│   │   │   │   │   ├── ratatui-macros-4588c3d6e4cc0e96/
+│   │   │   │   │   │   ├── dep-lib-ratatui_macros
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-ratatui_macros
+│   │   │   │   │   │   └── lib-ratatui_macros.json
+│   │   │   │   │   ├── ratatui-widgets-90a8b4eaac7f707f/
+│   │   │   │   │   │   ├── dep-lib-ratatui_widgets
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-ratatui_widgets
+│   │   │   │   │   │   └── lib-ratatui_widgets.json
+│   │   │   │   │   ├── rustversion-060bb69dfa1c987d/
+│   │   │   │   │   │   ├── build-script-build-script-build
+│   │   │   │   │   │   ├── build-script-build-script-build.json
+│   │   │   │   │   │   ├── dep-build-script-build-script-build
+│   │   │   │   │   │   └── invoked.timestamp
+│   │   │   │   │   ├── rustversion-5a54f76321baf9b2/
+│   │   │   │   │   │   ├── dep-lib-rustversion
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-rustversion
+│   │   │   │   │   │   └── lib-rustversion.json
+│   │   │   │   │   ├── rustversion-882dbf78ca7ba90a/
+│   │   │   │   │   │   ├── run-build-script-build-script-build
+│   │   │   │   │   │   └── run-build-script-build-script-build.json
+│   │   │   │   │   ├── ryu-26c54866c3686547/
+│   │   │   │   │   │   ├── dep-lib-ryu
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-ryu
+│   │   │   │   │   │   └── lib-ryu.json
+│   │   │   │   │   ├── scopeguard-3db0fba300fb4994/
+│   │   │   │   │   │   ├── dep-lib-scopeguard
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-scopeguard
+│   │   │   │   │   │   └── lib-scopeguard.json
+│   │   │   │   │   ├── serde-24b314e32c191f03/
+│   │   │   │   │   │   ├── dep-lib-serde
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-serde
+│   │   │   │   │   │   └── lib-serde.json
+│   │   │   │   │   ├── serde-5c8f9baa5cb62b21/
+│   │   │   │   │   │   ├── build-script-build-script-build
+│   │   │   │   │   │   ├── build-script-build-script-build.json
+│   │   │   │   │   │   ├── dep-build-script-build-script-build
+│   │   │   │   │   │   └── invoked.timestamp
+│   │   │   │   │   ├── serde-a0cdc943904a753b/
+│   │   │   │   │   │   ├── build-script-build-script-build
+│   │   │   │   │   │   ├── build-script-build-script-build.json
+│   │   │   │   │   │   ├── dep-build-script-build-script-build
+│   │   │   │   │   │   └── invoked.timestamp
+│   │   │   │   │   ├── serde-b4ec85fafc863481/
+│   │   │   │   │   │   ├── dep-lib-serde
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-serde
+│   │   │   │   │   │   └── lib-serde.json
+│   │   │   │   │   ├── serde-df693f4fae75e6e9/
+│   │   │   │   │   │   ├── run-build-script-build-script-build
+│   │   │   │   │   │   └── run-build-script-build-script-build.json
+│   │   │   │   │   ├── serde-e509b2a8907d6139/
+│   │   │   │   │   │   ├── run-build-script-build-script-build
+│   │   │   │   │   │   └── run-build-script-build-script-build.json
+│   │   │   │   │   ├── serde_core-41c4da796a7ac8f6/
+│   │   │   │   │   │   ├── dep-lib-serde_core
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-serde_core
+│   │   │   │   │   │   └── lib-serde_core.json
+│   │   │   │   │   ├── serde_core-4d6f366bb7ddf744/
+│   │   │   │   │   │   ├── run-build-script-build-script-build
+│   │   │   │   │   │   └── run-build-script-build-script-build.json
+│   │   │   │   │   ├── serde_core-99530115c8d26489/
+│   │   │   │   │   │   ├── dep-lib-serde_core
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-serde_core
+│   │   │   │   │   │   └── lib-serde_core.json
+│   │   │   │   │   ├── serde_core-a174d9b7f022b44e/
+│   │   │   │   │   │   ├── build-script-build-script-build
+│   │   │   │   │   │   ├── build-script-build-script-build.json
+│   │   │   │   │   │   ├── dep-build-script-build-script-build
+│   │   │   │   │   │   └── invoked.timestamp
+│   │   │   │   │   ├── serde_derive-f8f79c2a108af0eb/
+│   │   │   │   │   │   ├── dep-lib-serde_derive
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-serde_derive
+│   │   │   │   │   │   └── lib-serde_derive.json
+│   │   │   │   │   ├── serde_spanned-f9f54f2ed735e5fe/
+│   │   │   │   │   │   ├── dep-lib-serde_spanned
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-serde_spanned
+│   │   │   │   │   │   └── lib-serde_spanned.json
+│   │   │   │   │   ├── smallvec-fc01c0a1772c31d5/
+│   │   │   │   │   │   ├── dep-lib-smallvec
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-smallvec
+│   │   │   │   │   │   └── lib-smallvec.json
+│   │   │   │   │   ├── static_assertions-c75a19bd6a04bedb/
+│   │   │   │   │   │   ├── dep-lib-static_assertions
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-static_assertions
+│   │   │   │   │   │   └── lib-static_assertions.json
+│   │   │   │   │   ├── strsim-81676b8264968557/
+│   │   │   │   │   │   ├── dep-lib-strsim
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-strsim
+│   │   │   │   │   │   └── lib-strsim.json
+│   │   │   │   │   ├── strum-ca63598ea7c06f28/
+│   │   │   │   │   │   ├── dep-lib-strum
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-strum
+│   │   │   │   │   │   └── lib-strum.json
+│   │   │   │   │   ├── strum_macros-e6be26617887849f/
+│   │   │   │   │   │   ├── dep-lib-strum_macros
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-strum_macros
+│   │   │   │   │   │   └── lib-strum_macros.json
+│   │   │   │   │   ├── syn-ed37a70b817565f1/
+│   │   │   │   │   │   ├── dep-lib-syn
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-syn
+│   │   │   │   │   │   └── lib-syn.json
+│   │   │   │   │   ├── thiserror-12c8b6f50a20514b/
+│   │   │   │   │   │   ├── run-build-script-build-script-build
+│   │   │   │   │   │   └── run-build-script-build-script-build.json
+│   │   │   │   │   ├── thiserror-2c22208fdd3ea455/
+│   │   │   │   │   │   ├── dep-lib-thiserror
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-thiserror
+│   │   │   │   │   │   └── lib-thiserror.json
+│   │   │   │   │   ├── thiserror-aeab9a00eeb53913/
+│   │   │   │   │   │   ├── build-script-build-script-build
+│   │   │   │   │   │   ├── build-script-build-script-build.json
+│   │   │   │   │   │   ├── dep-build-script-build-script-build
+│   │   │   │   │   │   └── invoked.timestamp
+│   │   │   │   │   ├── thiserror-impl-4edc4b3c5b3d73a7/
+│   │   │   │   │   │   ├── dep-lib-thiserror_impl
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-thiserror_impl
+│   │   │   │   │   │   └── lib-thiserror_impl.json
+│   │   │   │   │   ├── time-75e916455cadc0e8/
+│   │   │   │   │   │   ├── dep-lib-time
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-time
+│   │   │   │   │   │   └── lib-time.json
+│   │   │   │   │   ├── time-core-29e28f871d47537f/
+│   │   │   │   │   │   ├── dep-lib-time_core
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-time_core
+│   │   │   │   │   │   └── lib-time_core.json
+│   │   │   │   │   ├── toml-1d6f3aebb9d60bfd/
+│   │   │   │   │   │   ├── dep-lib-toml
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-toml
+│   │   │   │   │   │   └── lib-toml.json
+│   │   │   │   │   ├── toml-5d91843395fd85c5/
+│   │   │   │   │   │   ├── dep-lib-toml
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-toml
+│   │   │   │   │   │   └── lib-toml.json
+│   │   │   │   │   ├── toml_datetime-419bf3c786166ae2/
+│   │   │   │   │   │   ├── dep-lib-toml_datetime
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-toml_datetime
+│   │   │   │   │   │   └── lib-toml_datetime.json
+│   │   │   │   │   ├── toml_edit-b291eec546ac6628/
+│   │   │   │   │   │   ├── dep-lib-toml_edit
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-toml_edit
+│   │   │   │   │   │   └── lib-toml_edit.json
+│   │   │   │   │   ├── toml_write-3ddaedb0fd4b6322/
+│   │   │   │   │   │   ├── dep-lib-toml_write
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-toml_write
+│   │   │   │   │   │   └── lib-toml_write.json
+│   │   │   │   │   ├── unicode-ident-aee44922ab25625e/
+│   │   │   │   │   │   ├── dep-lib-unicode_ident
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-unicode_ident
+│   │   │   │   │   │   └── lib-unicode_ident.json
+│   │   │   │   │   ├── unicode-segmentation-0ebb2197cbb303af/
+│   │   │   │   │   │   ├── dep-lib-unicode_segmentation
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-unicode_segmentation
+│   │   │   │   │   │   └── lib-unicode_segmentation.json
+│   │   │   │   │   ├── unicode-segmentation-9aa422158266dc2b/
+│   │   │   │   │   │   ├── dep-lib-unicode_segmentation
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-unicode_segmentation
+│   │   │   │   │   │   └── lib-unicode_segmentation.json
+│   │   │   │   │   ├── unicode-truncate-519938c60d8b2b29/
+│   │   │   │   │   │   ├── dep-lib-unicode_truncate
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-unicode_truncate
+│   │   │   │   │   │   └── lib-unicode_truncate.json
+│   │   │   │   │   ├── unicode-width-5410a1934e4df3cc/
+│   │   │   │   │   │   ├── dep-lib-unicode_width
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-unicode_width
+│   │   │   │   │   │   └── lib-unicode_width.json
+│   │   │   │   │   ├── winapi-41b419c7904a203f/
+│   │   │   │   │   │   ├── dep-lib-winapi
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-winapi
+│   │   │   │   │   │   └── lib-winapi.json
+│   │   │   │   │   ├── winapi-4af22c7c81dcce7e/
+│   │   │   │   │   │   ├── run-build-script-build-script-build
+│   │   │   │   │   │   └── run-build-script-build-script-build.json
+│   │   │   │   │   ├── winapi-abc9016e07255db4/
+│   │   │   │   │   │   ├── build-script-build-script-build
+│   │   │   │   │   │   ├── build-script-build-script-build.json
+│   │   │   │   │   │   ├── dep-build-script-build-script-build
+│   │   │   │   │   │   └── invoked.timestamp
+│   │   │   │   │   ├── windows-link-21627c4766c4452c/
+│   │   │   │   │   │   ├── dep-lib-windows_link
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-windows_link
+│   │   │   │   │   │   └── lib-windows_link.json
+│   │   │   │   │   ├── windows-sys-7923c6b1825fa1e5/
+│   │   │   │   │   │   ├── dep-lib-windows_sys
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-windows_sys
+│   │   │   │   │   │   └── lib-windows_sys.json
+│   │   │   │   │   ├── windows-targets-c78d2b0844496050/
+│   │   │   │   │   │   ├── dep-lib-windows_targets
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-windows_targets
+│   │   │   │   │   │   └── lib-windows_targets.json
+│   │   │   │   │   ├── windows_x86_64_msvc-0a06def153ddddbc/
+│   │   │   │   │   │   ├── run-build-script-build-script-build
+│   │   │   │   │   │   └── run-build-script-build-script-build.json
+│   │   │   │   │   ├── windows_x86_64_msvc-0e3510ecaf0aa54e/
+│   │   │   │   │   │   ├── dep-lib-windows_x86_64_msvc
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-windows_x86_64_msvc
+│   │   │   │   │   │   └── lib-windows_x86_64_msvc.json
+│   │   │   │   │   ├── windows_x86_64_msvc-49ca1fa9a63d912a/
+│   │   │   │   │   │   ├── build-script-build-script-build
+│   │   │   │   │   │   ├── build-script-build-script-build.json
+│   │   │   │   │   │   ├── dep-build-script-build-script-build
+│   │   │   │   │   │   └── invoked.timestamp
+│   │   │   │   │   ├── winnow-1e4e294975dc544c/
+│   │   │   │   │   │   ├── dep-lib-winnow
+│   │   │   │   │   │   ├── invoked.timestamp
+│   │   │   │   │   │   ├── lib-winnow
+│   │   │   │   │   │   └── lib-winnow.json
+│   │   │   │   │   └── winres-9cc4faa9272b33d7/
+│   │   │   │   │       ├── dep-lib-winres
+│   │   │   │   │       ├── invoked.timestamp
+│   │   │   │   │       ├── lib-winres
+│   │   │   │   │       └── lib-winres.json
+│   │   │   │   ├── deps/
+│   │   │   │   │   ├── allocator_api2-07e5ed23aab02f3a.d
+│   │   │   │   │   ├── bitflags-0aef6ab8faa24446.d
+│   │   │   │   │   ├── castaway-9640518251f0b6d4.d
+│   │   │   │   │   ├── cfg_if-3dcb42ca3a02dcb5.d
+│   │   │   │   │   ├── cli_launcher-f648b96f5b5751ea.d
+│   │   │   │   │   ├── compact_str-fb9144a83bc7298c.d
+│   │   │   │   │   ├── convert_case-db4e0135e74064fc.d
+│   │   │   │   │   ├── crossterm-0519a7b109575f3d.d
+│   │   │   │   │   ├── crossterm-52a170841005d1d1.d
+│   │   │   │   │   ├── crossterm_winapi-6a7631b5ad68108f.d
+│   │   │   │   │   ├── darling-b7f95cd61e7d09dc.d
+│   │   │   │   │   ├── darling_core-41b1a914f2ff946c.d
+│   │   │   │   │   ├── darling_macro-7ead9b49df0c78f5.d
+│   │   │   │   │   ├── darling_macro-7ead9b49df0c78f5.dll
+│   │   │   │   │   ├── darling_macro-7ead9b49df0c78f5.dll.exp
+│   │   │   │   │   ├── darling_macro-7ead9b49df0c78f5.dll.lib
+│   │   │   │   │   ├── darling_macro-7ead9b49df0c78f5.pdb
+│   │   │   │   │   ├── deranged-3acce2d365c69143.d
+│   │   │   │   │   ├── derive_more-d75b7c7c22bf19a7.d
+│   │   │   │   │   ├── derive_more_impl-23d90fe3efba0013.d
+│   │   │   │   │   ├── derive_more_impl-23d90fe3efba0013.dll
+│   │   │   │   │   ├── derive_more_impl-23d90fe3efba0013.dll.exp
+│   │   │   │   │   ├── derive_more_impl-23d90fe3efba0013.dll.lib
+│   │   │   │   │   ├── derive_more_impl-23d90fe3efba0013.pdb
+│   │   │   │   │   ├── document_features-e3d5159f46e2f301.d
+│   │   │   │   │   ├── document_features-e3d5159f46e2f301.dll
+│   │   │   │   │   ├── document_features-e3d5159f46e2f301.dll.exp
+│   │   │   │   │   ├── document_features-e3d5159f46e2f301.dll.lib
+│   │   │   │   │   ├── document_features-e3d5159f46e2f301.pdb
+│   │   │   │   │   ├── either-9944aad0593e288d.d
+│   │   │   │   │   ├── equivalent-b0b9630c89b1647e.d
+│   │   │   │   │   ├── foldhash-7f4017ab3738e442.d
+│   │   │   │   │   ├── hashbrown-d4d396ce97c85b5b.d
+│   │   │   │   │   ├── heck-b54738d5e0d607f0.d
+│   │   │   │   │   ├── ident_case-191806c1d2cd87b0.d
+│   │   │   │   │   ├── indexmap-5062c8f88a7beb95.d
+│   │   │   │   │   ├── indoc-67543ea3aab7059b.d
+│   │   │   │   │   ├── indoc-67543ea3aab7059b.dll
+│   │   │   │   │   ├── indoc-67543ea3aab7059b.dll.exp
+│   │   │   │   │   ├── indoc-67543ea3aab7059b.dll.lib
+│   │   │   │   │   ├── indoc-67543ea3aab7059b.pdb
+│   │   │   │   │   ├── instability-34631661eda5897f.d
+│   │   │   │   │   ├── instability-34631661eda5897f.dll
+│   │   │   │   │   ├── instability-34631661eda5897f.dll.exp
+│   │   │   │   │   ├── instability-34631661eda5897f.dll.lib
+│   │   │   │   │   ├── instability-34631661eda5897f.pdb
+│   │   │   │   │   ├── itertools-c9a1d64079612310.d
+│   │   │   │   │   ├── itoa-41a8b9ef9e35d87c.d
+│   │   │   │   │   ├── kasuari-4e69e3f8d3561143.d
+│   │   │   │   │   ├── liballocator_api2-07e5ed23aab02f3a.rmeta
+│   │   │   │   │   ├── libbitflags-0aef6ab8faa24446.rmeta
+│   │   │   │   │   ├── libcastaway-9640518251f0b6d4.rmeta
+│   │   │   │   │   ├── libcfg_if-3dcb42ca3a02dcb5.rmeta
+│   │   │   │   │   ├── libcli_launcher-f648b96f5b5751ea.rmeta
+│   │   │   │   │   ├── libcompact_str-fb9144a83bc7298c.rmeta
+│   │   │   │   │   ├── libconvert_case-db4e0135e74064fc.rlib
+│   │   │   │   │   ├── libconvert_case-db4e0135e74064fc.rmeta
+│   │   │   │   │   ├── libcrossterm-0519a7b109575f3d.rmeta
+│   │   │   │   │   ├── libcrossterm-52a170841005d1d1.rmeta
+│   │   │   │   │   ├── libcrossterm_winapi-6a7631b5ad68108f.rmeta
+│   │   │   │   │   ├── libdarling-b7f95cd61e7d09dc.rlib
+│   │   │   │   │   ├── libdarling-b7f95cd61e7d09dc.rmeta
+│   │   │   │   │   ├── libdarling_core-41b1a914f2ff946c.rlib
+│   │   │   │   │   ├── libdarling_core-41b1a914f2ff946c.rmeta
+│   │   │   │   │   ├── libderanged-3acce2d365c69143.rmeta
+│   │   │   │   │   ├── libderive_more-d75b7c7c22bf19a7.rmeta
+│   │   │   │   │   ├── libeither-9944aad0593e288d.rmeta
+│   │   │   │   │   ├── libequivalent-b0b9630c89b1647e.rmeta
+│   │   │   │   │   ├── libfoldhash-7f4017ab3738e442.rmeta
+│   │   │   │   │   ├── libhashbrown-d4d396ce97c85b5b.rmeta
+│   │   │   │   │   ├── libheck-b54738d5e0d607f0.rlib
+│   │   │   │   │   ├── libheck-b54738d5e0d607f0.rmeta
+│   │   │   │   │   ├── libident_case-191806c1d2cd87b0.rlib
+│   │   │   │   │   ├── libident_case-191806c1d2cd87b0.rmeta
+│   │   │   │   │   ├── libindexmap-5062c8f88a7beb95.rmeta
+│   │   │   │   │   ├── libitertools-c9a1d64079612310.rmeta
+│   │   │   │   │   ├── libitoa-41a8b9ef9e35d87c.rmeta
+│   │   │   │   │   ├── libkasuari-4e69e3f8d3561143.rmeta
+│   │   │   │   │   ├── libline_clipping-1186b56bf7e694dd.rmeta
+│   │   │   │   │   ├── liblitrs-273b6bed62c55a4b.rlib
+│   │   │   │   │   ├── liblitrs-273b6bed62c55a4b.rmeta
+│   │   │   │   │   ├── liblock_api-5dd2d45c13b27164.rmeta
+│   │   │   │   │   ├── liblru-9405035e0b1630d5.rmeta
+│   │   │   │   │   ├── libnum_conv-b7680dd2477d0d17.rmeta
+│   │   │   │   │   ├── libparking_lot-9ec996e874269e04.rmeta
+│   │   │   │   │   ├── libparking_lot_core-6199ab54f6c75a56.rmeta
+│   │   │   │   │   ├── libpowerfmt-120a97217c9de94b.rmeta
+│   │   │   │   │   ├── libproc_macro2-ab9656a159dbbfb6.rlib
+│   │   │   │   │   ├── libproc_macro2-ab9656a159dbbfb6.rmeta
+│   │   │   │   │   ├── libquote-6c6734f92489062c.rlib
+│   │   │   │   │   ├── libquote-6c6734f92489062c.rmeta
+│   │   │   │   │   ├── libratatui-2eeab548570a758f.rmeta
+│   │   │   │   │   ├── libratatui_core-c6e98947b6687453.rmeta
+│   │   │   │   │   ├── libratatui_crossterm-d3b584739ece9a51.rmeta
+│   │   │   │   │   ├── libratatui_macros-4588c3d6e4cc0e96.rmeta
+│   │   │   │   │   ├── libratatui_widgets-90a8b4eaac7f707f.rmeta
+│   │   │   │   │   ├── libryu-26c54866c3686547.rmeta
+│   │   │   │   │   ├── libscopeguard-3db0fba300fb4994.rmeta
+│   │   │   │   │   ├── libserde-24b314e32c191f03.rlib
+│   │   │   │   │   ├── libserde-24b314e32c191f03.rmeta
+│   │   │   │   │   ├── libserde-b4ec85fafc863481.rmeta
+│   │   │   │   │   ├── libserde_core-41c4da796a7ac8f6.rmeta
+│   │   │   │   │   ├── libserde_core-99530115c8d26489.rlib
+│   │   │   │   │   ├── libserde_core-99530115c8d26489.rmeta
+│   │   │   │   │   ├── libserde_spanned-f9f54f2ed735e5fe.rmeta
+│   │   │   │   │   ├── libsmallvec-fc01c0a1772c31d5.rmeta
+│   │   │   │   │   ├── libstatic_assertions-c75a19bd6a04bedb.rmeta
+│   │   │   │   │   ├── libstrsim-81676b8264968557.rlib
+│   │   │   │   │   ├── libstrsim-81676b8264968557.rmeta
+│   │   │   │   │   ├── libstrum-ca63598ea7c06f28.rmeta
+│   │   │   │   │   ├── libsyn-ed37a70b817565f1.rlib
+│   │   │   │   │   ├── libsyn-ed37a70b817565f1.rmeta
+│   │   │   │   │   ├── libthiserror-2c22208fdd3ea455.rmeta
+│   │   │   │   │   ├── libtime-75e916455cadc0e8.rmeta
+│   │   │   │   │   ├── libtime_core-29e28f871d47537f.rmeta
+│   │   │   │   │   ├── libtoml-1d6f3aebb9d60bfd.rmeta
+│   │   │   │   │   ├── libtoml-5d91843395fd85c5.rlib
+│   │   │   │   │   ├── libtoml-5d91843395fd85c5.rmeta
+│   │   │   │   │   ├── libtoml_datetime-419bf3c786166ae2.rmeta
+│   │   │   │   │   ├── libtoml_edit-b291eec546ac6628.rmeta
+│   │   │   │   │   ├── libtoml_write-3ddaedb0fd4b6322.rmeta
+│   │   │   │   │   ├── libunicode_ident-aee44922ab25625e.rlib
+│   │   │   │   │   ├── libunicode_ident-aee44922ab25625e.rmeta
+│   │   │   │   │   ├── libunicode_segmentation-0ebb2197cbb303af.rmeta
+│   │   │   │   │   ├── libunicode_segmentation-9aa422158266dc2b.rlib
+│   │   │   │   │   ├── libunicode_segmentation-9aa422158266dc2b.rmeta
+│   │   │   │   │   ├── libunicode_truncate-519938c60d8b2b29.rmeta
+│   │   │   │   │   ├── libunicode_width-5410a1934e4df3cc.rmeta
+│   │   │   │   │   ├── libwinapi-41b419c7904a203f.rmeta
+│   │   │   │   │   ├── libwindows_link-21627c4766c4452c.rmeta
+│   │   │   │   │   ├── libwindows_sys-7923c6b1825fa1e5.rmeta
+│   │   │   │   │   ├── libwindows_targets-c78d2b0844496050.rmeta
+│   │   │   │   │   ├── libwindows_x86_64_msvc-0e3510ecaf0aa54e.rmeta
+│   │   │   │   │   ├── libwinnow-1e4e294975dc544c.rmeta
+│   │   │   │   │   ├── libwinres-9cc4faa9272b33d7.rlib
+│   │   │   │   │   ├── libwinres-9cc4faa9272b33d7.rmeta
+│   │   │   │   │   ├── line_clipping-1186b56bf7e694dd.d
+│   │   │   │   │   ├── litrs-273b6bed62c55a4b.d
+│   │   │   │   │   ├── lock_api-5dd2d45c13b27164.d
+│   │   │   │   │   ├── lru-9405035e0b1630d5.d
+│   │   │   │   │   ├── num_conv-b7680dd2477d0d17.d
+│   │   │   │   │   ├── parking_lot-9ec996e874269e04.d
+│   │   │   │   │   ├── parking_lot_core-6199ab54f6c75a56.d
+│   │   │   │   │   ├── powerfmt-120a97217c9de94b.d
+│   │   │   │   │   ├── proc_macro2-ab9656a159dbbfb6.d
+│   │   │   │   │   ├── quote-6c6734f92489062c.d
+│   │   │   │   │   ├── ratatui-2eeab548570a758f.d
+│   │   │   │   │   ├── ratatui_core-c6e98947b6687453.d
+│   │   │   │   │   ├── ratatui_crossterm-d3b584739ece9a51.d
+│   │   │   │   │   ├── ratatui_macros-4588c3d6e4cc0e96.d
+│   │   │   │   │   ├── ratatui_widgets-90a8b4eaac7f707f.d
+│   │   │   │   │   ├── rustversion-5a54f76321baf9b2.d
+│   │   │   │   │   ├── rustversion-5a54f76321baf9b2.dll
+│   │   │   │   │   ├── rustversion-5a54f76321baf9b2.dll.exp
+│   │   │   │   │   ├── rustversion-5a54f76321baf9b2.dll.lib
+│   │   │   │   │   ├── rustversion-5a54f76321baf9b2.pdb
+│   │   │   │   │   ├── ryu-26c54866c3686547.d
+│   │   │   │   │   ├── scopeguard-3db0fba300fb4994.d
+│   │   │   │   │   ├── serde-24b314e32c191f03.d
+│   │   │   │   │   ├── serde-b4ec85fafc863481.d
+│   │   │   │   │   ├── serde_core-41c4da796a7ac8f6.d
+│   │   │   │   │   ├── serde_core-99530115c8d26489.d
+│   │   │   │   │   ├── serde_derive-f8f79c2a108af0eb.d
+│   │   │   │   │   ├── serde_derive-f8f79c2a108af0eb.dll
+│   │   │   │   │   ├── serde_derive-f8f79c2a108af0eb.dll.exp
+│   │   │   │   │   ├── serde_derive-f8f79c2a108af0eb.dll.lib
+│   │   │   │   │   ├── serde_derive-f8f79c2a108af0eb.pdb
+│   │   │   │   │   ├── serde_spanned-f9f54f2ed735e5fe.d
+│   │   │   │   │   ├── smallvec-fc01c0a1772c31d5.d
+│   │   │   │   │   ├── static_assertions-c75a19bd6a04bedb.d
+│   │   │   │   │   ├── strsim-81676b8264968557.d
+│   │   │   │   │   ├── strum-ca63598ea7c06f28.d
+│   │   │   │   │   ├── strum_macros-e6be26617887849f.d
+│   │   │   │   │   ├── strum_macros-e6be26617887849f.dll
+│   │   │   │   │   ├── strum_macros-e6be26617887849f.dll.exp
+│   │   │   │   │   ├── strum_macros-e6be26617887849f.dll.lib
+│   │   │   │   │   ├── strum_macros-e6be26617887849f.pdb
+│   │   │   │   │   ├── syn-ed37a70b817565f1.d
+│   │   │   │   │   ├── thiserror-2c22208fdd3ea455.d
+│   │   │   │   │   ├── thiserror_impl-4edc4b3c5b3d73a7.d
+│   │   │   │   │   ├── thiserror_impl-4edc4b3c5b3d73a7.dll
+│   │   │   │   │   ├── thiserror_impl-4edc4b3c5b3d73a7.dll.exp
+│   │   │   │   │   ├── thiserror_impl-4edc4b3c5b3d73a7.dll.lib
+│   │   │   │   │   ├── thiserror_impl-4edc4b3c5b3d73a7.pdb
+│   │   │   │   │   ├── time-75e916455cadc0e8.d
+│   │   │   │   │   ├── time_core-29e28f871d47537f.d
+│   │   │   │   │   ├── toml-1d6f3aebb9d60bfd.d
+│   │   │   │   │   ├── toml-5d91843395fd85c5.d
+│   │   │   │   │   ├── toml_datetime-419bf3c786166ae2.d
+│   │   │   │   │   ├── toml_edit-b291eec546ac6628.d
+│   │   │   │   │   ├── toml_write-3ddaedb0fd4b6322.d
+│   │   │   │   │   ├── unicode_ident-aee44922ab25625e.d
+│   │   │   │   │   ├── unicode_segmentation-0ebb2197cbb303af.d
+│   │   │   │   │   ├── unicode_segmentation-9aa422158266dc2b.d
+│   │   │   │   │   ├── unicode_truncate-519938c60d8b2b29.d
+│   │   │   │   │   ├── unicode_width-5410a1934e4df3cc.d
+│   │   │   │   │   ├── winapi-41b419c7904a203f.d
+│   │   │   │   │   ├── windows_link-21627c4766c4452c.d
+│   │   │   │   │   ├── windows_sys-7923c6b1825fa1e5.d
+│   │   │   │   │   ├── windows_targets-c78d2b0844496050.d
+│   │   │   │   │   ├── windows_x86_64_msvc-0e3510ecaf0aa54e.d
+│   │   │   │   │   ├── winnow-1e4e294975dc544c.d
+│   │   │   │   │   └── winres-9cc4faa9272b33d7.d
+│   │   │   │   ├── examples/
+│   │   │   │   ├── incremental/
+│   │   │   │   │   ├── build_script_build-0uzlqmjzphxai/
+│   │   │   │   │   │   ├── s-hh1ercmo27-1b6za5m-5y0d6tv3uyyz6sry3pqnlwfje/
+│   │   │   │   │   │   │   ├── 1x9yv4y1bdemfsupso38n1wnd.o
+│   │   │   │   │   │   │   ├── 5jral55cu8qzi6usy4d3zqda3.o
+│   │   │   │   │   │   │   ├── 6mkpf81lt3ndaquwi89lwesd1.o
+│   │   │   │   │   │   │   ├── 7de65zdi103gxs2bfr6pua1qx.o
+│   │   │   │   │   │   │   ├── 88lg1zgh91o2dd4dws82tnuu7.o
+│   │   │   │   │   │   │   ├── bbsfkn5e3ptm7o4rigviicgb3.o
+│   │   │   │   │   │   │   ├── dep-graph.bin
+│   │   │   │   │   │   │   ├── dqgpu9ds7ip63f2zc4szrxrh9.o
+│   │   │   │   │   │   │   ├── query-cache.bin
+│   │   │   │   │   │   │   └── work-products.bin
+│   │   │   │   │   │   └── s-hh1ercmo27-1b6za5m.lock
+│   │   │   │   │   └── cli_launcher-1uad95bxw2nuz/
+│   │   │   │   │       ├── s-hh1ergh2ym-1p52d4i-6jsnmo4iyl60evlseoi7qoq2v/
+│   │   │   │   │       │   ├── dep-graph.bin
+│   │   │   │   │       │   ├── query-cache.bin
+│   │   │   │   │       │   └── work-products.bin
+│   │   │   │   │       └── s-hh1ergh2ym-1p52d4i.lock
+│   │   │   │   └── .cargo-lock
 │   │   │   ├── release/
 │   │   │   │   ├── .fingerprint/
 │   │   │   │   │   ├── allocator-api2-0902360836a5cbcd/
@@ -5950,8 +6674,6 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 ├── stubs/
 │   └── r2pipe/
 │       └── __init__.pyi
-├── test_data/
-│   └── test.bmp
 ├── tests/
 │   ├── core/
 │   │   ├── test_process_cleanup.py
