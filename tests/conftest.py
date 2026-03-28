@@ -35,15 +35,19 @@ def pytest_configure(config: pytest.Config) -> None:
     """Redirect test execution to Windows Sandbox when running on the host.
 
     Checks whether tests are running inside Windows Sandbox by looking for
-    the INTELLICRACK_SANDBOXED environment variable. When not sandboxed,
-    launches Windows Sandbox with the current pytest arguments and streams
-    the output back to the caller. Falls back to local execution if sandbox
-    infrastructure is unavailable.
+    the ``INTELLICRACK_SANDBOXED`` environment variable. Setting
+    ``INTELLICRACK_LOCAL_TESTS=1`` bypasses sandbox redirection and runs
+    tests directly on the local system. When not sandboxed, launches Windows
+    Sandbox with the current pytest arguments and streams the output back to
+    the caller. Falls back to local execution if sandbox infrastructure is
+    unavailable.
 
     Args:
         config: The pytest configuration object.
     """
     if os.environ.get("INTELLICRACK_SANDBOXED") == "1":
+        return
+    if os.environ.get("INTELLICRACK_LOCAL_TESTS") == "1":
         return
     if os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS"):
         return

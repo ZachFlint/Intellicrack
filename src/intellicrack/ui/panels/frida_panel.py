@@ -11,10 +11,10 @@ for interacting with Frida dynamic instrumentation framework.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast, override
+from typing import TYPE_CHECKING, Final, cast, override
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont, QFontMetrics
+from PyQt6.QtGui import QFontMetrics, QIntValidator
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -39,13 +39,21 @@ from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.qt_compat import set_max_block_count
-from intellicrack.ui.resources.font_manager import DEFAULT_CODE_FONT
+from intellicrack.ui.resources.font_manager import FontManager
 
 
 if TYPE_CHECKING:
     from intellicrack.bridges.frida_bridge import FridaBridge
 
 _logger = get_logger("ui.panels.frida")
+
+_PANEL_MARGIN: Final[int] = 0
+_PANEL_SPACING: Final[int] = 2
+_DEVICE_COMBO_MIN_WIDTH: Final[int] = 120
+_STALKER_TID_MAX_WIDTH: Final[int] = 100
+_TOP_SPLIT: Final[list[int]] = [200, 400, 300]
+_MAIN_SPLIT: Final[list[int]] = [400, 200]
+_SPACING_STALKER: Final[int] = 4
 
 
 _DEFAULT_FRIDA_SCRIPT = """Interceptor.attach(ptr('ADDRESS'), {
@@ -100,7 +108,7 @@ class FridaPanel(AnalysisPanelBase):
         self._add_toolbar_label(toolbar, "Device:")
 
         self._device_combo = QComboBox()
-        self._device_combo.setMinimumWidth(120)
+        self._device_combo.setMinimumWidth(_DEVICE_COMBO_MIN_WIDTH)
         self._device_combo.addItem("local")
         self._device_combo.currentTextChanged.connect(self._on_device_changed)
         toolbar.addWidget(self._device_combo)
@@ -139,26 +147,26 @@ class FridaPanel(AnalysisPanelBase):
         top_splitter.addWidget(self._create_process_browser())
         top_splitter.addWidget(self._create_editor_section())
         top_splitter.addWidget(self._create_right_tabs())
-        top_splitter.setSizes([200, 400, 300])
+        top_splitter.setSizes(_TOP_SPLIT)
         main_splitter.addWidget(top_splitter)
 
         console_container = QWidget()
         console_layout = QVBoxLayout(console_container)
-        console_layout.setContentsMargins(0, 0, 0, 0)
-        console_layout.setSpacing(2)
+        console_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        console_layout.setSpacing(_PANEL_SPACING)
 
         console_title = QLabel("Console Output")
-        console_title.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+        console_title.setFont(FontManager.get_instance().get_ui_font_bold(9))
         console_layout.addWidget(console_title)
 
         self._console = QPlainTextEdit()
-        self._console.setFont(QFont(DEFAULT_CODE_FONT, 9))
+        self._console.setFont(FontManager.get_instance().get_code_font(9))
         self._console.setReadOnly(True)
         set_max_block_count(self._console, 10000)
         console_layout.addWidget(self._console)
         main_splitter.addWidget(console_container)
 
-        main_splitter.setSizes([400, 200])
+        main_splitter.setSizes(_MAIN_SPLIT)
         return main_splitter
 
     @override
@@ -179,12 +187,12 @@ class FridaPanel(AnalysisPanelBase):
         """
         editor_container = QWidget()
         editor_layout = QVBoxLayout(editor_container)
-        editor_layout.setContentsMargins(0, 0, 0, 0)
-        editor_layout.setSpacing(2)
+        editor_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        editor_layout.setSpacing(_PANEL_SPACING)
 
         editor_header = QHBoxLayout()
         editor_title = QLabel("Script Editor")
-        editor_title.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+        editor_title.setFont(FontManager.get_instance().get_ui_font_bold(9))
         editor_header.addWidget(editor_title)
 
         self._script_type_combo = QComboBox()
@@ -194,7 +202,7 @@ class FridaPanel(AnalysisPanelBase):
         editor_layout.addLayout(editor_header)
 
         self._script_editor = QPlainTextEdit()
-        self._script_editor.setFont(QFont(DEFAULT_CODE_FONT, 10))
+        self._script_editor.setFont(FontManager.get_instance().get_code_font(10))
         self._script_editor.setPlainText(_DEFAULT_FRIDA_SCRIPT)
         self._script_editor.setTabStopDistance(QFontMetrics(self._script_editor.font()).horizontalAdvance(" ") * 4)
         editor_layout.addWidget(self._script_editor)
@@ -208,12 +216,12 @@ class FridaPanel(AnalysisPanelBase):
         """
         container = QWidget()
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(2)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
 
         header = QHBoxLayout()
         title = QLabel("Processes")
-        title.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+        title.setFont(FontManager.get_instance().get_ui_font_bold(9))
         header.addWidget(title)
         header.addStretch()
 
@@ -255,12 +263,12 @@ class FridaPanel(AnalysisPanelBase):
         """
         hooks_container = QWidget()
         hooks_layout = QVBoxLayout(hooks_container)
-        hooks_layout.setContentsMargins(0, 0, 0, 0)
-        hooks_layout.setSpacing(2)
+        hooks_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        hooks_layout.setSpacing(_PANEL_SPACING)
 
         hooks_header = QHBoxLayout()
         hooks_title = QLabel("Active Hooks")
-        hooks_title.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+        hooks_title.setFont(FontManager.get_instance().get_ui_font_bold(9))
         hooks_header.addWidget(hooks_title)
         hooks_header.addStretch()
 
@@ -294,12 +302,12 @@ class FridaPanel(AnalysisPanelBase):
         """
         container = QWidget()
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(2)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
 
         header = QHBoxLayout()
         title = QLabel("Threads")
-        title.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+        title.setFont(FontManager.get_instance().get_ui_font_bold(9))
         header.addWidget(title)
         header.addStretch()
 
@@ -327,18 +335,19 @@ class FridaPanel(AnalysisPanelBase):
         """
         container = QWidget()
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(4)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_SPACING_STALKER)
 
-        title = QLabel("Stalker Tracing")
-        title.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+        title = QLabel(self.tr("Stalker Tracing"))
+        title.setFont(FontManager.get_instance().get_ui_font_bold(9))
         layout.addWidget(title)
 
         tid_row = QHBoxLayout()
         tid_row.addWidget(QLabel("Thread ID:"))
         self._stalker_tid_input = QLineEdit()
         self._stalker_tid_input.setToolTip("Leave empty for current thread")
-        self._stalker_tid_input.setMaximumWidth(100)
+        self._stalker_tid_input.setMaximumWidth(_STALKER_TID_MAX_WIDTH)
+        self._stalker_tid_input.setValidator(QIntValidator(0, 999999, self))
         tid_row.addWidget(self._stalker_tid_input)
         tid_row.addStretch()
         layout.addLayout(tid_row)

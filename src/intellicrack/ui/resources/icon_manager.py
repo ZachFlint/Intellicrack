@@ -17,6 +17,7 @@ from PyQt6.QtGui import QColor, QIcon, QPainter, QPixmap
 
 from ...core.logging import get_logger
 from .resource_helper import get_assets_path, get_icon_path
+from .theme_manager import ThemeManager
 
 
 _logger = get_logger("ui.resources.icons")
@@ -317,7 +318,7 @@ class IconManager:
             QIcon: QIcon containing the rendered text.
         """
         if color is None:
-            color = QColor("#d4d4d4")
+            color = QColor("#d4d4d4") if ThemeManager.get_instance().is_dark_theme() else QColor("#1a1a1a")
 
         pixmap = QPixmap(size, size)
         pixmap.fill(QColor(0, 0, 0, 0))
@@ -383,7 +384,8 @@ class IconManager:
             _logger.warning("app_icon_not_found")
 
         _logger.debug("app_icon_using_fallback")
-        fallback = IconManager._render_text_icon("IC", 256, QColor("#007acc"))
+        accent = QColor("#007acc") if ThemeManager.get_instance().is_dark_theme() else QColor("#0078d4")
+        fallback = IconManager._render_text_icon("IC", 256, accent)
         self._icon_cache["app_icon"] = fallback
         return fallback
 

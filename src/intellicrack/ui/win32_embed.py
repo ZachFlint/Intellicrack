@@ -31,6 +31,9 @@ if TYPE_CHECKING:
 
 _logger = get_logger("ui.win32_embed")
 
+_EMBED_MIN_WIDTH: Final[int] = 200
+_EMBED_MIN_HEIGHT: Final[int] = 150
+
 _GW_OWNER: Final[int] = 4
 _MAX_TITLE_LEN: Final[int] = 256
 
@@ -115,7 +118,7 @@ def embed_window(hwnd: int, parent: QWidget) -> QWidget | None:
             return None
 
         container: QWidget = QWidget.createWindowContainer(foreign_window, parent)
-        container.setMinimumSize(200, 150)
+        container.setMinimumSize(_EMBED_MIN_WIDTH, _EMBED_MIN_HEIGHT)
 
     except Exception:
         _logger.exception("win32_embed_failed", hwnd=hex(hwnd))

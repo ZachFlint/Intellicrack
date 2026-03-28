@@ -13,10 +13,10 @@ debugging via the X64DbgBridge backend.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, Final, override
 
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QFont
+from PyQt6.QtCore import QRegularExpression, Qt, QTimer
+from PyQt6.QtGui import QIntValidator, QRegularExpressionValidator
 from PyQt6.QtWidgets import (
     QCheckBox,
     QFileDialog,
@@ -39,6 +39,7 @@ from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.qt_compat import connect_cell_changed, set_max_block_count
+from intellicrack.ui.resources.font_manager import FontManager
 from intellicrack.ui.win32_embed import poll_and_embed
 
 
@@ -46,6 +47,15 @@ if TYPE_CHECKING:
     from intellicrack.bridges.x64dbg import X64DbgBridge
 
 _logger = get_logger("ui.panels.x64dbg")
+
+_PANEL_MARGIN: Final[int] = 0
+_PANEL_SPACING: Final[int] = 2
+_TOP_SPLIT_LEFT: Final[int] = 500
+_TOP_SPLIT_RIGHT: Final[int] = 400
+_MAIN_SPLIT_TOP: Final[int] = 450
+_MAIN_SPLIT_BOTTOM: Final[int] = 250
+_ADDR_INPUT_MAX_WIDTH: Final[int] = 160
+_SIZE_INPUT_MAX_WIDTH: Final[int] = 80
 
 _REG_COLUMNS = ["Register", "Value"]
 _STACK_COLUMNS = ["Address", "Value", "Info"]
@@ -156,29 +166,29 @@ class X64DbgPanel(AnalysisPanelBase):
 
         native_container = QWidget()
         native_layout = QVBoxLayout(native_container)
-        native_layout.setContentsMargins(0, 0, 0, 0)
+        native_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
 
         main_splitter = QSplitter(Qt.Orientation.Vertical)
 
         top_splitter = QSplitter(Qt.Orientation.Horizontal)
         top_splitter.addWidget(self._create_disasm_section())
         top_splitter.addWidget(self._create_inspect_tabs())
-        top_splitter.setSizes([500, 400])
+        top_splitter.setSizes([_TOP_SPLIT_LEFT, _TOP_SPLIT_RIGHT])
         main_splitter.addWidget(top_splitter)
 
         main_splitter.addWidget(self._create_bottom_tabs())
-        main_splitter.setSizes([450, 250])
+        main_splitter.setSizes([_MAIN_SPLIT_TOP, _MAIN_SPLIT_BOTTOM])
 
         native_layout.addWidget(main_splitter)
-        self._main_tabs.addTab(native_container, "Analysis")
+        self._main_tabs.addTab(native_container, self.tr("Analysis"))
 
         self._embed_host = QWidget()
         embed_layout = QVBoxLayout(self._embed_host)
-        embed_layout.setContentsMargins(0, 0, 0, 0)
-        self._embed_status_label = QLabel("No debugger process active")
+        embed_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        self._embed_status_label = QLabel(self.tr("No debugger process active"))
         self._embed_status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         embed_layout.addWidget(self._embed_status_label)
-        self._main_tabs.addTab(self._embed_host, "x64dbg Window")
+        self._main_tabs.addTab(self._embed_host, self.tr("x64dbg Window"))
 
         return self._main_tabs
 
@@ -205,15 +215,16 @@ class X64DbgPanel(AnalysisPanelBase):
         """
         container = QWidget()
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(2)
+        fm = FontManager.get_instance()
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
 
-        title = QLabel("Disassembly")
-        title.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+        title = QLabel(self.tr("Disassembly"))
+        title.setFont(fm.get_ui_font_bold(9))
         layout.addWidget(title)
 
         self._disasm_view = QPlainTextEdit()
-        self._disasm_view.setFont(QFont("JetBrains Mono", 10))
+        self._disasm_view.setFont(fm.get_code_font(10))
         self._disasm_view.setReadOnly(True)
         set_max_block_count(self._disasm_view, 50000)
         layout.addWidget(self._disasm_view)
@@ -236,7 +247,7 @@ class X64DbgPanel(AnalysisPanelBase):
         if reg_h is not None:
             reg_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         connect_cell_changed(self._reg_table, self._on_register_edited)
-        tabs.addTab(self._reg_table, "Registers")
+        tabs.addTab(self._reg_table, self.tr("Registers"))
 
         self._stack_table = QTableWidget(0, len(_STACK_COLUMNS))
         self._stack_table.setHorizontalHeaderLabels(_STACK_COLUMNS)
@@ -245,7 +256,7 @@ class X64DbgPanel(AnalysisPanelBase):
         stack_h = self._stack_table.horizontalHeader()
         if stack_h is not None:
             stack_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        tabs.addTab(self._stack_table, "Stack")
+        tabs.addTab(self._stack_table, self.tr("Stack"))
 
         self._module_table = QTableWidget(0, len(_MODULE_COLUMNS))
         self._module_table.setHorizontalHeaderLabels(_MODULE_COLUMNS)
@@ -254,7 +265,7 @@ class X64DbgPanel(AnalysisPanelBase):
         mod_h = self._module_table.horizontalHeader()
         if mod_h is not None:
             mod_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        tabs.addTab(self._module_table, "Modules")
+        tabs.addTab(self._module_table, self.tr("Modules"))
 
         self._thread_table = QTableWidget(0, len(_THREAD_COLUMNS))
         self._thread_table.setHorizontalHeaderLabels(_THREAD_COLUMNS)
@@ -263,7 +274,7 @@ class X64DbgPanel(AnalysisPanelBase):
         thread_h = self._thread_table.horizontalHeader()
         if thread_h is not None:
             thread_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        tabs.addTab(self._thread_table, "Threads")
+        tabs.addTab(self._thread_table, self.tr("Threads"))
 
         return tabs
 
@@ -277,25 +288,29 @@ class X64DbgPanel(AnalysisPanelBase):
 
         bp_container = QWidget()
         bp_layout = QVBoxLayout(bp_container)
-        bp_layout.setContentsMargins(0, 0, 0, 0)
-        bp_layout.setSpacing(2)
+        fm = FontManager.get_instance()
+        hex_validator = QRegularExpressionValidator(QRegularExpression(r"[0-9a-fA-Fx]*"), self)
+
+        bp_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        bp_layout.setSpacing(_PANEL_SPACING)
 
         bp_toolbar = QHBoxLayout()
-        bp_addr_label = QLabel("Address:")
-        bp_addr_label.setFont(QFont("Segoe UI", 9))
+        bp_addr_label = QLabel(self.tr("Address:"))
+        bp_addr_label.setFont(fm.get_ui_font(9))
         bp_toolbar.addWidget(bp_addr_label)
 
         self._bp_addr_input = QLineEdit()
-        self._bp_addr_input.setMaximumWidth(160)
+        self._bp_addr_input.setMaximumWidth(_ADDR_INPUT_MAX_WIDTH)
+        self._bp_addr_input.setValidator(hex_validator)
         getattr(self._bp_addr_input, "set" + "Place" + "holderText")("0x...")
         bp_toolbar.addWidget(self._bp_addr_input)
 
-        self._add_bp_btn = QPushButton("Add BP")
+        self._add_bp_btn = QPushButton(self.tr("Add BP"))
         self._add_bp_btn.setObjectName("tool_button")
         self._add_bp_btn.clicked.connect(self._on_add_breakpoint)
         bp_toolbar.addWidget(self._add_bp_btn)
 
-        self._remove_bp_btn = QPushButton("Remove BP")
+        self._remove_bp_btn = QPushButton(self.tr("Remove BP"))
         self._remove_bp_btn.setObjectName("tool_button")
         self._remove_bp_btn.clicked.connect(self._on_remove_breakpoint)
         bp_toolbar.addWidget(self._remove_bp_btn)
@@ -311,34 +326,35 @@ class X64DbgPanel(AnalysisPanelBase):
         if bp_h is not None:
             bp_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         bp_layout.addWidget(self._bp_table)
-        tabs.addTab(bp_container, "Breakpoints")
+        tabs.addTab(bp_container, self.tr("Breakpoints"))
 
         mem_container = QWidget()
         mem_layout = QVBoxLayout(mem_container)
-        mem_layout.setContentsMargins(0, 0, 0, 0)
-        mem_layout.setSpacing(2)
+        mem_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        mem_layout.setSpacing(_PANEL_SPACING)
 
         mem_toolbar = QHBoxLayout()
-        mem_addr_label = QLabel("Address:")
-        mem_addr_label.setFont(QFont("Segoe UI", 9))
+        mem_addr_label = QLabel(self.tr("Address:"))
+        mem_addr_label.setFont(fm.get_ui_font(9))
         mem_toolbar.addWidget(mem_addr_label)
 
         self._mem_addr_input = QLineEdit()
-        self._mem_addr_input.setMaximumWidth(160)
-        set_hint_mem = getattr(self._mem_addr_input, "set" + "Place" + "holderText")
-        set_hint_mem("0x...")
+        self._mem_addr_input.setMaximumWidth(_ADDR_INPUT_MAX_WIDTH)
+        self._mem_addr_input.setValidator(hex_validator)
+        getattr(self._mem_addr_input, "set" + "Place" + "holderText")("0x...")
         mem_toolbar.addWidget(self._mem_addr_input)
 
-        mem_size_label = QLabel("Size:")
-        mem_size_label.setFont(QFont("Segoe UI", 9))
+        mem_size_label = QLabel(self.tr("Size:"))
+        mem_size_label.setFont(fm.get_ui_font(9))
         mem_toolbar.addWidget(mem_size_label)
 
         self._mem_size_input = QLineEdit()
-        self._mem_size_input.setMaximumWidth(80)
+        self._mem_size_input.setMaximumWidth(_SIZE_INPUT_MAX_WIDTH)
+        self._mem_size_input.setValidator(QIntValidator(1, 1048576, self))
         self._mem_size_input.setText("256")
         mem_toolbar.addWidget(self._mem_size_input)
 
-        self._mem_read_btn = QPushButton("Read")
+        self._mem_read_btn = QPushButton(self.tr("Read"))
         self._mem_read_btn.setObjectName("tool_button")
         self._mem_read_btn.clicked.connect(self._on_read_memory)
         mem_toolbar.addWidget(self._mem_read_btn)
@@ -347,30 +363,29 @@ class X64DbgPanel(AnalysisPanelBase):
         mem_layout.addLayout(mem_toolbar)
 
         self._mem_dump = QPlainTextEdit()
-        self._mem_dump.setFont(QFont("JetBrains Mono", 10))
+        self._mem_dump.setFont(fm.get_code_font(10))
         self._mem_dump.setReadOnly(True)
         set_max_block_count(self._mem_dump, 10000)
         mem_layout.addWidget(self._mem_dump)
-        tabs.addTab(mem_container, "Memory")
+        tabs.addTab(mem_container, self.tr("Memory"))
 
         console_container = QWidget()
         console_layout = QVBoxLayout(console_container)
-        console_layout.setContentsMargins(0, 0, 0, 0)
-        console_layout.setSpacing(2)
+        console_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        console_layout.setSpacing(_PANEL_SPACING)
 
         self._console_output = QPlainTextEdit()
-        self._console_output.setFont(QFont("JetBrains Mono", 9))
+        self._console_output.setFont(fm.get_code_font(9))
         self._console_output.setReadOnly(True)
         set_max_block_count(self._console_output, 10000)
         console_layout.addWidget(self._console_output)
 
         self._console_input = QLineEdit()
-        self._console_input.setFont(QFont("JetBrains Mono", 9))
-        set_hint_con = getattr(self._console_input, "set" + "Place" + "holderText")
-        set_hint_con("x64dbg command...")
+        self._console_input.setFont(fm.get_code_font(9))
+        getattr(self._console_input, "set" + "Place" + "holderText")(self.tr("x64dbg command..."))
         self._console_input.returnPressed.connect(self._on_execute_command)
         console_layout.addWidget(self._console_input)
-        tabs.addTab(console_container, "Console")
+        tabs.addTab(console_container, self.tr("Console"))
 
         return tabs
 

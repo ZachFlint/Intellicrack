@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Final, cast
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -43,6 +43,13 @@ from ..core.logging import get_logger
 
 
 _logger = get_logger("ui.session_manager")
+
+_DIALOG_WIDTH: Final[int] = 800
+_DIALOG_HEIGHT: Final[int] = 500
+_SPLIT_LEFT: Final[int] = 450
+_SPLIT_RIGHT: Final[int] = 350
+_CONFIRM_DIALOG_WIDTH: Final[int] = 400
+_CONFIRM_DIALOG_HEIGHT: Final[int] = 200
 
 if TYPE_CHECKING:
     from intellicrack.core.session import SessionManager, SessionMetadata
@@ -93,7 +100,7 @@ class SessionManagerDialog(QDialog):
         self._load_sessions()
 
         self.setWindowTitle("Session Manager")
-        self.resize(800, 500)
+        self.resize(_DIALOG_WIDTH, _DIALOG_HEIGHT)
 
     def _setup_ui(self) -> None:
         """Set up the dialog UI layout."""
@@ -101,7 +108,7 @@ class SessionManagerDialog(QDialog):
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(self._create_left_panel())
         splitter.addWidget(self._create_right_panel())
-        splitter.setSizes([450, 350])
+        splitter.setSizes([_SPLIT_LEFT, _SPLIT_RIGHT])
         layout.addWidget(splitter)
         layout.addLayout(self._create_bottom_buttons())
 
@@ -811,7 +818,7 @@ class NewSessionDialog(QDialog):
         self._setup_ui()
 
         self.setWindowTitle("New Session")
-        self.resize(400, 200)
+        self.resize(_CONFIRM_DIALOG_WIDTH, _CONFIRM_DIALOG_HEIGHT)
 
     def _setup_ui(self) -> None:
         """Set up the dialog UI."""

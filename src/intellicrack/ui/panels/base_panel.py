@@ -12,7 +12,7 @@ integration, and lifecycle signals used by all native analysis panels
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
@@ -33,6 +33,12 @@ if TYPE_CHECKING:
 
 
 _logger = get_logger("ui.panels.base_panel")
+
+_BASE_MARGIN: Final[int] = 4
+_BASE_SPACING: Final[int] = 4
+_TOOLBAR_HEIGHT: Final[int] = 32
+_MIN_PANEL_WIDTH: Final[int] = 200
+_MIN_PANEL_HEIGHT: Final[int] = 150
 
 
 class AnalysisPanelBase(QWidget):
@@ -65,10 +71,10 @@ class AnalysisPanelBase(QWidget):
 
     def _setup_ui(self) -> None:
         """Build the standard panel layout with toolbar and content."""
-        self.setMinimumSize(200, 150)
+        self.setMinimumSize(_MIN_PANEL_WIDTH, _MIN_PANEL_HEIGHT)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(4, 4, 4, 4)
-        layout.setSpacing(4)
+        layout.setContentsMargins(_BASE_MARGIN, _BASE_MARGIN, _BASE_MARGIN, _BASE_MARGIN)
+        layout.setSpacing(_BASE_SPACING)
         layout.addWidget(self._build_toolbar())
         layout.addWidget(self._create_content())
 
@@ -80,7 +86,7 @@ class AnalysisPanelBase(QWidget):
         """
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(32)
+        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
         self._populate_toolbar(toolbar)
         return toolbar
 

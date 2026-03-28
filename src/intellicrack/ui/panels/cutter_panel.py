@@ -14,10 +14,9 @@ CutterBridge headless analysis backend via r2pipe.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, Any, Final, override
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QFileDialog,
@@ -51,12 +50,21 @@ from intellicrack.ui.panels.qt_compat import (
     tree_item_data,
     tree_item_set_data,
 )
+from intellicrack.ui.resources.font_manager import FontManager
 
 
 if TYPE_CHECKING:
     from intellicrack.bridges.cutter import CutterBridge
 
 _logger = get_logger("ui.panels.cutter")
+
+_PANEL_MARGIN: Final[int] = 0
+_PANEL_SPACING: Final[int] = 2
+_OUTER_SPLIT_TOP: Final[int] = 400
+_OUTER_SPLIT_MID: Final[int] = 250
+_OUTER_SPLIT_BOT: Final[int] = 150
+_INNER_SPLIT_LEFT: Final[int] = 250
+_INNER_SPLIT_RIGHT: Final[int] = 600
 
 _FUNC_COLUMNS = ["Name", "Address", "Size"]
 _IMPORT_COLUMNS = ["DLL", "Function", "Address"]
@@ -111,7 +119,7 @@ class CutterPanel(AnalysisPanelBase):
         outer.addWidget(self._create_code_zone())
         outer.addWidget(self._create_data_tabs())
         outer.addWidget(self._create_console())
-        outer.setSizes([400, 250, 150])
+        outer.setSizes([_OUTER_SPLIT_TOP, _OUTER_SPLIT_MID, _OUTER_SPLIT_BOT])
 
         return outer
 
@@ -134,7 +142,7 @@ class CutterPanel(AnalysisPanelBase):
 
         splitter.addWidget(self._create_functions_sidebar())
         splitter.addWidget(self._create_code_tabs())
-        splitter.setSizes([250, 600])
+        splitter.setSizes([_INNER_SPLIT_LEFT, _INNER_SPLIT_RIGHT])
 
         return splitter
 
@@ -146,12 +154,13 @@ class CutterPanel(AnalysisPanelBase):
         """
         container = QWidget()
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(2)
+        fm = FontManager.get_instance()
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
 
         header = QHBoxLayout()
-        self._func_count_label = QLabel("Functions")
-        self._func_count_label.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+        self._func_count_label = QLabel(self.tr("Functions"))
+        self._func_count_label.setFont(fm.get_ui_font_bold(9))
         header.addWidget(self._func_count_label)
         header.addStretch()
 
@@ -182,17 +191,18 @@ class CutterPanel(AnalysisPanelBase):
         Returns:
             QTabWidget: Tab widget with code views.
         """
+        fm = FontManager.get_instance()
         tabs = QTabWidget()
 
         self._disasm_view = QPlainTextEdit()
-        self._disasm_view.setFont(QFont("JetBrains Mono", 10))
+        self._disasm_view.setFont(fm.get_code_font(10))
         self._disasm_view.setReadOnly(True)
         set_max_block_count(self._disasm_view, 50000)
         self._asm_highlighter = AssemblySyntaxHighlighter(self._disasm_view.document())
-        tabs.addTab(self._disasm_view, "Disassembly")
+        tabs.addTab(self._disasm_view, self.tr("Disassembly"))
 
         self._decompiled_view = QPlainTextEdit()
-        self._decompiled_view.setFont(QFont("JetBrains Mono", 10))
+        self._decompiled_view.setFont(fm.get_code_font(10))
         self._decompiled_view.setReadOnly(True)
         set_max_block_count(self._decompiled_view, 50000)
         self._c_highlighter = CSyntaxHighlighter(self._decompiled_view.document())
@@ -282,15 +292,16 @@ class CutterPanel(AnalysisPanelBase):
         """
         container = QWidget()
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(2)
+        fm = FontManager.get_instance()
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
 
-        console_label = QLabel("Console")
-        console_label.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+        console_label = QLabel(self.tr("Console"))
+        console_label.setFont(fm.get_ui_font_bold(9))
         layout.addWidget(console_label)
 
         self._console_output = QPlainTextEdit()
-        self._console_output.setFont(QFont("JetBrains Mono", 9))
+        self._console_output.setFont(fm.get_code_font(9))
         self._console_output.setReadOnly(True)
         set_max_block_count(self._console_output, 10000)
         layout.addWidget(self._console_output)
@@ -875,9 +886,8 @@ class CutterPanel(AnalysisPanelBase):
         Args:
             result: Command output string from the bridge.
         """
-        if result is not None:
-            if text := str(result).rstrip():
-                self._console_output.appendPlainText(text)
+        if result is not None and (text := str(result).rstrip()):
+            self._console_output.appendPlainText(text)
         self._console_run_btn.setEnabled(True)
 
     def _on_command_error(self, exc: object) -> None:

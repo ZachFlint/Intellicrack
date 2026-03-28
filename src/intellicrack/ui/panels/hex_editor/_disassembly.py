@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any, Final, cast
 
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -29,6 +29,9 @@ from intellicrack.ui.panels.hex_editor._base import (
     disassembler_available,
     logger,
 )
+
+_LAYOUT_MARGIN: Final[int] = 2
+_SPIN_WIDTH: Final[int] = 60
 
 
 class DisassemblyMixin:
@@ -52,7 +55,7 @@ class DisassemblyMixin:
         """
         container = QWidget()
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(2, 2, 2, 2)
+        layout.setContentsMargins(_LAYOUT_MARGIN, _LAYOUT_MARGIN, _LAYOUT_MARGIN, _LAYOUT_MARGIN)
 
         toolbar_row = QHBoxLayout()
 
@@ -69,7 +72,7 @@ class DisassemblyMixin:
         self._disasm_count_spin = QSpinBox()
         self._disasm_count_spin.setRange(1, 500)
         self._disasm_count_spin.setValue(DEFAULT_DISASM_COUNT)
-        self._disasm_count_spin.setFixedWidth(60)
+        self._disasm_count_spin.setFixedWidth(_SPIN_WIDTH)
         toolbar_row.addWidget(self._disasm_count_spin)
 
         self._disasm_follow_cursor = QCheckBox("Follow Cursor")

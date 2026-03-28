@@ -20,7 +20,6 @@ from PyQt6.QtCore import QPointF, QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import (
     QBrush,
     QColor,
-    QFont,
     QPainter,
     QPainterPath,
     QPen,
@@ -38,6 +37,8 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.resources.font_manager import FontManager
+from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 _logger = get_logger("ui.panels.graph_view")
@@ -51,18 +52,45 @@ _LAYER_SPACING_H: Final[int] = 30
 _ARROW_SIZE: Final[int] = 8
 _ZOOM_FACTOR: Final[float] = 1.15
 
-_COLOR_BLOCK_BG = QColor(40, 44, 52)
-_COLOR_BLOCK_BORDER = QColor(80, 85, 95)
-_COLOR_HEADER_BG = QColor(55, 60, 72)
-_COLOR_HEADER_TEXT = QColor(220, 220, 220)
-_COLOR_ASM_TEXT = QColor(190, 190, 190)
-_COLOR_MNEMONIC_JUMP = QColor(86, 156, 214)
-_COLOR_MNEMONIC_CALL = QColor(78, 201, 176)
-_COLOR_MNEMONIC_RET = QColor(206, 106, 106)
-_COLOR_EDGE_TRUE = QColor(80, 200, 80)
-_COLOR_EDGE_FALSE = QColor(200, 80, 80)
-_COLOR_EDGE_UNCOND = QColor(150, 150, 150)
-_COLOR_SELECTED_BORDER = QColor(100, 150, 255)
+
+def _get_graph_colors() -> dict[str, QColor]:
+    """Get theme-aware colors for CFG rendering.
+
+    Returns:
+        dict[str, QColor]: Mapping of color names to QColor instances.
+    """
+    if ThemeManager.get_instance().is_dark_theme():
+        return {
+            "block_bg": QColor(40, 44, 52),
+            "block_border": QColor(80, 85, 95),
+            "header_bg": QColor(55, 60, 72),
+            "header_text": QColor(220, 220, 220),
+            "asm_text": QColor(190, 190, 190),
+            "mnemonic_jump": QColor(86, 156, 214),
+            "mnemonic_call": QColor(78, 201, 176),
+            "mnemonic_ret": QColor(206, 106, 106),
+            "edge_true": QColor(80, 200, 80),
+            "edge_false": QColor(200, 80, 80),
+            "edge_uncond": QColor(150, 150, 150),
+            "selected_border": QColor(100, 150, 255),
+            "background": QColor(30, 30, 30),
+        }
+    return {
+        "block_bg": QColor(255, 255, 255),
+        "block_border": QColor(200, 200, 210),
+        "header_bg": QColor(230, 235, 245),
+        "header_text": QColor(30, 30, 30),
+        "asm_text": QColor(60, 60, 60),
+        "mnemonic_jump": QColor(0, 0, 200),
+        "mnemonic_call": QColor(0, 128, 128),
+        "mnemonic_ret": QColor(180, 50, 50),
+        "edge_true": QColor(40, 160, 40),
+        "edge_false": QColor(200, 40, 40),
+        "edge_uncond": QColor(120, 120, 120),
+        "selected_border": QColor(50, 100, 220),
+        "background": QColor(248, 248, 248),
+    }
+
 
 _JUMP_MNEMONICS = frozenset({
     "je",
@@ -112,16 +140,18 @@ class BasicBlockItem(QGraphicsRectItem):
     ) -> None:
         self.block_address = block_address
         self._ops = ops
-        self._font = QFont("JetBrains Mono", 8)
-        self._header_font = QFont("JetBrains Mono", 8, QFont.Weight.Bold)
+        fm = FontManager.get_instance()
+        self._font = fm.get_code_font(8)
+        self._header_font = fm.get_code_font_bold(8)
+        self._colors = _get_graph_colors()
 
         text_width = max(len(op.get("disasm", "")) for op in ops) * 7 if ops else 10
         width = max(_BLOCK_MIN_WIDTH, text_width + _BLOCK_PADDING * 2)
         height = _HEADER_HEIGHT + len(ops) * _LINE_HEIGHT + _BLOCK_PADDING
 
         super().__init__(0, 0, width, height, parent)
-        self.setPen(QPen(_COLOR_BLOCK_BORDER, 1.5))
-        self.setBrush(QBrush(_COLOR_BLOCK_BG))
+        self.setPen(QPen(self._colors["block_border"], 1.5))
+        self.setBrush(QBrush(self._colors["block_bg"]))
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
 
     @override
@@ -143,22 +173,24 @@ class BasicBlockItem(QGraphicsRectItem):
         del option, widget
         rect = self.rect()
 
+        colors = self._colors
+
         if self.isSelected():
-            painter.setPen(QPen(_COLOR_SELECTED_BORDER, 2.0))
+            painter.setPen(QPen(colors["selected_border"], 2.0))
         else:
-            painter.setPen(QPen(_COLOR_BLOCK_BORDER, 1.5))
-        painter.setBrush(QBrush(_COLOR_BLOCK_BG))
+            painter.setPen(QPen(colors["block_border"], 1.5))
+        painter.setBrush(QBrush(colors["block_bg"]))
         painter.drawRoundedRect(rect, 4, 4)
 
         header_rect = QRectF(rect.x(), rect.y(), rect.width(), _HEADER_HEIGHT)
-        painter.setBrush(QBrush(_COLOR_HEADER_BG))
+        painter.setBrush(QBrush(colors["header_bg"]))
         painter.setPen(Qt.PenStyle.NoPen)
         painter.drawRoundedRect(header_rect, 4, 4)
         clip_rect = QRectF(rect.x(), rect.y() + 4, rect.width(), _HEADER_HEIGHT - 4)
         painter.drawRect(clip_rect)
 
         painter.setFont(self._header_font)
-        painter.setPen(_COLOR_HEADER_TEXT)
+        painter.setPen(colors["header_text"])
         painter.drawText(
             header_rect.adjusted(_BLOCK_PADDING, 0, -_BLOCK_PADDING, 0),
             Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
@@ -173,13 +205,13 @@ class BasicBlockItem(QGraphicsRectItem):
             mnemonic = disasm.split(maxsplit=1)[0].lower() if disasm else ""
 
             if mnemonic in _JUMP_MNEMONICS:
-                painter.setPen(_COLOR_MNEMONIC_JUMP)
+                painter.setPen(colors["mnemonic_jump"])
             elif mnemonic in _CALL_MNEMONICS:
-                painter.setPen(_COLOR_MNEMONIC_CALL)
+                painter.setPen(colors["mnemonic_call"])
             elif mnemonic in _RET_MNEMONICS:
-                painter.setPen(_COLOR_MNEMONIC_RET)
+                painter.setPen(colors["mnemonic_ret"])
             else:
-                painter.setPen(_COLOR_ASM_TEXT)
+                painter.setPen(colors["asm_text"])
 
             painter.drawText(
                 QRectF(rect.x() + _BLOCK_PADDING, y, rect.width() - _BLOCK_PADDING * 2, _LINE_HEIGHT),
@@ -208,13 +240,14 @@ class EdgeItem(QGraphicsPathItem):
     ) -> None:
         super().__init__(parent)
         self.edge_type = edge_type
+        colors = _get_graph_colors()
 
         if edge_type == "true":
-            color = _COLOR_EDGE_TRUE
+            color = colors["edge_true"]
         elif edge_type == "false":
-            color = _COLOR_EDGE_FALSE
+            color = colors["edge_false"]
         else:
-            color = _COLOR_EDGE_UNCOND
+            color = colors["edge_uncond"]
 
         self.setPen(QPen(color, 1.5))
 
@@ -451,7 +484,7 @@ class CFGGraphView(QGraphicsView):
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
-        self.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
+        self.setBackgroundBrush(QBrush(_get_graph_colors()["background"]))
 
     def graph_scene(self) -> CFGGraphScene:
         """Get the typed CFGGraphScene.

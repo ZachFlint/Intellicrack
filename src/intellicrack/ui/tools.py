@@ -16,10 +16,10 @@ from __future__ import annotations
 import importlib
 import inspect
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Protocol, cast, runtime_checkable
+from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, cast, runtime_checkable
 
 from PyQt6.QtCore import QPoint, Qt, pyqtSignal
-from PyQt6.QtGui import QFont, QSyntaxHighlighter, QTextCursor
+from PyQt6.QtGui import QSyntaxHighlighter, QTextCursor
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -41,6 +41,7 @@ from .highlighter import (
     get_highlighter_for_language,
 )
 from .panel_dock import DetachedPanelWindow
+from .resources.font_manager import FontManager
 
 
 @runtime_checkable
@@ -228,6 +229,15 @@ class FridaPanelProtocol(ToolWidget, Protocol):
 class ProcessPanelProtocol(ToolWidget, Protocol):
     """Protocol for process management panel."""
 
+    @property
+    def process_attached(self) -> Any:
+        """Get the signal emitted with PID when a process is attached.
+
+        Returns:
+            Any: The process-attached signal, or None if not implemented.
+        """
+        return None
+
     def get_selected_pid(self) -> int | None:
         """Get the currently selected process ID.
 
@@ -297,6 +307,20 @@ if TYPE_CHECKING:
 
 _logger = get_logger("ui.tools")
 
+_PANEL_MARGIN: Final[int] = 0
+_INFO_MARGIN: Final[int] = 8
+_INFO_MAX_HEIGHT: Final[int] = 150
+_HEADER_HEIGHT: Final[int] = 32
+_MAIN_HEADER_HEIGHT: Final[int] = 40
+_HEADER_MARGIN_H: Final[int] = 8
+_MAIN_HEADER_MARGIN_H: Final[int] = 12
+_LEFT_MIN_WIDTH: Final[int] = 300
+_RIGHT_MIN_WIDTH: Final[int] = 150
+_DEFAULT_SPLIT_LEFT: Final[int] = 600
+_DEFAULT_SPLIT_RIGHT: Final[int] = 200
+_CODE_SPLIT_LEFT: Final[int] = 400
+_CODE_SPLIT_RIGHT: Final[int] = 100
+
 
 OutputType = Literal[
     "ghidra",
@@ -338,7 +362,7 @@ class CodeDisplay(QPlainTextEdit):
     def _setup_ui(self) -> None:
         """Set up the code display UI."""
         self.setReadOnly(True)
-        self.setFont(QFont("JetBrains Mono", 10))
+        self.setFont(FontManager.get_instance().get_code_font(10))
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
         self.setObjectName("code_display")
 
@@ -431,20 +455,20 @@ class ToolTab(QFrame):
         self._splitter.addWidget(self._code_display)
 
         self._info_panel = QFrame()
-        self._info_panel.setMaximumHeight(150)
+        self._info_panel.setMaximumHeight(_INFO_MAX_HEIGHT)
         self._info_panel.setObjectName("info_panel")
 
         info_layout = QVBoxLayout(self._info_panel)
-        info_layout.setContentsMargins(8, 8, 8, 8)
+        info_layout.setContentsMargins(_INFO_MARGIN, _INFO_MARGIN, _INFO_MARGIN, _INFO_MARGIN)
         info_layout.setSpacing(4)
 
         self._info_header = QLabel("Details")
-        self._info_header.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+        self._info_header.setFont(FontManager.get_instance().get_ui_font_bold(9))
         self._info_header.setObjectName("panel_title")
         info_layout.addWidget(self._info_header)
 
         self._info_content = QLabel()
-        self._info_content.setFont(QFont("JetBrains Mono", 9))
+        self._info_content.setFont(FontManager.get_instance().get_code_font(9))
         self._info_content.setObjectName("code_label")
         self._info_content.setWordWrap(True)
         self._info_content.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
@@ -452,7 +476,7 @@ class ToolTab(QFrame):
         info_layout.addStretch()
 
         self._splitter.addWidget(self._info_panel)
-        self._splitter.setSizes([400, 100])
+        self._splitter.setSizes([_CODE_SPLIT_LEFT, _CODE_SPLIT_RIGHT])
 
         layout.addWidget(self._splitter)
 
@@ -525,13 +549,13 @@ class FunctionListPanel(QFrame):
         layout.setSpacing(0)
 
         header = QFrame()
-        header.setFixedHeight(32)
+        header.setFixedHeight(_HEADER_HEIGHT)
         header.setObjectName("panel_header")
         header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(8, 0, 8, 0)
+        header_layout.setContentsMargins(_HEADER_MARGIN_H, 0, _HEADER_MARGIN_H, 0)
 
         title = QLabel("Functions")
-        title.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+        title.setFont(FontManager.get_instance().get_ui_font_bold(9))
         title.setObjectName("panel_title")
         header_layout.addWidget(title)
 
@@ -543,7 +567,7 @@ class FunctionListPanel(QFrame):
         layout.addWidget(header)
 
         self._list_widget = QListWidget()
-        self._list_widget.setFont(QFont("JetBrains Mono", 9))
+        self._list_widget.setFont(FontManager.get_instance().get_code_font(9))
         self._list_widget.setObjectName("function_list")
         self._list_widget.itemDoubleClicked.connect(self._on_item_double_clicked)
         layout.addWidget(self._list_widget)
@@ -611,13 +635,13 @@ class XRefPanel(QFrame):
         layout.setSpacing(0)
 
         header = QFrame()
-        header.setFixedHeight(32)
+        header.setFixedHeight(_HEADER_HEIGHT)
         header.setObjectName("panel_header")
         header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(8, 0, 8, 0)
+        header_layout.setContentsMargins(_HEADER_MARGIN_H, 0, _HEADER_MARGIN_H, 0)
 
         title = QLabel("Cross References")
-        title.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+        title.setFont(FontManager.get_instance().get_ui_font_bold(9))
         title.setObjectName("panel_title")
         header_layout.addWidget(title)
         header_layout.addStretch()
@@ -626,7 +650,7 @@ class XRefPanel(QFrame):
 
         self._xref_display = QTreeWidget()
         self._xref_display.setHeaderHidden(True)
-        self._xref_display.setFont(QFont("JetBrains Mono", 9))
+        self._xref_display.setFont(FontManager.get_instance().get_code_font(9))
         self._xref_display.setObjectName("xref_display")
         self._xref_display.itemClicked.connect(self._on_item_clicked)
         layout.addWidget(self._xref_display)
@@ -712,19 +736,19 @@ class ToolOutputPanel(QFrame):
         layout.setSpacing(0)
 
         header = QFrame()
-        header.setFixedHeight(40)
+        header.setFixedHeight(_MAIN_HEADER_HEIGHT)
         header.setObjectName("panel_header")
         header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(12, 0, 12, 0)
+        header_layout.setContentsMargins(_MAIN_HEADER_MARGIN_H, 0, _MAIN_HEADER_MARGIN_H, 0)
 
         title = QLabel("Analysis Output")
-        title.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+        title.setFont(FontManager.get_instance().get_ui_font_bold(11))
         title.setObjectName("panel_title")
         header_layout.addWidget(title)
         header_layout.addStretch()
 
         self._address_label = QLabel()
-        self._address_label.setFont(QFont("JetBrains Mono", 10))
+        self._address_label.setFont(FontManager.get_instance().get_code_font(10))
         self._address_label.setObjectName("code_label")
         header_layout.addWidget(self._address_label)
 
@@ -733,7 +757,7 @@ class ToolOutputPanel(QFrame):
         self._main_splitter = QSplitter(Qt.Orientation.Horizontal)
 
         left_panel = QFrame()
-        left_panel.setMinimumWidth(300)
+        left_panel.setMinimumWidth(_LEFT_MIN_WIDTH)
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(0)
@@ -752,7 +776,7 @@ class ToolOutputPanel(QFrame):
         self._main_splitter.addWidget(left_panel)
 
         right_panel = QFrame()
-        right_panel.setMinimumWidth(150)
+        right_panel.setMinimumWidth(_RIGHT_MIN_WIDTH)
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(0)
@@ -766,7 +790,7 @@ class ToolOutputPanel(QFrame):
         right_layout.addWidget(self._xref_panel)
 
         self._main_splitter.addWidget(right_panel)
-        self._main_splitter.setSizes([600, 200])
+        self._main_splitter.setSizes([_DEFAULT_SPLIT_LEFT, _DEFAULT_SPLIT_RIGHT])
 
         layout.addWidget(self._main_splitter)
 

@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Fri, Mar 27, 2026 01:56:32 PM
+Generated: Sat, Mar 28, 2026 01:02:39 AM
 Directory: D:\Intellicrack
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -50,7 +50,8 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   └── workspace.xml
 ├── .intellicrack/
 │   ├── scripts/
-│   └── tools/
+│   ├── tools/
+│   └── providers.json
 ├── .qodo/
 │   ├── agents/
 │   └── workflows/
@@ -2525,9 +2526,12 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   └── config.toml
 ├── data/
 │   ├── scripts/
+│   ├── model_discovery_cache.json
 │   └── sessions.db
 ├── docs/
 │   ├── source/
+│   │   ├── _static/
+│   │   │   └── .gitkeep
 │   │   ├── _templates/
 │   │   │   └── autosummary/
 │   │   │       ├── class.rst
@@ -3095,7 +3099,8 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   │   ├── session_manager.py
 │   │   │   ├── tool_config.py
 │   │   │   ├── tools.py
-│   │   │   └── win32_embed.py
+│   │   │   ├── win32_embed.py
+│   │   │   └── xpu_status.py
 │   │   ├── __init__.py
 │   │   ├── __main__.py
 │   │   ├── _metadata.py
@@ -6721,6 +6726,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   ├── test_bridge_error_handling.py
 │   │   ├── test_bridge_hash_advanced.py
 │   │   ├── test_bridge_lifecycle.py
+│   │   ├── test_bridge_new_capabilities.py
 │   │   ├── test_bridge_patches.py
 │   │   ├── test_bridge_pattern_engine.py
 │   │   ├── test_bridge_sandbox.py
@@ -6802,7 +6808,8 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   ├── test_tool_panel_detach.py
 │   │   ├── test_tools_logic.py
 │   │   ├── test_vnc_widget.py
-│   │   └── test_win32_embed.py
+│   │   ├── test_win32_embed.py
+│   │   └── test_xpu_status.py
 │   ├── __init__.py
 │   └── conftest.py
 ├── tools/
@@ -23023,6 +23030,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 ├── .aiderignore
 ├── .codeqlignore
 ├── .coverage
+├── .dead-allowlist
 ├── .editorconfig
 ├── .env
 ├── .env.example
@@ -23070,4 +23078,5 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 ├── REMOVE_NUL.cmd
 ├── requirements.txt
 ├── SECURITY.md
+├── vulture_whitelist.py
 └── yarn.lock

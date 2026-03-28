@@ -17,7 +17,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, Final
 
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -49,6 +49,10 @@ from .resources import IconManager
 
 
 _logger = get_logger("ui.sandbox_config")
+
+_DIALOG_WIDTH: Final[int] = 550
+_DIALOG_HEIGHT: Final[int] = 500
+_OUTPUT_MAX_HEIGHT: Final[int] = 150
 _IS_WIN32: bool = os.name == "nt"
 
 if TYPE_CHECKING:
@@ -283,7 +287,7 @@ class SandboxConfigDialog(QDialog):
         self._load_settings()
 
         self.setWindowTitle("Sandbox Settings")
-        self.resize(550, 500)
+        self.resize(_DIALOG_WIDTH, _DIALOG_HEIGHT)
 
     def _setup_ui(self) -> None:
         """Set up the dialog UI layout."""
@@ -768,7 +772,7 @@ class SandboxMonitorWidget(QFrame):
 
         self._output_text = QTextEdit()
         self._output_text.setReadOnly(True)
-        self._output_text.setMaximumHeight(150)
+        self._output_text.setMaximumHeight(_OUTPUT_MAX_HEIGHT)
         self._output_text.setObjectName("sandbox_output")
         layout.addWidget(self._output_text)
 

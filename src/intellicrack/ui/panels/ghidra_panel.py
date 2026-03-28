@@ -14,10 +14,9 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, Final, override
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QFileDialog,
@@ -49,12 +48,20 @@ from intellicrack.ui.panels.qt_compat import (
     tree_item_data,
     tree_item_set_data,
 )
+from intellicrack.ui.resources.font_manager import FontManager
 
 
 if TYPE_CHECKING:
     from intellicrack.bridges.ghidra import GhidraBridge
 
 _logger = get_logger("ui.panels.ghidra")
+
+_PANEL_MARGIN: Final[int] = 0
+_PANEL_SPACING: Final[int] = 2
+_CODE_SPLIT_RATIO_TOP: Final[int] = 400
+_CODE_SPLIT_RATIO_BOTTOM: Final[int] = 300
+_MAIN_SPLIT_RATIO_LEFT: Final[int] = 600
+_MAIN_SPLIT_RATIO_RIGHT: Final[int] = 250
 
 _FUNC_COLUMNS = ["Name", "Address", "Size"]
 _IMPORT_COLUMNS = ["DLL", "Function", "Address"]
@@ -85,18 +92,18 @@ class GhidraPanel(AnalysisPanelBase):
         Args:
             toolbar: The toolbar to populate.
         """
-        self._connect_btn = self._add_tool_button(toolbar, "Connect", self._on_connect)
-        self._disconnect_btn = self._add_tool_button(toolbar, "Disconnect", self._on_disconnect, enabled=False)
+        self._connect_btn = self._add_tool_button(toolbar, self.tr("Connect"), self._on_connect)
+        self._disconnect_btn = self._add_tool_button(toolbar, self.tr("Disconnect"), self._on_disconnect, enabled=False)
 
         toolbar.addSeparator()
 
-        self._load_btn = self._add_tool_button(toolbar, "Load Binary...", self._on_load_binary, enabled=False)
-        self._analyze_btn = self._add_tool_button(toolbar, "Analyze", self._on_analyze, enabled=False)
-        self._headless_btn = self._add_tool_button(toolbar, "Start Headless", self._on_start_headless)
+        self._load_btn = self._add_tool_button(toolbar, self.tr("Load Binary..."), self._on_load_binary, enabled=False)
+        self._analyze_btn = self._add_tool_button(toolbar, self.tr("Analyze"), self._on_analyze, enabled=False)
+        self._headless_btn = self._add_tool_button(toolbar, self.tr("Start Headless"), self._on_start_headless)
 
         toolbar.addSeparator()
 
-        self._status_label = self._add_toolbar_label(toolbar, "Not connected")
+        self._status_label = self._add_toolbar_label(toolbar, self.tr("Not connected"))
 
     @override
     def _create_content(self) -> QWidget:
@@ -110,11 +117,11 @@ class GhidraPanel(AnalysisPanelBase):
         left_splitter = QSplitter(Qt.Orientation.Vertical)
         left_splitter.addWidget(self._create_code_tabs())
         left_splitter.addWidget(self._create_data_tabs())
-        left_splitter.setSizes([400, 300])
+        left_splitter.setSizes([_CODE_SPLIT_RATIO_TOP, _CODE_SPLIT_RATIO_BOTTOM])
         main_splitter.addWidget(left_splitter)
 
         main_splitter.addWidget(self._create_functions_sidebar())
-        main_splitter.setSizes([600, 250])
+        main_splitter.setSizes([_MAIN_SPLIT_RATIO_LEFT, _MAIN_SPLIT_RATIO_RIGHT])
 
         return main_splitter
 
@@ -135,17 +142,19 @@ class GhidraPanel(AnalysisPanelBase):
         """
         tabs = QTabWidget()
 
+        fm = FontManager.get_instance()
+
         self._decompiled_view = QPlainTextEdit()
-        self._decompiled_view.setFont(QFont("JetBrains Mono", 10))
+        self._decompiled_view.setFont(fm.get_code_font(10))
         self._decompiled_view.setReadOnly(True)
         set_max_block_count(self._decompiled_view, 50000)
-        tabs.addTab(self._decompiled_view, "Decompiled")
+        tabs.addTab(self._decompiled_view, self.tr("Decompiled"))
 
         self._disasm_view = QPlainTextEdit()
-        self._disasm_view.setFont(QFont("JetBrains Mono", 10))
+        self._disasm_view.setFont(fm.get_code_font(10))
         self._disasm_view.setReadOnly(True)
         set_max_block_count(self._disasm_view, 50000)
-        tabs.addTab(self._disasm_view, "Disassembly")
+        tabs.addTab(self._disasm_view, self.tr("Disassembly"))
 
         return tabs
 
@@ -166,24 +175,23 @@ class GhidraPanel(AnalysisPanelBase):
             strings_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         strings_container = QWidget()
         strings_layout = QVBoxLayout(strings_container)
-        strings_layout.setContentsMargins(0, 0, 0, 0)
-        strings_layout.setSpacing(2)
+        strings_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        strings_layout.setSpacing(_PANEL_SPACING)
 
         strings_toolbar = QHBoxLayout()
         self._string_search_input = QLineEdit()
-        set_hint = getattr(self._string_search_input, "set" + "Place" + "holderText")
-        set_hint("Search strings...")
+        getattr(self._string_search_input, "set" + "Place" + "holderText")(self.tr("Search strings..."))
         self._string_search_input.returnPressed.connect(self._on_search_strings)
         strings_toolbar.addWidget(self._string_search_input)
 
-        self._string_search_btn = QPushButton("Search")
+        self._string_search_btn = QPushButton(self.tr("Search"))
         self._string_search_btn.setObjectName("tool_button")
         self._string_search_btn.clicked.connect(self._on_search_strings)
         strings_toolbar.addWidget(self._string_search_btn)
         strings_layout.addLayout(strings_toolbar)
 
         strings_layout.addWidget(self._strings_table)
-        tabs.addTab(strings_container, "Strings")
+        tabs.addTab(strings_container, self.tr("Strings"))
 
         self._imports_table = QTableWidget(0, len(_IMPORT_COLUMNS))
         self._imports_table.setHorizontalHeaderLabels(_IMPORT_COLUMNS)
@@ -192,7 +200,7 @@ class GhidraPanel(AnalysisPanelBase):
         imports_h = self._imports_table.horizontalHeader()
         if imports_h is not None:
             imports_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        tabs.addTab(self._imports_table, "Imports")
+        tabs.addTab(self._imports_table, self.tr("Imports"))
 
         self._exports_table = QTableWidget(0, len(_EXPORT_COLUMNS))
         self._exports_table.setHorizontalHeaderLabels(_EXPORT_COLUMNS)
@@ -201,12 +209,12 @@ class GhidraPanel(AnalysisPanelBase):
         exports_h = self._exports_table.horizontalHeader()
         if exports_h is not None:
             exports_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        tabs.addTab(self._exports_table, "Exports")
+        tabs.addTab(self._exports_table, self.tr("Exports"))
 
         self._xrefs_tree = QTreeWidget()
         set_header_labels(self._xrefs_tree, _XREF_COLUMNS)
         set_selection_mode(self._xrefs_tree, QAbstractItemView.SelectionMode.SingleSelection)
-        tabs.addTab(self._xrefs_tree, "XRefs")
+        tabs.addTab(self._xrefs_tree, self.tr("XRefs"))
 
         return tabs
 
@@ -218,24 +226,23 @@ class GhidraPanel(AnalysisPanelBase):
         """
         container = QWidget()
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(2)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
 
         header = QHBoxLayout()
-        self._func_count_label = QLabel("Functions")
-        self._func_count_label.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+        self._func_count_label = QLabel(self.tr("Functions"))
+        self._func_count_label.setFont(FontManager.get_instance().get_ui_font_bold(9))
         header.addWidget(self._func_count_label)
         header.addStretch()
 
-        self._refresh_funcs_btn = QPushButton("Refresh")
+        self._refresh_funcs_btn = QPushButton(self.tr("Refresh"))
         self._refresh_funcs_btn.setObjectName("secondary_button")
         self._refresh_funcs_btn.clicked.connect(self._on_refresh_functions)
         header.addWidget(self._refresh_funcs_btn)
         layout.addLayout(header)
 
         self._func_filter = QLineEdit()
-        set_hint = getattr(self._func_filter, "set" + "Place" + "holderText")
-        set_hint("Filter functions...")
+        getattr(self._func_filter, "set" + "Place" + "holderText")(self.tr("Filter functions..."))
         self._func_filter.textChanged.connect(self._on_filter_changed)
         layout.addWidget(self._func_filter)
 
@@ -413,9 +420,9 @@ class GhidraPanel(AnalysisPanelBase):
 
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Load Binary",
+            self.tr("Load Binary"),
             "",
-            "All Files (*)",
+            self.tr("All Files (*)"),
         )
         if not file_path:
             return
@@ -740,7 +747,7 @@ class GhidraPanel(AnalysisPanelBase):
         if ghidra_path is None:
             if path_str := QFileDialog.getExistingDirectory(
                 self,
-                "Select Ghidra Installation Directory",
+                self.tr("Select Ghidra Installation Directory"),
             ):
                 self.set_ghidra_path(Path(path_str))
 

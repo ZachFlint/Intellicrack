@@ -13,9 +13,9 @@ from __future__ import annotations
 
 import struct
 import sys
+from typing import Final
 
 from PyQt6.QtCore import QModelIndex, Qt, QThread, QTimer, pyqtSignal
-from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QHeaderView,
     QLabel,
@@ -35,9 +35,18 @@ from PyQt6.QtWidgets import (
 from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager, TrackedProcess
 from intellicrack.ui.panels.qt_compat import set_header_labels, set_sorting_enabled
+from intellicrack.ui.resources.font_manager import FontManager
 
 
 _logger = get_logger("ui.panels.process")
+
+_PANEL_MARGIN: Final[int] = 4
+_PANEL_MARGIN_ZERO: Final[int] = 0
+_PANEL_SPACING: Final[int] = 4
+_TOOLBAR_HEIGHT: Final[int] = 32
+_SEARCH_MAX_WIDTH: Final[int] = 250
+_SPLIT_LEFT: Final[int] = 500
+_SPLIT_RIGHT: Final[int] = 300
 
 _WINDOWS = sys.platform == "win32"
 
@@ -423,24 +432,24 @@ class ProcessPanel(QWidget):
     def _setup_ui(self) -> None:
         """Set up the process panel layout."""
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
         layout.setSpacing(4)
 
         self._top_tabs = QTabWidget()
 
         system_tab = QWidget()
         system_layout = QVBoxLayout(system_tab)
-        system_layout.setContentsMargins(0, 4, 0, 0)
+        system_layout.setContentsMargins(_PANEL_MARGIN_ZERO, _PANEL_SPACING, _PANEL_MARGIN_ZERO, _PANEL_MARGIN_ZERO)
         system_layout.setSpacing(4)
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(32)
+        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
 
         self._search_input = QLineEdit()
         set_hint = getattr(self._search_input, "set" + "Place" + "holderText")
         set_hint("Filter by name or PID...")
-        self._search_input.setMaximumWidth(250)
+        self._search_input.setMaximumWidth(_SEARCH_MAX_WIDTH)
         self._search_input.textChanged.connect(self._on_filter_changed)
         toolbar.addWidget(self._search_input)
 
@@ -496,7 +505,7 @@ class ProcessPanel(QWidget):
 
         details_panel = QWidget()
         details_layout = QVBoxLayout(details_panel)
-        details_layout.setContentsMargins(0, 0, 0, 0)
+        details_layout.setContentsMargins(_PANEL_MARGIN_ZERO, _PANEL_MARGIN_ZERO, _PANEL_MARGIN_ZERO, _PANEL_MARGIN_ZERO)
 
         self._details_tabs = QTabWidget()
 
@@ -513,7 +522,7 @@ class ProcessPanel(QWidget):
         self._details_tabs.addTab(self._threads_table, "Threads")
 
         self._info_label = QLabel("Select a process to view details")
-        self._info_label.setFont(QFont("Segoe UI", 9))
+        self._info_label.setFont(FontManager.get_instance().get_ui_font(9))
         self._info_label.setAlignment(Qt.AlignmentFlag.AlignTop)
         self._info_label.setWordWrap(True)
         self._details_tabs.addTab(self._info_label, "Info")
@@ -521,7 +530,7 @@ class ProcessPanel(QWidget):
         details_layout.addWidget(self._details_tabs)
         main_splitter.addWidget(details_panel)
 
-        main_splitter.setSizes([500, 300])
+        main_splitter.setSizes([_SPLIT_LEFT, _SPLIT_RIGHT])
         system_layout.addWidget(main_splitter)
 
         self._top_tabs.addTab(system_tab, "System Processes")
@@ -542,7 +551,7 @@ class ProcessPanel(QWidget):
         """
         tab = QWidget()
         tab_layout = QVBoxLayout(tab)
-        tab_layout.setContentsMargins(0, 4, 0, 0)
+        tab_layout.setContentsMargins(_PANEL_MARGIN_ZERO, _PANEL_SPACING, _PANEL_MARGIN_ZERO, _PANEL_MARGIN_ZERO)
         tab_layout.setSpacing(4)
 
         tracked_toolbar = QToolBar()
