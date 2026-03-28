@@ -12,7 +12,7 @@ with support for Frida, Ghidra, Cutter, x64dbg, and Python scripts.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, cast, override
+from typing import TYPE_CHECKING, ClassVar, Final, cast, override
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QFont
@@ -42,6 +42,25 @@ if TYPE_CHECKING:
     from intellicrack.core.script_gen import ScriptManager, ScriptValidator
 
 _logger = get_logger("ui.panels.script_manager")
+
+_PANEL_MARGIN: Final[int] = 8
+_PANEL_MARGIN_INNER: Final[int] = 4
+_PANEL_SPACING: Final[int] = 8
+_LEFT_PANEL_MAX_WIDTH: Final[int] = 250
+_SPLITTER_LEFT_SIZE: Final[int] = 200
+_SPLITTER_RIGHT_SIZE: Final[int] = 600
+
+
+def _restyle(widget: QWidget) -> None:
+    """Force a QSS re-evaluation after a dynamic property change.
+
+    Args:
+        widget: The widget whose style should be refreshed.
+    """
+    s = widget.style()
+    if s is not None:
+        s.unpolish(widget)
+        s.polish(widget)
 
 
 class ScriptTypeInfo:
@@ -296,24 +315,7 @@ class ScriptListWidget(QListWidget):
 
     def _setup_ui(self) -> None:
         """Set up the list widget UI."""
-        self.setStyleSheet("""
-            QListWidget {
-                background-color: #252526;
-                border: none;
-                outline: none;
-            }
-            QListWidget::item {
-                padding: 8px;
-                border-bottom: 1px solid #3e3e42;
-            }
-            QListWidget::item:selected {
-                background-color: #094771;
-            }
-            QListWidget::item:hover {
-                background-color: #2a2d2e;
-            }
-        """)
-
+        self.setObjectName("script_list_widget")
         self.itemClicked.connect(self._on_item_clicked)
 
     def _on_item_clicked(self, item: QListWidgetItem) -> None:
@@ -398,15 +400,8 @@ class ScriptEditor(QPlainTextEdit):
 
     def _setup_ui(self) -> None:
         """Set up the editor UI."""
+        self.setObjectName("script_editor_widget")
         self.setFont(QFont("JetBrains Mono", 10))
-        self.setStyleSheet("""
-            QPlainTextEdit {
-                background-color: #1e1e1e;
-                color: #d4d4d4;
-                border: none;
-                selection-background-color: #264f78;
-            }
-        """)
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
         self.setTabStopDistance(40)
 
@@ -472,8 +467,8 @@ class ScriptManagerPanel(QWidget):
 
         left_panel = QFrame()
         left_layout = QVBoxLayout(left_panel)
-        left_layout.setContentsMargins(8, 8, 4, 8)
-        left_layout.setSpacing(8)
+        left_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN_INNER, _PANEL_MARGIN)
+        left_layout.setSpacing(_PANEL_SPACING)
 
         filter_layout = QHBoxLayout()
         filter_label = QLabel("Filter:")
@@ -491,16 +486,16 @@ class ScriptManagerPanel(QWidget):
         self._script_list.script_selected.connect(self._on_script_selected)
         left_layout.addWidget(self._script_list)
 
-        left_panel.setMaximumWidth(250)
+        left_panel.setMaximumWidth(_LEFT_PANEL_MAX_WIDTH)
         splitter.addWidget(left_panel)
 
         right_panel = QFrame()
         right_layout = QVBoxLayout(right_panel)
-        right_layout.setContentsMargins(4, 8, 8, 8)
-        right_layout.setSpacing(8)
+        right_layout.setContentsMargins(_PANEL_MARGIN_INNER, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        right_layout.setSpacing(_PANEL_SPACING)
 
         header_layout = QHBoxLayout()
-        header_layout.setSpacing(8)
+        header_layout.setSpacing(_PANEL_SPACING)
 
         self._name_edit = QLineEdit()
         self._name_edit.setToolTip("Enter script name")
@@ -521,7 +516,7 @@ class ScriptManagerPanel(QWidget):
         right_layout.addWidget(self._editor)
 
         button_layout = QHBoxLayout()
-        button_layout.setSpacing(8)
+        button_layout.setSpacing(_PANEL_SPACING)
 
         self._new_btn = QPushButton("New")
         self._new_btn.clicked.connect(self._on_new)
@@ -546,27 +541,20 @@ class ScriptManagerPanel(QWidget):
         button_layout.addWidget(self._validate_btn)
 
         self._execute_btn = QPushButton("Execute")
-        self._execute_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #0e639c;
-                padding: 6px 16px;
-            }
-            QPushButton:hover {
-                background-color: #1177bb;
-            }
-        """)
+        self._execute_btn.setObjectName("execute_button")
         self._execute_btn.clicked.connect(self._on_execute)
         button_layout.addWidget(self._execute_btn)
 
         right_layout.addLayout(button_layout)
 
         splitter.addWidget(right_panel)
-        splitter.setSizes([200, 600])
+        splitter.setSizes([_SPLITTER_LEFT_SIZE, _SPLITTER_RIGHT_SIZE])
 
         layout.addWidget(splitter)
 
         self._status_bar = QStatusBar()
-        self._status_bar.setStyleSheet("background-color: #007acc; color: white;")
+        self._status_bar.setProperty("status", "info")
+        _restyle(self._status_bar)
         self._status_bar.showMessage("Ready")
         layout.addWidget(self._status_bar)
 
@@ -779,6 +767,15 @@ class ScriptManagerPanel(QWidget):
                 self._modified = True
                 self._status_bar.showMessage(f"Loaded from: {file_path}")
 
+    def _set_status_style(self, status: str) -> None:
+        """Set the status bar QSS property and refresh its style.
+
+        Args:
+            status: One of ``"info"``, ``"error"``, ``"success"``, or ``"idle"``.
+        """
+        self._status_bar.setProperty("status", status)
+        _restyle(self._status_bar)
+
     def _on_validate(self) -> None:
         """Handle validate button."""
         if not self._validator:
@@ -796,18 +793,18 @@ class ScriptManagerPanel(QWidget):
         except (RuntimeError, ValueError):
             _logger.exception("script_validation_failed", script_name=name)
             self._status_bar.showMessage("Validation error. Check logs for details.")
-            self._status_bar.setStyleSheet("background-color: #f14c4c; color: white;")
+            self._set_status_style("error")
         else:
             if is_valid:
                 self._status_bar.showMessage("Validation passed")
-                self._status_bar.setStyleSheet("background-color: #4ec9b0; color: black;")
+                self._set_status_style("success")
             else:
                 error_text = error_msg or "Unknown error"
                 self._status_bar.showMessage(f"Validation failed: {error_text}")
-                self._status_bar.setStyleSheet("background-color: #f14c4c; color: white;")
+                self._set_status_style("error")
 
         def reset_status() -> None:
-            self._status_bar.setStyleSheet("background-color: #007acc; color: white;")
+            self._set_status_style("info")
 
         QTimer.singleShot(3000, reset_status)
 

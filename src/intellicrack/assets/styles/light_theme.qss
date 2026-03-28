@@ -844,3 +844,34 @@ QTabWidget#analysis_tabs > QTabBar::tab:selected {
 QTabWidget#analysis_tabs > QTabBar::tab:hover:!selected {
     background-color: #e0e0e0;
 }
+
+/* Execute Button */
+QPushButton#execute_button {
+    background-color: #0078d4;
+    padding: 6px 16px;
+}
+
+QPushButton#execute_button:hover {
+    background-color: #106ebe;
+}
+
+/* Status Bar Status Property */
+QStatusBar[status="info"] {
+    background-color: #0078d4;
+    color: #ffffff;
+}
+
+QStatusBar[status="error"] {
+    background-color: #c62828;
+    color: #ffffff;
+}
+
+QStatusBar[status="success"] {
+    background-color: #2e7d32;
+    color: #ffffff;
+}
+
+QStatusBar[status="idle"] {
+    background-color: #0078d4;
+    color: #ffffff;
+}
