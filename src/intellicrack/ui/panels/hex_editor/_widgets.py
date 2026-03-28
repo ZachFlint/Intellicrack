@@ -40,6 +40,40 @@ from intellicrack.ui.panels.hex_editor._base import (
     ENTROPY_MAX,
     compute_custom_crc,
 )
+from intellicrack.ui.resources.theme_manager import ThemeManager
+
+
+def _get_widget_colors() -> dict[str, QColor]:
+    """Return theme-appropriate colors for hex editor graph widgets.
+
+    Returns:
+        dict[str, QColor]: Mapping of color role names to QColor instances.
+    """
+    if ThemeManager.get_instance().is_dark_theme():
+        return {
+            "bg": QColor("#1E1E1E"),
+            "entropy_low": QColor("#4CAF50"),
+            "entropy_mid": QColor("#FFC107"),
+            "entropy_high": QColor("#F44336"),
+            "axis": QColor("#888888"),
+            "bar_normal": QColor("#2196F3"),
+            "bar_hovered": QColor("#4CAF50"),
+            "gradient_low": QColor("#1B3A1F"),
+            "gradient_mid": QColor("#3A3A1B"),
+            "gradient_high": QColor("#3A1B1B"),
+        }
+    return {
+        "bg": QColor("#FFFFFF"),
+        "entropy_low": QColor("#2E7D32"),
+        "entropy_mid": QColor("#EF6C00"),
+        "entropy_high": QColor("#C62828"),
+        "axis": QColor("#757575"),
+        "bar_normal": QColor("#1565C0"),
+        "bar_hovered": QColor("#2E7D32"),
+        "gradient_low": QColor("#E8F5E9"),
+        "gradient_mid": QColor("#FFF3E0"),
+        "gradient_high": QColor("#FFEBEE"),
+    }
 
 
 class EntropyGraphWidget(QWidget):
@@ -86,6 +120,7 @@ class EntropyGraphWidget(QWidget):
             a0: The paint event.
         """
         _ = a0
+        colors = _get_widget_colors()
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
@@ -93,12 +128,12 @@ class EntropyGraphWidget(QWidget):
         h = self.height()
         pad = 4
 
-        painter.fillRect(0, 0, w, h, QColor("#1E1E1E"))
+        painter.fillRect(0, 0, w, h, colors["bg"])
 
         band_data: list[tuple[float, float, QColor]] = [
-            (0.0, ENTROPY_LOW_THRESHOLD, QColor("#1B3A1F")),
-            (ENTROPY_LOW_THRESHOLD, ENTROPY_HIGH_THRESHOLD, QColor("#3A3A1B")),
-            (ENTROPY_HIGH_THRESHOLD, ENTROPY_MAX, QColor("#3A1B1B")),
+            (0.0, ENTROPY_LOW_THRESHOLD, colors["gradient_low"]),
+            (ENTROPY_LOW_THRESHOLD, ENTROPY_HIGH_THRESHOLD, colors["gradient_mid"]),
+            (ENTROPY_HIGH_THRESHOLD, ENTROPY_MAX, colors["gradient_high"]),
         ]
         for lo, hi, colour in band_data:
             y1 = h - pad - int((lo / ENTROPY_MAX) * (h - 2 * pad))
@@ -122,17 +157,16 @@ class EntropyGraphWidget(QWidget):
         for i in range(len(values) - 1):
             v = values[i]
             if v < ENTROPY_LOW_THRESHOLD:
-                colour_line = QColor("#4CAF50")
+                colour_line = colors["entropy_low"]
             elif v < ENTROPY_HIGH_THRESHOLD:
-                colour_line = QColor("#FFC107")
+                colour_line = colors["entropy_mid"]
             else:
-                colour_line = QColor("#F44336")
+                colour_line = colors["entropy_high"]
             pen = QPen(colour_line, 1)
             painter.setPen(pen)
             painter.drawLine(x_coord(i), y_coord(values[i]), x_coord(i + 1), y_coord(values[i + 1]))
 
-        axis_pen = QPen(QColor("#888888"), 1)
-        painter.setPen(axis_pen)
+        painter.setPen(QPen(colors["axis"], 1))
         painter.drawRect(pad, pad, w - 2 * pad, h - 2 * pad)
         painter.end()
 
@@ -195,11 +229,12 @@ class ByteDistributionWidget(QWidget):
             a0: The paint event.
         """
         _ = a0
+        colors = _get_widget_colors()
         painter = QPainter(self)
         w = self.width()
         h = self.height()
         pad = 2
-        painter.fillRect(0, 0, w, h, QColor("#1E1E1E"))
+        painter.fillRect(0, 0, w, h, colors["bg"])
 
         counts = self._counts
         if not counts or max(counts) == 0:
@@ -221,7 +256,7 @@ class ByteDistributionWidget(QWidget):
             if bh == 0:
                 continue
             x = pad + int(i * bar_w)
-            colour = QColor("#4CAF50") if i == self._hovered_bar else QColor("#2196F3")
+            colour = colors["bar_hovered"] if i == self._hovered_bar else colors["bar_normal"]
             painter.fillRect(QRect(x, h - pad - bh, max(1, int(bar_w)), bh), QBrush(colour))
 
         painter.end()

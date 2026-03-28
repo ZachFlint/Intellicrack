@@ -844,3 +844,8 @@ QTabWidget#analysis_tabs > QTabBar::tab:selected {
 QTabWidget#analysis_tabs > QTabBar::tab:hover:!selected {
     background-color: #e0e0e0;
 }
+
+QLabel#search_status_label {
+    color: #757575;
+    font-size: 11px;
+}

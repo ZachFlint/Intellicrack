@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut, QStandardItemModel
@@ -69,6 +69,16 @@ from intellicrack.ui.panels.hex_editor_widget import HexEditorWidget
 
 if TYPE_CHECKING:
     from intellicrack.bridges.hex_state import HexDocumentState
+
+_MODE_LABEL_WIDTH: Final[int] = 30
+_SEARCH_MODE_WIDTH: Final[int] = 80
+_ENCODING_COMBO_WIDTH: Final[int] = 120
+_LOG_BTN_WIDTH: Final[int] = 70
+_ZERO_MARGIN: Final[int] = 0
+_STATS_MARGIN: Final[int] = 2
+_STATS_SPACING: Final[int] = 4
+_HASH_MARGIN: Final[int] = 4
+_HASH_SPACING: Final[int] = 6
 
 
 class HexEditorPanel(
@@ -204,7 +214,7 @@ class HexEditorPanel(
         toolbar.addSeparator()
 
         self._mode_label = QLabel("OVR")
-        self._mode_label.setFixedWidth(30)
+        self._mode_label.setFixedWidth(_MODE_LABEL_WIDTH)
         toolbar.addWidget(self._mode_label)
         toolbar.addSeparator()
 
@@ -216,14 +226,14 @@ class HexEditorPanel(
 
         self._search_mode_combo = QComboBox()
         self._search_mode_combo.addItems(["Hex", "Text", "Regex", "Numeric"])
-        self._search_mode_combo.setFixedWidth(80)
+        self._search_mode_combo.setFixedWidth(_SEARCH_MODE_WIDTH)
         toolbar.addWidget(self._search_mode_combo)
 
         self._add_secondary_button(toolbar, "Find", self._on_search)
         self._find_next_btn = self._add_secondary_button(toolbar, "Next", self._on_find_next)
         self._find_prev_btn = self._add_secondary_button(toolbar, "Prev", self._on_find_prev)
         self._search_status_label = QLabel("")
-        self._search_status_label.setStyleSheet("color: #AAA; font-size: 11px;")
+        self._search_status_label.setObjectName("search_status_label")
         toolbar.addWidget(self._search_status_label)
         toolbar.addSeparator()
 
@@ -232,7 +242,7 @@ class HexEditorPanel(
         toolbar.addSeparator()
 
         self._encoding_combo = QComboBox()
-        self._encoding_combo.setFixedWidth(120)
+        self._encoding_combo.setFixedWidth(_ENCODING_COMBO_WIDTH)
         for enc_entry in ENCODING_ENTRIES:
             self._encoding_combo.addItem(enc_entry)
             if enc_entry.startswith("---"):
@@ -336,7 +346,7 @@ class HexEditorPanel(
 
         bookmarks_container = QWidget()
         bm_layout = QVBoxLayout(bookmarks_container)
-        bm_layout.setContentsMargins(0, 0, 0, 0)
+        bm_layout.setContentsMargins(_ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN)
         self._bookmarks_tree = self._make_tree(["Offset", "Length", "Label"])
         bm_layout.addWidget(self._bookmarks_tree)
         bm_btn_layout = QHBoxLayout()
@@ -364,15 +374,15 @@ class HexEditorPanel(
 
         stats_container = QWidget()
         stats_layout = QVBoxLayout(stats_container)
-        stats_layout.setContentsMargins(2, 2, 2, 2)
-        stats_layout.setSpacing(4)
+        stats_layout.setContentsMargins(_STATS_MARGIN, _STATS_MARGIN, _STATS_MARGIN, _STATS_MARGIN)
+        stats_layout.setSpacing(_STATS_SPACING)
         self._entropy_graph = EntropyGraphWidget()
         self._entropy_graph.block_clicked.connect(self.goto_offset)
         stats_layout.addWidget(self._entropy_graph)
         dist_header = QHBoxLayout()
         dist_header.addWidget(QLabel("Byte Distribution"))
         log_btn = QPushButton("Log Scale")
-        log_btn.setFixedWidth(70)
+        log_btn.setFixedWidth(_LOG_BTN_WIDTH)
         log_btn.setCheckable(True)
         self._byte_dist_widget = ByteDistributionWidget()
         dist_ref = self._byte_dist_widget
@@ -405,7 +415,7 @@ class HexEditorPanel(
 
         templates_container = QWidget()
         tmpl_layout = QVBoxLayout(templates_container)
-        tmpl_layout.setContentsMargins(0, 0, 0, 0)
+        tmpl_layout.setContentsMargins(_ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN)
         tmpl_top = QHBoxLayout()
         self._template_combo = QComboBox()
         tmpl_top.addWidget(self._template_combo)
@@ -419,7 +429,7 @@ class HexEditorPanel(
 
         patches_container = QWidget()
         patches_layout = QVBoxLayout(patches_container)
-        patches_layout.setContentsMargins(0, 0, 0, 0)
+        patches_layout.setContentsMargins(_ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN)
         self._patches_tree = self._make_tree(["Offset", "Original", "New"])
         patches_layout.addWidget(self._patches_tree)
         patches_btn_layout = QHBoxLayout()
@@ -434,8 +444,8 @@ class HexEditorPanel(
 
         hashes_container = QWidget()
         hashes_layout = QVBoxLayout(hashes_container)
-        hashes_layout.setContentsMargins(4, 4, 4, 4)
-        hashes_layout.setSpacing(6)
+        hashes_layout.setContentsMargins(_HASH_MARGIN, _HASH_MARGIN, _HASH_MARGIN, _HASH_MARGIN)
+        hashes_layout.setSpacing(_HASH_SPACING)
         hash_row = QHBoxLayout()
         self._hash_algo_combo = QComboBox()
         self._hash_algo_combo.addItems(HASH_ALGORITHMS)
