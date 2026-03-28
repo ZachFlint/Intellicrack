@@ -643,9 +643,7 @@ class TestThreadSafety:
                 with lock:
                     errors.append(exc)
 
-        threads = [
-            threading.Thread(target=do_set_cursor, args=(i,)) for i in range(50)
-        ]
+        threads = [threading.Thread(target=do_set_cursor, args=(i,)) for i in range(50)]
         for t in threads:
             t.start()
         for t in threads:

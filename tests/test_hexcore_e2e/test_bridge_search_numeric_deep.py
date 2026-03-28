@@ -74,9 +74,7 @@ class TestSearchNumericDeep:
         f.write_bytes(pattern_data)
         _run(bridge.open_file(str(f)))
 
-    def test_search_uint16_finds_value_at_known_offset(
-        self, bridge: Any, tmp_path: Path, pattern_data: bytes
-    ) -> None:
+    def test_search_uint16_finds_value_at_known_offset(self, bridge: Any, tmp_path: Path, pattern_data: bytes) -> None:
         """Verify search_numeric finds uint16 0x1234 at offset 0 in pattern_data.
 
         Args:
@@ -85,15 +83,11 @@ class TestSearchNumericDeep:
             pattern_data: The 512-byte structured test buffer fixture.
         """
         self._open_pattern_data(bridge, tmp_path, pattern_data)
-        results: list[dict[str, int]] = _run(
-            bridge.search_numeric(_PATTERN_U16_VALUE, size=2, value_type="uint", endianness="little")
-        )
+        results: list[dict[str, int]] = _run(bridge.search_numeric(_PATTERN_U16_VALUE, size=2, value_type="uint", endianness="little"))
         offsets = [r["offset"] for r in results]
         assert _PATTERN_U16_OFFSET in offsets
 
-    def test_search_uint32_deadbeef_finds_at_offset_2(
-        self, bridge: Any, tmp_path: Path, pattern_data: bytes
-    ) -> None:
+    def test_search_uint32_deadbeef_finds_at_offset_2(self, bridge: Any, tmp_path: Path, pattern_data: bytes) -> None:
         """Verify search_numeric finds uint32 0xDEADBEEF at offset 2 in pattern_data.
 
         Args:
@@ -102,15 +96,11 @@ class TestSearchNumericDeep:
             pattern_data: The 512-byte structured test buffer fixture.
         """
         self._open_pattern_data(bridge, tmp_path, pattern_data)
-        results: list[dict[str, int]] = _run(
-            bridge.search_numeric(_PATTERN_U32_VALUE, size=4, value_type="uint", endianness="little")
-        )
+        results: list[dict[str, int]] = _run(bridge.search_numeric(_PATTERN_U32_VALUE, size=4, value_type="uint", endianness="little"))
         offsets = [r["offset"] for r in results]
         assert _PATTERN_U32_OFFSET in offsets
 
-    def test_search_uint64_cafebare_finds_at_offset_6(
-        self, bridge: Any, tmp_path: Path, pattern_data: bytes
-    ) -> None:
+    def test_search_uint64_cafebare_finds_at_offset_6(self, bridge: Any, tmp_path: Path, pattern_data: bytes) -> None:
         """Verify search_numeric finds uint64 0xCAFEBABE12345678 at offset 6 in pattern_data.
 
         The native Rust search_numeric uses i64 and may overflow for values > 2**63.
@@ -124,17 +114,13 @@ class TestSearchNumericDeep:
         """
         self._open_pattern_data(bridge, tmp_path, pattern_data)
         try:
-            results: list[dict[str, int]] = _run(
-                bridge.search_numeric(_PATTERN_U64_VALUE, size=8, value_type="uint", endianness="little")
-            )
+            results: list[dict[str, int]] = _run(bridge.search_numeric(_PATTERN_U64_VALUE, size=8, value_type="uint", endianness="little"))
         except OverflowError:
             pytest.skip("native search_numeric overflows on uint64 > i64 max")
         offsets = [r["offset"] for r in results]
         assert _PATTERN_U64_OFFSET in offsets
 
-    def test_search_uint8_0xff_finds_at_offset_36(
-        self, bridge: Any, tmp_path: Path, pattern_data: bytes
-    ) -> None:
+    def test_search_uint8_0xff_finds_at_offset_36(self, bridge: Any, tmp_path: Path, pattern_data: bytes) -> None:
         """Verify search_numeric finds uint8 0xFF at offset 36 in pattern_data.
 
         Args:
@@ -143,15 +129,11 @@ class TestSearchNumericDeep:
             pattern_data: The 512-byte structured test buffer fixture.
         """
         self._open_pattern_data(bridge, tmp_path, pattern_data)
-        results: list[dict[str, int]] = _run(
-            bridge.search_numeric(_PATTERN_U8_VALUE, size=1, value_type="uint", endianness="little")
-        )
+        results: list[dict[str, int]] = _run(bridge.search_numeric(_PATTERN_U8_VALUE, size=1, value_type="uint", endianness="little"))
         offsets = [r["offset"] for r in results]
         assert _PATTERN_U8_OFFSET in offsets
 
-    def test_search_int16_signed_neg1000_finds_at_offset_34(
-        self, bridge: Any, tmp_path: Path, pattern_data: bytes
-    ) -> None:
+    def test_search_int16_signed_neg1000_finds_at_offset_34(self, bridge: Any, tmp_path: Path, pattern_data: bytes) -> None:
         """Verify search_numeric finds int16 -1000 at offset 34 in pattern_data.
 
         Args:
@@ -160,15 +142,11 @@ class TestSearchNumericDeep:
             pattern_data: The 512-byte structured test buffer fixture.
         """
         self._open_pattern_data(bridge, tmp_path, pattern_data)
-        results: list[dict[str, int]] = _run(
-            bridge.search_numeric(_PATTERN_S16_VALUE, size=2, value_type="int", endianness="little")
-        )
+        results: list[dict[str, int]] = _run(bridge.search_numeric(_PATTERN_S16_VALUE, size=2, value_type="int", endianness="little"))
         offsets = [r["offset"] for r in results]
         assert _PATTERN_S16_OFFSET in offsets
 
-    def test_search_int32_signed_neg42_finds_at_offset_30(
-        self, bridge: Any, tmp_path: Path, pattern_data: bytes
-    ) -> None:
+    def test_search_int32_signed_neg42_finds_at_offset_30(self, bridge: Any, tmp_path: Path, pattern_data: bytes) -> None:
         """Verify search_numeric finds int32 -42 at offset 30 in pattern_data.
 
         Args:
@@ -177,15 +155,11 @@ class TestSearchNumericDeep:
             pattern_data: The 512-byte structured test buffer fixture.
         """
         self._open_pattern_data(bridge, tmp_path, pattern_data)
-        results: list[dict[str, int]] = _run(
-            bridge.search_numeric(_PATTERN_S32_VALUE, size=4, value_type="int", endianness="little")
-        )
+        results: list[dict[str, int]] = _run(bridge.search_numeric(_PATTERN_S32_VALUE, size=4, value_type="int", endianness="little"))
         offsets = [r["offset"] for r in results]
         assert _PATTERN_S32_OFFSET in offsets
 
-    def test_search_big_endian_uint32_finds_aabbccdd(
-        self, bridge: Any, tmp_path: Path, pattern_data: bytes
-    ) -> None:
+    def test_search_big_endian_uint32_finds_aabbccdd(self, bridge: Any, tmp_path: Path, pattern_data: bytes) -> None:
         """Verify search_numeric(big) finds 0xAABBCCDD at offset 46 in pattern_data.
 
         Args:
@@ -194,15 +168,11 @@ class TestSearchNumericDeep:
             pattern_data: The 512-byte structured test buffer fixture.
         """
         self._open_pattern_data(bridge, tmp_path, pattern_data)
-        results: list[dict[str, int]] = _run(
-            bridge.search_numeric(_PATTERN_BE_U32_VALUE, size=4, value_type="uint", endianness="big")
-        )
+        results: list[dict[str, int]] = _run(bridge.search_numeric(_PATTERN_BE_U32_VALUE, size=4, value_type="uint", endianness="big"))
         offsets = [r["offset"] for r in results]
         assert _PATTERN_BE_U32_OFFSET in offsets
 
-    def test_search_with_alignment_4_returns_only_aligned_offsets(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_search_with_alignment_4_returns_only_aligned_offsets(self, bridge: Any, tmp_path: Path) -> None:
         """Verify search_numeric with alignment=4 returns only 4-byte-aligned offsets.
 
         Args:
@@ -223,9 +193,7 @@ class TestSearchNumericDeep:
         for r in results:
             assert r["offset"] % 4 == 0
 
-    def test_search_absent_value_returns_empty_list(
-        self, bridge: Any, tmp_path: Path, pattern_data: bytes
-    ) -> None:
+    def test_search_absent_value_returns_empty_list(self, bridge: Any, tmp_path: Path, pattern_data: bytes) -> None:
         """Verify search_numeric returns an empty list when the value is not present.
 
         Args:
@@ -235,14 +203,10 @@ class TestSearchNumericDeep:
         """
         self._open_pattern_data(bridge, tmp_path, pattern_data)
         absent_value: int = 0x13572468
-        results: list[dict[str, int]] = _run(
-            bridge.search_numeric(absent_value, size=4, value_type="uint", endianness="little")
-        )
+        results: list[dict[str, int]] = _run(bridge.search_numeric(absent_value, size=4, value_type="uint", endianness="little"))
         assert results == []
 
-    def test_search_max_results_caps_returned_matches(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_search_max_results_caps_returned_matches(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that max_results=1 returns at most 1 result even with multiple matches.
 
         Args:
@@ -261,9 +225,7 @@ class TestSearchNumericDeep:
         )
         assert len(results) <= 1
 
-    def test_search_uint32_100_finds_at_offset_42(
-        self, bridge: Any, tmp_path: Path, pattern_data: bytes
-    ) -> None:
+    def test_search_uint32_100_finds_at_offset_42(self, bridge: Any, tmp_path: Path, pattern_data: bytes) -> None:
         """Verify search_numeric finds uint32 100 at offset 42 in pattern_data.
 
         Args:
@@ -272,15 +234,11 @@ class TestSearchNumericDeep:
             pattern_data: The 512-byte structured test buffer fixture.
         """
         self._open_pattern_data(bridge, tmp_path, pattern_data)
-        results: list[dict[str, int]] = _run(
-            bridge.search_numeric(_PATTERN_U32_100_VALUE, size=4, value_type="uint", endianness="little")
-        )
+        results: list[dict[str, int]] = _run(bridge.search_numeric(_PATTERN_U32_100_VALUE, size=4, value_type="uint", endianness="little"))
         offsets = [r["offset"] for r in results]
         assert _PATTERN_U32_100_OFFSET in offsets
 
-    def test_search_result_length_equals_size_parameter(
-        self, bridge: Any, tmp_path: Path, pattern_data: bytes
-    ) -> None:
+    def test_search_result_length_equals_size_parameter(self, bridge: Any, tmp_path: Path, pattern_data: bytes) -> None:
         """Verify that each search_numeric result dict has length equal to the size parameter.
 
         Args:
@@ -289,16 +247,12 @@ class TestSearchNumericDeep:
             pattern_data: The 512-byte structured test buffer fixture.
         """
         self._open_pattern_data(bridge, tmp_path, pattern_data)
-        results: list[dict[str, int]] = _run(
-            bridge.search_numeric(_PATTERN_U32_VALUE, size=4, value_type="uint", endianness="little")
-        )
+        results: list[dict[str, int]] = _run(bridge.search_numeric(_PATTERN_U32_VALUE, size=4, value_type="uint", endianness="little"))
         assert len(results) >= 1
         for r in results:
             assert r["length"] == 4
 
-    def test_search_on_minimal_data_does_not_crash(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_search_on_minimal_data_does_not_crash(self, bridge: Any, tmp_path: Path) -> None:
         """Verify search_numeric on a 4-byte buffer returns correct match or empty list.
 
         Args:
@@ -310,9 +264,7 @@ class TestSearchNumericDeep:
         f = tmp_path / "tiny.bin"
         f.write_bytes(data)
         _run(bridge.open_file(str(f)))
-        results: list[dict[str, int]] = _run(
-            bridge.search_numeric(target_value, size=4, value_type="uint", endianness="little")
-        )
+        results: list[dict[str, int]] = _run(bridge.search_numeric(target_value, size=4, value_type="uint", endianness="little"))
         assert isinstance(results, list)
         if results:
             assert results[0]["offset"] == 0

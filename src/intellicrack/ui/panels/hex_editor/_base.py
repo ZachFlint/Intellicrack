@@ -316,9 +316,7 @@ def _compute_hash_checksums(algo: str, data: bytes) -> str | None:
     if algo == "CRC-32":
         return f"{zlib.crc32(data) & 0xFFFFFFFF:08x}"
     if algo == "CRC-64":
-        crc = compute_custom_crc(
-            data, 64, 0x42F0E1EBA9EA3693, 0xFFFFFFFFFFFFFFFF, False, False, 0xFFFFFFFFFFFFFFFF
-        )
+        crc = compute_custom_crc(data, 64, 0x42F0E1EBA9EA3693, 0xFFFFFFFFFFFFFFFF, False, False, 0xFFFFFFFFFFFFFFFF)
         return f"{crc:016x}"
     return None
 

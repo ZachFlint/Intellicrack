@@ -61,7 +61,7 @@ def bmp_header_bytes() -> bytes:
     struct.pack_into("<H", data, 26, 1)
     struct.pack_into("<H", data, 28, 24)
     struct.pack_into("<I", data, 30, 0)
-    data[54:57] = b"\xFF\x00\x00"
+    data[54:57] = b"\xff\x00\x00"
     return bytes(data)
 
 

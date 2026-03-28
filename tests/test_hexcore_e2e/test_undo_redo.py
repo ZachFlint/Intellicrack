@@ -33,7 +33,7 @@ class TestUndoRedo:
         Args:
             sample_doc_from_bytes: In-memory HexDocument from open_bytes.
         """
-        sample_doc_from_bytes.write_bytes(0, b"\xFF")
+        sample_doc_from_bytes.write_bytes(0, b"\xff")
         assert sample_doc_from_bytes.can_undo()
 
     def test_undo_restores_previous_data(self, sample_doc_from_bytes: Any) -> None:
@@ -49,15 +49,13 @@ class TestUndoRedo:
         assert result is True
         assert sample_doc_from_bytes.read(0, 4) == original
 
-    def test_redo_restores_written_data(
-        self, sample_doc_from_bytes: Any
-    ) -> None:
+    def test_redo_restores_written_data(self, sample_doc_from_bytes: Any) -> None:
         """Verify that redo() re-applies the undone write.
 
         Args:
             sample_doc_from_bytes: In-memory HexDocument from open_bytes.
         """
-        write_payload = b"\xAA\xBB\xCC\xDD"
+        write_payload = b"\xaa\xbb\xcc\xdd"
         sample_doc_from_bytes.write_bytes(0, write_payload)
         sample_doc_from_bytes.undo()
         assert sample_doc_from_bytes.can_redo()
@@ -86,29 +84,25 @@ class TestUndoRedo:
         sample_doc_from_bytes.undo()
         assert sample_doc_from_bytes.read(0, 1) == original_0
 
-    def test_new_write_after_undo_clears_redo_stack(
-        self, sample_doc_from_bytes: Any
-    ) -> None:
+    def test_new_write_after_undo_clears_redo_stack(self, sample_doc_from_bytes: Any) -> None:
         """Verify that writing after an undo invalidates the redo history.
 
         Args:
             sample_doc_from_bytes: In-memory HexDocument from open_bytes.
         """
-        sample_doc_from_bytes.write_bytes(0, b"\xAA")
+        sample_doc_from_bytes.write_bytes(0, b"\xaa")
         sample_doc_from_bytes.undo()
         assert sample_doc_from_bytes.can_redo()
-        sample_doc_from_bytes.write_bytes(0, b"\xBB")
+        sample_doc_from_bytes.write_bytes(0, b"\xbb")
         assert not sample_doc_from_bytes.can_redo()
 
-    def test_can_redo_true_after_undo(
-        self, sample_doc_from_bytes: Any
-    ) -> None:
+    def test_can_redo_true_after_undo(self, sample_doc_from_bytes: Any) -> None:
         """Verify that can_redo() is True immediately after an undo operation.
 
         Args:
             sample_doc_from_bytes: In-memory HexDocument from open_bytes.
         """
-        sample_doc_from_bytes.write_bytes(0, b"\xCC")
+        sample_doc_from_bytes.write_bytes(0, b"\xcc")
         sample_doc_from_bytes.undo()
         assert sample_doc_from_bytes.can_redo()
 
@@ -132,9 +126,7 @@ class TestUndoRedo:
 class TestModificationTracking:
     """Tests covering is_modified() state transitions."""
 
-    def test_is_modified_false_on_fresh_open(
-        self, sample_doc: Any
-    ) -> None:
+    def test_is_modified_false_on_fresh_open(self, sample_doc: Any) -> None:
         """Verify that a freshly opened file-backed document is not modified.
 
         Args:
@@ -142,26 +134,22 @@ class TestModificationTracking:
         """
         assert not sample_doc.is_modified()
 
-    def test_is_modified_true_after_write(
-        self, sample_doc_from_bytes: Any
-    ) -> None:
+    def test_is_modified_true_after_write(self, sample_doc_from_bytes: Any) -> None:
         """Verify that a write marks the document as modified.
 
         Args:
             sample_doc_from_bytes: In-memory HexDocument from open_bytes.
         """
-        sample_doc_from_bytes.write_bytes(0, b"\xFF")
+        sample_doc_from_bytes.write_bytes(0, b"\xff")
         assert sample_doc_from_bytes.is_modified()
 
-    def test_is_modified_tracks_through_undo_redo(
-        self, sample_doc_from_bytes: Any
-    ) -> None:
+    def test_is_modified_tracks_through_undo_redo(self, sample_doc_from_bytes: Any) -> None:
         """Verify is_modified() reflects undo/redo transitions accurately.
 
         Args:
             sample_doc_from_bytes: In-memory HexDocument from open_bytes.
         """
-        sample_doc_from_bytes.write_bytes(0, b"\xAB")
+        sample_doc_from_bytes.write_bytes(0, b"\xab")
         assert sample_doc_from_bytes.is_modified()
 
         sample_doc_from_bytes.undo()

@@ -351,13 +351,7 @@ class HexPatEvaluator:
         for node in program:
             if isinstance(
                 node,
-                StructDecl
-                | UnionDecl
-                | EnumDecl
-                | BitfieldDecl
-                | FunctionDecl
-                | NamespaceDecl
-                | UsingDecl,
+                StructDecl | UnionDecl | EnumDecl | BitfieldDecl | FunctionDecl | NamespaceDecl | UsingDecl,
             ):
                 self._eval_decl(node)
             else:
@@ -571,11 +565,7 @@ class HexPatEvaluator:
         Args:
             node: The variable declaration AST node.
         """
-        value = (
-            self._eval_expr(node.initializer)
-            if node.initializer is not None
-            else PatternValue(value=None)
-        )
+        value = self._eval_expr(node.initializer) if node.initializer is not None else PatternValue(value=None)
         self._scope.define(node.name, value)
 
     def _eval_while(self, node: WhileStmt) -> None:
@@ -862,9 +852,7 @@ class HexPatEvaluator:
         if type_info.parent is not None:
             parent_resolved = self._types.resolve(type_info.parent)
             if isinstance(parent_resolved, StructTypeInfo):
-                parent_result = self._eval_struct_instance(
-                    parent_resolved.name, parent_resolved, "__parent__", self._offset, color, ""
-                )
+                parent_result = self._eval_struct_instance(parent_resolved.name, parent_resolved, "__parent__", self._offset, color, "")
                 children.extend(parent_result.get("children", []))
                 self._offset += int(parent_result["size"])
 
@@ -964,11 +952,7 @@ class HexPatEvaluator:
             (k for k, v in type_info.members.items() if v == raw_int),
             None,
         )
-        display = (
-            f"{member_name} (0x{raw_int:X})"
-            if member_name is not None
-            else f"<unknown> (0x{raw_int:X})"
-        )
+        display = f"{member_name} (0x{raw_int:X})" if member_name is not None else f"<unknown> (0x{raw_int:X})"
         raw = self._data.read(offset, backing.size)
         result = _make_parsed_field(var_name, offset, backing.size, raw, display, [], color, description)
         result["_value"] = raw_int
@@ -1178,9 +1162,7 @@ class HexPatEvaluator:
         pv = self._read_primitive(ptr_type, target_offset)
         raw = self._data.read(target_offset, self._pointer_size)
         display = f"*{self._format_value(pv.value, ptr_type)}"
-        result: dict[str, Any] = _make_parsed_field(
-            node.name, target_offset, self._pointer_size, raw, display, [], color, description
-        )
+        result: dict[str, Any] = _make_parsed_field(node.name, target_offset, self._pointer_size, raw, display, [], color, description)
         if node.at_offset is None:
             self._offset = target_offset + self._pointer_size
         bound = PatternValue(value=pv.value, type_info=ptr_type, offset=target_offset, size=self._pointer_size)
@@ -1567,9 +1549,7 @@ class HexPatEvaluator:
         op = node.op
         val = operand.value
 
-        if op == "-" and (
-            (isinstance(val, int) and not isinstance(val, bool)) or isinstance(val, float)
-        ):
+        if op == "-" and ((isinstance(val, int) and not isinstance(val, bool)) or isinstance(val, float)):
             return PatternValue(value=-val)
         if op in {"!", "not"}:
             return PatternValue(value=not _truthy(operand))
@@ -1742,9 +1722,7 @@ class HexPatEvaluator:
             parent = self._eval_expr(node.target.object_expr)
             member_name = node.target.member
             if node.op != "=" and member_name in parent.members:
-                new_val = self._apply_compound_assign(
-                    node.op, parent.members[member_name], new_val, node.line, node.column
-                )
+                new_val = self._apply_compound_assign(node.op, parent.members[member_name], new_val, node.line, node.column)
             parent.members[member_name] = new_val
             return new_val
 

@@ -1772,10 +1772,7 @@ class ToolOutputPanel(QFrame):
             keep_index: Tab index to keep open.
         """
         keep_widget = self._tab_widget.widget(keep_index)
-        indices_to_close = [
-            i for i in range(self._tab_widget.count() - 1, -1, -1)
-            if self._tab_widget.widget(i) is not keep_widget
-        ]
+        indices_to_close = [i for i in range(self._tab_widget.count() - 1, -1, -1) if self._tab_widget.widget(i) is not keep_widget]
         for i in indices_to_close:
             self._on_tab_close_requested(i)
 

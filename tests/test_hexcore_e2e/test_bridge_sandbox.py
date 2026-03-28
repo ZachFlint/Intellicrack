@@ -52,9 +52,7 @@ class _MinimalRegistry:
 class TestSaveToSandboxErrorPaths:
     """Tests covering save_to_sandbox validation error paths."""
 
-    def test_save_to_sandbox_no_document_raises_runtime_error(
-        self, bridge: Any
-    ) -> None:
+    def test_save_to_sandbox_no_document_raises_runtime_error(self, bridge: Any) -> None:
         """Verify save_to_sandbox raises RuntimeError when no document is open.
 
         Args:
@@ -63,9 +61,7 @@ class TestSaveToSandboxErrorPaths:
         with pytest.raises(RuntimeError, match="no document open"):
             _run(bridge.save_to_sandbox("/sandbox/target.bin"))
 
-    def test_save_to_sandbox_no_tool_registry_raises_runtime_error(
-        self, loaded_bridge: Any
-    ) -> None:
+    def test_save_to_sandbox_no_tool_registry_raises_runtime_error(self, loaded_bridge: Any) -> None:
         """Verify save_to_sandbox raises RuntimeError when tool registry is not set.
 
         Args:
@@ -75,9 +71,7 @@ class TestSaveToSandboxErrorPaths:
         with pytest.raises(RuntimeError, match="tool registry"):
             _run(loaded_bridge.save_to_sandbox("/sandbox/target.bin"))
 
-    def test_save_to_sandbox_no_sandbox_bridge_raises_runtime_error(
-        self, loaded_bridge: Any
-    ) -> None:
+    def test_save_to_sandbox_no_sandbox_bridge_raises_runtime_error(self, loaded_bridge: Any) -> None:
         """Verify save_to_sandbox raises RuntimeError when sandbox bridge is absent.
 
         Args:
@@ -87,9 +81,7 @@ class TestSaveToSandboxErrorPaths:
         with pytest.raises(RuntimeError, match="sandbox bridge not available"):
             _run(loaded_bridge.save_to_sandbox("/sandbox/target.bin"))
 
-    def test_save_to_sandbox_document_required_before_registry(
-        self, bridge: Any
-    ) -> None:
+    def test_save_to_sandbox_document_required_before_registry(self, bridge: Any) -> None:
         """Verify save_to_sandbox checks for open document before registry access.
 
         The no-document check must fire before any registry lookup.
@@ -101,9 +93,7 @@ class TestSaveToSandboxErrorPaths:
         with pytest.raises(RuntimeError, match="no document open"):
             _run(bridge.save_to_sandbox("/sandbox/target.bin"))
 
-    def test_save_to_sandbox_sandbox_type_forwarded(
-        self, loaded_bridge: Any
-    ) -> None:
+    def test_save_to_sandbox_sandbox_type_forwarded(self, loaded_bridge: Any) -> None:
         """Verify save_to_sandbox fails on missing bridge even with custom sandbox_type.
 
         Args:
@@ -117,9 +107,7 @@ class TestSaveToSandboxErrorPaths:
 class TestTestInSandboxErrorPaths:
     """Tests covering test_in_sandbox validation error paths."""
 
-    def test_test_in_sandbox_no_document_raises_runtime_error(
-        self, bridge: Any
-    ) -> None:
+    def test_test_in_sandbox_no_document_raises_runtime_error(self, bridge: Any) -> None:
         """Verify test_in_sandbox raises RuntimeError when no document is open.
 
         Args:
@@ -128,9 +116,7 @@ class TestTestInSandboxErrorPaths:
         with pytest.raises(RuntimeError, match="no document open"):
             _run(bridge.test_in_sandbox())
 
-    def test_test_in_sandbox_no_tool_registry_raises_runtime_error(
-        self, loaded_bridge: Any
-    ) -> None:
+    def test_test_in_sandbox_no_tool_registry_raises_runtime_error(self, loaded_bridge: Any) -> None:
         """Verify test_in_sandbox raises RuntimeError when tool registry is not set.
 
         The method reaches the save_to_sandbox step first, which checks the registry.
@@ -142,9 +128,7 @@ class TestTestInSandboxErrorPaths:
         with pytest.raises(RuntimeError, match="tool registry"):
             _run(loaded_bridge.test_in_sandbox())
 
-    def test_test_in_sandbox_no_sandbox_bridge_raises_runtime_error(
-        self, loaded_bridge: Any
-    ) -> None:
+    def test_test_in_sandbox_no_sandbox_bridge_raises_runtime_error(self, loaded_bridge: Any) -> None:
         """Verify test_in_sandbox raises RuntimeError when sandbox bridge is absent.
 
         Args:
@@ -154,9 +138,7 @@ class TestTestInSandboxErrorPaths:
         with pytest.raises(RuntimeError, match="sandbox bridge not available"):
             _run(loaded_bridge.test_in_sandbox())
 
-    def test_test_in_sandbox_with_args_still_requires_document(
-        self, bridge: Any
-    ) -> None:
+    def test_test_in_sandbox_with_args_still_requires_document(self, bridge: Any) -> None:
         """Verify test_in_sandbox raises RuntimeError for no-document even with args set.
 
         Args:

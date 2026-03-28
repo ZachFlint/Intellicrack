@@ -39,9 +39,7 @@ def _run(coro: Any) -> Any:
 class TestBridgeExportPatches:
     """Tests covering IPS/IPS32 patch export from a modified document."""
 
-    def test_export_patches_returns_string(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_export_patches_returns_string(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that export_patches returns a string.
 
         Args:
@@ -57,9 +55,7 @@ class TestBridgeExportPatches:
         assert isinstance(result, str)
         assert len(result) > 0
 
-    def test_export_patches_ips_decodes_to_bytes_starting_with_patch(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_export_patches_ips_decodes_to_bytes_starting_with_patch(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that decoded IPS data begins with the PATCH magic header.
 
         Args:
@@ -75,9 +71,7 @@ class TestBridgeExportPatches:
         decoded = base64.b64decode(b64_result)
         assert decoded[:5] == b"PATCH"
 
-    def test_export_patches_ips32_returns_valid_base64(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_export_patches_ips32_returns_valid_base64(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that ips32 export result is valid base64.
 
         Args:
@@ -97,9 +91,7 @@ class TestBridgeExportPatches:
 class TestBridgeImportPatches:
     """Tests covering IPS patch import into a fresh document."""
 
-    def test_import_patches_returns_integer_count(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_import_patches_returns_integer_count(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that import_patches returns a non-negative integer.
 
         Args:
@@ -127,9 +119,7 @@ class TestBridgeImportPatches:
 class TestBridgePatchRoundtrip:
     """Tests covering full modify-export-import-verify roundtrip."""
 
-    def test_patch_roundtrip_data_matches(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_patch_roundtrip_data_matches(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that bytes written before export match bytes after import.
 
         Args:

@@ -269,12 +269,7 @@ class SectionsMixin:
 
     def _try_pattern_registry_match(self) -> None:
         """Attempt to match the open file against .hexpat patterns via magic bytes."""
-        if (
-            self._document is None
-            or not hexpat_interpreter_available
-            or PatternRegistryCls is None
-            or DataReaderCls is None
-        ):
+        if self._document is None or not hexpat_interpreter_available or PatternRegistryCls is None or DataReaderCls is None:
             return
 
         if self._pattern_registry is None:

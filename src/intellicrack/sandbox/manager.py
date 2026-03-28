@@ -394,9 +394,7 @@ class SandboxManager:
         _logger.debug(
             "sandbox_status_queried",
             total_count=len(self._instances),
-            active_count=sum(
-                i.state.status == "running" for i in self._instances.values()
-            ),
+            active_count=sum(i.state.status == "running" for i in self._instances.values()),
         )
         available_types = await self.get_available_types()
 

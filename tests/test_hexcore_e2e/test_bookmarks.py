@@ -20,9 +20,7 @@ class TestBookmarks:
         bookmarks = empty_doc.list_bookmarks()
         assert bookmarks == []
 
-    def test_add_bookmark_returns_index(
-        self, sample_doc_from_bytes: Any
-    ) -> None:
+    def test_add_bookmark_returns_index(self, sample_doc_from_bytes: Any) -> None:
         """Verify that add_bookmark() returns a non-negative integer index.
 
         Args:
@@ -32,9 +30,7 @@ class TestBookmarks:
         assert isinstance(idx, int)
         assert idx >= 0
 
-    def test_list_bookmarks_contains_added_bookmark(
-        self, sample_doc_from_bytes: Any
-    ) -> None:
+    def test_list_bookmarks_contains_added_bookmark(self, sample_doc_from_bytes: Any) -> None:
         """Verify that a freshly added bookmark appears in list_bookmarks().
 
         Args:
@@ -63,9 +59,7 @@ class TestBookmarks:
         assert bm[2] == label
         assert bm[3] == color
 
-    def test_add_multiple_bookmarks_preserves_order(
-        self, sample_doc_from_bytes: Any
-    ) -> None:
+    def test_add_multiple_bookmarks_preserves_order(self, sample_doc_from_bytes: Any) -> None:
         """Verify that multiple bookmarks are stored and returned in insertion order.
 
         Args:
@@ -87,9 +81,7 @@ class TestBookmarks:
             assert bookmarks[i][2] == label
             assert bookmarks[i][3] == color
 
-    def test_remove_bookmark_by_index(
-        self, sample_doc_from_bytes: Any
-    ) -> None:
+    def test_remove_bookmark_by_index(self, sample_doc_from_bytes: Any) -> None:
         """Verify that remove_bookmark() removes the bookmark at the given index.
 
         Args:
@@ -102,9 +94,7 @@ class TestBookmarks:
         labels = [bm[2] for bm in bookmarks]
         assert "to_remove" not in labels
 
-    def test_remove_bookmark_returns_false_for_invalid_index(
-        self, sample_doc_from_bytes: Any
-    ) -> None:
+    def test_remove_bookmark_returns_false_for_invalid_index(self, sample_doc_from_bytes: Any) -> None:
         """Verify that remove_bookmark() returns False for an out-of-range index.
 
         Args:
@@ -113,23 +103,19 @@ class TestBookmarks:
         result = sample_doc_from_bytes.remove_bookmark(9999)
         assert result is False
 
-    def test_bookmark_survives_write_operation(
-        self, sample_doc_from_bytes: Any
-    ) -> None:
+    def test_bookmark_survives_write_operation(self, sample_doc_from_bytes: Any) -> None:
         """Verify that writing to the document does not remove existing bookmarks.
 
         Args:
             sample_doc_from_bytes: In-memory HexDocument from open_bytes.
         """
         sample_doc_from_bytes.add_bookmark(0, 4, "persistent", "#AABBCC")
-        sample_doc_from_bytes.write_bytes(50, b"\xDE\xAD")
+        sample_doc_from_bytes.write_bytes(50, b"\xde\xad")
         bookmarks = sample_doc_from_bytes.list_bookmarks()
         assert len(bookmarks) == 1
         assert bookmarks[0][2] == "persistent"
 
-    def test_remove_one_of_multiple_bookmarks_leaves_others(
-        self, sample_doc_from_bytes: Any
-    ) -> None:
+    def test_remove_one_of_multiple_bookmarks_leaves_others(self, sample_doc_from_bytes: Any) -> None:
         """Verify that removing one bookmark from a set leaves the remaining ones intact.
 
         Args:

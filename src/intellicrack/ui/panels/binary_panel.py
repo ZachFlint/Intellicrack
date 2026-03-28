@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import override
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QKeyEvent, QWheelEvent
+from PyQt6.QtGui import QColor, QKeyEvent, QWheelEvent
 from PyQt6.QtWidgets import (
     QFileDialog,
     QHeaderView,
@@ -56,7 +56,7 @@ from intellicrack.ui.panels.qt_compat import (
     tree_item_set_data,
     wheel_angle_delta_y,
 )
-from intellicrack.ui.resources.font_manager import DEFAULT_CODE_FONT
+from intellicrack.ui.resources.font_manager import FontManager
 
 
 _logger = get_logger("ui.panels.binary")
@@ -194,7 +194,7 @@ class BinaryPanel(QWidget):
         set_hint = getattr(self._offset_input, "set" + "Place" + "holderText")
         set_hint("0x0")
         self._offset_input.setMaximumWidth(120)
-        self._offset_input.setFont(QFont(DEFAULT_CODE_FONT, 9))
+        self._offset_input.setFont(FontManager.get_instance().get_code_font(9))
         self._offset_input.returnPressed.connect(self._on_goto_offset)
         toolbar.addWidget(self._offset_input)
 
@@ -271,7 +271,7 @@ class BinaryPanel(QWidget):
 
         self._hex_table = QTableWidget(0, 3)
         self._hex_table.setHorizontalHeaderLabels(["Offset", "Hex", "ASCII"])
-        self._hex_table.setFont(QFont(DEFAULT_CODE_FONT, 9))
+        self._hex_table.setFont(FontManager.get_instance().get_code_font(9))
         self._hex_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         v_header = self._hex_table.verticalHeader()
         if v_header is not None:

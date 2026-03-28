@@ -11,10 +11,9 @@ exports, functions, sections, and analysis notes.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import (
     QGridLayout,
     QHeaderView,
@@ -28,7 +27,8 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.resources.font_manager import DEFAULT_CODE_FONT
+from intellicrack.ui.resources.font_manager import FontManager
+from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 if TYPE_CHECKING:
@@ -36,32 +36,11 @@ if TYPE_CHECKING:
 
 _logger = get_logger("ui.panels.analysis")
 
-_DARK_BG = "#1e1e1e"
-_DARK_FG = "#d4d4d4"
-_ALT_ROW = "#252526"
-_HEADER_BG = "#333333"
-_ADDR_FG = "#4ec9b0"
-
-_TABLE_STYLE = f"""
-    QTableWidget {{
-        background-color: {_DARK_BG};
-        color: {_DARK_FG};
-        gridline-color: #3c3c3c;
-        alternate-background-color: {_ALT_ROW};
-        selection-background-color: #264f78;
-        border: none;
-    }}
-    QTableWidget::item {{
-        padding: 2px 4px;
-    }}
-    QHeaderView::section {{
-        background-color: {_HEADER_BG};
-        color: {_DARK_FG};
-        padding: 4px;
-        border: 1px solid #3c3c3c;
-        font-weight: bold;
-    }}
-"""
+_PANEL_MARGIN: Final[int] = 0
+_PANEL_SPACING: Final[int] = 2
+_HEADER_MARGIN_H: Final[int] = 8
+_HEADER_MARGIN_V: Final[int] = 4
+_HEADER_SPACING: Final[int] = 4
 
 
 class BridgeAnalysisPanel(QWidget):
@@ -83,47 +62,50 @@ class BridgeAnalysisPanel(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._current_analysis: BridgeAnalysisSummary | None = None
-        self._mono_font = QFont(DEFAULT_CODE_FONT, 9)
+        self._mono_font = FontManager.get_instance().get_code_font(9)
+        self._addr_color = ThemeManager.get_instance().get_analysis_colors()["accent"]
         self._setup_ui()
 
     def _setup_ui(self) -> None:
         """Build the panel layout with header and tabbed tables."""
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(2)
+        layout.setContentsMargins(
+            _PANEL_MARGIN,
+            _PANEL_MARGIN,
+            _PANEL_MARGIN,
+            _PANEL_MARGIN,
+        )
+        layout.setSpacing(_PANEL_SPACING)
 
         header = QWidget()
         header_layout = QGridLayout(header)
-        header_layout.setContentsMargins(8, 4, 8, 4)
-        header_layout.setSpacing(4)
+        header_layout.setContentsMargins(
+            _HEADER_MARGIN_H,
+            _HEADER_MARGIN_V,
+            _HEADER_MARGIN_H,
+            _HEADER_MARGIN_V,
+        )
+        header_layout.setSpacing(_HEADER_SPACING)
 
         self._binary_label = QLabel("No binary loaded")
-        self._binary_label.setStyleSheet(f"color: {_DARK_FG}; font-weight: bold; font-size: 12px;")
+        self._binary_label.setProperty("heading", True)
         header_layout.addWidget(self._binary_label, 0, 0, 1, 2)
 
         self._format_label = QLabel("")
-        self._format_label.setStyleSheet(f"color: {_ADDR_FG};")
+        self._format_label.setProperty("muted", True)
         header_layout.addWidget(self._format_label, 1, 0)
 
         self._arch_label = QLabel("")
-        self._arch_label.setStyleSheet(f"color: {_ADDR_FG};")
+        self._arch_label.setProperty("muted", True)
         header_layout.addWidget(self._arch_label, 1, 1)
 
         self._bridges_label = QLabel("")
-        self._bridges_label.setStyleSheet(f"color: {_DARK_FG};")
         header_layout.addWidget(self._bridges_label, 2, 0, 1, 2)
 
         layout.addWidget(header)
 
         self._tab_widget = QTabWidget()
-        self._tab_widget.setStyleSheet(f"""
-            QTabWidget::pane {{ border: none; background: {_DARK_BG}; }}
-            QTabBar::tab {{
-                background: {_HEADER_BG}; color: {_DARK_FG};
-                padding: 6px 12px; border: 1px solid #3c3c3c;
-            }}
-            QTabBar::tab:selected {{ background: {_DARK_BG}; }}
-        """)
+        self._tab_widget.setObjectName("analysis_tabs")
 
         self._strings_table = self._create_table(["Address", "Value", "Encoding", "Section"])
         self._imports_table = self._create_table(["DLL", "Function", "Ordinal", "Address"])
@@ -133,7 +115,7 @@ class BridgeAnalysisPanel(QWidget):
         self._notes_edit = QTextEdit()
         self._notes_edit.setReadOnly(True)
         self._notes_edit.setFont(self._mono_font)
-        self._notes_edit.setStyleSheet(f"background-color: {_DARK_BG}; color: {_DARK_FG}; border: none;")
+        self._notes_edit.setObjectName("code_preview_text")
 
         self._tab_widget.addTab(self._strings_table, "Strings")
         self._tab_widget.addTab(self._imports_table, "Imports")
@@ -169,7 +151,6 @@ class BridgeAnalysisPanel(QWidget):
         if v_header is not None:
             v_header.setVisible(False)
         table.setFont(self._mono_font)
-        table.setStyleSheet(_TABLE_STYLE)
 
         h_header = table.horizontalHeader()
         if h_header is not None:
@@ -353,7 +334,7 @@ class BridgeAnalysisPanel(QWidget):
             address: Address value to format.
         """
         item = QTableWidgetItem(f"0x{address:08X}")
-        item.setForeground(QColor(0, 255, 255))
+        item.setForeground(self._addr_color)
         item.setFont(self._mono_font)
         table.setItem(row, col, item)
 

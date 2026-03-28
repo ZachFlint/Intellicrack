@@ -69,7 +69,7 @@ class TestEntropy:
         Args:
             hexcore: The native hexcore module fixture.
         """
-        doc = hexcore.HexDocument.open_bytes(b"\xAB" * 512)
+        doc = hexcore.HexDocument.open_bytes(b"\xab" * 512)
         result: float = doc.entropy()
         assert abs(result) < 1e-6
 
@@ -113,9 +113,7 @@ class TestEntropyMap:
         result = sample_doc_from_bytes.entropy_map(block_size)
         assert len(result) == expected_blocks
 
-    def test_entropy_map_smaller_block_size_gives_more_blocks(
-        self, sample_doc_from_bytes: Any
-    ) -> None:
+    def test_entropy_map_smaller_block_size_gives_more_blocks(self, sample_doc_from_bytes: Any) -> None:
         """Verify that a smaller block_size produces more entropy map blocks.
 
         Args:
@@ -145,9 +143,7 @@ class TestByteDistribution:
     for every byte value.
     """
 
-    def test_byte_distribution_full_has_256_elements(
-        self, sample_doc_from_bytes: Any
-    ) -> None:
+    def test_byte_distribution_full_has_256_elements(self, sample_doc_from_bytes: Any) -> None:
         """Verify that byte_distribution_full() returns exactly 256 integer counts.
 
         Args:
@@ -156,9 +152,7 @@ class TestByteDistribution:
         result = sample_doc_from_bytes.byte_distribution_full()
         assert len(result) == 256
 
-    def test_byte_distribution_sum_equals_document_length(
-        self, sample_doc_from_bytes: Any
-    ) -> None:
+    def test_byte_distribution_sum_equals_document_length(self, sample_doc_from_bytes: Any) -> None:
         """Verify that the sum of all distribution counts equals the document length.
 
         Args:
@@ -205,9 +199,7 @@ class TestByteTypeDistribution:
     specific controlled data (null/printable/control/high-byte categories).
     """
 
-    def test_byte_type_distribution_returns_four_values(
-        self, sample_doc_from_bytes: Any
-    ) -> None:
+    def test_byte_type_distribution_returns_four_values(self, sample_doc_from_bytes: Any) -> None:
         """Verify that byte_type_distribution() returns a tuple of exactly 4 elements.
 
         Args:
@@ -216,9 +208,7 @@ class TestByteTypeDistribution:
         result = sample_doc_from_bytes.byte_type_distribution()
         assert len(result) == 4
 
-    def test_byte_type_distribution_sum_equals_document_length(
-        self, sample_doc_from_bytes: Any
-    ) -> None:
+    def test_byte_type_distribution_sum_equals_document_length(self, sample_doc_from_bytes: Any) -> None:
         """Verify that the sum of all byte type counts equals the document length.
 
         Args:
@@ -280,9 +270,7 @@ class TestDigramMatrix:
         result = sample_doc_from_bytes.digram_matrix()
         assert len(result) == 65536
 
-    def test_digram_matrix_sum_equals_length_minus_one(
-        self, sample_doc_from_bytes: Any
-    ) -> None:
+    def test_digram_matrix_sum_equals_length_minus_one(self, sample_doc_from_bytes: Any) -> None:
         """Verify that the sum of the digram matrix equals doc_length - 1.
 
         Args:
@@ -320,9 +308,7 @@ class TestContentClassification:
         result = sample_doc_from_bytes.content_classification(64)
         assert isinstance(result, list)
 
-    def test_content_classification_values_in_range(
-        self, sample_doc_from_bytes: Any
-    ) -> None:
+    def test_content_classification_values_in_range(self, sample_doc_from_bytes: Any) -> None:
         """Verify that every classification value is an integer in the range [0, 4].
 
         Args:
@@ -345,9 +331,7 @@ class TestContentClassification:
         result = sample_doc_from_bytes.content_classification(block_size)
         assert len(result) == expected_blocks
 
-    def test_content_classification_zeros_classified_low_entropy(
-        self, hexcore: Any
-    ) -> None:
+    def test_content_classification_zeros_classified_low_entropy(self, hexcore: Any) -> None:
         """Verify that all-zero data receives a low-entropy classification (0 or 1).
 
         Args:

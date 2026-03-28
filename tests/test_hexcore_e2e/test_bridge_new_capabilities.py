@@ -177,7 +177,7 @@ class TestSearchBytes:
             tmp_path: Pytest temporary directory.
         """
         f = tmp_path / "repeats.bin"
-        f.write_bytes(b"\xAA\xBB" * 100)
+        f.write_bytes(b"\xaa\xbb" * 100)
         _run(bridge.open_file(str(f)))
 
         results: list[dict[str, int]] = _run(bridge.search_bytes("AABB", max_results=5))
@@ -199,7 +199,7 @@ class TestSearchBytes:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        data = b"\x00" * 100 + b"\xDE\xAD\xBE\xEF" + b"\x00" * 100
+        data = b"\x00" * 100 + b"\xde\xad\xbe\xef" + b"\x00" * 100
         f = tmp_path / "embedded.bin"
         f.write_bytes(data)
         _run(bridge.open_file(str(f)))
@@ -227,9 +227,7 @@ class TestSearchNumericRange:
         f.write_bytes(bytes(data))
         _run(bridge.open_file(str(f)))
 
-        results: list[dict[str, int]] = _run(
-            bridge.search_numeric_range(15, 150, size=4, value_type="uint", endianness="little")
-        )
+        results: list[dict[str, int]] = _run(bridge.search_numeric_range(15, 150, size=4, value_type="uint", endianness="little"))
 
         found_values: list[int] = []
         for r in results:
@@ -257,9 +255,7 @@ class TestSearchNumericRange:
         f.write_bytes(bytes(data))
         _run(bridge.open_file(str(f)))
 
-        results: list[dict[str, int]] = _run(
-            bridge.search_numeric_range(-50, 50, size=4, value_type="int", endianness="little")
-        )
+        results: list[dict[str, int]] = _run(bridge.search_numeric_range(-50, 50, size=4, value_type="int", endianness="little"))
 
         found_offsets = {r["offset"] for r in results}
         assert 4 in found_offsets
@@ -280,9 +276,7 @@ class TestSearchNumericRange:
         f.write_bytes(bytes(data))
         _run(bridge.open_file(str(f)))
 
-        results: list[dict[str, int]] = _run(
-            bridge.search_numeric_range(150, 250, size=2, value_type="uint", endianness="big")
-        )
+        results: list[dict[str, int]] = _run(bridge.search_numeric_range(150, 250, size=2, value_type="uint", endianness="big"))
 
         assert len(results) == 1
         assert results[0]["offset"] == 2
@@ -300,12 +294,8 @@ class TestSearchNumericRange:
         f.write_bytes(data)
         _run(bridge.open_file(str(f)))
 
-        results_unaligned: list[dict[str, int]] = _run(
-            bridge.search_numeric_range(42, 42, size=4, alignment=1)
-        )
-        results_aligned: list[dict[str, int]] = _run(
-            bridge.search_numeric_range(42, 42, size=4, alignment=4)
-        )
+        results_unaligned: list[dict[str, int]] = _run(bridge.search_numeric_range(42, 42, size=4, alignment=1))
+        results_aligned: list[dict[str, int]] = _run(bridge.search_numeric_range(42, 42, size=4, alignment=4))
 
         unaligned_offsets = {r["offset"] for r in results_unaligned}
         aligned_offsets = {r["offset"] for r in results_aligned}
@@ -373,9 +363,7 @@ class TestSearchTextEncodedPreference:
         _run(bridge.open_file(str(f)))
 
         doc = bridge._document
-        assert hasattr(doc, "search_text_encoded"), (
-            "HexDocument should expose search_text_encoded for multi-encoding support"
-        )
+        assert hasattr(doc, "search_text_encoded"), "HexDocument should expose search_text_encoded for multi-encoding support"
 
 
 _HELPER_NAME = "_build_numeric" + "_format"
@@ -458,14 +446,10 @@ class TestNumericSearchWorkerDispatch:
         f.write_bytes(data)
         _run(bridge.open_file(str(f)))
 
-        results: list[dict[str, int]] = _run(
-            bridge.search_numeric(val, size=4, value_type="uint", endianness="little")
-        )
+        results: list[dict[str, int]] = _run(bridge.search_numeric(val, size=4, value_type="uint", endianness="little"))
         assert any(r["offset"] == 16 for r in results)
 
-    def test_search_numeric_and_range_agree_for_single_value(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_search_numeric_and_range_agree_for_single_value(self, bridge: Any, tmp_path: Path) -> None:
         """search_numeric(v) and search_numeric_range(v,v) must return same offsets.
 
         Args:
@@ -478,12 +462,8 @@ class TestNumericSearchWorkerDispatch:
         f.write_bytes(data)
         _run(bridge.open_file(str(f)))
 
-        exact: list[dict[str, int]] = _run(
-            bridge.search_numeric(val, size=4, value_type="uint", endianness="little")
-        )
-        ranged: list[dict[str, int]] = _run(
-            bridge.search_numeric_range(val, val, size=4, value_type="uint", endianness="little")
-        )
+        exact: list[dict[str, int]] = _run(bridge.search_numeric(val, size=4, value_type="uint", endianness="little"))
+        ranged: list[dict[str, int]] = _run(bridge.search_numeric_range(val, val, size=4, value_type="uint", endianness="little"))
 
         exact_offsets = sorted(r["offset"] for r in exact)
         range_offsets = sorted(r["offset"] for r in ranged)
@@ -550,9 +530,7 @@ class TestProcessMemoryBridge:
 
         target = readable[0]
         read_size = min(target["size"], 4096)
-        result: dict[str, Any] = _run(
-            bridge.open_process_memory(pid, target["base_address"], read_size)
-        )
+        result: dict[str, Any] = _run(bridge.open_process_memory(pid, target["base_address"], read_size))
 
         assert result["pid"] == pid
         assert result["address"] == target["base_address"]

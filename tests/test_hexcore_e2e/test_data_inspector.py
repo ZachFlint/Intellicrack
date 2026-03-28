@@ -121,9 +121,7 @@ class TestInspectAtBasic:
         result = sample_doc_from_bytes.inspect_at(0)
         assert "f64_le" in result
 
-    def test_inspect_at_contains_all_expected_keys(
-        self, sample_doc_from_bytes: Any
-    ) -> None:
+    def test_inspect_at_contains_all_expected_keys(self, sample_doc_from_bytes: Any) -> None:
         """Verify that inspect_at() result contains all keys defined in _EXPECTED_KEYS.
 
         Args:

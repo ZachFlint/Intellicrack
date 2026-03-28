@@ -1029,11 +1029,7 @@ class HexPatParser:
         false_fields: tuple[StmtNode, ...] = ()
         if self._current().type == TokenType.ELSE:
             self._advance()
-            false_fields = (
-                (self._parse_if_stmt(),)
-                if self._current().type == TokenType.IF
-                else self._parse_block(allow_fields=True)
-            )
+            false_fields = (self._parse_if_stmt(),) if self._current().type == TokenType.IF else self._parse_block(allow_fields=True)
         return ConditionalField(
             condition=condition,
             true_fields=true_fields,

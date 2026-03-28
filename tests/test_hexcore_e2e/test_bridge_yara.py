@@ -102,9 +102,7 @@ class TestBridgeYaraScan:
         for match in results:
             assert _EXPECTED_MATCH_KEYS.issubset(match.keys())
 
-    def test_yara_scan_match_rule_name_matches_rule_identifier(
-        self, loaded_bridge: Any
-    ) -> None:
+    def test_yara_scan_match_rule_name_matches_rule_identifier(self, loaded_bridge: Any) -> None:
         """Verify that the rule field in the match equals the declared rule name.
 
         Args:
@@ -113,9 +111,7 @@ class TestBridgeYaraScan:
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan(_MZ_YARA_RULE))
         assert results[0]["rule"] == "MZHeader"
 
-    def test_yara_scan_no_match_returns_empty_list(
-        self, loaded_bridge: Any
-    ) -> None:
+    def test_yara_scan_no_match_returns_empty_list(self, loaded_bridge: Any) -> None:
         """Verify that a rule with no matches returns an empty list.
 
         Args:
@@ -124,16 +120,14 @@ class TestBridgeYaraScan:
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan(_NO_MATCH_RULE))
         assert results == []
 
-    def test_yara_scan_custom_bytes_match(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_yara_scan_custom_bytes_match(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that a DEADBEEF rule matches a document containing those bytes.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        payload = b"\x00" * 8 + b"\xDE\xAD\xBE\xEF" + b"\x00" * 8
+        payload = b"\x00" * 8 + b"\xde\xad\xbe\xef" + b"\x00" * 8
         f = tmp_path / "deadbeef.bin"
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
@@ -145,9 +139,7 @@ class TestBridgeYaraScan:
 class TestBridgeYaraScanFiles:
     """Tests covering YARA scanning with rule files loaded from disk."""
 
-    def test_yara_scan_files_with_rule_file_matches_pe(
-        self, loaded_bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_yara_scan_files_with_rule_file_matches_pe(self, loaded_bridge: Any, tmp_path: Path) -> None:
         """Verify that yara_scan_files with a .yar file on disk produces matches.
 
         Args:
@@ -156,15 +148,11 @@ class TestBridgeYaraScanFiles:
         """
         rule_file = tmp_path / "mz.yar"
         rule_file.write_text(_MZ_YARA_RULE, encoding="utf-8")
-        results: list[dict[str, Any]] = _run(
-            loaded_bridge.yara_scan_files(str(rule_file))
-        )
+        results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan_files(str(rule_file)))
         assert isinstance(results, list)
         assert len(results) >= 1
 
-    def test_yara_scan_files_no_match_rule_returns_empty(
-        self, loaded_bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_yara_scan_files_no_match_rule_returns_empty(self, loaded_bridge: Any, tmp_path: Path) -> None:
         """Verify that a rule file with no matches returns an empty list.
 
         Args:
@@ -173,7 +161,5 @@ class TestBridgeYaraScanFiles:
         """
         rule_file = tmp_path / "nomatch.yar"
         rule_file.write_text(_NO_MATCH_RULE, encoding="utf-8")
-        results: list[dict[str, Any]] = _run(
-            loaded_bridge.yara_scan_files(str(rule_file))
-        )
+        results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan_files(str(rule_file)))
         assert results == []

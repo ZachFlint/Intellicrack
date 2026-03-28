@@ -90,13 +90,7 @@ class TestUnions:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = struct.pack("<I", 0xDEADBEEF) + bytes(16)
-        source = (
-            "union MyUnion {\n"
-            "    u32 as_u32;\n"
-            "    u8 bytes[4];\n"
-            "};\n"
-            "MyUnion u @ 0;"
-        )
+        source = "union MyUnion {\n    u32 as_u32;\n    u8 bytes[4];\n};\nMyUnion u @ 0;"
         results = interp.execute_bytes(source, data)
         union_field = _field(results, "u")
         children = union_field["children"]
@@ -109,13 +103,7 @@ class TestUnions:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes(16)
-        source = (
-            "union Overlap {\n"
-            "    u8 small;\n"
-            "    u32 large;\n"
-            "};\n"
-            "Overlap o @ 0;"
-        )
+        source = "union Overlap {\n    u8 small;\n    u32 large;\n};\nOverlap o @ 0;"
         results = interp.execute_bytes(source, data)
         union_field = _field(results, "o")
         assert union_field["size"] == 4
@@ -127,13 +115,7 @@ class TestUnions:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes([0x78, 0x56, 0x34, 0x12]) + bytes(16)
-        source = (
-            "union TwoViews {\n"
-            "    u32 word;\n"
-            "    u8 byte0;\n"
-            "};\n"
-            "TwoViews tv @ 0;"
-        )
+        source = "union TwoViews {\n    u32 word;\n    u8 byte0;\n};\nTwoViews tv @ 0;"
         results = interp.execute_bytes(source, data)
         tv = _field(results, "tv")
         assert tv["raw_bytes"][0] == 0x78
@@ -151,10 +133,7 @@ class TestComputedFields:
         data = bytearray(64)
         data[0] = 10
         data[10] = 0xCC
-        source = (
-            "u8 jump_to @ 0;\n"
-            "u8 target @ jump_to;"
-        )
+        source = "u8 jump_to @ 0;\nu8 target @ jump_to;"
         results = interp.execute_bytes(source, bytes(data))
         target = _field(results, "target")
         assert target["offset"] == 10
@@ -169,10 +148,7 @@ class TestComputedFields:
         data = bytearray(64)
         data[0] = 5
         data[1:6] = bytes([10, 20, 30, 40, 50])
-        source = (
-            "u8 count @ 0;\n"
-            "u8 items[count] @ 1;"
-        )
+        source = "u8 count @ 0;\nu8 items[count] @ 1;"
         results = interp.execute_bytes(source, bytes(data))
         array_field = _field(results, "items")
         assert len(array_field["children"]) == 5
@@ -189,14 +165,7 @@ class TestConditionalFields:
         """
         data = bytearray(16)
         data[0] = 1
-        source = (
-            "u8 flag @ 0;\n"
-            "if (flag == 1) {\n"
-            "    u8 type_a @ 1;\n"
-            "} else {\n"
-            "    u8 type_b @ 1;\n"
-            "}"
-        )
+        source = "u8 flag @ 0;\nif (flag == 1) {\n    u8 type_a @ 1;\n} else {\n    u8 type_b @ 1;\n}"
         results = interp.execute_bytes(source, bytes(data))
         named = [r["name"] for r in results]
         assert "type_a" in named
@@ -210,14 +179,7 @@ class TestConditionalFields:
         """
         data = bytearray(16)
         data[0] = 0
-        source = (
-            "u8 flag @ 0;\n"
-            "if (flag == 1) {\n"
-            "    u8 type_a @ 1;\n"
-            "} else {\n"
-            "    u8 type_b @ 1;\n"
-            "}"
-        )
+        source = "u8 flag @ 0;\nif (flag == 1) {\n    u8 type_a @ 1;\n} else {\n    u8 type_b @ 1;\n}"
         results = interp.execute_bytes(source, bytes(data))
         named = [r["name"] for r in results]
         assert "type_b" in named
@@ -232,15 +194,7 @@ class TestConditionalFields:
         data = bytearray(16)
         data[0] = 1
         data[1] = 0x42
-        source = (
-            "struct Conditional {\n"
-            "    u8 has_extra;\n"
-            "    if (has_extra != 0) {\n"
-            "        u8 extra_data;\n"
-            "    }\n"
-            "};\n"
-            "Conditional c @ 0;"
-        )
+        source = "struct Conditional {\n    u8 has_extra;\n    if (has_extra != 0) {\n        u8 extra_data;\n    }\n};\nConditional c @ 0;"
         results = interp.execute_bytes(source, bytes(data))
         c = _field(results, "c")
         child_names = [ch["name"] for ch in c["children"]]
@@ -257,13 +211,7 @@ class TestNestedArrays:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes(range(32))
-        source = (
-            "struct Pair {\n"
-            "    u8 lo;\n"
-            "    u8 hi;\n"
-            "};\n"
-            "Pair pairs[4] @ 0;"
-        )
+        source = "struct Pair {\n    u8 lo;\n    u8 hi;\n};\nPair pairs[4] @ 0;"
         results = interp.execute_bytes(source, data)
         array_field = _field(results, "pairs")
         assert len(array_field["children"]) == 4
@@ -290,10 +238,7 @@ class TestNestedArrays:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes(range(16))
-        source = (
-            "u8 n = 6;\n"
-            "u8 items[n] @ 0;"
-        )
+        source = "u8 n = 6;\nu8 items[n] @ 0;"
         results = interp.execute_bytes(source, data)
         array_field = _field(results, "items")
         assert len(array_field["children"]) == 6
@@ -342,13 +287,7 @@ class TestSizeofOperator:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes(16)
-        source = (
-            "struct TwoBytes {\n"
-            "    u8 a;\n"
-            "    u8 b;\n"
-            "};\n"
-            "u8 result @ sizeof(TwoBytes);"
-        )
+        source = "struct TwoBytes {\n    u8 a;\n    u8 b;\n};\nu8 result @ sizeof(TwoBytes);"
         results = interp.execute_bytes(source, data)
         assert results[0]["offset"] == 2
 
@@ -359,10 +298,7 @@ class TestSizeofOperator:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes(16)
-        source = (
-            "u32 my_val @ 0;\n"
-            "u8 sz_result @ sizeof(my_val);"
-        )
+        source = "u32 my_val @ 0;\nu8 sz_result @ sizeof(my_val);"
         results = interp.execute_bytes(source, data)
         sz = _field(results, "sz_result")
         assert sz["offset"] == 4
@@ -378,12 +314,7 @@ class TestDollarOperator:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes(16)
-        source = (
-            "u8 a @ 0;\n"
-            "u8 b @ 1;\n"
-            "u8 cur_offset = $;\n"
-            "u8 result @ cur_offset;"
-        )
+        source = "u8 a @ 0;\nu8 b @ 1;\nu8 cur_offset = $;\nu8 result @ cur_offset;"
         results = interp.execute_bytes(source, data)
         assert any(r["name"] == "result" for r in results)
         result_field = _field(results, "result")
@@ -396,10 +327,7 @@ class TestDollarOperator:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes(16)
-        source = (
-            "u32 first @ 0;\n"
-            "u8 pos_after_u32 @ $;"
-        )
+        source = "u32 first @ 0;\nu8 pos_after_u32 @ $;"
         results = interp.execute_bytes(source, data)
         pos_field = _field(results, "pos_after_u32")
         assert pos_field["offset"] == 4
@@ -411,11 +339,7 @@ class TestDollarOperator:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes(32)
-        source = (
-            "u8 a @ 0;\n"
-            "$ = 10;\n"
-            "u8 jumped @ $;"
-        )
+        source = "u8 a @ 0;\n$ = 10;\nu8 jumped @ $;"
         results = interp.execute_bytes(source, data)
         jumped = _field(results, "jumped")
         assert jumped["offset"] == 10
@@ -496,14 +420,7 @@ class TestTypeCasts:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes([0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08] + [0] * 8)
-        source = (
-            "struct Header {\n"
-            "    u16 sig;\n"
-            "    u16 version;\n"
-            "    u32 size;\n"
-            "};\n"
-            "Header h @ 0;"
-        )
+        source = "struct Header {\n    u16 sig;\n    u16 version;\n    u32 size;\n};\nHeader h @ 0;"
         results = interp.execute_bytes(source, data)
         h = _field(results, "h")
         assert h["size"] == 8

@@ -192,9 +192,7 @@ class TransformsMixin:
         if not param_names and node.description:
             self._transform_params_form.addRow(
                 QLabel(
-                    node.description[:DESCRIPTION_TRUNCATE_LEN]
-                    if len(node.description) > DESCRIPTION_TRUNCATE_LEN
-                    else node.description
+                    node.description[:DESCRIPTION_TRUNCATE_LEN] if len(node.description) > DESCRIPTION_TRUNCATE_LEN else node.description
                 )
             )
 
@@ -328,8 +326,7 @@ class TransformsMixin:
             QMessageBox.warning(
                 parent,
                 "Transform Truncated",
-                f"Transform output ({len(result)} bytes) exceeds input region "
-                f"({read_len} bytes). Output will be truncated to fit.",
+                f"Transform output ({len(result)} bytes) exceeds input region ({read_len} bytes). Output will be truncated to fit.",
             )
         try:
             self._document.write_bytes(cursor_offset, result[:write_len])
@@ -481,8 +478,7 @@ class TransformsMixin:
             QMessageBox.warning(
                 parent,
                 "Pipeline Truncated",
-                f"Pipeline output ({len(result)} bytes) exceeds input region "
-                f"({read_len} bytes). Output will be truncated to fit.",
+                f"Pipeline output ({len(result)} bytes) exceeds input region ({read_len} bytes). Output will be truncated to fit.",
             )
         try:
             self._document.write_bytes(cursor_offset, result[:write_len])

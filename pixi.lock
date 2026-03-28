@@ -385,6 +385,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/87/22/b76d483683216dde3d67cba61fb2444be8d5be289bf628c13fc0fd90e5f9/wheel-0.46.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/69/c358c61e7a50f290958809b3c61ebe8b3838ea3e070d7aac9814f95a0528/wrapt-2.1.2-cp313-cp313-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/6f/5d/29ff8665b129cafd147d90b86e92babee32e116e3c84447107da3e77f8fb/xenon-0.9.3-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/86/15/9bc32671e9a38b413a76d24722a2bf8784a132c043063a8f5152d390b0f9/xxhash-3.6.0-cp313-cp313-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/05/92/aed08e68de6e6a3d7c2328ce7388072cd6affc26e2917197430b646aed02/yamllint-1.38.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/81/6acd6601f61e31cfb8729d3da6d5df966f80f374b78eff83760714487338/yapf-0.43.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/cc/a0/40b0291c8b24d13daf0e26538c9f3a0d843c38c6446dd17f36335bdd5b5f/yara_python-4.5.4-cp313-cp313-win_amd64.whl
@@ -1794,115 +1795,28 @@ packages:
 - pypi: ./
   name: intellicrack
   version: 0.1.0a1
-  sha256: 2a3391bd00cb5dd2752b463c0b6faff69ef555dc4ba9655cd70eb0237e1a4942
+  sha256: fe2ef7a0f5e6066a2f66a1b9441e312a145f6cfbafc14772327a46659f2c6e65
   requires_dist:
   - psutil>=7.2.2,<8
   - keyring>=25.7.0,<26
-  - torch
-  - requests>=2.33.0
-  - nltk>=3.9.4
   - yara-python>=4.5.4,<5
-  - black
-  - pylint
-  - autopep8
-  - flake8
-  - flake8-pyproject
-  - ruff
-  - isort
-  - pycodestyle
-  - bandit
-  - blinter
-  - vulture
-  - pyupgrade
-  - pydocstyle
-  - sourcery
-  - wemake-python-styleguide
-  - darglint
-  - pydoclint
-  - pyroma
-  - yapf
-  - mccabe
-  - xenon
-  - codespell
-  - detect-secrets
-  - safety
-  - yamllint
-  - jsonlint
-  - interrogate
-  - deptry
-  - radon
-  - dead
-  - uncalled
-  - deadcode
-  - pygount
-  - basedpyright
-  - mypy
-  - mypy-extensions
-  - monkeytype
-  - ty
-  - pyannotate
-  - types-requests
-  - types-pyyaml
-  - build
-  - pyclean
-  - pre-commit
-  - pre-commit-hooks
-  - commitizen
-  - bumpversion
-  - setuptools-scm
-  - twine
-  - rope
-  - astor
-  - nodeenv
-  - pipdeptree
-  - pip-audit
-  - poetry
-  - validate-pyproject
-  - pytest
-  - pytest-cov
-  - pytest-mock
-  - pytest-asyncio
-  - pytest-xdist
-  - pytest-timeout
-  - pytest-qt
-  - pytest-benchmark
-  - pytest-html
-  - pytest-randomly
-  - pytest-sugar
-  - pytest-env
-  - pytest-instafail
-  - pytest-deadfixtures
-  - hypothesis
-  - tox
-  - nox
-  - coverage
-  - freezegun
-  - responses
-  - faker
-  - sphinx
-  - sphinx-rtd-theme
-  - sphinx-autodoc-typehints
-  - sphinx-copybutton
-  - sphinx-tabs
-  - sphinxcontrib-mermaid
-  - sphinx-autobuild
-  - pdoc3
-  - mkdocs-material
-  - pymdown-extensions
-  - myst-parser
-  - ipdb
-  - line-profiler
-  - memory-profiler
-  - py-spy
-  - snakeviz
-  - pyinstrument
-  - scalene
-  - pycallgraph2
-  - transformers
-  - accelerate
-  - bitsandbytes
-  - sentencepiece
-  - safetensors
+  - pyqt6>=6.10.2,<7
+  - pefile>=2024.8.26,<2025
+  - lief>=0.17.6,<0.18
+  - capstone
+  - keystone-engine>=0.9.2,<0.10
+  - frida>=17.8.2,<18
+  - r2pipe>=1.9.8,<2
+  - cxxfilt>=0.3.0,<0.4
+  - httpx>=0.28.1,<0.29
+  - structlog>=25.5.0,<26
+  - anthropic>=0.86.0,<0.87
+  - openai>=2.29.0,<3
+  - google-genai>=1.68.0,<2
+  - torch
+  - transformers>=5.3.0,<6
+  - ghidra-bridge>=1.0.0,<2
+  - tomli-w>=1.2.0,<2
   - black ; extra == 'dev'
   - pylint ; extra == 'dev'
   - autopep8 ; extra == 'dev'
@@ -5313,6 +5227,11 @@ packages:
   - radon>=4,<7
   - requests>=2.0,<3.0
   - pyyaml>=5.0,<7.0
+- pypi: https://files.pythonhosted.org/packages/86/15/9bc32671e9a38b413a76d24722a2bf8784a132c043063a8f5152d390b0f9/xxhash-3.6.0-cp313-cp313-win_amd64.whl
+  name: xxhash
+  version: 3.6.0
+  sha256: 757320d45d2fbcce8f30c42a6b2f47862967aea7bf458b9625b4bbe7ee390392
+  requires_python: '>=3.7'
 - conda: https://conda.anaconda.org/conda-forge/win-64/yamlfmt-0.21.0-h11686cb_0.conda
   sha256: 7363a8624cb10799d45e41ff80a30f562b7964edc83c9a7dd72380aaa02c2df5
   md5: 6459ee548fa77890df43f7f238047f88

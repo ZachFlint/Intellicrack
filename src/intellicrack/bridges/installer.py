@@ -930,9 +930,7 @@ def _find_plugin_source(plugin_dir: Path, filename: str) -> Path | None:
         plugin_dir / f"build_{arch}" / "plugins" / filename,
         plugin_dir / f"build_{arch}" / "Release" / filename,
     ]
-    return next(
-        (candidate for candidate in candidates if candidate.is_file()), None
-    )
+    return next((candidate for candidate in candidates if candidate.is_file()), None)
 
 
 def deploy_x64dbg_plugin(x64dbg_path: Path, tools_directory: Path) -> bool:

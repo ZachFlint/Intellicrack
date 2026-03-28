@@ -72,9 +72,7 @@ def _open_and_select(
 class TestCopyAsCsharpArray:
     """Tests for copy_as('csharp_array') formatting."""
 
-    def test_csharp_array_starts_with_new_byte_array(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_csharp_array_starts_with_new_byte_array(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that csharp_array output starts with 'new byte[] {'.
 
         Args:
@@ -85,9 +83,7 @@ class TestCopyAsCsharpArray:
         result: str = _run(bridge.copy_as("csharp_array"))
         assert result.startswith("new byte[] {")
 
-    def test_csharp_array_ends_with_closing_brace(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_csharp_array_ends_with_closing_brace(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that csharp_array output ends with '}'.
 
         Args:
@@ -98,9 +94,7 @@ class TestCopyAsCsharpArray:
         result: str = _run(bridge.copy_as("csharp_array"))
         assert result.endswith("}")
 
-    def test_csharp_array_contains_correct_hex_values(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_csharp_array_contains_correct_hex_values(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that csharp_array output contains the correct 0xNN tokens for each byte.
 
         Args:
@@ -117,9 +111,7 @@ class TestCopyAsCsharpArray:
 class TestCopyAsJavaArray:
     """Tests for copy_as('java_array') formatting."""
 
-    def test_java_array_starts_with_new_byte_array(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_java_array_starts_with_new_byte_array(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that java_array output starts with 'new byte[] {'.
 
         Args:
@@ -130,9 +122,7 @@ class TestCopyAsJavaArray:
         result: str = _run(bridge.copy_as("java_array"))
         assert result.startswith("new byte[] {")
 
-    def test_java_array_high_bytes_get_cast_prefix(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_java_array_high_bytes_get_cast_prefix(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that java_array casts bytes > 0x7F with a '(byte)' prefix.
 
         Args:
@@ -145,9 +135,7 @@ class TestCopyAsJavaArray:
         assert "(byte)0xFF" in result
         assert "(byte)0xDE" in result
 
-    def test_java_array_low_bytes_have_no_cast(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_java_array_low_bytes_have_no_cast(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that java_array does not cast bytes <= 0x7F.
 
         Args:
@@ -161,9 +149,7 @@ class TestCopyAsJavaArray:
         assert "(byte)0x7F" not in result
         assert "0x01" in result
 
-    def test_java_array_mixed_payload_has_cast_only_for_high_byte(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_java_array_mixed_payload_has_cast_only_for_high_byte(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that java_array only casts bytes > 0x7F in a mixed payload.
 
         Args:
@@ -181,9 +167,7 @@ class TestCopyAsJavaArray:
 class TestCopyAsJavascriptArray:
     """Tests for copy_as('javascript_array') formatting."""
 
-    def test_javascript_array_starts_with_new_uint8array(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_javascript_array_starts_with_new_uint8array(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that javascript_array output starts with 'new Uint8Array(['.
 
         Args:
@@ -194,9 +178,7 @@ class TestCopyAsJavascriptArray:
         result: str = _run(bridge.copy_as("javascript_array"))
         assert result.startswith("new Uint8Array([")
 
-    def test_javascript_array_ends_with_closing_bracket_paren(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_javascript_array_ends_with_closing_bracket_paren(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that javascript_array output ends with '])'.
 
         Args:
@@ -207,9 +189,7 @@ class TestCopyAsJavascriptArray:
         result: str = _run(bridge.copy_as("javascript_array"))
         assert result.endswith("])")
 
-    def test_javascript_array_contains_correct_hex_values(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_javascript_array_contains_correct_hex_values(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that javascript_array output contains all expected 0xNN tokens.
 
         Args:
@@ -226,9 +206,7 @@ class TestCopyAsJavascriptArray:
 class TestCopyAsNasmDb:
     """Tests for copy_as('nasm_db') formatting."""
 
-    def test_nasm_db_starts_with_db(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_nasm_db_starts_with_db(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that nasm_db output starts with 'db '.
 
         Args:
@@ -239,9 +217,7 @@ class TestCopyAsNasmDb:
         result: str = _run(bridge.copy_as("nasm_db"))
         assert result.startswith("db ")
 
-    def test_nasm_db_contains_correct_hex_values(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_nasm_db_contains_correct_hex_values(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that nasm_db output contains the expected 0xNN tokens.
 
         Args:

@@ -169,19 +169,19 @@ class PatchesMixin:
         eof_marker = b"EOF"
         offset_size = IPS32_OFFSET_SIZE if use_ips32 else IPS_OFFSET_SIZE
         try:
-            while pos + offset_size + IPS_LENGTH_FIELD_SIZE <= len(patch_bytes) and patch_bytes[pos:pos + IPS_OFFSET_SIZE] != eof_marker:
+            while pos + offset_size + IPS_LENGTH_FIELD_SIZE <= len(patch_bytes) and patch_bytes[pos : pos + IPS_OFFSET_SIZE] != eof_marker:
                 if use_ips32:
-                    (patch_offset,) = struct.unpack(">I", patch_bytes[pos:pos + IPS32_OFFSET_SIZE])
+                    (patch_offset,) = struct.unpack(">I", patch_bytes[pos : pos + IPS32_OFFSET_SIZE])
                     pos += IPS32_OFFSET_SIZE
                 else:
-                    (patch_offset,) = struct.unpack(">I", b"\x00" + patch_bytes[pos:pos + IPS_OFFSET_SIZE])
+                    (patch_offset,) = struct.unpack(">I", b"\x00" + patch_bytes[pos : pos + IPS_OFFSET_SIZE])
                     pos += IPS_OFFSET_SIZE
-                (length,) = struct.unpack(">H", patch_bytes[pos:pos + IPS_LENGTH_FIELD_SIZE])
+                (length,) = struct.unpack(">H", patch_bytes[pos : pos + IPS_LENGTH_FIELD_SIZE])
                 pos += IPS_LENGTH_FIELD_SIZE
                 if length == 0:
                     if pos + IPS_LENGTH_FIELD_SIZE > len(patch_bytes):
                         break
-                    (rle_len,) = struct.unpack(">H", patch_bytes[pos:pos + IPS_LENGTH_FIELD_SIZE])
+                    (rle_len,) = struct.unpack(">H", patch_bytes[pos : pos + IPS_LENGTH_FIELD_SIZE])
                     pos += IPS_LENGTH_FIELD_SIZE
                     rle_byte = patch_bytes[pos]
                     pos += 1
@@ -189,7 +189,7 @@ class PatchesMixin:
                 else:
                     if pos + length > len(patch_bytes):
                         break
-                    data_to_write = patch_bytes[pos:pos + length]
+                    data_to_write = patch_bytes[pos : pos + length]
                     pos += length
                 self._document.write_bytes(patch_offset, bytes(data_to_write))
                 applied += 1

@@ -21,10 +21,8 @@ from intellicrack.core.logging import get_logger
 _logger = get_logger("core.hexpat.preprocessor")
 
 _PRAGMA_ENDIAN_RE = re.compile(r"#pragma\s+endian\s+(big|little|native)")
-_PRAGMA_MIME_RE = re.compile(r'#pragma\s+MIME\s+(\S+)')
-_PRAGMA_MAGIC_RE = re.compile(
-    r"#pragma\s+magic\s+\[\s*(0x[0-9A-Fa-f]+)\s*,\s*\"([^\"]*)\"\s*\]"
-)
+_PRAGMA_MIME_RE = re.compile(r"#pragma\s+MIME\s+(\S+)")
+_PRAGMA_MAGIC_RE = re.compile(r"#pragma\s+magic\s+\[\s*(0x[0-9A-Fa-f]+)\s*,\s*\"([^\"]*)\"\s*\]")
 _PRAGMA_BASE_RE = re.compile(r"#pragma\s+base_address\s+(0x[0-9A-Fa-f]+|\d+)")
 _PRAGMA_EVAL_DEPTH_RE = re.compile(r"#pragma\s+eval_depth\s+(\d+)")
 _PRAGMA_ARRAY_LIMIT_RE = re.compile(r"#pragma\s+array_limit\s+(0x[0-9A-Fa-f]+|\d+)")
@@ -34,12 +32,10 @@ _PRAGMA_AUTHOR_RE = re.compile(r'#pragma\s+author\s+"([^"]*)"')
 _PRAGMA_DESCRIPTION_RE = re.compile(r'#pragma\s+description\s+"([^"]*)"')
 _PRAGMA_DEBUG_RE = re.compile(r"#pragma\s+debug\b")
 _MAX_INCLUDE_DEPTH = 50
-_PRAGMA_BITFIELD_ORDER_RE = re.compile(
-    r"#pragma\s+bitfield_order\s+(left_to_right|right_to_left)"
-)
+_PRAGMA_BITFIELD_ORDER_RE = re.compile(r"#pragma\s+bitfield_order\s+(left_to_right|right_to_left)")
 _PRAGMA_POINTER_SIZE_RE = re.compile(r"#pragma\s+pointer_size\s+(\d+)")
 
-_INCLUDE_ANGLE_RE = re.compile(r'#include\s+<([^>]+)>')
+_INCLUDE_ANGLE_RE = re.compile(r"#include\s+<([^>]+)>")
 _INCLUDE_QUOTE_RE = re.compile(r'#include\s+"([^"]+)"')
 _IMPORT_RE = re.compile(r"import\s+([\w.]+)\s*;")
 _DEFINE_RE = re.compile(r"#define\s+(\w+)(?:\s+(.*))?")
@@ -246,7 +242,11 @@ class HexPatPreprocessor:
             if m:
                 include_path = m.group(1)
                 resolved = self._resolve_include(
-                    include_path, file_path, is_angle=True, line=line_num, depth=depth,
+                    include_path,
+                    file_path,
+                    is_angle=True,
+                    line=line_num,
+                    depth=depth,
                 )
                 if resolved is not None:
                     output_lines.append(resolved)
@@ -256,7 +256,11 @@ class HexPatPreprocessor:
             if m:
                 include_path = m.group(1)
                 resolved = self._resolve_include(
-                    include_path, file_path, is_angle=False, line=line_num, depth=depth,
+                    include_path,
+                    file_path,
+                    is_angle=False,
+                    line=line_num,
+                    depth=depth,
                 )
                 if resolved is not None:
                     output_lines.append(resolved)
@@ -266,7 +270,11 @@ class HexPatPreprocessor:
             if m:
                 module_path = m.group(1).replace(".", "/") + ".pat"
                 resolved = self._resolve_include(
-                    module_path, file_path, is_angle=True, line=line_num, depth=depth,
+                    module_path,
+                    file_path,
+                    is_angle=True,
+                    line=line_num,
+                    depth=depth,
                 )
                 if resolved is not None:
                     output_lines.append(resolved)

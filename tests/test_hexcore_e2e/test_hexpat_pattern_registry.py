@@ -168,7 +168,7 @@ class TestPatternMetadata:
         pattern = registry.list_patterns()[0]
         assert len(pattern.magic_bytes) == 1
         assert pattern.magic_bytes[0][0] == 0
-        assert pattern.magic_bytes[0][1] == b"\x7F\x45\x4C\x46"
+        assert pattern.magic_bytes[0][1] == b"\x7f\x45\x4c\x46"
 
     def test_category_from_parent_directory(self, tmp_path: Path) -> None:
         """PatternMetadata.category is derived from the parent directory name.
@@ -220,7 +220,7 @@ class TestPatternAutoDetect:
             "elf_match",
             '#pragma magic [0x0, "7F454C46"]\nu32 magic @ 0;',
         )
-        data = b"\x7FELF" + bytes(60)
+        data = b"\x7fELF" + bytes(60)
         reader = DataReader.from_bytes(data)
         registry = PatternRegistry(pattern_dirs=[tmp_path])
         matches = registry.match_file(reader)
@@ -238,7 +238,7 @@ class TestPatternAutoDetect:
             "pe_match",
             '#pragma magic [0x0, "4D5A"]\nu32 magic @ 0;',
         )
-        data = b"\x7FELF" + bytes(60)
+        data = b"\x7fELF" + bytes(60)
         reader = DataReader.from_bytes(data)
         registry = PatternRegistry(pattern_dirs=[tmp_path])
         matches = registry.match_file(reader)

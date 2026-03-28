@@ -30,14 +30,7 @@ class TestWhileLoops:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes(range(16))
-        source = (
-            "u8 count = 4;\n"
-            "u8 i = 0;\n"
-            "while (i < count) {\n"
-            "    u8 byte @ i;\n"
-            "    i = i + 1;\n"
-            "}"
-        )
+        source = "u8 count = 4;\nu8 i = 0;\nwhile (i < count) {\n    u8 byte @ i;\n    i = i + 1;\n}"
         results = interp.execute_bytes(source, data)
         assert len(results) == 4
 
@@ -48,13 +41,7 @@ class TestWhileLoops:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = b"\x01\x02\x03\x00\x05\x06"
-        source = (
-            "u8 idx = 0;\n"
-            "while (read_unsigned(idx, 1) != 0) {\n"
-            "    u8 byte @ idx;\n"
-            "    idx = idx + 1;\n"
-            "}"
-        )
+        source = "u8 idx = 0;\nwhile (read_unsigned(idx, 1) != 0) {\n    u8 byte @ idx;\n    idx = idx + 1;\n}"
         results = interp.execute_bytes(source, data)
         assert len(results) == 3
 
@@ -80,11 +67,7 @@ class TestForLoops:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes(range(8))
-        source = (
-            "for (u8 i = 0; i < 5; i = i + 1) {\n"
-            "    u8 elem @ i;\n"
-            "}"
-        )
+        source = "for (u8 i = 0; i < 5; i = i + 1) {\n    u8 elem @ i;\n}"
         results = interp.execute_bytes(source, data)
         assert len(results) == 5
 
@@ -95,11 +78,7 @@ class TestForLoops:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes([10, 20, 30, 40])
-        source = (
-            "for (u8 i = 0; i < 4; i = i + 1) {\n"
-            "    u8 val @ i;\n"
-            "}"
-        )
+        source = "for (u8 i = 0; i < 4; i = i + 1) {\n    u8 val @ i;\n}"
         results = interp.execute_bytes(source, data)
         assert len(results) == 4
         values = [int(r["display_value"], 16) for r in results]
@@ -127,13 +106,7 @@ class TestMatchStatement:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = b"\x01" + bytes(15)
-        source = (
-            "u8 tag @ 0;\n"
-            "match (tag) {\n"
-            "    1: { u8 field_a @ 1; }\n"
-            "    2: { u8 field_b @ 1; }\n"
-            "}"
-        )
+        source = "u8 tag @ 0;\nmatch (tag) {\n    1: { u8 field_a @ 1; }\n    2: { u8 field_b @ 1; }\n}"
         results = interp.execute_bytes(source, data)
         named = [r["name"] for r in results]
         assert "field_a" in named
@@ -146,13 +119,7 @@ class TestMatchStatement:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = b"\x02" + bytes(15)
-        source = (
-            "u8 tag @ 0;\n"
-            "match (tag) {\n"
-            "    1: { u8 field_a @ 1; }\n"
-            "    2: { u8 field_b @ 1; }\n"
-            "}"
-        )
+        source = "u8 tag @ 0;\nmatch (tag) {\n    1: { u8 field_a @ 1; }\n    2: { u8 field_b @ 1; }\n}"
         results = interp.execute_bytes(source, data)
         named = [r["name"] for r in results]
         assert "field_b" in named
@@ -164,35 +131,21 @@ class TestMatchStatement:
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
-        data = b"\xFF" + bytes(15)
-        source = (
-            "u8 tag @ 0;\n"
-            "match (tag) {\n"
-            "    1: { u8 known @ 1; }\n"
-            "    _: { u8 unknown @ 1; }\n"
-            "}"
-        )
+        data = b"\xff" + bytes(15)
+        source = "u8 tag @ 0;\nmatch (tag) {\n    1: { u8 known @ 1; }\n    _: { u8 unknown @ 1; }\n}"
         results = interp.execute_bytes(source, data)
         named = [r["name"] for r in results]
         assert "unknown" in named
         assert "known" not in named
 
-    def test_match_no_arm_matches_produces_no_extra_fields(
-        self, interp: HexPatInterpreter
-    ) -> None:
+    def test_match_no_arm_matches_produces_no_extra_fields(self, interp: HexPatInterpreter) -> None:
         """Match with no matching arm and no wildcard produces only the subject field.
 
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = b"\x09" + bytes(15)
-        source = (
-            "u8 tag @ 0;\n"
-            "match (tag) {\n"
-            "    1: { u8 one @ 1; }\n"
-            "    2: { u8 two @ 1; }\n"
-            "}"
-        )
+        source = "u8 tag @ 0;\nmatch (tag) {\n    1: { u8 one @ 1; }\n    2: { u8 two @ 1; }\n}"
         results = interp.execute_bytes(source, data)
         assert len(results) == 1
         assert results[0]["name"] == "tag"
@@ -208,14 +161,7 @@ class TestTryCatch:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes(4)
-        source = (
-            "u8 caught = 0;\n"
-            "try {\n"
-            "    u32 oob @ 200;\n"
-            "} catch {\n"
-            "    u8 fallback @ 0;\n"
-            "}"
-        )
+        source = "u8 caught = 0;\ntry {\n    u32 oob @ 200;\n} catch {\n    u8 fallback @ 0;\n}"
         results = interp.execute_bytes(source, data)
         named = [r["name"] for r in results]
         assert "fallback" in named
@@ -227,13 +173,7 @@ class TestTryCatch:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes(8)
-        source = (
-            "try {\n"
-            "    u8 success @ 0;\n"
-            "} catch {\n"
-            "    u8 catch_field @ 1;\n"
-            "}"
-        )
+        source = "try {\n    u8 success @ 0;\n} catch {\n    u8 catch_field @ 1;\n}"
         results = interp.execute_bytes(source, data)
         named = [r["name"] for r in results]
         assert "success" in named
@@ -250,16 +190,7 @@ class TestBreakContinue:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes(range(16))
-        source = (
-            "u8 i = 0;\n"
-            "while (i < 10) {\n"
-            "    if (i == 3) {\n"
-            "        break;\n"
-            "    }\n"
-            "    u8 val @ i;\n"
-            "    i = i + 1;\n"
-            "}"
-        )
+        source = "u8 i = 0;\nwhile (i < 10) {\n    if (i == 3) {\n        break;\n    }\n    u8 val @ i;\n    i = i + 1;\n}"
         results = interp.execute_bytes(source, data)
         assert len(results) == 3
 
@@ -337,40 +268,21 @@ class TestNestedControl:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes([1, 2, 3, 4, 5, 0, 0, 0])
-        source = (
-            "u32 total = 0;\n"
-            "u8 i = 0;\n"
-            "while (i < 5) {\n"
-            "    total = total + read_unsigned(i, 1);\n"
-            "    i = i + 1;\n"
-            "}"
-        )
+        source = "u32 total = 0;\nu8 i = 0;\nwhile (i < 5) {\n    total = total + read_unsigned(i, 1);\n    i = i + 1;\n}"
         interp.execute_bytes(source, data)
 
-    def test_try_inside_for_loop_recovers_per_iteration(
-        self, interp: HexPatInterpreter
-    ) -> None:
+    def test_try_inside_for_loop_recovers_per_iteration(self, interp: HexPatInterpreter) -> None:
         """try/catch inside a for loop recovers from each failed iteration independently.
 
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes(4)
-        source = (
-            "for (u8 i = 0; i < 4; i = i + 1) {\n"
-            "    try {\n"
-            "        u32 big @ i;\n"
-            "    } catch {\n"
-            "        u8 small @ i;\n"
-            "    }\n"
-            "}"
-        )
+        source = "for (u8 i = 0; i < 4; i = i + 1) {\n    try {\n        u32 big @ i;\n    } catch {\n        u8 small @ i;\n    }\n}"
         results = interp.execute_bytes(source, data)
         assert len(results) >= 1
 
-    def test_match_inside_while_selects_branch_each_iteration(
-        self, interp: HexPatInterpreter
-    ) -> None:
+    def test_match_inside_while_selects_branch_each_iteration(self, interp: HexPatInterpreter) -> None:
         """Match inside while loop selects the correct branch per iteration.
 
         Args:

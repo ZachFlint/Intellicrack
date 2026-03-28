@@ -739,9 +739,7 @@ class HexEditorBridge(ToolBridgeBase):
                         ToolParameter(name="min_val", type="integer", description="Minimum value (inclusive)."),
                         ToolParameter(name="max_val", type="integer", description="Maximum value (inclusive)."),
                         ToolParameter(name="size", type="integer", description="Byte size: 1, 2, 4, or 8.", required=False, default=4),
-                        ToolParameter(
-                            name="value_type", type="string", description="Type: uint, int.", required=False, default="uint"
-                        ),
+                        ToolParameter(name="value_type", type="string", description="Type: uint, int.", required=False, default="uint"),
                         ToolParameter(
                             name="endianness", type="string", description="Byte order: little, big.", required=False, default="little"
                         ),
@@ -2889,8 +2887,13 @@ class HexEditorBridge(ToolBridgeBase):
 
         if hasattr(self._document, "search_numeric_range"):
             results = self._document.search_numeric_range(
-                min_val, max_val, size, value_type == "int",
-                endianness == "big", alignment, max_results,
+                min_val,
+                max_val,
+                size,
+                value_type == "int",
+                endianness == "big",
+                alignment,
+                max_results,
             )
             _logger.debug("search_numeric_range_completed", matches=len(results))
             return [{"offset": r[0], "length": r[1]} for r in results]
@@ -3077,10 +3080,7 @@ class HexEditorBridge(ToolBridgeBase):
 
         regions: list[tuple[int, int, int, int]] = _hexcore_mod.HexDocument.list_process_memory_regions(pid)
         _logger.debug("process_regions_listed", pid=pid, count=len(regions), bridge=self.name)
-        return [
-            {"base_address": r[0], "size": r[1], "protection": r[2], "state": r[3]}
-            for r in regions
-        ]
+        return [{"base_address": r[0], "size": r[1], "protection": r[2], "state": r[3]} for r in regions]
 
     async def open_process_memory(self, pid: int, address: int, size: int) -> dict[str, Any]:
         """Open a process memory region as a hex document (Windows only).

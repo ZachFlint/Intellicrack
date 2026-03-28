@@ -144,10 +144,7 @@ class TestBinaryExpressions:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes([5, 1, 2])
-        source = (
-            "u8 cond = (5 == 5);\n"
-            "if (cond) { u8 yes @ 0; }"
-        )
+        source = "u8 cond = (5 == 5);\nif (cond) { u8 yes @ 0; }"
         results = interp.execute_bytes(source, data)
         named = [r["name"] for r in results]
         assert "yes" in named
@@ -159,10 +156,7 @@ class TestBinaryExpressions:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes([5, 1, 2])
-        source = (
-            "u8 cond = (5 != 4);\n"
-            "if (cond) { u8 yes @ 0; }"
-        )
+        source = "u8 cond = (5 != 4);\nif (cond) { u8 yes @ 0; }"
         results = interp.execute_bytes(source, data)
         named = [r["name"] for r in results]
         assert "yes" in named
@@ -265,10 +259,7 @@ class TestUnaryExpressions:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes(4)
-        source = (
-            "u32 val = ~0;\n"
-            "if ((~0 & 0xFFFFFFFF) == 0xFFFFFFFF) { u8 ok @ 0; }"
-        )
+        source = "u32 val = ~0;\nif ((~0 & 0xFFFFFFFF) == 0xFFFFFFFF) { u8 ok @ 0; }"
         results = interp.execute_bytes(source, data)
         assert any(r["name"] == "ok" for r in results)
 
@@ -305,10 +296,7 @@ class TestTernaryExpression:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes([1, 0, 0, 0, 0, 0, 0, 0])
-        source = (
-            "u8 flag = read_unsigned(0, 1);\n"
-            "u8 result @ (flag ? 1 : 2);"
-        )
+        source = "u8 flag = read_unsigned(0, 1);\nu8 result @ (flag ? 1 : 2);"
         results = interp.execute_bytes(source, data)
         assert results[0]["offset"] == 1
 
@@ -323,12 +311,7 @@ class TestVariableScoping:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes(8)
-        source = (
-            "u8 base = 2;\n"
-            "for (u8 i = 0; i < 3; i = i + 1) {\n"
-            "    u8 val @ (base + i);\n"
-            "}"
-        )
+        source = "u8 base = 2;\nfor (u8 i = 0; i < 3; i = i + 1) {\n    u8 val @ (base + i);\n}"
         results = interp.execute_bytes(source, data)
         assert len(results) == 3
         assert results[0]["offset"] == 2
@@ -341,12 +324,7 @@ class TestVariableScoping:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes(8)
-        source = (
-            "for (u8 loop_var = 0; loop_var < 2; loop_var = loop_var + 1) {\n"
-            "    u8 val @ loop_var;\n"
-            "}\n"
-            "u8 after @ 0;"
-        )
+        source = "for (u8 loop_var = 0; loop_var < 2; loop_var = loop_var + 1) {\n    u8 val @ loop_var;\n}\nu8 after @ 0;"
         results = interp.execute_bytes(source, data)
         assert any(r["name"] == "after" for r in results)
 
@@ -361,12 +339,7 @@ class TestFunctionDefinitions:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes(16)
-        source = (
-            "fn double(u8 x) {\n"
-            "    return x * 2;\n"
-            "}\n"
-            "u8 result @ double(4);"
-        )
+        source = "fn double(u8 x) {\n    return x * 2;\n}\nu8 result @ double(4);"
         results = interp.execute_bytes(source, data)
         assert results[0]["offset"] == 8
 
@@ -377,12 +350,7 @@ class TestFunctionDefinitions:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes(16)
-        source = (
-            "fn add(u8 a, u8 b) {\n"
-            "    return a + b;\n"
-            "}\n"
-            "u8 result @ add(3, 4);"
-        )
+        source = "fn add(u8 a, u8 b) {\n    return a + b;\n}\nu8 result @ add(3, 4);"
         results = interp.execute_bytes(source, data)
         assert results[0]["offset"] == 7
 
@@ -393,12 +361,7 @@ class TestFunctionDefinitions:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes(8)
-        source = (
-            "fn side_effect(u8 x) {\n"
-            "    u8 placed @ x;\n"
-            "}\n"
-            "side_effect(2);"
-        )
+        source = "fn side_effect(u8 x) {\n    u8 placed @ x;\n}\nside_effect(2);"
         interp.execute_bytes(source, data)
 
 
@@ -412,11 +375,7 @@ class TestTypeCoercion:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = struct.pack("<I", 300) + bytes(12)
-        source = (
-            "u32 wide @ 0;\n"
-            "u8 narrow = 100;\n"
-            "u8 check @ (narrow + 0);"
-        )
+        source = "u32 wide @ 0;\nu8 narrow = 100;\nu8 check @ (narrow + 0);"
         results = interp.execute_bytes(source, data)
         assert any(r["name"] == "check" for r in results)
 
@@ -438,10 +397,7 @@ class TestTypeCoercion:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes(16)
-        source = (
-            "float f = (float)(5);\n"
-            "u8 ok @ 0;"
-        )
+        source = "float f = (float)(5);\nu8 ok @ 0;"
         results = interp.execute_bytes(source, data)
         assert any(r["name"] == "ok" for r in results)
 

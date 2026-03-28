@@ -16,7 +16,7 @@ import base64
 import math
 import struct
 from dataclasses import dataclass
-from typing import Any, Literal, cast, override
+from typing import Any, ClassVar, Literal, cast, override
 
 from PyQt6.QtCore import QPoint, QRect, Qt, pyqtSignal
 from PyQt6.QtGui import (
@@ -35,6 +35,7 @@ from PyQt6.QtWidgets import QAbstractScrollArea, QApplication, QMenu, QWidget
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.resources.font_manager import FontManager
+from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 _logger = get_logger("ui.panels.hex_editor_widget")
@@ -48,11 +49,60 @@ _PRINTABLE_MIN = 0x20
 _PRINTABLE_MAX = 0x7E
 _MINIMAP_WIDTH = 32
 
-_ENTROPY_LOW_COLOR = QColor("#4CAF50")
-_ENTROPY_MED_COLOR = QColor("#FFC107")
-_ENTROPY_HIGH_COLOR = QColor("#F44336")
 _ENTROPY_LOW_THRESH = 3.5
 _ENTROPY_HIGH_THRESH = 6.5
+
+_ERR_UNKNOWN_MODE = "Unknown display mode"
+
+_SIGNED_BYTE_THRESHOLD = 128
+_MIN_RGB_BYTES = 3
+_MIN_RGBA_BYTES = 4
+_ASCII_MAX = 0x7F
+
+
+def _get_hex_editor_colors() -> dict[str, QColor]:
+    """Get theme-aware colors for hex editor rendering.
+
+    Returns:
+        dict[str, QColor]: Mapping of semantic color names to QColor values.
+    """
+    if ThemeManager.get_instance().is_dark_theme():
+        return {
+            "minimap_bg": QColor(25, 25, 25),
+            "minimap_indicator": QColor(100, 150, 255, 100),
+            "minimap_indicator_border": QColor(150, 190, 255),
+            "entropy_low": QColor("#4CAF50"),
+            "entropy_mid": QColor("#FFC107"),
+            "entropy_high": QColor("#F44336"),
+            "editor_bg": QColor(30, 30, 30),
+            "offset_text": QColor(128, 128, 128),
+            "separator": QColor(60, 60, 60),
+            "selection_bg": QColor(100, 149, 237),
+            "hex_normal": QColor(212, 212, 212),
+            "hex_modified": QColor(255, 80, 80),
+            "hex_zero": QColor(80, 80, 80),
+            "ascii_printable": QColor(180, 200, 180),
+            "ascii_nonprintable": QColor(80, 80, 80),
+            "cursor_text": QColor(255, 255, 255),
+        }
+    return {
+        "minimap_bg": QColor(245, 245, 245),
+        "minimap_indicator": QColor(50, 100, 220, 100),
+        "minimap_indicator_border": QColor(50, 100, 220),
+        "entropy_low": QColor("#2E7D32"),
+        "entropy_mid": QColor("#EF6C00"),
+        "entropy_high": QColor("#C62828"),
+        "editor_bg": QColor(255, 255, 255),
+        "offset_text": QColor(117, 117, 117),
+        "separator": QColor(224, 224, 224),
+        "selection_bg": QColor(0, 120, 212, 80),
+        "hex_normal": QColor(26, 26, 26),
+        "hex_modified": QColor(198, 40, 40),
+        "hex_zero": QColor(180, 180, 180),
+        "ascii_printable": QColor(46, 125, 50),
+        "ascii_nonprintable": QColor(180, 180, 180),
+        "cursor_text": QColor(0, 0, 0),
+    }
 
 
 @dataclass
@@ -98,14 +148,20 @@ class EntropyMiniMap(QWidget):
         self._total_size: int = 0
         self._viewport_start: int = 0
         self._viewport_end: int = 0
+        self._colors = _get_hex_editor_colors()
         self.setFixedWidth(_MINIMAP_WIDTH)
-        self.setToolTip("Entropy minimap – click to navigate")
+        self.setToolTip("Entropy minimap - click to navigate")
+
+    def refresh_colors(self) -> None:
+        """Refresh cached theme colors after theme change."""
+        self._colors = _get_hex_editor_colors()
+        self.update()
 
     def set_entropy_data(self, values: list[float], total_size: int) -> None:
         """Load entropy values for a file.
 
         Args:
-            values: List of per-chunk Shannon entropy values (0.0–8.0).
+            values: List of per-chunk Shannon entropy values (0.0-8.0).
             total_size: Total file size in bytes.
         """
         self._entropy_values = values
@@ -143,8 +199,9 @@ class EntropyMiniMap(QWidget):
         Args:
             painter: Active QPainter instance.
         """
+        colors = self._colors
         rect = self.rect()
-        painter.fillRect(rect, QColor(25, 25, 25))
+        painter.fillRect(rect, colors["minimap_bg"])
 
         if not self._entropy_values or self._total_size == 0:
             return
@@ -152,6 +209,9 @@ class EntropyMiniMap(QWidget):
         h = rect.height()
         w = rect.width()
         count = len(self._entropy_values)
+        entropy_low = colors["entropy_low"]
+        entropy_mid = colors["entropy_mid"]
+        entropy_high = colors["entropy_high"]
 
         for i, entropy in enumerate(self._entropy_values):
             y0 = int(i * h / count)
@@ -159,18 +219,18 @@ class EntropyMiniMap(QWidget):
             segment_h = max(1, y1 - y0)
 
             if entropy < _ENTROPY_LOW_THRESH:
-                color = _ENTROPY_LOW_COLOR
+                color = entropy_low
             elif entropy < _ENTROPY_HIGH_THRESH:
                 t = (entropy - _ENTROPY_LOW_THRESH) / (_ENTROPY_HIGH_THRESH - _ENTROPY_LOW_THRESH)
-                r = int(_ENTROPY_LOW_COLOR.red() + t * (_ENTROPY_MED_COLOR.red() - _ENTROPY_LOW_COLOR.red()))
-                g = int(_ENTROPY_LOW_COLOR.green() + t * (_ENTROPY_MED_COLOR.green() - _ENTROPY_LOW_COLOR.green()))
-                b = int(_ENTROPY_LOW_COLOR.blue() + t * (_ENTROPY_MED_COLOR.blue() - _ENTROPY_LOW_COLOR.blue()))
+                r = int(entropy_low.red() + t * (entropy_mid.red() - entropy_low.red()))
+                g = int(entropy_low.green() + t * (entropy_mid.green() - entropy_low.green()))
+                b = int(entropy_low.blue() + t * (entropy_mid.blue() - entropy_low.blue()))
                 color = QColor(r, g, b)
             else:
                 t = min(1.0, (entropy - _ENTROPY_HIGH_THRESH) / (8.0 - _ENTROPY_HIGH_THRESH))
-                r = int(_ENTROPY_MED_COLOR.red() + t * (_ENTROPY_HIGH_COLOR.red() - _ENTROPY_MED_COLOR.red()))
-                g = int(_ENTROPY_MED_COLOR.green() + t * (_ENTROPY_HIGH_COLOR.green() - _ENTROPY_MED_COLOR.green()))
-                b = int(_ENTROPY_MED_COLOR.blue() + t * (_ENTROPY_HIGH_COLOR.blue() - _ENTROPY_MED_COLOR.blue()))
+                r = int(entropy_mid.red() + t * (entropy_high.red() - entropy_mid.red()))
+                g = int(entropy_mid.green() + t * (entropy_high.green() - entropy_mid.green()))
+                b = int(entropy_mid.blue() + t * (entropy_high.blue() - entropy_mid.blue()))
                 color = QColor(r, g, b)
 
             painter.fillRect(QRect(0, y0, w, segment_h), color)
@@ -179,9 +239,8 @@ class EntropyMiniMap(QWidget):
             vp_y0 = int(self._viewport_start * h / self._total_size)
             vp_y1 = int(self._viewport_end * h / self._total_size)
             vp_h = max(2, vp_y1 - vp_y0)
-            indicator = QColor(100, 150, 255, 100)
-            painter.fillRect(QRect(0, vp_y0, w, vp_h), indicator)
-            painter.setPen(QPen(QColor(150, 190, 255)))
+            painter.fillRect(QRect(0, vp_y0, w, vp_h), colors["minimap_indicator"])
+            painter.setPen(QPen(colors["minimap_indicator_border"]))
             painter.drawRect(0, vp_y0, w - 1, vp_h - 1)
 
     @override
@@ -240,7 +299,7 @@ class HexEditorWidget(QAbstractScrollArea):
         edit_mode_changed: Signal emitted when the edit mode changes.
     """
 
-    DISPLAY_MODES: list[str] = list(_MODE_PARAMS.keys())
+    DISPLAY_MODES: ClassVar[list[str]] = list(_MODE_PARAMS.keys())
 
     cursor_moved: pyqtSignal = pyqtSignal(int)
     selection_changed: pyqtSignal = pyqtSignal(int, int)
@@ -268,6 +327,7 @@ class HexEditorWidget(QAbstractScrollArea):
         self._highlight_rules: list[HighlightRule] = []
 
         self._setup_font()
+        self._colors = _get_hex_editor_colors()
         self._calculate_layout()
 
         focus_policy = getattr(Qt.FocusPolicy, "StrongFocus", Qt.FocusPolicy(11))
@@ -295,6 +355,12 @@ class HexEditorWidget(QAbstractScrollArea):
         self._char_height: int = metrics.height()
         self._line_height: int = self._char_height + 2
         self._font_ascent: int = metrics.ascent()
+
+    def refresh_colors(self) -> None:
+        """Refresh cached theme colors after theme change."""
+        self._colors = _get_hex_editor_colors()
+        self._minimap.refresh_colors()
+        self._update_viewport()
 
     def _get_mode_params(self) -> tuple[int, int]:
         """Return (group_size, chars_per_group) for the current display mode.
@@ -433,10 +499,10 @@ class HexEditorWidget(QAbstractScrollArea):
             painter: Active QPainter instance.
             clip_rect: Clipping rectangle for the viewport.
         """
-        painter.fillRect(clip_rect, QColor(30, 30, 30))
+        painter.fillRect(clip_rect, self._colors["editor_bg"])
 
         if self._document is None:
-            painter.setPen(QColor(128, 128, 128))
+            painter.setPen(self._colors["offset_text"])
             painter.drawText(50, 50, "No file loaded")
             return
 
@@ -455,7 +521,7 @@ class HexEditorWidget(QAbstractScrollArea):
             painter: Active QPainter instance.
             vp_height: Viewport height in pixels.
         """
-        painter.setPen(QPen(QColor(60, 60, 60)))
+        painter.setPen(QPen(self._colors["separator"]))
         sep1_x = self._hex_col_x - _GAP_PX // 2
         sep2_x = self._ascii_col_x - _GAP_PX // 2
         painter.drawLine(sep1_x, 0, sep1_x, vp_height)
@@ -484,7 +550,7 @@ class HexEditorWidget(QAbstractScrollArea):
             bytes_in_row = min(self._bytes_per_row, doc_len - row_offset)
             row_data = self._read_row_data(read_fn, row_offset, bytes_in_row)
 
-            painter.setPen(QPen(QColor(100, 149, 237)))
+            painter.setPen(QPen(self._colors["selection_bg"]))
             painter.drawText(self._offset_col_x, y, f"0x{row_offset:08X}")
 
             groups_per_row = max(1, _BYTES_PER_ROW // group_size)
@@ -673,21 +739,21 @@ class HexEditorWidget(QAbstractScrollArea):
         if any_selected:
             painter.fillRect(
                 QRect(hex_x - 1, row_idx * self._line_height, cell_w + 2, self._line_height),
-                QColor(51, 153, 255),
+                self._colors["selection_bg"],
             )
-            painter.setPen(QPen(QColor(255, 255, 255)))
+            painter.setPen(QPen(self._colors["cursor_text"]))
         elif any_modified:
-            painter.setPen(QPen(QColor(255, 80, 80)))
+            painter.setPen(QPen(self._colors["hex_modified"]))
         elif all(b == 0 for b in group_bytes[:actual_size]):
-            painter.setPen(QPen(QColor(80, 80, 80)))
+            painter.setPen(QPen(self._colors["hex_zero"]))
         else:
-            painter.setPen(QPen(QColor(212, 212, 212)))
+            painter.setPen(QPen(self._colors["hex_normal"]))
 
         text = self._format_group(group_bytes, group_size)
         painter.drawText(hex_x, y, text)
 
         if is_cursor and self._active_column == "hex" and self.hasFocus():
-            painter.setPen(QPen(QColor(255, 255, 255)))
+            painter.setPen(QPen(self._colors["cursor_text"]))
             nibble_x = hex_x + self._nibble_index * self._char_width
             painter.drawRect(nibble_x - 1, row_idx * self._line_height, self._char_width, self._line_height - 1)
 
@@ -777,20 +843,20 @@ class HexEditorWidget(QAbstractScrollArea):
         if is_selected:
             painter.fillRect(
                 QRect(ascii_x - 1, row_idx * self._line_height, self._char_width + 1, self._line_height),
-                QColor(51, 153, 255),
+                self._colors["selection_bg"],
             )
-            painter.setPen(QPen(QColor(255, 255, 255)))
+            painter.setPen(QPen(self._colors["cursor_text"]))
         elif byte_offset in self._modified_offsets:
-            painter.setPen(QPen(QColor(255, 80, 80)))
+            painter.setPen(QPen(self._colors["hex_modified"]))
         elif byte_val == 0:
-            painter.setPen(QPen(QColor(80, 80, 80)))
+            painter.setPen(QPen(self._colors["ascii_nonprintable"]))
         else:
-            painter.setPen(QPen(QColor(180, 200, 180)))
+            painter.setPen(QPen(self._colors["ascii_printable"]))
 
         painter.drawText(ascii_x, y, ascii_ch)
 
         if byte_offset == self._cursor_offset and self._active_column == "ascii" and self.hasFocus():
-            painter.setPen(QPen(QColor(255, 255, 255)))
+            painter.setPen(QPen(self._colors["cursor_text"]))
             painter.drawRect(ascii_x - 1, row_idx * self._line_height, self._char_width, self._line_height - 1)
 
     def _paint_highlight_overlays(self, painter: QPainter, first_row: int, visible_rows: int) -> None:
@@ -973,11 +1039,7 @@ class HexEditorWidget(QAbstractScrollArea):
             if self._active_column == "hex":
                 if text in "0123456789abcdefABCDEF":
                     self._handle_hex_input(text)
-            elif (
-                self._active_column == "ascii"
-                and len(text) == 1
-                and _PRINTABLE_MIN <= ord(text) <= _PRINTABLE_MAX
-            ):
+            elif self._active_column == "ascii" and len(text) == 1 and _PRINTABLE_MIN <= ord(text) <= _PRINTABLE_MAX:
                 self._handle_ascii_input(text)
 
     def _move_cursor(self, new_offset: int, extend_selection: bool = False) -> None:
