@@ -844,3 +844,9 @@ QTabWidget#analysis_tabs > QTabBar::tab:selected {
 QTabWidget#analysis_tabs > QTabBar::tab:hover:!selected {
     background-color: #e0e0e0;
 }
+
+/* Hint Labels */
+QLabel#hint_label {
+    color: #808080;
+    font-size: 11px;
+}

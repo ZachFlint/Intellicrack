@@ -18,7 +18,7 @@ import re
 import struct
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, override
+from typing import Any, Final, override
 
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPaintEvent, QPen
@@ -43,6 +43,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 _logger = get_logger("ui.panels.hex_tools_panel")
@@ -223,12 +224,46 @@ _F32_MAN_BITS = 23
 _F64_EXP_BITS = 11
 _F64_MAN_BITS = 52
 
-_COLOR_SIGN = QColor(200, 60, 60)
-_COLOR_EXP = QColor(60, 100, 200)
-_COLOR_MAN = QColor(60, 160, 80)
-_COLOR_TEXT_LIGHT = QColor(255, 255, 255)
-_BIT_BOX_WIDTH = 14
-_BIT_BOX_HEIGHT = 24
+_BIT_BOX_WIDTH: Final[int] = 14
+_BIT_BOX_HEIGHT: Final[int] = 24
+_PANEL_MARGIN: Final[int] = 6
+_TAB_MARGIN: Final[int] = 4
+_SPACING_SMALL: Final[int] = 6
+_SPACING_MEDIUM: Final[int] = 8
+_SWATCH_SIZE: Final[int] = 16
+_MIN_VIS_HEIGHT: Final[int] = 40
+
+
+def _get_ieee754_colors() -> dict[str, QColor]:
+    """Get theme-aware colors for IEEE 754 bit visualization.
+
+    Returns:
+        dict[str, QColor]: Mapping of bit-field names to QColor values.
+    """
+    if ThemeManager.get_instance().is_dark_theme():
+        return {
+            "sign": QColor(200, 60, 60),
+            "exponent": QColor(60, 100, 200),
+            "mantissa": QColor(60, 160, 80),
+            "text": QColor(255, 255, 255),
+        }
+    return {
+        "sign": QColor(198, 40, 40),
+        "exponent": QColor(21, 101, 192),
+        "mantissa": QColor(46, 125, 50),
+        "text": QColor(26, 26, 26),
+    }
+
+
+def _get_swatch_border_color() -> str:
+    """Get theme-aware border color for color swatches.
+
+    Returns:
+        str: CSS color string for swatch borders.
+    """
+    if ThemeManager.get_instance().is_dark_theme():
+        return "#555"
+    return "#ccc"
 
 
 def _set_hint(widget: QWidget, text: str) -> None:
@@ -260,7 +295,7 @@ class _IEEE754BitWidget(QWidget):
         super().__init__(parent)
         self._bits: int = 0
         self._is_double: bool = False
-        self.setMinimumHeight(40)
+        self.setMinimumHeight(_MIN_VIS_HEIGHT)
 
     def set_bits(self, bits: int, is_double: bool) -> None:
         """Update the bit pattern and trigger a repaint.
@@ -295,6 +330,12 @@ class _IEEE754BitWidget(QWidget):
         bit_count = 64 if is_double else 32
         man_bits = _F64_MAN_BITS if is_double else _F32_MAN_BITS
 
+        colors = _get_ieee754_colors()
+        sign_color = colors["sign"]
+        exp_color = colors["exponent"]
+        man_color = colors["mantissa"]
+        text_color = colors["text"]
+
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         painter.setFont(QFont("Courier New", 7))
@@ -307,15 +348,15 @@ class _IEEE754BitWidget(QWidget):
             bit_val = (self._bits >> bit_index) & 1
 
             if bit_index == bit_count - 1:
-                color = _COLOR_SIGN
+                color = sign_color
             elif bit_index >= man_bits:
-                color = _COLOR_EXP
+                color = exp_color
             else:
-                color = _COLOR_MAN
+                color = man_color
 
             rect_x = x_offset + i * _BIT_BOX_WIDTH
             painter.fillRect(rect_x, y_offset, _BIT_BOX_WIDTH - 1, _BIT_BOX_HEIGHT, QBrush(color))
-            painter.setPen(QPen(_COLOR_TEXT_LIGHT))
+            painter.setPen(QPen(text_color))
             painter.drawText(
                 rect_x,
                 y_offset,
@@ -377,7 +418,7 @@ class HexToolsPanel(QWidget):
         self._combine_output_input: QLineEdit
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setContentsMargins(_TAB_MARGIN, _TAB_MARGIN, _TAB_MARGIN, _TAB_MARGIN)
         layout.setSpacing(0)
 
         tabs = QTabWidget(self)
@@ -443,8 +484,8 @@ class HexToolsPanel(QWidget):
         """
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(6)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_SPACING_SMALL)
 
         input_row = QHBoxLayout()
         self._demangle_input = QLineEdit()
@@ -457,7 +498,7 @@ class HexToolsPanel(QWidget):
         layout.addLayout(input_row)
 
         hint = QLabel("Supports: Itanium/GCC (cxxfilt), MSVC (?name@scope@@), Rust (_ZN / _R)")
-        hint.setStyleSheet("color: gray; font-size: 11px;")
+        hint.setObjectName("hint_label")
         layout.addWidget(hint)
 
         self._demangle_output = QPlainTextEdit()
@@ -477,8 +518,8 @@ class HexToolsPanel(QWidget):
         """
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(6)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_SPACING_SMALL)
 
         filter_row = QHBoxLayout()
         filter_label = QLabel("Filter:")
@@ -547,8 +588,8 @@ class HexToolsPanel(QWidget):
         """
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(8)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_SPACING_MEDIUM)
 
         self._base_input = QLineEdit()
         _set_hint(self._base_input, "0x1A2B  |  0b10110  |  0o777  |  12345")
@@ -600,8 +641,8 @@ class HexToolsPanel(QWidget):
         """
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(8)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_SPACING_MEDIUM)
 
         type_row = QHBoxLayout()
         type_row.addWidget(QLabel("Type:"))
@@ -621,18 +662,20 @@ class HexToolsPanel(QWidget):
         layout.addLayout(input_row)
 
         legend_row = QHBoxLayout()
-        for color, label in [(_COLOR_SIGN, "Sign"), (_COLOR_EXP, "Exponent"), (_COLOR_MAN, "Mantissa")]:
+        colors = _get_ieee754_colors()
+        border_color = _get_swatch_border_color()
+        for color_key, label in [("sign", "Sign"), ("exponent", "Exponent"), ("mantissa", "Mantissa")]:
             swatch = QLabel()
-            swatch.setFixedSize(16, 16)
-            swatch.setStyleSheet(f"background-color: {color.name()}; border: 1px solid #555;")
+            swatch.setFixedSize(_SWATCH_SIZE, _SWATCH_SIZE)
+            swatch.setStyleSheet(f"background-color: {colors[color_key].name()}; border: 1px solid {border_color};")
             legend_row.addWidget(swatch)
             legend_row.addWidget(QLabel(label))
-            legend_row.addSpacing(8)
+            legend_row.addSpacing(_SPACING_MEDIUM)
         legend_row.addStretch()
         layout.addLayout(legend_row)
 
         self._ieee754_bit_widget = _IEEE754BitWidget()
-        self._ieee754_bit_widget.setMinimumHeight(40)
+        self._ieee754_bit_widget.setMinimumHeight(_MIN_VIS_HEIGHT)
         layout.addWidget(self._ieee754_bit_widget)
 
         mono_font = QFont("Courier New", 10)
@@ -667,8 +710,8 @@ class HexToolsPanel(QWidget):
         """
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(8)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_SPACING_MEDIUM)
 
         input_row = QHBoxLayout()
         input_row.addWidget(QLabel("Hex Input:"))
@@ -711,8 +754,8 @@ class HexToolsPanel(QWidget):
         """
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(6)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_SPACING_SMALL)
 
         layout.addWidget(QLabel("Expressions (one per line) — hex 0x, binary 0b, bitwise &|^~<<>>:"))
 
@@ -750,8 +793,8 @@ class HexToolsPanel(QWidget):
         """
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(8)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_SPACING_MEDIUM)
 
         split_group = QGroupBox("Split File")
         split_layout = QFormLayout(split_group)
@@ -906,12 +949,7 @@ class HexToolsPanel(QWidget):
                 length = int(length_match[1])
                 start = len(length_match[0])
                 segment = inner[start : start + length]
-                segment = (
-                    segment.replace("$LT$", "<")
-                    .replace("$GT$", ">")
-                    .replace("$u20$", " ")
-                    .replace("$RF$", "&")
-                )
+                segment = segment.replace("$LT$", "<").replace("$GT$", ">").replace("$u20$", " ").replace("$RF$", "&")
                 segments.append(segment)
                 inner = inner[start + length :]
             if segments:
@@ -1167,10 +1205,7 @@ class HexToolsPanel(QWidget):
         self._swap_16_output.setText(f"0x{val_16:04X}")
 
         val_32 = (
-            ((raw_int & 0x000000FF) << 24)
-            | ((raw_int & 0x0000FF00) << 8)
-            | ((raw_int & 0x00FF0000) >> 8)
-            | ((raw_int & 0xFF000000) >> 24)
+            ((raw_int & 0x000000FF) << 24) | ((raw_int & 0x0000FF00) << 8) | ((raw_int & 0x00FF0000) >> 8) | ((raw_int & 0xFF000000) >> 24)
         )
         self._swap_32_output.setText(f"0x{val_32 & 0xFFFFFFFF:08X}")
 
@@ -1220,9 +1255,7 @@ class HexToolsPanel(QWidget):
 
     def _browse_split_outdir(self) -> None:
         """Open a directory dialog to select the output directory for split parts."""
-        if path := QFileDialog.getExistingDirectory(
-            self, "Select Output Directory"
-        ):
+        if path := QFileDialog.getExistingDirectory(self, "Select Output Directory"):
             self._split_outdir_input.setText(path)
 
     def _browse_combine_add(self) -> None:
