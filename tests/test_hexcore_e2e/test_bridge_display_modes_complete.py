@@ -200,9 +200,7 @@ class TestHighlightPatternCondition:
             bridge: An initialized HexEditorBridge fixture.
         """
         params = json.dumps({"pattern": "DE AD BE EF"})
-        rule_id: str = _run(
-            bridge.add_highlight_rule("pattern", params, "#FF00FF")
-        )
+        rule_id: str = _run(bridge.add_highlight_rule("pattern", params, "#FF00FF"))
         assert isinstance(rule_id, str)
         parsed = uuid.UUID(rule_id)
         assert str(parsed) == rule_id
@@ -214,32 +212,24 @@ class TestHighlightPatternCondition:
             bridge: An initialized HexEditorBridge fixture.
         """
         params = json.dumps({"pattern": "FF FF"})
-        rule_id: str = _run(
-            bridge.add_highlight_rule("pattern", params, "#AABBCC")
-        )
+        rule_id: str = _run(bridge.add_highlight_rule("pattern", params, "#AABBCC"))
         rules: list[dict[str, Any]] = _run(bridge.list_highlight_rules())
         ids = [r["id"] for r in rules]
         assert rule_id in ids
 
-    def test_pattern_rule_condition_type_stored_correctly(
-        self, bridge: Any
-    ) -> None:
+    def test_pattern_rule_condition_type_stored_correctly(self, bridge: Any) -> None:
         """Verify that the stored rule has condition_type equal to 'pattern'.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
         """
         params = json.dumps({"pattern": "00 01 02"})
-        rule_id: str = _run(
-            bridge.add_highlight_rule("pattern", params, "#112233")
-        )
+        rule_id: str = _run(bridge.add_highlight_rule("pattern", params, "#112233"))
         rules: list[dict[str, Any]] = _run(bridge.list_highlight_rules())
         matched = next(r for r in rules if r["id"] == rule_id)
         assert matched["condition_type"] == "pattern"
 
-    def test_pattern_rule_condition_params_stored_correctly(
-        self, bridge: Any
-    ) -> None:
+    def test_pattern_rule_condition_params_stored_correctly(self, bridge: Any) -> None:
         """Verify that the stored rule condition_params matches the input JSON.
 
         Args:
@@ -247,9 +237,7 @@ class TestHighlightPatternCondition:
         """
         pattern_value = "AA BB CC DD"
         params = json.dumps({"pattern": pattern_value})
-        rule_id: str = _run(
-            bridge.add_highlight_rule("pattern", params, "#FFFFFF")
-        )
+        rule_id: str = _run(bridge.add_highlight_rule("pattern", params, "#FFFFFF"))
         rules: list[dict[str, Any]] = _run(bridge.list_highlight_rules())
         matched = next(r for r in rules if r["id"] == rule_id)
         stored_params: dict[str, Any] = matched["condition_params"]
@@ -262,9 +250,7 @@ class TestHighlightPatternCondition:
             bridge: An initialized HexEditorBridge fixture.
         """
         params = json.dumps({"pattern": "01 02 03"})
-        rule_id: str = _run(
-            bridge.add_highlight_rule("pattern", params, "#654321")
-        )
+        rule_id: str = _run(bridge.add_highlight_rule("pattern", params, "#654321"))
         removed: bool = _run(bridge.remove_highlight_rule(rule_id))
         assert removed is True
 
@@ -275,9 +261,7 @@ class TestHighlightPatternCondition:
             bridge: An initialized HexEditorBridge fixture.
         """
         params = json.dumps({"pattern": "EE FF"})
-        rule_id: str = _run(
-            bridge.add_highlight_rule("pattern", params, "#000000")
-        )
+        rule_id: str = _run(bridge.add_highlight_rule("pattern", params, "#000000"))
         _run(bridge.remove_highlight_rule(rule_id))
         rules: list[dict[str, Any]] = _run(bridge.list_highlight_rules())
         ids = [r["id"] for r in rules]

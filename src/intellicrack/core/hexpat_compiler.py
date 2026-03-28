@@ -295,16 +295,7 @@ class AddressofExpr:
     target: str
 
 
-ExprNode = (
-    NumberLiteral
-    | StringLiteral
-    | IdentifierExpr
-    | DollarExpr
-    | SizeofExpr
-    | AddressofExpr
-    | BinaryExpr
-    | UnaryExpr
-)
+ExprNode = NumberLiteral | StringLiteral | IdentifierExpr | DollarExpr | SizeofExpr | AddressofExpr | BinaryExpr | UnaryExpr
 
 
 @dataclass
@@ -511,11 +502,11 @@ class HexPatLexer:
                 tt = _SINGLE_CHAR_TOKENS[ch]
                 self._tokens.append(Token(tt, ch, self._line, self._col))
                 self._advance()
-            elif ch in {'[', ']', '!', '=', '<', '>'}:
+            elif ch in {"[", "]", "!", "=", "<", ">"}:
                 self._read_multi_char_operator(ch)
             elif ch.isdigit():
                 self._read_number()
-            elif ch.isalpha() or ch == '_':
+            elif ch.isalpha() or ch == "_":
                 self._read_identifier()
             else:
                 msg = f"unexpected character '{ch}'"
@@ -531,52 +522,52 @@ class HexPatLexer:
             ch: The current character.
         """
         nxt = self._peek(1)
-        if ch == '[':
-            if nxt == '[':
+        if ch == "[":
+            if nxt == "[":
                 self._tokens.append(Token(TokenType.DOUBLE_LBRACKET, "[[", self._line, self._col))
                 self._advance()
             else:
                 self._tokens.append(Token(TokenType.LBRACKET, "[", self._line, self._col))
             self._advance()
-        elif ch == ']':
-            if nxt == ']':
+        elif ch == "]":
+            if nxt == "]":
                 self._tokens.append(Token(TokenType.DOUBLE_RBRACKET, "]]", self._line, self._col))
                 self._advance()
             else:
                 self._tokens.append(Token(TokenType.RBRACKET, "]", self._line, self._col))
             self._advance()
-        elif ch == '!':
-            if nxt == '=':
+        elif ch == "!":
+            if nxt == "=":
                 self._tokens.append(Token(TokenType.NOT_EQUALS, "!=", self._line, self._col))
                 self._advance()
             else:
                 self._tokens.append(Token(TokenType.BANG, "!", self._line, self._col))
             self._advance()
-        elif ch == '=':
-            if nxt == '=':
+        elif ch == "=":
+            if nxt == "=":
                 self._tokens.append(Token(TokenType.EQUALS, "==", self._line, self._col))
                 self._advance()
             else:
                 self._tokens.append(Token(TokenType.ASSIGN, "=", self._line, self._col))
             self._advance()
-        elif ch == '<':
-            if nxt == '=':
+        elif ch == "<":
+            if nxt == "=":
                 self._tokens.append(Token(TokenType.LESS_EQUAL, "<=", self._line, self._col))
                 self._advance()
                 self._advance()
-            elif nxt == '<':
+            elif nxt == "<":
                 self._tokens.append(Token(TokenType.LSHIFT, "<<", self._line, self._col))
                 self._advance()
                 self._advance()
             else:
                 self._tokens.append(Token(TokenType.LESS, "<", self._line, self._col))
                 self._advance()
-        elif ch == '>':
-            if nxt == '=':
+        elif ch == ">":
+            if nxt == "=":
                 self._tokens.append(Token(TokenType.GREATER_EQUAL, ">=", self._line, self._col))
                 self._advance()
                 self._advance()
-            elif nxt == '>':
+            elif nxt == ">":
                 self._tokens.append(Token(TokenType.RSHIFT, ">>", self._line, self._col))
                 self._advance()
                 self._advance()
@@ -587,7 +578,7 @@ class HexPatLexer:
     def _advance(self) -> None:
         """Advance the position by one character."""
         if self._pos < len(self._source):
-            if self._source[self._pos] == '\n':
+            if self._source[self._pos] == "\n":
                 self._line += 1
                 self._col = 1
             else:
@@ -610,19 +601,19 @@ class HexPatLexer:
         """Skip whitespace and comments."""
         while self._pos < len(self._source):
             ch = self._source[self._pos]
-            if ch in {' ', '\t', '\r', '\n'}:
+            if ch in {" ", "\t", "\r", "\n"}:
                 self._advance()
-            elif ch == '/' and self._peek(1) == '/':
-                while self._pos < len(self._source) and self._source[self._pos] != '\n':
+            elif ch == "/" and self._peek(1) == "/":
+                while self._pos < len(self._source) and self._source[self._pos] != "\n":
                     self._advance()
-            elif ch == '/' and self._peek(1) == '*':
+            elif ch == "/" and self._peek(1) == "*":
                 comment_line = self._line
                 comment_col = self._col
                 self._advance()
                 self._advance()
                 found_end = False
                 while self._pos < len(self._source):
-                    if self._source[self._pos] == '*' and self._peek(1) == '/':
+                    if self._source[self._pos] == "*" and self._peek(1) == "/":
                         self._advance()
                         self._advance()
                         found_end = True
@@ -643,16 +634,14 @@ class HexPatLexer:
         while self._pos < len(self._source):
             ch = self._source[self._pos]
             self._advance()
-            if ch == '\\':
+            if ch == "\\":
                 if self._pos < len(self._source):
                     esc = self._source[self._pos]
                     escape_map = {"n": "\n", "t": "\t", "r": "\r", "\\": "\\", '"': '"'}
                     chars.append(escape_map.get(esc, esc))
                     self._advance()
             elif ch == '"':
-                self._tokens.append(
-                    Token(TokenType.STRING_LITERAL, "".join(chars), start_line, start_col)
-                )
+                self._tokens.append(Token(TokenType.STRING_LITERAL, "".join(chars), start_line, start_col))
                 return
             else:
                 chars.append(ch)
@@ -665,19 +654,16 @@ class HexPatLexer:
         start_col = self._col
         start_pos = self._pos
 
-        if self._source[self._pos] == '0' and self._peek(1) in {'x', 'X'}:
+        if self._source[self._pos] == "0" and self._peek(1) in {"x", "X"}:
             self._advance()
             self._advance()
-            while self._pos < len(self._source) and (
-                self._source[self._pos].isdigit()
-                or self._source[self._pos] in "abcdefABCDEF"
-            ):
+            while self._pos < len(self._source) and (self._source[self._pos].isdigit() or self._source[self._pos] in "abcdefABCDEF"):
                 self._advance()
         else:
             while self._pos < len(self._source) and self._source[self._pos].isdigit():
                 self._advance()
 
-        text = self._source[start_pos:self._pos]
+        text = self._source[start_pos : self._pos]
         self._tokens.append(Token(TokenType.NUMBER, text, start_line, start_col))
 
     def _read_identifier(self) -> None:
@@ -685,11 +671,9 @@ class HexPatLexer:
         start_line = self._line
         start_col = self._col
         start_pos = self._pos
-        while self._pos < len(self._source) and (
-            self._source[self._pos].isalnum() or self._source[self._pos] == '_'
-        ):
+        while self._pos < len(self._source) and (self._source[self._pos].isalnum() or self._source[self._pos] == "_"):
             self._advance()
-        text = self._source[start_pos:self._pos]
+        text = self._source[start_pos : self._pos]
         token_type = _KEYWORD_MAP.get(text, TokenType.IDENTIFIER)
         self._tokens.append(Token(token_type, text, start_line, start_col))
 
@@ -811,7 +795,13 @@ class HexPatParser:
             self._advance()
             return None
         if tok.type == TokenType.IDENTIFIER and tok.value in {
-            "fn", "namespace", "using", "const", "return", "break", "continue",
+            "fn",
+            "namespace",
+            "using",
+            "const",
+            "return",
+            "break",
+            "continue",
         }:
             self._skip_construct()
             return None
@@ -1216,9 +1206,7 @@ class HexPatCodegen:
         Raises:
             HexPatError: If no struct declaration is found.
         """
-        main_struct: StructDecl | None = next(
-            (decl for decl in self._decls if isinstance(decl, StructDecl)), None
-        )
+        main_struct: StructDecl | None = next((decl for decl in self._decls if isinstance(decl, StructDecl)), None)
         if main_struct is None:
             msg = "no struct declaration found"
             raise HexPatError(msg)
@@ -1381,8 +1369,13 @@ class HexPatCodegen:
             if isinstance(node.condition.right, NumberLiteral):
                 condition_value = node.condition.right.value
             op_map: dict[str, str] = {
-                "==": "Eq", "!=": "Ne", ">": "Gt", "<": "Lt",
-                ">=": "Ge", "<=": "Le", "&": "BitAnd",
+                "==": "Eq",
+                "!=": "Ne",
+                ">": "Gt",
+                "<": "Lt",
+                ">=": "Ge",
+                "<=": "Le",
+                "&": "BitAnd",
             }
             condition_op = op_map.get(node.condition.op, "Eq")
         elif isinstance(node.condition, IdentifierExpr):
@@ -1412,8 +1405,13 @@ class HexPatCodegen:
 
         if node.false_fields:
             invert_map: dict[str, str] = {
-                "Eq": "Ne", "Ne": "Eq", "Gt": "Le", "Lt": "Ge",
-                "Ge": "Lt", "Le": "Gt", "BitAnd": "Eq",
+                "Eq": "Ne",
+                "Ne": "Eq",
+                "Gt": "Le",
+                "Lt": "Ge",
+                "Ge": "Lt",
+                "Le": "Gt",
+                "BitAnd": "Eq",
             }
             inverted_op = invert_map.get(condition_op, "Ne")
             inv_value = condition_value

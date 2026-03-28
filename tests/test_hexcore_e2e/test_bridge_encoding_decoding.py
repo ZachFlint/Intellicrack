@@ -48,9 +48,7 @@ def _run(coro: Any) -> Any:
 class TestDecodeText:
     """Tests for bridge.decode_text operating on real HexDocument data."""
 
-    def test_decode_ascii_text_from_file(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_decode_ascii_text_from_file(self, bridge: Any, tmp_path: Path) -> None:
         """decode_text must return the original ASCII string for ASCII-encoded bytes.
 
         Args:
@@ -67,9 +65,7 @@ class TestDecodeText:
 
         assert result == text
 
-    def test_decode_utf8_text_from_file(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_decode_utf8_text_from_file(self, bridge: Any, tmp_path: Path) -> None:
         """decode_text with utf-8 encoding must reproduce the original UTF-8 string.
 
         Args:
@@ -86,9 +82,7 @@ class TestDecodeText:
 
         assert result == text
 
-    def test_decode_latin1_text_from_file(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_decode_latin1_text_from_file(self, bridge: Any, tmp_path: Path) -> None:
         """decode_text with latin-1 encoding must reproduce extended Latin-1 characters.
 
         Args:
@@ -105,9 +99,7 @@ class TestDecodeText:
 
         assert result == text
 
-    def test_decode_utf16le_text_from_file(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_decode_utf16le_text_from_file(self, bridge: Any, tmp_path: Path) -> None:
         """decode_text with utf-16le encoding must reproduce the original UTF-16 LE string.
 
         Args:
@@ -124,16 +116,14 @@ class TestDecodeText:
 
         assert result == text
 
-    def test_decode_text_at_nonzero_offset(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_decode_text_at_nonzero_offset(self, bridge: Any, tmp_path: Path) -> None:
         """decode_text at an offset must skip leading bytes and read from the correct position.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        prefix = b"\xDE\xAD\xBE\xEF"
+        prefix = b"\xde\xad\xbe\xef"
         text = "offset_payload"
         encoded = text.encode("ascii")
         f = tmp_path / "offset.bin"
@@ -144,9 +134,7 @@ class TestDecodeText:
 
         assert result == text
 
-    def test_decode_text_at_multiple_offsets(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_decode_text_at_multiple_offsets(self, bridge: Any, tmp_path: Path) -> None:
         """decode_text correctly reads different text spans from the same document.
 
         Args:
@@ -166,9 +154,7 @@ class TestDecodeText:
         assert result_a == word_a
         assert result_b == word_b
 
-    def test_decode_text_invalid_encoding_handles_gracefully(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_decode_text_invalid_encoding_handles_gracefully(self, bridge: Any, tmp_path: Path) -> None:
         """decode_text with an unknown encoding must not crash; it may raise or return a string.
 
         Args:
@@ -191,9 +177,7 @@ class TestDecodeText:
             assert result is not None
             assert isinstance(result, str)
 
-    def test_decode_text_returns_string_type(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_decode_text_returns_string_type(self, bridge: Any, tmp_path: Path) -> None:
         """decode_text must return a str object, not bytes or None.
 
         Args:
@@ -209,9 +193,7 @@ class TestDecodeText:
 
         assert isinstance(result, str)
 
-    def test_decode_text_single_byte_ascii(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_decode_text_single_byte_ascii(self, bridge: Any, tmp_path: Path) -> None:
         """decode_text on a single ASCII byte must return the corresponding character.
 
         Args:
@@ -309,9 +291,7 @@ class TestListEncodings:
             assert isinstance(entry["label"], str)
             assert len(entry["label"]) > 0
 
-    def test_list_encodings_with_open_document(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_list_encodings_with_open_document(self, bridge: Any, tmp_path: Path) -> None:
         """list_encodings must work the same way with or without an open document.
 
         Args:
@@ -341,9 +321,7 @@ class TestListEncodings:
 
         _run(fresh.shutdown())
 
-    def test_decode_text_encoding_present_in_list_encodings(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_decode_text_encoding_present_in_list_encodings(self, bridge: Any, tmp_path: Path) -> None:
         """Every name returned by list_encodings must be usable with decode_text.
 
         Args:

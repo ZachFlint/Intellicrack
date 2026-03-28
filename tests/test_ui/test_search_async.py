@@ -157,7 +157,7 @@ class TestSearchWorkerExecution:
     @staticmethod
     def test_search_worker_hex_search(qtbot: QtBot) -> None:
         """Verify hex search finds expected offsets in repeated pattern."""
-        pattern = b"\xDE\xAD\xBE\xEF"
+        pattern = b"\xde\xad\xbe\xef"
         data = pattern * 4
         doc = SimpleDocument(data)
         worker = SearchWorker(doc, "Hex", "DEAD", "utf-8", 100)

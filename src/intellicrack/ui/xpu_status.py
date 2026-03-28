@@ -11,7 +11,7 @@ memory utilization, model cache state, and Windows system requirements.
 
 from __future__ import annotations
 
-from typing import Any, override
+from typing import Any, Final, override
 
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import (
@@ -28,6 +28,7 @@ from PyQt6.QtWidgets import (
 )
 
 from ..core.logging import get_logger
+from .resources.theme_manager import ThemeManager
 
 
 try:
@@ -55,17 +56,24 @@ except ImportError:
 
 _logger = get_logger("ui.xpu_status")
 
-_BYTES_PER_GB: float = 1024.0 * 1024.0 * 1024.0
-_BYTES_PER_MB: float = 1024.0 * 1024.0
-_LIVE_REFRESH_MS: int = 2000
-_DIALOG_WIDTH: int = 480
-_DIALOG_HEIGHT: int = 520
-_WARNINGS_MAX_HEIGHT: int = 100
+_BYTES_PER_GB: Final[float] = 1024.0 * 1024.0 * 1024.0
+_BYTES_PER_MB: Final[float] = 1024.0 * 1024.0
+_LIVE_REFRESH_MS: Final[int] = 2000
+_DIALOG_WIDTH: Final[int] = 480
+_DIALOG_HEIGHT: Final[int] = 520
+_WARNINGS_MAX_HEIGHT: Final[int] = 100
 
-_STYLE_GREEN: str = "color: #4CAF50; font-weight: bold;"
-_STYLE_ORANGE: str = "color: #FF9800; font-weight: bold;"
-_STYLE_RED: str = "color: #F44336; font-weight: bold;"
-_STYLE_MUTED: str = "color: #888888; font-style: italic;"
+
+def _restyle(widget: QWidget) -> None:
+    """Force QSS re-evaluation after dynamic property change.
+
+    Args:
+        widget: Widget to re-polish.
+    """
+    s = widget.style()
+    if s is not None:
+        s.unpolish(widget)
+        s.polish(widget)
 
 
 class XPUStatusDialog(QDialog):
@@ -213,7 +221,8 @@ class XPUStatusDialog(QDialog):
         """Refresh static device information (name, driver, dtype, caps)."""
         if is_xpu_available is None:
             self._status_label.setText("XPU utilities not available")
-            self._status_label.setStyleSheet(_STYLE_RED)
+            self._status_label.setProperty("status", "error")
+            _restyle(self._status_label)
             return
 
         try:
@@ -224,7 +233,8 @@ class XPUStatusDialog(QDialog):
 
         if not available:
             self._status_label.setText("CPU Only")
-            self._status_label.setStyleSheet(_STYLE_ORANGE)
+            self._status_label.setProperty("status", "warning")
+            _restyle(self._status_label)
             self._device_name_label.setText("No XPU device detected")
             self._driver_label.setText("N/A")
             self._dtype_label.setText("float32")
@@ -232,7 +242,8 @@ class XPUStatusDialog(QDialog):
             return
 
         self._status_label.setText("XPU Active")
-        self._status_label.setStyleSheet(_STYLE_GREEN)
+        self._status_label.setProperty("status", "success")
+        _restyle(self._status_label)
 
         self._refresh_device_details()
         self._refresh_dtype()
@@ -285,14 +296,16 @@ class XPUStatusDialog(QDialog):
         """Update memory usage bar and text."""
         if get_xpu_memory_info is None or is_xpu_available is None:
             self._memory_text.setText("XPU memory info not available")
-            self._memory_text.setStyleSheet(_STYLE_MUTED)
+            self._memory_text.setProperty("status", "idle")
+            _restyle(self._memory_text)
             return
 
         try:
             if not is_xpu_available():
                 self._memory_bar.setValue(0)
                 self._memory_text.setText("No XPU device")
-                self._memory_text.setStyleSheet(_STYLE_MUTED)
+                self._memory_text.setProperty("status", "idle")
+                _restyle(self._memory_text)
                 return
 
             allocated, total = get_xpu_memory_info(0)
@@ -308,17 +321,20 @@ class XPUStatusDialog(QDialog):
             alloc_gb = allocated / _BYTES_PER_GB
             total_gb = total / _BYTES_PER_GB
             self._memory_text.setText(f"{alloc_gb:.2f} GB / {total_gb:.2f} GB ({pct}%)")
-            self._memory_text.setStyleSheet("")
+            self._memory_text.setProperty("status", "")
+            _restyle(self._memory_text)
         else:
             self._memory_bar.setValue(0)
             self._memory_text.setText("Unable to determine memory size")
-            self._memory_text.setStyleSheet(_STYLE_MUTED)
+            self._memory_text.setProperty("status", "idle")
+            _restyle(self._memory_text)
 
     def _refresh_cache(self) -> None:
         """Update model cache usage and limit labels."""
         if get_global_model_cache is None:
             self._cache_usage_label.setText("Model cache not available")
-            self._cache_usage_label.setStyleSheet(_STYLE_MUTED)
+            self._cache_usage_label.setProperty("status", "idle")
+            _restyle(self._cache_usage_label)
             self._cache_limit_label.setText("N/A")
             return
 
@@ -331,7 +347,8 @@ class XPUStatusDialog(QDialog):
             limit_mb = limit_bytes / _BYTES_PER_MB
 
             self._cache_usage_label.setText(f"{usage_mb:.1f} MB")
-            self._cache_usage_label.setStyleSheet("")
+            self._cache_usage_label.setProperty("status", "")
+            _restyle(self._cache_usage_label)
             self._cache_limit_label.setText(f"{limit_mb:.0f} MB")
         except Exception:
             _logger.debug("cache_info_failed", exc_info=True)
@@ -355,14 +372,15 @@ class XPUStatusDialog(QDialog):
             self._requirements_text.setPlainText("Failed to check requirements.")
             return
 
+        colors = ThemeManager.get_instance().get_analysis_colors()
+        success_hex = colors["success"].name()
+        warning_hex = colors["warning"].name()
+
         if all_met and not warnings:
-            self._requirements_text.setHtml(
-                '<span style="color: #4CAF50; font-weight: bold;">'
-                "All system requirements met.</span>"
-            )
+            self._requirements_text.setHtml(f'<span style="color: {success_hex}; font-weight: bold;">All system requirements met.</span>')
         else:
             lines = [
-                '<span style="color: #FF9800; font-weight: bold;">Warnings:</span><ul>',
+                f'<span style="color: {warning_hex}; font-weight: bold;">Warnings:</span><ul>',
                 *[f"<li>{w}</li>" for w in warnings],
                 "</ul>",
             ]

@@ -191,9 +191,7 @@ class TestListEncodings:
         assert isinstance(result, list)
         assert len(result) > 0
 
-    def test_list_encodings_entries_are_two_tuples(
-        self, sample_doc_from_bytes: Any
-    ) -> None:
+    def test_list_encodings_entries_are_two_tuples(self, sample_doc_from_bytes: Any) -> None:
         """Verify that each entry in list_encodings() is a tuple of exactly 2 elements.
 
         Args:

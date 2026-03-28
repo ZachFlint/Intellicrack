@@ -154,7 +154,7 @@ def _build_pe_binary() -> bytes:
     struct.pack_into("<I", data, sec + 20, PE_SECTION_RAW_OFFSET)
     struct.pack_into("<I", data, sec + 36, PE_SECTION_CHARACTERISTICS)
 
-    data[PE_SECTION_RAW_OFFSET : PE_SECTION_RAW_OFFSET + 4] = b"\xCC\xCC\xCC\xCC"
+    data[PE_SECTION_RAW_OFFSET : PE_SECTION_RAW_OFFSET + 4] = b"\xcc\xcc\xcc\xcc"
     return bytes(data)
 
 
@@ -334,9 +334,7 @@ def loaded_bridge(bridge: Any, pe_binary: Path) -> Any:
     Returns:
         Any: The bridge with the PE file opened.
     """
-    asyncio.get_event_loop().run_until_complete(
-        bridge.open_file(str(pe_binary))
-    )
+    asyncio.get_event_loop().run_until_complete(bridge.open_file(str(pe_binary)))
     return bridge
 
 

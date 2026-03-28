@@ -31,12 +31,7 @@ class TestDefineExpansion:
     def test_multiple_defines_all_expand(self) -> None:
         """Multiple #define directives each expand their respective tokens."""
         pp = HexPatPreprocessor()
-        source = (
-            "#define OFFSET_A 0x10\n"
-            "#define OFFSET_B 0x20\n"
-            "u8 a @ OFFSET_A;\n"
-            "u8 b @ OFFSET_B;"
-        )
+        source = "#define OFFSET_A 0x10\n#define OFFSET_B 0x20\nu8 a @ OFFSET_A;\nu8 b @ OFFSET_B;"
         result, _ = pp.process(source)
         assert "0x10" in result
         assert "0x20" in result
@@ -123,7 +118,7 @@ class TestPragmaDirectives:
         _, pragma = pp.process(source)
         assert len(pragma.magic) == 1
         assert pragma.magic[0][0] == 0
-        assert pragma.magic[0][1] == b"\x4D\x5A"
+        assert pragma.magic[0][1] == b"\x4d\x5a"
 
     def test_pragma_eval_depth_extracted(self) -> None:
         """#pragma eval_depth value is captured in PragmaInfo."""

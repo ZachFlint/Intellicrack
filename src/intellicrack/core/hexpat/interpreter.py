@@ -238,10 +238,7 @@ class HexPatInterpreter:
         except HexPatError:
             return False
         else:
-            return not any(
-                isinstance(node, (FunctionDecl, WhileStmt, ForStmt, MatchStmt))
-                for node in program
-            )
+            return not any(isinstance(node, (FunctionDecl, WhileStmt, ForStmt, MatchStmt)) for node in program)
 
     @staticmethod
     def compile_to_json(source: str) -> str:
@@ -261,6 +258,7 @@ class HexPatInterpreter:
         """
         try:
             from intellicrack.core.hexpat_compiler import HexPatCompiler
+
             result = HexPatCompiler.compile(source)
         except Exception as exc:
             raise HexPatError(str(exc)) from exc

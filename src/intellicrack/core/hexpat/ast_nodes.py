@@ -880,9 +880,7 @@ ExprNode: TypeAlias = (
     | AssignExpr
 )
 
-TypeNode: TypeAlias = (
-    PrimitiveType | NamedType | PointerType | ArrayType | PaddingType | AutoType
-)
+TypeNode: TypeAlias = PrimitiveType | NamedType | PointerType | ArrayType | PaddingType | AutoType
 
 StmtNode: TypeAlias = (
     FieldDecl
@@ -899,12 +897,4 @@ StmtNode: TypeAlias = (
     | PlacementStmt
 )
 
-DeclNode: TypeAlias = (
-    StructDecl
-    | UnionDecl
-    | EnumDecl
-    | BitfieldDecl
-    | FunctionDecl
-    | NamespaceDecl
-    | UsingDecl
-)
+DeclNode: TypeAlias = StructDecl | UnionDecl | EnumDecl | BitfieldDecl | FunctionDecl | NamespaceDecl | UsingDecl

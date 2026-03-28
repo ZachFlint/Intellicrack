@@ -45,9 +45,7 @@ _EXPECTED_TOP_LEVEL_KEYS = {
 class TestBridgeAIContext:
     """Tests covering the structure and content of get_context_for_ai."""
 
-    def test_get_context_for_ai_contains_expected_top_level_keys(
-        self, loaded_bridge: Any
-    ) -> None:
+    def test_get_context_for_ai_contains_expected_top_level_keys(self, loaded_bridge: Any) -> None:
         """Verify that the AI context dict has the required document info keys.
 
         Args:
@@ -57,9 +55,7 @@ class TestBridgeAIContext:
         for key in _EXPECTED_TOP_LEVEL_KEYS:
             assert key in ctx, f"missing key: {key}"
 
-    def test_get_context_for_ai_bytes_at_cursor_is_hex_string(
-        self, loaded_bridge: Any
-    ) -> None:
+    def test_get_context_for_ai_bytes_at_cursor_is_hex_string(self, loaded_bridge: Any) -> None:
         """Verify that bytes_at_cursor is a non-empty hex string.
 
         Args:
@@ -75,9 +71,7 @@ class TestBridgeAIContext:
             assert len(token) == 2
             int(token, 16)
 
-    def test_get_context_for_ai_bookmarks_is_list(
-        self, loaded_bridge: Any
-    ) -> None:
+    def test_get_context_for_ai_bookmarks_is_list(self, loaded_bridge: Any) -> None:
         """Verify that the bookmarks field in the AI context is a list.
 
         Args:
@@ -87,9 +81,7 @@ class TestBridgeAIContext:
         assert "bookmarks" in ctx
         assert isinstance(ctx["bookmarks"], list)
 
-    def test_get_context_for_ai_bookmarks_contain_expected_fields_when_present(
-        self, loaded_bridge: Any
-    ) -> None:
+    def test_get_context_for_ai_bookmarks_contain_expected_fields_when_present(self, loaded_bridge: Any) -> None:
         """Verify that each bookmark in the AI context has offset, length, label.
 
         Args:
@@ -104,9 +96,7 @@ class TestBridgeAIContext:
             assert "length" in bm
             assert "label" in bm
 
-    def test_get_context_for_ai_size_is_positive(
-        self, loaded_bridge: Any
-    ) -> None:
+    def test_get_context_for_ai_size_is_positive(self, loaded_bridge: Any) -> None:
         """Verify that the size field in the AI context is a positive integer.
 
         Args:
@@ -116,9 +106,7 @@ class TestBridgeAIContext:
         assert isinstance(ctx["size"], int)
         assert ctx["size"] > 0
 
-    def test_get_context_for_ai_file_path_matches_opened_file(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_get_context_for_ai_file_path_matches_opened_file(self, bridge: Any, pe_binary: Path) -> None:
         """Verify that file_path in AI context matches the opened file path.
 
         Args:
@@ -129,9 +117,7 @@ class TestBridgeAIContext:
         ctx: dict[str, Any] = _run(bridge.get_context_for_ai())
         assert ctx["file_path"] == str(pe_binary)
 
-    def test_get_context_for_ai_cursor_reflects_goto_offset(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_get_context_for_ai_cursor_reflects_goto_offset(self, bridge: Any, pe_binary: Path) -> None:
         """Verify that the cursor field reflects the offset set by goto_offset.
 
         Args:

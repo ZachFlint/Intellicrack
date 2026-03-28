@@ -85,9 +85,7 @@ class TestBridgeListTransforms:
 class TestBridgeApplyTransform:
     """Tests covering individual transform application to byte ranges."""
 
-    def test_apply_transform_xor_single_returns_hex_string(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_apply_transform_xor_single_returns_hex_string(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that apply_transform with xor_single returns a hex string.
 
         Args:
@@ -99,19 +97,15 @@ class TestBridgeApplyTransform:
         if "xor_single" not in names:
             pytest.skip("xor_single transform not available")
 
-        payload = b"\xFF" * 8
+        payload = b"\xff" * 8
         f = tmp_path / "xortest.bin"
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
-        result: str = _run(
-            bridge.apply_transform("xor_single", 0, 4, json.dumps({"key": "AA"}))
-        )
+        result: str = _run(bridge.apply_transform("xor_single", 0, 4, json.dumps({"key": "AA"})))
         assert isinstance(result, str)
         assert len(result) == 8
 
-    def test_apply_transform_xor_single_known_output(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_apply_transform_xor_single_known_output(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that XOR-ing 0xFF bytes with 0xFF produces 0x00 bytes.
 
         Args:
@@ -123,18 +117,14 @@ class TestBridgeApplyTransform:
         if "xor_single" not in names:
             pytest.skip("xor_single transform not available")
 
-        payload = b"\xFF\xFF\xFF\xFF"
+        payload = b"\xff\xff\xff\xff"
         f = tmp_path / "xorknown.bin"
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
-        result: str = _run(
-            bridge.apply_transform("xor_single", 0, 4, json.dumps({"key": "FF"}))
-        )
+        result: str = _run(bridge.apply_transform("xor_single", 0, 4, json.dumps({"key": "FF"})))
         assert result == "00000000"
 
-    def test_apply_transform_returns_length_matching_input(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_apply_transform_returns_length_matching_input(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that apply_transform output length in bytes equals the input length.
 
         Args:
@@ -146,22 +136,18 @@ class TestBridgeApplyTransform:
         if "xor_single" not in names:
             pytest.skip("xor_single transform not available")
 
-        payload = b"\xAA" * 16
+        payload = b"\xaa" * 16
         f = tmp_path / "xorlen.bin"
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
-        result: str = _run(
-            bridge.apply_transform("xor_single", 0, 16, json.dumps({"key": "00"}))
-        )
+        result: str = _run(bridge.apply_transform("xor_single", 0, 16, json.dumps({"key": "00"})))
         assert len(result) == 32
 
 
 class TestBridgeApplyPipeline:
     """Tests covering pipeline application when the transform_pipeline module is available."""
 
-    def test_apply_pipeline_with_single_xor_step(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_apply_pipeline_with_single_xor_step(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that a single-step pipeline produces the same result as apply_transform.
 
         Args:
@@ -176,7 +162,7 @@ class TestBridgeApplyPipeline:
         if "xor_single" not in names:
             pytest.skip("xor_single transform not available")
 
-        payload = b"\xFF" * 4
+        payload = b"\xff" * 4
         f = tmp_path / "pipeline.bin"
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))

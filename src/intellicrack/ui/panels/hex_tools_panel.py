@@ -18,10 +18,10 @@ import re
 import struct
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, override
+from typing import Any, Final, override
 
 from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtGui import QBrush, QColor, QPainter, QPaintEvent, QPen
+from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPaintEvent, QPen
 from PyQt6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -44,6 +44,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.resources.font_manager import FontManager
+from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 _logger = get_logger("ui.panels.hex_tools_panel")
@@ -224,12 +225,46 @@ _F32_MAN_BITS = 23
 _F64_EXP_BITS = 11
 _F64_MAN_BITS = 52
 
-_COLOR_SIGN = QColor(200, 60, 60)
-_COLOR_EXP = QColor(60, 100, 200)
-_COLOR_MAN = QColor(60, 160, 80)
-_COLOR_TEXT_LIGHT = QColor(255, 255, 255)
-_BIT_BOX_WIDTH = 14
-_BIT_BOX_HEIGHT = 24
+_BIT_BOX_WIDTH: Final[int] = 14
+_BIT_BOX_HEIGHT: Final[int] = 24
+_PANEL_MARGIN: Final[int] = 6
+_TAB_MARGIN: Final[int] = 4
+_SPACING_SMALL: Final[int] = 6
+_SPACING_MEDIUM: Final[int] = 8
+_SWATCH_SIZE: Final[int] = 16
+_MIN_VIS_HEIGHT: Final[int] = 40
+
+
+def _get_ieee754_colors() -> dict[str, QColor]:
+    """Get theme-aware colors for IEEE 754 bit visualization.
+
+    Returns:
+        dict[str, QColor]: Mapping of bit-field names to QColor values.
+    """
+    if ThemeManager.get_instance().is_dark_theme():
+        return {
+            "sign": QColor(200, 60, 60),
+            "exponent": QColor(60, 100, 200),
+            "mantissa": QColor(60, 160, 80),
+            "text": QColor(255, 255, 255),
+        }
+    return {
+        "sign": QColor(198, 40, 40),
+        "exponent": QColor(21, 101, 192),
+        "mantissa": QColor(46, 125, 50),
+        "text": QColor(26, 26, 26),
+    }
+
+
+def _get_swatch_border_color() -> str:
+    """Get theme-aware border color for color swatches.
+
+    Returns:
+        str: CSS color string for swatch borders.
+    """
+    if ThemeManager.get_instance().is_dark_theme():
+        return "#555"
+    return "#ccc"
 
 
 def _set_hint(widget: QWidget, text: str) -> None:
@@ -261,7 +296,7 @@ class _IEEE754BitWidget(QWidget):
         super().__init__(parent)
         self._bits: int = 0
         self._is_double: bool = False
-        self.setMinimumHeight(40)
+        self.setMinimumHeight(_MIN_VIS_HEIGHT)
 
     def set_bits(self, bits: int, is_double: bool) -> None:
         """Update the bit pattern and trigger a repaint.
@@ -296,6 +331,12 @@ class _IEEE754BitWidget(QWidget):
         bit_count = 64 if is_double else 32
         man_bits = _F64_MAN_BITS if is_double else _F32_MAN_BITS
 
+        colors = _get_ieee754_colors()
+        sign_color = colors["sign"]
+        exp_color = colors["exponent"]
+        man_color = colors["mantissa"]
+        text_color = colors["text"]
+
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         painter.setFont(FontManager.get_instance().get_code_font(7))
@@ -308,15 +349,15 @@ class _IEEE754BitWidget(QWidget):
             bit_val = (self._bits >> bit_index) & 1
 
             if bit_index == bit_count - 1:
-                color = _COLOR_SIGN
+                color = sign_color
             elif bit_index >= man_bits:
-                color = _COLOR_EXP
+                color = exp_color
             else:
-                color = _COLOR_MAN
+                color = man_color
 
             rect_x = x_offset + i * _BIT_BOX_WIDTH
             painter.fillRect(rect_x, y_offset, _BIT_BOX_WIDTH - 1, _BIT_BOX_HEIGHT, QBrush(color))
-            painter.setPen(QPen(_COLOR_TEXT_LIGHT))
+            painter.setPen(QPen(text_color))
             painter.drawText(
                 rect_x,
                 y_offset,
@@ -378,7 +419,7 @@ class HexToolsPanel(QWidget):
         self._combine_output_input: QLineEdit
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setContentsMargins(_TAB_MARGIN, _TAB_MARGIN, _TAB_MARGIN, _TAB_MARGIN)
         layout.setSpacing(0)
 
         tabs = QTabWidget(self)
@@ -444,8 +485,8 @@ class HexToolsPanel(QWidget):
         """
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(6)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_SPACING_SMALL)
 
         input_row = QHBoxLayout()
         self._demangle_input = QLineEdit()
@@ -458,7 +499,7 @@ class HexToolsPanel(QWidget):
         layout.addLayout(input_row)
 
         hint = QLabel("Supports: Itanium/GCC (cxxfilt), MSVC (?name@scope@@), Rust (_ZN / _R)")
-        hint.setStyleSheet("color: gray; font-size: 11px;")
+        hint.setObjectName("hint_label")
         layout.addWidget(hint)
 
         self._demangle_output = QPlainTextEdit()
@@ -478,8 +519,8 @@ class HexToolsPanel(QWidget):
         """
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(6)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_SPACING_SMALL)
 
         filter_row = QHBoxLayout()
         filter_label = QLabel("Filter:")
@@ -548,8 +589,8 @@ class HexToolsPanel(QWidget):
         """
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(8)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_SPACING_MEDIUM)
 
         self._base_input = QLineEdit()
         _set_hint(self._base_input, "0x1A2B  |  0b10110  |  0o777  |  12345")
@@ -601,8 +642,8 @@ class HexToolsPanel(QWidget):
         """
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(8)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_SPACING_MEDIUM)
 
         type_row = QHBoxLayout()
         type_row.addWidget(QLabel("Type:"))
@@ -622,18 +663,20 @@ class HexToolsPanel(QWidget):
         layout.addLayout(input_row)
 
         legend_row = QHBoxLayout()
-        for color, label in [(_COLOR_SIGN, "Sign"), (_COLOR_EXP, "Exponent"), (_COLOR_MAN, "Mantissa")]:
+        colors = _get_ieee754_colors()
+        border_color = _get_swatch_border_color()
+        for color_key, label in [("sign", "Sign"), ("exponent", "Exponent"), ("mantissa", "Mantissa")]:
             swatch = QLabel()
-            swatch.setFixedSize(16, 16)
-            swatch.setStyleSheet(f"background-color: {color.name()}; border: 1px solid #555;")
+            swatch.setFixedSize(_SWATCH_SIZE, _SWATCH_SIZE)
+            swatch.setStyleSheet(f"background-color: {colors[color_key].name()}; border: 1px solid {border_color};")
             legend_row.addWidget(swatch)
             legend_row.addWidget(QLabel(label))
-            legend_row.addSpacing(8)
+            legend_row.addSpacing(_SPACING_MEDIUM)
         legend_row.addStretch()
         layout.addLayout(legend_row)
 
         self._ieee754_bit_widget = _IEEE754BitWidget()
-        self._ieee754_bit_widget.setMinimumHeight(40)
+        self._ieee754_bit_widget.setMinimumHeight(_MIN_VIS_HEIGHT)
         layout.addWidget(self._ieee754_bit_widget)
 
         mono_font = FontManager.get_instance().get_code_font(10)
@@ -668,8 +711,8 @@ class HexToolsPanel(QWidget):
         """
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(8)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_SPACING_MEDIUM)
 
         input_row = QHBoxLayout()
         input_row.addWidget(QLabel("Hex Input:"))
@@ -712,10 +755,10 @@ class HexToolsPanel(QWidget):
         """
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(6)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_SPACING_SMALL)
 
-        layout.addWidget(QLabel("Expressions (one per line) — hex 0x, binary 0b, bitwise &|^~<<>>:"))
+        layout.addWidget(QLabel("Expressions (one per line) -- hex 0x, binary 0b, bitwise &|^~<<>>:"))
 
         mono_font = FontManager.get_instance().get_code_font(10)
 
@@ -751,8 +794,8 @@ class HexToolsPanel(QWidget):
         """
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(8)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_SPACING_MEDIUM)
 
         split_group = QGroupBox("Split File")
         split_layout = QFormLayout(split_group)
@@ -839,7 +882,8 @@ class HexToolsPanel(QWidget):
 
         return widget
 
-    def _demangle_msvc(self, mangled: str) -> str:
+    @staticmethod
+    def _demangle_msvc(mangled: str) -> str:
         """Attempt to demangle an MSVC-mangled symbol.
 
         Handles the ``?name@scope1@scope2@@qualifiers`` pattern commonly
@@ -862,16 +906,13 @@ class HexToolsPanel(QWidget):
         func_name = at_parts[0]
         scopes: list[str] = []
         for part in at_parts[1:]:
-            if part in ("", "Y", "QA", "UA", "QAE", "QAX", "UAE", "UAX", "3", "4"):
+            if part in {"", "Y", "QA", "UA", "QAE", "QAX", "UAE", "UAX", "3", "4"}:
                 break
             if part.startswith("?"):
                 break
             scopes.append(part)
 
-        if scopes:
-            qualified = "::".join(reversed(scopes)) + "::" + func_name
-        else:
-            qualified = func_name
+        qualified = "::".join(reversed(scopes)) + "::" + func_name if scopes else func_name
 
         suffix_match = re.search(r"@@([A-Z_]+)(.*)$", mangled)
         ret_type = ""
@@ -883,7 +924,8 @@ class HexToolsPanel(QWidget):
             return f"{ret_type} {qualified}(...)"
         return f"{qualified}(...)"
 
-    def _demangle_rust(self, mangled: str) -> str:
+    @staticmethod
+    def _demangle_rust(mangled: str) -> str:
         """Attempt to demangle a Rust-mangled symbol.
 
         Handles legacy ``_ZN`` (length-prefixed path segments) and v0
@@ -907,12 +949,7 @@ class HexToolsPanel(QWidget):
                 length = int(length_match[1])
                 start = len(length_match[0])
                 segment = inner[start : start + length]
-                segment = (
-                    segment.replace("$LT$", "<")
-                    .replace("$GT$", ">")
-                    .replace("$u20$", " ")
-                    .replace("$RF$", "&")
-                )
+                segment = segment.replace("$LT$", "<").replace("$GT$", ">").replace("$u20$", " ").replace("$RF$", "&")
                 segments.append(segment)
                 inner = inner[start + length :]
             if segments:
@@ -1076,10 +1113,7 @@ class HexToolsPanel(QWidget):
                     float_val = float(struct.unpack(">f", packed)[0])
             else:
                 float_val = float(text)
-                if is_double:
-                    packed = struct.pack(">d", float_val)
-                else:
-                    packed = struct.pack(">f", float_val)
+                packed = struct.pack(">d", float_val) if is_double else struct.pack(">f", float_val)
                 raw_bits = int.from_bytes(packed, "big")
         except (ValueError, struct.error):
             for label in (
@@ -1125,10 +1159,7 @@ class HexToolsPanel(QWidget):
         exp_text = f"{exp_bin} = {exp_val} (biased), {exp_val - exp_bias} (unbiased)"
         man_text = f"{man_bin} = {man_val}"
 
-        if is_double:
-            hex_text = f"0x{raw_bits:016X}  ({float_val!r})"
-        else:
-            hex_text = f"0x{raw_bits:08X}  ({float_val!r})"
+        hex_text = f"0x{raw_bits:016X}  ({float_val!r})" if is_double else f"0x{raw_bits:08X}  ({float_val!r})"
 
         self._ieee754_sign_label.setText(sign_text)
         self._ieee754_exp_label.setText(exp_text)
@@ -1168,10 +1199,7 @@ class HexToolsPanel(QWidget):
         self._swap_16_output.setText(f"0x{val_16:04X}")
 
         val_32 = (
-            ((raw_int & 0x000000FF) << 24)
-            | ((raw_int & 0x0000FF00) << 8)
-            | ((raw_int & 0x00FF0000) >> 8)
-            | ((raw_int & 0xFF000000) >> 24)
+            ((raw_int & 0x000000FF) << 24) | ((raw_int & 0x0000FF00) << 8) | ((raw_int & 0x00FF0000) >> 8) | ((raw_int & 0xFF000000) >> 24)
         )
         self._swap_32_output.setText(f"0x{val_32 & 0xFFFFFFFF:08X}")
 
@@ -1200,16 +1228,16 @@ class HexToolsPanel(QWidget):
         results: list[str] = []
 
         for line in lines:
-            line = line.strip()
-            if not line or line.startswith("#"):
+            stripped_line = line.strip()
+            if not stripped_line or stripped_line.startswith("#"):
                 continue
             try:
-                result = _safe_eval_expr(line)
-                results.append(f"{line} = {result!r}")
+                result = _safe_eval_expr(stripped_line)
+                results.append(f"{stripped_line} = {result!r}")
             except SyntaxError as exc:
-                results.append(f"{line} => SyntaxError: {exc.msg}")
+                results.append(f"{stripped_line} => SyntaxError: {exc.msg}")
             except (ValueError, TypeError, ZeroDivisionError, OverflowError) as exc:
-                results.append(f"{line} => Error: {exc}")
+                results.append(f"{stripped_line} => Error: {exc}")
 
         self._calc_output.setPlainText("\n".join(results))
 
@@ -1221,9 +1249,7 @@ class HexToolsPanel(QWidget):
 
     def _browse_split_outdir(self) -> None:
         """Open a directory dialog to select the output directory for split parts."""
-        if path := QFileDialog.getExistingDirectory(
-            self, "Select Output Directory"
-        ):
+        if path := QFileDialog.getExistingDirectory(self, "Select Output Directory"):
             self._split_outdir_input.setText(path)
 
     def _browse_combine_add(self) -> None:
@@ -1261,6 +1287,66 @@ class HexToolsPanel(QWidget):
             self._combine_files_list.insertItem(row + 1, item)
             self._combine_files_list.setCurrentRow(row + 1)
 
+    def _split_at_offset(
+        self, data: bytes, offset: int, outdir: Path, src_path: Path
+    ) -> None:
+        """Split file data into two parts at the given byte offset.
+
+        Args:
+            data: The complete file contents.
+            offset: The byte position at which to split.
+            outdir: Directory to write the output parts into.
+            src_path: Original source file path (used for naming).
+        """
+        file_size = len(data)
+        if offset >= file_size:
+            QMessageBox.warning(
+                self, "Split File", f"Offset {offset} is beyond file size {file_size}."
+            )
+            return
+        stem = src_path.stem
+        suffix = src_path.suffix
+        part1_path = outdir / f"{stem}_part1{suffix}"
+        part2_path = outdir / f"{stem}_part2{suffix}"
+        part1_path.write_bytes(data[:offset])
+        part2_path.write_bytes(data[offset:])
+        _logger.info("split_complete", parts=2, src=str(src_path))
+        QMessageBox.information(
+            self,
+            "Split File",
+            f"Split into 2 parts at offset {offset}:\n{part1_path}\n{part2_path}",
+        )
+
+    def _split_into_chunks(
+        self, data: bytes, chunk_size: int, outdir: Path, src_path: Path
+    ) -> None:
+        """Split file data into equal-size chunks with a possible remainder.
+
+        Args:
+            data: The complete file contents.
+            chunk_size: Maximum number of bytes per chunk.
+            outdir: Directory to write the output parts into.
+            src_path: Original source file path (used for naming).
+        """
+        if chunk_size <= 0:
+            QMessageBox.warning(self, "Split File", "Chunk size must be greater than 0.")
+            return
+        file_size = len(data)
+        stem = src_path.stem
+        suffix = src_path.suffix
+        part_count = (file_size + chunk_size - 1) // chunk_size
+        for idx in range(part_count):
+            start = idx * chunk_size
+            chunk = data[start : start + chunk_size]
+            part_path = outdir / f"{stem}_part{idx + 1:04d}{suffix}"
+            part_path.write_bytes(chunk)
+        _logger.info("split_complete", parts=part_count, src=str(src_path))
+        QMessageBox.information(
+            self,
+            "Split File",
+            f"Split into {part_count} chunk(s) of up to {chunk_size} bytes each.",
+        )
+
     def _do_split_file(self) -> None:
         """Split the selected source file according to the chosen mode and value.
 
@@ -1285,8 +1371,6 @@ class HexToolsPanel(QWidget):
 
         mode = self._split_mode_combo.currentIndex()
         value = self._split_value_spin.value()
-        stem = src_path.stem
-        suffix = src_path.suffix
 
         try:
             data = src_path.read_bytes()
@@ -1294,38 +1378,10 @@ class HexToolsPanel(QWidget):
             QMessageBox.critical(self, "Split File", f"Failed to read file: {exc}")
             return
 
-        file_size = len(data)
-
         if mode == 0:
-            if value >= file_size:
-                QMessageBox.warning(self, "Split File", f"Offset {value} is beyond file size {file_size}.")
-                return
-            part1_path = outdir / f"{stem}_part1{suffix}"
-            part2_path = outdir / f"{stem}_part2{suffix}"
-            part1_path.write_bytes(data[:value])
-            part2_path.write_bytes(data[value:])
-            _logger.info("split_complete", parts=2, src=str(src_path))
-            QMessageBox.information(
-                self,
-                "Split File",
-                f"Split into 2 parts at offset {value}:\n{part1_path}\n{part2_path}",
-            )
+            self._split_at_offset(data, value, outdir, src_path)
         else:
-            if value <= 0:
-                QMessageBox.warning(self, "Split File", "Chunk size must be greater than 0.")
-                return
-            part_count = (file_size + value - 1) // value
-            for idx in range(part_count):
-                start = idx * value
-                chunk = data[start : start + value]
-                part_path = outdir / f"{stem}_part{idx + 1:04d}{suffix}"
-                part_path.write_bytes(chunk)
-            _logger.info("split_complete", parts=part_count, src=str(src_path))
-            QMessageBox.information(
-                self,
-                "Split File",
-                f"Split into {part_count} chunk(s) of up to {value} bytes each.",
-            )
+            self._split_into_chunks(data, value, outdir, src_path)
 
     def _do_combine_files(self) -> None:
         """Combine all listed files into a single output file in list order.

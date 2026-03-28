@@ -138,9 +138,16 @@ class TestRestoreTabState:
         """Verify the internal tab_openers dict maps expected panel names."""
         panel = ToolOutputPanel()
         expected_keys = {
-            "Hex Editor", "Frida", "Ghidra", "Cutter",
-            "Process", "Binary", "Sandbox",
-            "Analysis", "Scripts", "Stack",
+            "Hex Editor",
+            "Frida",
+            "Ghidra",
+            "Cutter",
+            "Process",
+            "Binary",
+            "Sandbox",
+            "Analysis",
+            "Scripts",
+            "Stack",
         }
 
         state: dict[str, object] = {

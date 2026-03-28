@@ -98,9 +98,7 @@ class TestSetStateHolder:
 class TestDocumentOpenedEvent:
     """Tests for DOCUMENT_OPENED event fired by open_file through state holder."""
 
-    def test_open_file_fires_document_opened(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_open_file_fires_document_opened(self, bridge: Any, pe_binary: Path) -> None:
         """open_file must fire DOCUMENT_OPENED on the attached state holder.
 
         Args:
@@ -116,9 +114,7 @@ class TestDocumentOpenedEvent:
 
         assert any(e[0] == HexDocumentEvent.DOCUMENT_OPENED for e in events)
 
-    def test_open_file_document_opened_payload_has_size(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_open_file_document_opened_payload_has_size(self, bridge: Any, pe_binary: Path) -> None:
         """DOCUMENT_OPENED event data must contain a positive size field.
 
         Args:
@@ -136,9 +132,7 @@ class TestDocumentOpenedEvent:
         assert len(opened) == 1
         assert opened[0][1]["size"] > 0
 
-    def test_state_holder_document_property_after_open(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_state_holder_document_property_after_open(self, bridge: Any, pe_binary: Path) -> None:
         """After open_file, state_holder.document must reference the loaded document.
 
         Args:
@@ -156,9 +150,7 @@ class TestDocumentOpenedEvent:
 class TestDataModifiedEvent:
     """Tests for DATA_MODIFIED event fired by write_bytes through state holder."""
 
-    def test_write_bytes_fires_data_modified(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_write_bytes_fires_data_modified(self, bridge: Any, pe_binary: Path) -> None:
         """write_bytes must fire DATA_MODIFIED on the attached state holder.
 
         Args:
@@ -176,9 +168,7 @@ class TestDataModifiedEvent:
 
         assert any(e[0] == HexDocumentEvent.DATA_MODIFIED for e in events)
 
-    def test_write_bytes_data_modified_contains_offset(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_write_bytes_data_modified_contains_offset(self, bridge: Any, pe_binary: Path) -> None:
         """DATA_MODIFIED event data must contain the write offset.
 
         Args:
@@ -202,9 +192,7 @@ class TestDataModifiedEvent:
 class TestTemplateEvents:
     """Tests for TEMPLATE_REGISTERED and TEMPLATE_REMOVED events via bridge."""
 
-    def test_register_template_fires_template_registered(
-        self, loaded_bridge: Any
-    ) -> None:
+    def test_register_template_fires_template_registered(self, loaded_bridge: Any) -> None:
         """register_template must fire TEMPLATE_REGISTERED on the state holder.
 
         Args:
@@ -226,9 +214,7 @@ class TestTemplateEvents:
 
         assert any(e[0] == HexDocumentEvent.TEMPLATE_REGISTERED for e in events)
 
-    def test_register_template_event_contains_name(
-        self, loaded_bridge: Any
-    ) -> None:
+    def test_register_template_event_contains_name(self, loaded_bridge: Any) -> None:
         """TEMPLATE_REGISTERED event data must contain the registered template name.
 
         Args:
@@ -252,9 +238,7 @@ class TestTemplateEvents:
         assert len(reg_events) == 1
         assert reg_events[0][1]["template_name"] == registered_name
 
-    def test_remove_template_fires_template_removed(
-        self, loaded_bridge: Any
-    ) -> None:
+    def test_remove_template_fires_template_removed(self, loaded_bridge: Any) -> None:
         """remove_template must fire TEMPLATE_REMOVED on the state holder.
 
         Args:
@@ -294,11 +278,13 @@ class TestHighlightRuleEvents:
         state.register_callback(cb)
         bridge.set_state_holder(state)
 
-        _run(bridge.add_highlight_rule(
-            "byte_value",
-            json.dumps({"value": 0}),
-            "#FF0000",
-        ))
+        _run(
+            bridge.add_highlight_rule(
+                "byte_value",
+                json.dumps({"value": 0}),
+                "#FF0000",
+            )
+        )
 
         assert any(e[0] == HexDocumentEvent.HIGHLIGHT_RULE_ADDED for e in events)
 
@@ -310,11 +296,13 @@ class TestHighlightRuleEvents:
         """
         state = HexDocumentState()
         bridge.set_state_holder(state)
-        rule_id: str = _run(bridge.add_highlight_rule(
-            "byte_value",
-            json.dumps({"value": 255}),
-            "#00FF00",
-        ))
+        rule_id: str = _run(
+            bridge.add_highlight_rule(
+                "byte_value",
+                json.dumps({"value": 255}),
+                "#00FF00",
+            )
+        )
 
         events, cb = _make_collector()
         state.register_callback(cb)
@@ -363,9 +351,7 @@ class TestDisplayModeEvent:
 class TestPatternExecutedEvent:
     """Tests for PATTERN_EXECUTED event fired by execute_pattern via state holder."""
 
-    def test_execute_pattern_fires_pattern_executed(
-        self, loaded_bridge: Any
-    ) -> None:
+    def test_execute_pattern_fires_pattern_executed(self, loaded_bridge: Any) -> None:
         """execute_pattern must fire PATTERN_EXECUTED when interpreter is available.
 
         Args:
@@ -392,9 +378,7 @@ class TestPatternExecutedEvent:
 class TestCallbackSourceFiltering:
     """Tests for source-id loop-guard filtering through real bridge operations."""
 
-    def test_bridge_source_callback_not_called_for_bridge_events(
-        self, bridge: Any
-    ) -> None:
+    def test_bridge_source_callback_not_called_for_bridge_events(self, bridge: Any) -> None:
         """A callback registered with source_id='bridge' receives no bridge-sourced events.
 
         Args:
@@ -413,9 +397,7 @@ class TestCallbackSourceFiltering:
 
         assert len(events_filtered) == 0
 
-    def test_non_bridge_source_callback_receives_bridge_events(
-        self, bridge: Any
-    ) -> None:
+    def test_non_bridge_source_callback_receives_bridge_events(self, bridge: Any) -> None:
         """A callback registered with source_id='gui' receives bridge-sourced events.
 
         Args:
@@ -438,9 +420,7 @@ class TestCallbackSourceFiltering:
 class TestMultipleCallbacks:
     """Tests for multi-callback delivery through bridge state holder."""
 
-    def test_multiple_callbacks_all_receive_event(
-        self, bridge: Any
-    ) -> None:
+    def test_multiple_callbacks_all_receive_event(self, bridge: Any) -> None:
         """All registered callbacks must receive the same bridge-fired event.
 
         Args:
@@ -462,9 +442,7 @@ class TestMultipleCallbacks:
         assert any(e[0] == HexDocumentEvent.DISPLAY_MODE_CHANGED for e in events_b)
         assert any(e[0] == HexDocumentEvent.DISPLAY_MODE_CHANGED for e in events_c)
 
-    def test_unregistered_callback_no_longer_receives_events(
-        self, bridge: Any
-    ) -> None:
+    def test_unregistered_callback_no_longer_receives_events(self, bridge: Any) -> None:
         """After unregister_callback, the callback must not receive further events.
 
         Args:
@@ -497,9 +475,7 @@ class TestStateCursorUpdate:
         state.set_cursor(512)
         assert state.cursor_offset == 512
 
-    def test_goto_offset_fires_cursor_moved_on_state(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_goto_offset_fires_cursor_moved_on_state(self, bridge: Any, pe_binary: Path) -> None:
         """goto_offset must update the state holder cursor_offset.
 
         Args:
@@ -522,9 +498,7 @@ class TestStateCursorUpdate:
 class TestBridgeStateFactory:
     """Tests for constructing a fresh HexEditorBridge with a state holder."""
 
-    def test_fresh_bridge_with_state_holder_open_fires_event(
-        self, pe_binary: Path
-    ) -> None:
+    def test_fresh_bridge_with_state_holder_open_fires_event(self, pe_binary: Path) -> None:
         """A bridge constructed from scratch with a state holder fires DOCUMENT_OPENED.
 
         Args:

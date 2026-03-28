@@ -49,9 +49,7 @@ def _run(coro: Any) -> Any:
 class TestOpenCloseCycles:
     """Tests for repeated open/close cycles on the same bridge instance."""
 
-    def test_multiple_open_close_cycles_same_size(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_multiple_open_close_cycles_same_size(self, bridge: Any, pe_binary: Path) -> None:
         """Repeated open/close cycles on the same file must return the same size.
 
         Args:
@@ -66,9 +64,7 @@ class TestOpenCloseCycles:
 
         assert len(set(sizes)) == 1
 
-    def test_read_bytes_after_reopen_matches_original(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_read_bytes_after_reopen_matches_original(self, bridge: Any, pe_binary: Path) -> None:
         """Read bytes after a close/reopen must produce the same hex string.
 
         Args:
@@ -85,9 +81,7 @@ class TestOpenCloseCycles:
 
         assert first_read == second_read
 
-    def test_open_different_files_sequentially(
-        self, bridge: Any, pe_binary: Path, elf_binary: Path
-    ) -> None:
+    def test_open_different_files_sequentially(self, bridge: Any, pe_binary: Path, elf_binary: Path) -> None:
         """Opening different files sequentially must produce distinct magic bytes.
 
         Args:
@@ -106,9 +100,7 @@ class TestOpenCloseCycles:
         assert pe_magic == "4D 5A"
         assert elf_magic == "7F 45 4C 46"
 
-    def test_open_pe_then_elf_then_pe_magic_consistent(
-        self, bridge: Any, pe_binary: Path, elf_binary: Path
-    ) -> None:
+    def test_open_pe_then_elf_then_pe_magic_consistent(self, bridge: Any, pe_binary: Path, elf_binary: Path) -> None:
         """After PE -> ELF -> PE cycle the PE magic bytes must still read as MZ.
 
         Args:
@@ -132,9 +124,7 @@ class TestOpenCloseCycles:
 class TestStateAfterClose:
     """Tests for bridge internal state being clean after close_file."""
 
-    def test_close_file_resets_cursor_to_zero(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_close_file_resets_cursor_to_zero(self, bridge: Any, pe_binary: Path) -> None:
         """After close_file the internal cursor must be zero.
 
         Args:
@@ -147,9 +137,7 @@ class TestStateAfterClose:
 
         assert bridge._cursor_offset == 0
 
-    def test_close_file_clears_selection(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_close_file_clears_selection(self, bridge: Any, pe_binary: Path) -> None:
         """After close_file the internal selection must be None.
 
         Args:
@@ -162,9 +150,7 @@ class TestStateAfterClose:
 
         assert bridge._selection is None
 
-    def test_read_after_close_raises_runtime_error(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_read_after_close_raises_runtime_error(self, bridge: Any, pe_binary: Path) -> None:
         """read_bytes after close_file must raise RuntimeError.
 
         Args:
@@ -177,9 +163,7 @@ class TestStateAfterClose:
         with pytest.raises(RuntimeError):
             _run(bridge.read_bytes(0, 4))
 
-    def test_get_document_info_after_close_returns_empty(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_get_document_info_after_close_returns_empty(self, bridge: Any, pe_binary: Path) -> None:
         """get_document_info after close_file must return size zero and None file_path.
 
         Args:
@@ -198,9 +182,7 @@ class TestStateAfterClose:
 class TestShutdownReinit:
     """Tests for shutdown followed by re-initialization producing a clean bridge."""
 
-    def test_shutdown_then_reinit_reads_same_data(
-        self, pe_binary: Path
-    ) -> None:
+    def test_shutdown_then_reinit_reads_same_data(self, pe_binary: Path) -> None:
         """Data read from a re-initialized bridge must match data from the original.
 
         Args:
@@ -221,9 +203,7 @@ class TestShutdownReinit:
         assert result1 == result2
         assert result1 == "4D 5A"
 
-    def test_bridge_after_shutdown_raises_on_read(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_bridge_after_shutdown_raises_on_read(self, bridge: Any, pe_binary: Path) -> None:
         """read_bytes after shutdown must raise RuntimeError because the document is gone.
 
         Args:
@@ -236,9 +216,7 @@ class TestShutdownReinit:
         with pytest.raises(RuntimeError):
             _run(bridge.read_bytes(0, 4))
 
-    def test_bridge_after_shutdown_document_is_none(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_bridge_after_shutdown_document_is_none(self, bridge: Any, pe_binary: Path) -> None:
         """After shutdown the _document attribute must be None.
 
         Args:
@@ -254,9 +232,7 @@ class TestShutdownReinit:
 class TestBridgeCoexistence:
     """Tests for multiple bridge instances operating independently on separate documents."""
 
-    def test_two_bridges_read_different_files_independently(
-        self, pe_binary: Path, elf_binary: Path
-    ) -> None:
+    def test_two_bridges_read_different_files_independently(self, pe_binary: Path, elf_binary: Path) -> None:
         """Two bridges each holding a different file must read that file's magic bytes.
 
         Args:
@@ -280,9 +256,7 @@ class TestBridgeCoexistence:
         assert pe_data == "4D 5A"
         assert elf_data == "7F 45 4C 46"
 
-    def test_write_to_one_bridge_does_not_affect_other(
-        self, pe_binary: Path, tmp_path: Path
-    ) -> None:
+    def test_write_to_one_bridge_does_not_affect_other(self, pe_binary: Path, tmp_path: Path) -> None:
         """A write on one bridge must not corrupt the document held by another bridge.
 
         Args:
@@ -311,9 +285,7 @@ class TestBridgeCoexistence:
 
         assert before == after
 
-    def test_three_bridges_coexist_independently(
-        self, pe_binary: Path, elf_binary: Path, tmp_path: Path
-    ) -> None:
+    def test_three_bridges_coexist_independently(self, pe_binary: Path, elf_binary: Path, tmp_path: Path) -> None:
         """Three bridges holding distinct files must each read their own magic bytes correctly.
 
         Args:
@@ -353,9 +325,7 @@ class TestBridgeCoexistence:
 class TestRapidWriteOperations:
     """Tests for rapid sequential write operations not corrupting document state."""
 
-    def test_rapid_writes_final_value_is_last_written(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_rapid_writes_final_value_is_last_written(self, bridge: Any, pe_binary: Path) -> None:
         """After many sequential writes the last-written value must be readable.
 
         Args:
@@ -374,9 +344,7 @@ class TestRapidWriteOperations:
 
         assert result == f"{final_byte:02X}"
 
-    def test_rapid_writes_do_not_corrupt_surrounding_bytes(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_rapid_writes_do_not_corrupt_surrounding_bytes(self, bridge: Any, pe_binary: Path) -> None:
         """Sequential writes at offset 0 must not alter bytes at a distant offset.
 
         Args:
@@ -395,9 +363,7 @@ class TestRapidWriteOperations:
 
         assert sentinel_before == sentinel_after
 
-    def test_sequential_write_and_read_roundtrip(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_sequential_write_and_read_roundtrip(self, bridge: Any, pe_binary: Path) -> None:
         """Each written byte value must be immediately readable at the write offset.
 
         Args:

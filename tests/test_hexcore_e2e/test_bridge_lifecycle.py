@@ -75,9 +75,7 @@ class TestBridgeInit:
 class TestBridgeFileOps:
     """Tests covering open_file, close_file, and reopen semantics."""
 
-    def test_open_file_returns_dict_with_file_path(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_open_file_returns_dict_with_file_path(self, bridge: Any, pe_binary: Path) -> None:
         """Verify that open_file returns a dict containing file_path.
 
         Args:
@@ -88,9 +86,7 @@ class TestBridgeFileOps:
         assert "file_path" in result
         assert result["file_path"] == str(pe_binary)
 
-    def test_open_file_returns_dict_with_positive_size(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_open_file_returns_dict_with_positive_size(self, bridge: Any, pe_binary: Path) -> None:
         """Verify that open_file returns a dict with a positive size field.
 
         Args:
@@ -101,9 +97,7 @@ class TestBridgeFileOps:
         assert "size" in result
         assert result["size"] > 0
 
-    def test_open_file_returns_dict_with_modified_false(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_open_file_returns_dict_with_modified_false(self, bridge: Any, pe_binary: Path) -> None:
         """Verify that open_file returns modified=False for a freshly opened file.
 
         Args:
@@ -113,9 +107,7 @@ class TestBridgeFileOps:
         result: dict[str, Any] = _run(bridge.open_file(str(pe_binary)))
         assert result["modified"] is False
 
-    def test_close_file_returns_true_when_open(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_close_file_returns_true_when_open(self, bridge: Any, pe_binary: Path) -> None:
         """Verify that close_file returns True when a file is open.
 
         Args:
@@ -126,9 +118,7 @@ class TestBridgeFileOps:
         closed: bool = _run(bridge.close_file())
         assert closed is True
 
-    def test_close_file_returns_false_when_already_closed(
-        self, bridge: Any
-    ) -> None:
+    def test_close_file_returns_false_when_already_closed(self, bridge: Any) -> None:
         """Verify that close_file returns False when no file is open.
 
         Args:
@@ -137,9 +127,7 @@ class TestBridgeFileOps:
         closed: bool = _run(bridge.close_file())
         assert closed is False
 
-    def test_open_then_close_then_reopen_succeeds(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_open_then_close_then_reopen_succeeds(self, bridge: Any, pe_binary: Path) -> None:
         """Verify that a file can be closed and reopened with consistent size.
 
         Args:
@@ -151,9 +139,7 @@ class TestBridgeFileOps:
         second: dict[str, Any] = _run(bridge.open_file(str(pe_binary)))
         assert first["size"] == second["size"]
 
-    def test_open_file_sets_binary_loaded_state(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_open_file_sets_binary_loaded_state(self, bridge: Any, pe_binary: Path) -> None:
         """Verify that open_file marks binary_loaded on the bridge state.
 
         Args:
@@ -163,9 +149,7 @@ class TestBridgeFileOps:
         _run(bridge.open_file(str(pe_binary)))
         assert bridge._state.binary_loaded is True
 
-    def test_close_file_clears_binary_loaded_state(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_close_file_clears_binary_loaded_state(self, bridge: Any, pe_binary: Path) -> None:
         """Verify that close_file clears binary_loaded on the bridge state.
 
         Args:
@@ -180,9 +164,7 @@ class TestBridgeFileOps:
 class TestBridgeShutdown:
     """Tests covering shutdown behavior and post-shutdown operation safety."""
 
-    def test_shutdown_clears_document(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_shutdown_clears_document(self, bridge: Any, pe_binary: Path) -> None:
         """Verify that shutdown discards the open document reference.
 
         Args:
@@ -193,9 +175,7 @@ class TestBridgeShutdown:
         _run(bridge.shutdown())
         assert bridge._document is None
 
-    def test_shutdown_resets_cursor_offset(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_shutdown_resets_cursor_offset(self, bridge: Any, pe_binary: Path) -> None:
         """Verify that shutdown resets the cursor offset to zero.
 
         Args:
@@ -207,9 +187,7 @@ class TestBridgeShutdown:
         _run(bridge.shutdown())
         assert bridge._cursor_offset == 0
 
-    def test_operations_after_shutdown_raise_or_return_gracefully(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_operations_after_shutdown_raise_or_return_gracefully(self, bridge: Any, pe_binary: Path) -> None:
         """Verify that read_bytes after shutdown raises RuntimeError.
 
         Args:

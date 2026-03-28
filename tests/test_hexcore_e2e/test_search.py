@@ -20,9 +20,9 @@ class TestSearchBytes:
         Args:
             hexcore: The native module fixture.
         """
-        data = b"\x00" * 10 + b"\xAA\xBB" + b"\x00" * 10 + b"\xAA\xBB" + b"\x00" * 10
+        data = b"\x00" * 10 + b"\xaa\xbb" + b"\x00" * 10 + b"\xaa\xbb" + b"\x00" * 10
         doc = hexcore.HexDocument.open_bytes(data)
-        results: list[tuple[int, int]] = doc.search_bytes(b"\xAA\xBB", 100)
+        results: list[tuple[int, int]] = doc.search_bytes(b"\xaa\xbb", 100)
         assert len(results) == 2
         assert results[0][0] == 10
         assert results[1][0] == 22
@@ -35,7 +35,7 @@ class TestSearchBytes:
         """
         data = b"\x00" * 32
         doc = hexcore.HexDocument.open_bytes(data)
-        results: list[tuple[int, int]] = doc.search_bytes(b"\xFF\xFE", 100)
+        results: list[tuple[int, int]] = doc.search_bytes(b"\xff\xfe", 100)
         assert results == []
 
     def test_max_results_limits_output(self, hexcore: Any) -> None:
@@ -44,9 +44,9 @@ class TestSearchBytes:
         Args:
             hexcore: The native module fixture.
         """
-        repeated = b"\xDE\xAD" * 20
+        repeated = b"\xde\xad" * 20
         doc = hexcore.HexDocument.open_bytes(repeated)
-        results: list[tuple[int, int]] = doc.search_bytes(b"\xDE\xAD", 3)
+        results: list[tuple[int, int]] = doc.search_bytes(b"\xde\xad", 3)
         assert len(results) == 3
 
     def test_single_byte_pattern_finds_all_positions(self, hexcore: Any) -> None:
@@ -55,9 +55,9 @@ class TestSearchBytes:
         Args:
             hexcore: The native module fixture.
         """
-        data = b"\x00\xFF\x00\xFF\x00"
+        data = b"\x00\xff\x00\xff\x00"
         doc = hexcore.HexDocument.open_bytes(data)
-        results: list[tuple[int, int]] = doc.search_bytes(b"\xFF", 100)
+        results: list[tuple[int, int]] = doc.search_bytes(b"\xff", 100)
         assert len(results) == 2
         assert results[0][0] == 1
         assert results[1][0] == 3
@@ -68,9 +68,9 @@ class TestSearchBytes:
         Args:
             hexcore: The native module fixture.
         """
-        data = b"\xCA\xFE" + b"\x00" * 20 + b"\xCA\xFE"
+        data = b"\xca\xfe" + b"\x00" * 20 + b"\xca\xfe"
         doc = hexcore.HexDocument.open_bytes(data)
-        results: list[tuple[int, int]] = doc.search_bytes(b"\xCA\xFE", 100)
+        results: list[tuple[int, int]] = doc.search_bytes(b"\xca\xfe", 100)
         assert len(results) == 2
         assert results[0][0] == 0
         assert results[1][0] == 22
@@ -91,9 +91,7 @@ class TestSearchHex:
         assert len(results) >= 1
         assert results[0][0] == 0
 
-    def test_wildcard_byte_matches_pe_header_sequence(
-        self, hexcore: Any, pe_bytes: bytes
-    ) -> None:
+    def test_wildcard_byte_matches_pe_header_sequence(self, hexcore: Any, pe_bytes: bytes) -> None:
         """Verify that a hex pattern with a wildcard byte matches the MZ header sequence.
 
         The PE header constructed by conftest starts 4D 5A 90 00 so the pattern
@@ -128,14 +126,12 @@ class TestSearchHex:
         Args:
             hexcore: The native module fixture.
         """
-        data = b"\xAB\xCD" * 10
+        data = b"\xab\xcd" * 10
         doc = hexcore.HexDocument.open_bytes(data)
         results: list[tuple[int, int]] = doc.search_hex("AB CD", 4)
         assert len(results) == 4
 
-    def test_lowercase_hex_digits_accepted(
-        self, hexcore: Any, pe_bytes: bytes
-    ) -> None:
+    def test_lowercase_hex_digits_accepted(self, hexcore: Any, pe_bytes: bytes) -> None:
         """Verify that search_hex accepts lowercase hex digits and returns the same result.
 
         Args:
@@ -289,9 +285,7 @@ class TestSearchNumeric:
         struct.pack_into("<I", buf, 8, 0x12345678)
         struct.pack_into("<I", buf, 40, 0x12345678)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
-        results: list[tuple[int, int]] = doc.search_numeric(
-            0x12345678, 4, False, False, 1, 100
-        )
+        results: list[tuple[int, int]] = doc.search_numeric(0x12345678, 4, False, False, 1, 100)
         offsets = [r[0] for r in results]
         assert 8 in offsets
         assert 40 in offsets
@@ -320,9 +314,7 @@ class TestSearchNumeric:
         buf = bytearray(100)
         struct.pack_into(">I", buf, 30, 0xAABBCCDD)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
-        results: list[tuple[int, int]] = doc.search_numeric(
-            0xAABBCCDD, 4, False, True, 1, 100
-        )
+        results: list[tuple[int, int]] = doc.search_numeric(0xAABBCCDD, 4, False, True, 1, 100)
         offsets = [r[0] for r in results]
         assert 30 in offsets
 
@@ -337,9 +329,7 @@ class TestSearchNumeric:
         struct.pack_into("<I", buf, 12, 0xBEEFCAFE)
         struct.pack_into("<I", buf, 18, 0xBEEFCAFE)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
-        aligned_results: list[tuple[int, int]] = doc.search_numeric(
-            0xBEEFCAFE, 4, False, False, 4, 100
-        )
+        aligned_results: list[tuple[int, int]] = doc.search_numeric(0xBEEFCAFE, 4, False, False, 4, 100)
         offsets = [r[0] for r in aligned_results]
         assert 8 in offsets
         assert 12 in offsets
@@ -368,9 +358,7 @@ class TestSearchNumeric:
         """
         buf = bytearray(64)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
-        results: list[tuple[int, int]] = doc.search_numeric(
-            0xDEADBEEF, 4, False, False, 1, 100
-        )
+        results: list[tuple[int, int]] = doc.search_numeric(0xDEADBEEF, 4, False, False, 1, 100)
         assert results == []
 
 
@@ -387,9 +375,7 @@ class TestSearchNumericFloat:
         struct.pack_into("<f", buf, 20, 3.14)
         struct.pack_into("<f", buf, 60, 3.14)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
-        results: list[tuple[int, int]] = doc.search_numeric_float(
-            3.14, 4, False, 0.001, 1, 100
-        )
+        results: list[tuple[int, int]] = doc.search_numeric_float(3.14, 4, False, 0.001, 1, 100)
         offsets = [r[0] for r in results]
         assert 20 in offsets
         assert 60 in offsets
@@ -403,9 +389,7 @@ class TestSearchNumericFloat:
         buf = bytearray(100)
         struct.pack_into("<f", buf, 20, 100.0)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
-        results: list[tuple[int, int]] = doc.search_numeric_float(
-            200.0, 4, False, 0.001, 1, 100
-        )
+        results: list[tuple[int, int]] = doc.search_numeric_float(200.0, 4, False, 0.001, 1, 100)
         assert results == []
 
     def test_finds_big_endian_f32_at_correct_offset(self, hexcore: Any) -> None:
@@ -417,9 +401,7 @@ class TestSearchNumericFloat:
         buf = bytearray(100)
         struct.pack_into(">f", buf, 40, 2.718)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
-        results: list[tuple[int, int]] = doc.search_numeric_float(
-            2.718, 4, True, 0.001, 1, 100
-        )
+        results: list[tuple[int, int]] = doc.search_numeric_float(2.718, 4, True, 0.001, 1, 100)
         offsets = [r[0] for r in results]
         assert 40 in offsets
 
@@ -438,9 +420,7 @@ class TestSearchNumericRange:
         struct.pack_into("<I", buf, 28, 100)
         struct.pack_into("<I", buf, 52, 45)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
-        results: list[tuple[int, int]] = doc.search_numeric_range(
-            40, 60, 4, False, False, 1, 100
-        )
+        results: list[tuple[int, int]] = doc.search_numeric_range(40, 60, 4, False, False, 1, 100)
         offsets = [r[0] for r in results]
         assert 8 in offsets
         assert 52 in offsets
@@ -454,9 +434,7 @@ class TestSearchNumericRange:
         """
         buf = bytearray(64)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
-        results: list[tuple[int, int]] = doc.search_numeric_range(
-            100, 200, 4, False, False, 1, 100
-        )
+        results: list[tuple[int, int]] = doc.search_numeric_range(100, 200, 4, False, False, 1, 100)
         assert results == []
 
     def test_signed_range_includes_negative_values(self, hexcore: Any) -> None:
@@ -470,9 +448,7 @@ class TestSearchNumericRange:
         struct.pack_into("<i", buf, 40, -10)
         struct.pack_into("<i", buf, 70, 5)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
-        results: list[tuple[int, int]] = doc.search_numeric_range(
-            -100, -1, 4, True, False, 1, 100
-        )
+        results: list[tuple[int, int]] = doc.search_numeric_range(-100, -1, 4, True, False, 1, 100)
         offsets = [r[0] for r in results]
         assert 16 in offsets
         assert 40 in offsets
@@ -488,9 +464,7 @@ class TestSearchNumericRange:
         struct.pack_into(">I", buf, 20, 75)
         struct.pack_into(">I", buf, 50, 200)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
-        results: list[tuple[int, int]] = doc.search_numeric_range(
-            70, 80, 4, False, True, 1, 100
-        )
+        results: list[tuple[int, int]] = doc.search_numeric_range(70, 80, 4, False, True, 1, 100)
         offsets = [r[0] for r in results]
         assert 20 in offsets
         assert 50 not in offsets
@@ -505,7 +479,7 @@ class TestReplaceBytes:
         Args:
             hexcore: The native module fixture.
         """
-        data = b"\x00" * 10 + b"\xAA\xBB" + b"\x00" * 10 + b"\xAA\xBB" + b"\x00" * 10
+        data = b"\x00" * 10 + b"\xaa\xbb" + b"\x00" * 10 + b"\xaa\xbb" + b"\x00" * 10
         doc = hexcore.HexDocument.open_bytes(data)
         count: int = doc.replace_bytes([0xAA, 0xBB], [0xCC, 0xDD])
         assert count == 2
@@ -516,11 +490,11 @@ class TestReplaceBytes:
         Args:
             hexcore: The native module fixture.
         """
-        data = b"\x00" * 10 + b"\xAA\xBB" + b"\x00" * 10 + b"\xAA\xBB" + b"\x00" * 10
+        data = b"\x00" * 10 + b"\xaa\xbb" + b"\x00" * 10 + b"\xaa\xbb" + b"\x00" * 10
         doc = hexcore.HexDocument.open_bytes(data)
         doc.replace_bytes([0xAA, 0xBB], [0xCC, 0xDD])
-        assert doc.read(10, 2) == b"\xCC\xDD"
-        assert doc.read(22, 2) == b"\xCC\xDD"
+        assert doc.read(10, 2) == b"\xcc\xdd"
+        assert doc.read(22, 2) == b"\xcc\xdd"
 
     def test_original_pattern_absent_after_replace(self, hexcore: Any) -> None:
         """Verify that the original pattern no longer appears after replace_bytes.
@@ -528,10 +502,10 @@ class TestReplaceBytes:
         Args:
             hexcore: The native module fixture.
         """
-        data = b"\x00" * 10 + b"\xAA\xBB" + b"\x00" * 10 + b"\xAA\xBB" + b"\x00" * 10
+        data = b"\x00" * 10 + b"\xaa\xbb" + b"\x00" * 10 + b"\xaa\xbb" + b"\x00" * 10
         doc = hexcore.HexDocument.open_bytes(data)
         doc.replace_bytes([0xAA, 0xBB], [0xCC, 0xDD])
-        remaining: list[tuple[int, int]] = doc.search_bytes(b"\xAA\xBB", 100)
+        remaining: list[tuple[int, int]] = doc.search_bytes(b"\xaa\xbb", 100)
         assert remaining == []
 
     def test_no_match_returns_zero(self, hexcore: Any) -> None:
@@ -551,10 +525,8 @@ class TestReplaceBytes:
         Args:
             hexcore: The native module fixture.
         """
-        data = b"\x00" * 5 + b"\xDE\xAD\xBE\xEF" + b"\x00" * 5
+        data = b"\x00" * 5 + b"\xde\xad\xbe\xef" + b"\x00" * 5
         doc = hexcore.HexDocument.open_bytes(data)
-        count: int = doc.replace_bytes(
-            [0xDE, 0xAD, 0xBE, 0xEF], [0x11, 0x22, 0x33, 0x44]
-        )
+        count: int = doc.replace_bytes([0xDE, 0xAD, 0xBE, 0xEF], [0x11, 0x22, 0x33, 0x44])
         assert count == 1
         assert doc.read(5, 4) == b"\x11\x22\x33\x44"

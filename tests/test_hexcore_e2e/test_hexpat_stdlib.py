@@ -46,10 +46,7 @@ class TestMemoryFunctions:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = struct.pack("<I", 0x12345678) + bytes(16)
-        source = (
-            "u8 offset_result @ 0;\n"
-            "u32 check = read_unsigned(0, 4);\n"
-        )
+        source = "u8 offset_result @ 0;\nu32 check = read_unsigned(0, 4);\n"
         interp.execute_bytes(source, data)
 
     def test_read_signed_negative(self, interp: HexPatInterpreter) -> None:
@@ -59,10 +56,7 @@ class TestMemoryFunctions:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = struct.pack("b", -42) + bytes(15)
-        source = (
-            "s8 val @ 0;\n"
-            "u8 ok @ 0;"
-        )
+        source = "s8 val @ 0;\nu8 ok @ 0;"
         results = interp.execute_bytes(source, data)
         signed_field = next(r for r in results if r["name"] == "val")
         assert signed_field["display_value"] == "-42"
@@ -85,10 +79,7 @@ class TestMemoryFunctions:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes([0, 1, 2, 0xDE, 0xAD, 0xBE, 0xEF, 0, 0, 0])
-        source = (
-            "u8 found = find_sequence(0, \"DEADBEEF\");\n"
-            "u8 ok @ 0;"
-        )
+        source = 'u8 found = find_sequence(0, "DEADBEEF");\nu8 ok @ 0;'
         results = interp.execute_bytes(source, data)
         assert any(r["name"] == "ok" for r in results)
 

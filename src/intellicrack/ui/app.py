@@ -296,10 +296,7 @@ class MainWindow(QMainWindow):
 
         raw_splitter = settings.value("splitter_sizes")
         if isinstance(raw_splitter, list):
-            parsed_sizes: list[int] = [
-                int(val) for val in cast("list[object]", raw_splitter)
-                if isinstance(val, (str, int, float))
-            ]
+            parsed_sizes: list[int] = [int(val) for val in cast("list[object]", raw_splitter) if isinstance(val, (str, int, float))]
             if len(parsed_sizes) == 2:  # noqa: PLR2004
                 self._splitter.setSizes(parsed_sizes)
 
@@ -2082,9 +2079,7 @@ class MainWindow(QMainWindow):
                 self,
                 "Unsaved Changes",
                 "The hex editor has unsaved changes. Save before closing?",
-                QMessageBox.StandardButton.Save
-                | QMessageBox.StandardButton.Discard
-                | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
                 QMessageBox.StandardButton.Save,
             )
             if reply == QMessageBox.StandardButton.Cancel:

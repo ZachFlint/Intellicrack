@@ -45,7 +45,7 @@ def _load_and_select(bridge: Any, tmp_path: Path) -> None:
         bridge: An initialized HexEditorBridge fixture.
         tmp_path: Pytest temporary directory.
     """
-    payload = b"\xDE\xAD\xBE\xEF"
+    payload = b"\xde\xad\xbe\xef"
     f = tmp_path / "copyas.bin"
     f.write_bytes(payload)
     _run(bridge.open_file(str(f)))
@@ -55,9 +55,7 @@ def _load_and_select(bridge: Any, tmp_path: Path) -> None:
 class TestBridgeCopyAs:
     """Tests covering all copy_as output formats."""
 
-    def test_copy_as_hex_contains_spaces(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_copy_as_hex_contains_spaces(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that the hex format produces space-separated byte tokens.
 
         Args:
@@ -70,9 +68,7 @@ class TestBridgeCopyAs:
         tokens = result.split(" ")
         assert all(len(t) == 2 for t in tokens)
 
-    def test_copy_as_hex_expected_value(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_copy_as_hex_expected_value(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that hex format output matches the known byte values.
 
         Args:
@@ -83,9 +79,7 @@ class TestBridgeCopyAs:
         result: str = _run(bridge.copy_as("hex"))
         assert result == "DE AD BE EF"
 
-    def test_copy_as_c_array_has_curly_braces(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_copy_as_c_array_has_curly_braces(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that c_array format wraps the bytes in curly braces.
 
         Args:
@@ -97,9 +91,7 @@ class TestBridgeCopyAs:
         assert result.startswith("{")
         assert result.endswith("}")
 
-    def test_copy_as_python_starts_with_b_quote(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_copy_as_python_starts_with_b_quote(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that python format output starts with the bytes literal prefix.
 
         Args:
@@ -111,9 +103,7 @@ class TestBridgeCopyAs:
         assert result.startswith('b"')
         assert result.endswith('"')
 
-    def test_copy_as_rust_array_has_square_brackets(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_copy_as_rust_array_has_square_brackets(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that rust_array format output is enclosed in square brackets.
 
         Args:
@@ -125,9 +115,7 @@ class TestBridgeCopyAs:
         assert result.startswith("[")
         assert result.endswith("]")
 
-    def test_copy_as_go_slice_has_byte_prefix(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_copy_as_go_slice_has_byte_prefix(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that go_slice format output begins with the Go byte-slice literal.
 
         Args:
@@ -138,9 +126,7 @@ class TestBridgeCopyAs:
         result: str = _run(bridge.copy_as("go_slice"))
         assert result.startswith("[]byte{")
 
-    def test_copy_as_base64_is_decodable(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_copy_as_base64_is_decodable(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that base64 format output decodes back to the original bytes.
 
         Args:
@@ -150,11 +136,9 @@ class TestBridgeCopyAs:
         _load_and_select(bridge, tmp_path)
         result: str = _run(bridge.copy_as("base64"))
         decoded = base64.b64decode(result)
-        assert decoded == b"\xDE\xAD\xBE\xEF"
+        assert decoded == b"\xde\xad\xbe\xef"
 
-    def test_copy_as_hex_string_no_spaces_has_no_spaces(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_copy_as_hex_string_no_spaces_has_no_spaces(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that hex_string_no_spaces format contains no whitespace.
 
         Args:
@@ -166,9 +150,7 @@ class TestBridgeCopyAs:
         assert " " not in result
         assert result == "DEADBEEF"
 
-    def test_copy_as_markdown_table_has_header(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_copy_as_markdown_table_has_header(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that markdown_table format contains the expected column headers.
 
         Args:

@@ -40,9 +40,7 @@ def _run(coro: Any) -> Any:
 class TestReadBytesErrors:
     """Tests covering read_bytes error behaviour without an open document."""
 
-    def test_read_bytes_no_document_raises_runtime_error(
-        self, bridge: Any
-    ) -> None:
+    def test_read_bytes_no_document_raises_runtime_error(self, bridge: Any) -> None:
         """Verify read_bytes raises RuntimeError when no document is open.
 
         Args:
@@ -55,9 +53,7 @@ class TestReadBytesErrors:
 class TestWriteBytesErrors:
     """Tests covering write_bytes error behaviour without an open document."""
 
-    def test_write_bytes_no_document_raises_runtime_error(
-        self, bridge: Any
-    ) -> None:
+    def test_write_bytes_no_document_raises_runtime_error(self, bridge: Any) -> None:
         """Verify write_bytes raises RuntimeError when no document is open.
 
         Args:
@@ -66,9 +62,7 @@ class TestWriteBytesErrors:
         with pytest.raises(RuntimeError, match="no document open"):
             _run(bridge.write_bytes(0, "AABB"))
 
-    def test_write_bytes_beyond_length_on_loaded_doc(
-        self, loaded_bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_write_bytes_beyond_length_on_loaded_doc(self, loaded_bridge: Any, pe_binary: Path) -> None:
         """Verify write_bytes on a loaded document can attempt an out-of-range write.
 
         The bridge delegates to the Rust layer; this test confirms the call
@@ -89,9 +83,7 @@ class TestWriteBytesErrors:
 class TestSearchErrors:
     """Tests covering search method behaviour without an open document."""
 
-    def test_search_hex_no_document_raises_runtime_error(
-        self, bridge: Any
-    ) -> None:
+    def test_search_hex_no_document_raises_runtime_error(self, bridge: Any) -> None:
         """Verify search_hex raises RuntimeError when no document is open.
 
         Args:
@@ -100,9 +92,7 @@ class TestSearchErrors:
         with pytest.raises(RuntimeError, match="no document open"):
             _run(bridge.search_hex("4D 5A"))
 
-    def test_search_text_no_document_raises_runtime_error(
-        self, bridge: Any
-    ) -> None:
+    def test_search_text_no_document_raises_runtime_error(self, bridge: Any) -> None:
         """Verify search_text raises RuntimeError when no document is open.
 
         Args:
@@ -115,9 +105,7 @@ class TestSearchErrors:
 class TestDisassembleErrors:
     """Tests covering disassemble error behaviour without an open document."""
 
-    def test_disassemble_no_document_raises_runtime_error(
-        self, bridge: Any
-    ) -> None:
+    def test_disassemble_no_document_raises_runtime_error(self, bridge: Any) -> None:
         """Verify disassemble raises RuntimeError when no document is open.
 
         Args:
@@ -130,15 +118,13 @@ class TestDisassembleErrors:
 class TestYaraScanErrors:
     """Tests covering yara_scan error behaviour without an open document."""
 
-    def test_yara_scan_no_document_raises_runtime_error(
-        self, bridge: Any
-    ) -> None:
+    def test_yara_scan_no_document_raises_runtime_error(self, bridge: Any) -> None:
         """Verify yara_scan raises RuntimeError when no document is open.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
         """
-        rule = 'rule test { condition: true }'
+        rule = "rule test { condition: true }"
         with pytest.raises(RuntimeError, match="no document open"):
             _run(bridge.yara_scan(rule))
 
@@ -146,9 +132,7 @@ class TestYaraScanErrors:
 class TestCalculateHashErrors:
     """Tests covering hash calculation error behaviour without an open document."""
 
-    def test_calculate_hash_no_document_raises_runtime_error(
-        self, bridge: Any
-    ) -> None:
+    def test_calculate_hash_no_document_raises_runtime_error(self, bridge: Any) -> None:
         """Verify calculate_hash raises RuntimeError when no document is open.
 
         Args:
@@ -157,9 +141,7 @@ class TestCalculateHashErrors:
         with pytest.raises(RuntimeError, match="no document open"):
             _run(bridge.calculate_hash("sha256"))
 
-    def test_calculate_hash_range_no_document_raises_runtime_error(
-        self, bridge: Any
-    ) -> None:
+    def test_calculate_hash_range_no_document_raises_runtime_error(self, bridge: Any) -> None:
         """Verify calculate_hash_range raises RuntimeError when no document is open.
 
         Args:
@@ -168,9 +150,7 @@ class TestCalculateHashErrors:
         with pytest.raises(RuntimeError, match="no document open"):
             _run(bridge.calculate_hash_range(0, 64, "sha256"))
 
-    def test_calculate_hash_custom_crc_no_document_raises_runtime_error(
-        self, bridge: Any
-    ) -> None:
+    def test_calculate_hash_custom_crc_no_document_raises_runtime_error(self, bridge: Any) -> None:
         """Verify calculate_hash_custom_crc raises RuntimeError when no document is open.
 
         Args:
@@ -183,9 +163,7 @@ class TestCalculateHashErrors:
 class TestEntropyErrors:
     """Tests covering entropy error behaviour without an open document."""
 
-    def test_get_entropy_no_document_raises_runtime_error(
-        self, bridge: Any
-    ) -> None:
+    def test_get_entropy_no_document_raises_runtime_error(self, bridge: Any) -> None:
         """Verify get_entropy raises RuntimeError when no document is open.
 
         Args:
@@ -198,9 +176,7 @@ class TestEntropyErrors:
 class TestTransformErrors:
     """Tests covering transform and pipeline error behaviour without an open document."""
 
-    def test_apply_transform_no_document_raises_runtime_error(
-        self, bridge: Any
-    ) -> None:
+    def test_apply_transform_no_document_raises_runtime_error(self, bridge: Any) -> None:
         """Verify apply_transform raises RuntimeError when no document is open.
 
         Args:
@@ -209,9 +185,7 @@ class TestTransformErrors:
         with pytest.raises(RuntimeError, match="no document open"):
             _run(bridge.apply_transform("xor_single", 0, 4, '{"key": "ff"}'))
 
-    def test_apply_pipeline_no_document_raises_runtime_error(
-        self, bridge: Any
-    ) -> None:
+    def test_apply_pipeline_no_document_raises_runtime_error(self, bridge: Any) -> None:
         """Verify apply_pipeline raises RuntimeError when no document is open.
 
         Args:
@@ -224,9 +198,7 @@ class TestTransformErrors:
 class TestDecodeTextErrors:
     """Tests covering decode_text error behaviour without an open document."""
 
-    def test_decode_text_no_document_raises_runtime_error(
-        self, bridge: Any
-    ) -> None:
+    def test_decode_text_no_document_raises_runtime_error(self, bridge: Any) -> None:
         """Verify decode_text raises RuntimeError when no document is open.
 
         Args:

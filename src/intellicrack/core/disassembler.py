@@ -35,6 +35,12 @@ except ImportError:
 
 _ERR_NO_CAPSTONE = "capstone is not available"
 _ERR_RISCV_UNAVAIL = "riscv support not available in this capstone build"
+_ERR_UNSUPPORTED_ARCH = "unsupported architecture"
+
+_MIN_HEADER_BYTES: int = 4
+_MIN_PE_HEADER_BYTES: int = 64
+_MIN_ELF_HEADER_BYTES: int = 20
+_MIN_MACHO_HEADER_BYTES: int = 8
 
 _PE_MACHINE_I386: int = 0x014C
 _PE_MACHINE_AMD64: int = 0x8664
@@ -127,9 +133,7 @@ class HexDisassembler:
     # Architecture / mode resolution
     # ------------------------------------------------------------------
 
-    def _resolve_arch_mode(
-        self, arch: str, mode: str
-    ) -> tuple[int, int]:
+    def _resolve_arch_mode(self, arch: str, mode: str) -> tuple[int, int]:
         """Map architecture and mode strings to capstone integer constants.
 
         Args:
@@ -151,19 +155,11 @@ class HexDisassembler:
         mode_lower = mode.lower()
 
         if arch_lower == "arm":
-            return (
-                (cs.CS_ARCH_ARM, cs.CS_MODE_THUMB)
-                if mode_lower == "thumb"
-                else (cs.CS_ARCH_ARM, cs.CS_MODE_ARM)
-            )
-        elif arch_lower == "x86":
+            return (cs.CS_ARCH_ARM, cs.CS_MODE_THUMB) if mode_lower == "thumb" else (cs.CS_ARCH_ARM, cs.CS_MODE_ARM)
+        if arch_lower == "x86":
             if mode_lower == "16":
                 return cs.CS_ARCH_X86, cs.CS_MODE_16
-            return (
-                (cs.CS_ARCH_X86, cs.CS_MODE_32)
-                if mode_lower == "32"
-                else (cs.CS_ARCH_X86, cs.CS_MODE_64)
-            )
+            return (cs.CS_ARCH_X86, cs.CS_MODE_32) if mode_lower == "32" else (cs.CS_ARCH_X86, cs.CS_MODE_64)
         if arch_lower in {"arm64", "aarch64"}:
             return cs.CS_ARCH_ARM64, cs.CS_MODE_ARM
 
@@ -191,7 +187,7 @@ class HexDisassembler:
                     return cs.CS_ARCH_RISCV, cs.CS_MODE_RISCV32
             raise ValueError(_ERR_RISCV_UNAVAIL)
 
-        raise ValueError(f"unsupported architecture: {arch!r} / mode: {mode!r}")
+        raise ValueError(_ERR_UNSUPPORTED_ARCH)
 
     # ------------------------------------------------------------------
     # Public API
@@ -286,7 +282,8 @@ class HexDisassembler:
         raw = self.disassemble(data, base_addr, arch, mode, count)
         return [_to_disassembly_line(insn) for insn in raw]
 
-    def auto_detect_arch(self, data: bytes) -> tuple[str, str]:
+    @staticmethod
+    def auto_detect_arch(data: bytes) -> tuple[str, str]:
         """Detect architecture from PE, ELF, or Mach-O binary headers.
 
         Inspects the first bytes of *data* to identify common binary
@@ -301,11 +298,11 @@ class HexDisassembler:
             :meth:`disassemble`.  Falls back to ``("x86", "64")`` when
             the format is unrecognised.
         """
-        if len(data) < 4:
+        if len(data) < _MIN_HEADER_BYTES:
             return ("x86", "64")
 
         # ------ PE -------------------------------------------------------
-        if data[:2] == b"MZ" and len(data) >= 64:
+        if data[:2] == b"MZ" and len(data) >= _MIN_PE_HEADER_BYTES:
             pe_offset = struct.unpack_from("<I", data, 60)[0]
             if pe_offset + 6 <= len(data) and data[pe_offset : pe_offset + 4] == b"PE\x00\x00":
                 machine = struct.unpack_from("<H", data, pe_offset + 4)[0]
@@ -320,7 +317,7 @@ class HexDisassembler:
                     return ("arm64", "arm")
 
         # ------ ELF ------------------------------------------------------
-        if data[:4] == b"\x7fELF" and len(data) >= 20:
+        if data[:4] == b"\x7fELF" and len(data) >= _MIN_ELF_HEADER_BYTES:
             is_64 = data[4] == _ELF_CLASS_64
             e_machine = struct.unpack_from("<H", data, 18)[0]
             _logger.debug("elf_machine_detected", e_machine=hex(e_machine))
@@ -338,7 +335,7 @@ class HexDisassembler:
                 return ("riscv", "64" if is_64 else "32")
 
         # ------ Mach-O ---------------------------------------------------
-        if len(data) >= 8:
+        if len(data) >= _MIN_MACHO_HEADER_BYTES:
             magic_le = struct.unpack_from("<I", data[:4])[0]
             magic_be = struct.unpack_from(">I", data[:4])[0]
             if magic_le in {_MACHO_MAGIC_32, _MACHO_MAGIC_64} or magic_be in {
@@ -398,20 +395,14 @@ class HexDisassembler:
 
         if hasattr(cs, "CS_ARCH_RISCV"):
             if hasattr(cs, "CS_MODE_RISCV32"):
-                candidates.append(
-                    {"arch": "riscv", "mode": "32", "description": "RISC-V 32-bit"}
-                )
+                candidates.append({"arch": "riscv", "mode": "32", "description": "RISC-V 32-bit"})
             if hasattr(cs, "CS_MODE_RISCV64"):
-                candidates.append(
-                    {"arch": "riscv", "mode": "64", "description": "RISC-V 64-bit"}
-                )
+                candidates.append({"arch": "riscv", "mode": "64", "description": "RISC-V 64-bit"})
 
         supported: list[dict[str, str]] = []
         for entry in candidates:
             try:
-                cs_arch, cs_mode = self._resolve_arch_mode(
-                    entry["arch"], entry["mode"]
-                )
+                cs_arch, cs_mode = self._resolve_arch_mode(entry["arch"], entry["mode"])
                 _ = cs.Cs(cs_arch, cs_mode)
                 supported.append(entry)
             except Exception:
@@ -425,7 +416,7 @@ class HexDisassembler:
         return supported
 
 
-_disassembler: HexDisassembler | None = None
+_singleton: dict[str, HexDisassembler] = {}
 
 
 def get_disassembler() -> HexDisassembler:
@@ -434,7 +425,6 @@ def get_disassembler() -> HexDisassembler:
     Returns:
         HexDisassembler: Shared disassembler instance, created on first call.
     """
-    global _disassembler
-    if _disassembler is None:
-        _disassembler = HexDisassembler()
-    return _disassembler
+    if "instance" not in _singleton:
+        _singleton["instance"] = HexDisassembler()
+    return _singleton["instance"]

@@ -2619,10 +2619,7 @@ class X64DbgBridge(DebuggerBridge):
                 continue
 
             for i in range(len(data) - pat_len + 1):
-                matched = not any(
-                    pat_bytes[j] is not None and data[i + j] != pat_bytes[j]
-                    for j in range(pat_len)
-                )
+                matched = not any(pat_bytes[j] is not None and data[i + j] != pat_bytes[j] for j in range(pat_len))
                 if matched:
                     addr = region.base_address + i
                     matches.append({"address": hex(addr), "offset": addr})

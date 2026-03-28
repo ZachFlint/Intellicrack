@@ -246,12 +246,12 @@ class TestDataReaderEndianSwitch:
 
     def test_find_sequence_across_data(self) -> None:
         """find_sequence locates a 4-byte pattern in the data."""
-        data = bytes(20) + b"\xDE\xAD\xBE\xEF" + bytes(20)
+        data = bytes(20) + b"\xde\xad\xbe\xef" + bytes(20)
         r = _reader(data)
-        idx = r.find_sequence(b"\xDE\xAD\xBE\xEF")
+        idx = r.find_sequence(b"\xde\xad\xbe\xef")
         assert idx == 20
 
     def test_find_sequence_not_present_returns_minus_one(self) -> None:
         """find_sequence returns -1 when the pattern is not present."""
         r = _reader(bytes(32))
-        assert r.find_sequence(b"\xFF\xFF\xFF\xFF") == -1
+        assert r.find_sequence(b"\xff\xff\xff\xff") == -1

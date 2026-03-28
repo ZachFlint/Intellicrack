@@ -100,9 +100,7 @@ class TestCalculateHashRange:
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
 
-    def test_sha256_on_first_16_bytes_of_pe_is_nonempty_hex(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_sha256_on_first_16_bytes_of_pe_is_nonempty_hex(self, bridge: Any, pe_binary: Path) -> None:
         """Verify calculate_hash_range(sha256) on first 16 PE bytes returns non-empty hex.
 
         Args:
@@ -115,9 +113,7 @@ class TestCalculateHashRange:
         assert len(result) > 0
         bytes.fromhex(result)
 
-    def test_sha256_result_matches_hashlib_on_same_slice(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_sha256_result_matches_hashlib_on_same_slice(self, bridge: Any, tmp_path: Path) -> None:
         """Verify calculate_hash_range(sha256) matches hashlib.sha256 on the same byte slice.
 
         Args:
@@ -130,9 +126,7 @@ class TestCalculateHashRange:
         result: str = _run(bridge.calculate_hash_range(start, end, "sha256"))
         assert result.lower() == expected.lower()
 
-    def test_md5_range_differs_from_sha256_range(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_md5_range_differs_from_sha256_range(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that md5 and sha256 produce different digests for the same range.
 
         Args:
@@ -144,9 +138,7 @@ class TestCalculateHashRange:
         md5_result: str = _run(bridge.calculate_hash_range(0, 64, "md5"))
         assert sha256_result != md5_result
 
-    def test_md5_range_matches_hashlib(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_md5_range_matches_hashlib(self, bridge: Any, tmp_path: Path) -> None:
         """Verify calculate_hash_range(md5) matches hashlib.md5 on the same slice.
 
         Args:
@@ -159,9 +151,7 @@ class TestCalculateHashRange:
         result: str = _run(bridge.calculate_hash_range(start, end, "md5"))
         assert result.lower() == expected.lower()
 
-    def test_sha1_range_is_valid_hex_digest(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_sha1_range_is_valid_hex_digest(self, bridge: Any, tmp_path: Path) -> None:
         """Verify calculate_hash_range(sha1) returns a valid 40-character hex digest.
 
         Args:
@@ -173,9 +163,7 @@ class TestCalculateHashRange:
         assert len(result) == 40
         bytes.fromhex(result)
 
-    def test_sha1_range_matches_hashlib(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_sha1_range_matches_hashlib(self, bridge: Any, tmp_path: Path) -> None:
         """Verify calculate_hash_range(sha1) matches hashlib.sha1 on the same slice.
 
         Args:
@@ -188,9 +176,7 @@ class TestCalculateHashRange:
         result: str = _run(bridge.calculate_hash_range(start, end, "sha1"))
         assert result.lower() == expected.lower()
 
-    def test_crc32_range_matches_binascii(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_crc32_range_matches_binascii(self, bridge: Any, tmp_path: Path) -> None:
         """Verify calculate_hash_range(crc32) matches binascii.crc32 on the same slice.
 
         Args:
@@ -204,9 +190,7 @@ class TestCalculateHashRange:
         result: str = _run(bridge.calculate_hash_range(start, end, "crc32"))
         assert result.lower() == expected.lower()
 
-    def test_full_document_range_matches_hashlib_sha256(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_full_document_range_matches_hashlib_sha256(self, bridge: Any, tmp_path: Path) -> None:
         """Verify calculate_hash_range over full document matches hashlib on all bytes.
 
         Args:
@@ -218,9 +202,7 @@ class TestCalculateHashRange:
         result: str = _run(bridge.calculate_hash_range(0, _PAYLOAD_LEN, "sha256"))
         assert result.lower() == expected.lower()
 
-    def test_pe_text_section_sha256_range(
-        self, bridge: Any, pe_binary: Path, pe_bytes: bytes
-    ) -> None:
+    def test_pe_text_section_sha256_range(self, bridge: Any, pe_binary: Path, pe_bytes: bytes) -> None:
         """Verify calculate_hash_range on PE .text section matches hashlib on that slice.
 
         Args:
@@ -235,9 +217,7 @@ class TestCalculateHashRange:
         result: str = _run(bridge.calculate_hash_range(start, end, "sha256"))
         assert result.lower() == expected.lower()
 
-    def test_empty_range_returns_hash_of_empty_bytes(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_empty_range_returns_hash_of_empty_bytes(self, bridge: Any, tmp_path: Path) -> None:
         """Verify calculate_hash_range with start==end returns hash of empty bytes.
 
         Args:
@@ -266,9 +246,7 @@ class TestCalculateHashCustomCrc:
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
 
-    def test_crc32_iso_hdlc_matches_binascii(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_crc32_iso_hdlc_matches_binascii(self, bridge: Any, tmp_path: Path) -> None:
         """Verify custom CRC-32/ISO-HDLC matches binascii.crc32 on the full payload.
 
         Args:
@@ -279,16 +257,10 @@ class TestCalculateHashCustomCrc:
         self._open_payload(bridge, tmp_path, payload, "crc32_iso.bin")
         crc_val: int = binascii.crc32(payload) & 0xFFFFFFFF
         expected: str = f"{crc_val:08x}"
-        result: str = _run(
-            bridge.calculate_hash_custom_crc(
-                0, len(payload), 0x04C11DB7, 0xFFFFFFFF, 32, True, True, 0xFFFFFFFF
-            )
-        )
+        result: str = _run(bridge.calculate_hash_custom_crc(0, len(payload), 0x04C11DB7, 0xFFFFFFFF, 32, True, True, 0xFFFFFFFF))
         assert result.lower() == expected.lower()
 
-    def test_crc32_on_subrange_matches_binascii_slice(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_crc32_on_subrange_matches_binascii_slice(self, bridge: Any, tmp_path: Path) -> None:
         """Verify custom CRC-32/ISO-HDLC on a sub-range matches binascii on the same slice.
 
         Args:
@@ -300,16 +272,10 @@ class TestCalculateHashCustomCrc:
         start, end = 16, 80
         crc_val: int = binascii.crc32(payload[start:end]) & 0xFFFFFFFF
         expected: str = f"{crc_val:08x}"
-        result: str = _run(
-            bridge.calculate_hash_custom_crc(
-                start, end, 0x04C11DB7, 0xFFFFFFFF, 32, True, True, 0xFFFFFFFF
-            )
-        )
+        result: str = _run(bridge.calculate_hash_custom_crc(start, end, 0x04C11DB7, 0xFFFFFFFF, 32, True, True, 0xFFFFFFFF))
         assert result.lower() == expected.lower()
 
-    def test_crc16_ccitt_matches_reference_implementation(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_crc16_ccitt_matches_reference_implementation(self, bridge: Any, tmp_path: Path) -> None:
         """Verify custom CRC-16/CCITT-FALSE matches Python reference on same payload.
 
         Args:
@@ -320,16 +286,10 @@ class TestCalculateHashCustomCrc:
         self._open_payload(bridge, tmp_path, payload, "crc16.bin")
         crc_val: int = _crc16_ccitt(payload)
         expected: str = f"{crc_val:04x}"
-        result: str = _run(
-            bridge.calculate_hash_custom_crc(
-                0, len(payload), 0x1021, 0xFFFF, 16, False, False, 0x0000
-            )
-        )
+        result: str = _run(bridge.calculate_hash_custom_crc(0, len(payload), 0x1021, 0xFFFF, 16, False, False, 0x0000))
         assert result.lower() == expected.lower()
 
-    def test_crc16_on_pe_bytes_returns_hex_string(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_crc16_on_pe_bytes_returns_hex_string(self, bridge: Any, pe_binary: Path) -> None:
         """Verify custom CRC-16 on the PE header bytes returns a valid 4-char hex string.
 
         Args:
@@ -337,18 +297,12 @@ class TestCalculateHashCustomCrc:
             pe_binary: Path to the minimal PE binary fixture.
         """
         _run(bridge.open_file(str(pe_binary)))
-        result: str = _run(
-            bridge.calculate_hash_custom_crc(
-                0, _FIRST_16_BYTES, 0x1021, 0xFFFF, 16, False, False, 0x0000
-            )
-        )
+        result: str = _run(bridge.calculate_hash_custom_crc(0, _FIRST_16_BYTES, 0x1021, 0xFFFF, 16, False, False, 0x0000))
         assert isinstance(result, str)
         assert len(result) >= 1
         bytes.fromhex(result)
 
-    def test_crc8_smbus_matches_reference_implementation(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_crc8_smbus_matches_reference_implementation(self, bridge: Any, tmp_path: Path) -> None:
         """Verify custom CRC-8/SMBUS matches Python reference on same payload.
 
         Args:
@@ -359,16 +313,10 @@ class TestCalculateHashCustomCrc:
         self._open_payload(bridge, tmp_path, payload, "crc8.bin")
         crc_val: int = _crc8_smbus(payload)
         expected: str = f"{crc_val:02x}"
-        result: str = _run(
-            bridge.calculate_hash_custom_crc(
-                0, len(payload), 0x07, 0x00, 8, False, False, 0x00
-            )
-        )
+        result: str = _run(bridge.calculate_hash_custom_crc(0, len(payload), 0x07, 0x00, 8, False, False, 0x00))
         assert result.lower() == expected.lower()
 
-    def test_crc8_returns_valid_hex_string(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_crc8_returns_valid_hex_string(self, bridge: Any, tmp_path: Path) -> None:
         """Verify custom CRC-8 returns a non-empty hex string for any payload.
 
         Args:
@@ -377,18 +325,12 @@ class TestCalculateHashCustomCrc:
         """
         payload = bytes(range(16))
         self._open_payload(bridge, tmp_path, payload, "crc8_fmt.bin")
-        result: str = _run(
-            bridge.calculate_hash_custom_crc(
-                0, len(payload), 0x07, 0x00, 8, False, False, 0x00
-            )
-        )
+        result: str = _run(bridge.calculate_hash_custom_crc(0, len(payload), 0x07, 0x00, 8, False, False, 0x00))
         assert isinstance(result, str)
         assert len(result) > 0
         bytes.fromhex(result)
 
-    def test_crc32_result_is_8_hex_chars(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_crc32_result_is_8_hex_chars(self, bridge: Any, tmp_path: Path) -> None:
         """Verify custom CRC-32 result is at most 8 hex characters.
 
         Args:
@@ -397,16 +339,10 @@ class TestCalculateHashCustomCrc:
         """
         payload = bytes(range(64))
         self._open_payload(bridge, tmp_path, payload, "crc32_len.bin")
-        result: str = _run(
-            bridge.calculate_hash_custom_crc(
-                0, len(payload), 0x04C11DB7, 0xFFFFFFFF, 32, True, True, 0xFFFFFFFF
-            )
-        )
+        result: str = _run(bridge.calculate_hash_custom_crc(0, len(payload), 0x04C11DB7, 0xFFFFFFFF, 32, True, True, 0xFFFFFFFF))
         assert len(result) <= 8
 
-    def test_different_crc32_ranges_produce_different_values(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_different_crc32_ranges_produce_different_values(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that two non-overlapping ranges produce distinct CRC-32 values.
 
         Args:
@@ -415,21 +351,11 @@ class TestCalculateHashCustomCrc:
         """
         payload = _KNOWN_PAYLOAD
         self._open_payload(bridge, tmp_path, payload, "crc32_diff.bin")
-        crc_a: str = _run(
-            bridge.calculate_hash_custom_crc(
-                0, 64, 0x04C11DB7, 0xFFFFFFFF, 32, True, True, 0xFFFFFFFF
-            )
-        )
-        crc_b: str = _run(
-            bridge.calculate_hash_custom_crc(
-                64, 128, 0x04C11DB7, 0xFFFFFFFF, 32, True, True, 0xFFFFFFFF
-            )
-        )
+        crc_a: str = _run(bridge.calculate_hash_custom_crc(0, 64, 0x04C11DB7, 0xFFFFFFFF, 32, True, True, 0xFFFFFFFF))
+        crc_b: str = _run(bridge.calculate_hash_custom_crc(64, 128, 0x04C11DB7, 0xFFFFFFFF, 32, True, True, 0xFFFFFFFF))
         assert crc_a != crc_b
 
-    def test_invalid_crc_width_raises_value_error(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_invalid_crc_width_raises_value_error(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that an unsupported CRC width raises ValueError.
 
         Args:
@@ -439,15 +365,9 @@ class TestCalculateHashCustomCrc:
         payload = bytes(range(16))
         self._open_payload(bridge, tmp_path, payload, "crc_bad_width.bin")
         with pytest.raises((ValueError, RuntimeError)):
-            _run(
-                bridge.calculate_hash_custom_crc(
-                    0, len(payload), 0x07, 0x00, 24, False, False, 0x00
-                )
-            )
+            _run(bridge.calculate_hash_custom_crc(0, len(payload), 0x07, 0x00, 24, False, False, 0x00))
 
-    def test_crc32_single_known_byte_matches_binascii(
-        self, bridge: Any, tmp_path: Path
-    ) -> None:
+    def test_crc32_single_known_byte_matches_binascii(self, bridge: Any, tmp_path: Path) -> None:
         """Verify CRC-32 over a single known byte matches binascii.crc32 on that byte.
 
         Args:
@@ -458,9 +378,5 @@ class TestCalculateHashCustomCrc:
         self._open_payload(bridge, tmp_path, payload, "crc32_single.bin")
         crc_val: int = binascii.crc32(bytes([0xAB])) & 0xFFFFFFFF
         expected: str = f"{crc_val:08x}"
-        result: str = _run(
-            bridge.calculate_hash_custom_crc(
-                0, 1, 0x04C11DB7, 0xFFFFFFFF, 32, True, True, 0xFFFFFFFF
-            )
-        )
+        result: str = _run(bridge.calculate_hash_custom_crc(0, 1, 0x04C11DB7, 0xFFFFFFFF, 32, True, True, 0xFFFFFFFF))
         assert result.lower() == expected.lower()

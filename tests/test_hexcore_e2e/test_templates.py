@@ -16,26 +16,24 @@ PE_LFANEW_VALUE = 0x80
 PE_E_MAGIC_DECIMAL = 23117
 PE_E_MAGIC_HEX = "5A4D"
 
-_CUSTOM_TEMPLATE_JSON = json.dumps(
-    {
-        "name": "TestStruct",
-        "description": "Test structure for E2E validation",
-        "default_endianness": "little",
-        "category": "test",
-        "fields": [
-            {
-                "name": "magic",
-                "field_type": {"type": "UInt16"},
-                "description": "Magic number",
-            },
-            {
-                "name": "version",
-                "field_type": {"type": "UInt32"},
-                "description": "Version field",
-            },
-        ],
-    }
-)
+_CUSTOM_TEMPLATE_JSON = json.dumps({
+    "name": "TestStruct",
+    "description": "Test structure for E2E validation",
+    "default_endianness": "little",
+    "category": "test",
+    "fields": [
+        {
+            "name": "magic",
+            "field_type": {"type": "UInt16"},
+            "description": "Magic number",
+        },
+        {
+            "name": "version",
+            "field_type": {"type": "UInt32"},
+            "description": "Version field",
+        },
+    ],
+})
 
 
 class TestListTemplates:
@@ -622,9 +620,7 @@ class TestApplyInvalidTemplate:
 class TestTemplateOnWrongData:
     """Tests for template behavior when applied to binary data of the wrong format."""
 
-    def test_pe_template_on_elf_data_parses_or_raises(
-        self, hexcore: Any, elf_bytes: bytes
-    ) -> None:
+    def test_pe_template_on_elf_data_parses_or_raises(self, hexcore: Any, elf_bytes: bytes) -> None:
         """Verify IMAGE_DOS_HEADER on ELF data either parses with wrong values or raises.
 
         If it parses, the e_magic field must NOT contain the MZ magic string.
@@ -648,9 +644,7 @@ class TestTemplateOnWrongData:
             display: str = e_magic_fields[0]["display_value"]
             assert str(PE_E_MAGIC_DECIMAL) not in display
 
-    def test_elf_template_on_pe_data_parses_or_raises(
-        self, hexcore: Any, pe_bytes: bytes
-    ) -> None:
+    def test_elf_template_on_pe_data_parses_or_raises(self, hexcore: Any, pe_bytes: bytes) -> None:
         """Verify Elf64_Ehdr on PE data either parses with wrong values or raises.
 
         If it parses, the e_ident field must NOT contain 7F 45 4C 46.

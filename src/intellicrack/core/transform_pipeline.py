@@ -23,6 +23,27 @@ from intellicrack.core.logging import get_logger
 
 _logger = get_logger("core.transform_pipeline")
 
+_MAX_BYTE_VALUE = 255
+
+
+class ExpressionError(ValueError):
+    """Raised when a restricted AST expression uses unsupported constructs."""
+
+
+class UnsupportedConstantTypeError(TypeError):
+    """Raised when an AST constant has an unsupported type."""
+
+    def __init__(self, type_name: str) -> None:
+        super().__init__(f"Unsupported constant type: {type_name}")
+
+
+class TransformParamError(ValueError):
+    """Raised when a transform node receives invalid parameters."""
+
+    def __init__(self, node_name: str, detail: str) -> None:
+        super().__init__(f"{node_name}: {detail}")
+
+
 _hexcore_mod: Any = None
 _hexcore_available: bool = False
 try:
@@ -81,11 +102,12 @@ def _eval_ast_node(node: ast.expr, b: int, i: int) -> int:
         int: Result of the expression, as a Python integer.
 
     Raises:
-        ValueError: If the expression uses unsupported constructs.
+        UnsupportedConstantTypeError: If a constant has an unsupported type.
+        ExpressionError: If the expression uses unsupported constructs.
     """
     if isinstance(node, ast.Constant):
         if not isinstance(node.value, (int, float, bool)):
-            raise ValueError(f"Unsupported constant type: {type(node.value).__name__}")
+            raise UnsupportedConstantTypeError(type(node.value).__name__)
         return int(node.value)
 
     if isinstance(node, ast.Name):
@@ -93,12 +115,14 @@ def _eval_ast_node(node: ast.expr, b: int, i: int) -> int:
             return b
         if node.id == "i":
             return i
-        raise ValueError(f"Unknown variable: {node.id!r}; only 'b' and 'i' are allowed")
+        msg = f"Unknown variable: {node.id!r}"
+        raise ExpressionError(msg)
 
     if isinstance(node, ast.BinOp):
         op_fn = _BINARY_OPS.get(type(node.op))
         if op_fn is None:
-            raise ValueError(f"Unsupported binary operator: {type(node.op).__name__}")
+            msg = f"Unsupported binary op: {type(node.op).__name__}"
+            raise ExpressionError(msg)
         left = _eval_ast_node(node.left, b, i)
         right = _eval_ast_node(node.right, b, i)
         return int(op_fn(left, right))
@@ -106,7 +130,8 @@ def _eval_ast_node(node: ast.expr, b: int, i: int) -> int:
     if isinstance(node, ast.UnaryOp):
         op_fn = _UNARY_OPS.get(type(node.op))
         if op_fn is None:
-            raise ValueError(f"Unsupported unary operator: {type(node.op).__name__}")
+            msg = f"Unsupported unary op: {type(node.op).__name__}"
+            raise ExpressionError(msg)
         operand = _eval_ast_node(node.operand, b, i)
         return int(op_fn(operand))
 
@@ -115,7 +140,8 @@ def _eval_ast_node(node: ast.expr, b: int, i: int) -> int:
         for cmp_op, comparator_node in zip(node.ops, node.comparators, strict=False):
             op_fn = _COMPARE_OPS.get(type(cmp_op))
             if op_fn is None:
-                raise ValueError(f"Unsupported comparison operator: {type(cmp_op).__name__}")
+                msg = f"Unsupported compare op: {type(cmp_op).__name__}"
+                raise ExpressionError(msg)
             right = _eval_ast_node(comparator_node, b, i)
             if not op_fn(left, right):
                 return 0
@@ -141,10 +167,8 @@ def _eval_ast_node(node: ast.expr, b: int, i: int) -> int:
                     return candidate
             return 0
 
-    raise ValueError(
-        f"Unsupported expression node type: {type(node).__name__}. "
-        "Only arithmetic, bitwise, comparison, and conditional expressions are allowed."
-    )
+    msg = f"Unsupported node type: {type(node).__name__}"
+    raise ExpressionError(msg)
 
 
 class TransformNode:
@@ -182,7 +206,8 @@ class TransformNode:
         """
         return ""
 
-    def process(self, data: bytes, params: dict[str, Any]) -> bytes:
+    @staticmethod
+    def process(data: bytes, params: dict[str, Any]) -> bytes:
         """Apply this transform to binary data.
 
         The base implementation returns ``data`` unchanged. Subclasses must
@@ -275,16 +300,12 @@ class RustTransformNode(TransformNode):
             if isinstance(val, bytes):
                 rust_params[key] = val
             elif isinstance(val, int):
-                if 0 <= val <= 255:
+                if 0 <= val <= _MAX_BYTE_VALUE:
                     rust_params[key] = val.to_bytes(1, "little")
                 else:
                     rust_params[key] = val.to_bytes(8, "little")
             elif isinstance(val, str):
-                is_hex = (
-                    len(val) > 0
-                    and len(val) % 2 == 0
-                    and all(c in "0123456789abcdefABCDEF" for c in val)
-                )
+                is_hex = len(val) > 0 and len(val) % 2 == 0 and all(c in "0123456789abcdefABCDEF" for c in val)
                 rust_params[key] = bytes.fromhex(val) if is_hex else val.encode("utf-8")
             else:
                 rust_params[key] = str(val).encode("utf-8")
@@ -331,7 +352,8 @@ class RegexReplaceNode(TransformNode):
         """
         return "Replace binary patterns using a regular expression"
 
-    def process(self, data: bytes, params: dict[str, Any]) -> bytes:
+    @staticmethod
+    def process(data: bytes, params: dict[str, Any]) -> bytes:
         """Apply regex search-and-replace on binary data.
 
         Args:
@@ -343,11 +365,11 @@ class RegexReplaceNode(TransformNode):
             bytes: Data with all pattern matches replaced.
 
         Raises:
-            ValueError: If ``"pattern"`` is missing or invalid.
+            TransformParamError: If ``"pattern"`` is missing or invalid.
         """
         raw_pattern = params.get("pattern")
         if not isinstance(raw_pattern, str) or not raw_pattern:
-            raise ValueError("RegexReplaceNode requires a non-empty 'pattern' string param")
+            raise TransformParamError("RegexReplaceNode", "requires 'pattern'")
 
         raw_replacement = params.get("replacement", "")
         if isinstance(raw_replacement, bytes):
@@ -360,7 +382,7 @@ class RegexReplaceNode(TransformNode):
         try:
             compiled = re.compile(raw_pattern.encode("latin-1"))
         except re.error as exc:
-            raise ValueError(f"Invalid regex pattern: {exc}") from exc
+            raise TransformParamError("RegexReplaceNode", f"invalid regex: {exc}") from exc
 
         return compiled.sub(replacement, data)
 
@@ -409,7 +431,8 @@ class CustomExpressionNode(TransformNode):
         """
         return "Apply a Python expression to each byte; use 'b' for byte value, 'i' for index"
 
-    def process(self, data: bytes, params: dict[str, Any]) -> bytes:
+    @staticmethod
+    def process(data: bytes, params: dict[str, Any]) -> bytes:
         """Evaluate the expression for every byte in data.
 
         The expression is parsed with ``ast.parse`` and evaluated using a
@@ -425,19 +448,17 @@ class CustomExpressionNode(TransformNode):
             bytes: Transformed bytes with each value masked to 0-255.
 
         Raises:
-            ValueError: If ``"expression"`` is missing, syntactically invalid,
-                or uses unsupported constructs.
+            TransformParamError: If ``"expression"`` is missing or
+                syntactically invalid.
         """
         expression = params.get("expression")
         if not isinstance(expression, str) or not expression:
-            raise ValueError(
-                "CustomExpressionNode requires a non-empty 'expression' string param"
-            )
+            raise TransformParamError("CustomExpressionNode", "requires 'expression'")
 
         try:
             tree = ast.parse(expression, mode="eval")
         except SyntaxError as exc:
-            raise ValueError(f"Invalid expression syntax: {exc}") from exc
+            raise TransformParamError("CustomExpressionNode", f"bad syntax: {exc}") from exc
 
         expr_node = tree.body
         result = bytearray(len(data))
@@ -481,7 +502,8 @@ class RepeatNode(TransformNode):
         """
         return "Repeat input data N times"
 
-    def process(self, data: bytes, params: dict[str, Any]) -> bytes:
+    @staticmethod
+    def process(data: bytes, params: dict[str, Any]) -> bytes:
         """Repeat data by the count factor.
 
         Args:
@@ -492,16 +514,16 @@ class RepeatNode(TransformNode):
             bytes: Input bytes concatenated ``count`` times.
 
         Raises:
-            ValueError: If ``"count"`` is missing or less than 1.
+            TransformParamError: If ``"count"`` is missing or less than 1.
         """
         raw_count = params.get("count", 1)
         try:
             count = int(raw_count)
         except (TypeError, ValueError) as exc:
-            raise ValueError(f"RepeatNode 'count' must be an integer, got {raw_count!r}") from exc
+            raise TransformParamError("RepeatNode", f"'count' not int: {raw_count!r}") from exc
 
         if count < 1:
-            raise ValueError(f"RepeatNode 'count' must be >= 1, got {count}")
+            raise TransformParamError("RepeatNode", f"'count' must be >= 1, got {count}")
 
         return data * count
 
@@ -540,7 +562,8 @@ class TruncateNode(TransformNode):
         """
         return "Truncate data to at most N bytes"
 
-    def process(self, data: bytes, params: dict[str, Any]) -> bytes:
+    @staticmethod
+    def process(data: bytes, params: dict[str, Any]) -> bytes:
         """Return the first ``length`` bytes of data.
 
         Args:
@@ -551,21 +574,19 @@ class TruncateNode(TransformNode):
             bytes: First ``length`` bytes, or all of ``data`` if shorter.
 
         Raises:
-            ValueError: If ``"length"`` is missing or negative.
+            TransformParamError: If ``"length"`` is missing or negative.
         """
         raw_length = params.get("length")
         if raw_length is None:
-            raise ValueError("TruncateNode requires a 'length' param")
+            raise TransformParamError("TruncateNode", "requires 'length'")
 
         try:
             length = int(raw_length)
         except (TypeError, ValueError) as exc:
-            raise ValueError(
-                f"TruncateNode 'length' must be an integer, got {raw_length!r}"
-            ) from exc
+            raise TransformParamError("TruncateNode", f"'length' not int: {raw_length!r}") from exc
 
         if length < 0:
-            raise ValueError(f"TruncateNode 'length' must be >= 0, got {length}")
+            raise TransformParamError("TruncateNode", f"'length' must be >= 0, got {length}")
 
         return data[:length]
 
@@ -607,7 +628,8 @@ class PadNode(TransformNode):
         """
         return "Pad data to a target length with a fill byte"
 
-    def process(self, data: bytes, params: dict[str, Any]) -> bytes:
+    @staticmethod
+    def process(data: bytes, params: dict[str, Any]) -> bytes:
         """Pad data to the requested length.
 
         Args:
@@ -620,33 +642,29 @@ class PadNode(TransformNode):
                 long enough.
 
         Raises:
-            ValueError: If ``"length"`` is missing, negative, or ``"byte"``
-                is outside 0-255.
+            TransformParamError: If ``"length"`` is missing, negative, or
+                ``"byte"`` is outside 0-255.
         """
         raw_length = params.get("length")
         if raw_length is None:
-            raise ValueError("PadNode requires a 'length' param")
+            raise TransformParamError("PadNode", "requires 'length'")
 
         try:
             length = int(raw_length)
         except (TypeError, ValueError) as exc:
-            raise ValueError(
-                f"PadNode 'length' must be an integer, got {raw_length!r}"
-            ) from exc
+            raise TransformParamError("PadNode", f"'length' not int: {raw_length!r}") from exc
 
         if length < 0:
-            raise ValueError(f"PadNode 'length' must be >= 0, got {length}")
+            raise TransformParamError("PadNode", f"'length' must be >= 0, got {length}")
 
         raw_byte = params.get("byte", 0)
         try:
             fill_byte = int(raw_byte)
         except (TypeError, ValueError) as exc:
-            raise ValueError(
-                f"PadNode 'byte' must be an integer, got {raw_byte!r}"
-            ) from exc
+            raise TransformParamError("PadNode", f"'byte' not int: {raw_byte!r}") from exc
 
-        if not 0 <= fill_byte <= 255:
-            raise ValueError(f"PadNode 'byte' must be 0-255, got {fill_byte}")
+        if not 0 <= fill_byte <= _MAX_BYTE_VALUE:
+            raise TransformParamError("PadNode", f"'byte' must be 0-255, got {fill_byte}")
 
         if len(data) >= length:
             return data
@@ -803,9 +821,7 @@ def get_all_transform_nodes() -> list[TransformNode]:
     if _hexcore_available and _hexcore_mod is not None:
         doc = _hexcore_mod.HexDocument()
         nodes.extend(
-            RustTransformNode(
-                transform_name, transform_category, transform_description
-            )
+            RustTransformNode(transform_name, transform_category, transform_description)
             for transform_name, transform_category, transform_description in doc.list_transforms()
         )
         _logger.debug("hexcore_transforms_loaded", count=len(nodes))

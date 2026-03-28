@@ -22,9 +22,7 @@ _WIN32_ONLY = pytest.mark.skipif(
 class TestListProcessMemoryRegions:
     """Tests covering list_process_memory_regions() against the current process."""
 
-    def test_list_regions_returns_list(
-        self, hexcore: Any
-    ) -> None:
+    def test_list_regions_returns_list(self, hexcore: Any) -> None:
         """Verify that list_process_memory_regions returns a list for the current PID.
 
         Args:
@@ -34,9 +32,7 @@ class TestListProcessMemoryRegions:
         regions: list[tuple[int, int, int, int]] = hexcore.HexDocument.list_process_memory_regions(pid)
         assert isinstance(regions, list)
 
-    def test_list_regions_nonempty_for_current_process(
-        self, hexcore: Any
-    ) -> None:
+    def test_list_regions_nonempty_for_current_process(self, hexcore: Any) -> None:
         """Verify that at least one memory region exists in the current process.
 
         Args:
@@ -46,9 +42,7 @@ class TestListProcessMemoryRegions:
         regions: list[tuple[int, int, int, int]] = hexcore.HexDocument.list_process_memory_regions(pid)
         assert len(regions) > 0
 
-    def test_list_regions_each_entry_has_four_elements(
-        self, hexcore: Any
-    ) -> None:
+    def test_list_regions_each_entry_has_four_elements(self, hexcore: Any) -> None:
         """Verify that every region tuple has exactly 4 integer elements.
 
         Args:
@@ -69,9 +63,7 @@ class TestListProcessMemoryRegions:
             assert isinstance(prot_val, int)
             assert isinstance(rtype_val, int)
 
-    def test_list_regions_all_sizes_positive(
-        self, hexcore: Any
-    ) -> None:
+    def test_list_regions_all_sizes_positive(self, hexcore: Any) -> None:
         """Verify that all reported memory region sizes are greater than zero.
 
         Args:
@@ -83,9 +75,7 @@ class TestListProcessMemoryRegions:
             assert size > 0
             assert address >= 0
 
-    def test_list_regions_invalid_pid_raises(
-        self, hexcore: Any
-    ) -> None:
+    def test_list_regions_invalid_pid_raises(self, hexcore: Any) -> None:
         """Verify that list_process_memory_regions raises an exception for an invalid PID.
 
         Args:
@@ -99,9 +89,7 @@ class TestListProcessMemoryRegions:
 class TestFromProcessMemory:
     """Tests covering from_process_memory() read operations on the current process."""
 
-    def test_read_from_current_process_first_region(
-        self, hexcore: Any
-    ) -> None:
+    def test_read_from_current_process_first_region(self, hexcore: Any) -> None:
         """Verify that from_process_memory can read bytes from an accessible region.
 
         Args:
@@ -126,9 +114,7 @@ class TestFromProcessMemory:
         assert doc is not None
         assert doc.length() == 16
 
-    def test_from_process_memory_returns_hex_document(
-        self, hexcore: Any
-    ) -> None:
+    def test_from_process_memory_returns_hex_document(self, hexcore: Any) -> None:
         """Verify that from_process_memory returns an object with HexDocument methods.
 
         Args:
@@ -153,9 +139,7 @@ class TestFromProcessMemory:
         assert hasattr(doc, "read")
         assert doc.length() == 8
 
-    def test_from_process_memory_invalid_pid_raises(
-        self, hexcore: Any
-    ) -> None:
+    def test_from_process_memory_invalid_pid_raises(self, hexcore: Any) -> None:
         """Verify that from_process_memory raises an exception for a nonexistent PID.
 
         Args:
@@ -164,9 +148,7 @@ class TestFromProcessMemory:
         with pytest.raises((OSError, RuntimeError, PermissionError)):
             hexcore.HexDocument.from_process_memory(0x7FFFFFFF, 0x1000, 16)
 
-    def test_from_process_memory_zero_size_handled(
-        self, hexcore: Any
-    ) -> None:
+    def test_from_process_memory_zero_size_handled(self, hexcore: Any) -> None:
         """Verify that from_process_memory with size=0 raises or returns an empty document.
 
         Args:

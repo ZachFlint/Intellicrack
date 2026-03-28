@@ -16,9 +16,7 @@ if TYPE_CHECKING:
 
 pytest.importorskip("intellicrack_hexcore")
 
-_REQUIRED_KEYS: frozenset[str] = frozenset(
-    {"file_path", "size", "modified", "cursor", "selection"}
-)
+_REQUIRED_KEYS: frozenset[str] = frozenset({"file_path", "size", "modified", "cursor", "selection"})
 
 
 def _run(coro: Any) -> Any:
@@ -102,9 +100,7 @@ class TestDocumentInfoNoDocument:
 class TestDocumentInfoWithFile:
     """Tests covering get_document_info after a file has been opened."""
 
-    def test_open_pe_file_path_matches(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_open_pe_file_path_matches(self, bridge: Any, pe_binary: Path) -> None:
         """Verify file_path matches the opened PE file path.
 
         Args:
@@ -115,9 +111,7 @@ class TestDocumentInfoWithFile:
         info: dict[str, Any] = _run(bridge.get_document_info())
         assert info["file_path"] == str(pe_binary)
 
-    def test_open_pe_size_is_1024(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_open_pe_size_is_1024(self, bridge: Any, pe_binary: Path) -> None:
         """Verify size equals the on-disk PE file size (1024 bytes).
 
         Args:
@@ -128,9 +122,7 @@ class TestDocumentInfoWithFile:
         info: dict[str, Any] = _run(bridge.get_document_info())
         assert info["size"] == pe_binary.stat().st_size
 
-    def test_open_pe_modified_is_false(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_open_pe_modified_is_false(self, bridge: Any, pe_binary: Path) -> None:
         """Verify modified is False immediately after opening a file.
 
         Args:
@@ -141,9 +133,7 @@ class TestDocumentInfoWithFile:
         info: dict[str, Any] = _run(bridge.get_document_info())
         assert info["modified"] is False
 
-    def test_write_bytes_sets_modified_true(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_write_bytes_sets_modified_true(self, bridge: Any, pe_binary: Path) -> None:
         """Verify modified becomes True after writing bytes.
 
         Args:
@@ -155,9 +145,7 @@ class TestDocumentInfoWithFile:
         info: dict[str, Any] = _run(bridge.get_document_info())
         assert info["modified"] is True
 
-    def test_goto_offset_updates_cursor(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_goto_offset_updates_cursor(self, bridge: Any, pe_binary: Path) -> None:
         """Verify cursor field reflects the offset set by goto_offset.
 
         Args:
@@ -169,9 +157,7 @@ class TestDocumentInfoWithFile:
         info: dict[str, Any] = _run(bridge.get_document_info())
         assert info["cursor"] == 256
 
-    def test_select_range_sets_selection(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_select_range_sets_selection(self, bridge: Any, pe_binary: Path) -> None:
         """Verify selection reflects the range set by select_range.
 
         Args:
@@ -183,9 +169,7 @@ class TestDocumentInfoWithFile:
         info: dict[str, Any] = _run(bridge.get_document_info())
         assert info["selection"] == [10, 20]
 
-    def test_all_required_keys_present_with_file(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_all_required_keys_present_with_file(self, bridge: Any, pe_binary: Path) -> None:
         """Verify all required keys are present after opening a file.
 
         Args:
@@ -196,9 +180,7 @@ class TestDocumentInfoWithFile:
         info: dict[str, Any] = _run(bridge.get_document_info())
         assert _REQUIRED_KEYS.issubset(info.keys())
 
-    def test_multiple_operations_info_consistency(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_multiple_operations_info_consistency(self, bridge: Any, pe_binary: Path) -> None:
         """Verify info remains self-consistent after a sequence of operations.
 
         Opens a file, moves cursor, selects a range, and confirms info fields
@@ -219,9 +201,7 @@ class TestDocumentInfoWithFile:
         assert info["selection"] == [32, 96]
         assert info["modified"] is True
 
-    def test_size_matches_actual_file_size(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_size_matches_actual_file_size(self, bridge: Any, pe_binary: Path) -> None:
         """Verify size in document info exactly matches the file's on-disk size.
 
         Args:
@@ -233,9 +213,7 @@ class TestDocumentInfoWithFile:
         info: dict[str, Any] = _run(bridge.get_document_info())
         assert info["size"] == expected_size
 
-    def test_undo_after_write_may_clear_modified(
-        self, bridge: Any, pe_binary: Path
-    ) -> None:
+    def test_undo_after_write_may_clear_modified(self, bridge: Any, pe_binary: Path) -> None:
         """Verify undo after a single write may restore unmodified state.
 
         After writing and then undoing, the document may report modified as

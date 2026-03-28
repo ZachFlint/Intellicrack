@@ -98,7 +98,8 @@ class YaraScanner:
         """
         return _yara_available
 
-    def compile_rules(self, paths: list[str | Path]) -> Any:
+    @staticmethod
+    def compile_rules(paths: list[str | Path]) -> Any:
         """Compile YARA rules from one or more rule files.
 
         Each file is compiled under a namespace derived from its stem so that
@@ -132,7 +133,8 @@ class YaraScanner:
         else:
             return compiled
 
-    def compile_source(self, source: str, namespace: str = "default") -> Any:
+    @staticmethod
+    def compile_source(source: str, namespace: str = "default") -> Any:
         """Compile YARA rules from a source string.
 
         Args:
@@ -231,7 +233,8 @@ class YaraScanner:
         """
         return await asyncio.to_thread(self.scan_file, path, rules)
 
-    def _convert_matches(self, raw_matches: list[Any]) -> list[YaraMatch]:
+    @staticmethod
+    def _convert_matches(raw_matches: list[Any]) -> list[YaraMatch]:
         """Convert raw yara-python match objects to :class:`YaraMatch` instances.
 
         Handles both the legacy tuple format ``(offset, identifier, data)``

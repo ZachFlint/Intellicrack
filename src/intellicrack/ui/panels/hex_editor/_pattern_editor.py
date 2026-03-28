@@ -94,12 +94,7 @@ class PatternEditorMixin:
         editor_tabs = QTabWidget()
 
         self._pattern_dsl_editor = QPlainTextEdit()
-        self._pattern_dsl_editor.setPlainText(
-            "struct MY_HEADER {\n"
-            "    le u16 magic [[validate(0x5A4D)]];\n"
-            "    le u32 size;\n"
-            "};\n"
-        )
+        self._pattern_dsl_editor.setPlainText("struct MY_HEADER {\n    le u16 magic [[validate(0x5A4D)]];\n    le u32 size;\n};\n")
         font = self._pattern_dsl_editor.font()
         font.setFamily("Consolas")
         font.setPointSize(10)
@@ -203,9 +198,7 @@ class PatternEditorMixin:
                 col_num = getattr(exc, "column", 0)
                 msg = getattr(exc, "message", str(exc))
                 if self._pattern_error_display is not None:
-                    self._pattern_error_display.setPlainText(
-                        f"Line {line_num}, Col {col_num}: {msg}"
-                    )
+                    self._pattern_error_display.setPlainText(f"Line {line_num}, Col {col_num}: {msg}")
             elif self._pattern_error_display is not None:
                 self._pattern_error_display.setPlainText(str(exc))
             if self._pattern_status_label is not None:
@@ -295,9 +288,7 @@ class PatternEditorMixin:
             return
 
         try:
-            fields: list[dict[str, Any]] = interpreter.execute(
-                source, self._document, offset
-            )
+            fields: list[dict[str, Any]] = interpreter.execute(source, self._document, offset)
         except (ValueError, TypeError, AttributeError) as exc:
             if self._pattern_error_display is not None:
                 err_msg = str(exc)
@@ -320,9 +311,7 @@ class PatternEditorMixin:
                 self._highlight_template_fields(typed_fields)
 
             if self._pattern_status_label is not None:
-                self._pattern_status_label.setText(
-                    f"Executed at offset {offset} ({len(fields)} fields)"
-                )
+                self._pattern_status_label.setText(f"Executed at offset {offset} ({len(fields)} fields)")
 
             logger.info("pattern_executed_via_interpreter", field_count=len(fields))
 
@@ -400,12 +389,7 @@ class PatternEditorMixin:
     def _on_pattern_new(self) -> None:
         """Clear the pattern editor with a starter skeleton."""
         if self._pattern_dsl_editor is not None:
-            self._pattern_dsl_editor.setPlainText(
-                "struct MY_HEADER {\n"
-                "    le u16 magic;\n"
-                "    le u32 size;\n"
-                "};\n"
-            )
+            self._pattern_dsl_editor.setPlainText("struct MY_HEADER {\n    le u16 magic;\n    le u32 size;\n};\n")
         if self._pattern_json_preview is not None:
             self._pattern_json_preview.clear()
         if self._pattern_error_display is not None:
@@ -528,11 +512,7 @@ class PatternEditorMixin:
 
     def _populate_hexpat_library_entries(self) -> None:
         """Add .hexpat community patterns to the pattern library tree."""
-        if (
-            self._pattern_library_tree is None
-            or not hexpat_interpreter_available
-            or PatternRegistryCls is None
-        ):
+        if self._pattern_library_tree is None or not hexpat_interpreter_available or PatternRegistryCls is None:
             return
 
         if self._pattern_registry is None:

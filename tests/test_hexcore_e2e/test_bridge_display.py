@@ -85,9 +85,7 @@ class TestBridgeDisplayMode:
 class TestBridgeHighlights:
     """Tests covering highlight rule add, list, and remove operations."""
 
-    def test_add_highlight_rule_returns_nonempty_string_id(
-        self, bridge: Any
-    ) -> None:
+    def test_add_highlight_rule_returns_nonempty_string_id(self, bridge: Any) -> None:
         """Verify that add_highlight_rule returns a non-empty string rule ID.
 
         Args:
@@ -120,9 +118,7 @@ class TestBridgeHighlights:
         ids = [r["id"] for r in rules]
         assert rule_id in ids
 
-    def test_remove_highlight_rule_returns_true_for_valid_id(
-        self, bridge: Any
-    ) -> None:
+    def test_remove_highlight_rule_returns_true_for_valid_id(self, bridge: Any) -> None:
         """Verify that remove_highlight_rule returns True for an existing rule.
 
         Args:
@@ -156,22 +152,16 @@ class TestBridgeHighlights:
         ids = [r["id"] for r in rules]
         assert rule_id not in ids
 
-    def test_remove_highlight_rule_invalid_id_returns_false(
-        self, bridge: Any
-    ) -> None:
+    def test_remove_highlight_rule_invalid_id_returns_false(self, bridge: Any) -> None:
         """Verify that remove_highlight_rule returns False for an unknown ID.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
         """
-        removed: bool = _run(
-            bridge.remove_highlight_rule("nonexistent-rule-id-00000000")
-        )
+        removed: bool = _run(bridge.remove_highlight_rule("nonexistent-rule-id-00000000"))
         assert removed is False
 
-    def test_list_highlight_rules_empty_on_fresh_bridge(
-        self, bridge: Any
-    ) -> None:
+    def test_list_highlight_rules_empty_on_fresh_bridge(self, bridge: Any) -> None:
         """Verify that a fresh bridge starts with no highlight rules.
 
         Args:

@@ -304,7 +304,7 @@ class HexPatLexer:
                 raise self._error(msg, line, col)
             while self._pos < len(self._source) and self._source[self._pos] in "0123456789abcdefABCDEF_":
                 self._advance()
-            raw = self._source[start:self._pos].replace("_", "")
+            raw = self._source[start : self._pos].replace("_", "")
             self._add(TokenType.NUMBER, str(int(raw, 16)), line, col)
             return
 
@@ -316,7 +316,7 @@ class HexPatLexer:
                 raise self._error(msg, line, col)
             while self._pos < len(self._source) and self._source[self._pos] in "01_":
                 self._advance()
-            raw = self._source[start:self._pos].replace("_", "")
+            raw = self._source[start : self._pos].replace("_", "")
             self._add(TokenType.NUMBER, str(int(raw, 2)), line, col)
             return
 
@@ -328,7 +328,7 @@ class HexPatLexer:
                 raise self._error(msg, line, col)
             while self._pos < len(self._source) and self._source[self._pos] in "01234567_":
                 self._advance()
-            raw = self._source[start:self._pos].replace("_", "")
+            raw = self._source[start : self._pos].replace("_", "")
             self._add(TokenType.NUMBER, str(int(raw, 8)), line, col)
             return
 
@@ -336,8 +336,10 @@ class HexPatLexer:
             self._advance()
 
         is_float = False
-        if self._pos < len(self._source) and self._source[self._pos] == "." and (
-            self._pos + 1 < len(self._source) and self._source[self._pos + 1].isdigit()
+        if (
+            self._pos < len(self._source)
+            and self._source[self._pos] == "."
+            and (self._pos + 1 < len(self._source) and self._source[self._pos + 1].isdigit())
         ):
             is_float = True
             self._advance()
@@ -355,7 +357,7 @@ class HexPatLexer:
             while self._pos < len(self._source) and self._source[self._pos].isdigit():
                 self._advance()
 
-        raw = self._source[start:self._pos].replace("_", "")
+        raw = self._source[start : self._pos].replace("_", "")
         if is_float:
             self._add(TokenType.FLOAT_LITERAL, raw, line, col)
         else:
@@ -371,7 +373,7 @@ class HexPatLexer:
         start = self._pos
         while self._pos < len(self._source) and (self._source[self._pos].isalnum() or self._source[self._pos] == "_"):
             self._advance()
-        text = self._source[start:self._pos]
+        text = self._source[start : self._pos]
         ttype = KEYWORDS.get(text, TokenType.IDENTIFIER)
         self._add(ttype, text, line, col)
 
